@@ -49,12 +49,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public class FeatureApi extends SpaceBasedApi {
-
-  private static final Logger logger = LogManager.getLogger();
 
   public FeatureApi(RouterBuilder rb) {
     rb.operation("getFeature").handler(this::getFeature);
@@ -205,7 +201,9 @@ public class FeatureApi extends SpaceBasedApi {
       ApiResponseType apiResponseTypeType, IfExists ifExists, IfNotExists ifNotExists, boolean transactional, ConflictResolution cr,
       List<Map<String, Object>> featureModifications) {
     ModifyFeaturesEvent event = new ModifyFeaturesEvent().withTransaction(transactional);
-    ConditionalOperation task = buildConditionalOperation(event, context, apiResponseTypeType, featureModifications, ifNotExists, ifExists, transactional, cr, requireResourceExists);
+    Integer bodySize = context.getBody() != null ? context.getBody().getBytes().length : 0;
+
+    ConditionalOperation task = buildConditionalOperation(event, context, apiResponseTypeType, featureModifications, ifNotExists, ifExists, transactional, cr, requireResourceExists, bodySize != null ? bodySize : 0);
     final List<String> addTags = Query.queryParam(Query.ADD_TAGS, context);
     final List<String> removeTags = Query.queryParam(Query.REMOVE_TAGS, context);
     task.addTags = XyzNamespace.normalizeTags(addTags);
@@ -225,11 +223,12 @@ public class FeatureApi extends SpaceBasedApi {
       IfExists ifExists,
       boolean transactional,
       ConflictResolution cr,
-      boolean requireResourceExists) {
+      boolean requireResourceExists,
+      Integer bodySize) {
     if (featureModifications == null)
-      return new ConditionalOperation(event, context, apiResponseTypeType, ifNotExists, ifExists, transactional, cr, requireResourceExists);
+      return new ConditionalOperation(event, context, apiResponseTypeType, ifNotExists, ifExists, transactional, cr, requireResourceExists, bodySize);
 
     final ModifyFeatureOp modifyFeatureOp = new ModifyFeatureOp(featureModifications, ifNotExists, ifExists, transactional, cr);
-    return new ConditionalOperation(event, context, apiResponseTypeType, modifyFeatureOp, requireResourceExists);
+    return new ConditionalOperation(event, context, apiResponseTypeType, modifyFeatureOp, requireResourceExists, bodySize);
   }
 }

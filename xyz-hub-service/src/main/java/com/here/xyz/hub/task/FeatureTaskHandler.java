@@ -32,6 +32,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.xyz.Payload;
@@ -50,6 +51,7 @@ import com.here.xyz.events.ModifySpaceEvent;
 import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.auth.JWTPayload;
+import com.here.xyz.hub.connectors.RemoteFunctionClient;
 import com.here.xyz.hub.connectors.RpcClient;
 import com.here.xyz.hub.connectors.RpcClient.RpcContext;
 import com.here.xyz.hub.connectors.models.BinaryResponse;
@@ -103,7 +105,6 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.validation.impl.RequestParametersImpl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -116,6 +117,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -141,6 +143,7 @@ public class FeatureTaskHandler {
   private static ConcurrentHashMap<String, Long> contentModificationAdminTimers = new ConcurrentHashMap<>();
   private static final long CONTENT_MODIFICATION_INTERVAL = 1_000; //1s
   private static final long CONTENT_MODIFICATION_ADMIN_INTERVAL = 300_000; //5min
+  private static final double ALLOCATED_MEMORY_MULTIPLIER = 3;
 
   /**
    * The latest versions of the space contents as it has been seen on this service node. The key is the space ID and the value is the
@@ -151,6 +154,12 @@ public class FeatureTaskHandler {
    * performed by this service-node.
    */
   private static ConcurrentHashMap<String, Integer> latestSeenContentVersions = new ConcurrentHashMap<>();
+
+  /**
+   * Contains the amount of all in-flight requests for each storage ID.
+   */
+  private static ConcurrentHashMap<String, LongAdder> inflightRequestMemory = new ConcurrentHashMap<>();
+  private static LongAdder globalInflightRequestMemory = new LongAdder();
 
   /**
    * Sends the event to the connector client and write the response as the responseCollection of the task.
@@ -855,6 +864,62 @@ public class FeatureTaskHandler {
     return future;
   }
 
+  static <X extends FeatureTask> void registerRequestMemory(final X task, final Callback<X> callback) {
+    try {
+      registerRequestMemory(task.storage.id, task.requestBodySize);
+    }
+    finally {
+      callback.call(task);
+    }
+  }
+
+  static <X extends FeatureTask> void throttleIfNecessary(final X task, final Callback<X> callback) {
+    Connector storage = task.storage;
+    //Only throttle requests if the memory filled up over the specified threshold
+
+    System.out.println(globalInflightRequestMemory.sum()/1024/1024+" - "+(RemoteFunctionClient.GLOBAL_MAX_QUEUE_BYTE_SIZE * Service.configuration.IN_FLIGHT_REQUEST_MEMORY_HIGH_UTILIZATION_THRESHOLD)/1024/1024);
+    if (globalInflightRequestMemory.sum() >
+            RemoteFunctionClient.GLOBAL_MAX_QUEUE_BYTE_SIZE * Service.configuration.IN_FLIGHT_REQUEST_MEMORY_HIGH_UTILIZATION_THRESHOLD) {
+      LongAdder storageInflightRequestMemory = inflightRequestMemory.get(storage.id);
+      long storageInflightRequestMemorySum = 0;
+      if (storageInflightRequestMemory == null || (storageInflightRequestMemorySum = storageInflightRequestMemory.sum()) == 0)
+        callback.call(task); //Nothing to throttle
+
+      try {
+        RpcClient rpcClient = getRpcClient(storage);
+        if (storageInflightRequestMemorySum > rpcClient.getFunctionClient().getPriority() * RemoteFunctionClient.GLOBAL_MAX_QUEUE_BYTE_SIZE)
+          throw new HttpException(TOO_MANY_REQUESTS, "Too many requests for the storage.");
+      }
+      catch (HttpException e) {
+        logger.warn(task.getMarker(), e.getMessage(), e);
+        callback.exception(e);
+        return;
+      }
+    }
+    callback.call(task);
+  }
+
+  private static void registerRequestMemory(String storageId, int byteSize) {
+    if (byteSize <= 0) return;
+
+    byteSize *= ALLOCATED_MEMORY_MULTIPLIER;
+
+    LongAdder usedMemory = inflightRequestMemory.get(storageId);
+    if (usedMemory == null)
+      inflightRequestMemory.put(storageId, usedMemory = new LongAdder());
+    usedMemory.add(byteSize);
+    globalInflightRequestMemory.add(byteSize);
+  }
+
+  public static void deregisterRequestMemory(String storageId, int byteSize) {
+    if (byteSize <= 0) return;
+
+    byteSize *= ALLOCATED_MEMORY_MULTIPLIER;
+
+    inflightRequestMemory.get(storageId).add(-byteSize);
+    globalInflightRequestMemory.add(-byteSize);
+  }
+
   public static void prepareModifyFeatureOp(ConditionalOperation task, Callback<ConditionalOperation> callback) {
     if (task.modifyOp != null) {
       callback.call(task);
@@ -912,10 +977,6 @@ public class FeatureTaskHandler {
       logger.info(logMarker, "Error in the provided content", e);
       throw new HttpException(BAD_REQUEST, "Cannot read input JSON string.");
     }
-    finally {
-      context.setBody(null);
-      ((RequestParametersImpl)context.data().get("requestParameters")).setBody(null);
-    }
   }
 
   private static List<Map<String, Object>> getJsonObjects(JsonObject json, RoutingContext context) throws HttpException {
@@ -943,6 +1004,13 @@ public class FeatureTaskHandler {
       logger.info(Context.getMarker(context), "Error in the provided content", e);
       throw new HttpException(BAD_REQUEST, "Cannot read input JSON string.");
     }
+  }
+
+  static void removeParametersFromContext(ConditionalOperation task, Callback<ConditionalOperation> callback) throws Exception {
+    task.context.setBody(null);
+    task.context.data().remove("requestParameters");
+    task.context.data().remove("parsedParameters");
+    callback.call(task);
   }
 
   static void preprocessConditionalOp(ConditionalOperation task, Callback<ConditionalOperation> callback) throws Exception {
