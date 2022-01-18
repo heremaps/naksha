@@ -41,11 +41,8 @@ import com.here.xyz.models.geojson.implementation.Point;
 import com.here.xyz.models.geojson.implementation.Properties;
 import com.here.xyz.models.geojson.implementation.XyzNamespace;
 import com.here.xyz.responses.ErrorResponse;
+import com.here.xyz.responses.SuccessResponse;
 import com.here.xyz.responses.XyzError;
-import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.Option;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -105,8 +102,8 @@ public abstract class PSQLAbstractIT {
             .withConnectorParams(connectorParameters);
 
     String response = invokeLambda(mse.serialize());
-    assertEquals("Check response status", "OK", JsonPath.read(response, "$.status").toString());
 
+    assertTrue("Check response status", XyzSerializable.deserialize(response) instanceof SuccessResponse);
     logger.info("Setup Test Completed.");
   }
 
@@ -233,73 +230,69 @@ public abstract class PSQLAbstractIT {
     String insertResponse = invokeLambdaFromFile(insertJsonFile);
     logger.info("RAW RESPONSE: " + insertResponse);
     String insertRequest = IOUtils.toString(GSContext.class.getResourceAsStream(insertJsonFile));
-    assertRead(insertRequest, insertResponse, false);
-    final JsonPath jsonPathFeatures = JsonPath.compile("$.features");
-    List<Map> originalFeatures = jsonPathFeatures.read(insertResponse, jsonPathConf);
+    FeatureCollection fc = assertRead(insertRequest, insertResponse, false);
 
-    final JsonPath jsonPathFeatureIds = JsonPath.compile("$.features..id");
-    List<String> ids = jsonPathFeatureIds.read(insertResponse, jsonPathConf);
+    List<String> ids = fc.getFeatures().stream().map(Feature::getId).filter(Objects::nonNull).toList();
     logger.info("Preparation: Inserted features {}", ids);
 
     // =========== UPDATE ==========
     logger.info("Modify features");
-    final DocumentContext updateFeaturesEventDoc = getEventFromResource("/events/InsertFeaturesEvent.json");
-    updateFeaturesEventDoc.put("$", "params", Collections.singletonMap("includeOldStates", includeOldStates));
-
-    List<Map> updateFeatures = jsonPathFeatures.read(insertResponse, jsonPathConf);
-    updateFeaturesEventDoc.delete("$.insertFeatures");
-    updateFeatures.forEach((Map feature) -> {
-      final Map<String, Object> properties = (Map<String, Object>) feature.get("properties");
-      properties.put("test", "updated");
+    List<Feature> updatedFeatures = fc.getFeatures();
+    updatedFeatures.forEach(feature -> {
+      feature.getProperties().put("test", "updated");
     });
-    updateFeaturesEventDoc.put("$", "updateFeatures", updateFeatures);
 
-    String updateFeaturesEvent = updateFeaturesEventDoc.jsonString();
-    String updateFeaturesResponse = invokeLambda(updateFeaturesEvent);
-    assertNoErrorInResponse(updateFeaturesResponse);
+    Map<String, Object> connectorParams = new HashMap<>() {{put("includeOldStates", includeOldStates);}};
+    connectorParams.putAll(defaultTestConnectorParams);
 
-    List features = jsonPathFeatures.read(updateFeaturesResponse, jsonPathConf);
-    assertNotNull("'features' element in ModifyFeaturesResponse is missing", features);
-    assertTrue("'features' element in ModifyFeaturesResponse is empty", features.size() > 0);
+    ModifyFeaturesEvent mfe = new ModifyFeaturesEvent()
+            .withSpace("foo")
+            .withParams(connectorParams)
+            .withUpdateFeatures(updatedFeatures);
 
-    final JsonPath jsonPathOldFeatures = JsonPath.compile("$.oldFeatures");
-    List oldFeatures = jsonPathOldFeatures.read(updateFeaturesResponse, jsonPathConf);
+    String updateFeaturesResponse = invokeLambda(mfe.serialize());
+    FeatureCollection fcUp = XyzSerializable.deserialize(updateFeaturesResponse);
+    assertEquals(2, fcUp.getUpdated().size());
+    assertNull(fcUp.getInserted());
+    assertNull(fcUp.getDeleted());
+    assertNull(fcUp.getFailed());
+
+
+
+    List<Feature> oldFeatures = fcUp.getOldFeatures();
     if (includeOldStates) {
       assertNotNull("'oldFeatures' element in ModifyFeaturesResponse is missing", oldFeatures);
       assertTrue("'oldFeatures' element in ModifyFeaturesResponse is empty", oldFeatures.size() > 0);
-      assertEquals(oldFeatures, originalFeatures);
+
+      List<String> oids = oldFeatures.stream().map(Feature::getId).filter(Objects::nonNull).toList();
+      assertTrue(ids.containsAll(oids));
     } else if (oldFeatures != null) {
       assertEquals("unexpected oldFeatures in ModifyFeaturesResponse", 0, oldFeatures.size());
     }
 
     // =========== DELETE ==========
-    final DocumentContext modifyFeaturesEventDoc = getEventFromResource("/events/InsertFeaturesEvent.json");
-    modifyFeaturesEventDoc.put("$", "params", Collections.singletonMap("includeOldStates", includeOldStates));
-    modifyFeaturesEventDoc.delete("$.insertFeatures");
-
     Map<String, String> idsMap = new HashMap<>();
     ids.forEach(id -> idsMap.put(id, null));
-    modifyFeaturesEventDoc.put("$", "deleteFeatures", idsMap);
 
-    String deleteEvent = modifyFeaturesEventDoc.jsonString();
-    String deleteResponse = invokeLambda(deleteEvent);
-    assertNoErrorInResponse(deleteResponse);
-    oldFeatures = jsonPathOldFeatures.read(deleteResponse, jsonPathConf);
+    mfe = new ModifyFeaturesEvent()
+            .withSpace("foo")
+            .withParams(connectorParams)
+            .withDeleteFeatures(idsMap);
+
+    String deleteResponse = invokeLambda(mfe.serialize());
+    FeatureCollection dfc = XyzSerializable.deserialize(deleteResponse);
+    oldFeatures = dfc.getOldFeatures();
+
     if (includeOldStates) {
       assertNotNull("'oldFeatures' element in ModifyFeaturesResponse is missing", oldFeatures);
       assertTrue("'oldFeatures' element in ModifyFeaturesResponse is empty", oldFeatures.size() > 0);
-      assertEquals(oldFeatures, features);
+      List<String> oids = oldFeatures.stream().map(Feature::getId).filter(Objects::nonNull).toList();
+      assertTrue(ids.containsAll(oids));
     } else if (oldFeatures != null) {
       assertEquals("unexpected oldFeatures in ModifyFeaturesResponse", 0, oldFeatures.size());
     }
 
     logger.info("Modify features tested successfully");
-  }
-
-  static final Configuration jsonPathConf = Configuration.defaultConfiguration().addOptions(Option.SUPPRESS_EXCEPTIONS);
-
-  void assertNoErrorInResponse(String response) {
-    assertNull(JsonPath.compile("$.error").read(response, jsonPathConf));
   }
 
   void assertReadFeatures(String space, boolean checkGuid, List<Feature> requestFeatures, List<Feature> responseFeatures) {
@@ -327,7 +320,7 @@ public abstract class PSQLAbstractIT {
     }
   }
 
-  void assertRead(String insertRequest, String response, boolean checkGuid) throws Exception {
+  FeatureCollection assertRead(String insertRequest, String response, boolean checkGuid) throws Exception {
     final FeatureCollection responseCollection = XyzSerializable.deserialize(response);
     final List<Feature> responseFeatures = responseCollection.getFeatures();
 
@@ -339,6 +332,7 @@ public abstract class PSQLAbstractIT {
 
     modifiedFeatures = gsModifyFeaturesEvent.getUpsertFeatures();
     assertReadFeatures(gsModifyFeaturesEvent.getSpace(), checkGuid, modifiedFeatures, responseFeatures);
+    return responseCollection;
   }
 
   void assertUpdate(String updateRequest, String response, boolean checkGuid) throws Exception {
@@ -364,22 +358,6 @@ public abstract class PSQLAbstractIT {
         assertNull("Check uuid", actualFeature.getProperties().getXyzNamespace().getUuid());
       }
     }
-  }
-
-  void assertCount(String insertRequest, String countResponse) {
-    if (!JsonPath.<Boolean>read(countResponse, "$.estimated")) {
-      assertEquals("Check inserted feature count vs fetched count", JsonPath.read(insertRequest, "$.insertFeatures.length()").toString(),
-          JsonPath.read(countResponse, "$.count").toString());
-    }
-  }
-
-  void assertDeleteSpaceResponse(String deleteResponse) {
-    assertEquals("Check delete space", JsonPath.read(deleteResponse, "$.status").toString(), "OK");
-  }
-
-  DocumentContext getEventFromResource(String file) {
-    InputStream inputStream = GSContext.class.getResourceAsStream(file);
-    return JsonPath.parse(inputStream);
   }
 
   static String invokeLambdaFromFile(String file) throws Exception {

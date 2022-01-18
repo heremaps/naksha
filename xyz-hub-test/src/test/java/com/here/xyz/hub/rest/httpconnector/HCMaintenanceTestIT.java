@@ -32,7 +32,7 @@ import org.junit.*;
 import java.util.HashMap;
 
 import static com.here.xyz.hub.rest.Api.HeaderValues.APPLICATION_JSON;
-import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.RestAssured.given;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.Matchers.equalTo;
@@ -145,7 +145,7 @@ public class HCMaintenanceTestIT {
                 .then()
                 .statusCode(OK.code())
                 .body("initialized", equalTo(true))
-                .body("extensions.size", greaterThan(1))
+                .body("extensions.size()", greaterThan(1))
                 .body("extensions", hasItem("postgis"))
                 .body("scriptVersions.h3", greaterThan(1))
                 .body("scriptVersions.ext", greaterThan(1));
@@ -195,7 +195,7 @@ public class HCMaintenanceTestIT {
                 .then()
                 .statusCode(OK.code())
                 .body("maintenanceStatus.AUTO_INDEXING.maintainedAt", greaterThan(curTime))
-                .body("maintenanceStatus.AUTO_INDEXING.maintenanceRunning.size", equalTo(0));
+                .body("maintenanceStatus.AUTO_INDEXING.maintenanceRunning.size()", equalTo(0));
     }
 
     @Test
@@ -229,7 +229,7 @@ public class HCMaintenanceTestIT {
                 .then()
                 .statusCode(OK.code())
                 .body("initialized", equalTo(true))
-                .body("extensions.size", greaterThan(1))
+                .body("extensions.size()", greaterThan(1))
                 .body("extensions", hasItem("postgis"))
                 .body("scriptVersions.h3", greaterThan(1))
                 .body("scriptVersions.ext", greaterThan(1));
@@ -280,7 +280,7 @@ public class HCMaintenanceTestIT {
                 .then()
                 .statusCode(OK.code())
                 .body("idxCreationFinished", equalTo(true))
-                .body("idxAvailable.size", equalTo(8))
+                .body("idxAvailable.size()", equalTo(8))
                 .body("idxManual.searchableProperties.foo", equalTo(true))
                 .body("idxManual.sortableProperties", nullValue());
     }

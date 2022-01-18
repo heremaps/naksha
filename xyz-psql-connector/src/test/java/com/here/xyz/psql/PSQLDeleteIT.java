@@ -19,17 +19,16 @@
 package com.here.xyz.psql;
 
 import com.amazonaws.util.IOUtils;
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
+import com.here.xyz.XyzSerializable;
+import com.here.xyz.events.*;
+import com.here.xyz.models.geojson.implementation.Feature;
+import com.here.xyz.models.geojson.implementation.FeatureCollection;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
@@ -52,24 +51,20 @@ public class PSQLDeleteIT extends PSQLAbstractIT {
         String insertResponse = invokeLambdaFromFile(insertJsonFile);
         logger.info("RAW RESPONSE: " + insertResponse);
 
-        String insertRequest = IOUtils.toString(GSContext.class.getResourceAsStream(insertJsonFile));
-        assertRead(insertRequest, insertResponse, false);
-
-        final JsonPath jsonPathFeatureIds = JsonPath.compile("$.features..id");
-        List<String> ids = jsonPathFeatureIds.read(insertResponse, jsonPathConf);
-        logger.info("Preparation: Inserted features {}", ids);
+        FeatureCollection fc = XyzSerializable.deserialize(insertResponse);
+        List<String> ids = fc.getFeatures().stream().map(Feature::getId).filter(Objects::nonNull).toList();
 
         // =========== DELETE ==========
-        final DocumentContext modifyFeaturesEventDoc = getEventFromResource("/events/InsertFeaturesEvent.json");
-        modifyFeaturesEventDoc.delete("$.insertFeatures");
-
         Map<String, String> idsMap = new HashMap<>();
         ids.forEach(id -> idsMap.put(id, null));
-        modifyFeaturesEventDoc.put("$", "deleteFeatures", idsMap);
 
-        String deleteEvent = modifyFeaturesEventDoc.jsonString();
-        String deleteResponse = invokeLambda(deleteEvent);
-        assertNoErrorInResponse(deleteResponse);
+        ModifyFeaturesEvent mfe = new ModifyFeaturesEvent().withSpace("foo").withDeleteFeatures(idsMap).withConnectorParams(defaultTestConnectorParams);
+        String deleteResponse = invokeLambda(mfe.serialize());
+        fc = XyzSerializable.deserialize(deleteResponse);
+
+        assertEquals(2,fc.getDeleted().size());
+        assertTrue(fc.getDeleted().containsAll(ids));
+
         logger.info("Modify features tested successfully");
     }
 
@@ -89,50 +84,49 @@ public class PSQLDeleteIT extends PSQLAbstractIT {
         String insertResponse = invokeLambdaFromFile(insertJsonFile);
         logger.info("RAW RESPONSE: " + insertResponse);
         String insertRequest = IOUtils.toString(GSContext.class.getResourceAsStream(insertJsonFile));
-        assertRead(insertRequest, insertResponse, false);
+
+        FeatureCollection fc = assertRead(insertRequest, insertResponse, false);
         logger.info("Preparation: Insert features");
 
         // =========== COUNT ==========
-        String countResponse = invokeLambdaFromFile("/events/CountFeaturesEvent.json");
-        Integer originalCount = JsonPath.read(countResponse, "$.count");
+        int originalCount = fc.getFeatures().size();
         logger.info("Preparation: feature count = {}", originalCount);
 
         // =========== DELETE SOME TAGGED FEATURES ==========
         logger.info("Delete tagged features");
-        final DocumentContext deleteByTagEventDoc = getEventFromResource("/events/DeleteFeaturesByTagEvent.json");
-        deleteByTagEventDoc.put("$", "params", Collections.singletonMap("includeOldStates", includeOldStates));
-        String[][] tags = {{"yellow"}};
-        deleteByTagEventDoc.put("$", "tags", tags);
-        String deleteByTagEvent = deleteByTagEventDoc.jsonString();
-        String deleteByTagResponse = invokeLambda(deleteByTagEvent);
-        assertNoErrorInResponse(deleteByTagResponse);
-        final JsonPath jsonPathFeatures = JsonPath.compile("$.features");
-        @SuppressWarnings("rawtypes") List features = jsonPathFeatures.read(deleteByTagResponse, jsonPathConf);
+        Map<String, Object> params = new HashMap<>() {{put("includeOldStates", includeOldStates);}};
+
+        DeleteFeaturesByTagEvent dfbt = new DeleteFeaturesByTagEvent()
+                .withSpace("foo")
+                .withConnectorParams(defaultTestConnectorParams)
+                .withParams(params)
+                .withTags(TagsQuery.fromQueryParameter(new String[]{"yellow"}));
+        String deleteByTagResponse = invokeLambda(dfbt.serialize());
+        fc = XyzSerializable.deserialize(deleteByTagResponse);
+
         if (includeOldStates) {
-            assertNotNull("'features' element in DeleteByTagResponse is missing", features);
-            assertTrue("'features' element in DeleteByTagResponse is empty", features.size() > 0);
-        } else if (features != null) {
-            assertEquals("unexpected features in DeleteByTagResponse", 0, features.size());
+            assertNotNull("'features' element in DeleteByTagResponse is missing", fc.getFeatures());
+            assertTrue("'features' element in DeleteByTagResponse is empty", fc.getFeatures().size() > 0);
+        } else{
+            assertEquals(Long.valueOf(1), fc.getCount());
+            assertEquals("unexpected features in DeleteByTagResponse", 0, fc.getFeatures().size());
         }
 
-        countResponse = invokeLambdaFromFile("/events/CountFeaturesEvent.json");
-        Integer count = JsonPath.read(countResponse, "$.count");
-        assertTrue(originalCount > count);
+        Event sff = new SearchForFeaturesEvent().withSpace("foo").withConnectorParams(defaultTestConnectorParams);
+        String sffResponse = invokeLambda(sff.serialize());
+        fc = XyzSerializable.deserialize(sffResponse);
+
+        assertTrue(originalCount > fc.getFeatures().size());
         logger.info("Delete tagged features tested successfully");
 
         // =========== DELETE ALL FEATURES ==========
-        deleteByTagEventDoc.put("$", "tags", null);
-        String deleteAllEvent = deleteByTagEventDoc.jsonString();
-        String deleteAllResponse = invokeLambda(deleteAllEvent);
-        assertNoErrorInResponse(deleteAllResponse);
-        features = jsonPathFeatures.read(deleteAllResponse, jsonPathConf);
-        if (features != null) {
-            assertEquals("unexpected features in DeleteByTagResponse", 0, features.size());
-        }
+        dfbt.setTags(null);
+        invokeLambda(dfbt.serialize());
 
-        countResponse = invokeLambdaFromFile("/events/CountFeaturesEvent.json");
-        count = JsonPath.read(countResponse, "$.count");
-        assertEquals(0, count.intValue());
+        sffResponse = invokeLambda(sff.serialize());
+        fc = XyzSerializable.deserialize(sffResponse);
+
+        assertEquals(0, fc.getFeatures().size());
         logger.info("Delete all features tested successfully");
     }
 }

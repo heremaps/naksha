@@ -24,7 +24,8 @@ import com.here.xyz.XyzSerializable;
 import com.here.xyz.events.ModifyFeaturesEvent;
 import com.here.xyz.models.geojson.implementation.Feature;
 import com.here.xyz.models.geojson.implementation.FeatureCollection;
-import com.jayway.jsonpath.JsonPath;
+import com.here.xyz.responses.CountResponse;
+import io.restassured.path.json.JsonPath;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -49,7 +50,8 @@ public class PSQLWriteIT extends PSQLAbstractIT {
     @Test
     public void testTableCreated() throws Exception {
         String response = invokeLambdaFromFile("/events/TestCreateTable.json");
-        assertEquals("Check response status", JsonPath.read(response, "$.type").toString(), "FeatureCollection");
+        JsonPath jsonPathEvaluator = JsonPath.from(response);
+        assertEquals("Check response status", jsonPathEvaluator.get("type").toString(), "FeatureCollection");
     }
 
     @Test
@@ -154,12 +156,15 @@ public class PSQLWriteIT extends PSQLAbstractIT {
         String insertResponse = invokeLambdaFromFile(insertJsonFile);
         logger.info("RAW RESPONSE: " + insertResponse);
         String insertRequest = IOUtils.toString(GSContext.class.getResourceAsStream(insertJsonFile));
-        assertRead(insertRequest, insertResponse, false);
+
+        FeatureCollection fc = assertRead(insertRequest, insertResponse, false);
         logger.info("Insert feature tested successfully");
 
         // =========== COUNT ==========
         String countResponse = invokeLambdaFromFile("/events/CountFeaturesEvent.json");
-        assertCount(insertRequest, countResponse);
+        CountResponse cr = XyzSerializable.deserialize(countResponse);
+
+        assertEquals(Long.valueOf(fc.getFeatures().size()), cr.getCount());
         logger.info("Count feature tested successfully");
 
         // =========== SEARCH ==========
