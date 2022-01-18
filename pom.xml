@@ -84,18 +84,55 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- Java version -->
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
 
     <!-- Dependencies versions -->
-    <aws-sdk-version>1.12.128</aws-sdk-version>
+<!--    <aws-sdk-version>1.12.128</aws-sdk-version>-->
+<!--    <vertx-version>4.1.7</vertx-version>-->
+<!--    <geo-tools-version>19.1</geo-tools-version>-->
+<!--    <jts-version>1.14.0</jts-version>-->
+<!--    <jackson-version>2.13.0</jackson-version>-->
+<!--    <lambda-core-version>1.2.1</lambda-core-version>-->
+<!--    <log4j-version>2.17.1</log4j-version>-->
+<!--    <aws-log4j-version>1.5.1</aws-log4j-version>-->
+<!--    <junit-version>1.13.2</junit-version>-->
+    <!-- Vertx -->
     <vertx-version>4.1.7</vertx-version>
-    <geo-tools-version>19.1</geo-tools-version>
-    <jts-version>1.14.0</jts-version>
+    <!-- Netty native transport -->
+    <netty-version>4.1.30.Final</netty-version>
+    <!-- JSON libraries -->
     <jackson-version>2.13.0</jackson-version>
+    <!-- FlatBuffers -->
+    <flatbuffers-java-version>2.0.3</flatbuffers-java-version>
+    <!-- AWS SDKs -->
+    <aws-sns-version>2.15.41</aws-sns-version>
+    <aws-sdk-version>1.12.128</aws-sdk-version>
+    <!-- AWS Lambda Core -->
     <lambda-core-version>1.2.1</lambda-core-version>
+    <!-- Util -->
+    <guava-version>31.0.1-jre</guava-version>
+    <commons-lang3-version>3.12.0</commons-lang3-version>
+    <!-- Cache -->
+    <expiringmap-version>0.5.10</expiringmap-version>
+    <ohc-core-version>0.7.0</ohc-core-version>
+    <!--  Geo -->
+    <jts-version>1.14.0</jts-version>
+    <geo-tools-version>19.1</geo-tools-version>
+    <!-- Logging -->
     <log4j-version>2.17.1</log4j-version>
     <aws-log4j-version>1.5.1</aws-log4j-version>
+    <disruptor-version>3.4.4</disruptor-version>
+    <!-- Test -->
+    <junit-version>4.13.2</junit-version>
+    <rest-assured-version>4.2.0</rest-assured-version>
+    <assertj-core-version>3.21.0</assertj-core-version>
+    <awaitility-version>4.1.1</awaitility-version>
+    <!-- Database libraries -->
+    <postgresql-version>42.3.1</postgresql-version>
+    <commons-dbutils-version>1.7</commons-dbutils-version>
+    <mchange-commons-java-version>0.2.20</mchange-commons-java-version>
+    <c3p0-version>0.9.5.5</c3p0-version>
   </properties>
 
   <!-- Release settings -->
@@ -142,36 +179,44 @@
         <!-- Plugin versions -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.15</version>
+          <version>3.0.0-M5</version>
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.1</version>
+          <version>3.0.0-M5</version>
         </plugin>
         <plugin>
           <artifactId>maven-source-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.2.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.8.0</version>
+          <configuration>
+            <release>17</release>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.8.1</version>
+          <version>3.9.0</version>
         </plugin>
         <plugin>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.1.1</version>
+          <version>3.3.1</version>
         </plugin>
         <plugin>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.3.0-SNAPSHOT</version>
         </plugin>
         <plugin>
           <artifactId>maven-release-plugin</artifactId>
-          <version>2.5.3</version>
+          <version>3.0.0-M5</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
-          <version>1.6.0</version>
+          <version>3.0.0</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -188,6 +233,14 @@
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <tagNameFormat>@{project.version}</tagNameFormat>
           <releaseProfiles>release</releaseProfiles>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>17</source>
+          <target>17</target>
         </configuration>
       </plugin>
     </plugins>
@@ -269,13 +322,13 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-kqueue</artifactId>
-        <version>4.1.30.Final</version>
+        <version>${netty-version}</version>
         <classifier>osx-x86_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
-        <version>4.1.30.Final</version>
+        <version>${netty-version}</version>
         <classifier>linux-x86_64</classifier>
       </dependency>
 
@@ -301,7 +354,7 @@
       <dependency>
         <groupId>com.google.flatbuffers</groupId>
         <artifactId>flatbuffers-java</artifactId>
-        <version>2.0.3</version>
+        <version>${flatbuffers-java-version}</version>
       </dependency>
 
       <!-- AWS SDKs -->
@@ -357,7 +410,7 @@
       <dependency>
         <groupId>software.amazon.awssdk</groupId>
         <artifactId>sns</artifactId>
-        <version>2.15.41</version>
+        <version>${aws-sns-version}</version>
       </dependency>
       <dependency>
         <groupId>com.amazonaws</groupId>
@@ -386,24 +439,24 @@
       <dependency>
         <artifactId>guava</artifactId>
         <groupId>com.google.guava</groupId>
-        <version>31.0.1-jre</version>
+        <version>${guava-version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
-        <version>3.12.0</version>
+        <version>${commons-lang3-version}</version>
       </dependency>
 
       <!-- Cache -->
       <dependency>
         <artifactId>expiringmap</artifactId>
         <groupId>net.jodah</groupId>
-        <version>0.5.10</version>
+        <version>${expiringmap-version}</version>
       </dependency>
       <dependency>
         <groupId>org.caffinitas.ohc</groupId>
         <artifactId>ohc-core</artifactId>
-        <version>0.7.0</version>
+        <version>${ohc-core-version}</version>
       </dependency>
 
       <!--  Geo -->
@@ -462,7 +515,7 @@
       <dependency>
         <artifactId>disruptor</artifactId>
         <groupId>com.lmax</groupId>
-        <version>3.4.4</version>
+        <version>${disruptor-version}</version>
       </dependency>
 
       <!-- Testing -->
@@ -470,19 +523,19 @@
         <artifactId>junit</artifactId>
         <groupId>junit</groupId>
         <scope>test</scope>
-        <version>4.13.2</version>
+        <version>${junit-version}</version>
       </dependency>
       <dependency>
-        <groupId>com.jayway.jsonpath</groupId>
+        <groupId>io.rest-assured</groupId>
         <artifactId>json-path</artifactId>
-        <version>2.4.0</version>
+        <version>${rest-assured-version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>io.rest-assured</groupId>
         <artifactId>rest-assured</artifactId>
-        <groupId>com.jayway.restassured</groupId>
+        <version>${rest-assured-version}</version>
         <scope>test</scope>
-        <version>2.9.0</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
@@ -494,35 +547,35 @@
         <artifactId>assertj-core</artifactId>
         <groupId>org.assertj</groupId>
         <scope>test</scope>
-        <version>3.21.0</version>
+        <version>${assertj-core-version}</version>
       </dependency>
       <dependency>
         <artifactId>awaitility</artifactId>
         <groupId>org.awaitility</groupId>
         <scope>test</scope>
-        <version>4.1.1</version>
+        <version>${awaitility-version}</version>
       </dependency>
 
       <!-- Database libraries -->
       <dependency>
         <groupId>org.postgresql</groupId>
         <artifactId>postgresql</artifactId>
-        <version>42.3.1</version>
+        <version>${postgresql-version}</version>
       </dependency>
       <dependency>
         <groupId>commons-dbutils</groupId>
         <artifactId>commons-dbutils</artifactId>
-        <version>1.7</version>
+        <version>${commons-dbutils-version}</version>
       </dependency>
       <dependency>
         <groupId>com.mchange</groupId>
         <artifactId>mchange-commons-java</artifactId>
-        <version>0.2.20</version>
+        <version>${mchange-commons-java-version}</version>
       </dependency>
       <dependency>
         <groupId>com.mchange</groupId>
         <artifactId>c3p0</artifactId>
-        <version>0.9.5.5</version>
+        <version>${c3p0-version}</version>
       </dependency>
 
     </dependencies>
@@ -550,5 +603,13 @@
     </repository>
 
   </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>maven-snapshots</id>
+      <url>https://repository.apache.org/content/repositories/snapshots/</url>
+    </pluginRepository>
+
+  </pluginRepositories>
 
 </project>
