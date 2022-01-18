@@ -88,34 +88,25 @@
     <maven.compiler.target>17</maven.compiler.target>
 
     <!-- Dependencies versions -->
-<!--    <aws-sdk-version>1.12.128</aws-sdk-version>-->
-<!--    <vertx-version>4.1.7</vertx-version>-->
-<!--    <geo-tools-version>19.1</geo-tools-version>-->
-<!--    <jts-version>1.14.0</jts-version>-->
-<!--    <jackson-version>2.13.0</jackson-version>-->
-<!--    <lambda-core-version>1.2.1</lambda-core-version>-->
-<!--    <log4j-version>2.17.1</log4j-version>-->
-<!--    <aws-log4j-version>1.5.1</aws-log4j-version>-->
-<!--    <junit-version>1.13.2</junit-version>-->
     <!-- Vertx -->
-    <vertx-version>4.1.7</vertx-version>
+    <vertx-version>4.1.8</vertx-version>
     <!-- Netty native transport -->
-    <netty-version>4.1.30.Final</netty-version>
+    <netty-version>4.1.73.Final</netty-version>
     <!-- JSON libraries -->
-    <jackson-version>2.13.0</jackson-version>
+    <jackson-version>2.13.1</jackson-version>
     <!-- FlatBuffers -->
     <flatbuffers-java-version>2.0.3</flatbuffers-java-version>
     <!-- AWS SDKs -->
-    <aws-sns-version>2.15.41</aws-sns-version>
-    <aws-sdk-version>1.12.128</aws-sdk-version>
+    <aws-sns-version>2.17.112</aws-sns-version>
+    <aws-sdk-version>1.12.141</aws-sdk-version>
     <!-- AWS Lambda Core -->
-    <lambda-core-version>1.2.1</lambda-core-version>
+    <aws-lambda-core-version>1.2.1</aws-lambda-core-version>
     <!-- Util -->
     <guava-version>31.0.1-jre</guava-version>
     <commons-lang3-version>3.12.0</commons-lang3-version>
     <!-- Cache -->
     <expiringmap-version>0.5.10</expiringmap-version>
-    <ohc-core-version>0.7.0</ohc-core-version>
+    <ohc-core-version>0.7.4</ohc-core-version>
     <!--  Geo -->
     <jts-version>1.14.0</jts-version>
     <geo-tools-version>19.1</geo-tools-version>
@@ -125,8 +116,8 @@
     <disruptor-version>3.4.4</disruptor-version>
     <!-- Test -->
     <junit-version>4.13.2</junit-version>
-    <rest-assured-version>4.2.0</rest-assured-version>
-    <assertj-core-version>3.21.0</assertj-core-version>
+    <rest-assured-version>3.3.0</rest-assured-version>
+    <assertj-core-version>3.22.0</assertj-core-version>
     <awaitility-version>4.1.1</awaitility-version>
     <!-- Database libraries -->
     <postgresql-version>42.3.1</postgresql-version>
@@ -427,7 +418,7 @@
       <dependency>
         <groupId>com.amazonaws</groupId>
         <artifactId>aws-lambda-java-core</artifactId>
-        <version>${lambda-core-version}</version>
+        <version>${aws-lambda-core-version}</version>
       </dependency>
       <dependency>
         <groupId>com.amazonaws</groupId>

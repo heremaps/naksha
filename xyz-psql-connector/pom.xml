@@ -45,8 +45,8 @@
 
   <properties>
     <skipTests>true</skipTests>
-    <tink-version>1.5.0</tink-version>
-    <protobuf-java-version>3.16.1</protobuf-java-version>
+    <tink-version>1.6.1</tink-version>
+    <protobuf-java-version>3.19.3</protobuf-java-version>
   </properties>
 
   <!-- Release settings -->
@@ -266,6 +266,12 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-kms</artifactId>
+      <exclusions>
+        <exclusion>
+          <artifactId>aws-java-sdk-core</artifactId>
+          <groupId>com.amazonaws</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -286,6 +292,12 @@
       <groupId>com.google.crypto.tink</groupId>
       <artifactId>tink</artifactId>
       <version>${tink-version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -299,7 +311,11 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20211205</version>
+    </dependency>
     <dependency>
       <groupId>io.rest-assured</groupId>
       <artifactId>json-path</artifactId>

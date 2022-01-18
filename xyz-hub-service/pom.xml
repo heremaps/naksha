@@ -46,6 +46,7 @@
     <startHub>false</startHub>
     <pathToConfig>deployment/local/config.json</pathToConfig>
     <dockerComposeFile>docker-compose.yml</dockerComposeFile>
+    <mapbox-vector-tile-version>2.0.0</mapbox-vector-tile-version>
   </properties>
 
   <build>
@@ -258,6 +259,20 @@
     <!-- AWS SDK -->
     <dependency>
       <artifactId>aws-java-sdk-s3</artifactId>
+      <exclusions>
+        <exclusion>
+          <artifactId>commons-codec</artifactId>
+          <groupId>commons-codec</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>commons-logging</artifactId>
+          <groupId>commons-logging</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>httpcore</artifactId>
+          <groupId>org.apache.httpcomponents</groupId>
+        </exclusion>
+      </exclusions>
       <groupId>com.amazonaws</groupId>
     </dependency>
     <dependency>
@@ -341,7 +356,13 @@
     <dependency>
       <artifactId>mapbox-vector-tile</artifactId>
       <groupId>com.wdtinc</groupId>
-      <version>2.0.0</version>
+      <version>${mapbox-vector-tile-version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- Test -->
