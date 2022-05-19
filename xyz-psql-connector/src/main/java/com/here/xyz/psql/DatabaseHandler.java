@@ -97,10 +97,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import javax.sql.DataSource;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
@@ -160,6 +162,8 @@ public abstract class DatabaseHandler extends StorageConnector {
      * The dbMaintainer for the current event.
      */
     protected DatabaseMaintainer dbMaintainer;
+
+    private Map<String, String> replacements = new HashMap<>();
 
     private boolean retryAttempted;
 
@@ -241,7 +245,7 @@ public abstract class DatabaseHandler extends StorageConnector {
     }
 
     @Override
-    protected synchronized void initialize(Event event) {
+    protected synchronized void initialize(@Nonnull Event<?> event) {
         this.event = event;
         this.config= new PSQLConfig(event, context, traceItem);
         String connectorId = traceItem.getConnectorId();
