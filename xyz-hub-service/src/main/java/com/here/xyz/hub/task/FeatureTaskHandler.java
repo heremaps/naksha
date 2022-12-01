@@ -962,39 +962,39 @@ public class FeatureTaskHandler {
   }
 
   static <X extends FeatureTask> void throttle(final X task, final Callback<X> callback) {
-    Connector storage = task.storage;
-    final long GLOBAL_INFLIGHT_REQUEST_MEMORY_SIZE = (long) Service.configuration.GLOBAL_INFLIGHT_REQUEST_MEMORY_SIZE_MB * 1024 * 1024;
-    float usedMemoryPercent = Service.getUsedMemoryPercent() / 100f;
-    try {
-      //When ZGC is in use, only throttle requests if the service memory filled up over the specified service memory threshold
-      if (Service.IS_USING_ZGC) {
-        if (usedMemoryPercent > Service.configuration.SERVICE_MEMORY_HIGH_UTILIZATION_THRESHOLD) {
-          AbstractHttpServerVerticle.addStreamInfo(task.context, "THR", "M"); //Reason for throttling is memory
-          throw new HttpException(TOO_MANY_REQUESTS, "Too many requests for the service node.");
-        }
-      }
-      //For other GCs, only throttle requests if the request memory filled up over the specified request memory threshold
-      else if (globalInflightRequestMemory.sum() >
-          GLOBAL_INFLIGHT_REQUEST_MEMORY_SIZE * Service.configuration.GLOBAL_INFLIGHT_REQUEST_MEMORY_HIGH_UTILIZATION_THRESHOLD) {
-        LongAdder storageInflightRequestMemory = inflightRequestMemory.get(storage.id);
-        long storageInflightRequestMemorySum = 0;
-        if (storageInflightRequestMemory == null || (storageInflightRequestMemorySum = storageInflightRequestMemory.sum()) == 0) {
-          callback.call(task); //Nothing to throttle for that storage
-          return;
-        }
-
-        RpcClient rpcClient = getRpcClient(storage);
-        if (storageInflightRequestMemorySum > rpcClient.getFunctionClient().getPriority() * GLOBAL_INFLIGHT_REQUEST_MEMORY_SIZE) {
-          AbstractHttpServerVerticle.addStreamInfo(task.context, "THR", "M"); //Reason for throttling is memory
-          throw new HttpException(TOO_MANY_REQUESTS, "Too many requests for the storage.");
-        }
-      }
-    }
-    catch (HttpException e) {
-      logger.warn(task.getMarker(), e.getMessage(), e);
-      callback.exception(e);
-      return;
-    }
+//    Connector storage = task.storage;
+//    final long GLOBAL_INFLIGHT_REQUEST_MEMORY_SIZE = (long) Service.configuration.GLOBAL_INFLIGHT_REQUEST_MEMORY_SIZE_MB * 1024 * 1024;
+//    float usedMemoryPercent = Service.getUsedMemoryPercent() / 100f;
+//    try {
+//      //When ZGC is in use, only throttle requests if the service memory filled up over the specified service memory threshold
+//      if (Service.IS_USING_ZGC) {
+//        if (usedMemoryPercent > Service.configuration.SERVICE_MEMORY_HIGH_UTILIZATION_THRESHOLD) {
+//          AbstractHttpServerVerticle.addStreamInfo(task.context, "THR", "M"); //Reason for throttling is memory
+//          throw new HttpException(TOO_MANY_REQUESTS, "Too many requests for the service node.");
+//        }
+//      }
+//      //For other GCs, only throttle requests if the request memory filled up over the specified request memory threshold
+//      else if (globalInflightRequestMemory.sum() >
+//          GLOBAL_INFLIGHT_REQUEST_MEMORY_SIZE * Service.configuration.GLOBAL_INFLIGHT_REQUEST_MEMORY_HIGH_UTILIZATION_THRESHOLD) {
+//        LongAdder storageInflightRequestMemory = inflightRequestMemory.get(storage.id);
+//        long storageInflightRequestMemorySum = 0;
+//        if (storageInflightRequestMemory == null || (storageInflightRequestMemorySum = storageInflightRequestMemory.sum()) == 0) {
+//          callback.call(task); //Nothing to throttle for that storage
+//          return;
+//        }
+//
+//        RpcClient rpcClient = getRpcClient(storage);
+//        if (storageInflightRequestMemorySum > rpcClient.getFunctionClient().getPriority() * GLOBAL_INFLIGHT_REQUEST_MEMORY_SIZE) {
+//          AbstractHttpServerVerticle.addStreamInfo(task.context, "THR", "M"); //Reason for throttling is memory
+//          throw new HttpException(TOO_MANY_REQUESTS, "Too many requests for the storage.");
+//        }
+//      }
+//    }
+//    catch (HttpException e) {
+//      logger.warn(task.getMarker(), e.getMessage(), e);
+//      callback.exception(e);
+//      return;
+//    }
     callback.call(task);
   }
 
