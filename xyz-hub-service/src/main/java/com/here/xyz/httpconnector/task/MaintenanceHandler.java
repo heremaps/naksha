@@ -19,6 +19,7 @@
 
 package com.here.xyz.httpconnector.task;
 
+import com.here.xyz.httpconnector.config.MaintenanceClient;
 import com.here.xyz.hub.Core;
 import com.here.xyz.httpconnector.CService;
 import com.here.xyz.hub.rest.HttpException;
@@ -32,23 +33,23 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import javax.naming.NoPermissionException;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 
 public class MaintenanceHandler {
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LoggerFactory.getLogger(MaintenanceHandler.class);
 
   public static void getConnectorStatus(String connectorId, String ecps, String passphrase, Handler<AsyncResult<XyzResponse>> handler) {
     ConnectorStatus connectorStatus;
 
     try {
-      connectorStatus = CService.maintenanceClient.getConnectorStatus(connectorId, ecps, passphrase);
+      connectorStatus = MaintenanceClient.get().getConnectorStatus(connectorId, ecps, passphrase);
       if(connectorStatus == null){
         handler.handle(Future.failedFuture(new HttpException(NOT_FOUND, "Cant get status for connector: "+connectorId)));
         return;
@@ -61,13 +62,13 @@ public class MaintenanceHandler {
 
   public static void initializeDatabase(String connectorId, String ecps, String passphrase, boolean force, Handler<AsyncResult<XyzResponse>> handler) {
     try {
-      ConnectorStatus dbStatus = force ? null : CService.maintenanceClient.getConnectorStatus(connectorId, ecps, passphrase);
+      ConnectorStatus dbStatus = force ? null : MaintenanceClient.get().getConnectorStatus(connectorId, ecps, passphrase);
       if(dbStatus != null && dbStatus.isInitialized()) {
         /** Nothing more to do */
         logger.info("Database is already initialized for connector: {}",connectorId);
       } else {
         logger.info("Start database initialization for connector: {} ",connectorId);
-        CService.maintenanceClient.initializeOrUpdateDatabase(connectorId, ecps, passphrase);
+        MaintenanceClient.get().initializeOrUpdateDatabase(connectorId, ecps, passphrase);
       }
       handler.handle(Future.succeededFuture(new SuccessResponse().withStatus("Ok")));
     }catch (Exception e) {
@@ -78,12 +79,12 @@ public class MaintenanceHandler {
   public static void maintainIndices(String connectorId, String ecps, String passphrase, boolean autoIndexing, Handler<AsyncResult<XyzResponse>> handler) {
     try {
       boolean force = false;
-      ConnectorStatus connectorStatus = CService.maintenanceClient.getConnectorStatus(connectorId, ecps, passphrase);
+      ConnectorStatus connectorStatus = MaintenanceClient.get().getConnectorStatus(connectorId, ecps, passphrase);
 
       if(connectorStatus != null && connectorStatus.isInitialized()) {
         if( DatabaseMaintainer.XYZ_EXT_VERSION > connectorStatus.getScriptVersions().get("ext") || DatabaseMaintainer.H3_CORE_VERSION > connectorStatus.getScriptVersions().get("h3") ){
           logger.warn("Database needs an update: {}",connectorId);
-          CService.maintenanceClient.initializeOrUpdateDatabase(connectorId, ecps, passphrase);
+          MaintenanceClient.get().initializeOrUpdateDatabase(connectorId, ecps, passphrase);
         }
 
         if(connectorStatus.getMaintenanceStatus() != null && connectorStatus.getMaintenanceStatus().get(ConnectorStatus.AUTO_INDEXING) !=  null) {
@@ -105,7 +106,7 @@ public class MaintenanceHandler {
         }
 
         logger.info("Start maintain indices for connector: {}", connectorId);
-        CService.maintenanceClient.maintainIndices(connectorId, ecps, passphrase, autoIndexing, force);
+        MaintenanceClient.get().maintainIndices(connectorId, ecps, passphrase, autoIndexing, force);
         handler.handle(Future.succeededFuture(new SuccessResponse().withStatus("Ok")));
       } else {
         logger.warn("Database not initialized for connector: {}",connectorId);
@@ -122,7 +123,7 @@ public class MaintenanceHandler {
     try {
 
       if(!force) {
-        SpaceStatus maintenanceStatusOfSpace = CService.maintenanceClient.getMaintenanceStatusOfSpace(connectorId, ecps, passphrase, spaceId);
+        SpaceStatus maintenanceStatusOfSpace = MaintenanceClient.get().getMaintenanceStatusOfSpace(connectorId, ecps, passphrase, spaceId);
         if (maintenanceStatusOfSpace != null && maintenanceStatusOfSpace.isIdxCreationFinished() != null && !maintenanceStatusOfSpace.isIdxCreationFinished()) {
           logger.warn("Index creation is currently running on {}/{}", spaceId, connectorId);
           handler.handle(Future.failedFuture(new HttpException(CONFLICT, "Index creation is currently running!")));
@@ -130,7 +131,7 @@ public class MaintenanceHandler {
         }
       }
 
-      CService.maintenanceClient.maintainSpace(connectorId, ecps, passphrase, spaceId);
+      MaintenanceClient.get().maintainSpace(connectorId, ecps, passphrase, spaceId);
       /** If the space does not exists we return also OK */
       handler.handle(Future.succeededFuture(new SuccessResponse().withStatus("Ok")));
     }catch (SQLException e){
@@ -149,7 +150,7 @@ public class MaintenanceHandler {
                                    Handler<AsyncResult<XyzResponse>> handler) {
 
     try {
-      CService.maintenanceClient.maintainHistory(connectorId, ecps, passphrase, spaceId, currentVersion, maxVersionCount);
+      MaintenanceClient.get().maintainHistory(connectorId, ecps, passphrase, spaceId, currentVersion, maxVersionCount);
       handler.handle(Future.succeededFuture(new SuccessResponse().withStatus("Ok")));
     }catch (SQLException e){
       if(e.getSQLState() != null && e.getSQLState().equals("42P01")){
@@ -166,7 +167,7 @@ public class MaintenanceHandler {
   public static void getMaintenanceStatusOfSpace(String connectorId, String ecps, String passphrase, String spaceId,
                                                  Handler<AsyncResult<XyzResponse>> handler) {
     try {
-      SpaceStatus maintenanceStatusOfSpace = CService.maintenanceClient.getMaintenanceStatusOfSpace(connectorId, ecps, passphrase, spaceId);
+      SpaceStatus maintenanceStatusOfSpace = MaintenanceClient.get().getMaintenanceStatusOfSpace(connectorId, ecps, passphrase, spaceId);
       if(maintenanceStatusOfSpace == null) {
         handler.handle(Future.failedFuture(new HttpException(NOT_FOUND, "Can not find entry in idx-table: "+spaceId)));
         return;

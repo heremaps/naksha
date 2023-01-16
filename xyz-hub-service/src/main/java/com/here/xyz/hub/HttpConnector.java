@@ -32,11 +32,6 @@ import java.util.concurrent.TimeUnit;
 
 public class HttpConnector extends Core {
 
-  /**
-   * The client to access databases for maintenanceTasks
-   */
-  public static MaintenanceClient maintenanceClient;
-
   private static final Logger logger = LogManager.getLogger();
 
   public static void main(String[] args) {
@@ -48,8 +43,6 @@ public class HttpConnector extends Core {
   }
 
   private static void onConfigLoaded(JsonObject jsonConfig) {
-    maintenanceClient = new MaintenanceClient();
-
     final DeploymentOptions options = new DeploymentOptions()
             .setConfig(jsonConfig)
             .setWorker(false)

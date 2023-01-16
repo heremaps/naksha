@@ -54,30 +54,8 @@ public class EmbeddedFunctionClient extends RemoteFunctionClient {
    */
   private ExecutorService embeddedExecutor;
 
-  private static final AtomicReference<MaintenanceClient> maintenanceClientRef = new AtomicReference<>();
-
   EmbeddedFunctionClient(Connector connectorConfig) {
     super(connectorConfig);
-    MaintenanceClient maintenanceClient = maintenanceClientRef.get();
-    if (maintenanceClient== null) {
-      maintenanceClient = new MaintenanceClient();
-      if (maintenanceClientRef.compareAndSet(null, maintenanceClient)) {
-        final Map<String, Object> params = connectorConfig.params;
-        final Object raw_ecps = params.get("ecps");
-        if (raw_ecps instanceof String) {
-          final String ecps = (String) raw_ecps;
-          final RemoteFunctionConfig raw_remoteFunction = connectorConfig.remoteFunctions.get(Service.configuration.ENVIRONMENT_NAME);
-          if (raw_remoteFunction instanceof RemoteFunctionConfig.Embedded) {
-            final RemoteFunctionConfig.Embedded remoteFunction =(RemoteFunctionConfig.Embedded) raw_remoteFunction;
-            try {
-              maintenanceClient.initializeOrUpdateDatabase(connectorConfig.id, ecps, remoteFunction.env.get("ECPS_PHRASE"));
-            } catch (Exception e) {
-              logger.error(e);
-            }
-          }
-        }
-      }
-    }
   }
 
   @Override

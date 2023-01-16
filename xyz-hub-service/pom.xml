@@ -191,11 +191,11 @@
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-jcl</artifactId>
     </dependency>
+
     <dependency>
       <artifactId>disruptor</artifactId>
       <groupId>com.lmax</groupId>
     </dependency>
-
 
     <!-- Vert.x -->
     <dependency>
@@ -338,6 +338,11 @@
       <artifactId>mapbox-vector-tile</artifactId>
       <groupId>com.wdtinc</groupId>
       <version>2.0.0</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.jetbrains/annotations -->
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
     </dependency>
 
     <!-- Test -->

@@ -42,6 +42,9 @@ import java.util.concurrent.TimeUnit;
  * Vertex deployment of HTTP-Connector.
  */
 public class CService extends Core {
+
+  private CService(){}
+
   public static final String USER_AGENT = "HTTP-Connector/" + BUILD_VERSION;
 
   /**
@@ -52,7 +55,7 @@ public class CService extends Core {
   /**
    * The client to access databases for maintenanceTasks
    */
-  public static MaintenanceClient maintenanceClient;
+  //public static MaintenanceClient maintenanceClient;
 
   /**
    * The client to access job configs
@@ -119,7 +122,7 @@ public class CService extends Core {
       throw new RuntimeException("Configuration-Error - please check service config!",e);
     }
 
-    maintenanceClient = new MaintenanceClient();
+    //maintenanceClient = new MaintenanceClient();
     jobConfigClient = JobConfigClient.getInstance();
 
     jobConfigClient.init(jobConfigReady -> {

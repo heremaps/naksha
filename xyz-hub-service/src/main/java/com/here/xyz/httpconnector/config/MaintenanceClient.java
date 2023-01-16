@@ -49,15 +49,36 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.naming.NoPermissionException;
 import javax.sql.DataSource;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.dbutils.StatementConfiguration;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MaintenanceClient {
+    private MaintenanceClient(){}
+
+    private static final AtomicReference<MaintenanceClient> maintenanceClientRef = new AtomicReference<>();
+
+    /**
+     * Returns the maintenance singleton.
+     * @return the maintenance singleton.
+     */
+    public static @NotNull MaintenanceClient get() {
+        MaintenanceClient client = maintenanceClientRef.get();
+        if (client == null) {
+            client = new MaintenanceClient();
+            if (!maintenanceClientRef.compareAndSet(null, client)) {
+                logger.info("Created MaintenanceClient singleton");
+                client = maintenanceClientRef.get();
+            }
+        }
+        return client;
+    }
 
     private static final Map<String, MaintenanceInstance> dbInstanceMap = new HashMap<>();
     private static final String C3P0EXT_CONFIG_SCHEMA = "config.schema()";
@@ -65,7 +86,7 @@ public class MaintenanceClient {
     private static final String[] extensionList = new String[]{"postgis","postgis_topology","tsm_system_rows","dblink"};
     private static final String[] localScripts = new String[]{"/xyz_ext.sql", "/h3Core.sql"};
 
-    private static final Logger logger = LogManager.getLogger();
+    private static final Logger logger = LoggerFactory.getLogger(MaintenanceClient.class);
 
     public <T> T executeQuery(SQLQuery query, ResultSetHandler<T> handler, DataSource dataSource) throws SQLException {
         final long start = System.currentTimeMillis();
