@@ -44,6 +44,7 @@ public class RestAssuredConfig extends JsonConfigFile<RestAssuredConfig> {
   @EnvName("PSQL_HTTP_CONNECTOR_HOST") // config.json
   @JsonName("PSQL_HTTP_CONNECTOR_HOST") // config.json
   public String connectorHost = "localhost";
+  public String baseURI;
   @EnvName("HTTP_PORT") // config.json and connector-config.json (both must run at different ports, but share an env-var!)
   @JsonName("HTTP_PORT") // config.json
   public int hubPort = 8080;
