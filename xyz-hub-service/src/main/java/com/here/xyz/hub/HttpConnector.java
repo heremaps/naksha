@@ -19,7 +19,8 @@
 
 package com.here.xyz.hub;
 
-import com.here.xyz.hub.config.MaintenanceClient;
+import com.here.xyz.httpconnector.PsqlHttpConnectorVerticle;
+import com.here.xyz.httpconnector.config.MaintenanceClient;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
@@ -54,7 +55,7 @@ public class HttpConnector extends Core {
             .setWorker(false)
             .setInstances(Runtime.getRuntime().availableProcessors() * 2);
 
-    vertx.deployVerticle(PsqlHttpVerticle.class, options, result -> {
+    vertx.deployVerticle(PsqlHttpConnectorVerticle.class, options, result -> {
       if (result.failed()) {
         logger.error("Unable to deploy the verticle.");
         System.exit(1);

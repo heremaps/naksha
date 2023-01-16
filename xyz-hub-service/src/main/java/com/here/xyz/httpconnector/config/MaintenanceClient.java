@@ -28,6 +28,7 @@ import static com.here.xyz.psql.config.DatabaseSettings.PSQL_USER;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.xyz.XyzSerializable;
+import com.here.xyz.httpconnector.PsqlHttpConnectorVerticle;
 import com.here.xyz.hub.Core;
 import com.here.xyz.httpconnector.CService;
 import com.here.xyz.psql.DatabaseMaintainer;
@@ -326,7 +327,7 @@ public class MaintenanceClient {
 
     private ComboPooledDataSource getComboPooledDataSource(DatabaseSettings dbSettings, String applicationName, boolean useReplica) {
         // This will initialize the env-map. Theoretically we should use it, rather than the properties below.
-        PsqlHttpVerticle.getEnvMap();
+        PsqlHttpConnectorVerticle.getEnvMap();
         final ComboPooledDataSource cpds = new ComboPooledDataSource();
 
         cpds.setJdbcUrl("jdbc:postgresql://" + (useReplica ? dbSettings.getReplicaHost() : dbSettings.getHost()) + ":"

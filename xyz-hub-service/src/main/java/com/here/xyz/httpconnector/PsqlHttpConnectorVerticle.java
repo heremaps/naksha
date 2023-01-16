@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 HERE Europe B.V.
+ * Copyright (C) 2017-2022 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,27 +17,41 @@
  * License-Filename: LICENSE
  */
 
-package com.here.xyz.hub;
+package com.here.xyz.httpconnector;
 
-import static io.vertx.core.http.HttpHeaders.CONTENT_LENGTH;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.ByteStreams;
 import com.here.xyz.connectors.AbstractConnectorHandler;
-import com.here.xyz.hub.rest.HttpConnectorApi;
+import com.here.xyz.httpconnector.rest.HttpConnectorApi;
+import com.here.xyz.httpconnector.rest.JobApi;
+import com.here.xyz.httpconnector.rest.JobStatusApi;
+import com.here.xyz.hub.AbstractHttpServerVerticle;
+import com.here.xyz.hub.Service;
+import com.here.xyz.hub.XYZHubRESTVerticle;
 import com.here.xyz.psql.PSQLXyzConnector;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.Router;
-import java.util.HashMap;
-import java.util.Map;
 import io.vertx.ext.web.openapi.RouterBuilder;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class PsqlHttpVerticle extends AbstractHttpServerVerticle {
+import java.util.HashMap;
+import java.util.Map;
+
+import static io.vertx.core.http.HttpHeaders.CONTENT_LENGTH;
+
+/**
+ * Verticle for HTTP-Connector. Includes three API tribes for :
+ * - event Processing
+ * - maintenance Tasks
+ * - job execution
+ */
+
+public class PsqlHttpConnectorVerticle extends AbstractHttpServerVerticle {
 
   private static final Logger logger = LogManager.getLogger();
   private static final ConcurrentHashMap<String, String> envMap = new ConcurrentHashMap<>();
@@ -81,10 +95,15 @@ public class PsqlHttpVerticle extends AbstractHttpServerVerticle {
       if (ar.succeeded()) {
         try {
           final RouterBuilder rb = ar.result();
+          // TODO: Do we really need this here? Others should always call getEnvMap() anyway!
+          // populateEnvMap();
 
           new HttpConnectorApi(rb, connector);
+          new JobApi(rb);
 
           final Router router = rb.createRouter();
+
+          new JobStatusApi(router);
 
           //OpenAPI resources
           router.route("/psql/static/openapi/*").handler(createCorsHandler()).handler((routingContext -> {
@@ -153,7 +172,18 @@ public class PsqlHttpVerticle extends AbstractHttpServerVerticle {
           (envMap.get("MAX_CONCURRENT_MAINTENANCE_TASKS") == null ? "1" : envMap.get("MAX_CONCURRENT_MAINTENANCE_TASKS")));
       MISSING_MAINTENANCE_WARNING_IN_HR = Integer.parseInt(
           (envMap.get("MISSING_MAINTENANCE_WARNING_IN_HR") == null ? "12" : envMap.get("MISSING_MAINTENANCE_WARNING_IN_HR")));
+      // TODO: Review what this does and fix accordingly!
+      // envMap = new ObjectMapper().convertValue(CService.configuration, HashMap.class);
       return envMap;
     }
   }
+
+  // TODO: We should not need an populateEnvMap() and especially not a public one!
+  /*public static synchronized void populateEnvMap(){
+    try {
+      envMap = new ObjectMapper().convertValue(CService.configuration, HashMap.class);
+    }catch (Exception e){
+      logger.error("Cannot populate EnvMap");
+    }
+  }*/
 }
