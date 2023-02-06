@@ -31,6 +31,7 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.HashMap;
 
 import static com.here.xyz.hub.AbstractHttpServerVerticle.STREAM_INFO_CTX_KEY;
+import static com.here.xyz.hub.Service.addStreamInfo;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_IMPLEMENTED;
 
@@ -134,10 +135,6 @@ public class HApiParam extends ApiParam {
                     Query.getString(context, "ecps", null),
                     Query.getString(context, "passphrase", Service.get().config.ECPS_PHRASE)
             };
-        }
-
-        protected static void addStreamInfo(final RoutingContext context, String key, Object value){
-            context.put(STREAM_INFO_CTX_KEY, new HashMap<String, Object>(){{put(key, value);}});
         }
     }
 }

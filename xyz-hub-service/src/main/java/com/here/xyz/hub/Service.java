@@ -19,10 +19,10 @@
 
 package com.here.xyz.hub;
 
+import static com.here.xyz.hub.AbstractHttpServerVerticle.STREAM_INFO_CTX_KEY;
 import static com.here.xyz.util.JsonConfigFile.nullable;
 
 import com.here.xyz.config.ServiceConfig;
-import com.here.xyz.connectors.ErrorResponseException;
 import com.here.xyz.httpconnector.config.AwsCWClient;
 import com.here.xyz.httpconnector.config.JDBCClients;
 import com.here.xyz.httpconnector.config.JDBCImporter;
@@ -38,7 +38,6 @@ import com.here.xyz.hub.connectors.WarmupRemoteFunctionThread;
 import com.here.xyz.hub.rest.admin.MessageBroker;
 import com.here.xyz.hub.rest.admin.messages.RelayedMessage;
 import com.here.xyz.hub.rest.admin.messages.brokers.Broker;
-import com.here.xyz.hub.rest.admin.messages.brokers.NoopBroker;
 import com.here.xyz.hub.util.metrics.GcDurationMetric;
 import com.here.xyz.hub.util.metrics.GlobalInflightRequestMemory;
 import com.here.xyz.hub.util.metrics.GlobalUsedRfcConnections;
@@ -49,6 +48,9 @@ import com.here.xyz.hub.util.metrics.base.MetricPublisher;
 import com.here.xyz.hub.util.metrics.net.ConnectionMetrics;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
+import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.lang.management.GarbageCollectorMXBean;
@@ -63,14 +65,14 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class Service extends Core {
 
@@ -84,7 +86,7 @@ public class Service extends Core {
    * @return the current service instance.
    * @throws IllegalStateException if the service not started.
    */
-  public static @Nonnull Service get() {
+  public static @NotNull Service get() {
     if (singleton == null) {
       throw new IllegalStateException("Service not started");
     }
@@ -98,7 +100,7 @@ public class Service extends Core {
    * @return the booting service.
    * @throws Exception if any error occurred.
    */
-  public synchronized static @Nonnull Service start(final @Nullable VertxOptions vertxOptions) throws Exception {
+  public synchronized static @NotNull Service start(final @Nullable VertxOptions vertxOptions) throws Exception {
     if (singleton != null) {
       throw new IllegalStateException("The service is already initialized");
     }
@@ -175,6 +177,17 @@ public class Service extends Core {
   public final List<String> supportedConnectors = new ArrayList<>();
   public final HashMap<String, String> rdsLookupDatabaseIdentifier = new HashMap<>();
   public final HashMap<String, Integer> rdsLookupCapacity = new HashMap<>();
+
+  /**
+   * The HTTP server of the XYZ-Hub, if the XYZ-Hub verticle is deployed.
+   */
+  public final @Nullable HttpServer xyzHubHttpSever;
+
+  /**
+   * The HTTP server of the PSQL connector, if the PSQL connector verticle is deployed.
+   */
+  public final @Nullable HttpServer connectorHttpSever;
+
 
   /**
    * The hostname
@@ -255,18 +268,33 @@ public class Service extends Core {
 
     // Deploy verticles.
     if (config.DEPLOY_XYZ_HUB_REST_VERTICLE) {
+      logger.info("Start XYZ-Hub at port {}", config.HTTP_PORT);
+      xyzHubHttpSever = vertx.createHttpServer(SERVER_OPTIONS())
+          .requestHandler(router)
+          .listen(config.HTTP_PORT).result();
+
       logger.info("Deploy {}", XYZHubRESTVerticle.class.getName());
       final DeploymentOptions options = new DeploymentOptions();
       options.setWorker(false);
       options.setInstances(Runtime.getRuntime().availableProcessors());
       vertx.deployVerticle(XYZHubRESTVerticle.class, options);
+    } else {
+      xyzHubHttpSever = null;
     }
+
     if (config.DEPLOY_PSQL_HTTP_CONNECTOR_VERTICLE) {
+      logger.info("Start XYZ-Hub at port {}", config.HTTP_PORT);
+      connectorHttpSever = vertx.createHttpServer(SERVER_OPTIONS())
+          .requestHandler(router)
+          .listen(config.HTTP_PORT).result();
+
       logger.info("Deploy {}", XYZHubRESTVerticle.class.getName());
       final DeploymentOptions options = new DeploymentOptions();
       options.setWorker(false);
       options.setInstances(Runtime.getRuntime().availableProcessors());
       vertx.deployVerticle(XYZHubRESTVerticle.class, options);
+    } else {
+      connectorHttpSever = null;
     }
 
     logger.info("XYZ Hub " + BUILD_VERSION + " was started at " + new Date().toString());
@@ -281,6 +309,17 @@ public class Service extends Core {
     }));
 
     startMetricPublishers();
+  }
+
+  protected @NotNull HttpServerOptions SERVER_OPTIONS() {
+    return new HttpServerOptions()
+        .setCompressionSupported(true)
+        .setDecompressionSupported(true)
+        .setHandle100ContinueAutomatically(true)
+        .setTcpQuickAck(true)
+        .setTcpFastOpen(true)
+        .setMaxInitialLineLength(16 * 1024)
+        .setIdleTimeout(300);
   }
 
   /**
@@ -421,5 +460,18 @@ public class Service extends Core {
 
       logger.info("LOG LEVEL UPDATE performed. New level is now: " + level);
     }
+  }
+
+  public static void addStreamInfo(final RoutingContext context, String key, Object value){
+    final Object raw = context.get(STREAM_INFO_CTX_KEY);
+    final Map<String, Object> map;
+    if (raw instanceof Map) {
+      //noinspection unchecked
+      map = (Map<String, Object>) raw;
+    } else {
+      map = new HashMap<>();
+      context.put(STREAM_INFO_CTX_KEY, map);
+    }
+    map.put(key, value);
   }
 }

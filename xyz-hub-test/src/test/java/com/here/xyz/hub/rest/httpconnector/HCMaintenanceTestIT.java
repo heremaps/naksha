@@ -71,16 +71,16 @@ public class HCMaintenanceTestIT {
     }
 
     public static MaintenanceClient initMaintenanceClient() throws Exception {
-        CService.configuration = new CService.Config();
-        CService.configuration.DB_INITIAL_POOL_SIZE = 1;
-        CService.configuration.DB_MIN_POOL_SIZE = 1;
-        CService.configuration.DB_MAX_POOL_SIZE = 1;
+        CService.get().config = new CService.Config();
+        CService.get().config.DB_INITIAL_POOL_SIZE = 1;
+        CService.get().config.DB_MIN_POOL_SIZE = 1;
+        CService.get().config.DB_MAX_POOL_SIZE = 1;
 
-        CService.configuration.DB_ACQUIRE_RETRY_ATTEMPTS = 1;
-        CService.configuration.DB_ACQUIRE_INCREMENT = 1;
+        CService.get().config.DB_ACQUIRE_RETRY_ATTEMPTS = 1;
+        CService.get().config.DB_ACQUIRE_INCREMENT = 1;
 
-        CService.configuration.DB_CHECKOUT_TIMEOUT = 10;
-        CService.configuration.DB_TEST_CONNECTION_ON_CHECKOUT = true;
+        CService.get().config.DB_CHECKOUT_TIMEOUT = 10;
+        CService.get().config.DB_TEST_CONNECTION_ON_CHECKOUT = true;
 
     return new MaintenanceClient();
   }
