@@ -21,6 +21,7 @@ package com.here.xyz.hub.rest.httpconnector;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.xyz.httpconnector.CService;
+import com.here.xyz.hub.Service;
 import com.here.xyz.hub.auth.TestAuthenticator;
 import com.here.xyz.httpconnector.config.MaintenanceClient;
 import com.here.xyz.hub.rest.RestAssuredConfig;
@@ -71,18 +72,17 @@ public class HCMaintenanceTestIT {
     }
 
     public static MaintenanceClient initMaintenanceClient() throws Exception {
-        CService.get().config = new CService.Config();
-        CService.get().config.DB_INITIAL_POOL_SIZE = 1;
-        CService.get().config.DB_MIN_POOL_SIZE = 1;
-        CService.get().config.DB_MAX_POOL_SIZE = 1;
+        Service.get().config.DB_INITIAL_POOL_SIZE = 1;
+        Service.get().config.DB_MIN_POOL_SIZE = 1;
+        Service.get().config.DB_MAX_POOL_SIZE = 1;
 
-        CService.get().config.DB_ACQUIRE_RETRY_ATTEMPTS = 1;
-        CService.get().config.DB_ACQUIRE_INCREMENT = 1;
+        Service.get().config.DB_ACQUIRE_RETRY_ATTEMPTS = 1;
+        Service.get().config.DB_ACQUIRE_INCREMENT = 1;
 
-        CService.get().config.DB_CHECKOUT_TIMEOUT = 10;
-        CService.get().config.DB_TEST_CONNECTION_ON_CHECKOUT = true;
+        Service.get().config.DB_CHECKOUT_TIMEOUT = 10;
+        Service.get().config.DB_TEST_CONNECTION_ON_CHECKOUT = true;
 
-    return new MaintenanceClient();
+    return MaintenanceClient.get();
   }
 
   public static void deleteTestResources() throws Exception {

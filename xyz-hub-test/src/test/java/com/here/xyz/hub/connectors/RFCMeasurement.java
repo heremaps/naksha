@@ -45,8 +45,6 @@ public class RFCMeasurement {
     @Before
     public void setup() {
         //Mock necessary configuration values
-        Core.vertx = Vertx.vertx();
-        Service.get().config = new ServiceConfig();
         Service.get().config.REMOTE_FUNCTION_REQUEST_TIMEOUT = 26;
         Service.get().config.INSTANCE_COUNT = 1;
         Service.get().config.REMOTE_FUNCTION_MAX_CONNECTIONS = 256;

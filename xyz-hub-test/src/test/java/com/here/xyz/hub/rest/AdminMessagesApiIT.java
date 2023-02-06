@@ -56,7 +56,6 @@ public class AdminMessagesApiIT extends RestAssuredTest {
   @BeforeClass
   public static void setup() {
     //Mock necessary configuration values
-    Service.get().config = new ServiceConfig();
     Service.get().config.REMOTE_FUNCTION_REQUEST_TIMEOUT = 26;
     Service.get().config.INSTANCE_COUNT = 1;
 

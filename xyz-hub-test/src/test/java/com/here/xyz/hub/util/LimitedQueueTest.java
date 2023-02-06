@@ -40,7 +40,6 @@ public class LimitedQueueTest {
 
   @BeforeClass
   public static void setupClass() {
-    Service.get().config = new ServiceConfig();
     Service.get().config.GLOBAL_MAX_QUEUE_SIZE = 1024;
   }
 
