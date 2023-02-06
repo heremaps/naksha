@@ -19,7 +19,6 @@
 
 package com.here.xyz.httpconnector.config;
 
-import com.here.xyz.httpconnector.CService;
 import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
 import com.here.xyz.psql.config.DatabaseSettings;
@@ -47,7 +46,7 @@ public class JDBCClients {
     public static void addClientIfRequired(String id, String ecps, String passphrase) throws CannotDecodeException, UnsupportedOperationException {
         DatabaseSettings settings = ECPSTool.readDBSettingsFromECPS(ecps, passphrase);
 
-        if(CService.supportedConnectors != null && CService.supportedConnectors.indexOf(id) == -1)
+        if(Service.get().supportedConnectors != null && Service.get().supportedConnectors.indexOf(id) == -1)
             throw new UnsupportedOperationException();
 
         if(JDBCImporter.getClient(id) == null){

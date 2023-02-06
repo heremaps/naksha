@@ -18,7 +18,6 @@
  */
 package com.here.xyz.httpconnector.rest;
 
-import com.here.xyz.httpconnector.CService;
 import com.here.xyz.httpconnector.util.jobs.Import;
 import com.here.xyz.httpconnector.util.jobs.Job;
 import com.here.xyz.hub.Service;

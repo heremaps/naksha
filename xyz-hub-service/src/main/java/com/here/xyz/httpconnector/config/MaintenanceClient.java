@@ -30,7 +30,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.xyz.XyzSerializable;
 import com.here.xyz.httpconnector.PsqlHttpConnectorVerticle;
 import com.here.xyz.hub.Core;
-import com.here.xyz.httpconnector.CService;
+
 import com.here.xyz.hub.Service;
 import com.here.xyz.psql.DatabaseMaintainer;
 import com.here.xyz.psql.SQLQuery;

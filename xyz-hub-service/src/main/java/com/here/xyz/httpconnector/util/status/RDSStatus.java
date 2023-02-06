@@ -22,7 +22,8 @@ package com.here.xyz.httpconnector.util.status;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.xyz.httpconnector.CService;
+
+import com.here.xyz.hub.Service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
@@ -48,7 +49,7 @@ public class RDSStatus {
 
     public RDSStatus(String clientId, JSONObject currentMetrics, RunningQueryStatistics runningQueryStatistics ){
         this.clientId = clientId;
-        this.limits = new Limits(CService.rdsLookupCapacity.get(clientId));
+        this.limits = new Limits(Service.get().rdsLookupCapacity.get(clientId));
         this.currentMetrics = new CurrentMetrics(currentMetrics, runningQueryStatistics, this.limits.maxMemInGB);
         this.runningQueries = new RunningQueries(runningQueryStatistics.getRunningQueries());
     }

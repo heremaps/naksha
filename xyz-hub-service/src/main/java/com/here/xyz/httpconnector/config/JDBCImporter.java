@@ -19,7 +19,7 @@
 
 package com.here.xyz.httpconnector.config;
 
-import com.here.xyz.httpconnector.CService;
+
 import com.here.xyz.httpconnector.util.jobs.Import;
 import com.here.xyz.httpconnector.util.jobs.Job;
 import com.here.xyz.httpconnector.util.jobs.Job.CSVFormat;
@@ -470,7 +470,7 @@ public class JDBCImporter extends JDBCClients{
             JDBCImporter.collectRunningQueries(clientId)
                     .onSuccess(runningQueryStatistics -> {
                         /** Collect metrics from Cloudwatch */
-                        JSONObject avg5MinRDSMetrics = CService.jobCWClient.getAvg5MinRDSMetrics(CService.rdsLookupDatabaseIdentifier.get(clientId));
+                        JSONObject avg5MinRDSMetrics = Service.get().jobCWClient.getAvg5MinRDSMetrics(Service.get().rdsLookupDatabaseIdentifier.get(clientId));
                         p.complete(new RDSStatus(clientId, avg5MinRDSMetrics, runningQueryStatistics));
                     }).onFailure(f -> {
                         logger.warn("Cant get RDS-Resources {}",f);

@@ -80,8 +80,8 @@ public class EmbeddedFunctionClient extends RemoteFunctionClient {
     shutdown(embeddedExecutor);
   }
 
-  private static void shutdown(ExecutorService execService) {
-    if (execService == null) return;
+  private static void shutdown(ExecutorService exeService) {
+    if (exeService == null) return;
     //Shutdown the executor service after the request timeout
     //TODO: Use CompletableFuture.delayedExecutor() after switching to Java 9
     new Thread(() -> {
@@ -89,7 +89,7 @@ public class EmbeddedFunctionClient extends RemoteFunctionClient {
         Thread.sleep(MAX_REQUEST_TIMEOUT);
       }
       catch (InterruptedException ignored) {}
-      execService.shutdownNow();
+      exeService.shutdownNow();
     }).start();
   }
 

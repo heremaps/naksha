@@ -64,7 +64,7 @@ public class HealthApi extends Api {
                 .withName("HERE XYZ Hub")
                 .withBuildDate(Core.BUILD_TIME)
                 .withUpSince(Core.START_TIME)
-                .withEndpoint(getPublicServiceEndpoint())
+                .withEndpoint(getPubliService())
         );
     if (Service.get().config.getRedisUri() != null) {
       healthCheck.add(new RedisHealthCheck(Service.get().config.getRedisUri()));
@@ -102,7 +102,7 @@ public class HealthApi extends Api {
     }
   }
 
-  private static URI getPublicServiceEndpoint() {
+  private static URI getPubliService() {
     return URI.create(Service.get().config.XYZ_HUB_PUBLIC_ENDPOINT + Service.get().config.XYZ_HUB_PUBLIC_HEALTH_ENDPOINT);
   }
 

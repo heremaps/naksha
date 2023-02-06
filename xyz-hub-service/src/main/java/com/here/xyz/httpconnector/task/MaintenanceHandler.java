@@ -21,7 +21,7 @@ package com.here.xyz.httpconnector.task;
 
 import com.here.xyz.httpconnector.config.MaintenanceClient;
 import com.here.xyz.hub.Core;
-import com.here.xyz.httpconnector.CService;
+
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.HttpException;
 

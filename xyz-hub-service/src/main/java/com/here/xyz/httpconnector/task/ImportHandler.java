@@ -20,13 +20,13 @@
 package com.here.xyz.httpconnector.task;
 
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.here.xyz.httpconnector.CService;
 import com.here.xyz.httpconnector.config.JDBCImporter;
 import com.here.xyz.httpconnector.rest.HApiParam;
 import com.here.xyz.httpconnector.util.jobs.Import;
 import com.here.xyz.httpconnector.util.jobs.ImportValidator;
 import com.here.xyz.httpconnector.util.jobs.Job;
 import com.here.xyz.httpconnector.util.jobs.Job.Type;
+import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.HttpException;
 import com.here.xyz.hub.util.diff.Difference;
 import com.here.xyz.hub.util.diff.Patcher;
@@ -63,10 +63,10 @@ public class ImportHandler {
                 return Future.failedFuture(new HttpException(BAD_REQUEST, error));
         }
 
-        CService.jobConfigClient.get(marker, job.getId())
+        Service.get().jobConfigClient.get(marker, job.getId())
                 .compose( loadedJob -> {
                     if(loadedJob == null)
-                        return CService.jobConfigClient.store(marker, job);
+                        return Service.get().jobConfigClient.store(marker, job);
                     return Future.failedFuture(new HttpException(BAD_REQUEST, "Job with id '"+job.getId()+"' already exists!"));
                 })
                 .onSuccess(
@@ -87,7 +87,7 @@ public class ImportHandler {
     public static Future<Job> patchJob(Job job, Marker marker){
         Promise<Job> p = Promise.promise();
 
-        CService.jobConfigClient.get(marker, job.getId())
+        Service.get().jobConfigClient.get(marker, job.getId())
                 .compose( loadedJob -> {
                     if(loadedJob != null) {
                         Map oldJobMap = asMap(loadedJob);
@@ -102,7 +102,7 @@ public class ImportHandler {
                                 Patcher.patch(oldJobMap, diffMap);
                                 loadedJob = asJob(marker, oldJobMap);
 
-                                return CService.jobConfigClient.update(marker, loadedJob);
+                                return Service.get().jobConfigClient.update(marker, loadedJob);
                             }catch (HttpException e){
                                 return Future.failedFuture(e);
                             }
@@ -128,7 +128,7 @@ public class ImportHandler {
     public static Future<List<Job>> getJobs(Marker marker, Type type, Job.Status status, String targetSpaceId){
         Promise<List<Job>> p = Promise.promise();
 
-        CService.jobConfigClient.getList(marker, type, status, targetSpaceId).onSuccess(
+        Service.get().jobConfigClient.getList(marker, type, status, targetSpaceId).onSuccess(
                 j -> p.complete(j)
         ).onFailure(
                 t -> p.fail(new HttpException(BAD_GATEWAY, t.getMessage())));
@@ -139,7 +139,7 @@ public class ImportHandler {
     public static Future<Job> getJob(String jobId, Marker marker){
         Promise<Job> p = Promise.promise();
 
-        CService.jobConfigClient.get(marker, jobId).onSuccess(j -> {
+        Service.get().jobConfigClient.get(marker, jobId).onSuccess(j -> {
             if(j == null){
                 p.fail(new HttpException(NOT_FOUND, "Job with Id "+jobId+" not found"));
             }else{
@@ -153,7 +153,7 @@ public class ImportHandler {
     public static Future<Job> deleteJob(String jobId, Marker marker){
         Promise<Job> p = Promise.promise();
 
-        CService.jobConfigClient.delete(marker, jobId).onSuccess(j -> {
+        Service.get().jobConfigClient.delete(marker, jobId).onSuccess(j -> {
             if(j == null){
                 p.fail(new HttpException(NOT_FOUND, "Job with Id "+jobId+" not found"));
             }else{
@@ -172,7 +172,7 @@ public class ImportHandler {
                 job.setErrorType(null);
             }
         }
-        job.addImportObject(CService.jobS3Client.generateUploadURL(job));
+        job.addImportObject(Service.get().jobS3Client.generateUploadURL(job));
     }
 
     public static Future<Job> postExecute(String jobId, String connectorId, String ecps, String passphrase, HApiParam.HQuery.Command command,
@@ -181,7 +181,7 @@ public class ImportHandler {
         Promise<Job> p = Promise.promise();
 
         /** Load JobConfig */
-        CService.jobConfigClient.get(marker, jobId)
+        Service.get().jobConfigClient.get(marker, jobId)
                 .onSuccess(j -> {
                     if(!isJobStateValid(j, jobId, command, p))
                         return;
@@ -218,7 +218,7 @@ public class ImportHandler {
                             case CREATEUPLOADURL:
                                 try {
                                     addUploadURL(importJob);
-                                    CService.jobConfigClient.update(marker, importJob)
+                                    Service.get().jobConfigClient.update(marker, importJob)
                                             .onFailure( t-> p.fail(new HttpException(BAD_GATEWAY, t.getMessage())))
                                             .onSuccess( f-> p.complete(importJob));
                                 } catch (IOException e) {
@@ -243,11 +243,11 @@ public class ImportHandler {
                 .onSuccess( runningJob -> {
                     if(runningJob == null){
                         /** Update JobConfig */
-                        CService.jobConfigClient.update(marker, job)
+                        Service.get().jobConfigClient.update(marker, job)
                                 .onFailure( t -> p.fail(new HttpException(BAD_GATEWAY, t.getMessage())))
                                 .onSuccess( f -> {
                                     /** Actively push job to local JOB-Queue */
-                                    CService.importQueue.addJob(job);
+                                    Service.get().importQueue.addJob(job);
                                     p.complete();
                                 });
                     }else{
@@ -258,12 +258,12 @@ public class ImportHandler {
 
     private static Future<String> checkRunningJobs(Marker marker, Job job){
         /** Check in node memory */
-        String jobId = CService.importQueue.checkRunningImportJobsOnSpace(job.getTargetSpaceId());
+        String jobId = Service.get().importQueue.checkRunningImportJobsOnSpace(job.getTargetSpaceId());
 
         if(jobId != null) {
             return Future.succeededFuture(jobId);
         }else{
-            return CService.jobConfigClient.getRunningImportJobsOnSpace(marker, job.getTargetSpaceId());
+            return Service.get().jobConfigClient.getRunningImportJobsOnSpace(marker, job.getTargetSpaceId());
         }
     }
 

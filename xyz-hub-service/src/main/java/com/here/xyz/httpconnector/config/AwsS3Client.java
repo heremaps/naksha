@@ -26,7 +26,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.here.xyz.httpconnector.CService;
 
 import com.here.xyz.hub.Service;
 import java.io.IOException;

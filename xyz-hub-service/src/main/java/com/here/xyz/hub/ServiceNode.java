@@ -21,7 +21,6 @@ package com.here.xyz.hub;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.xyz.httpconnector.CService;
 import com.here.xyz.hub.rest.admin.AdminMessage;
 import com.here.xyz.hub.rest.health.HealthApi;
 import com.here.xyz.hub.util.health.Config;

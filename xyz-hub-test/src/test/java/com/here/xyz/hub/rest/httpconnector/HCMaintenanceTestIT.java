@@ -20,7 +20,7 @@
 package com.here.xyz.hub.rest.httpconnector;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.here.xyz.httpconnector.CService;
+
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.auth.TestAuthenticator;
 import com.here.xyz.httpconnector.config.MaintenanceClient;

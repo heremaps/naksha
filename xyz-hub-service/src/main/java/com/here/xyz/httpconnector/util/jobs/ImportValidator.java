@@ -20,8 +20,9 @@ package com.here.xyz.httpconnector.util.jobs;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.xyz.XyzSerializable;
-import com.here.xyz.httpconnector.CService;
+
 import com.here.xyz.hub.Core;
+import com.here.xyz.hub.Service;
 import com.here.xyz.models.geojson.implementation.Feature;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKBReader;
@@ -105,7 +106,7 @@ public class ImportValidator {
         }else {
             try {
                 /** scan S3 Path for existing Uploads and validate first line of CSV */
-                Map<String, ImportObject> scannedObjects = CService.jobS3Client.scanImportPath(job, job.getCsvFormat());
+                Map<String, ImportObject> scannedObjects = Service.get().jobS3Client.scanImportPath(job, job.getCsvFormat());
                 if (scannedObjects.size() == 0) {
                     job.setErrorDescription(Import.ERROR_DESCRIPTION_UPLOAD_MISSING);
                     job.setErrorType(Import.ERROR_TYPE_VALIDATION_FAILED);

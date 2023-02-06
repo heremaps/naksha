@@ -21,7 +21,7 @@ package com.here.xyz.httpconnector.config;
 import com.amazonaws.AmazonServiceException;
 
 import com.amazonaws.services.s3.model.*;
-import com.here.xyz.httpconnector.CService;
+
 import com.here.xyz.httpconnector.util.jobs.Import;
 import com.here.xyz.httpconnector.util.jobs.ImportObject;
 import com.here.xyz.httpconnector.util.jobs.ImportValidator;
