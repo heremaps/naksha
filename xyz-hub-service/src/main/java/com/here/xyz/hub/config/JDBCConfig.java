@@ -50,24 +50,23 @@ public class JDBCConfig {
 
     synchronized (CONNECTOR_TABLE) {
       if (client == null) {
-        String db_url = Service.configuration.STORAGE_DB_URL;
+        String db_url = Service.get().config.STORAGE_DB_URL;
         db_url += (db_url.contains("?") ? "&" : "?") + "ApplicationName=XYZ-Hub";
         JsonObject config = new JsonObject()
             .put("url", db_url)
-            .put("user", Service.configuration.STORAGE_DB_USER)
-            .put("password", Service.configuration.STORAGE_DB_PASSWORD)
+            .put("user", Service.get().config.STORAGE_DB_USER)
+            .put("password", Service.get().config.STORAGE_DB_PASSWORD)
             .put("min_pool_size", 1)
             .put("max_pool_size", 4)
             .put("acquire_retry_attempts", 1);
-        client = io.vertx.ext.jdbc.JDBCClient.createShared(Service.vertx, config);
+        client = io.vertx.ext.jdbc.JDBCClient.createShared(Service.get().vertx, config);
       }
       return client;
     }
   }
 
-  public static synchronized void init(Handler<AsyncResult<Void>> onReady) {
+  public static synchronized void init() {
     if (initialized) {
-      onReady.handle(Future.succeededFuture());
       return;
     }
 
@@ -76,7 +75,6 @@ public class JDBCConfig {
     client.getConnection(res -> {
       if (res.failed()) {
         logger.error("Initializing of the config table failed.", res.cause());
-        onReady.handle(Future.failedFuture(res.cause()));
         return;
       }
       SQLConnection connection = res.result();
@@ -85,7 +83,6 @@ public class JDBCConfig {
       connection.query(query, out -> {
         if (out.succeeded() && out.result().getNumRows() > 0) {
           logger.info("schema already created");
-          onReady.handle(Future.succeededFuture());
           connection.close();
           return;
         }
@@ -119,7 +116,6 @@ public class JDBCConfig {
           } else {
             logger.info("Initializing of the config table was successful.");
           }
-          onReady.handle(ar);
           connection.close();
         });
 

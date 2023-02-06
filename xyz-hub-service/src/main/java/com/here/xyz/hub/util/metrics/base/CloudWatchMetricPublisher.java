@@ -49,7 +49,7 @@ public abstract class CloudWatchMetricPublisher<V> extends MetricPublisher<V> {
     super(metric, 30);
     mainDimension = new Dimension()
         .withName(mainDimensionName)
-        .withValue("XYZ-Hub-" + Service.configuration.ENVIRONMENT_NAME);
+        .withValue("XYZ-Hub-" + Service.get().config.ENVIRONMENT_NAME);
     this.unit = mapUnit(metric.getUnit());
   }
 

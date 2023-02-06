@@ -24,7 +24,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 
 import com.here.xyz.hub.Service;
-import com.here.xyz.hub.Service.Config;
+import com.here.xyz.config.ServiceConfig;
 import com.here.xyz.hub.util.LimitedOffHeapQueue.OffHeapBuffer;
 import com.here.xyz.hub.util.LimitedOffHeapQueue.PayloadVanishedException;
 import java.lang.reflect.InvocationTargetException;
@@ -40,8 +40,8 @@ public class LimitedQueueTest {
 
   @BeforeClass
   public static void setupClass() {
-    Service.configuration = new Config();
-    Service.configuration.GLOBAL_MAX_QUEUE_SIZE = 1024;
+    Service.get().config = new ServiceConfig();
+    Service.get().config.GLOBAL_MAX_QUEUE_SIZE = 1024;
   }
 
   public class TestElement extends OffHeapBuffer {

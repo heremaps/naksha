@@ -21,12 +21,11 @@ package com.here.xyz.hub.rest.admin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.AdminApi;
 import com.here.xyz.hub.rest.admin.messages.RelayedMessage;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -48,7 +47,7 @@ public interface MessageBroker {
   void sendRawMessage(String jsonMessage);
 
   default void sendMessage(AdminMessage message) {
-    if (!Node.OWN_INSTANCE.equals(message.destination)) {
+    if (!Service.get().node.equals(message.destination)) {
       String jsonMessage = null;
       try {
         if (message instanceof RelayedMessage && ((RelayedMessage) message).globalRelay) {
@@ -86,16 +85,16 @@ public interface MessageBroker {
   default void sendRawMessagesToRemoteCluster(String jsonMessage, int tryCount) {
     int finalTryCount = tryCount++;
 
-    List<String> hubRemoteUrls = Service.configuration.getHubRemoteServiceUrls();
+    List<String> hubRemoteUrls = Service.get().config.getHubRemoteServiceUrls();
     if (hubRemoteUrls != null && !hubRemoteUrls.isEmpty()) {
       for (String remoteUrl : hubRemoteUrls) {
         if (remoteUrl.isEmpty()) continue;
         try {
-          Service.webClient
+          Service.get().webClient
               .postAbs(remoteUrl + AdminApi.ADMIN_MESSAGES_ENDPOINT)
               .timeout(29_000)
               .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
-              .putHeader("Authorization", "Bearer " + Service.configuration.ADMIN_MESSAGE_JWT)
+              .putHeader("Authorization", "Bearer " + Service.get().config.ADMIN_MESSAGE_JWT)
               .sendBuffer(Buffer.buffer(jsonMessage), ar -> {
                 if (ar.failed()) {
                   if (ar.cause() == ConnectionBase.CLOSED_EXCEPTION && finalTryCount <= 1) {
@@ -148,8 +147,8 @@ public interface MessageBroker {
     if (message.source == null)
       throw new NullPointerException("The source node of the AdminMessage must be defined.");
 
-    if (message.destination == null && (!Node.OWN_INSTANCE.equals(message.source) || message.broadcastIncludeLocalNode)
-        || Node.OWN_INSTANCE.equals(message.destination)) {
+    if (message.destination == null && (!Service.get().node.equals(message.source) || message.broadcastIncludeLocalNode)
+        || Service.get().node.equals(message.destination)) {
       try {
         message.handle();
       }

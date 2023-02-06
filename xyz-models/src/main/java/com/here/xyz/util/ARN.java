@@ -17,7 +17,7 @@
  * License-Filename: LICENSE
  */
 
-package com.here.xyz.hub.util;
+package com.here.xyz.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

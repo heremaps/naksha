@@ -26,6 +26,7 @@ import com.here.xyz.httpconnector.util.jobs.ImportValidator;
 import com.here.xyz.httpconnector.util.jobs.Job;
 import com.here.xyz.httpconnector.util.status.RDSStatus;
 import com.here.xyz.hub.Core;
+import com.here.xyz.hub.Service;
 import com.mchange.v3.decode.CannotDecodeException;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.CompositeFuture;
@@ -51,7 +52,7 @@ public class ImportQueue extends JobQueue{
         Promise<Void> p = Promise.promise();
 
         /** Check how many jobs are currently running */
-        if(i != null && i > CService.configuration.JOB_MAX_RUNNING_JOBS) {
+        if(i != null && i > Service.get().config.JOB_MAX_RUNNING_JOBS) {
             logger.info("Maximum number of parallel running Jobs reached!");
             p.complete();
             return p.future();
@@ -78,24 +79,24 @@ public class ImportQueue extends JobQueue{
                 .onSuccess(rdsStatus -> {
                     RDS_STATUS_MAP.put(job.getTargetConnector(), rdsStatus);
 
-                    if(rdsStatus.getCurrentMetrics().getCapacityUnits() > CService.configuration.JOB_MAX_RDS_CAPACITY) {
-                        p.fail("JOB_MAX_RDS_CAPACITY to high "+rdsStatus.getCurrentMetrics().getCapacityUnits()+" >"+CService.configuration.JOB_MAX_RDS_CAPACITY);
+                    if(rdsStatus.getCurrentMetrics().getCapacityUnits() > Service.get().config.JOB_MAX_RDS_CAPACITY) {
+                        p.fail("JOB_MAX_RDS_CAPACITY to high "+rdsStatus.getCurrentMetrics().getCapacityUnits()+" >"+Service.get().config.JOB_MAX_RDS_CAPACITY);
                         return;
                     }
-                    if(rdsStatus.getCurrentMetrics().getCpuLoad() > CService.configuration.JOB_MAX_RDS_CPU_LOAD) {
-                        p.fail("JOB_MAX_RDS_CPU_LOAD to high "+rdsStatus.getCurrentMetrics().getCpuLoad()+" > "+CService.configuration.JOB_MAX_RDS_CPU_LOAD);
+                    if(rdsStatus.getCurrentMetrics().getCpuLoad() > Service.get().config.JOB_MAX_RDS_CPU_LOAD) {
+                        p.fail("JOB_MAX_RDS_CPU_LOAD to high "+rdsStatus.getCurrentMetrics().getCpuLoad()+" > "+Service.get().config.JOB_MAX_RDS_CPU_LOAD);
                         return;
                     }
-                    if(rdsStatus.getCurrentMetrics().getTotalInflightImportBytes() > CService.configuration.JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES) {
-                        p.fail("JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES to high "+rdsStatus.getCurrentMetrics().getTotalInflightImportBytes()+" > "+CService.configuration.JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES);
+                    if(rdsStatus.getCurrentMetrics().getTotalInflightImportBytes() > Service.get().config.JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES) {
+                        p.fail("JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES to high "+rdsStatus.getCurrentMetrics().getTotalInflightImportBytes()+" > "+Service.get().config.JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES);
                         return;
                     }
-                    if(rdsStatus.getCurrentMetrics().getTotalRunningIDXQueries() > CService.configuration.JOB_MAX_RDS_MAX_RUNNING_IDX_CREATIONS) {
-                        p.fail("JOB_MAX_RDS_MAX_RUNNING_IDX_CREATIONS to high "+rdsStatus.getCurrentMetrics().getTotalInflightImportBytes()+" > "+CService.configuration.JOB_MAX_RDS_MAX_RUNNING_IDX_CREATIONS);
+                    if(rdsStatus.getCurrentMetrics().getTotalRunningIDXQueries() > Service.get().config.JOB_MAX_RDS_MAX_RUNNING_IDX_CREATIONS) {
+                        p.fail("JOB_MAX_RDS_MAX_RUNNING_IDX_CREATIONS to high "+rdsStatus.getCurrentMetrics().getTotalInflightImportBytes()+" > "+Service.get().config.JOB_MAX_RDS_MAX_RUNNING_IDX_CREATIONS);
                         return;
                     }
-                    if(rdsStatus.getCurrentMetrics().getTotalRunningImportQueries() > CService.configuration.JOB_MAX_RDS_MAX_RUNNING_IMPORTS) {
-                        p.fail("JOB_MAX_RDS_MAX_RUNNING_IDX_CREATIONS to high "+rdsStatus.getCurrentMetrics().getTotalRunningImportQueries()+" > "+CService.configuration.JOB_MAX_RDS_MAX_RUNNING_IMPORTS);
+                    if(rdsStatus.getCurrentMetrics().getTotalRunningImportQueries() > Service.get().config.JOB_MAX_RDS_MAX_RUNNING_IMPORTS) {
+                        p.fail("JOB_MAX_RDS_MAX_RUNNING_IDX_CREATIONS to high "+rdsStatus.getCurrentMetrics().getTotalRunningImportQueries()+" > "+Service.get().config.JOB_MAX_RDS_MAX_RUNNING_IMPORTS);
                         return;
                     }
                     p.complete();
@@ -239,14 +240,14 @@ public class ImportQueue extends JobQueue{
 
             //TODO: Also view RDS METRICS?
             //if(NODE_EXECUTED_IMPORT_MEMORY < (maxMemInGB * 1024 * 1024 * 1024)){
-            if(NODE_EXECUTED_IMPORT_MEMORY < CService.configuration.JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES){
+            if(NODE_EXECUTED_IMPORT_MEMORY < Service.get().config.JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES){
                 importObjects.get(key).setStatus(ImportObject.Status.processing);
                 NODE_EXECUTED_IMPORT_MEMORY += curFileSize;
                 logger.info("JOB[{}] start execution of {}! mem: {}", j.getId(), importObjects.get(key).getS3Key(), NODE_EXECUTED_IMPORT_MEMORY);
 
                 importFutures.add(
                         CService.jdbcImporter.executeImport(j.getTargetConnector(), defaultSchema, j.getTargetTable(),
-                                        CService.configuration.JOBS_S3_BUCKET, importObjects.get(key).getS3Key(), CService.configuration.JOBS_S3_BUCKET_REGION, curFileSize, j.getCsvFormat() )
+                                        Service.get().config.JOBS_S3_BUCKET, importObjects.get(key).getS3Key(), Service.get().config.JOBS_S3_BUCKET_REGION, curFileSize, j.getCsvFormat() )
                                 .onSuccess(result -> {
                                             NODE_EXECUTED_IMPORT_MEMORY -= curFileSize;
 
@@ -334,7 +335,7 @@ public class ImportQueue extends JobQueue{
     protected Future<Void> updateSpaceConfig(JsonObject config, Job j){
         Promise<Void> p = Promise.promise();
 
-        CService.webClient.patchAbs(CService.configuration.HUB_ENDPOINT+"/spaces/"+j.getTargetSpaceId())
+        Service.get().webClient.patchAbs(Service.get().config.HUB_ENDPOINT+"/spaces/"+j.getTargetSpaceId())
                 .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                 .sendJsonObject(config)
                 .onSuccess(res -> {

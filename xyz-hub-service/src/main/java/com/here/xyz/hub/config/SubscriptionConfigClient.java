@@ -34,156 +34,158 @@ import org.apache.logging.log4j.Marker;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public abstract class SubscriptionConfigClient implements Initializable {
+public abstract class SubscriptionConfigClient {
 
-    private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LogManager.getLogger();
 
-    public static final ExpiringMap<String, Subscription> cache = ExpiringMap.builder()
-            .expirationPolicy(ExpirationPolicy.CREATED)
-            .expiration(1, TimeUnit.MINUTES)
-            .build();
+  public static final ExpiringMap<String, Subscription> cache = ExpiringMap.builder()
+      .expirationPolicy(ExpirationPolicy.CREATED)
+      .expiration(1, TimeUnit.MINUTES)
+      .build();
 
-    public static final ExpiringMap<String, List<Subscription>> cacheBySource = ExpiringMap.builder()
-            .expirationPolicy(ExpirationPolicy.CREATED)
-            .expiration(10, TimeUnit.MINUTES)
-            .build();
+  public static final ExpiringMap<String, List<Subscription>> cacheBySource = ExpiringMap.builder()
+      .expirationPolicy(ExpirationPolicy.CREATED)
+      .expiration(10, TimeUnit.MINUTES)
+      .build();
 
-    public static SubscriptionConfigClient getInstance() {
-        if (Service.configuration.SUBSCRIPTIONS_DYNAMODB_TABLE_ARN != null) {
-            return new DynamoSubscriptionConfigClient(Service.configuration.SUBSCRIPTIONS_DYNAMODB_TABLE_ARN);
+  public static SubscriptionConfigClient getInstance() {
+    final String subscriptions_dynamodb_table_arn = Service.get().config.SUBSCRIPTIONS_DYNAMODB_TABLE_ARN;
+    if (subscriptions_dynamodb_table_arn != null) {
+      return new DynamoSubscriptionConfigClient(subscriptions_dynamodb_table_arn);
+    } else {
+      return JDBCSubscriptionConfigClient.getInstance();
+    }
+  }
+
+  public Future<Subscription> get(Marker marker, String subscriptionId) {
+    final Subscription subscriptionFromCache = cache.get(subscriptionId);
+
+    if (subscriptionFromCache != null) {
+      logger.info(marker, "subscriptionId: {} - The subscription was loaded from cache", subscriptionId);
+      return Future.succeededFuture(subscriptionFromCache);
+    }
+
+    Promise<Subscription> p = Promise.promise();
+    getSubscription(marker, subscriptionId).onComplete(ar -> {
+      if (ar.succeeded()) {
+        final Subscription subscription = ar.result();
+        if (subscription == null) {
+          logger.warn(marker, "subscriptionId [{}]: Subscription not found", subscriptionId);
+          p.fail(new RuntimeException("The subscription config was not found for subscription ID: " + subscriptionId));
         } else {
-            return JDBCSubscriptionConfigClient.getInstance();
+          cache.put(subscriptionId, subscription);
+          p.complete(subscription);
         }
+      } else {
+        logger.warn(marker, "subscriptionId [{}]: Subscription not found", subscriptionId);
+        p.fail(ar.cause());
+      }
+    });
+    return p.future();
+  }
+
+  public Future<List<Subscription>> getBySource(Marker marker, String source) {
+
+    final List<Subscription> subscriptionsFromCache = cacheBySource.get(source);
+
+    if (subscriptionsFromCache != null) {
+      logger.info(marker, "source: {} - The subscriptions was loaded from cache", source);
+      return Future.succeededFuture(subscriptionsFromCache);
     }
 
-    public Future<Subscription> get(Marker marker, String subscriptionId) {
-        final Subscription subscriptionFromCache = cache.get(subscriptionId);
-
-        if (subscriptionFromCache != null) {
-            logger.info(marker, "subscriptionId: {} - The subscription was loaded from cache", subscriptionId);
-            return Future.succeededFuture(subscriptionFromCache);
-        }
-
-        Promise<Subscription> p = Promise.promise();
-        getSubscription(marker, subscriptionId).onComplete(ar -> {
-            if (ar.succeeded()) {
-                final Subscription subscription = ar.result();
-                if(subscription == null) {
-                    logger.warn(marker, "subscriptionId [{}]: Subscription not found", subscriptionId);
-                    p.fail(new RuntimeException("The subscription config was not found for subscription ID: " + subscriptionId));
-                } else {
-                    cache.put(subscriptionId, subscription);
-                    p.complete(subscription);
-                }
-            }
-            else {
-                logger.warn(marker, "subscriptionId [{}]: Subscription not found", subscriptionId);
-                p.fail(ar.cause());
-            }
+    Promise<List<Subscription>> p = Promise.promise();
+    getSubscriptionsBySource(marker, source).onComplete(ar -> {
+      if (ar.succeeded()) {
+        final List<Subscription> subscriptions = ar.result();
+        cacheBySource.put(source, subscriptions);
+        subscriptions.forEach(s -> {
+          cache.put(s.getId(), s);
         });
-        return p.future();
-    }
+        p.complete(subscriptions);
+      } else {
+        logger.warn(marker, "source[{}]: Subscription for source not found", source);
+        p.fail(ar.cause());
+      }
+    });
+    return p.future();
+  }
 
-    public Future<List<Subscription>> getBySource(Marker marker, String source) {
-
-        final List<Subscription> subscriptionsFromCache = cacheBySource.get(source);
-
-        if (subscriptionsFromCache != null) {
-            logger.info(marker, "source: {} - The subscriptions was loaded from cache", source);
-            return Future.succeededFuture(subscriptionsFromCache);
-        }
-
-        Promise<List<Subscription>> p = Promise.promise();
-        getSubscriptionsBySource(marker, source).onComplete( ar -> {
-            if (ar.succeeded()) {
-                final List<Subscription> subscriptions = ar.result();
-                cacheBySource.put(source, subscriptions);
-                subscriptions.forEach(s -> {
-                    cache.put(s.getId(), s);
-                });
-                p.complete(subscriptions);
-            }
-            else {
-                logger.warn(marker, "source[{}]: Subscription for source not found", source);
-                p.fail(ar.cause());
-            }
+  public Future<List<Subscription>> getAll(Marker marker) {
+    Promise<List<Subscription>> p = Promise.promise();
+    getAllSubscriptions(marker).onComplete(ar -> {
+      if (ar.succeeded()) {
+        final List<Subscription> subscriptions = ar.result();
+        subscriptions.forEach(s -> {
+          cache.put(s.getId(), s);
         });
-        return p.future();
+        p.complete(subscriptions);
+      } else {
+        logger.error(marker, "Failed to load subscriptions, reason: ", ar.cause());
+        p.fail(ar.cause());
+      }
+    });
+    return p.future();
+  }
+
+  public Future<Void> store(Marker marker, Subscription subscription) {
+
+    if (subscription.getId() == null) {
+      subscription.setId(RandomStringUtils.randomAlphanumeric(10));
     }
 
-    public Future<List<Subscription>> getAll(Marker marker) {
-        Promise<List<Subscription>> p = Promise.promise();
-        getAllSubscriptions(marker).onComplete( ar -> {
-            if (ar.succeeded()) {
-                final List<Subscription> subscriptions = ar.result();
-                subscriptions.forEach(s -> {
-                    cache.put(s.getId(), s);
-                });
-                p.complete(subscriptions);
-            } else {
-                logger.error(marker, "Failed to load subscriptions, reason: ", ar.cause());
-                p.fail(ar.cause());
-            }
-        });
-        return p.future();
+    return storeSubscription(marker, subscription)
+        .onSuccess(ar -> {
+          invalidateCache(subscription);
+        }).onFailure(
+            t -> logger.error(marker, "subscriptionId[{}]: Failed to store subscription configuration, reason: ", subscription.getId(), t));
+  }
+
+  public Future<Subscription> delete(Marker marker, Subscription subscription) {
+    return deleteSubscription(marker, subscription.getId())
+        .onSuccess(ar -> {
+          invalidateCache(subscription);
+        }).onFailure(
+            t -> logger.error(marker, "subscriptionId[{}]: Failed to delete subscription configuration, reason: ", subscription.getId(),
+                t));
+  }
+
+  protected abstract Future<Subscription> getSubscription(Marker marker, String subscriptionId);
+
+  protected abstract Future<List<Subscription>> getSubscriptionsBySource(Marker marker, String source);
+
+  protected abstract Future<Void> storeSubscription(Marker marker, Subscription subscription);
+
+  protected abstract Future<Subscription> deleteSubscription(Marker marker, String subscriptionId);
+
+  protected abstract Future<List<Subscription>> getAllSubscriptions(Marker marker);
+
+  public void invalidateCache(Subscription subscription) {
+    cache.remove(subscription.getId());
+    cacheBySource.remove(subscription.getSource());
+    new InvalidateSubscriptionCacheMessage().withSubscription(subscription).withGlobalRelay(true).broadcast();
+  }
+
+  public static class InvalidateSubscriptionCacheMessage extends RelayedMessage {
+
+    private Subscription subscription;
+
+    public Subscription getSubscription() {
+      return subscription;
     }
 
-    public Future<Void> store(Marker marker, Subscription subscription) {
-
-        if (subscription.getId() == null) {
-            subscription.setId(RandomStringUtils.randomAlphanumeric(10));
-        }
-
-        return storeSubscription(marker, subscription)
-                .onSuccess(ar -> {
-                    invalidateCache(subscription);
-                }).onFailure(t -> logger.error(marker, "subscriptionId[{}]: Failed to store subscription configuration, reason: ", subscription.getId(), t));
+    public void setSubscription(Subscription subscription) {
+      this.subscription = subscription;
     }
 
-    public Future<Subscription> delete(Marker marker, Subscription subscription) {
-        return deleteSubscription(marker, subscription.getId())
-                .onSuccess(ar -> {
-                    invalidateCache(subscription);
-                }).onFailure(t -> logger.error(marker, "subscriptionId[{}]: Failed to delete subscription configuration, reason: ", subscription.getId(), t));
+    public InvalidateSubscriptionCacheMessage withSubscription(Subscription subscription) {
+      this.subscription = subscription;
+      return this;
     }
 
-    protected abstract Future<Subscription> getSubscription(Marker marker, String subscriptionId);
-
-    protected abstract Future<List<Subscription>> getSubscriptionsBySource(Marker marker, String source);
-
-    protected abstract Future<Void> storeSubscription(Marker marker, Subscription subscription);
-
-    protected abstract Future<Subscription> deleteSubscription(Marker marker, String subscriptionId);
-
-    protected abstract Future<List<Subscription>> getAllSubscriptions(Marker marker);
-
-    public void invalidateCache(Subscription subscription) {
-        cache.remove(subscription.getId());
-        cacheBySource.remove(subscription.getSource());
-        new InvalidateSubscriptionCacheMessage().withSubscription(subscription).withGlobalRelay(true).broadcast();
+    @Override
+    protected void handleAtDestination() {
+      cache.remove(subscription.getId());
+      cacheBySource.remove(subscription.getSource());
     }
-
-    public static class InvalidateSubscriptionCacheMessage extends RelayedMessage {
-
-        private Subscription subscription;
-
-        public Subscription getSubscription() {
-            return subscription;
-        }
-
-        public void setSubscription(Subscription subscription) {
-            this.subscription = subscription;
-        }
-
-        public InvalidateSubscriptionCacheMessage withSubscription(Subscription subscription) {
-            this.subscription = subscription;
-            return this;
-        }
-
-        @Override
-        protected void handleAtDestination() {
-            cache.remove(subscription.getId());
-            cacheBySource.remove(subscription.getSource());
-        }
-    }
+  }
 }

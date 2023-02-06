@@ -78,7 +78,7 @@ public class RpcClient {
   private static final Logger logger = LogManager.getLogger();
 
   private static final ConcurrentHashMap<String, RpcClient> connectorIdToClient = new ConcurrentHashMap<>();
-  private static final RelocationClient relocationClient = new RelocationClient(Service.configuration.XYZ_HUB_S3_BUCKET);
+  private static final RelocationClient relocationClient = new RelocationClient(Service.get().config.XYZ_HUB_S3_BUCKET);
 
   private RemoteFunctionClient functionClient;
 
@@ -206,7 +206,7 @@ public class RpcClient {
 
   private void relocateAsync(Marker marker, byte[] bytes, Handler<AsyncResult<byte[]>> callback) {
     logger.info(marker, "Relocating event. Total event byte size: {}", bytes.length);
-    Service.vertx.executeBlocking(
+    Service.get().vertx.executeBlocking(
         future -> {
           try {
             future.complete(relocationClient.relocate(marker.getName(), Payload.compress(bytes)));
@@ -503,7 +503,7 @@ public class RpcClient {
   }
 
   private void processRelocatedEventAsync(RelocatedEvent relocatedEvent, Handler<AsyncResult<byte[]>> callback) {
-    Service.vertx.executeBlocking(
+    Service.get().vertx.executeBlocking(
         future -> {
           try {
             InputStream input = relocationClient.processRelocatedEvent(relocatedEvent, getConnector().getRemoteFunction().getRegion());
@@ -577,7 +577,7 @@ public class RpcClient {
     if (ArrayUtils.isEmpty(bytes))
       throw new NullPointerException("Response string is null or empty");
 
-    if (Service.configuration.MAX_UNCOMPRESSED_RESPONSE_SIZE > 0 && bytes.length > Service.configuration.MAX_UNCOMPRESSED_RESPONSE_SIZE) {
+    if (Service.get().config.MAX_UNCOMPRESSED_RESPONSE_SIZE > 0 && bytes.length > Service.get().config.MAX_UNCOMPRESSED_RESPONSE_SIZE) {
       throwResponseSizeException(marker);
     }
   }

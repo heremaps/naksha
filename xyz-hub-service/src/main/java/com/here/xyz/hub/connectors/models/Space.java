@@ -84,7 +84,7 @@ public class Space extends com.here.xyz.models.hub.Space implements Cloneable {
   private Map<ConnectorType, Map<String, List<ResolvableListenerConnectorRef>>> resolvedConnectorRefs;
 
   public static Future<Space> resolveSpace(Marker marker, String spaceId) {
-    return Service.spaceConfigClient.get(marker, spaceId);
+    return Service.get().spaceConfigClient.get(marker, spaceId);
   }
 
   public static Future<Connector> resolveConnector(Marker marker, String connectorId) {
@@ -94,7 +94,7 @@ public class Space extends com.here.xyz.models.hub.Space implements Cloneable {
   }
 
   public static void resolveConnector(Marker marker, String connectorId, Handler<AsyncResult<Connector>> handler) {
-    Service.connectorConfigClient.get(marker, connectorId, arStorage -> {
+    Service.get().connectorConfigClient.get(marker, connectorId, arStorage -> {
       if (arStorage.failed()) {
         logger.warn(marker, "Unable to load the connector definition for storage '{}'",
             connectorId, arStorage.cause());

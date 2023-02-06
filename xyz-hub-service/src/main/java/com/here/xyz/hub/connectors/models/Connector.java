@@ -28,12 +28,13 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.xyz.Payload;
+import com.here.xyz.config.ServiceConfig;
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig.AWSLambda;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig.Embedded;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig.Http;
-import com.here.xyz.hub.rest.admin.Node;
-import com.here.xyz.hub.util.ARN;
+import com.here.xyz.hub.ServiceNode;
+import com.here.xyz.util.ARN;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -101,10 +102,10 @@ public class Connector {
    * @return the function pool id
    */
   public static String getRemoteFunctionPoolId() {
-    if (Service.configuration != null && Service.configuration.REMOTE_FUNCTION_POOL_ID != null) {
-      return Service.configuration.REMOTE_FUNCTION_POOL_ID;
+    if (Service.get().config.REMOTE_FUNCTION_POOL_ID != null) {
+      return Service.get().config.REMOTE_FUNCTION_POOL_ID;
     }
-    return Service.getEnvironmentIdentifier();
+    return Service.get().getEnvironmentIdentifier();
   }
 
   /**
@@ -186,12 +187,12 @@ public class Connector {
 
   @JsonIgnore
   public int getMinConnectionsPerInstance() {
-    return connectionSettings.getMinConnections() / Node.count();
+    return connectionSettings.getMinConnections() / Service.get().node.count();
   }
 
   @JsonIgnore
   public int getMaxConnectionsPerInstance() {
-    return connectionSettings.maxConnections / Node.count();
+    return connectionSettings.maxConnections / Service.get().node.count();
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -325,9 +326,9 @@ public class Connector {
      * If a request from a {@link com.here.xyz.hub.connectors.RemoteFunctionClient} exceeds the timeout,
      * the request to the connector will be cancelled and the user will receive an HTTP 504 response.
      * If not specified, the default value for this property
-     * is {@link com.here.xyz.hub.Service.Config#REMOTE_FUNCTION_REQUEST_TIMEOUT} * 1000.
+     * is {@link ServiceConfig#REMOTE_FUNCTION_REQUEST_TIMEOUT} * 1000.
      *
-     * NOTE: This value may never be higher than {@link com.here.xyz.hub.Service.Config#REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT} * 1000.
+     * NOTE: This value may never be higher than {@link ServiceConfig#REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT} * 1000.
      */
     public int timeoutMs;
 
@@ -349,7 +350,7 @@ public class Connector {
     @JsonIgnore
     public int getTimeout() {
       if (timeoutMs > 0) {
-        final int maxTimeout = Service.configuration.getRemoteFunctionMaxRequestTimeout() * 1000;
+        final int maxTimeout = Service.get().config.getRemoteFunctionMaxRequestTimeout() * 1000;
         if (timeoutMs > maxTimeout) {
           logger.warn("Specified timeout (" + timeoutMs + "ms) of connector with ID " + id + " is larger than the maximum allowed value"
               + " (" + maxTimeout + "ms). Using the maximum allowed value instead.");
@@ -357,7 +358,7 @@ public class Connector {
         }
         return timeoutMs;
       }
-      return Service.configuration.REMOTE_FUNCTION_REQUEST_TIMEOUT * 1000;
+      return Service.get().config.REMOTE_FUNCTION_REQUEST_TIMEOUT * 1000;
     }
 
     @JsonIgnore

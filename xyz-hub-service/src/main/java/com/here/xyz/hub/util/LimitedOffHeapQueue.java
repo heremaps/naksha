@@ -27,7 +27,7 @@ public class LimitedOffHeapQueue<E extends OffHeapBuffer> extends LimitedQueue<E
   private static final long OH_TTL = 32_000; //ms
   private static final ScheduledExecutorService executors = new ScheduledThreadPoolExecutor(2, Core.newThreadFactory("oh-queues"));
   private static final OHCache<byte[], byte[]> ohStorage = OHCacheClient.createCache(
-      (int) (Service.configuration.GLOBAL_MAX_QUEUE_SIZE * 1.1), executors, true);
+      (int) (Service.get().config.GLOBAL_MAX_QUEUE_SIZE * 1.1), executors, true);
 
   public LimitedOffHeapQueue(long maxSize, long maxByteSize) {
     super(maxSize, maxByteSize);

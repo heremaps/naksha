@@ -22,11 +22,10 @@ package com.here.xyz.hub.rest.health;
 import static com.here.xyz.hub.rest.Api.HeaderValues.APPLICATION_JSON;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
-import com.google.common.base.Strings;
 import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.Api;
-import com.here.xyz.hub.rest.admin.Node;
+import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.util.health.Config;
 import com.here.xyz.hub.util.health.MainHealthCheck;
 import com.here.xyz.hub.util.health.checks.ClusterHealthCheck;
@@ -67,18 +66,18 @@ public class HealthApi extends Api {
                 .withUpSince(Core.START_TIME)
                 .withEndpoint(getPublicServiceEndpoint())
         );
-    if (Service.configuration.getRedisUri() != null) {
-      healthCheck.add(new RedisHealthCheck(Service.configuration.getRedisUri()));
+    if (Service.get().config.getRedisUri() != null) {
+      healthCheck.add(new RedisHealthCheck(Service.get().config.getRedisUri()));
     }
     healthCheck.add(new MemoryHealthCheck())
         .add(new ClusterHealthCheck());
-    if (Service.configuration.ENABLE_CONNECTOR_HEALTH_CHECKS){
+    if (Service.get().config.ENABLE_CONNECTOR_HEALTH_CHECKS){
       healthCheck.add(rfcHcAggregator);
     }
-    if (Service.configuration.STORAGE_DB_URL != null) {
+    if (Service.get().config.STORAGE_DB_URL != null) {
       healthCheck.add(
-          (ExecutableCheck) new JDBCHealthCheck(getStorageDbUri(), Service.configuration.STORAGE_DB_USER,
-              Service.configuration.STORAGE_DB_PASSWORD)
+          (ExecutableCheck) new JDBCHealthCheck(getStorageDbUri(), Service.get().config.STORAGE_DB_USER,
+              Service.get().config.STORAGE_DB_PASSWORD)
               .withName("Configuration DB Postgres")
               .withEssential(true)
       );
@@ -96,20 +95,20 @@ public class HealthApi extends Api {
 
   private static URI getStorageDbUri() {
     try {
-      return new URI(Service.configuration.STORAGE_DB_URL);
+      return new URI(Service.get().config.STORAGE_DB_URL);
     } catch (URISyntaxException e) {
-      logger.error("Wrong format of STORAGE_DB_URL: " + Service.configuration.STORAGE_DB_URL, e);
+      logger.error("Wrong format of STORAGE_DB_URL: " + Service.get().config.STORAGE_DB_URL, e);
       return null;
     }
   }
 
   private static URI getPublicServiceEndpoint() {
-    return URI.create(Service.configuration.XYZ_HUB_PUBLIC_ENDPOINT + Service.configuration.XYZ_HUB_PUBLIC_HEALTH_ENDPOINT);
+    return URI.create(Service.get().config.XYZ_HUB_PUBLIC_ENDPOINT + Service.get().config.XYZ_HUB_PUBLIC_HEALTH_ENDPOINT);
   }
 
   private static URI getNodeHealthCheckEndpoint() {
     try {
-      return new URI("http://" + Service.getHostname() + ":" + Service.configuration.HTTP_PORT + MAIN_HEALTCHECK_ENDPOINT);
+      return new URI("http://" + Service.getHostname() + ":" + Service.get().config.HTTP_PORT + MAIN_HEALTCHECK_ENDPOINT);
     } catch (URISyntaxException e) {
       logger.error("Wrong format of internal node hostname URI: " + Service.getHostname(), e);
       return null;
@@ -120,7 +119,7 @@ public class HealthApi extends Api {
     try {
       Response r = healthCheck.getResponse();
       r.setEndpoint(NODE_HEALTHCHECK_ENDPOINT);
-      r.setNode(Node.OWN_INSTANCE.id);
+      r.setNode(Service.get().node.ip);
 
       String secretHeaderValue = context.request().getHeader(Config.getHealthCheckHeaderName());
 

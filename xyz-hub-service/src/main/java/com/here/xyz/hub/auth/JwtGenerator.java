@@ -72,7 +72,7 @@ public class JwtGenerator {
             .setAlgorithm("RS256")
             .setBuffer(new String(bytes, StandardCharsets.UTF_8)));
 
-    authProvider = JWTAuth.create(Service.vertx, authConfig);
+    authProvider = JWTAuth.create(Service.get().vertx, authConfig);
   }
 
   private static String readResourceFile(String resourceFilename) throws IOException {

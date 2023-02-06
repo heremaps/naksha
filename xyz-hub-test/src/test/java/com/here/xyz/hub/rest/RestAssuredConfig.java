@@ -20,13 +20,13 @@
 package com.here.xyz.hub.rest;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.xyz.util.EnvName;
 import com.here.xyz.util.JsonConfigFile;
 import com.here.xyz.util.JsonName;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -37,14 +37,20 @@ public class RestAssuredConfig extends JsonConfigFile<RestAssuredConfig> {
   // We annotate the well-known environment variable names and the JSON names from the XYZ-hub service config.
   // Additionally, we define special environment names.
 
+  @JsonProperty
   @EnvName("HOST_NAME") // config.json
   @JsonName("HOST_NAME") // config.json
   public String hubHost;
+
+  @JsonProperty
   @EnvName("HTTP_HOST")
   @EnvName("PSQL_HTTP_CONNECTOR_HOST") // config.json
   @JsonName("PSQL_HTTP_CONNECTOR_HOST") // config.json
   public String connectorHost = "localhost";
+
   public String baseURI;
+
+  @JsonProperty
   @EnvName("HTTP_PORT") // config.json and connector-config.json (both must run at different ports, but share an env-var!)
   @JsonName("HTTP_PORT") // config.json
   public int hubPort = 8080;

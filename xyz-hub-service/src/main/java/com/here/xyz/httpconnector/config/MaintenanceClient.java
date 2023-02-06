@@ -31,6 +31,7 @@ import com.here.xyz.XyzSerializable;
 import com.here.xyz.httpconnector.PsqlHttpConnectorVerticle;
 import com.here.xyz.hub.Core;
 import com.here.xyz.httpconnector.CService;
+import com.here.xyz.hub.Service;
 import com.here.xyz.psql.DatabaseMaintainer;
 import com.here.xyz.psql.SQLQuery;
 import com.here.xyz.psql.SQLQueryBuilder;
@@ -65,8 +66,8 @@ public class MaintenanceClient {
     private static final AtomicReference<MaintenanceClient> maintenanceClientRef = new AtomicReference<>();
 
     /**
-     * Returns the maintenance singleton.
-     * @return the maintenance singleton.
+     * Returns the maintenance client singleton.
+     * @return the maintenance client singleton.
      */
     public static @NotNull MaintenanceClient get() {
         MaintenanceClient client = maintenanceClientRef.get();
@@ -91,7 +92,7 @@ public class MaintenanceClient {
     public <T> T executeQuery(SQLQuery query, ResultSetHandler<T> handler, DataSource dataSource) throws SQLException {
         final long start = System.currentTimeMillis();
         try {
-            final QueryRunner run = new QueryRunner(dataSource, new StatementConfiguration(null,null,null,null, CService.configuration.DB_STATEMENT_TIMEOUT_IN_S));
+            final QueryRunner run = new QueryRunner(dataSource, new StatementConfiguration(null,null,null,null, Service.get().config.DB_STATEMENT_TIMEOUT_IN_S));
             return run.query(query.text(), handler, query.parameters().toArray());
         } finally {
             final long end = System.currentTimeMillis();
@@ -102,7 +103,7 @@ public class MaintenanceClient {
     public int executeQueryWithoutResults(SQLQuery query, DataSource dataSource) throws SQLException {
         final long start = System.currentTimeMillis();
         try {
-            final QueryRunner run = new QueryRunner(dataSource, new StatementConfiguration(null,null,null,null, CService.configuration.DB_STATEMENT_TIMEOUT_IN_S));
+            final QueryRunner run = new QueryRunner(dataSource, new StatementConfiguration(null,null,null,null, Service.get().config.DB_STATEMENT_TIMEOUT_IN_S));
             return run.execute(query.text(), query.parameters().toArray());
         } finally {
             final long end = System.currentTimeMillis();
@@ -113,7 +114,7 @@ public class MaintenanceClient {
     public int executeUpdate(SQLQuery query, DataSource dataSource) throws SQLException {
         final long start = System.currentTimeMillis();
         try {
-            final QueryRunner run = new QueryRunner(dataSource, new StatementConfiguration(null,null,null,null,  CService.configuration.DB_STATEMENT_TIMEOUT_IN_S));
+            final QueryRunner run = new QueryRunner(dataSource, new StatementConfiguration(null,null,null,null,  Service.get().config.DB_STATEMENT_TIMEOUT_IN_S));
             final String queryText = query.text();
             final List<Object> queryParameters = query.parameters();
 
@@ -348,7 +349,6 @@ public class MaintenanceClient {
 
     private ComboPooledDataSource getComboPooledDataSource(DatabaseSettings dbSettings, String applicationName, boolean useReplica) {
         // This will initialize the env-map. Theoretically we should use it, rather than the properties below.
-        PsqlHttpConnectorVerticle.getEnvMap();
         final ComboPooledDataSource cpds = new ComboPooledDataSource();
 
         cpds.setJdbcUrl("jdbc:postgresql://" + (useReplica ? dbSettings.getReplicaHost() : dbSettings.getHost()) + ":"
@@ -357,15 +357,15 @@ public class MaintenanceClient {
         cpds.setUser(dbSettings.getUser());
         cpds.setPassword(dbSettings.getPassword());
 
-        cpds.setInitialPoolSize( CService.configuration.DB_INITIAL_POOL_SIZE);
-        cpds.setMinPoolSize( CService.configuration.DB_MIN_POOL_SIZE);
-        cpds.setMaxPoolSize( CService.configuration.DB_MAX_POOL_SIZE);
+        cpds.setInitialPoolSize( Service.get().config.DB_INITIAL_POOL_SIZE);
+        cpds.setMinPoolSize( Service.get().config.DB_MIN_POOL_SIZE);
+        cpds.setMaxPoolSize( Service.get().config.DB_MAX_POOL_SIZE);
 
-        cpds.setAcquireRetryAttempts( CService.configuration.DB_ACQUIRE_RETRY_ATTEMPTS);
-        cpds.setAcquireIncrement( CService.configuration.DB_ACQUIRE_INCREMENT);
+        cpds.setAcquireRetryAttempts( Service.get().config.DB_ACQUIRE_RETRY_ATTEMPTS);
+        cpds.setAcquireIncrement( Service.get().config.DB_ACQUIRE_INCREMENT);
 
-        cpds.setCheckoutTimeout( CService.configuration.DB_CHECKOUT_TIMEOUT * 1000 );
-        cpds.setTestConnectionOnCheckout( CService.configuration.DB_TEST_CONNECTION_ON_CHECKOUT);
+        cpds.setCheckoutTimeout( Service.get().config.DB_CHECKOUT_TIMEOUT * 1000 );
+        cpds.setTestConnectionOnCheckout( Service.get().config.DB_TEST_CONNECTION_ON_CHECKOUT);
 
         cpds.setConnectionCustomizerClassName(ConnectionCustomizer.class.getName());
         return cpds;
@@ -381,7 +381,7 @@ public class MaintenanceClient {
             QueryRunner runner = new QueryRunner();
             try {
                 runner.execute(c, "SET enable_seqscan = off;");
-                runner.execute(c, "SET statement_timeout = " + (  CService.configuration.DB_STATEMENT_TIMEOUT_IN_S * 1000) + " ;");
+                runner.execute(c, "SET statement_timeout = " + (  Service.get().config.DB_STATEMENT_TIMEOUT_IN_S * 1000) + " ;");
                 runner.execute(c, "SET search_path=" + schema + ",h3,public,topology;");
             } catch (SQLException e) {
                 logger.error("Failed to initialize connection " + c + " [" + pdsIdt + "] : {}", e);

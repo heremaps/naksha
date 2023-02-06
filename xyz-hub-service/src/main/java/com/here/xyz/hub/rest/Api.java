@@ -86,8 +86,8 @@ public abstract class Api {
 
   protected static final Logger logger = LogManager.getLogger();
 
-  public static final int MAX_SERVICE_RESPONSE_SIZE = (Service.configuration == null ? 0 :  Service.configuration.MAX_SERVICE_RESPONSE_SIZE);
-  public static final int MAX_HTTP_RESPONSE_SIZE = (Service.configuration == null ? 0 :Service.configuration.MAX_HTTP_RESPONSE_SIZE);
+  public static final int MAX_SERVICE_RESPONSE_SIZE = (Service.get().config == null ? 0 :  Service.get().config.MAX_SERVICE_RESPONSE_SIZE);
+  public static final int MAX_HTTP_RESPONSE_SIZE = (Service.get().config == null ? 0 :Service.get().config.MAX_HTTP_RESPONSE_SIZE);
   public static final HttpResponseStatus RESPONSE_PAYLOAD_TOO_LARGE = new HttpResponseStatus(513, "Response payload too large");
   public static final String RESPONSE_PAYLOAD_TOO_LARGE_MESSAGE =
       "The response payload was too large. Please try to reduce the expected amount of data.";
@@ -495,13 +495,13 @@ public abstract class Api {
       httpResponse.putHeader(HttpHeaders.CACHE_CONTROL, "private, max-age=" + (cacheProfile.browserTTL / 1000));
     }
 
-    if (Service.configuration.INCLUDE_HEADERS_FOR_DECOMPRESSED_IO_SIZE){
+    if (Service.get().config.INCLUDE_HEADERS_FOR_DECOMPRESSED_IO_SIZE){
       RoutingContext context = task.context;
       // the body is discarded already, but the request size is stored in the access log object
       long requestSize = Context.getAccessLog(context).reqInfo.size;
       long responseSize = response == null ? 0 : response.length;
-      context.response().putHeader(Service.configuration.DECOMPRESSED_INPUT_SIZE_HEADER_NAME, String.valueOf(requestSize));
-      context.response().putHeader(Service.configuration.DECOMPRESSED_OUTPUT_SIZE_HEADER_NAME, String.valueOf(responseSize));
+      context.response().putHeader(Service.get().config.DECOMPRESSED_INPUT_SIZE_HEADER_NAME, String.valueOf(requestSize));
+      context.response().putHeader(Service.get().config.DECOMPRESSED_OUTPUT_SIZE_HEADER_NAME, String.valueOf(responseSize));
     }
 
     if (response == null || response.length == 0) {
@@ -670,7 +670,7 @@ public abstract class Api {
     }
 
     public static String getAuthor(RoutingContext context) {
-      if (Service.configuration.USE_AUTHOR_FROM_HEADER)
+      if (Service.get().config.USE_AUTHOR_FROM_HEADER)
         return context.request().getHeader(AUTHOR_HEADER);
       return getJWT(context).aid;
     }

@@ -66,8 +66,8 @@ public class ChangesetApi extends SpaceBasedApi {
           .onSuccess(result -> {
             this.sendResponse(context, HttpResponseStatus.NO_CONTENT, null);
             Marker marker = Api.Context.getMarker(context);
-            Service.spaceConfigClient.get(marker, spaceId)
-                .compose(space -> Service.spaceConfigClient.store(marker, space.withMinVersion(minVersion)))
+            Service.get().spaceConfigClient.get(marker, spaceId)
+                .compose(space -> Service.get().spaceConfigClient.store(marker, space.withMinVersion(minVersion)))
                 .onSuccess(v -> logger.info(marker, "Updated minVersion for space {}", spaceId))
                 .onFailure(t -> logger.error(marker, "Error while updating minVersion for space {}", spaceId, t));
           })

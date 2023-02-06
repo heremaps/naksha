@@ -19,17 +19,17 @@
 
 package com.here.xyz.hub;
 
-import com.here.xyz.hub.Service.Config;
-import com.here.xyz.hub.util.ConfigDecryptor;
-import com.here.xyz.hub.util.ConfigDecryptor.CryptoException;
+import static com.here.xyz.util.JsonConfigFile.nullable;
+
+import com.here.xyz.config.ConnectorConfig;
+import com.here.xyz.config.ServiceConfig;
+import com.here.xyz.hub.auth.Authorization.AuthorizationType;
+import com.here.xyz.hub.util.metrics.net.ConnectionMetrics.HubMetricsFactory;
 import com.here.xyz.util.JsonConfigFile;
-import io.vertx.config.ConfigRetriever;
-import io.vertx.config.ConfigRetrieverOptions;
-import io.vertx.config.ConfigStoreOptions;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.metrics.MetricsOptions;
+import io.vertx.ext.web.Router;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -48,22 +48,80 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.logging.log4j.core.util.CachedClock;
 import org.apache.logging.log4j.core.util.NetUtils;
+import org.jetbrains.annotations.NotNull;
 
 public class Core {
 
   private static final Logger logger = LogManager.getLogger();
 
+  protected Core(@Nullable VertxOptions vertxOptions) throws IOException {
+    // All further calls to ServiceConfig.get() will return this configuration object!
+    // This will work as well in xyz-hub-test module.
+    if (vertxOptions == null) {
+      vertxOptions = new VertxOptions();
+    }
+    config = ServiceConfig.get();
+    connectorConfig = ConnectorConfig.get();
+
+    if (config.START_METRICS) {
+      vertxOptions.setMetricsOptions(new MetricsOptions().setEnabled(true).setFactory(new HubMetricsFactory()));
+    }
+
+    Configurator.reconfigure(NetUtils.toURI(config.LOG_CONFIG()));
+    if (config.DEBUG) {
+      Configurator.setAllLevels(LogManager.getRootLogger().getName(), Level.getLevel("DEBUG"));
+    }
+    vertxOptions.setWorkerPoolSize(config.vertxWorkerPoolSize());
+    vertxOptions.setPreferNativeTransport(true);
+    if (config.DEBUG) {
+      vertxOptions
+          .setBlockedThreadCheckInterval(TimeUnit.MINUTES.toMillis(1))
+          .setMaxEventLoopExecuteTime(TimeUnit.MINUTES.toMillis(1))
+          .setMaxWorkerExecuteTime(TimeUnit.MINUTES.toMillis(1))
+          .setWarningExceptionTime(TimeUnit.MINUTES.toMillis(1));
+    }
+    vertx = Vertx.vertx(vertxOptions);
+    router = Router.router(vertx);
+  }
+
   /**
    * The entry point to the Vert.x core API.
    */
-  public static Vertx vertx;
+  public final @Nonnull Vertx vertx;
+
+  /**
+   * The configuration of the service, the same that is returned via {@link ServiceConfig#get()}.
+   */
+  public final @Nonnull ServiceConfig config;
+
+  /**
+   * Returns the authorization type; if no valid value is explicitly defined, {@link AuthorizationType#DUMMY DUMMY} is returned.
+   *
+   * @return the authorization type.
+   */
+  public @NotNull AuthorizationType config_XYZ_HUB_AUTH() {
+    try {
+      return AuthorizationType.valueOf(config.XYZ_HUB_AUTH);
+    } catch (Exception e) {
+      return AuthorizationType.DUMMY;
+    }
+  }
+
+  /**
+   * The configuration of the service, the same that is returned via {@link ServiceConfig#get()}.
+   */
+  public final @Nonnull ConnectorConfig connectorConfig;
+
+  /**
+   * The router of the service.
+   */
+  public final @Nonnull Router router;
 
   /**
    * A cached clock instance.
@@ -78,11 +136,6 @@ public class Core {
    * The service start time.
    */
   public static final long START_TIME = currentTimeMillis();
-
-  /**
-   * The LOG4J configuration file.
-   */
-  protected static final String CONSOLE_LOG_CONFIG = "log4j2-console-plain.json";
 
   /**
    * The Vertx worker pool size environment variable.
@@ -117,8 +170,8 @@ public class Core {
       filename = filename.substring(1);
     }
 
-    final String pathEnvName = JsonConfigFile.configPathEnvName(Config.class);
-    final String path = JsonConfigFile.nullable(System.getenv(pathEnvName));
+    final String pathEnvName = JsonConfigFile.configPathEnvName(ServiceConfig.class);
+    final String path = nullable(System.getenv(pathEnvName));
     final Path filePath;
     if (path != null) {
       filePath = Paths.get(path, filename).toAbsolutePath();
@@ -213,99 +266,7 @@ public class Core {
     return result;
   }
 
-  public static void initialize(
-      @Nonnull VertxOptions vertxOptions,
-      boolean debug,
-      @Nonnull String configFilename,
-      @Nonnull Handler<JsonObject> handler
-  ) {
-    final String pathEnvName = JsonConfigFile.configPathEnvName(Config.class);
-    final String path = JsonConfigFile.nullable(System.getenv(pathEnvName));
-    if (path != null) {
-      configFilename = Paths.get(path, configFilename).toAbsolutePath().toString();
-    } else {
-      final String userHome = System.getProperty("user.home");
-      if (userHome != null) {
-        final File configFile = new File(userHome + File.separatorChar + ".xyz-hub" + File.separatorChar + configFilename);
-        if (configFile.exists() && configFile.isFile()) {
-          configFilename = configFile.toPath().toAbsolutePath().toString();
-          if (!configFile.canRead()) {
-            die(1, "Unable to access configuration file: " + configFilename);
-          }
-        }
-      }
-    }
-
-    Configurator.initialize("default", CONSOLE_LOG_CONFIG);
-    final ConfigStoreOptions fileStore = new ConfigStoreOptions().setType("file").setConfig(new JsonObject().put("path", configFilename));
-    final ConfigStoreOptions envConfig = new ConfigStoreOptions().setType("env");
-    final ConfigStoreOptions sysConfig = new ConfigStoreOptions().setType("sys");
-    final ConfigRetrieverOptions options = new ConfigRetrieverOptions().addStore(fileStore).addStore(envConfig).addStore(sysConfig)
-        .setScanPeriod(24 * 60 * 1000);
-
-    vertxOptions = (vertxOptions != null ? vertxOptions : new VertxOptions())
-        .setWorkerPoolSize(NumberUtils.toInt(System.getenv(Core.VERTX_WORKER_POOL_SIZE), 128))
-        .setPreferNativeTransport(true);
-
-    if (debug) {
-      vertxOptions
-          .setBlockedThreadCheckInterval(TimeUnit.MINUTES.toMillis(1))
-          .setMaxEventLoopExecuteTime(TimeUnit.MINUTES.toMillis(1))
-          .setMaxWorkerExecuteTime(TimeUnit.MINUTES.toMillis(1))
-          .setWarningExceptionTime(TimeUnit.MINUTES.toMillis(1));
-    }
-
-    vertx = Vertx.vertx(vertxOptions);
-    ConfigRetriever retriever = ConfigRetriever.create(vertx, options);
-    retriever.getConfig(c -> {
-      if (c.failed() || c.result() == null) {
-        System.err.println("Unable to load the configuration.");
-        System.exit(1);
-      }
-      JsonObject config = c.result();
-      config.forEach(entry -> {
-        if (entry.getValue() instanceof String) {
-          if (entry.getValue().equals("")) {
-            config.put(entry.getKey(), (String) null);
-          } else {
-            try {
-              config.put(entry.getKey(), decryptSecret((String) entry.getValue()));
-            } catch (final CryptoException e) {
-              die(1, "Unable to decrypt value for key " + entry.getKey(), e);
-            }
-          }
-        }
-      });
-      initializeLogger(config, debug);
-      handler.handle(config);
-    });
-  }
-
-  private static void initializeLogger(JsonObject config, boolean debug) {
-    if (!CONSOLE_LOG_CONFIG.equals(config.getString("LOG_CONFIG"))) {
-      Configurator.reconfigure(NetUtils.toURI(config.getString("LOG_CONFIG")));
-    }
-    if (debug) {
-      changeLogLevel("DEBUG");
-    }
-  }
-
-  static void changeLogLevel(String level) {
-    logger.info("LOG LEVEL UPDATE requested. New level will be: " + level);
-
-    Configurator.setAllLevels(LogManager.getRootLogger().getName(), Level.getLevel(level));
-
-    logger.info("LOG LEVEL UPDATE performed. New level is now: " + level);
-  }
-
-  private static String decryptSecret(String encryptedSecret) throws CryptoException {
-    if (ConfigDecryptor.isEncrypted(encryptedSecret)) {
-      return ConfigDecryptor.decryptSecret(encryptedSecret);
-    }
-    return encryptedSecret;
-  }
-
-  public static final ThreadFactory newThreadFactory(String groupName) {
+  public static @Nonnull ThreadFactory newThreadFactory(@Nonnull String groupName) {
     return new DefaultThreadFactory(groupName);
   }
 

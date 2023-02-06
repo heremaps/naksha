@@ -39,7 +39,7 @@ class RedisCacheClient implements CacheClient {
   private static CacheClient instance;
   private static final Logger logger = LogManager.getLogger();
   private ThreadLocal<Redis> redis;
-  private String connectionString = Service.configuration.getRedisUri();
+  private String connectionString = Service.get().config.getRedisUri();
   RedisOptions config = new RedisOptions()
       .setConnectionString(connectionString)
       .setNetClientOptions(new NetClientOptions()
@@ -50,9 +50,9 @@ class RedisCacheClient implements CacheClient {
 
   private RedisCacheClient() {
     //Use redis auth token when available
-    if (Service.configuration.XYZ_HUB_REDIS_AUTH_TOKEN != null)
-      config.setPassword(Service.configuration.XYZ_HUB_REDIS_AUTH_TOKEN);
-    redis = ThreadLocal.withInitial(() -> Redis.createClient(Service.vertx, config));
+    if (Service.get().config.XYZ_HUB_REDIS_AUTH_TOKEN != null)
+      config.setPassword(Service.get().config.XYZ_HUB_REDIS_AUTH_TOKEN);
+    redis = ThreadLocal.withInitial(() -> Redis.createClient(Service.get().vertx, config));
   }
 
   @Nonnull
@@ -60,7 +60,7 @@ class RedisCacheClient implements CacheClient {
     if (instance != null)
       return instance;
 
-    if (Service.configuration.getRedisUri() == null)
+    if (Service.get().config.getRedisUri() == null)
       instance = new NoopCacheClient();
     else {
       try {

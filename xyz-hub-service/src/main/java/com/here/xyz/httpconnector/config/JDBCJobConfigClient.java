@@ -44,11 +44,11 @@ public class JDBCJobConfigClient extends JobConfigClient {
     public static final String JOB_TABLE = JDBCConfig.SCHEMA + ".xyz_job";
     private static JDBCJobConfigClient instance;
     private final SqlClient client;
-    private static boolean initialized = false;
 
     private JDBCJobConfigClient() {
         JDBCClients.addConfigClient();
         this.client = JDBCClients.getClient(JDBCClients.CONFIG_CLIENT_ID);
+        init();
     }
 
     public static JDBCJobConfigClient getInstance() {
@@ -148,14 +148,7 @@ public class JDBCJobConfigClient extends JobConfigClient {
                 });
     }
 
-    @Override
-    public void init(Handler<AsyncResult<Void>> onReady) {
-        if (initialized) {
-            onReady.handle(Future.succeededFuture());
-            return;
-        }
-        initialized = true;
-
+    private void init() {
         String q = "SELECT " +
                 "to_regclass as table_exists," +
                 "(SELECT schema_name as schema_exists FROM information_schema.schemata WHERE schema_name='xyz_config') " +
@@ -165,7 +158,6 @@ public class JDBCJobConfigClient extends JobConfigClient {
                 .execute(Tuple.of(JOB_TABLE))
                 .onSuccess(rows -> {
                     if (rows.rowCount() == 0) {
-                        onReady.handle(Future.failedFuture(""));
                         return;
                     }
                     String tableExists = rows.iterator().next().getString("table_exists");
@@ -173,26 +165,21 @@ public class JDBCJobConfigClient extends JobConfigClient {
 
                     if (schemaExists == null) {
                         logger.error("Config-Schema is missing!");
-                        onReady.handle(Future.failedFuture("Config-Schema is missing!"));
                         return;
                     }
                     if (tableExists == null) {
                         logger.info("Job Table is missing - create Table!");
                         client.preparedQuery("CREATE TABLE IF NOT EXISTS "+JOB_TABLE+" (id VARCHAR(255) primary key, jobtype VARCHAR (255), config JSONB)")
                                 .execute()
-                                .onSuccess( f -> onReady.handle(Future.succeededFuture()))
                                 .onFailure( f -> {
                                     logger.error("Cant create JOB-Config Table!", f);
-                                    onReady.handle(Future.failedFuture(f.getCause()));
                                 });
                     }else {
                         /** Schema are Table are in place */
-                        onReady.handle(Future.succeededFuture());
                     }
                 })
                 .onFailure(f -> {
                     logger.error("Initialization Error", f);
-                    onReady.handle(Future.failedFuture(f.getCause()));
                 });
     }
 }

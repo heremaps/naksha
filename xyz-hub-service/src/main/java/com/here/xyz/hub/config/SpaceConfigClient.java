@@ -39,8 +39,9 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
+import org.jetbrains.annotations.NotNull;
 
-public abstract class SpaceConfigClient implements Initializable {
+public abstract class SpaceConfigClient {
 
   private static final Logger logger = LogManager.getLogger();
 
@@ -57,9 +58,10 @@ public abstract class SpaceConfigClient implements Initializable {
   public static final String CONTENT_UPDATED_AT = "contentUpdatedAt";
   public static final String UPDATED_AT = "updatedAt";
 
-  public static SpaceConfigClient getInstance() {
-    if (Service.configuration.SPACES_DYNAMODB_TABLE_ARN != null) {
-      return new DynamoSpaceConfigClient(Service.configuration.SPACES_DYNAMODB_TABLE_ARN);
+  public static @NotNull SpaceConfigClient getInstance() {
+    final String spaces_dynamodb_table_arn = Service.get().config.SPACES_DYNAMODB_TABLE_ARN;
+    if (spaces_dynamodb_table_arn != null) {
+      return new DynamoSpaceConfigClient(spaces_dynamodb_table_arn);
     } else {
       return JDBCSpaceConfigClient.getInstance();
     }

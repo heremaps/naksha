@@ -49,15 +49,10 @@ public class DynamoConnectorConfigClient extends ConnectorConfigClient {
     dynamoClient = new DynamoClient(tableArn);
     logger.debug("Instantiating a reference to Dynamo Table {}", dynamoClient.tableName);
     connectors = dynamoClient.db.getTable(dynamoClient.tableName);
-  }
 
-  @Override
-  public void init(Handler<AsyncResult<Void>> onReady) {
     if (dynamoClient.isLocal()) {
       dynamoClient.createTable(connectors.getTableName(), "id:S,owner:S", "id", "owner", null);
     }
-
-    onReady.handle(Future.succeededFuture());
   }
 
   @Override

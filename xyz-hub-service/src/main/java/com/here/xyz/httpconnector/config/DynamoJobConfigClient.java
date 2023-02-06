@@ -29,6 +29,7 @@ import com.here.xyz.httpconnector.CService;
 import com.here.xyz.httpconnector.util.jobs.Job;
 import com.here.xyz.httpconnector.util.jobs.Job.Status;
 import com.here.xyz.httpconnector.util.jobs.Job.Type;
+import com.here.xyz.hub.Service;
 import com.here.xyz.hub.config.DynamoClient;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -57,12 +58,9 @@ public class DynamoJobConfigClient extends JobConfigClient {
         dynamoClient = new DynamoClient(tableArn);
         logger.debug("Instantiating a reference to Dynamo Table {}", dynamoClient.tableName);
         jobs = dynamoClient.db.getTable(dynamoClient.tableName);
-        if(CService.configuration != null && CService.configuration.JOB_DYNAMO_EXP_IN_DAYS != null)
-            expiration = CService.configuration.JOB_DYNAMO_EXP_IN_DAYS;
-    }
+        if(Service.get().config.JOB_DYNAMO_EXP_IN_DAYS > 0L)
+            expiration = Service.get().config.JOB_DYNAMO_EXP_IN_DAYS;
 
-    @Override
-    public void init(Handler<AsyncResult<Void>> onReady) {
         if (dynamoClient.isLocal()) {
             logger.info("DynamoDB running locally, initializing tables.");
 
@@ -71,11 +69,8 @@ public class DynamoJobConfigClient extends JobConfigClient {
             }
             catch (Exception e) {
                 logger.error("Failure during creating tables on DynamoSpaceConfigClient init", e);
-                onReady.handle(Future.failedFuture(e));
-                return;
             }
         }
-        onReady.handle(Future.succeededFuture());
     }
 
     @Override

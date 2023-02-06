@@ -26,7 +26,7 @@ import com.here.xyz.hub.Service;
 import com.here.xyz.hub.cache.CacheClient;
 import com.here.xyz.hub.connectors.RemoteFunctionClient;
 import com.here.xyz.hub.connectors.models.Connector;
-import com.here.xyz.hub.rest.admin.Node;
+import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.util.health.GroupedHealthCheck;
 import com.here.xyz.hub.util.health.schema.Response;
 import com.here.xyz.hub.util.health.schema.Status;
@@ -88,7 +88,7 @@ public class RemoteFunctionHealthAggregator extends GroupedHealthCheck {
     else {
       //There was no cached response or it was too old, so this node will create a new health-check response
       s = super.execute().withTimestamp(Service.currentTimeMillis());
-      res = getResponse().withNode(Node.OWN_INSTANCE.id);
+      res = getResponse().withNode(Service.get().node.ip);
       res.setStatus(s);
 
       try {
@@ -138,7 +138,7 @@ public class RemoteFunctionHealthAggregator extends GroupedHealthCheck {
       res.setAdditionalProperty("globalArrivalRate", RemoteFunctionClient.getGlobalArrivalRate());
       res.setAdditionalProperty("globalThroughput", RemoteFunctionClient.getGlobalThroughput());
       res.setAdditionalProperty("globalMinConnections", RemoteFunctionClient.getGlobalMinConnections());
-      res.setAdditionalProperty("globalMaxConnections", Service.configuration.REMOTE_FUNCTION_MAX_CONNECTIONS);
+      res.setAdditionalProperty("globalMaxConnections", Service.get().config.REMOTE_FUNCTION_MAX_CONNECTIONS);
       res.setAdditionalProperty("globalUsedConnections", RemoteFunctionClient.getGlobalUsedConnections());
       res.setAdditionalProperty("globalUsedConnectionsPercentage", RemoteFunctionClient.getGlobalUsedConnectionsPercentage());
       setResponse(res);

@@ -63,6 +63,12 @@
       <artifactId>jackson-databind</artifactId>
       <groupId>com.fasterxml.jackson.core</groupId>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/org.jetbrains/annotations -->
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+    </dependency>
+
     <dependency>
       <artifactId>junit</artifactId>
       <groupId>junit</groupId>
@@ -71,6 +77,10 @@
     <dependency>
       <groupId>com.google.flatbuffers</groupId>
       <artifactId>flatbuffers-java</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-kms</artifactId>
     </dependency>
   </dependencies>
 </project>

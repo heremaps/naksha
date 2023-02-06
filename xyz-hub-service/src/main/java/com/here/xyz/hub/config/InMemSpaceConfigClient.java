@@ -40,11 +40,6 @@ public class InMemSpaceConfigClient extends SpaceConfigClient {
   private Map<String, Space> spaceMap = new ConcurrentHashMap<>();
 
   @Override
-  public void init(Handler<AsyncResult<Void>> onReady) {
-    onReady.handle(Future.succeededFuture());
-  }
-
-  @Override
   public Future<Space> getSpace(Marker marker, String spaceId) {
     return Future.succeededFuture(spaceMap.get(spaceId));
   }

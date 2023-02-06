@@ -50,7 +50,7 @@ public class OHCacheClient implements CacheClient {
 
   private OHCacheClient() {
     executors = new ScheduledThreadPoolExecutor(2, Core.newThreadFactory("ohCache" + clientCount.getAndIncrement()));
-    cache = createCache(Service.configuration.OFF_HEAP_CACHE_SIZE_MB, executors, false);
+    cache = createCache(Service.get().config.OFF_HEAP_CACHE_SIZE_MB, executors, false);
   }
 
   @Override

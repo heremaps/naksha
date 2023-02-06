@@ -48,8 +48,8 @@ import com.here.xyz.hub.connectors.models.Connector;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig.AWSLambda;
 import com.here.xyz.hub.rest.HttpException;
-import com.here.xyz.hub.rest.admin.Node;
-import com.here.xyz.hub.util.ARN;
+import com.here.xyz.hub.ServiceNode;
+import com.here.xyz.util.ARN;
 import com.here.xyz.hub.util.LimitedOffHeapQueue.PayloadVanishedException;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -83,8 +83,8 @@ public class LambdaFunctionClient extends RemoteFunctionClient {
   private static Map<AWSLambdaAsync, List<String>> clientReferences = new HashMap<>();
   private static ExecutorService executors = new ForwardingExecutorService() {
     private ExecutorService threadPool = new ThreadPoolExecutor(
-        Service.configuration.REMOTE_FUNCTION_MAX_CONNECTIONS,
-        Service.configuration.REMOTE_FUNCTION_MAX_CONNECTIONS,
+        Service.get().config.REMOTE_FUNCTION_MAX_CONNECTIONS,
+        Service.get().config.REMOTE_FUNCTION_MAX_CONNECTIONS,
         0L, TimeUnit.MILLISECONDS,
         new LinkedBlockingQueue<Runnable>(), Core.newThreadFactory("lambdaRfcs"));
 
@@ -146,7 +146,7 @@ public class LambdaFunctionClient extends RemoteFunctionClient {
         .withCredentials(getAWSCredentialsProvider(remoteFunction))
         .withClientConfiguration(new ClientConfiguration()
             .withTcpKeepAlive(true)
-            .withMaxConnections(Service.configuration.REMOTE_FUNCTION_MAX_CONNECTIONS)
+            .withMaxConnections(Service.get().config.REMOTE_FUNCTION_MAX_CONNECTIONS)
             .withConnectionTimeout(CONNECTION_ESTABLISH_TIMEOUT)
             .withRequestTimeout(remoteFunction.getTimeout())
             .withMaxErrorRetry(0)
@@ -228,7 +228,7 @@ public class LambdaFunctionClient extends RemoteFunctionClient {
    */
   private static AWSCredentialsProvider getAWSCredentialsProvider(AWSLambda remoteFunction) {
     if (remoteFunction.roleARN != null) {
-      return new STSAssumeRoleSessionCredentialsProvider.Builder(remoteFunction.roleARN, Node.OWN_INSTANCE.id)
+      return new STSAssumeRoleSessionCredentialsProvider.Builder(remoteFunction.roleARN, Service.get().node.id)
           .withStsClient(AWSSecurityTokenServiceClientBuilder.defaultClient())
           .build();
     }

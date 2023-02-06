@@ -62,7 +62,7 @@ public class ConnectorHandler {
   public static void getConnector(RoutingContext context, String connectorId, Handler<AsyncResult<Connector>> handler) {
     Marker marker = Api.Context.getMarker(context);
 
-    Service.connectorConfigClient.get(marker, connectorId, ar -> {
+    Service.get().connectorConfigClient.get(marker, connectorId, ar -> {
       if (ar.failed()) {
         logger.warn(marker, "The requested resource does not exist.'", ar.cause());
         handler.handle(Future.failedFuture(new HttpException(NOT_FOUND, "The requested resource does not exist.", ar.cause())));
@@ -80,7 +80,7 @@ public class ConnectorHandler {
     connectorIds.forEach(connectorId -> {
       CompletableFuture<Connector> f = new CompletableFuture<>();
       completableFutureList.add(f);
-      Service.connectorConfigClient.get(marker, connectorId, ar -> {
+      Service.get().connectorConfigClient.get(marker, connectorId, ar -> {
         if (ar.failed()) {
           logger.warn(marker, "The requested resource does not exist.'", ar.cause());
           f.completeExceptionally(new HttpException(NOT_FOUND, "The requested resource '" + connectorId + "' does not exist.", ar.cause()));
@@ -105,7 +105,7 @@ public class ConnectorHandler {
   public static void getConnectors(RoutingContext context, String ownerId, Handler<AsyncResult<List<Connector>>> handler) {
     Marker marker = Api.Context.getMarker(context);
 
-    Service.connectorConfigClient.getByOwner(marker, ownerId, ar -> {
+    Service.get().connectorConfigClient.getByOwner(marker, ownerId, ar -> {
       if (ar.failed()) {
         logger.warn(marker, "Unable to load resource definitions.'", ar.cause());
         handler.handle(Future.failedFuture(new HttpException(INTERNAL_SERVER_ERROR, "Unable to load the resource definitions.", ar.cause())));
@@ -118,7 +118,7 @@ public class ConnectorHandler {
   public static void getAllConnectors(RoutingContext context, Handler<AsyncResult<List<Connector>>> handler) {
     Marker marker = Api.Context.getMarker(context);
 
-    Service.connectorConfigClient.getAll(marker, ar -> {
+    Service.get().connectorConfigClient.getAll(marker, ar -> {
       if (ar.failed()) {
         logger.warn(marker, "Unable to load resource definitions.'", ar.cause());
         handler.handle(Future.failedFuture(new HttpException(INTERNAL_SERVER_ERROR, "Unable to load the resource definitions.", ar.cause())));
@@ -131,7 +131,7 @@ public class ConnectorHandler {
   public static void createConnector(RoutingContext context, JsonObject connector, Handler<AsyncResult<Connector>> handler) {
     Marker marker = Api.Context.getMarker(context);
 
-    Service.connectorConfigClient.get(marker, connector.getString("id"), ar -> {
+    Service.get().connectorConfigClient.get(marker, connector.getString("id"), ar -> {
       if (ar.failed()) {
         storeConnector(context, connector, handler, marker, ar);
       }
@@ -171,7 +171,7 @@ public class ConnectorHandler {
       AsyncResult<Connector> ar, Connector c) throws HttpException {
     validate(context, c);
 
-    Service.connectorConfigClient.store(marker, c, ar2 -> {
+    Service.get().connectorConfigClient.store(marker, c, ar2 -> {
       if (ar2.failed()) {
         logger.error(marker, "Unable to store resource definition.'", ar.cause());
         handler.handle(Future.failedFuture(new HttpException(INTERNAL_SERVER_ERROR, "Unable to store the resource definition.", ar2.cause())));
@@ -184,7 +184,7 @@ public class ConnectorHandler {
   public static void updateConnector(RoutingContext context, JsonObject connector, Handler<AsyncResult<Connector>> handler) {
     Marker marker = Api.Context.getMarker(context);
 
-    Service.connectorConfigClient.get(marker, connector.getString("id"), ar -> {
+    Service.get().connectorConfigClient.get(marker, connector.getString("id"), ar -> {
       if (ar.failed()) {
         logger.error(marker, "Unable to load resource definition.'", ar.cause());
         handler.handle(Future.failedFuture(new HttpException(NOT_FOUND, "Unable to load the resource definition.", ar.cause())));
@@ -212,9 +212,9 @@ public class ConnectorHandler {
   public static void deleteConnector(RoutingContext context, String connectorId, Handler<AsyncResult<Connector>> handler) {
     Marker marker = Api.Context.getMarker(context);
 
-    Service.connectorConfigClient.get(marker, connectorId, arGet -> {
+    Service.get().connectorConfigClient.get(marker, connectorId, arGet -> {
       if (arGet.succeeded()) {
-        Service.connectorConfigClient.delete(marker, connectorId, ar -> {
+        Service.get().connectorConfigClient.delete(marker, connectorId, ar -> {
           if (ar.failed()) {
             logger.error(marker, "Unable to delete resource definition.'", ar.cause());
             handler.handle(Future.failedFuture(new HttpException(INTERNAL_SERVER_ERROR, "Unable to delete the resource definition.", ar.cause())));

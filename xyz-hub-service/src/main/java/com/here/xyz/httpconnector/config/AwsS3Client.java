@@ -28,6 +28,7 @@ import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.here.xyz.httpconnector.CService;
 
+import com.here.xyz.hub.Service;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Date;
@@ -44,10 +45,10 @@ public class AwsS3Client {
 
     public AwsS3Client() {
         final AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
-        final String region = CService.configuration != null ? CService.configuration.JOBS_S3_BUCKET_REGION : "eu-west-1";
+        final String region = Service.get().config.JOBS_S3_BUCKET_REGION;
         builder.setRegion(region);
 
-        if (CService.configuration != null && CService.configuration.USE_AWS_INSTANCE_CREDENTIALS_WITH_REFRESH) {
+        if (Service.get().config.USE_AWS_INSTANCE_CREDENTIALS_WITH_REFRESH) {
             synchronized(AwsS3Client.class) {
                 if (customCredentialsProvider == null) {
                     customCredentialsProvider = InstanceProfileCredentialsProvider.createAsyncRefreshingProvider(true);

@@ -38,11 +38,6 @@ public class InMemSubscriptionConfigClient extends SubscriptionConfigClient {
   private Map<String, Subscription> storageMap = new ConcurrentHashMap<>();
 
   @Override
-  public void init(Handler<AsyncResult<Void>> onReady) {
-    onReady.handle(Future.succeededFuture());
-  }
-
-  @Override
   protected Future<Subscription> getSubscription(Marker marker, String subscriptionId) {
     Subscription subscription = storageMap.get(subscriptionId);
     return Future.succeededFuture(subscription);

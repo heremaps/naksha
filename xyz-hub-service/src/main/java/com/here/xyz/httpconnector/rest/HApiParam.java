@@ -21,6 +21,7 @@ package com.here.xyz.httpconnector.rest;
 import com.here.xyz.httpconnector.CService;
 import com.here.xyz.httpconnector.util.jobs.Import;
 import com.here.xyz.httpconnector.util.jobs.Job;
+import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.ApiParam;
 import com.here.xyz.hub.rest.HttpException;
 import io.vertx.core.json.DecodeException;
@@ -131,7 +132,7 @@ public class HApiParam extends ApiParam {
             return new String[]{
                     connectorId,
                     Query.getString(context, "ecps", null),
-                    Query.getString(context, "passphrase", CService.configuration.ECPS_PHRASE)
+                    Query.getString(context, "passphrase", Service.get().config.ECPS_PHRASE)
             };
         }
 

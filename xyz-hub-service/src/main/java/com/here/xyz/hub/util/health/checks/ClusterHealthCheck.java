@@ -3,7 +3,8 @@ package com.here.xyz.hub.util.health.checks;
 import static com.here.xyz.hub.util.health.schema.Status.Result.ERROR;
 import static com.here.xyz.hub.util.health.schema.Status.Result.OK;
 
-import com.here.xyz.hub.rest.admin.Node;
+import com.here.xyz.hub.Service;
+import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.util.health.schema.Response;
 import com.here.xyz.hub.util.health.schema.Status;
 
@@ -19,7 +20,7 @@ public class ClusterHealthCheck extends ExecutableCheck {
     Status s = new Status().withResult(OK);
     Response r = new Response();
     try {
-      r.setAdditionalProperty("nodes", Node.getClusterNodes());
+      r.setAdditionalProperty("nodes", Service.get().node.getClusterNodes());
       s.setResult(OK);
     }
     catch (Exception e) {

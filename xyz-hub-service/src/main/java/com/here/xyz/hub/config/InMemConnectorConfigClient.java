@@ -38,11 +38,6 @@ public class InMemConnectorConfigClient extends ConnectorConfigClient {
   private Map<String, Connector> storageMap = new ConcurrentHashMap<>();
 
   @Override
-  public void init(Handler<AsyncResult<Void>> onReady) {
-    onReady.handle(Future.succeededFuture());
-  }
-
-  @Override
   protected void getConnector(Marker marker, String connectorId, Handler<AsyncResult<Connector>> handler) {
     Connector connector = storageMap.get(connectorId);
     handler.handle(Future.succeededFuture(connector));

@@ -40,7 +40,7 @@ import com.here.xyz.XyzSerializable;
 import com.here.xyz.events.PropertiesQuery;
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.connectors.models.Space;
-import com.here.xyz.hub.util.ARN;
+import com.here.xyz.util.ARN;
 import com.here.xyz.psql.SQLQuery;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -81,11 +81,12 @@ public class DynamoSpaceConfigClient extends SpaceConfigClient {
     logger.info("Instantiating a reference to Dynamo Table {}", dynamoClient.tableName);
     spaces = dynamoClient.db.getTable(dynamoClient.tableName);
     packages = dynamoClient.db
-        .getTable(new ARN(Service.configuration.PACKAGES_DYNAMODB_TABLE_ARN).getResourceWithoutType());
+        .getTable(new ARN(Service.get().config.PACKAGES_DYNAMODB_TABLE_ARN).getResourceWithoutType());
+
+    init();
   }
 
-  @Override
-  public void init(Handler<AsyncResult<Void>> onReady) {
+  private void init() {
     if (dynamoClient.isLocal()) {
       logger.info("DynamoDB running locally, initializing tables.");
 
@@ -95,12 +96,9 @@ public class DynamoSpaceConfigClient extends SpaceConfigClient {
       }
       catch (AmazonDynamoDBException e) {
         logger.error("Failure during creating tables on DynamoSpaceConfigClient init", e);
-        onReady.handle(Future.failedFuture(e));
         return;
       }
     }
-
-    onReady.handle(Future.succeededFuture());
   }
 
   @Override

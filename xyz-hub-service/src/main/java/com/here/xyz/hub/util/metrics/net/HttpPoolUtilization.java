@@ -42,7 +42,7 @@ class HttpPoolUtilization extends AttributedMetricCollector<Collection<Double>> 
   protected Map<Collection<Attribute>, Collection<Double>> gatherValues() {
     return HubHttpClientMetrics.endpointsConnected.entrySet().stream().collect(Collectors.toMap(
         e -> Collections.singleton(new Attribute<>(TARGET, e.getKey())),
-        e -> Collections.singleton(e.getValue().doubleValue() / Service.configuration.MAX_GLOBAL_HTTP_CLIENT_CONNECTIONS * 100))
+        e -> Collections.singleton(e.getValue().doubleValue() / Service.get().config.MAX_GLOBAL_HTTP_CLIENT_CONNECTIONS * 100))
     );
   }
 }

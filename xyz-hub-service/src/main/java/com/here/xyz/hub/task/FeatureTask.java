@@ -289,7 +289,7 @@ public abstract class FeatureTask<T extends Event<?>, X extends FeatureTask<T, ?
           c.call(gq);
           return;
         }
-        Service.connectorConfigClient.get(getMarker(), refSpace.getStorage().getId(), (arStorage) -> {
+        Service.get().connectorConfigClient.get(getMarker(), refSpace.getStorage().getId(), (arStorage) -> {
           if (arStorage.failed()) {
             c.exception(new InvalidStorageException("Unable to load the definition for this storage."));
             return;
@@ -309,7 +309,7 @@ public abstract class FeatureTask<T extends Event<?>, X extends FeatureTask<T, ?
           return;
         }
         //Load the space definition.
-        Service.spaceConfigClient.get(getMarker(), refSpaceId)
+        Service.get().spaceConfigClient.get(getMarker(), refSpaceId)
             .onFailure(t -> c.exception(new HttpException(BAD_REQUEST, "The resource ID '" + refSpaceId + "' does not exist!", t)))
             .onSuccess(space -> {
               refSpace = space;

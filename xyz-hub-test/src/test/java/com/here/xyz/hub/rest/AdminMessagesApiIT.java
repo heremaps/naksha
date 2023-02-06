@@ -28,9 +28,9 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.equalTo;
 
 import com.here.xyz.hub.Service;
-import com.here.xyz.hub.Service.Config;
+import com.here.xyz.config.ServiceConfig;
 import com.here.xyz.hub.rest.admin.AdminMessage;
-import com.here.xyz.hub.rest.admin.Node;
+import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.rest.admin.messages.TestMessage;
 import com.jayway.restassured.response.ResponseBodyExtractionOptions;
 import com.jayway.restassured.response.ValidatableResponse;
@@ -56,9 +56,9 @@ public class AdminMessagesApiIT extends RestAssuredTest {
   @BeforeClass
   public static void setup() {
     //Mock necessary configuration values
-    Service.configuration = new Config();
-    Service.configuration.REMOTE_FUNCTION_REQUEST_TIMEOUT = 26;
-    Service.configuration.INSTANCE_COUNT = 1;
+    Service.get().config = new ServiceConfig();
+    Service.get().config.REMOTE_FUNCTION_REQUEST_TIMEOUT = 26;
+    Service.get().config.INSTANCE_COUNT = 1;
 
     threadPool = new ForkJoinPool(10);
   }
@@ -149,7 +149,7 @@ public class AdminMessagesApiIT extends RestAssuredTest {
     ResponseBodyExtractionOptions bcResponse = loadAndVerifyResponse(bcTmpFile, bcContent);
     //String nodeId = response.path("receiver.id");
     //String nodeIp = response.path("receiver.ip");
-    Node node = JsonObject.mapFrom(bcResponse.path("receiver")).mapTo(Node.class);
+    ServiceNode node = JsonObject.mapFrom(bcResponse.path("receiver")).mapTo(ServiceNode.class);
 
     //Send a message dedicated to the node
     now = System.currentTimeMillis();

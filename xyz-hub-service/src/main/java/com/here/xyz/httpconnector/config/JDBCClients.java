@@ -21,6 +21,7 @@ package com.here.xyz.httpconnector.config;
 
 import com.here.xyz.httpconnector.CService;
 import com.here.xyz.hub.Core;
+import com.here.xyz.hub.Service;
 import com.here.xyz.psql.config.DatabaseSettings;
 import com.here.xyz.psql.tools.ECPSTool;
 import com.mchange.v3.decode.CannotDecodeException;
@@ -68,8 +69,8 @@ public class JDBCClients {
         /** Used to store Job definitions inside DB if Dynamo is not used */
         DatabaseSettings settings = new DatabaseSettings();
 
-        if(CService.configuration != null && CService.configuration.STORAGE_DB_URL != null) {
-            URI uri = URI.create(CService.configuration.STORAGE_DB_URL.substring(5));
+        if(Service.get().config != null && Service.get().config.STORAGE_DB_URL != null) {
+            URI uri = URI.create(Service.get().config.STORAGE_DB_URL.substring(5));
             settings.setHost(uri.getHost());
             settings.setPort(Integer.valueOf(uri.getPort() == -1 ? 5432 : uri.getPort()));
 
@@ -77,10 +78,10 @@ public class JDBCClients {
             if (pathComponent != null && pathComponent.length > 1)
                 settings.setDb(pathComponent[1]);
         }
-        if(CService.configuration != null && CService.configuration.STORAGE_DB_USER != null)
-            settings.setUser(CService.configuration.STORAGE_DB_USER);
-        if(CService.configuration != null && CService.configuration.STORAGE_DB_PASSWORD != null)
-            settings.setPassword(CService.configuration.STORAGE_DB_PASSWORD);
+        if(Service.get().config != null && Service.get().config.STORAGE_DB_USER != null)
+            settings.setUser(Service.get().config.STORAGE_DB_USER);
+        if(Service.get().config != null && Service.get().config.STORAGE_DB_PASSWORD != null)
+            settings.setPassword(Service.get().config.STORAGE_DB_PASSWORD);
 
         addClient(CONFIG_CLIENT_ID, settings);
     }
@@ -89,7 +90,7 @@ public class JDBCClients {
         Map<String, String> props = new HashMap<>();
         props.put("application_name", getApplicationName(id));
         props.put("search_path", settings.getSchema()+",h3,public,topology");
-        props.put("options", "-c statement_timeout="+CService.configuration.DB_STATEMENT_TIMEOUT_IN_S * 1000);
+        props.put("options", "-c statement_timeout="+ Service.get().config.DB_STATEMENT_TIMEOUT_IN_S * 1000);
 
         PgConnectOptions connectOptions = new PgConnectOptions()
                 .setPort(settings.getPort())
@@ -97,17 +98,17 @@ public class JDBCClients {
                 .setDatabase(settings.getDb())
                 .setUser(settings.getUser())
                 .setPassword(settings.getPassword())
-                .setConnectTimeout(CService.configuration.DB_CHECKOUT_TIMEOUT  * 1000)
-                .setReconnectAttempts(CService.configuration.DB_ACQUIRE_RETRY_ATTEMPTS)
+                .setConnectTimeout(Service.get().config.DB_CHECKOUT_TIMEOUT  * 1000)
+                .setReconnectAttempts(Service.get().config.DB_ACQUIRE_RETRY_ATTEMPTS)
                 .setReconnectInterval(1000)
                 /** Disable Pipelining */
                 .setPipeliningLimit(1)
                 .setProperties(props);
 
         PoolOptions poolOptions = new PoolOptions()
-                .setMaxSize(CService.configuration.DB_MAX_POOL_SIZE);
+                .setMaxSize(Service.get().config.DB_MAX_POOL_SIZE);
 
-        SqlClient client = PgPool.client(CService.vertx, connectOptions, poolOptions);
+        SqlClient client = PgPool.client(Service.get().vertx, connectOptions, poolOptions);
         logger.info("Add new SQL-Client [{}]",id);
         clients.put(id, new DBClient(client,settings,id));
     }

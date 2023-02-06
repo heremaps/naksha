@@ -1,7 +1,7 @@
 package com.here.xyz.hub.connectors;
 
 import com.here.xyz.hub.Service;
-import com.here.xyz.hub.Service.Config;
+import com.here.xyz.config.ServiceConfig;
 import com.here.xyz.hub.connectors.models.Connector;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig.Embedded;
@@ -15,8 +15,8 @@ public class ConnectorConfigTest {
 
   @Before
   public void before() {
-    Service.configuration = new Config();
-    Service.configuration.ENVIRONMENT_NAME = "euWest1";
+    Service.get().config = new ServiceConfig();
+    Service.get().config.ENVIRONMENT_NAME = "euWest1";
     c.id = "test";
 
     RemoteFunctionConfig euWest1 = new Embedded();

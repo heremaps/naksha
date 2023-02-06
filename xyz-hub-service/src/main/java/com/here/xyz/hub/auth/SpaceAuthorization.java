@@ -202,7 +202,7 @@ public class SpaceAuthorization extends Authorization {
       connectorIds.forEach(id -> {
         CompletableFuture<Void> f = new CompletableFuture<>();
         futureList.add(f);
-        Service.connectorConfigClient.get(task.context.get("marker"), id, ar -> {
+        Service.get().connectorConfigClient.get(task.context.get("marker"), id, ar -> {
           if (ar.succeeded()) {
             Connector c = ar.result();
             connectorsRights.accessConnectors(XyzHubAttributeMap.forIdValues(c.owner, c.id));

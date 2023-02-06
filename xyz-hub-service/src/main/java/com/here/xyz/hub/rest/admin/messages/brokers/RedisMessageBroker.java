@@ -21,7 +21,6 @@ package com.here.xyz.hub.rest.admin.messages.brokers;
 
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.admin.MessageBroker;
-import com.here.xyz.hub.rest.admin.Node;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -31,9 +30,11 @@ import io.vertx.redis.client.Redis;
 import io.vertx.redis.client.RedisConnection;
 import io.vertx.redis.client.RedisOptions;
 import io.vertx.redis.client.Request;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nonnull;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 class RedisMessageBroker implements MessageBroker {
 
@@ -49,8 +50,8 @@ class RedisMessageBroker implements MessageBroker {
 
   RedisMessageBroker() {
     try {
-      client = Redis.createClient(Service.vertx, getClientConfig(true));
-      messageReceiverClient = Redis.createClient(Service.vertx, getClientConfig(false));
+      client = Redis.createClient(Service.get().vertx, getClientConfig(true));
+      messageReceiverClient = Redis.createClient(Service.get().vertx, getClientConfig(false));
     }
     catch (Exception e) {
       logger.error("Error while subscribing node in Redis.", e);
@@ -59,15 +60,15 @@ class RedisMessageBroker implements MessageBroker {
 
   private RedisOptions getClientConfig(boolean withIdleTimeout) {
     RedisOptions config = new RedisOptions()
-        .setConnectionString(Service.configuration.getRedisUri())
+        .setConnectionString(Service.get().config.getRedisUri())
         .setNetClientOptions(new NetClientOptions()
             .setTcpKeepAlive(true)
             .setIdleTimeout(withIdleTimeout ? CONNECTION_KEEP_ALIVE : 0)
             .setConnectTimeout(2000));
 
     //Use redis auth token when available
-    if (Service.configuration.XYZ_HUB_REDIS_AUTH_TOKEN != null)
-      config.setPassword(Service.configuration.XYZ_HUB_REDIS_AUTH_TOKEN);
+    if (Service.get().config.XYZ_HUB_REDIS_AUTH_TOKEN != null)
+      config.setPassword(Service.get().config.XYZ_HUB_REDIS_AUTH_TOKEN);
 
     return config;
   }
@@ -107,7 +108,7 @@ class RedisMessageBroker implements MessageBroker {
   }
 
   private void subscribeOwnNode(AsyncResult<RedisConnection> ar) {
-    logger.info("Subscribing the NODE=" + Node.OWN_INSTANCE.getUrl());
+    logger.info("Subscribing the NODE=" + Service.get().node.getUrl());
 
     String errMsg = "The Node could not be subscribed as AdminMessage listener. No AdminMessages will be received by this node.";
     if (ar.succeeded()) {
@@ -121,7 +122,7 @@ class RedisMessageBroker implements MessageBroker {
       Request req = Request.cmd(Command.SUBSCRIBE).arg(CHANNEL);
       messageReceiverConnection.send(req).onComplete(arSub -> {
         if (arSub.succeeded()) {
-          logger.info("Subscription succeeded for NODE=" + Node.OWN_INSTANCE.getUrl());
+          logger.info("Subscription succeeded for NODE=" + Service.get().node.getUrl());
         }
         else
           logger.error(errMsg, arSub.cause());
@@ -150,23 +151,34 @@ class RedisMessageBroker implements MessageBroker {
     });
   }
 
-  static Future<RedisMessageBroker> getInstance() {
-    Promise<RedisMessageBroker> p = Promise.promise();
+  static synchronized @NotNull RedisMessageBroker getInstance() {
     if (instance != null) {
-      p.complete(instance);
-      return p.future();
+      return instance;
     }
     instance = new RedisMessageBroker();
-    instance.connect().onComplete(ar -> {
-      if (ar.succeeded()) {
-        logger.info("Subscribing node in Redis pub/sub channel {} succeeded.", CHANNEL);
-        p.complete(instance);
-      } else {
-        final Throwable cause = ar.cause();
-        logger.error("Subscribing node in Redis pub/sub channel "+CHANNEL+" failed.", cause);
-        p.fail(cause);
+    final AtomicBoolean done = new AtomicBoolean();
+    synchronized (done) {
+      instance.connect().onComplete(ar -> {
+        done.set(true);
+        if (ar.succeeded()) {
+          logger.info("Subscribing node in Redis pub/sub channel {} succeeded.", CHANNEL);
+        } else {
+          final Throwable cause = ar.cause();
+          logger.error("Subscribing node in Redis pub/sub channel " + CHANNEL + " failed.", cause);
+        }
+        synchronized (done) {
+          done.notifyAll();
+        }
+      });
+      synchronized (done) {
+        while (!done.get()) {
+          try {
+            done.wait();
+          } catch (InterruptedException ignore) {
+          }
+        }
       }
-    });
-    return p.future();
+    }
+    return instance;
   }
 }

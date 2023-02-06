@@ -22,6 +22,7 @@ package com.here.xyz.hub.rest.admin;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.Service;
 
 @JsonTypeInfo(use = Id.CLASS)
@@ -36,13 +37,13 @@ public abstract class AdminMessage {
   /**
    * The node which sent the message.
    */
-  public final Node source = Node.OWN_INSTANCE;
+  public final ServiceNode source = Service.get().node;
 
   /**
    * If defined this message is only relevant for the given node.
    * If not defined the message is relevant for all nodes except the source node.
    */
-  public Node destination;
+  public ServiceNode destination;
 
   /**
    * The actions to be done when this method is received by a {@link #destination} node.
@@ -54,7 +55,7 @@ public abstract class AdminMessage {
    * Sends this message to the {@link #destination} or (if not defined) to all other nodes.
    */
   public void send() {
-    Service.messageBroker.sendMessage(this);
+    Service.get().messageBroker.sendMessage(this);
   }
 
   /**
@@ -62,7 +63,7 @@ public abstract class AdminMessage {
    * Calling this method is the same as calling {@link #send()} while {@link #destination} is set to some node.
    * @param destination
    */
-  public void send(Node destination) {
+  public void send(ServiceNode destination) {
     this.destination = destination;
     send();
   }
@@ -81,7 +82,7 @@ public abstract class AdminMessage {
     return this;
   }
 
-  public AdminMessage withDestination(Node destination) {
+  public AdminMessage withDestination(ServiceNode destination) {
     this.destination = destination;
     return this;
   }

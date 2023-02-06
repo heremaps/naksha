@@ -63,12 +63,6 @@ public class JDBCSpaceConfigClient extends SpaceConfigClient {
     return instance;
   }
 
-  @Override
-  public void init(Handler<AsyncResult<Void>> onReady) {
-    JDBCConfig.init(onReady);
-  }
-
-
   private Future<Void> updateWithParams(Space modifiedObject, SQLQuery query) {
     Promise<Void> p = Promise.promise();
     client.updateWithParams(query.text(), new JsonArray(query.parameters()), out -> {

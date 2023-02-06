@@ -43,7 +43,7 @@ public class JobProxyApi extends Api{
             Job job = HApiParam.HQuery.getJobInput(context);
             JobAuthorization.authorizeManageSpacesRights(context,spaceId)
                     .onSuccess(auth -> {
-                        Service.spaceConfigClient.get(Api.Context.getMarker(context), spaceId)
+                        Service.get().spaceConfigClient.get(Api.Context.getMarker(context), spaceId)
                                 .onFailure(t ->  this.sendErrorResponse(context, new HttpException(BAD_REQUEST, "The resource ID does not exist!")))
                                 .onSuccess(headSpace -> {
                                     if (headSpace == null) {
@@ -58,8 +58,8 @@ public class JobProxyApi extends Api{
                                     job.setTargetSpaceId(spaceId);
                                     job.setTargetConnector(headSpace.getStorage().getId());
 
-                                    Service.webClient
-                                            .postAbs(Service.configuration.HTTP_CONNECTOR_ENDPOINT + "/jobs")
+                                    Service.get().webClient
+                                            .postAbs(Service.get().config.HTTP_CONNECTOR_ENDPOINT + "/jobs")
                                             .timeout(JOB_API_TIMEOUT)
                                             .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                                             .sendBuffer(Buffer.buffer(Json.encode(job)))
@@ -79,7 +79,7 @@ public class JobProxyApi extends Api{
 
         JobAuthorization.authorizeManageSpacesRights(context,spaceId)
                 .onSuccess(auth -> {
-                    Service.webClient.getAbs(Service.configuration.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
+                    Service.get().webClient.getAbs(Service.get().config.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
                         .timeout(JOB_API_TIMEOUT)
                         .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                         .send()
@@ -96,8 +96,8 @@ public class JobProxyApi extends Api{
 
                             try{
                                 Job job = HApiParam.HQuery.getJobInput(context);
-                                Service.webClient
-                                        .patchAbs(Service.configuration.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
+                                Service.get().webClient
+                                        .patchAbs(Service.get().config.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
                                         .timeout(JOB_API_TIMEOUT)
                                         .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                                         .sendBuffer(Buffer.buffer(Json.encode(job)))
@@ -118,7 +118,7 @@ public class JobProxyApi extends Api{
 
         JobAuthorization.authorizeManageSpacesRights(context,spaceId)
                 .onSuccess(auth -> {
-                    Service.webClient.getAbs(Service.configuration.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
+                    Service.get().webClient.getAbs(Service.get().config.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
                             .timeout(JOB_API_TIMEOUT)
                             .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                             .send()
@@ -134,7 +134,7 @@ public class JobProxyApi extends Api{
 
         JobAuthorization.authorizeManageSpacesRights(context,spaceId)
                 .onSuccess(auth -> {
-                    Service.webClient.getAbs(Service.configuration.HTTP_CONNECTOR_ENDPOINT+"/jobs?targetSpaceId="+spaceId+(status != null ? "&status="+status : ""))
+                    Service.get().webClient.getAbs(Service.get().config.HTTP_CONNECTOR_ENDPOINT+"/jobs?targetSpaceId="+spaceId+(status != null ? "&status="+status : ""))
                             .timeout(JOB_API_TIMEOUT)
                             .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                             .send()
@@ -150,7 +150,7 @@ public class JobProxyApi extends Api{
 
         JobAuthorization.authorizeManageSpacesRights(context,spaceId)
                 .onSuccess(auth -> {
-                    Service.webClient.getAbs(Service.configuration.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
+                    Service.get().webClient.getAbs(Service.get().config.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
                             .timeout(JOB_API_TIMEOUT)
                             .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                             .send()
@@ -164,7 +164,7 @@ public class JobProxyApi extends Api{
                                         this.sendErrorResponse(context, new HttpException(FORBIDDEN, "This job belongs to another space!"));
                                         return;
                                     }
-                                    Service.webClient.deleteAbs(Service.configuration.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
+                                    Service.get().webClient.deleteAbs(Service.get().config.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
                                             .timeout(JOB_API_TIMEOUT)
                                             .send()
                                             .onSuccess(res2 -> jobAPIResultHandler(context,res2,spaceId))
@@ -183,7 +183,7 @@ public class JobProxyApi extends Api{
 
         JobAuthorization.authorizeManageSpacesRights(context,spaceId)
                 .onSuccess(auth -> {
-                    Service.webClient.getAbs(Service.configuration.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
+                    Service.get().webClient.getAbs(Service.get().config.HTTP_CONNECTOR_ENDPOINT+"/jobs/"+jobId)
                             .timeout(JOB_API_TIMEOUT)
                             .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                             .send()
@@ -200,7 +200,7 @@ public class JobProxyApi extends Api{
 
                                 Job job = res.bodyAsJson(Job.class);
 
-                                Service.connectorConfigClient.get( Api.Context.getMarker(context), job.getTargetConnector())
+                                Service.get().connectorConfigClient.get( Api.Context.getMarker(context), job.getTargetConnector())
                                     .onFailure(t ->  this.sendResponse(context, HttpResponseStatus.valueOf(res.statusCode()), res.bodyAsJsonObject()))
                                     .onSuccess(connector -> {
 
@@ -208,7 +208,7 @@ public class JobProxyApi extends Api{
                                             String ecps = (String) connector.params.get("ecps");
                                             Boolean enableHashedSpaceId = connector.params.get("enableHashedSpaceId") == null ? false : (Boolean) connector.params.get("enableHashedSpaceId");
 
-                                            String postUrl = (Service.configuration.HTTP_CONNECTOR_ENDPOINT
+                                            String postUrl = (Service.get().config.HTTP_CONNECTOR_ENDPOINT
                                                     +"/jobs/{jobId}/execute?"
                                                     +"&connectorId={connectorId}"
                                                     +"&ecps={ecps}"
@@ -222,7 +222,7 @@ public class JobProxyApi extends Api{
                                                         .replace("{enableUUID}","false")
                                                         .replace("{command}",command);
 
-                                            Service.webClient
+                                            Service.get().webClient
                                                     .postAbs(postUrl)
                                                     .timeout(JOB_API_TIMEOUT)
                                                     .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())

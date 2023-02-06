@@ -20,13 +20,14 @@
 package com.here.xyz.hub.rest.admin.messages;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.admin.AdminMessage;
-import com.here.xyz.hub.rest.admin.Node;
+import com.here.xyz.hub.ServiceNode;
 
 public abstract class RelayedMessage extends AdminMessage {
 
   public boolean relay = false;
-  public Node relayedBy;
+  public ServiceNode relayedBy;
   public boolean globalRelay = false;
 
   /**
@@ -63,15 +64,15 @@ public abstract class RelayedMessage extends AdminMessage {
     }
     if (relay) {
       relay = false;
-      if (!Node.OWN_INSTANCE.equals(destination)) {
-        relayedBy = Node.OWN_INSTANCE;
+      if (!Service.get().node.equals(destination)) {
+        relayedBy = Service.get().node;
         relayedLocally = true;
         send();
       }
       else
         handleAtDestination();
     }
-    else if (!Node.OWN_INSTANCE.equals(relayedBy))
+    else if (!Service.get().node.equals(relayedBy))
       handleAtDestination();
   }
 

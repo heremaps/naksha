@@ -79,7 +79,7 @@ public class SpaceTaskHandler {
   private static final int CLIENT_VALUE_MAX_SIZE = 1024;
 
   static <X extends ReadQuery<?>> void readSpaces(final X task, final Callback<X> callback) {
-    Service.spaceConfigClient.getSelected(task.getMarker(), task.authorizedCondition, task.selectedCondition, task.propertiesQuery)
+    Service.get().spaceConfigClient.getSelected(task.getMarker(), task.authorizedCondition, task.selectedCondition, task.propertiesQuery)
         .onFailure(t -> {
           logger.error(task.getMarker(), "Unable to load space definitions.'", t);
           callback.exception(new HttpException(INTERNAL_SERVER_ERROR, "Unable to load the resource definitions.", t));
@@ -256,8 +256,8 @@ public class SpaceTaskHandler {
       throw new HttpException(BAD_REQUEST, "The property client is over the allowed limit of " + CLIENT_VALUE_MAX_SIZE + " bytes.");
     }
 
-    if (result.getVersionsToKeep() < 0 || result.getVersionsToKeep() > Service.configuration.MAX_VERSIONS_TO_KEEP) {
-      throw new HttpException(BAD_REQUEST, "The property versionsToKeep must be equals to zero or a positive integer. Max value is " + Service.configuration.MAX_VERSIONS_TO_KEEP);
+    if (result.getVersionsToKeep() < 0 || result.getVersionsToKeep() > Service.get().config.MAX_VERSIONS_TO_KEEP) {
+      throw new HttpException(BAD_REQUEST, "The property versionsToKeep must be equals to zero or a positive integer. Max value is " + Service.get().config.MAX_VERSIONS_TO_KEEP);
     }
 
     if (result.getExtension() != null && result.getSearchableProperties() != null) {
@@ -321,7 +321,7 @@ public class SpaceTaskHandler {
       return;
     }
 
-    Service.spaceConfigClient.get(task.getMarker(), (String)spaceId)
+    Service.get().spaceConfigClient.get(task.getMarker(), (String)spaceId)
         .onFailure(t -> callback.exception(t))
         .onSuccess(headSpace -> {
           task.modifyOp.entries.get(0).head = headSpace;
@@ -339,7 +339,7 @@ public class SpaceTaskHandler {
     }
 
     if (entry.input != null && entry.result == null)
-      Service.spaceConfigClient
+      Service.get().spaceConfigClient
           .delete(task.getMarker(), entry.head.getId())
           .onFailure(t -> callback.exception(t))
           .onSuccess(v -> {
@@ -347,7 +347,7 @@ public class SpaceTaskHandler {
             callback.call(task);
           });
     else
-      Service.spaceConfigClient
+      Service.get().spaceConfigClient
           .store(task.getMarker(), entry.result)
           .onFailure(t -> callback.exception(t))
           .onSuccess(v -> {
@@ -363,7 +363,7 @@ public class SpaceTaskHandler {
     space.setCid(cid);
     space.setEnableUUID(false);
     space.setClient(null);
-    space.setStorage(new ConnectorRef().withId(Service.configuration.getDefaultStorageId()));
+    space.setStorage(new ConnectorRef().withId(Service.get().config.DEFAULT_STORAGE_ID));
     return space;
   }
 
@@ -413,7 +413,7 @@ public class SpaceTaskHandler {
       return;
     }
 
-    Service.spaceConfigClient.getSpacesForOwner(task.getMarker(), jwt.aid)
+    Service.get().spaceConfigClient.getSpacesForOwner(task.getMarker(), jwt.aid)
         .onFailure(t -> {
           logger.warn(task.getMarker(), "Unable to load the space definitions.", t);
           callback.exception(new HttpException(BAD_GATEWAY, "Unable to load the resource definitions.", t));

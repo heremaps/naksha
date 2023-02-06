@@ -5,16 +5,18 @@ import com.here.xyz.hub.rest.admin.MessageBroker;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * The Noop message broker is a local message broker, it will only work for single instances.
  */
 public class NoopBroker implements MessageBroker {
 
-  static Future<NoopBroker> getInstance() {
-    final Promise<NoopBroker> promise = Promise.promise();
-    promise.complete(new NoopBroker());
-    return promise.future();
+  private static NoopBroker instance;
+
+  static synchronized @NotNull NoopBroker getInstance() {
+    if (instance != null) return instance;
+    return instance = new NoopBroker();
   }
 
   @Override

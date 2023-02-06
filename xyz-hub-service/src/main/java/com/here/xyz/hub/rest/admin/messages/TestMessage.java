@@ -25,7 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
-import com.here.xyz.hub.rest.admin.Node;
+import com.here.xyz.hub.ServiceNode;
 import io.vertx.ext.web.handler.StaticHandler;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -60,8 +60,8 @@ public class TestMessage extends RelayedMessage {
     Map<String, Object> fileContent = new HashMap<>();
     fileContent.put("content", content);
     fileContent.put("receivedAt", Core.currentTimeMillis());
-    fileContent.put("receiver", Node.OWN_INSTANCE);
-    fileContent.put("nodeCount", Service.configuration.INSTANCE_COUNT);
+    fileContent.put("receiver", Service.get().node);
+    fileContent.put("nodeCount", Service.get().config.INSTANCE_COUNT);
     fileContent.put("receiverRelayed", relay);
     if (relay) {
       fileContent.put("relayedTo", destination);
@@ -95,7 +95,7 @@ public class TestMessage extends RelayedMessage {
 
   @JsonIgnore
   private String getWebrootFolder() throws URISyntaxException {
-    return Service.configuration.FS_WEB_ROOT != null ? Service.configuration.FS_WEB_ROOT
+    return Service.get().config.FS_WEB_ROOT != null ? Service.get().config.FS_WEB_ROOT
         : new File(TestMessage.class.getResource("/build.properties").toURI())
             .getParent() + File.separator + StaticHandler.DEFAULT_WEB_ROOT;
   }

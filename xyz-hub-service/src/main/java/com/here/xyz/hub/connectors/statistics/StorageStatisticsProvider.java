@@ -62,7 +62,7 @@ public class StorageStatisticsProvider {
         .withValues(Collections.singletonList(includeChangesSince)));
     PropertiesQuery pq = new PropertiesQuery();
     pq.add(pql);
-    return Service.spaceConfigClient.getSelected(marker, new SpaceAuthorizationCondition(), ssc, pq)
+    return Service.get().spaceConfigClient.getSelected(marker, new SpaceAuthorizationCondition(), ssc, pq)
         .compose(spaces -> sortByStorage(spaces))
         .compose(spacesByStorage -> CompositeFuture.all(spacesByStorage
             .entrySet()
@@ -87,7 +87,7 @@ public class StorageStatisticsProvider {
 
   private static Future<Map<String, List<String>>> sortByStorage(List<Space> spaces) {
     //That operation could take longer, so do it asynchronously
-    return Service.vertx.executeBlocking(p -> sortByStorageSync(spaces, p));
+    return Service.get().vertx.executeBlocking(p -> sortByStorageSync(spaces, p));
   }
 
   private static void sortByStorageSync(List<Space> spaces, Promise<Map<String, List<String>>> p) {

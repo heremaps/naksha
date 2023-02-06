@@ -26,6 +26,7 @@ import com.here.xyz.httpconnector.util.jobs.Job.CSVFormat;
 import com.here.xyz.httpconnector.util.status.RDSStatus;
 import com.here.xyz.httpconnector.util.status.RunningQueryStatistic;
 import com.here.xyz.httpconnector.util.status.RunningQueryStatistics;
+import com.here.xyz.hub.Service;
 import com.here.xyz.psql.SQLQuery;
 import com.here.xyz.psql.query.ModifySpace;
 import io.vertx.core.CompositeFuture;
@@ -61,8 +62,7 @@ public class JDBCImporter extends JDBCClients{
     private static final String IDX_NAME_AUTHOR = "author";
 
     /** Temporally used during migration phase */
-    private static final Boolean OLD_DATABASE_LAYOUT =  (CService.configuration !=null && CService.configuration.JOB_OLD_DATABASE_LAYOUT != null)
-            ? CService.configuration.JOB_OLD_DATABASE_LAYOUT : false;
+    private static final boolean OLD_DATABASE_LAYOUT = Service.get().config.JOB_OLD_DATABASE_LAYOUT;
 
     /** List of default Indices */
     public static final String[] DEFAULT_IDX_LIST = { IDX_NAME_ID,IDX_NAME_GEO,IDX_NAME_CREATEDAT,IDX_NAME_UPDATEDAT,IDX_NAME_SERIAL,IDX_NAME_TAGS,IDX_NAME_VIZ };

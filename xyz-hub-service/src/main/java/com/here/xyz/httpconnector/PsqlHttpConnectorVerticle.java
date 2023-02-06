@@ -32,6 +32,7 @@ import com.here.xyz.psql.PSQLXyzConnector;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.openapi.RouterBuilder;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,23 +61,6 @@ public class PsqlHttpConnectorVerticle extends AbstractHttpServerVerticle {
 
   private static String LOCATION = "openapi-http-connector.yaml";
   private static String API;
-  private static int HTTP_PORT;
-
-  public static String ECPS_PASSPHRASE;
-  public static Integer DB_INITIAL_POOL_SIZE;
-  public static Integer DB_MIN_POOL_SIZE;
-  public static Integer DB_MAX_POOL_SIZE;
-
-  public static Integer DB_ACQUIRE_RETRY_ATTEMPTS;
-  public static Integer DB_ACQUIRE_INCREMENT;
-
-  public static Integer DB_CHECKOUT_TIMEOUT;
-  public static boolean DB_TEST_CONNECTION_ON_CHECKOUT;
-
-  public static int DB_STATEMENT_TIMEOUT_IN_S;
-
-  public static int MAX_CONCURRENT_MAINTENANCE_TASKS;
-  public static int MISSING_MAINTENANCE_WARNING_IN_HR;
 
   static {
     try {
@@ -121,7 +105,7 @@ public class PsqlHttpConnectorVerticle extends AbstractHttpServerVerticle {
 
           //Add default handlers
           addDefaultHandlers(router);
-          createHttpServer(HTTP_PORT, router);
+          createHttpServer(Service.get().connectorConfig.HTTP_PORT, router);
         } catch (Exception e) {
           logger.error("An error occurred, during the creation of the router from the Open API specification file.", e);
         }
@@ -130,60 +114,4 @@ public class PsqlHttpConnectorVerticle extends AbstractHttpServerVerticle {
       }
     });
   }
-
-  private static final AtomicBoolean isInitialized = new AtomicBoolean();
-
-  public static Map<String, String> getEnvMap() {
-    if (isInitialized.get()) {
-      return envMap;
-    }
-    synchronized (isInitialized) {
-      if (isInitialized.get()) {
-        return envMap;
-      }
-      isInitialized.set(true);
-
-      assert Service.rawConfiguration != null;
-      Service.rawConfiguration.fieldNames().forEach(fieldName -> {
-        Object value = Service.rawConfiguration.getValue(fieldName);
-        if (value != null) {
-          envMap.put(fieldName, value.toString());
-        }
-      });
-
-      ECPS_PASSPHRASE = (envMap.get("ECPS_PHRASE") == null ? "local" : envMap.get("ECPS_PHRASE"));
-      HTTP_PORT = Integer.parseInt((envMap.get("HTTP_PORT") == null ? "9090" : envMap.get("HTTP_PORT")));
-
-      DB_INITIAL_POOL_SIZE = Integer.parseInt((envMap.get("DB_INITIAL_POOL_SIZE") == null ? "5" : envMap.get("DB_INITIAL_POOL_SIZE")));
-      DB_MIN_POOL_SIZE = Integer.parseInt((envMap.get("DB_MIN_POOL_SIZE") == null ? "1" : envMap.get("DB_MIN_POOL_SIZE")));
-      DB_MAX_POOL_SIZE = Integer.parseInt((envMap.get("DB_MAX_POOL_SIZE") == null ? "50" : envMap.get("DB_MAX_POOL_SIZE")));
-
-      DB_ACQUIRE_RETRY_ATTEMPTS = Integer.parseInt(
-          (envMap.get("DB_ACQUIRE_RETRY_ATTEMPTS") == null ? "10" : envMap.get("DB_ACQUIRE_RETRY_ATTEMPTS")));
-      DB_ACQUIRE_INCREMENT = Integer.parseInt((envMap.get("DB_ACQUIRE_INCREMENT") == null ? "1" : envMap.get("DB_ACQUIRE_INCREMENT")));
-
-      DB_CHECKOUT_TIMEOUT = Integer.parseInt((envMap.get("DB_CHECKOUT_TIMEOUT") == null ? "10" : envMap.get("DB_CHECKOUT_TIMEOUT")));
-      DB_TEST_CONNECTION_ON_CHECKOUT = Boolean.parseBoolean((envMap.get("DB_TEST_CONNECTION_ON_CHECKOUT")));
-
-      DB_STATEMENT_TIMEOUT_IN_S = Integer.parseInt(
-          envMap.get("DB_STATEMENT_TIMEOUT_IN_S") == null ? "10" : envMap.get("DB_STATEMENT_TIMEOUT_IN_S"));
-
-      MAX_CONCURRENT_MAINTENANCE_TASKS = Integer.parseInt(
-          (envMap.get("MAX_CONCURRENT_MAINTENANCE_TASKS") == null ? "1" : envMap.get("MAX_CONCURRENT_MAINTENANCE_TASKS")));
-      MISSING_MAINTENANCE_WARNING_IN_HR = Integer.parseInt(
-          (envMap.get("MISSING_MAINTENANCE_WARNING_IN_HR") == null ? "12" : envMap.get("MISSING_MAINTENANCE_WARNING_IN_HR")));
-      // TODO: Review what this does and fix accordingly!
-      // envMap = new ObjectMapper().convertValue(CService.configuration, HashMap.class);
-      return envMap;
-    }
-  }
-
-  // TODO: We should not need an populateEnvMap() and especially not a public one!
-  /*public static synchronized void populateEnvMap(){
-    try {
-      envMap = new ObjectMapper().convertValue(CService.configuration, HashMap.class);
-    }catch (Exception e){
-      logger.error("Cannot populate EnvMap");
-    }
-  }*/
 }

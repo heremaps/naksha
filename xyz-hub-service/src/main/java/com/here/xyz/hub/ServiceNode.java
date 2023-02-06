@@ -17,12 +17,12 @@
  * License-Filename: LICENSE
  */
 
-package com.here.xyz.hub.rest.admin;
+package com.here.xyz.hub;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.xyz.hub.Core;
-import com.here.xyz.hub.Service;
+import com.here.xyz.httpconnector.CService;
+import com.here.xyz.hub.rest.admin.AdminMessage;
 import com.here.xyz.hub.rest.health.HealthApi;
 import com.here.xyz.hub.util.health.Config;
 import com.here.xyz.hub.util.health.schema.Response;
@@ -42,73 +42,96 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A Node represents one running Service Node of the XYZ Hub Service.
  */
-public class Node {
+public class ServiceNode {
 
   private static final int HEALTH_TIMEOUT = 25;
   private static final Logger logger = LogManager.getLogger();
 
-  private static int nodeCount = Service.configuration.INSTANCE_COUNT;
+  private int nodeCount;
   private static final int NODE_COUNT_FETCH_PERIOD = 30_000; //ms
   private static final int CLUSTER_NODES_CHECKER_PERIOD = 120_000; //ms
   private static final int CLUSTER_NODES_PING_PERIOD = 600_000; //ms
   private static final int MAX_HC_FAILURE_COUNT = 3;
 
-  public static final Node OWN_INSTANCE = new Node(Service.HOST_ID, Service.getHostname(),
-      Service.configuration != null ? Service.getPublicPort() : -1);
-  private static final Set<Node> otherClusterNodes = new CopyOnWriteArraySet<>();
+  private static final Set<ServiceNode> otherClusterNodes = new CopyOnWriteArraySet<>();
   private static final String UNKNOWN_ID = "UNKNOWN";
+
+  @JsonProperty
   public String id;
+
+  @JsonProperty
   public String ip;
+
+  @JsonProperty
   public int port;
+
+  @JsonIgnore
   public int consecutiveHcFailures;
+
   @JsonIgnore
   private URL url;
 
-  private Node(@JsonProperty("id") String id, @JsonProperty("ip") String ip, @JsonProperty("port") int port) {
+  @JsonIgnore
+  private final @Nullable Service service;
+
+  public ServiceNode(
+      @JsonProperty("id") String id,
+      @JsonProperty("ip") String ip,
+      @JsonProperty("port") int port
+  ) {
+    this(null, id, ip, port);
+  }
+
+  ServiceNode(@Nullable Service service, String id, String ip, int port) {
+    this.service = service;
     this.id = id;
     this.ip = ip;
     this.port = port;
+    nodeCount = Service.get().config.INSTANCE_COUNT;
   }
 
-  public static void initialize() {
-    startNodeInfoBroadcast();
-    initNodeCountFetcher();
-    initNodeChecker();
-  }
-
-  private static void startNodeInfoBroadcast() {
-    new NodeInfoNotification().broadcast();
-    if (Core.vertx != null) Core.vertx.setPeriodic(CLUSTER_NODES_PING_PERIOD, timerId -> new NodeInfoNotification().broadcast());
-  }
-
-  private static void initNodeCountFetcher() {
-    if (Core.vertx != null) {
-      Core.vertx.setPeriodic(NODE_COUNT_FETCH_PERIOD, Node::periodicFetchCountHandler);
+  void start() {
+    if (service != null) {
+      nodeCount = service.config.INSTANCE_COUNT;
+      startNodeInfoBroadcast();
+      initNodeCountFetcher();
+      initNodeChecker();
     }
   }
 
-  private static void periodicFetchCountHandler(@Nonnull Long timerId) {
-    final Future<Integer> f = Service.messageBroker.fetchSubscriberCount();
-    f.onSuccess(Node::updateSubscriberCount);
-    f.onFailure(Node::failedSubscriberCount);
+  private void startNodeInfoBroadcast() {
+    new NodeInfoNotification().broadcast();
+    if (service!= null) Service.get().vertx.setPeriodic(CLUSTER_NODES_PING_PERIOD, timerId -> new NodeInfoNotification().broadcast());
   }
 
-  private static void failedSubscriberCount(@Nonnull Throwable cause) {
+  private void initNodeCountFetcher() {
+    if (service != null) Service.get().vertx.setPeriodic(NODE_COUNT_FETCH_PERIOD, this::periodicFetchCountHandler);
+  }
+
+  private void periodicFetchCountHandler(@Nonnull Long timerId) {
+    final Future<Integer> f = Service.get().messageBroker.fetchSubscriberCount();
+    f.onSuccess(this::updateSubscriberCount);
+    f.onFailure(this::failedSubscriberCount);
+  }
+
+  private void failedSubscriberCount(@Nonnull Throwable cause) {
     logger.warn("Checking service node-count failed.", cause);
   }
 
-  private static void updateSubscriberCount(@Nonnull Integer count) {
+  private void updateSubscriberCount(@Nonnull Integer count) {
     nodeCount = count;
     logger.debug("Service node-count: " + nodeCount);
   }
 
-  private static void initNodeChecker() {
-    if (Service.vertx != null) {
-      Service.vertx.setPeriodic(CLUSTER_NODES_CHECKER_PERIOD, timerId -> otherClusterNodes.forEach(otherNode -> otherNode.isHealthy(ar -> {
+  private void initNodeChecker() {
+    if (service != null) {
+      Service.get().vertx.setPeriodic(CLUSTER_NODES_CHECKER_PERIOD, timerId -> otherClusterNodes.forEach(otherNode -> otherNode.isHealthy(ar -> {
         if (ar.failed()) {
           otherNode.consecutiveHcFailures++;
           if (otherNode.consecutiveHcFailures >= MAX_HC_FAILURE_COUNT)
@@ -120,8 +143,8 @@ public class Node {
     }
   }
 
-  public static Node forIpAndPort(String ip, int port) {
-    return new Node(UNKNOWN_ID, ip, port);
+  public static ServiceNode forIpAndPort(String ip, int port) {
+    return new ServiceNode(UNKNOWN_ID, ip, port);
   }
 
   public void isAlive(Handler<AsyncResult<Void>> callback) {
@@ -134,7 +157,7 @@ public class Node {
 
   private void callHealthCheck(boolean onlyAliveCheck, Handler<AsyncResult<Void>> callback) {
     try {
-      Service.webClient.get(port, ip, HealthApi.MAIN_HEALTCHECK_ENDPOINT)
+      Service.get().webClient.get(port, ip, HealthApi.MAIN_HEALTCHECK_ENDPOINT)
           .timeout(TimeUnit.SECONDS.toMillis(HEALTH_TIMEOUT))
           .putHeader(Config.getHealthCheckHeaderName(), Config.getHealthCheckHeaderValue())
           .send(ar -> {
@@ -187,7 +210,7 @@ public class Node {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Node node = (Node) o;
+    ServiceNode node = (ServiceNode) o;
     return !UNKNOWN_ID.equals(node.id) && id.equals(node.id);
   }
 
@@ -196,13 +219,13 @@ public class Node {
     return Objects.hash(id);
   }
 
-  public static int count() {
+  public int count() {
     return Math.max(nodeCount, 1);
   }
 
-  public static Set<Node> getClusterNodes() {
-    Set<Node> clusterNodes = new HashSet<>(otherClusterNodes);
-    clusterNodes.add(OWN_INSTANCE);
+  public Set<ServiceNode> getClusterNodes() {
+    Set<ServiceNode> clusterNodes = new HashSet<>(otherClusterNodes);
+    clusterNodes.add(this);
     return clusterNodes;
   }
 

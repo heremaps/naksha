@@ -60,15 +60,15 @@ public class HTTPFunctionClient extends RemoteFunctionClient {
   private volatile String url;
   private int requestTimeout;
 
-  private static HttpClient httpClient = Service.vertx.createHttpClient(
+  private static HttpClient httpClient = Service.get().vertx.createHttpClient(
       new HttpClientOptions()
-        .setMaxPoolSize(Service.configuration.MAX_GLOBAL_HTTP_CLIENT_CONNECTIONS)
-        .setHttp2MaxPoolSize(Service.configuration.MAX_GLOBAL_HTTP_CLIENT_CONNECTIONS)
-        .setTcpKeepAlive(Service.configuration.HTTP_CLIENT_TCP_KEEPALIVE)
-        .setIdleTimeout(Service.configuration.HTTP_CLIENT_IDLE_TIMEOUT)
+        .setMaxPoolSize(Service.get().config.MAX_GLOBAL_HTTP_CLIENT_CONNECTIONS)
+        .setHttp2MaxPoolSize(Service.get().config.MAX_GLOBAL_HTTP_CLIENT_CONNECTIONS)
+        .setTcpKeepAlive(Service.get().config.HTTP_CLIENT_TCP_KEEPALIVE)
+        .setIdleTimeout(Service.get().config.HTTP_CLIENT_IDLE_TIMEOUT)
         .setTcpQuickAck(true)
         .setTcpFastOpen(true)
-        .setPipelining(Service.configuration.HTTP_CLIENT_PIPELINING))
+        .setPipelining(Service.get().config.HTTP_CLIENT_PIPELINING))
       /*.connectionHandler(HTTPFunctionClient::newConnectionCreated)*/;
 
   HTTPFunctionClient(Connector connectorConfig) {

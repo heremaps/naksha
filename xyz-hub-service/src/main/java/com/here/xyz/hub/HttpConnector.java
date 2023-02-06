@@ -24,22 +24,28 @@ import com.here.xyz.httpconnector.config.MaintenanceClient;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
+import java.io.IOException;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.TimeUnit;
+import org.jetbrains.annotations.Nullable;
 
 public class HttpConnector extends Core {
 
   private static final Logger logger = LogManager.getLogger();
+
+  protected HttpConnector(@Nullable VertxOptions vertxOptions) throws IOException {
+    super(vertxOptions);
+  }
 
   public static void main(String[] args) {
     VertxOptions vertxOptions = new VertxOptions()
             .setWorkerPoolSize(NumberUtils.toInt(System.getenv(Core.VERTX_WORKER_POOL_SIZE), 128))
             .setPreferNativeTransport(true)
             .setBlockedThreadCheckInterval(TimeUnit.MINUTES.toMillis(15));
-    initialize(vertxOptions, false, "connector-config.json", HttpConnector::onConfigLoaded );
+    //initialize(vertxOptions, false, "connector-config.json", HttpConnector::onConfigLoaded );
   }
 
   private static void onConfigLoaded(JsonObject jsonConfig) {
@@ -48,12 +54,12 @@ public class HttpConnector extends Core {
             .setWorker(false)
             .setInstances(Runtime.getRuntime().availableProcessors() * 2);
 
-    vertx.deployVerticle(PsqlHttpConnectorVerticle.class, options, result -> {
-      if (result.failed()) {
-        logger.error("Unable to deploy the verticle.");
-        System.exit(1);
-      }
-      logger.info("The http-connector is up and running on port " + jsonConfig.getInteger("HTTP_PORT") );
-    });
+//    vertx.deployVerticle(PsqlHttpConnectorVerticle.class, options, result -> {
+//      if (result.failed()) {
+//        logger.error("Unable to deploy the verticle.");
+//        System.exit(1);
+//      }
+//      logger.info("The http-connector is up and running on port " + jsonConfig.getInteger("HTTP_PORT") );
+//    });
   }
 }

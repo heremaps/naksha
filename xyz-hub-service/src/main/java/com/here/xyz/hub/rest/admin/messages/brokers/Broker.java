@@ -1,6 +1,7 @@
 package com.here.xyz.hub.rest.admin.messages.brokers;
 
 import com.here.xyz.hub.rest.admin.MessageBroker;
+import com.here.xyz.hub.task.TaskPipeline.Callback;
 import io.vertx.core.Future;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
@@ -17,7 +18,7 @@ public enum Broker {
 
   Broker(
       final @Nonnull Class<? extends MessageBroker> brokerClass,
-      final @Nonnull Supplier<Future<? extends MessageBroker>> instance
+      final @Nonnull IGetBroker instance
       ) {
     this.brokerClass = brokerClass;
     this.instance = instance;
@@ -34,6 +35,6 @@ public enum Broker {
    * initialized, this will be done asynchronously.
    */
   @Nonnull
-  public final Supplier<Future<? extends MessageBroker>> instance;
+  public final IGetBroker instance;
 
 }

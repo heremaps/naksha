@@ -60,11 +60,6 @@ public class JDBCConnectorConfigClient extends ConnectorConfigClient {
   }
 
   @Override
-  public void init(Handler<AsyncResult<Void>> onReady) {
-    JDBCConfig.init(onReady);
-  }
-
-  @Override
   protected void getConnector(final Marker marker, final String connectorId, final Handler<AsyncResult<Connector>> handler) {
     final SQLQuery query = new SQLQuery("SELECT config FROM " + CONNECTOR_TABLE + " WHERE id = ?", connectorId);
     client.queryWithParams(query.text(), new JsonArray(query.parameters()), out -> {

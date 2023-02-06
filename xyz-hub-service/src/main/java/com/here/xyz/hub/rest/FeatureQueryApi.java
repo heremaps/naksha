@@ -356,7 +356,7 @@ public class FeatureQueryApi extends SpaceBasedApi {
               throw new HttpException(BAD_REQUEST, "Invalid argument tileId.");
             }
           } else {
-            hereTileAddress = new HQuad(tileId, Service.configuration.USE_BASE_4_H_TILES);
+            hereTileAddress = new HQuad(tileId, Service.get().config.USE_BASE_4_H_TILES);
           }
         }
 

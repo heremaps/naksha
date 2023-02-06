@@ -39,7 +39,7 @@ import com.here.xyz.hub.rest.AdminApi;
 import com.here.xyz.hub.rest.ApiParam.Query;
 import com.here.xyz.hub.rest.admin.AdminMessage;
 import com.here.xyz.hub.rest.admin.MessageBroker;
-import com.here.xyz.hub.rest.admin.Node;
+import com.here.xyz.hub.ServiceNode;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -56,6 +56,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * The MessageBroker provides the infrastructural implementation of how to send & receive {@link AdminMessage}s. Currently it's an
@@ -73,13 +74,13 @@ class SnsMessageBroker extends DefaultSnsMessageHandler implements MessageBroker
 
   static {
     String ownNodeUrl;
-    if (Service.configuration.ADMIN_MESSAGE_JWT == null) {
+    if (Service.get().config.ADMIN_MESSAGE_JWT == null) {
       ownNodeUrl = null;
     }
     else {
       try {
-        ownNodeUrl = Node.OWN_INSTANCE.getUrl() != null ? new URL(Node.OWN_INSTANCE.getUrl(), AdminApi.ADMIN_MESSAGES_ENDPOINT
-            + "?" + Query.ACCESS_TOKEN + "=" + Service.configuration.ADMIN_MESSAGE_JWT).toString() : null;
+        ownNodeUrl = Service.get().node.getUrl() != null ? new URL(Service.get().node.getUrl(), AdminApi.ADMIN_MESSAGES_ENDPOINT
+            + "?" + Query.ACCESS_TOKEN + "=" + Service.get().config.ADMIN_MESSAGE_JWT).toString() : null;
       }
       catch (MalformedURLException e) {
         logger.error("Error creating the Node URL", e);
@@ -103,13 +104,13 @@ class SnsMessageBroker extends DefaultSnsMessageHandler implements MessageBroker
     String topicArn = null;
     SnsMessageManager messageManager = null;
     AmazonSNSAsync snsClient = null;
-    if (Service.configuration.ADMIN_MESSAGE_TOPIC_ARN != null) {
+    if (Service.get().config.ADMIN_MESSAGE_TOPIC_ARN != null) {
       try {
-        topicArn = Service.configuration.ADMIN_MESSAGE_TOPIC_ARN.toString();
-        messageManager = new SnsMessageManager(Service.configuration.ADMIN_MESSAGE_TOPIC_ARN.getRegion());
+        topicArn = Service.get().config.ADMIN_MESSAGE_TOPIC_ARN.toString();
+        messageManager = new SnsMessageManager(Service.get().config.ADMIN_MESSAGE_TOPIC_ARN.getRegion());
         snsClient = AmazonSNSAsyncClientBuilder
             .standard()
-            .withRegion(Service.configuration.ADMIN_MESSAGE_TOPIC_ARN.getRegion())
+            .withRegion(Service.get().config.ADMIN_MESSAGE_TOPIC_ARN.getRegion())
             .build();
       }
       catch (Exception e) {
@@ -148,17 +149,11 @@ class SnsMessageBroker extends DefaultSnsMessageHandler implements MessageBroker
     }
   }
 
-  static synchronized Future<SnsMessageBroker> getInstance() {
-    final Promise<SnsMessageBroker> promise = Promise.promise();
+  static synchronized @NotNull SnsMessageBroker getInstance() {
     if (instance != null) {
-      promise.complete(instance);
-      return promise.future();
+      return instance;
     }
-    (new Thread(() -> {
-      instance = new SnsMessageBroker();
-      promise.complete(instance);
-    })).start();
-    return promise.future();
+    return instance = new SnsMessageBroker();
   }
 
   @Override
@@ -167,7 +162,7 @@ class SnsMessageBroker extends DefaultSnsMessageHandler implements MessageBroker
   }
 
   private void subscribeOwnNode(Handler<AsyncResult<Void>> callback) {
-    logger.info("Subscribing the NODE=" + Node.OWN_INSTANCE.getUrl());
+    logger.info("Subscribing the NODE=" + Service.get().node.getUrl());
 
     final String subscriptionErrorMsg = "The Node could not be subscribed as AdminMessage listener. "
         + "No AdminMessages will be received by this node.";
@@ -178,14 +173,14 @@ class SnsMessageBroker extends DefaultSnsMessageHandler implements MessageBroker
     loadSubscriptions(subscriptionsResult -> {
       if (subscriptionsResult.succeeded()) {
         oldSubscriptions = subscriptionsResult.result();
-        logger.info("Subscriptions have been loaded [" + oldSubscriptions.size() + "] for NODE=" + Node.OWN_INSTANCE.getUrl());
+        logger.info("Subscriptions have been loaded [" + oldSubscriptions.size() + "] for NODE=" + Service.get().node.getUrl());
         /*
         Check whether a subscription to the own node's endpoint already exists.
         (could happen by accident when this node re-uses an IP from a previously running node)
         */
         if (oldSubscriptions.stream().noneMatch(subscription -> OWN_NODE_MESSAGING_URL.equals(subscription.getEndpoint()))) {
           logger
-              .info("Current node is not subscribed yet, subscribing NODE=" + Node.OWN_INSTANCE.getUrl() + " into TOPIC_ARN=" + TOPIC_ARN);
+              .info("Current node is not subscribed yet, subscribing NODE=" + Service.get().node.getUrl() + " into TOPIC_ARN=" + TOPIC_ARN);
           SNS_CLIENT
               .subscribeAsync(TOPIC_ARN, SNS_HTTP_PROTOCOL, OWN_NODE_MESSAGING_URL, new AsyncHandler<SubscribeRequest, SubscribeResult>() {
                 @Override
@@ -196,7 +191,7 @@ class SnsMessageBroker extends DefaultSnsMessageHandler implements MessageBroker
 
                 @Override
                 public void onSuccess(SubscribeRequest request, SubscribeResult subscribeResult) {
-                  logger.info("Subscription succeeded for NODE=" + Node.OWN_INSTANCE.getUrl() + " into TOPIC_ARN=" + TOPIC_ARN);
+                  logger.info("Subscription succeeded for NODE=" + Service.get().node.getUrl() + " into TOPIC_ARN=" + TOPIC_ARN);
                   callback.handle(Future.succeededFuture());
                 }
               });
@@ -209,7 +204,7 @@ class SnsMessageBroker extends DefaultSnsMessageHandler implements MessageBroker
   }
 
   private void cleanup() {
-    long randomSeconds = (long) (Math.random() * (double) TimeUnit.MINUTES.toSeconds(Node.count()));
+    long randomSeconds = (long) (Math.random() * (double) TimeUnit.MINUTES.toSeconds(Service.get().node.count()));
     long deferringSeconds = TimeUnit.MINUTES.toSeconds(10) + randomSeconds;
     long shutdownDelay = deferringSeconds + TimeUnit.MINUTES.toSeconds(1);
 
@@ -289,7 +284,7 @@ class SnsMessageBroker extends DefaultSnsMessageHandler implements MessageBroker
     String endpoint = subscription.getEndpoint();
     try {
       URL subscriptionUrl = new URL(endpoint);
-      Node subscribedNode = Node.forIpAndPort(subscriptionUrl.getHost(), subscriptionUrl.getPort());
+      ServiceNode subscribedNode = ServiceNode.forIpAndPort(subscriptionUrl.getHost(), subscriptionUrl.getPort());
       subscribedNode.isAlive(ar -> {
         if (ar.failed()) {
           unsubscribe(subscription);

@@ -31,6 +31,7 @@ import com.here.xyz.hub.util.health.schema.Reporter;
 import com.here.xyz.hub.util.health.schema.Response;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.openapi.RouterBuilder;
+import java.util.HashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -73,14 +74,15 @@ public class HttpConnectorApi extends Api {
     sendResponse(context, OK, r);
   }
 
+  private static final HashMap<String, String> EMPTY_ENV = new HashMap<>();
+
   private void postEvent(final RoutingContext context) {
-    String streamId = Context.getMarker(context).getName();
-    byte[] inputBytes = new byte[context.getBody().length()];
+    final String streamId = Context.getMarker(context).getName();
+    final byte[] inputBytes = new byte[context.getBody().length()];
     context.getBody().getBytes(inputBytes);
-    InputStream inputStream = new ByteArrayInputStream(inputBytes);
-    ByteArrayOutputStream os = new ByteArrayOutputStream();
-    EmbeddedFunctionClient.EmbeddedContext embeddedContext
-            = new EmbeddedFunctionClient.EmbeddedContext(Context.getMarker(context), "psql", PsqlHttpConnectorVerticle.getEnvMap());
+    final InputStream inputStream = new ByteArrayInputStream(inputBytes);
+    final ByteArrayOutputStream os = new ByteArrayOutputStream();
+    final EmbeddedFunctionClient.EmbeddedContext embeddedContext = new EmbeddedFunctionClient.EmbeddedContext(Context.getMarker(context), "psql", EMPTY_ENV);
     connector.handleRequest(inputStream, os, embeddedContext, streamId);
     this.sendResponse(context, OK, os);
   }

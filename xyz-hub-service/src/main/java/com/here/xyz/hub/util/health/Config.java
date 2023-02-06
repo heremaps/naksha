@@ -70,14 +70,14 @@ public class Config {
 	}
 
 	public static String getHealthCheckHeaderName(){
-		if(Service.configuration.HEALTH_CHECK_HEADER_NAME != null )
-			return Service.configuration.HEALTH_CHECK_HEADER_NAME;
+		if(Service.get().config.HEALTH_CHECK_HEADER_NAME != null )
+			return Service.get().config.HEALTH_CHECK_HEADER_NAME;
 		return DEFAULT_HEALTH_CHECK_HEADER_NAME;
 	}
 
 	public static String getHealthCheckHeaderValue(){
-		if(Service.configuration.HEALTH_CHECK_HEADER_VALUE != null )
-			return Service.configuration.HEALTH_CHECK_HEADER_VALUE;
+		if(Service.get().config.HEALTH_CHECK_HEADER_VALUE != null )
+			return Service.get().config.HEALTH_CHECK_HEADER_VALUE;
 		return DEFAULT_HEALTH_CHECK_HEADER_VALUE;
 	}
 }

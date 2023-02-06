@@ -104,7 +104,7 @@ public class AdminApi extends Api {
   private void onMessage(final RoutingContext context) {
     try {
       AdminAuthorization.authorizeAdminCapability(context, ADMIN_CAPABILITY_MESSAGING);
-      Service.messageBroker.receiveRawMessage(context.getBody().getBytes());
+      Service.get().messageBroker.receiveRawMessage(context.getBody().getBytes());
       context
           .response()
           .setStatusCode(NO_CONTENT.code())

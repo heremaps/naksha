@@ -22,6 +22,7 @@ package com.here.xyz.httpconnector.task;
 import com.here.xyz.httpconnector.config.MaintenanceClient;
 import com.here.xyz.hub.Core;
 import com.here.xyz.httpconnector.CService;
+import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.HttpException;
 
 import com.here.xyz.psql.DatabaseMaintainer;
@@ -92,12 +93,12 @@ public class MaintenanceHandler {
 
           if(autoIndexingStatus.getMaintenanceRunning().size() > 0 ){
             Long timeSinceLastRunInHr = (Core.currentTimeMillis() - autoIndexingStatus.getMaintainedAt()) / 1000 / 60 / 60;
-            if(timeSinceLastRunInHr > CService.configuration.MISSING_MAINTENANCE_WARNING_IN_HR) {
+            if(timeSinceLastRunInHr > Service.get().config.MISSING_MAINTENANCE_WARNING_IN_HR) {
               logger.warn("Last MaintenanceRun is older than {}h - connector: {}", timeSinceLastRunInHr, connectorId);
               //clean potential orphan maintenance jobIds
               force = true;
             }else{
-              if(autoIndexingStatus.getMaintenanceRunning().size() >= CService.configuration.MAX_CONCURRENT_MAINTENANCE_TASKS) {
+              if(autoIndexingStatus.getMaintenanceRunning().size() >= Service.get().config.MAX_CONCURRENT_MAINTENANCE_TASKS) {
                 handler.handle(Future.failedFuture(new HttpException(CONFLICT, "Maximal concurrent Indexing tasks are running!")));
                 return;
               }

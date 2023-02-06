@@ -75,38 +75,43 @@ public class ConnectionMetrics {
 
   private static String REDIS_HOST = "";
   private static int REDIS_PORT;
-  private static List remoteHubHosts = new ArrayList();
+  private static List<String> remoteHubHosts = new ArrayList<>();
 
   public static void initialize() {
-    try {
-      URI redisUri = new URI(Service.configuration.getRedisUri());
-      REDIS_HOST = redisUri.getHost();
-      REDIS_PORT = redisUri.getPort();
-      if (REDIS_PORT == -1) REDIS_PORT = 6379; //Default redis port if none given
+    final String rawRedisUri = Service.get().config.getRedisUri();
+    REDIS_PORT = 0;
+    if (rawRedisUri != null) {
+      try {
+        URI redisUri = new URI(rawRedisUri);
+        REDIS_HOST = redisUri.getHost();
+        REDIS_PORT = redisUri.getPort();
+        if (REDIS_PORT == -1) {
+          REDIS_PORT = 6379; //Default redis port if none given
+        }
+      } catch (Exception ignore) {
+        REDIS_PORT = 0;
+      }
     }
-    catch (Exception e) {
-      REDIS_PORT = 0;
-    }
     try {
-      if (Service.configuration.getHubRemoteServiceUrls() != null) {
-        remoteHubHosts = Service.configuration.getHubRemoteServiceUrls().stream().map(url -> {
+      if (Service.get().config.getHubRemoteServiceUrls() != null) {
+        remoteHubHosts = Service.get().config.getHubRemoteServiceUrls().stream().map(url -> {
           try {
             return new URL(url).getHost();
-          }
-          catch (MalformedURLException e) {
+          } catch (MalformedURLException e) {
             return null;
           }
         }).filter(host -> host != null).collect(Collectors.toList());
       }
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       //ignore
     }
   }
 
   private static void aggregate(String target, Map<String, AggregatingMetric> metricsMap,
       AttributedMetricCollection<AggregatedValues> metricCollection, double valueToAggregate) {
-    if (metricCollection == null) return;
+    if (metricCollection == null) {
+      return;
+    }
     metricsMap.computeIfAbsent(target, t -> {
       AggregatingMetric m = new AggregatingMetric(metricCollection.getName(), metricCollection.getUnit());
       metricCollection.addMetric(m, new Attribute(TARGET, target));
@@ -114,45 +119,45 @@ public class ConnectionMetrics {
     }).addValue(valueToAggregate);
   }
 
-  public static Collection<MetricPublisher> startConnectionMetricPublishers() {
-    List<MetricPublisher> publishers = new ArrayList<>();
+  public static Collection<MetricPublisher<?>> startConnectionMetricPublishers() {
+    List<MetricPublisher<?>> publishers = new ArrayList<>();
     //HTTP client queueing time
     publishers.add(new CWAggregatedValuesPublisher(
         httpClientQueueingTime = new AggregatingMetric("HttpClientQueueingTime", MILLISECONDS)));
 
     //Open outbound TCP connections by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(new CurrentTcpConnections()));
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(new CurrentTcpConnections()));
 
     //New outbound TCP connections by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(new NewTcpConnections()));
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(new NewTcpConnections()));
 
     //TCP connection errors by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(new TcpErrors()));
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(new TcpErrors()));
 
     //Read bytes through TCP connections by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(
-        tcpReadBytes = new AttributedMetricCollection(TCP_READ_BYTES_METRIC_NAME, BYTES)));
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(
+        tcpReadBytes = new AttributedMetricCollection<>(TCP_READ_BYTES_METRIC_NAME, BYTES)));
 
     //Written bytes through TCP connections by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(
-        tcpWrittenBytes = new AttributedMetricCollection(TCP_WRITTEN_BYTES_METRIC_NAME, BYTES)));
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(
+        tcpWrittenBytes = new AttributedMetricCollection<>(TCP_WRITTEN_BYTES_METRIC_NAME, BYTES)));
 
     //Reset HTTP requests count by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(new ResetHttpRequests()));
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(new ResetHttpRequests()));
 
     //HTTP request latency by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(
-        httpRequestLatency = new AttributedMetricCollection(HTTP_REQUEST_LATENCY_METRIC_NAME, MILLISECONDS)));
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(
+        httpRequestLatency = new AttributedMetricCollection<>(HTTP_REQUEST_LATENCY_METRIC_NAME, MILLISECONDS)));
 
     //New HTTP requests by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(new HttpRequests()));
-    
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(new HttpRequests()));
+
     //Inflight HTTP requests by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(new HttpRequestsInflight()));
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(new HttpRequestsInflight()));
 
     //Current HTTP connection pool utilization by remote target
-    publishers.add(new CWAttributedMetricCollectionPublisher(new HttpPoolUtilization()));
-    
+    publishers.add(new CWAttributedMetricCollectionPublisher<>(new HttpPoolUtilization()));
+
     return publishers;
   }
 
@@ -169,12 +174,17 @@ public class ConnectionMetrics {
     private static final Map<String, AggregatingMetric> writtenBytesMetrics = new ConcurrentHashMap<>();
 
     protected String getTargetByHostAndPort(String hostname, int port) {
-      if (REDIS_HOST.equals(hostname) && port == REDIS_PORT) return REDIS;
-      if (remoteHubHosts.contains(hostname)) return REMOTE_HUB;
+      if (REDIS_HOST.equals(hostname) && port == REDIS_PORT) {
+        return REDIS;
+      }
+      if (remoteHubHosts.contains(hostname)) {
+        return REMOTE_HUB;
+      }
       return null;
     }
 
     private static class SocketMetric {
+
       SocketAddress remoteAddress;
       String remoteName;
       String target;
@@ -195,8 +205,7 @@ public class ConnectionMetrics {
           return sm;
         }
         return null;
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
         return null;
       }
@@ -205,13 +214,15 @@ public class ConnectionMetrics {
     @Override
     public void disconnected(Object socketMetric, SocketAddress remoteAddress) {
       try {
-        if (socketMetric == null) return;
+        if (socketMetric == null) {
+          return;
+        }
         LongAdder adder = currentConnections.get(((SocketMetric) socketMetric).target);
         //System.out.println("######### TCP-METRICS (" + ((SocketMetric) socketMetric).target + "): DisconnectedTcpConnection");
-        if (adder != null)
+        if (adder != null) {
           adder.decrement();
-      }
-      catch (Throwable t) {
+        }
+      } catch (Throwable t) {
         handleMetricError(t);
       }
     }
@@ -219,11 +230,12 @@ public class ConnectionMetrics {
     @Override
     public void bytesRead(Object socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
       try {
-        if (socketMetric == null) return;
+        if (socketMetric == null) {
+          return;
+        }
         //System.out.println("######### TCP-METRICS (" + ((SocketMetric) socketMetric).target + "): bytesRead: " + numberOfBytes);
         aggregate(((SocketMetric) socketMetric).target, readBytesMetrics, tcpReadBytes, numberOfBytes);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
       }
     }
@@ -231,11 +243,12 @@ public class ConnectionMetrics {
     @Override
     public void bytesWritten(Object socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
       try {
-        if (socketMetric == null) return;
+        if (socketMetric == null) {
+          return;
+        }
         //System.out.println("######### TCP-METRICS (" + ((SocketMetric) socketMetric).target + "): bytesWritten: " + numberOfBytes);
         aggregate(((SocketMetric) socketMetric).target, writtenBytesMetrics, tcpWrittenBytes, numberOfBytes);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
       }
     }
@@ -243,10 +256,11 @@ public class ConnectionMetrics {
     @Override
     public void exceptionOccurred(Object socketMetric, SocketAddress remoteAddress, Throwable t) {
       try {
-        if (socketMetric == null) return;
+        if (socketMetric == null) {
+          return;
+        }
         exceptionCount.computeIfAbsent(((SocketMetric) socketMetric).target, target -> new LongAdder()).increment();
-      }
-      catch (Throwable thr) {
+      } catch (Throwable thr) {
         handleMetricError(thr);
       }
     }
@@ -271,26 +285,28 @@ public class ConnectionMetrics {
 
     private static final String getTargetByUrl(String url) {
       String connectorId = HttpFunctionRegistry.getConnectorIdByUrl(url);
-      if (connectorId != null)
+      if (connectorId != null) {
         return HttpFunctionRegistry.isMetricsActive(connectorId) ? connectorId : null;
-      else {
+      } else {
         try {
           return remoteHubHosts.contains(new URL(url).getHost()) ? REMOTE_HUB : null;
-        }
-        catch (MalformedURLException e) {
+        } catch (MalformedURLException e) {
           return null;
         }
       }
     }
 
     static class RequestMetric {
+
       public HttpRequest request;
       private String target;
       private Marker marker;
       private long requestStart = Core.currentTimeMillis();
+
       public Marker getMarker() {
-        if (marker == null)
+        if (marker == null) {
           marker = new Log4jMarker(request.headers().get(STREAM_ID));
+        }
         return marker;
       }
     }
@@ -299,8 +315,7 @@ public class ConnectionMetrics {
     public Object enqueueRequest() {
       try {
         return Core.currentTimeMillis();
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
         return null;
       }
@@ -309,12 +324,13 @@ public class ConnectionMetrics {
     @Override
     public void dequeueRequest(Object taskMetric) {
       try {
-        if (httpClientQueueingTime == null) return;
+        if (httpClientQueueingTime == null) {
+          return;
+        }
         long queueingTime = Core.currentTimeMillis() - (long) taskMetric;
         //System.out.println("############## Request handling took: " + queueingTime);
         httpClientQueueingTime.addValue(queueingTime);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
       }
     }
@@ -332,8 +348,7 @@ public class ConnectionMetrics {
           return rm;
         }
         return null;
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
         return null;
       }
@@ -342,40 +357,47 @@ public class ConnectionMetrics {
     @Override
     public void requestReset(Object requestMetric) {
       try {
-        if (requestMetric == null) return;
+        if (requestMetric == null) {
+          return;
+        }
         resetHttpRequests.computeIfAbsent(((RequestMetric) requestMetric).target, target -> new LongAdder()).increment();
         removeInflight((RequestMetric) requestMetric);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
       }
     }
 
     @Override
     public void requestEnd(Object requestMetric, long bytesWritten) {
-      if (requestMetric == null) return;
+      if (requestMetric == null) {
+        return;
+      }
       //System.out.println("######### METRICS (" + ((RequestMetric) requestMetric).target + "): requestEnd, bytesWritten: " + bytesWritten);
     }
 
     @Override
     public void responseEnd(Object requestMetric, long bytesRead) {
       try {
-        if (requestMetric == null) return;
+        if (requestMetric == null) {
+          return;
+        }
         //System.out.println("######### METRICS(" + ((RequestMetric) requestMetric).target + "): responseEnd, bytesRead: " + bytesRead);
         aggregate(((RequestMetric) requestMetric).target, httpRequestLatencyMetrics, httpRequestLatency,
             Core.currentTimeMillis() - ((RequestMetric) requestMetric).requestStart);
         removeInflight((RequestMetric) requestMetric);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
       }
     }
 
     private void removeInflight(RequestMetric requestMetric) {
-      if (requestMetric == null) return;
+      if (requestMetric == null) {
+        return;
+      }
       LongAdder adder = httpRequestsInflight.get(requestMetric.target);
-      if (adder != null)
+      if (adder != null) {
         adder.decrement();
+      }
     }
   }
 
@@ -386,20 +408,22 @@ public class ConnectionMetrics {
     @Override
     protected String getTargetByHostAndPort(String hostname, int port) {
       String connectorId = HttpFunctionRegistry.getConnectorIdByHostAndPort(hostname, port);
-      if (connectorId != null)
+      if (connectorId != null) {
         return HttpFunctionRegistry.isMetricsActive(connectorId) ? connectorId : null;
-      else
+      } else {
         return super.getTargetByHostAndPort(hostname, port);
+      }
     }
 
     @Override
     public ClientMetrics createEndpointMetrics(SocketAddress remoteAddress, int maxPoolSize) {
       try {
         String target = getTargetByHostAndPort(remoteAddress.hostName(), remoteAddress.port());
-        if (target == null) return null;
+        if (target == null) {
+          return null;
+        }
         return new HubClientMetrics(remoteAddress, maxPoolSize, target);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
         return null;
       }
@@ -408,11 +432,12 @@ public class ConnectionMetrics {
     @Override
     public void endpointConnected(ClientMetrics endpointMetric) {
       try {
-        if (endpointMetric == null) return;
+        if (endpointMetric == null) {
+          return;
+        }
         endpointsConnected.computeIfAbsent(((HubClientMetrics) endpointMetric).target, t -> new LongAdder()).increment();
         //System.out.println("############ ENDPOINT CONNECTED (" + ((HubClientMetrics) endpointMetric).target + "): " + ((HubClientMetrics) endpointMetric).remoteAddress + ", maxPoolSize: " + ((HubClientMetrics) endpointMetric).maxPoolSize);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
       }
     }
@@ -420,13 +445,15 @@ public class ConnectionMetrics {
     @Override
     public void endpointDisconnected(ClientMetrics endpointMetric) {
       try {
-        if (endpointMetric == null) return;
+        if (endpointMetric == null) {
+          return;
+        }
         LongAdder adder = endpointsConnected.get(((HubClientMetrics) endpointMetric).target);
-        if (adder != null)
+        if (adder != null) {
           adder.decrement();
+        }
         //System.out.println("############ ENDPOINT DISCONNECTED (" + ((HubClientMetrics) endpointMetric).target + "): " + ((HubClientMetrics) endpointMetric).remoteAddress + ", maxPoolSize: " + ((HubClientMetrics) endpointMetric).maxPoolSize);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
         handleMetricError(t);
       }
     }

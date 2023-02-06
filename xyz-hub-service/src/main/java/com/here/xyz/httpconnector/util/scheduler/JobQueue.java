@@ -21,6 +21,7 @@ package com.here.xyz.httpconnector.util.scheduler;
 import com.here.xyz.httpconnector.CService;
 import com.here.xyz.httpconnector.util.jobs.Job;
 import com.here.xyz.hub.Core;
+import com.here.xyz.hub.Service;
 import com.mchange.v3.decode.CannotDecodeException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -100,7 +101,7 @@ public abstract class JobQueue implements Runnable {
         if (!commenced) {
             logger.info("Start!");
             commenced = true;
-            executionHandle = executorService.scheduleWithFixedDelay(this, 0, CService.configuration.JOB_CHECK_QUEUE_INTERVAL_SECONDS, TimeUnit.SECONDS);
+            executionHandle = executorService.scheduleWithFixedDelay(this, 0, Service.get().config.JOB_CHECK_QUEUE_INTERVAL_SECONDS, TimeUnit.SECONDS);
         }
         return this;
     }

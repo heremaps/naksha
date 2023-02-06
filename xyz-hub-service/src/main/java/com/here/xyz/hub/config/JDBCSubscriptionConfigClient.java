@@ -52,6 +52,7 @@ public class JDBCSubscriptionConfigClient extends SubscriptionConfigClient {
 
   private JDBCSubscriptionConfigClient() {
     this.client = JDBCConfig.getClient();
+    JDBCConfig.init();
   }
 
   public static JDBCSubscriptionConfigClient getInstance() {
@@ -59,11 +60,6 @@ public class JDBCSubscriptionConfigClient extends SubscriptionConfigClient {
       instance = new JDBCSubscriptionConfigClient();
     }
     return instance;
-  }
-
-  @Override
-  public void init(Handler<AsyncResult<Void>> onReady) {
-    JDBCConfig.init(onReady);
   }
 
   @Override

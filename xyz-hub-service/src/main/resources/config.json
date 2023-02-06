@@ -1,6 +1,8 @@
 {
   "LOG_CONFIG": "log4j2-console-plain.json",
 
+  "DEPLOY_XYZ_HUB_REST_VERTICLE": true,
+  "DEPLOY_PSQL_HTTP_CONNECTOR_VERTICLE": false,
   "INSTANCE_COUNT": 1,
   "HOST_NAME": "localhost",
   "HTTP_PORT": 8080,

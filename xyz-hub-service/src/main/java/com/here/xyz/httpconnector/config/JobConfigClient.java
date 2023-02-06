@@ -24,6 +24,7 @@ import com.here.xyz.XyzSerializable;
 import com.here.xyz.httpconnector.CService;
 import com.here.xyz.httpconnector.util.jobs.Job;
 import com.here.xyz.hub.Core;
+import com.here.xyz.hub.Service;
 import com.here.xyz.hub.config.Initializable;
 import com.here.xyz.hub.rest.HttpException;
 import com.here.xyz.responses.StatisticsResponse;
@@ -41,13 +42,13 @@ import static io.netty.handler.codec.http.HttpResponseStatus.PRECONDITION_FAILED
 /**
  * Client for reading and writing Jobs
  */
-public abstract class JobConfigClient implements Initializable {
+public abstract class JobConfigClient {
 
     private static final Logger logger = LogManager.getLogger();
 
     public static JobConfigClient getInstance() {
-        if (CService.configuration.JOBS_DYNAMODB_TABLE_ARN != null) {
-            return new DynamoJobConfigClient(CService.configuration.JOBS_DYNAMODB_TABLE_ARN);
+        if (Service.get().config.JOBS_DYNAMODB_TABLE_ARN != null) {
+            return new DynamoJobConfigClient(Service.get().config.JOBS_DYNAMODB_TABLE_ARN);
         } else {
             return JDBCJobConfigClient.getInstance();
         }
@@ -101,7 +102,7 @@ public abstract class JobConfigClient implements Initializable {
             job.setStatus(Job.Status.waiting);
 
         /** Collect statistics which also ensures an existing table */
-        CService.webClient.getAbs(CService.configuration.HUB_ENDPOINT+"/spaces/"+job.getTargetSpaceId()+"/statistics?skipCache=true")
+        Service.get().webClient.getAbs(Service.get().config.HUB_ENDPOINT+"/spaces/"+job.getTargetSpaceId()+"/statistics?skipCache=true")
                 .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                 .send()
                 .onSuccess(res -> {

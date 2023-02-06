@@ -23,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
-import com.here.xyz.hub.Service.Config;
+import com.here.xyz.config.ServiceConfig;
 import com.here.xyz.hub.connectors.models.Connector;
 import io.vertx.core.Vertx;
 import java.util.concurrent.ScheduledFuture;
@@ -31,7 +31,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Test;
 
 @SuppressWarnings("unused")
 public class RFCMeasurement {
@@ -47,12 +46,12 @@ public class RFCMeasurement {
     public void setup() {
         //Mock necessary configuration values
         Core.vertx = Vertx.vertx();
-        Service.configuration = new Config();
-        Service.configuration.REMOTE_FUNCTION_REQUEST_TIMEOUT = 26;
-        Service.configuration.INSTANCE_COUNT = 1;
-        Service.configuration.REMOTE_FUNCTION_MAX_CONNECTIONS = 256;
-        Service.configuration.REMOTE_FUNCTION_CONNECTION_HIGH_UTILIZATION_THRESHOLD = 0.75f;
-        Service.configuration.GLOBAL_MAX_QUEUE_SIZE = 1024;
+        Service.get().config = new ServiceConfig();
+        Service.get().config.REMOTE_FUNCTION_REQUEST_TIMEOUT = 26;
+        Service.get().config.INSTANCE_COUNT = 1;
+        Service.get().config.REMOTE_FUNCTION_MAX_CONNECTIONS = 256;
+        Service.get().config.REMOTE_FUNCTION_CONNECTION_HIGH_UTILIZATION_THRESHOLD = 0.75f;
+        Service.get().config.GLOBAL_MAX_QUEUE_SIZE = 1024;
 
         Connector s = new Connector();
         s.id = "testStorage";

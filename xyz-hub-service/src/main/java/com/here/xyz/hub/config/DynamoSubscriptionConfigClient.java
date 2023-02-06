@@ -50,15 +50,14 @@ public class DynamoSubscriptionConfigClient extends SubscriptionConfigClient {
         dynamoClient = new DynamoClient(tableArn);
         logger.debug("Instantiating a reference to Dynamo Table {}", dynamoClient.tableName);
         subscriptions = dynamoClient.db.getTable(dynamoClient.tableName);
+
+        init();
     }
 
-    @Override
-    public void init(Handler<AsyncResult<Void>> onReady) {
+    public void init() {
         if (dynamoClient.isLocal()) {
             dynamoClient.createTable(subscriptions.getTableName(), "id:S,source:S", "id", "source", null);
         }
-
-        onReady.handle(Future.succeededFuture());
     }
 
     @Override

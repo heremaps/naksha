@@ -6,7 +6,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import javax.annotation.Nullable;
 import org.junit.Test;
 
@@ -44,9 +46,13 @@ public class JsonConfigFileTest {
       return "TEST_";
     }
 
+    @JsonProperty
     public int theInt = 1;
+    @JsonProperty
     public boolean theBool = false;
+    @JsonProperty
     public String theString = "foo";
+    @JsonProperty
     public String env = "env-default";
   }
 
@@ -78,19 +84,41 @@ public class JsonConfigFileTest {
     assertEquals("env-default", testConfig.env);
   }
 
-  @Test
-  public void test_withMap() {
-    final TestConfig testConfig = new TestConfig();
+  private static LinkedHashMap<String, Object> createTestMap() {
     final LinkedHashMap<String, Object> testValues = new LinkedHashMap<>();
     testValues.put("theInt", 5);
     testValues.put("theBool", true);
     testValues.put("theString", "string");
     testValues.put("env", "env");
-    testConfig.load(testValues, null);
+    return testValues;
+  }
+
+  @Test
+  public void test_withMap() {
+    final TestConfig testConfig = new TestConfig();
+    final Map<String, Object> map = createTestMap();
+    testConfig.load(map, null);
     assertEquals(5, testConfig.theInt);
     assertTrue(testConfig.theBool);
     assertEquals("string", testConfig.theString);
     assertEquals("env", testConfig.env);
+  }
+
+  @Test
+  public void test_toMap() {
+    final TestConfig testConfig = new TestConfig();
+    final Map<String, Object> map = createTestMap();
+    testConfig.load(map, null);
+    assertEquals(5, testConfig.theInt);
+    assertTrue(testConfig.theBool);
+    assertEquals("string", testConfig.theString);
+    assertEquals("env", testConfig.env);
+
+    final Map<String, Object> serializedMap = testConfig.toMap();
+    assertEquals(map.size(), serializedMap.size());
+    for (final Map.Entry<String, Object> entry : map.entrySet()) {
+      assertEquals(entry.getValue(), serializedMap.get(entry.getKey()));
+    }
   }
 
   @Nullable
@@ -226,5 +254,4 @@ public class JsonConfigFileTest {
     testConfig.load(JsonConfigFileTest::test_annotationWithoutPrefix_getEnv);
     assertEquals("bar", testConfig.testAnnotation);
   }
-
 }

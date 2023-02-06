@@ -46,7 +46,7 @@ public class WarmupRemoteFunctionThread extends Thread {
 
   private static WarmupRemoteFunctionThread instance;
 
-  private WarmupRemoteFunctionThread(Handler<AsyncResult<Void>> handler) throws NullPointerException {
+  private WarmupRemoteFunctionThread() {
     super(name);
     if (instance != null) {
       throw new IllegalStateException("Singleton warmup thread has already been instantiated.");
@@ -54,13 +54,12 @@ public class WarmupRemoteFunctionThread extends Thread {
     WarmupRemoteFunctionThread.instance = this;
     this.setDaemon(true);
     this.start();
-    handler.handle(Future.succeededFuture());
     logger.info("Started warmup thread {}", name);
   }
 
-  public static void initialize(Handler<AsyncResult<Void>> handler) {
+  public static void initialize() {
     if (instance == null) {
-      instance = new WarmupRemoteFunctionThread(handler);
+      instance = new WarmupRemoteFunctionThread();
     }
   }
 

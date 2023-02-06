@@ -4,6 +4,7 @@ import com.here.xyz.httpconnector.CService;
 import com.here.xyz.httpconnector.config.JDBCImporter;
 import com.here.xyz.httpconnector.util.scheduler.ImportQueue;
 import com.here.xyz.httpconnector.util.status.RDSStatus;
+import com.here.xyz.hub.Service;
 import com.mchange.v3.decode.CannotDecodeException;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -32,14 +33,14 @@ public class JobStatusApi {
         this.system = new JSONObject();
 
         /** Add static configurations */
-        this.system.put("MAX_RDS_INFLIGHT_IMPORT_BYTES", CService.configuration.JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES);
-        this.system.put("MAX_RDS_CAPACITY", CService.configuration.JOB_MAX_RDS_CAPACITY);
-        this.system.put("MAX_RDS_CPU_LOAD", CService.configuration.JOB_MAX_RDS_CPU_LOAD);
-        this.system.put("MAX_RUNNING_JOBS", CService.configuration.JOB_MAX_RUNNING_JOBS);
+        this.system.put("MAX_RDS_INFLIGHT_IMPORT_BYTES", Service.get().config.JOB_MAX_RDS_INFLIGHT_IMPORT_BYTES);
+        this.system.put("MAX_RDS_CAPACITY", Service.get().config.JOB_MAX_RDS_CAPACITY);
+        this.system.put("MAX_RDS_CPU_LOAD", Service.get().config.JOB_MAX_RDS_CPU_LOAD);
+        this.system.put("MAX_RUNNING_JOBS", Service.get().config.JOB_MAX_RUNNING_JOBS);
 
         this.system.put("SUPPORTED_CONNECTORS", CService.supportedConnectors);
-        this.system.put("JOB_QUEUE_INTERVAL", CService.configuration.JOB_CHECK_QUEUE_INTERVAL_SECONDS);
-        this.system.put("JOB_DYNAMO_EXP_IN_DAYS", CService.configuration.JOB_DYNAMO_EXP_IN_DAYS);
+        this.system.put("JOB_QUEUE_INTERVAL", Service.get().config.JOB_CHECK_QUEUE_INTERVAL_SECONDS);
+        this.system.put("JOB_DYNAMO_EXP_IN_DAYS", Service.get().config.JOB_DYNAMO_EXP_IN_DAYS);
         this.system.put("HOST_ID", CService.HOST_ID);
 
         router.route(HttpMethod.GET, JOB_QUEUE_STATUS_ENDPOINT)

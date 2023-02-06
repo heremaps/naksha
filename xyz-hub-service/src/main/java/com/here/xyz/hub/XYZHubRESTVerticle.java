@@ -164,38 +164,20 @@ public class XYZHubRESTVerticle extends AbstractHttpServerVerticle {
                     }
                   }), null))
               .handler(createCorsHandler());
-          if (Service.configuration.FS_WEB_ROOT != null) {
-            logger.debug("Serving extra web-root folder in file-system with location: {}", Service.configuration.FS_WEB_ROOT);
+          if (Service.get().config.FS_WEB_ROOT != null) {
+            logger.debug("Serving extra web-root folder in file-system with location: {}", Service.get().config.FS_WEB_ROOT);
             //noinspection ResultOfMethodCallIgnored
-            new File(Service.configuration.FS_WEB_ROOT).mkdirs();
+            new File(Service.get().config.FS_WEB_ROOT).mkdirs();
             router.route("/hub/static/*")
                 .handler(StaticHandler.create()
                     .setAllowRootFileSystemAccess(true)
-                    .setWebRoot(Service.configuration.FS_WEB_ROOT)
+                    .setWebRoot(Service.get().config.FS_WEB_ROOT)
                     .setIndexPage("index.html")
                 );
           }
 
           //Add default handlers
           addDefaultHandlers(router);
-
-          vertx.sharedData().<String, Hashtable<String, Object>>getAsyncMap(Service.SHARED_DATA, sharedDataResult -> {
-            sharedDataResult.result().get(Service.SHARED_DATA, hashtableResult -> {
-              final Hashtable<String, Object> sharedData = hashtableResult.result();
-              final Router globalRouter = (Router) sharedData.get(Service.GLOBAL_ROUTER);
-
-              globalRouter.mountSubRouter("/", router);
-
-              vertx.eventBus().localConsumer(Service.SHARED_DATA, event -> {
-                createHttpServer(Service.configuration.HTTP_PORT, globalRouter);
-                if (Service.configuration.HTTP_PORT != Service.configuration.ADMIN_MESSAGE_PORT) {
-                  createHttpServer(Service.configuration.ADMIN_MESSAGE_PORT, globalRouter);
-                }
-              });
-
-              startPromise.complete();
-            });
-          });
         } catch (Exception e) {
           routerFailure(e);
         }
@@ -220,7 +202,7 @@ public class XYZHubRESTVerticle extends AbstractHttpServerVerticle {
     } catch (Exception e) {
       logger.error("Failed to load JWT public key from home or resources", e);
       // Fallback
-      pubKey = Service.configuration.getJwtPubKey();
+      pubKey = Service.get().config.getJwtPubKey();
     }
     assert pubKey != null;
     final JWTAuthOptions authConfig = new JWTAuthOptions().addPubSecKey(new PubSecKeyOptions().setAlgorithm("RS256").setBuffer(pubKey));

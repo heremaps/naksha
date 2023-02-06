@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 HERE Europe B.V.
+ * Copyright (C) 2017-2022 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,20 +21,24 @@ package com.here.xyz.hub;
 
 import static com.here.xyz.util.JsonConfigFile.nullable;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.here.xyz.hub.auth.Authorization;
+import com.here.xyz.config.ServiceConfig;
+import com.here.xyz.connectors.ErrorResponseException;
+import com.here.xyz.httpconnector.config.AwsCWClient;
+import com.here.xyz.httpconnector.config.JDBCClients;
+import com.here.xyz.httpconnector.config.JDBCImporter;
+import com.here.xyz.httpconnector.config.JobConfigClient;
+import com.here.xyz.httpconnector.config.JobS3Client;
+import com.here.xyz.httpconnector.util.scheduler.ImportQueue;
 import com.here.xyz.hub.cache.CacheClient;
 import com.here.xyz.hub.config.ConnectorConfigClient;
 import com.here.xyz.hub.config.SpaceConfigClient;
+import com.here.xyz.hub.config.SubscriptionConfigClient;
 import com.here.xyz.hub.connectors.BurstAndUpdateThread;
 import com.here.xyz.hub.connectors.WarmupRemoteFunctionThread;
 import com.here.xyz.hub.rest.admin.MessageBroker;
-import com.here.xyz.hub.rest.admin.Node;
 import com.here.xyz.hub.rest.admin.messages.RelayedMessage;
 import com.here.xyz.hub.rest.admin.messages.brokers.Broker;
 import com.here.xyz.hub.rest.admin.messages.brokers.NoopBroker;
-import com.here.xyz.hub.util.ARN;
 import com.here.xyz.hub.util.metrics.GcDurationMetric;
 import com.here.xyz.hub.util.metrics.GlobalInflightRequestMemory;
 import com.here.xyz.hub.util.metrics.GlobalUsedRfcConnections;
@@ -43,17 +47,8 @@ import com.here.xyz.hub.util.metrics.MemoryMetric;
 import com.here.xyz.hub.util.metrics.base.CWBareValueMetricPublisher;
 import com.here.xyz.hub.util.metrics.base.MetricPublisher;
 import com.here.xyz.hub.util.metrics.net.ConnectionMetrics;
-import com.here.xyz.hub.util.metrics.net.ConnectionMetrics.HubMetricsFactory;
-import com.here.xyz.util.JsonConfigFile;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.metrics.MetricsOptions;
-import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.lang.management.GarbageCollectorMXBean;
@@ -64,18 +59,14 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -85,62 +76,105 @@ public class Service extends Core {
 
   private static final Logger logger = LogManager.getLogger();
 
+  private static Service singleton;
+
+  /**
+   * Returns the current service instance.
+   *
+   * @return the current service instance.
+   * @throws IllegalStateException if the service not started.
+   */
+  public static @Nonnull Service get() {
+    if (singleton == null) {
+      throw new IllegalStateException("Service not started");
+    }
+    return singleton;
+  }
+
+  /**
+   * Start the service.
+   *
+   * @param vertxOptions the (optional) vertx options.
+   * @return the booting service.
+   * @throws Exception if any error occurred.
+   */
+  public synchronized static @Nonnull Service start(final @Nullable VertxOptions vertxOptions) throws Exception {
+    if (singleton != null) {
+      throw new IllegalStateException("The service is already initialized");
+    }
+    return new Service(vertxOptions);
+  }
+
   public static final String XYZ_HUB_USER_AGENT = "XYZ-Hub/" + BUILD_VERSION;
 
   /**
    * The host ID.
    */
-  public static final String HOST_ID = UUID.randomUUID().toString();
-
-  /**
-   * The shared map used across verticles
-   */
-  public static final String SHARED_DATA = "SHARED_DATA";
-
-  /**
-   * The key to access the global router in the shared data
-   */
-  public static final String GLOBAL_ROUTER = "GLOBAL_ROUTER";
-
-  /**
-   * The original JSON object of the configuration.
-   */
-  public static JsonObject rawConfiguration;
-
-  /**
-   * The service configuration.
-   */
-  public static Config configuration;
+  public static final String NODE_ID = UUID.randomUUID().toString();
 
   /**
    * The client to access the space configuration.
    */
-  public static SpaceConfigClient spaceConfigClient;
+  public final SpaceConfigClient spaceConfigClient;
 
   /**
    * The client to access the connector configuration.
    */
-  public static ConnectorConfigClient connectorConfigClient;
+  public final ConnectorConfigClient connectorConfigClient;
 
   /**
    * The client to access the subscription configuration.
    */
-  public static SubscriptionConfigClient subscriptionConfigClient;
+  public final SubscriptionConfigClient subscriptionConfigClient;
 
   /**
    * A web client to access XYZ Hub nodes and other web resources.
    */
-  public static WebClient webClient;
+  public final WebClient webClient;
 
   /**
    * The cache client for the service.
    */
-  public static CacheClient cacheClient;
+  public final CacheClient cacheClient;
 
   /**
    * The node's MessageBroker which is used to send AdminMessages.
    */
-  public static MessageBroker messageBroker;
+  public final MessageBroker messageBroker;
+
+  /**
+   * The client to access job configs
+   */
+  public final JobConfigClient jobConfigClient;
+
+  /**
+   * The node of this service.
+   */
+  public final ServiceNode node;
+
+  /**
+   * The client to access job configs
+   */
+  public final JobS3Client jobS3Client;
+
+  /**
+   * The client to access job configs
+   */
+  public final AwsCWClient jobCWClient;
+
+  /**
+   * The client to access the database
+   */
+  public final JDBCImporter jdbcImporter;
+
+  /**
+   * Queue for executed Jobs
+   */
+  public final ImportQueue importQueue;
+
+  public final List<String> supportedConnectors = new ArrayList<>();
+  public final HashMap<String, String> rdsLookupDatabaseIdentifier = new HashMap<>();
+  public final HashMap<String, Integer> rdsLookupCapacity = new HashMap<>();
 
   /**
    * The hostname
@@ -148,132 +182,95 @@ public class Service extends Core {
   private static String hostname;
   public static final boolean IS_USING_ZGC = isUsingZgc();
 
-  private static final List<MetricPublisher> metricPublishers = new LinkedList<>();
-
-  private static Router globalRouter;
-
-  private static final String CONFIG_FILE = "config.json";
+  private static final List<MetricPublisher<?>> metricPublishers = new LinkedList<>();
 
   /**
-   * The service entry point.
-   */
-  public static void main(String[] arguments) {
-    final boolean debug = Arrays.asList(arguments).contains("--debug");
-    VertxOptions vertxOptions = new VertxOptions().setMetricsOptions(
-        new MetricsOptions().setEnabled(true).setFactory(new HubMetricsFactory()));
-    initialize(vertxOptions, debug, CONFIG_FILE, Service::onConfigLoaded);
-  }
-
-  /**
+   * Only called internally from {@link #start(VertxOptions)}, being synchronized, so the constructor is as well synchronized.
    *
+   * @param vertxOptions optional pre-configured vertx options.
+   * @throws Exception if any error occurred.
    */
-  private static void onConfigLoaded(JsonObject jsonConfig) {
-    rawConfiguration = jsonConfig;
-    configuration = jsonConfig.mapTo(Config.class);
+  private Service(final @Nullable VertxOptions vertxOptions) throws Exception {
+    super(vertxOptions);
+    singleton = this;
+
+    // Get the message broker synchronously.
+    final String brokerName = nullable(ServiceConfig.get().DEFAULT_MESSAGE_BROKER);
+    Broker broker = null;
+    if (brokerName != null) {
+      broker = Broker.valueOf(brokerName);
+    }
+    if (broker == null) {
+      broker = Broker.Redis;
+    }
+    messageBroker = broker.instance.get();
+    // End of gathering of message broker.
 
     cacheClient = CacheClient.getInstance();
-    configuration.getDefaultMessageBroker().instance.get().onSuccess(mb -> {
-      messageBroker = mb;
-      Node.initialize();
-    }).onFailure((throwable) -> {
-      logger.error("Failed to create message broker", throwable);
-      messageBroker = new NoopBroker();
-      Node.initialize();
-    });
     spaceConfigClient = SpaceConfigClient.getInstance();
     connectorConfigClient = ConnectorConfigClient.getInstance();
-
+    subscriptionConfigClient = SubscriptionConfigClient.getInstance();
+    jobConfigClient = JobConfigClient.getInstance();
+    jdbcImporter = new JDBCImporter();
+    jobS3Client = new JobS3Client();
+    jobCWClient = new AwsCWClient();
+    importQueue = new ImportQueue();
     webClient = WebClient.create(vertx,
-        new WebClientOptions().setUserAgent(XYZ_HUB_USER_AGENT).setTcpKeepAlive(configuration.HTTP_CLIENT_TCP_KEEPALIVE)
-            .setIdleTimeout(configuration.HTTP_CLIENT_IDLE_TIMEOUT).setTcpQuickAck(true).setTcpFastOpen(true)
-            .setPipelining(Service.configuration.HTTP_CLIENT_PIPELINING));
+        new WebClientOptions()
+            .setUserAgent(XYZ_HUB_USER_AGENT)
+            .setTcpKeepAlive(config.HTTP_CLIENT_TCP_KEEPALIVE)
+            .setIdleTimeout(config.HTTP_CLIENT_IDLE_TIMEOUT)
+            .setTcpQuickAck(true)
+            .setTcpFastOpen(true)
+            .setPipelining(config.HTTP_CLIENT_PIPELINING));
 
-    globalRouter = Router.router(vertx);
-
-    spaceConfigClient.init(ar -> {
-      if (ar.succeeded()) {
-        connectorConfigClient.init(connectorConfigReady -> {
-          if (connectorConfigReady.succeeded()) {
-            if (Service.configuration.INSERT_LOCAL_CONNECTORS) {
-              connectorConfigClient.insertLocalConnectors(result -> onLocalConnectorsInserted(result, jsonConfig));
-            } else {
-              onLocalConnectorsInserted(Future.succeededFuture(), jsonConfig);
-            }
-          } else {
-            die(1, "Connector config client failed", ar.cause());
-          }
-        });
-      } else {
-        die(1, "Space config client failed", ar.cause());
+    node = new ServiceNode(this, Service.NODE_ID, Service.getHostname(), getPublicPort());
+    node.start();
+    try {
+      for (final String rdsConfig : Service.get().config.JOB_SUPPORTED_RDS()) {
+        final String[] config = rdsConfig.split(":");
+        final String cId = config[0];
+        supportedConnectors.add(cId);
+        rdsLookupDatabaseIdentifier.put(cId, config[1]);
+        rdsLookupCapacity.put(cId, Integer.parseInt(config[2]));
       }
-    });
-  }
-
-  private static void onLocalConnectorsInserted(AsyncResult<Void> result, JsonObject config) {
-    if (result.failed()) {
-      die(1, "Failed to insert local connectors.", result.cause());
-    } else {
-      BurstAndUpdateThread.initialize(initializeAr -> onBustAndUpdateThreadStarted(initializeAr, config));
+      supportedConnectors.add(JDBCClients.CONFIG_CLIENT_ID);
+    } catch (Exception e) {
+      logger.error("Configuration-Error - please check service config!");
+      throw new Error("Configuration-Error - please check service config!", e);
     }
-  }
+    importQueue.commence();
 
-  private static void onBustAndUpdateThreadStarted(AsyncResult<Void> result, JsonObject config) {
-    if (result.failed()) {
-      die(1, "Failed to start BurstAndUpdateThread.", result.cause());
-    } else {
-      // start warmup thread after connectors have been checked by BurstAndUpdateThread
-      WarmupRemoteFunctionThread.initialize(initializeAr -> onServiceInitialized(initializeAr, config));
-    }
-  }
-
-  private static void onServiceInitialized(AsyncResult<Void> result, JsonObject config) {
-    if (result.failed()) {
-      die(1, "Failed to initialize Connectors. Service can't be started.", result.cause());
-      return;
+    if (ServiceConfig.get().INSERT_LOCAL_CONNECTORS) {
+      connectorConfigClient.insertLocalConnectors();
     }
 
-    if (StringUtils.isEmpty(Service.configuration.VERTICLES_CLASS_NAMES)) {
-      die(1, "At least one Verticle class name should be specified on VERTICLES_CLASS_NAMES. Service can't be started");
-      return;
+    // Start threads.
+    if (config.START_BURST_AND_UPDATE_THREAD) {
+      BurstAndUpdateThread.initialize();
+    }
+    if (config.START_WARMUP_REMOTE_FUNCTION_THREAD) {
+      WarmupRemoteFunctionThread.initialize();
     }
 
-    final List<String> verticlesClassNames = Arrays.asList(Service.configuration.VERTICLES_CLASS_NAMES.split(","));
-    int numInstances = Runtime.getRuntime().availableProcessors() * 2 / verticlesClassNames.size();
-    final DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(false).setInstances(numInstances);
+    // Deploy verticles.
+    if (config.DEPLOY_XYZ_HUB_REST_VERTICLE) {
+      logger.info("Deploy {}", XYZHubRESTVerticle.class.getName());
+      final DeploymentOptions options = new DeploymentOptions();
+      options.setWorker(false);
+      options.setInstances(Runtime.getRuntime().availableProcessors());
+      vertx.deployVerticle(XYZHubRESTVerticle.class, options);
+    }
+    if (config.DEPLOY_PSQL_HTTP_CONNECTOR_VERTICLE) {
+      logger.info("Deploy {}", XYZHubRESTVerticle.class.getName());
+      final DeploymentOptions options = new DeploymentOptions();
+      options.setWorker(false);
+      options.setInstances(Runtime.getRuntime().availableProcessors());
+      vertx.deployVerticle(XYZHubRESTVerticle.class, options);
+    }
 
-    final Promise<Void> sharedDataPromise = Promise.promise();
-    final Future<Void> sharedDataFuture = sharedDataPromise.future();
-    final Hashtable<String, Object> sharedData = new Hashtable<String, Object>() {{
-      put(GLOBAL_ROUTER, globalRouter);
-    }};
-
-    sharedDataFuture.compose(r -> {
-      final List<Future> futures = new ArrayList<>();
-
-      verticlesClassNames.forEach(className -> {
-        final Promise<AsyncResult<String>> deployVerticlePromise = Promise.promise();
-        futures.add(deployVerticlePromise.future());
-
-        logger.info("Deploying verticle: " + className);
-        vertx.deployVerticle(className, options, deployVerticleHandler -> {
-          if (deployVerticleHandler.failed()) {
-            logger.warn("Unable to load verticle class:" + className);
-          }
-          deployVerticlePromise.complete();
-        });
-      });
-
-      return CompositeFuture.all(futures);
-    }).onComplete(done -> {
-      // at this point all verticles were initiated and all routers added as subrouter of globalRouter.
-      vertx.eventBus().publish(SHARED_DATA, GLOBAL_ROUTER);
-
-      logger.info("XYZ Hub " + BUILD_VERSION + " was started at " + new Date().toString());
-      logger.info("Native transport enabled: " + vertx.isNativeTransportEnabled());
-    });
-
-    //Shared data initialization
-    vertx.sharedData().getAsyncMap(SHARED_DATA, asyncMapResult -> asyncMapResult.result().put(SHARED_DATA, sharedData, sharedDataPromise));
+    logger.info("XYZ Hub " + BUILD_VERSION + " was started at " + new Date().toString());
+    logger.info("Native transport enabled: " + vertx.isNativeTransportEnabled());
 
     Thread.setDefaultUncaughtExceptionHandler((thread, t) -> logger.error("Uncaught exception: ", t));
 
@@ -286,9 +283,38 @@ public class Service extends Core {
     startMetricPublishers();
   }
 
+  /**
+   * The service entry point.
+   */
+  public static void main(String[] arguments) throws Exception {
+    String configFilename = null;
+    boolean enableDebug = false;
+    for (final String arg : arguments) {
+      if (arg.startsWith("--config=")) {
+        configFilename = arg.substring("--config=".length());
+        // Extend a relative path to an absolute path.
+        // If no path component found (no slash/backslash), then the config file will be searched in the config directory.
+        if (configFilename.indexOf('/') == -1 && configFilename.indexOf('\\') == -1) {
+          configFilename = Paths.get(System.getProperty("user.dir"), configFilename).toAbsolutePath().toString();
+        }
+      } else if (arg.startsWith("--debug")) { // --debug=true will work as well, while --debug
+        enableDebug = true;
+      }
+    }
+    // This will ensure the --config parameter taken into account.
+    final ServiceConfig config = ServiceConfig.get(ServiceConfig.class, configFilename);
+    if (enableDebug) {
+      config.DEBUG = true;
+      System.out.println("Start service in DEBUG mode ...");
+    } else {
+      System.out.println("Start service ...");
+    }
+    start(null);
+  }
+
   public static String getHostname() {
     if (hostname == null) {
-      final String hostname = Service.configuration != null ? Service.configuration.HOST_NAME : null;
+      final String hostname = Service.get().config.HOST_NAME;
       if (hostname != null && hostname.length() > 0) {
         Service.hostname = hostname;
       } else {
@@ -313,8 +339,8 @@ public class Service extends Core {
     return used / total * 100;
   }
 
-  private static void startMetricPublishers() {
-    if (configuration.PUBLISH_METRICS) {
+  private void startMetricPublishers() {
+    if (config.PUBLISH_METRICS) {
       ConnectionMetrics.initialize();
       metricPublishers.add(new CWBareValueMetricPublisher(new MemoryMetric("JvmMemoryUtilization")));
       metricPublishers.add(new CWBareValueMetricPublisher(new MajorGcCountMetric("MajorGcCount")));
@@ -336,498 +362,34 @@ public class Service extends Core {
     return false;
   }
 
-  private static void stopMetricPublishers() {
+  private void stopMetricPublishers() {
     metricPublishers.forEach(MetricPublisher::stop);
   }
 
-  public static int getPublicPort() {
-    if (configuration.XYZ_HUB_PUBLIC_ENDPOINT == null) {
-      return configuration.HTTP_PORT;
+  public int getPublicPort() {
+    if (config.XYZ_HUB_PUBLIC_ENDPOINT == null) {
+      return config.HTTP_PORT;
     }
     try {
-      URI endpoint = new URI(configuration.XYZ_HUB_PUBLIC_ENDPOINT);
+      URI endpoint = new URI(config.XYZ_HUB_PUBLIC_ENDPOINT);
       int port = endpoint.getPort();
       return port > 0 ? port : 80;
     } catch (URISyntaxException e) {
-      return configuration.HTTP_PORT;
+      return config.HTTP_PORT;
     }
   }
 
   /**
    * @return The "environment ID" of this service deployment.
    */
-  public static String getEnvironmentIdentifier() {
-    if (configuration.ENVIRONMENT_NAME == null) {
+  public String getEnvironmentIdentifier() {
+    if (config.ENVIRONMENT_NAME == null) {
       return "default";
     }
-    if (configuration.AWS_REGION != null) {
-      return configuration.ENVIRONMENT_NAME + "_" + configuration.AWS_REGION;
+    if (config.AWS_REGION != null) {
+      return config.ENVIRONMENT_NAME + "_" + config.AWS_REGION;
     }
-    return configuration.ENVIRONMENT_NAME;
-  }
-
-  /**
-   * The service configuration.
-   */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  public static class Config {
-
-    /**
-     * The global maximum number of http client connections.
-     */
-    public int MAX_GLOBAL_HTTP_CLIENT_CONNECTIONS;
-
-    /**
-     * Size of the off-heap cache in megabytes.
-     */
-    public int OFF_HEAP_CACHE_SIZE_MB;
-
-    /**
-     * The port of the HTTP server.
-     */
-    public int HTTP_PORT;
-
-    /**
-     * The hostname, which under instances can use to contact the service node.
-     */
-    public String HOST_NAME;
-
-    /**
-     * The initial number of instances.
-     */
-    public int INSTANCE_COUNT;
-
-    /**
-     * The S3 Bucket which could be used by connectors with transfer limitations to relocate responses.
-     */
-    public String XYZ_HUB_S3_BUCKET;
-
-    /**
-     * The public endpoint.
-     */
-    public String XYZ_HUB_PUBLIC_ENDPOINT;
-
-    /**
-     * The public health-check endpoint, i.e. /hub/
-     */
-    public String XYZ_HUB_PUBLIC_HEALTH_ENDPOINT = "/hub/";
-
-    /**
-     * The redis host.
-     */
-    @Deprecated
-    public String XYZ_HUB_REDIS_HOST;
-
-    /**
-     * The redis port.
-     */
-    @Deprecated
-    public int XYZ_HUB_REDIS_PORT;
-
-    /**
-     * The redis connection string.
-     */
-    public String XYZ_HUB_REDIS_URI;
-
-    /**
-     * The redis auth token.
-     */
-    public String XYZ_HUB_REDIS_AUTH_TOKEN;
-
-    /**
-     * Adds backward-compatibility for the deprecated environment variables XYZ_HUB_REDIS_HOST & XYZ_HUB_REDIS_PORT.
-     *
-     * @return the URI of Redis.
-     */
-    //TODO: Remove this workaround after the deprecation period
-    @Nullable
-    @JsonIgnore
-    public String getRedisUri() {
-      if (XYZ_HUB_REDIS_HOST != null) {
-        String protocol = XYZ_HUB_REDIS_AUTH_TOKEN != null ? "rediss" : "redis";
-        int port = XYZ_HUB_REDIS_PORT != 0 ? XYZ_HUB_REDIS_PORT : 6379;
-        return protocol + "://" + XYZ_HUB_REDIS_HOST + ":" + port;
-      } else {
-        return nullable(XYZ_HUB_REDIS_URI);
-      }
-    }
-
-    /**
-     * The urls of remote hub services, separated by semicolon ';'
-     */
-    public String XYZ_HUB_REMOTE_SERVICE_URLS;
-    private List<String> hubRemoteServiceUrls;
-
-    public List<String> getHubRemoteServiceUrls() {
-      if (hubRemoteServiceUrls == null) {
-        hubRemoteServiceUrls = XYZ_HUB_REMOTE_SERVICE_URLS == null ? null : Arrays.asList(XYZ_HUB_REMOTE_SERVICE_URLS.split(";"));
-      }
-      return hubRemoteServiceUrls;
-    }
-
-    /**
-     * The authorization type.
-     */
-    public Authorization.AuthorizationType XYZ_HUB_AUTH;
-
-    /**
-     * The public key used for verifying the signature of the JWT tokens.
-     */
-    public String JWT_PUB_KEY;
-
-    /**
-     * Adds backward-compatibility for public keys without header & footer.
-     *
-     * @return The JWT public key; if any.
-     */
-    //TODO: Remove this workaround after the deprecation period
-    @Nullable
-    @JsonIgnore
-    public String getJwtPubKey() {
-      String jwtPubKey = JWT_PUB_KEY;
-      if (jwtPubKey != null) {
-        if (!jwtPubKey.startsWith("-----")) {
-          jwtPubKey = "-----BEGIN PUBLIC KEY-----\n" + jwtPubKey;
-        }
-        if (!jwtPubKey.endsWith("-----")) {
-          jwtPubKey = jwtPubKey + "\n-----END PUBLIC KEY-----";
-        }
-      }
-      return jwtPubKey;
-    }
-
-    /**
-     * If set to true, the connectors configuration will be populated with connectors defined in connectors.json.
-     */
-    public boolean INSERT_LOCAL_CONNECTORS;
-
-    /**
-     * If set to true, the connectors will receive health checks. Further an unhealthy connector gets deactivated automatically if the
-     * connector config does not include skipAutoDisable.
-     */
-    public boolean ENABLE_CONNECTOR_HEALTH_CHECKS;
-
-    /**
-     * If true HERE Tiles are get handled as Base 4 encoded. Default is false (Base 10).
-     */
-    public boolean USE_BASE_4_H_TILES;
-
-    /**
-     * The ID of the default storage connector.
-     */
-    public String DEFAULT_STORAGE_ID;
-
-    /**
-     * The PostgreSQL URL.
-     */
-    public String STORAGE_DB_URL;
-
-    /**
-     * The database user.
-     */
-    public String STORAGE_DB_USER;
-
-    /**
-     * The database password.
-     */
-    public String STORAGE_DB_PASSWORD;
-
-    /**
-     * The http connector host.
-     */
-    public String PSQL_HTTP_CONNECTOR_HOST;
-
-    /**
-     * The http connector port.
-     */
-    public int PSQL_HTTP_CONNECTOR_PORT;
-
-    /**
-     * The ARN of the space table in DynamoDB.
-     */
-    public String SPACES_DYNAMODB_TABLE_ARN;
-
-    /**
-     * The ARN of the connectors table in DynamoDB.
-     */
-    public String CONNECTORS_DYNAMODB_TABLE_ARN;
-
-    /**
-     * The ARN of the packages table in DynamoDB.
-     */
-    public String PACKAGES_DYNAMODB_TABLE_ARN;
-
-    /**
-     * The default {@link Broker} to use. If not given, Redis is used.
-     */
-    public String DEFAULT_MESSAGE_BROKER;
-
-    /**
-     * Returns the broker to be used.
-     *
-     * @return the broker to be used.
-     */
-    @Nonnull
-    public Broker getDefaultMessageBroker() {
-      final String brokerName = nullable(DEFAULT_MESSAGE_BROKER);
-      Broker broker = null;
-      if (brokerName != null) {
-        try {
-          broker = Broker.valueOf(brokerName);
-        } catch (Exception e) {
-          logger.error("Illegal value for DEFAULT_MESSAGE_BROKER: " + brokerName, e);
-        }
-      }
-      return broker == null ? Broker.Redis : broker;
-    }
-
-    /**
-     * The ARN of the subscriptions table in DynamoDB.
-     */
-    public String SUBSCRIPTIONS_DYNAMODB_TABLE_ARN;
-
-    /**
-     * The ARN of the admin message topic.
-     */
-    public ARN ADMIN_MESSAGE_TOPIC_ARN;
-
-    /**
-     * The JWT token used for sending admin messages.
-     */
-    public String ADMIN_MESSAGE_JWT;
-
-    /**
-     * The port for the admin message server.
-     */
-    public int ADMIN_MESSAGE_PORT;
-
-    /**
-     * The total size assigned for remote functions queues.
-     */
-    public int GLOBAL_MAX_QUEUE_SIZE; //MB
-
-    /**
-     * The default timeout for remote function requests in seconds.
-     */
-    public int REMOTE_FUNCTION_REQUEST_TIMEOUT; //seconds
-
-    /**
-     * OPTIONAL: The maximum timeout for remote function requests in seconds. If not specified, the value of
-     * {@link #REMOTE_FUNCTION_REQUEST_TIMEOUT} will be used.
-     */
-    public int REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT; //seconds
-
-    /**
-     * @return the value of {@link #REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT} if specified. The value of {@link #REMOTE_FUNCTION_REQUEST_TIMEOUT}
-     * otherwise.
-     */
-    @JsonIgnore
-    public int getRemoteFunctionMaxRequestTimeout() {
-      return REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT > 0 ? REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT : REMOTE_FUNCTION_REQUEST_TIMEOUT;
-    }
-
-    /**
-     * The maximum amount of RemoteFunction connections to be opened by this node.
-     */
-    public int REMOTE_FUNCTION_MAX_CONNECTIONS;
-
-    /**
-     * The amount of memory (in MB) which can be taken by incoming requests.
-     */
-    public int GLOBAL_INFLIGHT_REQUEST_MEMORY_SIZE_MB;
-
-    /**
-     * A value between 0 and 1 defining a threshold as percentage of utilized RemoteFunction max-connections after which to start
-     * prioritizing more important connectors over less important ones.
-     *
-     * @see Config#REMOTE_FUNCTION_MAX_CONNECTIONS
-     */
-    public float REMOTE_FUNCTION_CONNECTION_HIGH_UTILIZATION_THRESHOLD;
-
-    /**
-     * A value between 0 and 1 defining a threshold as percentage of utilized service memory for in-flight request after which to start
-     * prioritizing more important connectors over less important ones.
-     */
-    public float GLOBAL_INFLIGHT_REQUEST_MEMORY_HIGH_UTILIZATION_THRESHOLD;
-
-    /**
-     * A value between 0 and 1 defining a threshold as percentage of utilized service memory which depicts a very high utilization of the
-     * the memory. The service uses that threshold to perform countermeasures to protect the service from overload.
-     */
-    public float SERVICE_MEMORY_HIGH_UTILIZATION_THRESHOLD;
-
-    /**
-     * The remote function pool ID to be used to select the according remote functions for this Service environment.
-     */
-    public String REMOTE_FUNCTION_POOL_ID;
-
-    /**
-     * The web root for serving static resources from the file system.
-     */
-    public String FS_WEB_ROOT;
-
-    /**
-     * The name of the upload limit header
-     */
-    public String UPLOAD_LIMIT_HEADER_NAME;
-
-    /**
-     * The code which gets returned if UPLOAD_LIMIT is reached
-     */
-    public int UPLOAD_LIMIT_REACHED_HTTP_CODE;
-
-    /**
-     * The message which gets returned if UPLOAD_LIMIT is reached
-     */
-    public String UPLOAD_LIMIT_REACHED_MESSAGE;
-
-    /**
-     * The name of the health check header to instruct for additional health status information.
-     */
-    public String HEALTH_CHECK_HEADER_NAME;
-
-    /**
-     * The value of the health check header to instruct for additional health status information.
-     */
-    public String HEALTH_CHECK_HEADER_VALUE;
-
-    /**
-     * An identifier for the service environment.
-     */
-    public String ENVIRONMENT_NAME;
-
-    /**
-     * Whether to publish custom service metrics like JVM memory utilization or Major GC count.
-     */
-    public boolean PUBLISH_METRICS;
-
-    /**
-     * The AWS region this service is running in. Value is <code>null</code> if not running in AWS.
-     */
-    public String AWS_REGION;
-
-    /**
-     * The verticles class names to be deployed, separated by comma
-     */
-    public String VERTICLES_CLASS_NAMES;
-
-    /**
-     * The default ECPS phrase. (Mainly for testing purposes)
-     */
-    public String DEFAULT_ECPS_PHRASE;
-
-    /**
-     * The topic ARN for Space modification notifications. If no value is provided no notifications will be sent.
-     */
-    public String MSE_NOTIFICATION_TOPIC;
-
-    /**
-     * The maximum size of an event transiting between connector -> service -> client. Validation is only applied when
-     * MAX_SERVICE_RESPONSE_SIZE is bigger than zero.
-     *
-     * @deprecated Use instead MAX_UNCOMPRESSED_RESPONSE_SIZE
-     */
-    public int MAX_SERVICE_RESPONSE_SIZE;
-
-    /**
-     * The maximum uncompressed request size in bytes supported on API calls. If uncompressed request size is bigger than
-     * MAX_UNCOMPRESSED_REQUEST_SIZE, an error with status code 413 will be sent.
-     */
-    public long MAX_UNCOMPRESSED_REQUEST_SIZE;
-
-    /**
-     * The maximum uncompressed response size in bytes supported on API calls. If uncompressed response size is bigger than
-     * MAX_UNCOMPRESSED_RESPONSE_SIZE, an error with status code 513 will be sent.
-     */
-    public long MAX_UNCOMPRESSED_RESPONSE_SIZE;
-
-
-    /**
-     * The maximum http response size in bytes supported on API calls. If response size is bigger than MAX_HTTP_RESPONSE_SIZE, an error with
-     * status code 513 will be sent. Validation is only applied when MAX_HTTP_RESPONSE_SIZE is bigger than zero.
-     *
-     * @deprecated Use instead MAX_UNCOMPRESSED_RESPONSE_SIZE
-     */
-    public int MAX_HTTP_RESPONSE_SIZE;
-
-    /**
-     * Whether to activate pipelining for the HTTP client of the service.
-     */
-    public boolean HTTP_CLIENT_PIPELINING;
-
-    /**
-     * Whether to activate TCP keepalive for the HTTP client of the service.
-     */
-    public boolean HTTP_CLIENT_TCP_KEEPALIVE = true;
-
-    /**
-     * The idle connection timeout in seconds for the HTTP client of the service. Setting it to 0 will make the connections not timing out
-     * at all.
-     */
-    public int HTTP_CLIENT_IDLE_TIMEOUT = 120;
-
-    /**
-     * List of fields, separated by comma, which are optional on feature's namespace property.
-     */
-    public List<String> FEATURE_NAMESPACE_OPTIONAL_FIELDS = Collections.emptyList();
-    private Map<String, Object> FEATURE_NAMESPACE_OPTIONAL_FIELDS_MAP;
-
-    /**
-     * When set, modifies the Stream-Info header name to the value specified.
-     */
-    public String CUSTOM_STREAM_INFO_HEADER_NAME;
-
-    /**
-     * Whether the service should use InstanceProviderCredentialsProfile with cached credential when utilizing AWS clients.
-     */
-    public boolean USE_AWS_INSTANCE_CREDENTIALS_WITH_REFRESH;
-
-    public boolean containsFeatureNamespaceOptionalField(String field) {
-      if (FEATURE_NAMESPACE_OPTIONAL_FIELDS_MAP == null) {
-        FEATURE_NAMESPACE_OPTIONAL_FIELDS_MAP = new HashMap<String, Object>() {{
-          FEATURE_NAMESPACE_OPTIONAL_FIELDS.forEach(k -> put(k, null));
-        }};
-      }
-
-      return FEATURE_NAMESPACE_OPTIONAL_FIELDS_MAP.containsKey(field);
-    }
-
-    /**
-     * Flag that indicates whether the creation of features on history spaces contains features in the request payload with uuid.
-     */
-    public boolean MONITOR_FEATURES_WITH_UUID = true;
-
-    /**
-     * Global limit for the maximum amount of versions to keep per space.
-     */
-    public long MAX_VERSIONS_TO_KEEP = 1_000_000_000;
-
-    /**
-     * Flag indicating whether the author should be retrieved from the custom header Author.
-     */
-    public boolean USE_AUTHOR_FROM_HEADER = false;
-
-    /**
-     * Endpoint which includes Maintenance and JOB-API.
-     */
-    public String HTTP_CONNECTOR_ENDPOINT;
-
-    /**
-     * If set to true, the service responses will include headers with information about the decompressed size of the request and response
-     * payloads.
-     */
-    public boolean INCLUDE_HEADERS_FOR_DECOMPRESSED_IO_SIZE = true;
-
-    /**
-     * The name of the header for reporting the decompressed size of the response payload.
-     */
-    public String DECOMPRESSED_INPUT_SIZE_HEADER_NAME = "X-Decompressed-Input-Size";
-
-    /**
-     * The name of the header for reporting the decompressed size of the response payload.
-     */
-    public String DECOMPRESSED_OUTPUT_SIZE_HEADER_NAME = "X-Decompressed-Output-Size";
-
+    return config.ENVIRONMENT_NAME;
   }
 
   /**

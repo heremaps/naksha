@@ -26,6 +26,7 @@ import com.here.xyz.httpconnector.util.jobs.Import;
 import com.here.xyz.httpconnector.util.jobs.ImportObject;
 import com.here.xyz.httpconnector.util.jobs.ImportValidator;
 import com.here.xyz.httpconnector.util.jobs.Job;
+import com.here.xyz.hub.Service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -52,11 +53,11 @@ public class JobS3Client extends AwsS3Client{
     protected static final String IMPORT_UPLOAD_FOLDER = "imports";
 
     public URL generateUploadURL(String key) throws IOException {
-        return generateUploadURL(CService.configuration.JOBS_S3_BUCKET, key);
+        return generateUploadURL(Service.get().config.JOBS_S3_BUCKET, key);
     }
 
     public ImportObject generateUploadURL(Import job) throws IOException {
-        return generateUploadURL(CService.configuration.JOBS_S3_BUCKET, job);
+        return generateUploadURL(Service.get().config.JOBS_S3_BUCKET, job);
     }
 
     public ImportObject generateUploadURL(String bucketName, Import job) throws IOException {
@@ -83,7 +84,7 @@ public class JobS3Client extends AwsS3Client{
         if(!firstKey.matches("part_\\d*.csv"))
             path = IMPORT_MANUAL_UPLOAD_FOLDER +"/"+ path;
 
-        return scanImportPath(path, CService.configuration.JOBS_S3_BUCKET, csvFormat);
+        return scanImportPath(path, Service.get().config.JOBS_S3_BUCKET, csvFormat);
     }
 
     public Map<String,ImportObject> scanImportPath(String prefix, String bucketName, Job.CSVFormat csvFormat){
