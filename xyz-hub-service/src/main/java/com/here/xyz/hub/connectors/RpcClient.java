@@ -555,20 +555,22 @@ public class RpcClient {
       throw new NullPointerException("Response string is null or empty");
 
     // When MAX_HTTP_RESPONSE_SIZE is bigger than zero, check whether a gzipped payload is bigger than MAX_HTTP_RESPONSE_SIZE
-    if (Api.MAX_HTTP_RESPONSE_SIZE > 0 && Payload.isGzipped(bytes) && bytes.length > Api.MAX_HTTP_RESPONSE_SIZE) {
+    if (Service.get().config.MAX_HTTP_RESPONSE_SIZE > 0 && Payload.isGzipped(bytes)
+        && bytes.length > Service.get().config.MAX_HTTP_RESPONSE_SIZE) {
       throwResponseSizeException(marker);
     }
 
     // When MAX_SERVICE_RESPONSE_SIZE is bigger than zero, check whether an ungzipped payload is bigger than MAX_SERVICE_RESPONSE_SIZE
-    if (Api.MAX_SERVICE_RESPONSE_SIZE > 0 && bytes.length > Api.MAX_SERVICE_RESPONSE_SIZE) {
+    if (Service.get().config.MAX_SERVICE_RESPONSE_SIZE > 0
+    && bytes.length > Service.get().config.MAX_SERVICE_RESPONSE_SIZE) {
       throwResponseSizeException(marker);
     }
 
     // when the data from connector is uncompressed and its size is bigger than the current MAX_HTTP_RESPONSE_SIZE, compress it and check again.
-    if (!Payload.isGzipped(bytes) && Api.MAX_HTTP_RESPONSE_SIZE > 0 && bytes.length > Api.MAX_HTTP_RESPONSE_SIZE) {
+    if (!Payload.isGzipped(bytes) && bytes.length > Service.get().config.MAX_HTTP_RESPONSE_SIZE) {
       // uncompressed data should be checked whether it's compression would fit under MAX_HTTP_RESPONSE_SIZE
       byte[] compressed = Payload.compress(bytes);
-      if (compressed != null && compressed.length > Api.MAX_HTTP_RESPONSE_SIZE)
+      if (compressed != null && compressed.length > Service.get().config.MAX_HTTP_RESPONSE_SIZE)
         throwResponseSizeException(marker);
     }
   }

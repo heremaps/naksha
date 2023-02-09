@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.commons.lang3.ObjectUtils.Null;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -198,6 +197,14 @@ public abstract class JsonConfigFile<SELF extends JsonConfigFile<SELF>> extends 
   @Nullable
   public static String nullable(@Nullable String string) {
     return string == null || string.isEmpty() || "null".equalsIgnoreCase(string) ? null : string;
+  }
+
+  public static int parseIntOr(@Nullable String string, int alternative) {
+    try {
+      return Integer.parseInt(string, 10);
+    } catch (Exception e) {
+      return alternative;
+    }
   }
 
   /**
@@ -438,6 +445,13 @@ public abstract class JsonConfigFile<SELF extends JsonConfigFile<SELF>> extends 
           field.setLong(this, longValue);
         } else if (value instanceof Number) {
           field.setLong(this, ((Number) value).longValue());
+        }
+      } else if (fieldType == float.class) {
+        if (value instanceof String) {
+          final float floatValue = Float.parseFloat((String) value);
+          field.setFloat(this, floatValue);
+        } else if (value instanceof Number) {
+          field.setFloat(this, ((Number) value).floatValue());
         }
       } else if (fieldType == double.class) {
         if (value instanceof String) {

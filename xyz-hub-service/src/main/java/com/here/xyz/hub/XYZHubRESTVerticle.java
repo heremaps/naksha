@@ -125,7 +125,7 @@ public class XYZHubRESTVerticle extends AbstractHttpServerVerticle {
           new AdminApi(vertx, router, jwtHandler);
 
           //OpenAPI resources
-          router.route("/hub/static/openapi/*").handler(createCorsHandler()).handler((routingContext -> {
+          router.route("/static/openapi/*").handler(createCorsHandler()).handler((routingContext -> {
             final HttpServerResponse res = routingContext.response();
             res.putHeader("content-type", "application/yaml");
             final String path = routingContext.request().path();
@@ -149,7 +149,7 @@ public class XYZHubRESTVerticle extends AbstractHttpServerVerticle {
           }));
 
           //Static resources
-          router.route("/hub/static/*")
+          router.route("/static/*")
               .handler(
                   new DelegatingHandler<>(StaticHandler.create().setIndexPage("index.html"), context -> context.addHeadersEndHandler(v -> {
                     //This handler implements a workaround for an issue with CloudFront, which removes slashes at the end of the request-URL's path
@@ -166,7 +166,7 @@ public class XYZHubRESTVerticle extends AbstractHttpServerVerticle {
             logger.debug("Serving extra web-root folder in file-system with location: {}", Service.get().config.FS_WEB_ROOT);
             //noinspection ResultOfMethodCallIgnored
             new File(Service.get().config.FS_WEB_ROOT).mkdirs();
-            router.route("/hub/static/*")
+            router.route("/static/*")
                 .handler(StaticHandler.create()
                     .setAllowRootFileSystemAccess(true)
                     .setWebRoot(Service.get().config.FS_WEB_ROOT)
@@ -176,7 +176,7 @@ public class XYZHubRESTVerticle extends AbstractHttpServerVerticle {
 
           //Add default handlers
           addDefaultHandlers(router);
-          createHttpServer(Service.get().config.HTTP_PORT, router);
+          Service.get().router.mountSubRouter("/hub/", router);
         } catch (Exception e) {
           routerFailure(e);
         }

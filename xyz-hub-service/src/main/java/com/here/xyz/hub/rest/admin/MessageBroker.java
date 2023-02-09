@@ -21,7 +21,6 @@ package com.here.xyz.hub.rest.admin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.AdminApi;
 import com.here.xyz.hub.rest.admin.messages.RelayedMessage;

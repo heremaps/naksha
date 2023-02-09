@@ -61,9 +61,6 @@ public class JDBCImporter extends JDBCClients{
     private static final String IDX_NAME_OPERATION = "operation";
     private static final String IDX_NAME_AUTHOR = "author";
 
-    /** Temporally used during migration phase */
-    private static final boolean OLD_DATABASE_LAYOUT = Service.get().config.JOB_OLD_DATABASE_LAYOUT;
-
     /** List of default Indices */
     public static final String[] DEFAULT_IDX_LIST = { IDX_NAME_ID,IDX_NAME_GEO,IDX_NAME_CREATEDAT,IDX_NAME_UPDATEDAT,IDX_NAME_SERIAL,IDX_NAME_TAGS,IDX_NAME_VIZ };
 
@@ -168,7 +165,7 @@ public class JDBCImporter extends JDBCClients{
                 .replace("{enableUUID}", Boolean.toString(_enableUUID))
                 .replace("{spaceVersion}", Long.toString(spaceVersion))
                 .replace("{author}", author)
-                .replace("{oldLayout}", Boolean.toString(OLD_DATABASE_LAYOUT))
+                .replace("{oldLayout}", Boolean.toString(Service.get().config.JOB_OLD_DATABASE_LAYOUT))
         );
 
         q.setVariable("schema", schema);
@@ -249,9 +246,9 @@ public class JDBCImporter extends JDBCClients{
     public static List<Future> generateIndexFutures (Job job, String schema, String tableName, String clientId){
         List<Future> indicesFutures = new ArrayList<>();
 
-        for (String idxName:  (OLD_DATABASE_LAYOUT ? DEFAULT_IDX_LIST : DEFAULT_IDX_LIST_EXTENDED)) {
+        for (String idxName:  (Service.get().config.JOB_OLD_DATABASE_LAYOUT ? DEFAULT_IDX_LIST : DEFAULT_IDX_LIST_EXTENDED)) {
             /** Create VIZ index only on root table - to workaround potential postgres bug */
-            if(idxName.equalsIgnoreCase(IDX_NAME_VIZ) && (tableName.indexOf("_head") != -1 || tableName.indexOf("_p0") != -1))
+            if(idxName.equalsIgnoreCase(IDX_NAME_VIZ) && (tableName.contains("_head") || tableName.contains("_p0")))
                 continue;
 
             SQLQuery q = createIdxQuery(idxName, schema, tableName);
@@ -420,7 +417,7 @@ public class JDBCImporter extends JDBCClients{
     public static List<Future> createIndices(String clientID, String schema, String tablename){
         List<Future> futures = new ArrayList<>();
 
-        for (String idxName: (OLD_DATABASE_LAYOUT ? DEFAULT_IDX_LIST :DEFAULT_IDX_LIST_EXTENDED)) {
+        for (String idxName: (Service.get().config.JOB_OLD_DATABASE_LAYOUT ? DEFAULT_IDX_LIST :DEFAULT_IDX_LIST_EXTENDED)) {
             SQLQuery q = createIdxQuery(idxName, schema, tablename);
             futures.add(createIndex(clientID, q, idxName));
         }

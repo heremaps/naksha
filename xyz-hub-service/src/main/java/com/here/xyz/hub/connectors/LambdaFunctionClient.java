@@ -48,7 +48,6 @@ import com.here.xyz.hub.connectors.models.Connector;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig.AWSLambda;
 import com.here.xyz.hub.rest.HttpException;
-import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.util.ARN;
 import com.here.xyz.hub.util.LimitedOffHeapQueue.PayloadVanishedException;
 import io.vertx.core.AsyncResult;
@@ -148,7 +147,7 @@ public class LambdaFunctionClient extends RemoteFunctionClient {
             .withTcpKeepAlive(true)
             .withMaxConnections(Service.get().config.REMOTE_FUNCTION_MAX_CONNECTIONS)
             .withConnectionTimeout(CONNECTION_ESTABLISH_TIMEOUT)
-            .withRequestTimeout(remoteFunction.getTimeout())
+            .withRequestTimeout((int)remoteFunction.getTimeout())
             .withMaxErrorRetry(0)
 //            .withClientExecutionTimeout(CLIENT_REQUEST_TIMEOUT)
             .withConnectionTTL(CONNECTION_TTL))
@@ -163,7 +162,7 @@ public class LambdaFunctionClient extends RemoteFunctionClient {
     //TODO: Use CompletableFuture.delayedExecutor() after switching to Java 9
     new Thread(() -> {
       try {
-        Thread.sleep(MAX_REQUEST_TIMEOUT);
+        Thread.sleep(Service.get().config.REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT_MS);
       }
       catch (InterruptedException ignored) {}
       lambdaClient.shutdown();

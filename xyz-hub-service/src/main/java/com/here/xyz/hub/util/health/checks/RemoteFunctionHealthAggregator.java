@@ -26,7 +26,6 @@ import com.here.xyz.hub.Service;
 import com.here.xyz.hub.cache.CacheClient;
 import com.here.xyz.hub.connectors.RemoteFunctionClient;
 import com.here.xyz.hub.connectors.models.Connector;
-import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.util.health.GroupedHealthCheck;
 import com.here.xyz.hub.util.health.schema.Response;
 import com.here.xyz.hub.util.health.schema.Status;

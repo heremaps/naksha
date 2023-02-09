@@ -21,17 +21,15 @@ package com.here.xyz.hub;
 
 import static com.here.xyz.util.JsonConfigFile.nullable;
 
-import com.here.xyz.config.ConnectorConfig;
-import com.here.xyz.config.ServiceConfig;
-import com.here.xyz.hub.auth.Authorization.AuthorizationType;
+import com.here.xyz.config.XyzConfig;
 import com.here.xyz.hub.util.metrics.net.ConnectionMetrics.HubMetricsFactory;
 import com.here.xyz.util.JsonConfigFile;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.metrics.MetricsOptions;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -48,8 +46,6 @@ import java.util.Properties;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -57,19 +53,22 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.logging.log4j.core.util.CachedClock;
 import org.apache.logging.log4j.core.util.NetUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class Core {
+public abstract class Core {
 
   private static final Logger logger = LogManager.getLogger();
 
   protected Core(@Nullable VertxOptions vertxOptions) throws IOException {
-    // All further calls to ServiceConfig.get() will return this configuration object!
-    // This will work as well in xyz-hub-test module.
     if (vertxOptions == null) {
       vertxOptions = new VertxOptions();
     }
-    config = ServiceConfig.get();
-    connectorConfig = ConnectorConfig.get();
+    vertx = Vertx.vertx(vertxOptions);
+    router = Router.router(vertx);
+
+    config = XyzConfig.get();
+    // TODO: Add environment and region!
+    config.USER_AGENT += '/' + BUILD_VERSION;
 
     if (config.START_METRICS) {
       vertxOptions.setMetricsOptions(new MetricsOptions().setEnabled(true).setFactory(new HubMetricsFactory()));
@@ -78,6 +77,8 @@ public class Core {
     Configurator.reconfigure(NetUtils.toURI(config.LOG_CONFIG()));
     if (config.DEBUG) {
       Configurator.setAllLevels(LogManager.getRootLogger().getName(), Level.getLevel("DEBUG"));
+    } else {
+      Configurator.setAllLevels(LogManager.getRootLogger().getName(), Level.INFO);
     }
     vertxOptions.setWorkerPoolSize(config.vertxWorkerPoolSize());
     vertxOptions.setPreferNativeTransport(true);
@@ -88,42 +89,35 @@ public class Core {
           .setMaxWorkerExecuteTime(TimeUnit.MINUTES.toMillis(1))
           .setWarningExceptionTime(TimeUnit.MINUTES.toMillis(1));
     }
-    vertx = Vertx.vertx(vertxOptions);
-    router = Router.router(vertx);
+    webClient = WebClient.create(vertx,
+        new WebClientOptions()
+            .setUserAgent(config.USER_AGENT)
+            .setTcpKeepAlive(config.HTTP_CLIENT_TCP_KEEPALIVE)
+            .setIdleTimeout(config.HTTP_CLIENT_IDLE_TIMEOUT)
+            .setTcpQuickAck(true)
+            .setTcpFastOpen(true)
+            .setPipelining(config.HTTP_CLIENT_PIPELINING));
   }
 
   /**
    * The entry point to the Vert.x core API.
    */
-  public final @Nonnull Vertx vertx;
+  public final @NotNull Vertx vertx;
 
   /**
-   * The configuration of the service, the same that is returned via {@link ServiceConfig#get()}.
+   * The configuration of the core service, the same as returned via {@link XyzConfig#get()}.
    */
-  public final @Nonnull ServiceConfig config;
+  public final @NotNull XyzConfig config;
 
   /**
-   * Returns the authorization type; if no valid value is explicitly defined, {@link AuthorizationType#DUMMY DUMMY} is returned.
-   *
-   * @return the authorization type.
+   * A web client to access XYZ Hub nodes and other web resources.
    */
-  public @NotNull AuthorizationType config_XYZ_HUB_AUTH() {
-    try {
-      return AuthorizationType.valueOf(config.XYZ_HUB_AUTH);
-    } catch (Exception e) {
-      return AuthorizationType.DUMMY;
-    }
-  }
-
-  /**
-   * The configuration of the service, the same that is returned via {@link ServiceConfig#get()}.
-   */
-  public final @Nonnull ConnectorConfig connectorConfig;
+  public final WebClient webClient;
 
   /**
    * The router of the service.
    */
-  public final @Nonnull Router router;
+  public final @NotNull Router router;
 
   /**
    * A cached clock instance.
@@ -162,7 +156,7 @@ public class Core {
    * @return the bytes of the file.
    * @throws IOException if the file does not exist or any other error occurred.
    */
-  public static @Nonnull byte[] readFileFromHomeOrResource(@Nonnull String filename) throws IOException {
+  public static byte @NotNull [] readFileFromHomeOrResource(@NotNull String filename) throws IOException {
     //noinspection ConstantConditions
     if (filename == null) {
       throw new FileNotFoundException("null");
@@ -172,7 +166,7 @@ public class Core {
       filename = filename.substring(1);
     }
 
-    final String pathEnvName = JsonConfigFile.configPathEnvName(ServiceConfig.class);
+    final String pathEnvName = JsonConfigFile.configPathEnvName(XyzConfig.class);
     final String path = nullable(System.getenv(pathEnvName));
     final Path filePath;
     if (path != null) {
@@ -268,7 +262,7 @@ public class Core {
     return result;
   }
 
-  public static @Nonnull ThreadFactory newThreadFactory(@Nonnull String groupName) {
+  public static @NotNull ThreadFactory newThreadFactory(@NotNull String groupName) {
     return new DefaultThreadFactory(groupName);
   }
 
@@ -312,13 +306,13 @@ public class Core {
     return buildProperties.getProperty(name);
   }
 
-  public static void die(final int exitCode, final @Nonnull String reason) {
+  public static void die(final int exitCode, final @NotNull String reason) {
     die(exitCode, reason, new RuntimeException());
   }
 
   public static void die(
       final int exitCode,
-      final @Nonnull String reason,
+      final @NotNull String reason,
       @Nullable Throwable exception
   ) {
     // Let's always generate a stack-trace.

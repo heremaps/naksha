@@ -58,7 +58,7 @@ public class HTTPFunctionClient extends RemoteFunctionClient {
 
   private static final Logger logger = LogManager.getLogger();
   private volatile String url;
-  private int requestTimeout;
+  private long requestTimeout;
 
   private static HttpClient httpClient = Service.get().vertx.createHttpClient(
       new HttpClientOptions()
@@ -106,7 +106,7 @@ public class HTTPFunctionClient extends RemoteFunctionClient {
           .putHeader(CONTENT_TYPE, "application/json; charset=" + Charset.defaultCharset().name())
           .putHeader(STREAM_ID, fc.marker.getName())
           .putHeader(ACCEPT_ENCODING, "gzip")
-          .putHeader(USER_AGENT, Service.XYZ_HUB_USER_AGENT)
+          .putHeader(USER_AGENT, Service.get().config.USER_AGENT)
           .setAbsoluteURI(url)
       )
           .onSuccess(req -> {

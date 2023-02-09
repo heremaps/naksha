@@ -86,7 +86,7 @@ public class EmbeddedFunctionClient extends RemoteFunctionClient {
     //TODO: Use CompletableFuture.delayedExecutor() after switching to Java 9
     new Thread(() -> {
       try {
-        Thread.sleep(MAX_REQUEST_TIMEOUT);
+        Thread.sleep(Service.get().config.REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT_MS);
       }
       catch (InterruptedException ignored) {}
       exeService.shutdownNow();

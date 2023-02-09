@@ -25,7 +25,6 @@ import com.here.xyz.XyzSerializable;
 import com.here.xyz.httpconnector.util.jobs.Job;
 import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
-import com.here.xyz.hub.config.Initializable;
 import com.here.xyz.hub.rest.HttpException;
 import com.here.xyz.responses.StatisticsResponse;
 import io.vertx.core.Future;
@@ -102,7 +101,7 @@ public abstract class JobConfigClient {
             job.setStatus(Job.Status.waiting);
 
         /** Collect statistics which also ensures an existing table */
-        Service.get().webClient.getAbs(Service.get().config.HUB_ENDPOINT+"/spaces/"+job.getTargetSpaceId()+"/statistics?skipCache=true")
+        Service.get().webClient.getAbs(Service.get().config.HTTP_ENDPOINT +"/spaces/"+job.getTargetSpaceId()+"/statistics?skipCache=true")
                 .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
                 .send()
                 .onSuccess(res -> {

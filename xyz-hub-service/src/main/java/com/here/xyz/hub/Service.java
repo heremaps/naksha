@@ -22,13 +22,14 @@ package com.here.xyz.hub;
 import static com.here.xyz.hub.AbstractHttpServerVerticle.STREAM_INFO_CTX_KEY;
 import static com.here.xyz.util.JsonConfigFile.nullable;
 
-import com.here.xyz.config.ServiceConfig;
+import com.here.xyz.config.XyzConfig;
+import com.here.xyz.httpconnector.PsqlHttpConnectorVerticle;
 import com.here.xyz.httpconnector.config.AwsCWClient;
-import com.here.xyz.httpconnector.config.JDBCClients;
 import com.here.xyz.httpconnector.config.JDBCImporter;
 import com.here.xyz.httpconnector.config.JobConfigClient;
 import com.here.xyz.httpconnector.config.JobS3Client;
 import com.here.xyz.httpconnector.util.scheduler.ImportQueue;
+import com.here.xyz.hub.auth.Authorization.AuthorizationType;
 import com.here.xyz.hub.cache.CacheClient;
 import com.here.xyz.hub.config.ConnectorConfigClient;
 import com.here.xyz.hub.config.SpaceConfigClient;
@@ -51,15 +52,10 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -107,8 +103,6 @@ public class Service extends Core {
     return new Service(vertxOptions);
   }
 
-  public static final String XYZ_HUB_USER_AGENT = "XYZ-Hub/" + BUILD_VERSION;
-
   /**
    * The host ID.
    */
@@ -128,11 +122,6 @@ public class Service extends Core {
    * The client to access the subscription configuration.
    */
   public final SubscriptionConfigClient subscriptionConfigClient;
-
-  /**
-   * A web client to access XYZ Hub nodes and other web resources.
-   */
-  public final WebClient webClient;
 
   /**
    * The cache client for the service.
@@ -157,42 +146,50 @@ public class Service extends Core {
   /**
    * The client to access job configs
    */
-  public final JobS3Client jobS3Client;
+  public final @NotNull JobS3Client jobS3Client;
 
   /**
    * The client to access job configs
    */
-  public final AwsCWClient jobCWClient;
+  public final @NotNull AwsCWClient jobCWClient;
 
   /**
    * The client to access the database
    */
-  public final JDBCImporter jdbcImporter;
+  public final @NotNull JDBCImporter jdbcImporter;
 
   /**
    * Queue for executed Jobs
    */
-  public final ImportQueue importQueue;
+  public final @NotNull ImportQueue importQueue;
 
+  // TODO: For what do we need this?
   public final List<String> supportedConnectors = new ArrayList<>();
   public final HashMap<String, String> rdsLookupDatabaseIdentifier = new HashMap<>();
   public final HashMap<String, Integer> rdsLookupCapacity = new HashMap<>();
 
   /**
+   * Returns the authorization type; if no valid value is explicitly defined, {@link AuthorizationType#DUMMY DUMMY} is returned.
+   *
+   * @return the authorization type.
+   */
+  public @NotNull AuthorizationType config_XYZ_HUB_AUTH() {
+    try {
+      return AuthorizationType.valueOf(config.XYZ_HUB_AUTH);
+    } catch (Exception e) {
+      return AuthorizationType.DUMMY;
+    }
+  }
+
+  /**
    * The HTTP server of the XYZ-Hub, if the XYZ-Hub verticle is deployed.
    */
-  public final @Nullable HttpServer xyzHubHttpSever;
+  public final @NotNull HttpServer httpSever;
 
   /**
-   * The HTTP server of the PSQL connector, if the PSQL connector verticle is deployed.
+   * The hostname.
    */
-  public final @Nullable HttpServer connectorHttpSever;
-
-
-  /**
-   * The hostname
-   */
-  private static String hostname;
+  private String hostname;
   public static final boolean IS_USING_ZGC = isUsingZgc();
 
   private static final List<MetricPublisher<?>> metricPublishers = new LinkedList<>();
@@ -207,14 +204,24 @@ public class Service extends Core {
     super(vertxOptions);
     singleton = this;
 
+    if (nullable(config.STORAGE_DB_URL) == null) {
+      throw new Error("Missing 'STORAGE_DB_URL' in configuration");
+    }
+    if (nullable(config.STORAGE_DB_USER) == null) {
+      throw new Error("Missing 'STORAGE_DB_USER' in configuration");
+    }
+    if (nullable(config.STORAGE_DB_PASSWORD) == null) {
+      throw new Error("Missing 'STORAGE_DB_PASSWORD' in configuration");
+    }
+
     // Get the message broker synchronously.
-    final String brokerName = nullable(ServiceConfig.get().DEFAULT_MESSAGE_BROKER);
+    final String brokerName = nullable(XyzConfig.get().DEFAULT_MESSAGE_BROKER);
     Broker broker = null;
     if (brokerName != null) {
       broker = Broker.valueOf(brokerName);
     }
     if (broker == null) {
-      broker = Broker.Redis;
+      broker = Broker.Noop;
     }
     messageBroker = broker.instance.get();
     // End of gathering of message broker.
@@ -228,87 +235,75 @@ public class Service extends Core {
     jobS3Client = new JobS3Client();
     jobCWClient = new AwsCWClient();
     importQueue = new ImportQueue();
-    webClient = WebClient.create(vertx,
-        new WebClientOptions()
-            .setUserAgent(XYZ_HUB_USER_AGENT)
-            .setTcpKeepAlive(config.HTTP_CLIENT_TCP_KEEPALIVE)
-            .setIdleTimeout(config.HTTP_CLIENT_IDLE_TIMEOUT)
-            .setTcpQuickAck(true)
-            .setTcpFastOpen(true)
-            .setPipelining(config.HTTP_CLIENT_PIPELINING));
 
-    node = new ServiceNode(this, Service.NODE_ID, Service.getHostname(), getPublicPort());
+    node = new ServiceNode(this, Service.NODE_ID, getHostname(), getPublicPort());
     node.start();
-    try {
-      for (final String rdsConfig : Service.get().config.JOB_SUPPORTED_RDS()) {
-        final String[] config = rdsConfig.split(":");
-        final String cId = config[0];
-        supportedConnectors.add(cId);
-        rdsLookupDatabaseIdentifier.put(cId, config[1]);
-        rdsLookupCapacity.put(cId, Integer.parseInt(config[2]));
-      }
-      supportedConnectors.add(JDBCClients.CONFIG_CLIENT_ID);
-    } catch (Exception e) {
-      logger.error("Configuration-Error - please check service config!");
-      throw new Error("Configuration-Error - please check service config!", e);
-    }
+// TODO: What does this do, do we need it?
+//    try {
+//      for (final String rdsConfig : Service.get().coreConfig.JOB_SUPPORTED_RDS()) {
+//        final String[] config = rdsConfig.split(":");
+//        final String cId = config[0];
+//        supportedConnectors.add(cId);
+//        rdsLookupDatabaseIdentifier.put(cId, config[1]);
+//        rdsLookupCapacity.put(cId, Integer.parseInt(config[2]));
+//      }
+//      supportedConnectors.add(JDBCClients.CONFIG_CLIENT_ID);
+//    } catch (Exception e) {
+//      logger.error("Configuration-Error - please check service config!");
+//      throw new Error("Configuration-Error - please check service config!", e);
+//    }
     importQueue.commence();
 
-    if (ServiceConfig.get().INSERT_LOCAL_CONNECTORS) {
-      connectorConfigClient.insertLocalConnectors();
-    }
-
-    // Start threads.
-    if (config.START_BURST_AND_UPDATE_THREAD) {
-      BurstAndUpdateThread.initialize();
-    }
-    if (config.START_WARMUP_REMOTE_FUNCTION_THREAD) {
-      WarmupRemoteFunctionThread.initialize();
-    }
+    // Start the HTTP server.
+    logger.info("Listen at port {}", config.HTTP_PORT);
+    httpSever = vertx
+        .createHttpServer(SERVER_OPTIONS())
+        .requestHandler(router)
+        .listen(config.HTTP_PORT)
+        .result();
 
     // Deploy verticles.
     if (config.DEPLOY_XYZ_HUB_REST_VERTICLE) {
-      logger.info("Start XYZ-Hub at port {}", config.HTTP_PORT);
-      xyzHubHttpSever = vertx.createHttpServer(SERVER_OPTIONS())
-          .requestHandler(router)
-          .listen(config.HTTP_PORT).result();
-
       logger.info("Deploy {}", XYZHubRESTVerticle.class.getName());
       final DeploymentOptions options = new DeploymentOptions();
       options.setWorker(false);
       options.setInstances(Runtime.getRuntime().availableProcessors());
       vertx.deployVerticle(XYZHubRESTVerticle.class, options);
-    } else {
-      xyzHubHttpSever = null;
+
+      if (config.INSERT_LOCAL_CONNECTORS) {
+        connectorConfigClient.insertLocalConnectors();
+      }
+      if (config.START_BURST_AND_UPDATE_THREAD) {
+        BurstAndUpdateThread.initialize();
+      }
+      if (config.START_WARMUP_REMOTE_FUNCTION_THREAD) {
+        WarmupRemoteFunctionThread.initialize();
+      }
     }
 
     if (config.DEPLOY_PSQL_HTTP_CONNECTOR_VERTICLE) {
-      logger.info("Start XYZ-Hub at port {}", config.HTTP_PORT);
-      connectorHttpSever = vertx.createHttpServer(SERVER_OPTIONS())
-          .requestHandler(router)
-          .listen(config.HTTP_PORT).result();
-
-      logger.info("Deploy {}", XYZHubRESTVerticle.class.getName());
+      logger.info("Deploy {}", PsqlHttpConnectorVerticle.class.getName());
       final DeploymentOptions options = new DeploymentOptions();
       options.setWorker(false);
       options.setInstances(Runtime.getRuntime().availableProcessors());
-      vertx.deployVerticle(XYZHubRESTVerticle.class, options);
-    } else {
-      connectorHttpSever = null;
+      vertx.deployVerticle(PsqlHttpConnectorVerticle.class, options);
     }
 
-    logger.info("XYZ Hub " + BUILD_VERSION + " was started at " + new Date().toString());
-    logger.info("Native transport enabled: " + vertx.isNativeTransportEnabled());
+    logger.info("XYZ Hub {} was started at {}", BUILD_VERSION, new Date());
+    logger.info("Native transport enabled: {}", vertx.isNativeTransportEnabled());
 
-    Thread.setDefaultUncaughtExceptionHandler((thread, t) -> logger.error("Uncaught exception: ", t));
-
+    Thread.setDefaultUncaughtExceptionHandler(logger::error);
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      stopMetricPublishers();
+      if (config.START_METRICS) {
+        stopMetricPublishers();
+      }
       //This may fail, if we are OOM, but lets at least try.
-      logger.warn("XYZ Service is going down at " + new Date().toString());
+      logger.info("XYZ Service is going down at {}", new Date());
     }));
 
-    startMetricPublishers();
+    if (config.START_METRICS) {
+      startMetricPublishers();
+    }
   }
 
   protected @NotNull HttpServerOptions SERVER_OPTIONS() {
@@ -326,45 +321,37 @@ public class Service extends Core {
    * The service entry point.
    */
   public static void main(String[] arguments) throws Exception {
-    String configFilename = null;
     boolean enableDebug = false;
     for (final String arg : arguments) {
-      if (arg.startsWith("--config=")) {
-        configFilename = arg.substring("--config=".length());
-        // Extend a relative path to an absolute path.
-        // If no path component found (no slash/backslash), then the config file will be searched in the config directory.
-        if (configFilename.indexOf('/') == -1 && configFilename.indexOf('\\') == -1) {
-          configFilename = Paths.get(System.getProperty("user.dir"), configFilename).toAbsolutePath().toString();
-        }
-      } else if (arg.startsWith("--debug")) { // --debug=true will work as well, while --debug
+      if (arg.startsWith("--debug")) { // --debug=true will work as well, while --debug
         enableDebug = true;
       }
     }
     // This will ensure the --config parameter taken into account.
-    final ServiceConfig config = ServiceConfig.get(ServiceConfig.class, configFilename);
     if (enableDebug) {
+      final XyzConfig config = XyzConfig.get();
       config.DEBUG = true;
-      System.out.println("Start service in DEBUG mode ...");
+      logger.info("Start service in DEBUG mode ...");
     } else {
-      System.out.println("Start service ...");
+      logger.info("Start service ...");
     }
     start(null);
   }
 
-  public static String getHostname() {
+  public @NotNull String getHostname() {
     if (hostname == null) {
-      final String hostname = Service.get().config.HOST_NAME;
-      if (hostname != null && hostname.length() > 0) {
-        Service.hostname = hostname;
-      } else {
+      String hostname = nullable(Service.get().config.HTTP_HOST);
+      if (hostname == null) {
         try {
-          Service.hostname = InetAddress.getLocalHost().getHostAddress();
+          hostname = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
           logger.error("Unable to resolve the hostname using Java's API.", e);
-          Service.hostname = "localhost";
+          hostname = "localhost";
         }
       }
+      this.hostname = hostname;
     }
+    assert hostname != null;
     return hostname;
   }
 
@@ -406,16 +393,14 @@ public class Service extends Core {
   }
 
   public int getPublicPort() {
-    if (config.XYZ_HUB_PUBLIC_ENDPOINT == null) {
-      return config.HTTP_PORT;
-    }
-    try {
-      URI endpoint = new URI(config.XYZ_HUB_PUBLIC_ENDPOINT);
-      int port = endpoint.getPort();
-      return port > 0 ? port : 80;
-    } catch (URISyntaxException e) {
-      return config.HTTP_PORT;
-    }
+      return config.PUBLIC_HTTP_PORT;
+//    try {
+//      URI endpoint = new URI(coreConfig.XYZ_HUB_PUBLIC_ENDPOINT);
+//      int port = endpoint.getPort();
+//      return port > 0 ? port : 80;
+//    } catch (URISyntaxException e) {
+//      return coreConfig.HTTP_PORT;
+//    }
   }
 
   /**
@@ -462,7 +447,7 @@ public class Service extends Core {
     }
   }
 
-  public static void addStreamInfo(final RoutingContext context, String key, Object value){
+  public static void addStreamInfo(final RoutingContext context, String key, Object value) {
     final Object raw = context.get(STREAM_INFO_CTX_KEY);
     final Map<String, Object> map;
     if (raw instanceof Map) {

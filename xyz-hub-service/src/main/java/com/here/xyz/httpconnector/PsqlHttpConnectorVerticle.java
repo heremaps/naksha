@@ -79,9 +79,6 @@ public class PsqlHttpConnectorVerticle extends AbstractHttpServerVerticle {
       if (ar.succeeded()) {
         try {
           final RouterBuilder rb = ar.result();
-          // TODO: Do we really need this here? Others should always call getEnvMap() anyway!
-          // populateEnvMap();
-
           new HttpConnectorApi(rb, connector);
           new JobApi(rb);
 
@@ -90,7 +87,7 @@ public class PsqlHttpConnectorVerticle extends AbstractHttpServerVerticle {
           new JobStatusApi(router);
 
           //OpenAPI resources
-          router.route("/psql/static/openapi/*").handler(createCorsHandler()).handler((routingContext -> {
+          router.route("/static/openapi/*").handler(createCorsHandler()).handler((routingContext -> {
             final HttpServerResponse res = routingContext.response();
             res.putHeader("content-type", "application/yaml");
             final String path = routingContext.request().path();
@@ -105,7 +102,8 @@ public class PsqlHttpConnectorVerticle extends AbstractHttpServerVerticle {
 
           //Add default handlers
           addDefaultHandlers(router);
-          createHttpServer(Service.get().connectorConfig.HTTP_PORT, router);
+          // TODO: We need to verify if this works as intended
+          Service.get().router.mountSubRouter("/psql/", router);
         } catch (Exception e) {
           logger.error("An error occurred, during the creation of the router from the Open API specification file.", e);
         }

@@ -68,10 +68,10 @@ public class JDBCClients {
         /** Used to store Job definitions inside DB if Dynamo is not used */
         DatabaseSettings settings = new DatabaseSettings();
 
-        if(Service.get().config != null && Service.get().config.STORAGE_DB_URL != null) {
+        if(Service.get().config.STORAGE_DB_URL != null) {
             URI uri = URI.create(Service.get().config.STORAGE_DB_URL.substring(5));
             settings.setHost(uri.getHost());
-            settings.setPort(Integer.valueOf(uri.getPort() == -1 ? 5432 : uri.getPort()));
+            settings.setPort(uri.getPort() < 0 ? 5432 : uri.getPort());
 
             String[] pathComponent = uri.getPath() == null ? null : uri.getPath().split("/");
             if (pathComponent != null && pathComponent.length > 1)

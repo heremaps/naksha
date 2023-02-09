@@ -52,7 +52,6 @@ public abstract class RemoteFunctionClient {
    * The global maximum byte size that is available for allocation by all of the queues.
    */
   public static final long GLOBAL_MAX_QUEUE_BYTE_SIZE = (long) Service.get().config.GLOBAL_MAX_QUEUE_SIZE * 1024 * 1024;
-  public static final int MAX_REQUEST_TIMEOUT = (int) TimeUnit.SECONDS.toMillis(Service.get().config.getRemoteFunctionMaxRequestTimeout());
 
   private static final Logger logger = LogManager.getLogger();
   private static int MEASUREMENT_INTERVAL = 1000; //1s

@@ -28,7 +28,6 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.equalTo;
 
 import com.here.xyz.hub.Service;
-import com.here.xyz.config.ServiceConfig;
 import com.here.xyz.hub.rest.admin.AdminMessage;
 import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.rest.admin.messages.TestMessage;
@@ -56,7 +55,7 @@ public class AdminMessagesApiIT extends RestAssuredTest {
   @BeforeClass
   public static void setup() {
     //Mock necessary configuration values
-    Service.get().config.REMOTE_FUNCTION_REQUEST_TIMEOUT = 26;
+    Service.get().config.REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT_MS = 26;
     Service.get().config.INSTANCE_COUNT = 1;
 
     threadPool = new ForkJoinPool(10);

@@ -28,9 +28,9 @@ import static com.here.xyz.psql.config.DatabaseSettings.PSQL_USER;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.xyz.XyzSerializable;
-import com.here.xyz.httpconnector.PsqlHttpConnectorVerticle;
 import com.here.xyz.hub.Core;
 
+import com.here.xyz.hub.HttpConnector;
 import com.here.xyz.hub.Service;
 import com.here.xyz.psql.DatabaseMaintainer;
 import com.here.xyz.psql.SQLQuery;
@@ -60,6 +60,9 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The maintenance client, exclusively used by the {@link HttpConnector} to managed indices and alike.
+ */
 public class MaintenanceClient {
     private MaintenanceClient(){}
 

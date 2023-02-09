@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
-import com.here.xyz.hub.ServiceNode;
 import io.vertx.ext.web.handler.StaticHandler;
 import java.io.BufferedWriter;
 import java.io.File;

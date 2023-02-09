@@ -41,11 +41,9 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -223,7 +221,7 @@ public abstract class ConnectorConfigClient implements Initializable {
     }
 
     replaceVarsInMap(connector.params, ecpsJson -> {
-      String ecpsPhrase = Service.get().config.DEFAULT_ECPS_PHRASE;
+      String ecpsPhrase = Service.get().config.ECPS_PHRASE;
       if (ecpsPhrase == null) return null;
       //Replace vars in the ECPS JSON
       JsonObject ecpsValues = new JsonObject(ecpsJson);

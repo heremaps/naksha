@@ -6,7 +6,7 @@ info:
   contact: {}
   version: 1.0.0
 servers:
-  - url: /
+  - url: /psql/
 tags:
   - name: Service
     description: Endpoint for Events
@@ -19,7 +19,7 @@ tags:
   - name: Maintain History
     description: Maintain database releated stuff on history level
 paths:
-  '/psql/event':
+  '/event':
     post:
       tags:
         - Service
@@ -41,7 +41,7 @@ paths:
           description: Connector Response
         '400':
           $ref: '#/components/responses/ErrorResponse400'
-  '/psql/status':
+  '/status':
     get:
       tags:
         - Status
@@ -58,7 +58,7 @@ paths:
           $ref: '#/components/responses/ConnectorStatusResponse'
         '400':
           $ref: '#/components/responses/ErrorResponse400'
-  '/psql/health':
+  '/health':
     get:
       tags:
         - Status
@@ -69,7 +69,7 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/HealthResponse'
-  '/psql/initialization':
+  '/initialization':
     post:
       tags:
         - Maintain Connector
@@ -94,7 +94,7 @@ paths:
           $ref: '#/components/responses/ErrorResponse400'
         '405':
           $ref: '#/components/responses/ErrorResponse405'
-  '/psql/maintain/indices':
+  '/maintain/indices':
     post:
       tags:
         - Maintain Connector
@@ -118,7 +118,7 @@ paths:
           description : OK
         '400':
           $ref: '#/components/responses/ErrorResponse400'
-  '/psql/maintain/space/{spaceId}':
+  '/maintain/space/{spaceId}':
     get:
       tags:
         - Maintain Spaces
@@ -158,7 +158,7 @@ paths:
           description : OK
         '400':
           $ref: '#/components/responses/ErrorResponse400'
-  '/psql/maintain/space/{spaceId}/history':
+  '/maintain/space/{spaceId}/history':
     post:
       tags:
         - Maintain History
@@ -190,7 +190,7 @@ paths:
           description : OK
         '400':
           $ref: '#/components/responses/ErrorResponse400'
-  '/psql/jobs':
+  '/jobs':
     post:
       tags:
         - Jobs
@@ -223,7 +223,7 @@ paths:
           $ref: '#/components/responses/JobsResponse'
         '400':
           $ref: '#/components/responses/ErrorResponse400'
-  '/psql/jobs/{jobId}':
+  '/jobs/{jobId}':
     get:
       tags:
         - Jobs
@@ -275,7 +275,7 @@ paths:
           $ref: '#/components/responses/ErrorResponse400'
         '404':
           $ref: '#/components/responses/ErrorResponse404'
-  '/psql/jobs/{jobId}/execute':
+  '/jobs/{jobId}/execute':
     post:
       tags:
         - Jobs

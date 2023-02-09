@@ -43,6 +43,9 @@ import org.slf4j.LoggerFactory;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 
+/**
+ * The maintenance handler, exclusively used by the HTTP connector verticle to perform maintenance tasks via the {@link MaintenanceClient}.
+ */
 public class MaintenanceHandler {
   private static final Logger logger = LoggerFactory.getLogger(MaintenanceHandler.class);
 

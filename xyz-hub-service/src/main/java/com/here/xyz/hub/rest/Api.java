@@ -86,8 +86,6 @@ public abstract class Api {
 
   protected static final Logger logger = LogManager.getLogger();
 
-  public static final int MAX_SERVICE_RESPONSE_SIZE = (Service.get().config == null ? 0 :  Service.get().config.MAX_SERVICE_RESPONSE_SIZE);
-  public static final int MAX_HTTP_RESPONSE_SIZE = (Service.get().config == null ? 0 :Service.get().config.MAX_HTTP_RESPONSE_SIZE);
   public static final HttpResponseStatus RESPONSE_PAYLOAD_TOO_LARGE = new HttpResponseStatus(513, "Response payload too large");
   public static final String RESPONSE_PAYLOAD_TOO_LARGE_MESSAGE =
       "The response payload was too large. Please try to reduce the expected amount of data.";
@@ -482,8 +480,8 @@ public abstract class Api {
   }
 
   protected long getMaxResponseLength(final RoutingContext context) {
-    long serviceSize = MAX_SERVICE_RESPONSE_SIZE > 0 ? MAX_SERVICE_RESPONSE_SIZE : Long.MAX_VALUE;
-    long httpSize = MAX_HTTP_RESPONSE_SIZE > 0 ? MAX_HTTP_RESPONSE_SIZE : Long.MAX_VALUE;
+    long serviceSize = Service.get().config.MAX_SERVICE_RESPONSE_SIZE;
+    long httpSize = Service.get().config.MAX_HTTP_RESPONSE_SIZE;
     return XYZHttpContentCompressor.isCompressionEnabled(context.request().getHeader(ACCEPT_ENCODING)) ? serviceSize : httpSize;
   }
 

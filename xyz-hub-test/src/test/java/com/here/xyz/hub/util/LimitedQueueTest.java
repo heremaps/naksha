@@ -24,7 +24,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 
 import com.here.xyz.hub.Service;
-import com.here.xyz.config.ServiceConfig;
 import com.here.xyz.hub.util.LimitedOffHeapQueue.OffHeapBuffer;
 import com.here.xyz.hub.util.LimitedOffHeapQueue.PayloadVanishedException;
 import java.lang.reflect.InvocationTargetException;

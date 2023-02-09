@@ -26,7 +26,6 @@ import com.here.xyz.hub.Service;
 import com.here.xyz.hub.util.metrics.base.AttributedMetricCollection.Attribute;
 import com.here.xyz.hub.util.metrics.base.AttributedMetricCollector;
 import com.here.xyz.hub.util.metrics.net.ConnectionMetrics.HubHttpClientMetrics;
-import com.here.xyz.hub.util.metrics.net.ConnectionMetrics.HubTCPMetrics;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;

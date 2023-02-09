@@ -23,12 +23,10 @@ import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
 import com.mchange.v3.decode.CannotDecodeException;
 import java.util.Enumeration;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.HashSet;
 import java.util.concurrent.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

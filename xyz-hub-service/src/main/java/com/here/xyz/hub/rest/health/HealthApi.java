@@ -25,7 +25,6 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
 import com.here.xyz.hub.rest.Api;
-import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.hub.util.health.Config;
 import com.here.xyz.hub.util.health.MainHealthCheck;
 import com.here.xyz.hub.util.health.checks.ClusterHealthCheck;
@@ -71,9 +70,6 @@ public class HealthApi extends Api {
     }
     healthCheck.add(new MemoryHealthCheck())
         .add(new ClusterHealthCheck());
-    if (Service.get().config.ENABLE_CONNECTOR_HEALTH_CHECKS){
-      healthCheck.add(rfcHcAggregator);
-    }
     if (Service.get().config.STORAGE_DB_URL != null) {
       healthCheck.add(
           (ExecutableCheck) new JDBCHealthCheck(getStorageDbUri(), Service.get().config.STORAGE_DB_USER,
@@ -103,14 +99,14 @@ public class HealthApi extends Api {
   }
 
   private static URI getPubliService() {
-    return URI.create(Service.get().config.XYZ_HUB_PUBLIC_ENDPOINT + Service.get().config.XYZ_HUB_PUBLIC_HEALTH_ENDPOINT);
+    return URI.create(Service.get().config.PUBLIC_HTTP_ENDPOINT);
   }
 
   private static URI getNodeHealthCheckEndpoint() {
     try {
-      return new URI("http://" + Service.getHostname() + ":" + Service.get().config.HTTP_PORT + MAIN_HEALTCHECK_ENDPOINT);
+      return new URI("http://" + Service.get().getHostname() + ":" + Service.get().config.HTTP_PORT + MAIN_HEALTCHECK_ENDPOINT);
     } catch (URISyntaxException e) {
-      logger.error("Wrong format of internal node hostname URI: " + Service.getHostname(), e);
+      logger.error("Wrong format of internal node hostname URI: " + Service.get().getHostname(), e);
       return null;
     }
   }

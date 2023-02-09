@@ -23,9 +23,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.here.xyz.hub.Core;
 import com.here.xyz.hub.Service;
-import com.here.xyz.config.ServiceConfig;
 import com.here.xyz.hub.connectors.models.Connector;
-import io.vertx.core.Vertx;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +43,7 @@ public class RFCMeasurement {
     @Before
     public void setup() {
         //Mock necessary configuration values
-        Service.get().config.REMOTE_FUNCTION_REQUEST_TIMEOUT = 26;
+        Service.get().config.REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT_MS = 26;
         Service.get().config.INSTANCE_COUNT = 1;
         Service.get().config.REMOTE_FUNCTION_MAX_CONNECTIONS = 256;
         Service.get().config.REMOTE_FUNCTION_CONNECTION_HIGH_UTILIZATION_THRESHOLD = 0.75f;

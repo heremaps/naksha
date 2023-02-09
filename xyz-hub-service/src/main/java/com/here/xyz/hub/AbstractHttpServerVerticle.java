@@ -44,7 +44,7 @@ import static io.vertx.core.http.HttpMethod.PATCH;
 import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
 
-import com.here.xyz.config.ServiceConfig;
+import com.here.xyz.config.XyzConfig;
 import com.here.xyz.hub.rest.Api;
 import com.here.xyz.hub.rest.HttpException;
 import com.here.xyz.hub.task.TaskPipeline;
@@ -216,7 +216,7 @@ public class AbstractHttpServerVerticle extends AbstractVerticle {
    * The max request size handler.
    */
   protected void maxRequestSizeHandler(final @NotNull RoutingContext context) {
-    final ServiceConfig config = Service.get().config;
+    final XyzConfig config = Service.get().config;
     long limit = config.MAX_UNCOMPRESSED_REQUEST_SIZE;
 
     String errorMessage = "The request payload is bigger than the maximum allowed.";
@@ -264,7 +264,7 @@ public class AbstractHttpServerVerticle extends AbstractVerticle {
    * The initial request handler.
    */
   protected void receiveHandler(final @NotNull RoutingContext context) {
-    final ServiceConfig config = Service.get().config;
+    final XyzConfig config = Service.get().config;
     if (context.request().getHeader(STREAM_ID) == null) {
       context.request().headers().add(STREAM_ID, RandomStringUtils.randomAlphanumeric(10));
     }

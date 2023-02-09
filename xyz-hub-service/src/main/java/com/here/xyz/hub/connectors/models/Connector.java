@@ -28,12 +28,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.xyz.Payload;
-import com.here.xyz.config.ServiceConfig;
+import com.here.xyz.config.XyzConfig;
 import com.here.xyz.hub.Service;
+import com.here.xyz.hub.connectors.RemoteFunctionClient;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig.AWSLambda;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig.Embedded;
 import com.here.xyz.hub.connectors.models.Connector.RemoteFunctionConfig.Http;
-import com.here.xyz.hub.ServiceNode;
 import com.here.xyz.util.ARN;
 import java.net.URL;
 import java.util.HashMap;
@@ -57,14 +57,14 @@ public class Connector {
   public String id;
 
   /**
-   * Whether this connector is activated.
-   * If this flag is set to false, no connector client will be available for it. That means no requests can be performed to the connector.
+   * Whether this connector is activated. If this flag is set to false, no connector client will be available for it. That means no requests
+   * can be performed to the connector.
    */
   public boolean active = true;
 
   /**
-   * Whether to skip the automatic disabling of this connector even when being not healthy.
-   * If this flag is set to true the connector will keep accepting requests even if its health-check is not OK.
+   * Whether to skip the automatic disabling of this connector even when being not healthy. If this flag is set to true the connector will
+   * keep accepting requests even if its health-check is not OK.
    */
   public boolean skipAutoDisable;
 
@@ -85,8 +85,8 @@ public class Connector {
   public StorageCapabilities capabilities = new StorageCapabilities();
 
   /**
-   * A map of remote functions which may be connected by this connector.
-   * The remote function to be used should be determined by the "environment ID" of the service.
+   * A map of remote functions which may be connected by this connector. The remote function to be used should be determined by the
+   * "environment ID" of the service.
    *
    * @see Service#getEnvironmentIdentifier()
    */
@@ -99,6 +99,7 @@ public class Connector {
 
   /**
    * Returns the remote function pool ID to be used for this Service environment.
+   *
    * @return the function pool id
    */
   public static String getRemoteFunctionPoolId() {
@@ -109,7 +110,9 @@ public class Connector {
   }
 
   /**
-   * Returns the first {@link RemoteFunctionConfig} found in the map of {@link Connector#remoteFunctions} flagged as {@link RemoteFunctionConfig#defaultConfig}
+   * Returns the first {@link RemoteFunctionConfig} found in the map of {@link Connector#remoteFunctions} flagged as
+   * {@link RemoteFunctionConfig#defaultConfig}
+   *
    * @return the default remote function config or null
    */
   @JsonIgnore
@@ -122,24 +125,29 @@ public class Connector {
   }
 
   /**
+   * @return The according remote function for this environment or - if there is no special function for this environment - any remote
+   * function from the {@link #remoteFunctions} map.
    * @see Service#getEnvironmentIdentifier()
-   *
-   * @return The according remote function for this environment or - if there is no special function
-   * for this environment - any remote function from the {@link #remoteFunctions} map.
    */
   @JsonInclude(Include.NON_NULL)
   public RemoteFunctionConfig getRemoteFunction() {
     if (remoteFunctions == null || remoteFunctions.isEmpty()) {
-      if (_remoteFunction == null) throw new RuntimeException("No remote functions are defined for connector with ID " + id);
+      if (_remoteFunction == null) {
+        throw new RuntimeException("No remote functions are defined for connector with ID " + id);
+      }
       return _remoteFunction;
     }
 
     String rfPoolId = getRemoteFunctionPoolId();
-    if (remoteFunctions.containsKey(rfPoolId)) return remoteFunctions.get(rfPoolId);
+    if (remoteFunctions.containsKey(rfPoolId)) {
+      return remoteFunctions.get(rfPoolId);
+    }
 
     RemoteFunctionConfig defaultConfig = getDefaultRemoteFunctionConfig();
-    if (defaultConfig == null) throw new RuntimeException("No matching remote function is defined for connector with ID "
-        + id + " and remote-function pool ID " + rfPoolId + " and none of the remote functions is flagged as defaultConfig.");
+    if (defaultConfig == null) {
+      throw new RuntimeException("No matching remote function is defined for connector with ID "
+          + id + " and remote-function pool ID " + rfPoolId + " and none of the remote functions is flagged as defaultConfig.");
+    }
 
     return defaultConfig;
   }
@@ -155,8 +163,8 @@ public class Connector {
   public List<String> defaultEventTypes;
 
   /**
-   * A list of email addresses of responsible owners for this connector.
-   * These email addresses will be used to send potential health warnings and other notifications.
+   * A list of email addresses of responsible owners for this connector. These email addresses will be used to send potential health
+   * warnings and other notifications.
    */
   public List<String> contactEmails;
 
@@ -224,8 +232,8 @@ public class Connector {
     public boolean propertySearch;
 
     /**
-     * Whether it's supported to configure the searchableProperties of spaces. (Only applicable for storage connectors) See: {@link
-     * Space#getSearchableProperties()}
+     * Whether it's supported to configure the searchableProperties of spaces. (Only applicable for storage connectors) See:
+     * {@link Space#getSearchableProperties()}
      */
     public boolean searchablePropertiesConfiguration;
 
@@ -253,8 +261,12 @@ public class Connector {
 
     @Override
     public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
       StorageCapabilities that = (StorageCapabilities) o;
       return preserializedResponseSupport == that.preserializedResponseSupport
           && relocationSupport == that.relocationSupport
@@ -281,8 +293,12 @@ public class Connector {
 
     @Override
     public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
       ConnectionSettings that = (ConnectionSettings) o;
       return minConnections == that.minConnections &&
           maxConnections == that.maxConnections;
@@ -317,48 +333,46 @@ public class Connector {
 
     /**
      * The XYZ connector protocol version being served by the remote function.
+     *
      * @see Payload#VERSION
      */
     public String protocolVersion = "0.5.0";
 
     /**
-     * The maximum amount of milliseconds a connector request may take.
-     * If a request from a {@link com.here.xyz.hub.connectors.RemoteFunctionClient} exceeds the timeout,
-     * the request to the connector will be cancelled and the user will receive an HTTP 504 response.
-     * If not specified, the default value for this property
-     * is {@link ServiceConfig#REMOTE_FUNCTION_REQUEST_TIMEOUT} * 1000.
-     *
-     * NOTE: This value may never be higher than {@link ServiceConfig#REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT} * 1000.
+     * The maximum amount of milliseconds a connector request may take. If a request from a {@link RemoteFunctionClient} exceeds the
+     * timeout, the request to the connector will be cancelled, and the user will receive an HTTP 504 response. If not specified, the
+     * default value for this property is {@link XyzConfig#REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT_MS}.
+     * <p>
+     * NOTE: This value may never become bigger than {@link XyzConfig#REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT_MS}.
      */
     public int timeoutMs;
 
     /**
-     * The flag that indicates the Remote Function Configuration should be used as default in case the instance's connector pool id
-     * is not found in the  {@link com.here.xyz.hub.connectors.models.Connector#remoteFunctions} map.
+     * The flag that indicates the Remote Function Configuration should be used as default in case the instance's connector pool id is not
+     * found in the  {@link com.here.xyz.hub.connectors.models.Connector#remoteFunctions} map.
      *
      * @see Connector#getRemoteFunctionPoolId()
      */
     public boolean defaultConfig;
 
     /**
-     * Returns the maximum amount of milliseconds a connector request may take.
-     * If a request from a {@link com.here.xyz.hub.connectors.RemoteFunctionClient} exceeds the timeout,
-     * the request to the connector will be cancelled and the user will receive an HTTP 504 response.
+     * Returns the maximum amount of milliseconds a connector request may take. If a request from a {@link RemoteFunctionClient} exceeds the
+     * timeout, the request to the connector will be cancelled and the user will receive an HTTP 504 response.
      *
      * @return The request timeout in milliseconds
      */
     @JsonIgnore
     public int getTimeout() {
       if (timeoutMs > 0) {
-        final int maxTimeout = Service.get().config.getRemoteFunctionMaxRequestTimeout() * 1000;
+        final long maxTimeout = Service.get().config.REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT_MS;
         if (timeoutMs > maxTimeout) {
           logger.warn("Specified timeout (" + timeoutMs + "ms) of connector with ID " + id + " is larger than the maximum allowed value"
               + " (" + maxTimeout + "ms). Using the maximum allowed value instead.");
-          return maxTimeout;
+          return (int) maxTimeout;
         }
         return timeoutMs;
       }
-      return Service.get().config.REMOTE_FUNCTION_REQUEST_TIMEOUT * 1000;
+      return (int) Service.get().config.REMOTE_FUNCTION_MAX_REQUEST_TIMEOUT_MS;
     }
 
     @JsonIgnore
@@ -367,12 +381,18 @@ public class Connector {
     }
 
     @JsonInclude(Include.NON_DEFAULT)
-    public boolean isDefaultConfig() { return this.defaultConfig; }
+    public boolean isDefaultConfig() {
+      return this.defaultConfig;
+    }
 
     @Override
     public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
       RemoteFunctionConfig that = (RemoteFunctionConfig) o;
       return warmUp == that.warmUp &&
           Objects.equals(id, that.id) &&
@@ -392,7 +412,7 @@ public class Connector {
       /**
        * The ARN of an AWS IAM Role granting the permission to call the lambda function specified in {@link #lambdaARN}. The referenced role
        * needs to allow this service to assume it by adding this service' role ARN as principle into its trust policy.
-       *
+       * <p>
        * See: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html#delegation
        */
       public String roleARN;
@@ -405,9 +425,15 @@ public class Connector {
 
       @Override
       public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
+        if (this == o) {
+          return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+          return false;
+        }
+        if (!super.equals(o)) {
+          return false;
+        }
         AWSLambda awsLambda = (AWSLambda) o;
         return lambdaARN.equals(awsLambda.lambdaARN) &&
             Objects.equals(roleARN, awsLambda.roleARN);
@@ -427,9 +453,15 @@ public class Connector {
 
       @Override
       public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Embedded)) return false;
-        if (!super.equals(o)) return false;
+        if (this == o) {
+          return true;
+        }
+        if (!(o instanceof Embedded)) {
+          return false;
+        }
+        if (!super.equals(o)) {
+          return false;
+        }
         Embedded embedded = (Embedded) o;
         return className.equals(embedded.className) &&
             Objects.equals(env, embedded.env);
@@ -451,9 +483,15 @@ public class Connector {
 
       @Override
       public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Http)) return false;
-        if (!super.equals(o)) return false;
+        if (this == o) {
+          return true;
+        }
+        if (!(o instanceof Http)) {
+          return false;
+        }
+        if (!super.equals(o)) {
+          return false;
+        }
         Http http = (Http) o;
         return metricsActive == http.metricsActive && url.toString().equals(http.url.toString());
       }
@@ -470,6 +508,7 @@ public class Connector {
   }
 
   public static class ForwardParamsConfig {
+
     public List<String> cookies;
     public List<String> headers;
     public List<String> queryParams;

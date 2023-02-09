@@ -352,7 +352,7 @@ public class ImportQueue extends JobQueue {
   protected Future<Void> updateSpaceConfig(JsonObject config, Job j) {
     Promise<Void> p = Promise.promise();
 
-    Service.get().webClient.patchAbs(Service.get().config.HUB_ENDPOINT + "/spaces/" + j.getTargetSpaceId())
+    Service.get().webClient.patchAbs(Service.get().config.HTTP_ENDPOINT + "/spaces/" + j.getTargetSpaceId())
         .putHeader("content-type", "application/json; charset=" + Charset.defaultCharset().name())
         .sendJsonObject(config)
         .onSuccess(res -> {
