@@ -15,6 +15,7 @@ public class PubConfig {
     public boolean ENABLE_TXN_PUBLISHER;
     public long TXN_PUB_JOB_INITIAL_DELAY_MS;
     public long TXN_PUB_JOB_SUBSEQUENT_DELAY_MS;
+    public static int TXN_PUB_FETCH_SIZE = 50;
     // One thread per subscription
     public int TXN_PUB_TPOOL_CORE_SIZE;
     public int TXN_PUB_TPOOL_MAX_SIZE;
