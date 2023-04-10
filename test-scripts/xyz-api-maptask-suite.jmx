@@ -6445,7 +6445,8 @@ else {
   &quot;active&quot;: true,&#xd;
   &quot;params&quot;: {&#xd;
     &quot;ecps&quot;: &quot;AzDrbETtkM3BanpPPMr1qYi156NbWJfb5D6u0DMh+ZuOuubgQTl9vxmKE1gmu4dD/fG7pIsu2rh5MOfZg9Slx4r5TMskOMWCWCeo42v1dmAPze8kEBbyQ88v5i6tgaz3dvRTJwlFIgT+1t0Ppe8nvPN9QFJkcQx0JY8B4RJ+zRsRHy/PeUP0gz310MjvVPKnzb9BnrxUXgH9+ppkedtTINF45eo=&quot;,&#xd;
-    &quot;connectorId&quot;: &quot;psql-task-mgmt&quot;&#xd;
+    &quot;connectorId&quot;: &quot;psql-task-mgmt&quot;,&#xd;
+    &quot;dbMaxPoolSize&quot;: 10&#xd;
   },&#xd;
   &quot;contactEmails&quot;: [&#xd;
     &quot;hiren.patel@here.com&quot;&#xd;
