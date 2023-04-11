@@ -40,6 +40,7 @@ public class PubDatabaseHandler {
     //      It may require a fix in future, if it needs to be transactional batch publish.
     final private static String SCHEMA_STR = "{{SCHEMA}}";
     final private static String TABLE_STR = "{{TABLE}}";
+    final private static String LIMIT_STR = "{{LIMIT}}";
     final private static String FETCH_TXNS_FROM_SPACEDB =
             "SELECT t.id, h.i, h.jsondata, h.jsondata->'properties'->'@ns:com:here:xyz'->>'action' AS action, h.jsondata->>'id' AS featureId " +
             "FROM "+SCHEMA_STR+".\""+TABLE_STR+"\" h, "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".transactions t " +
@@ -47,7 +48,7 @@ public class PubDatabaseHandler {
             //"AND "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".naksha_json_txn_ts(h.jsondata) = "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".naksha_uuid_ts("+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".naksha_uuid_to_bytes(t.txn)) " +
             "AND t.space = ? AND (t.id > ? OR (t.id = ? AND h.i > ?)) " +
             "ORDER BY t.id ASC, h.i ASC " +
-            "LIMIT "+PubConfig.TXN_PUB_FETCH_SIZE;
+            "LIMIT "+LIMIT_STR;
 
     final private static String UPDATE_PUB_TXN_ID =
             "UPDATE "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".xyz_txn_pub " +
@@ -188,12 +189,13 @@ public class PubDatabaseHandler {
     }
 
     public static List<PubTransactionData> fetchPublishableTransactions(
-            final JdbcConnectionParams spaceDBConnParams, final String spaceId, final PublishEntryDTO lastTxn) throws SQLException {
+            final JdbcConnectionParams spaceDBConnParams, final String spaceId, final PublishEntryDTO lastTxn, final int limit) throws SQLException {
         List<PubTransactionData> txnList = null;
 
         try (final Connection conn = PubJdbcConnectionPool.getConnection(spaceDBConnParams);) {
             final String SEL_STMT_STR = FETCH_TXNS_FROM_SPACEDB.replace(SCHEMA_STR, spaceDBConnParams.getSchema())
-                                            .replace(TABLE_STR, spaceDBConnParams.getTableName()+"_hst");
+                                            .replace(TABLE_STR, spaceDBConnParams.getTableName()+"_hst")
+                                            .replace(LIMIT_STR, String.valueOf(limit));
             logger.debug("Fetch Transactions statement for spaceId [{}] is [{}]", spaceId, SEL_STMT_STR);
 
             final long startTS = System.currentTimeMillis();

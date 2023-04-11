@@ -68,7 +68,7 @@ public class PubSubscriptionHandler implements Runnable{
             boolean txnFound = false;
             while (
                 (txnList =
-                    PubDatabaseHandler.fetchPublishableTransactions(spaceDBConnParams, spaceId, lastTxn)
+                    PubDatabaseHandler.fetchPublishableTransactions(spaceDBConnParams, spaceId, lastTxn, pubCfg.TXN_PUB_FETCH_SIZE)
                 ) != null
             ) {
                 logger.info("Fetched [{}] publishable records for subId [{}], space [{}]",
