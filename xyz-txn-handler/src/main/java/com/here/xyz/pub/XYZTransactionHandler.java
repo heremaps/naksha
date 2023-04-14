@@ -66,11 +66,7 @@ public class XYZTransactionHandler {
     // Starts the periodic publisher job (if enabled in config)
     public void start() {
         // Start sequencer job (if enabled)
-        if (!pubCfg.ENABLE_TXN_SEQUENCER) {
-            logger.warn("As per config, Transaction Sequencer is not enabled.");
-            return;
-        }
-        else {
+        if (pubCfg.ENABLE_TXN_SEQUENCER) {
             // Schedule Sequencer job (as per configured frequency e.g. 2 secs)
             new ScheduledThreadPoolExecutor(1)
                     .scheduleWithFixedDelay(
@@ -80,13 +76,12 @@ public class XYZTransactionHandler {
             logger.info("Transaction Sequencer job is set to start after {}ms with subsequent delay of {}ms.",
                     pubCfg.TXN_SEQ_JOB_INITIAL_DELAY_MS, pubCfg.TXN_SEQ_JOB_SUBSEQUENT_DELAY_MS);
         }
+        else {
+            logger.warn("As per config, Transaction Sequencer is not enabled.");
+        }
 
         // Start publisher job (if enabled)
-        if (!pubCfg.ENABLE_TXN_PUBLISHER) {
-            logger.warn("As per config, Transaction Publisher is not enabled.");
-            return;
-        }
-        else {
+        if (pubCfg.ENABLE_TXN_PUBLISHER) {
             // Schedule Publisher job (as per configured frequency e.g. 2 secs)
             new ScheduledThreadPoolExecutor(1)
                     .scheduleWithFixedDelay(
@@ -95,6 +90,9 @@ public class XYZTransactionHandler {
                     );
             logger.info("Transaction Publisher job is set to start after {}ms with subsequent delay of {}ms.",
                     pubCfg.TXN_PUB_JOB_INITIAL_DELAY_MS, pubCfg.TXN_PUB_JOB_SUBSEQUENT_DELAY_MS);
+        }
+        else {
+            logger.warn("As per config, Transaction Publisher is not enabled.");
         }
     }
 
