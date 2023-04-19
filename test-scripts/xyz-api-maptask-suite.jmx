@@ -335,6 +335,60 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - E2E Naksha ELB" enabled="false">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="XYZ_API_PROTOCOL" elementType="Argument">
+            <stringProp name="Argument.name">XYZ_API_PROTOCOL</stringProp>
+            <stringProp name="Argument.value">http</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="XYZ_HOST_URL" elementType="Argument">
+            <stringProp name="Argument.name">XYZ_HOST_URL</stringProp>
+            <stringProp name="Argument.value">internal-naksha-e2e-us-east-1-pvt-alb-868171580.us-east-1.elb.amazonaws.com</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">ec2-50-19-84-216.compute-1.amazonaws.com</stringProp>
+          </elementProp>
+          <elementProp name="XYZ_URI_PREFIX" elementType="Argument">
+            <stringProp name="Argument.name">XYZ_URI_PREFIX</stringProp>
+            <stringProp name="Argument.value">/hub</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="XYZ_PORT" elementType="Argument">
+            <stringProp name="Argument.name">XYZ_PORT</stringProp>
+            <stringProp name="Argument.value">80</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">7080</stringProp>
+          </elementProp>
+          <elementProp name="SPACE_ID" elementType="Argument">
+            <stringProp name="Argument.name">SPACE_ID</stringProp>
+            <stringProp name="Argument.value">demo:foo</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="WR_API_KEY" elementType="Argument">
+            <stringProp name="Argument.name">WR_API_KEY</stringProp>
+            <stringProp name="Argument.value"></stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="RD_API_KEY" elementType="Argument">
+            <stringProp name="Argument.name">RD_API_KEY</stringProp>
+            <stringProp name="Argument.value"></stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="CONN_API_KEY" elementType="Argument">
+            <stringProp name="Argument.name">CONN_API_KEY</stringProp>
+            <stringProp name="Argument.value"></stringProp>
+            <stringProp name="Argument.desc">Manage Connector API Key</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="SPACE_API_KEY" elementType="Argument">
+            <stringProp name="Argument.name">SPACE_API_KEY</stringProp>
+            <stringProp name="Argument.value"></stringProp>
+            <stringProp name="Argument.desc">Manage Space API Key</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
       <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request - Defaults" enabled="true">
         <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
           <collectionProp name="Arguments.arguments"/>
