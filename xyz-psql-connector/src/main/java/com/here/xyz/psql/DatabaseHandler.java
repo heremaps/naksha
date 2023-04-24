@@ -634,8 +634,10 @@ public abstract class DatabaseHandler extends StorageConnector {
                     retryAttempted = true;
 
                     if(!connection.isClosed())
-                    { connection.setAutoCommit(previousAutoCommitState);
-                      connection.close();
+                    {
+                        connection.rollback();
+                        connection.setAutoCommit(previousAutoCommitState);
+                        connection.close();
                     }
 
                     return executeModifyFeatures(event);

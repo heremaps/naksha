@@ -100,7 +100,9 @@ public class Space extends com.here.xyz.models.hub.Space implements Cloneable {
             connectorId, arStorage.cause());
       } else {
         final Connector storage = arStorage.result();
-        logger.info(marker, "Loaded storage, configuration is: {}", io.vertx.core.json.Json.encode(storage));
+        if (logger.isDebugEnabled()) {
+          logger.debug(marker, "Loaded storage configuration is: {}", io.vertx.core.json.Json.encode(storage));
+        }
       }
       handler.handle(arStorage);
     });
