@@ -90,7 +90,8 @@ public class MaintenanceSQL {
         return "CREATE EXTENSION IF NOT EXISTS postgis SCHEMA public;"+
                 "CREATE EXTENSION IF NOT EXISTS postgis_topology;"+
                 "CREATE EXTENSION IF NOT EXISTS tsm_system_rows SCHEMA public;"+
-                (isPropertySearchSupported ? "CREATE EXTENSION IF NOT EXISTS dblink SCHEMA public;" : "");
+                (isPropertySearchSupported ? "CREATE EXTENSION IF NOT EXISTS dblink SCHEMA public;" : "")+
+                "CREATE EXTENSION IF NOT EXISTS hstore SCHEMA public;";
     }
 
     /**
@@ -100,7 +101,8 @@ public class MaintenanceSQL {
         return "CREATE EXTENSION IF NOT EXISTS postgis SCHEMA public;"+
                 "CREATE EXTENSION IF NOT EXISTS postgis_topology;"+
                 "CREATE EXTENSION IF NOT EXISTS tsm_system_rows SCHEMA public;"+
-                "CREATE EXTENSION IF NOT EXISTS dblink SCHEMA public;";
+                "CREATE EXTENSION IF NOT EXISTS dblink SCHEMA public;"+
+                "CREATE EXTENSION IF NOT EXISTS hstore SCHEMA public;";
     }
 
     /**

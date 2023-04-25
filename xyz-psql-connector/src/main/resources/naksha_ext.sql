@@ -1103,11 +1103,16 @@ AS
 $BODY$
 DECLARE
     -- local variables
+    lock_stmt   TEXT;
     stmt        TEXT;
     arr_size    int;
     idx         int;
+    orig_idx_pos int;
     xyz_ns      jsonb;
     row_count   bigint;
+    id_pos_hstore       hstore; -- To store <key,value> pairs of <featureId,array-index-position>
+    sorted_id_arr       TEXT[]; -- To store sorted list of featureId's
+    orig_idx_arr        TEXT[]; -- To store original array-index-position of sorted featureId's
     -- return variables
     out_success_arr     bool[];
     out_xyz_ns_arr      jsonb[];
@@ -1115,46 +1120,95 @@ DECLARE
     out_err_msg_arr     TEXT[];
 BEGIN
     arr_size := array_length(in_id_arr, 1);
-    idx := 1;
 
+    -- We sort input collection and store sorted list of featureId and its corresponding index position in input array
+    -- For example:
+    --      Input ID Array = in_id_arr = ["id_6", "id_1", "id_3"]
+    -- We prepare:
+    --      HashMap of <Id,arr-idx-position> = id_pos_hstore = <id_6,1> <id_1,2> <id_3,3>
+    --      Sorted list of Ids = sorted_id_arr = ["id_1", "id_3", "id_6"]
+    --      Corresponding list of index positions = orig_idx_arr = ["2", "3", "1"]
+    idx := 1;
     WHILE idx <= arr_size
     LOOP
+        IF (idx = 1) THEN
+            id_pos_hstore := hstore(in_id_arr[idx], ''||idx);
+        ELSE
+            id_pos_hstore := id_pos_hstore || hstore(in_id_arr[idx], ''||idx);
+        END IF;
+        idx := idx + 1;
+    END LOOP;
+    sorted_id_arr := akeys(id_pos_hstore); -- Sorted list of feature Ids
+    orig_idx_arr := id_pos_hstore -> sorted_id_arr; -- Original array idx position of each sorted Id
+
+    -- We loop here by referring orignal index position of input array's, as per sorted Id list
+    -- We need output collection also prepared as per the same (input original) index positions
+    idx := 1;
+    WHILE idx <= arr_size
+    LOOP
+        orig_idx_pos := orig_idx_arr[idx]::int;
         -- initialize array elements
-        out_success_arr[idx]    := FALSE;
-        out_xyz_ns_arr[idx]     := null;
-        out_err_code_arr[idx]   := null;
-        out_err_msg_arr[idx]    := null;
+        out_success_arr[orig_idx_pos]    := FALSE;
+        out_xyz_ns_arr[orig_idx_pos]     := null;
+        out_err_code_arr[orig_idx_pos]   := null;
+        out_err_msg_arr[orig_idx_pos]    := null;
         BEGIN
-            stmt := format('UPDATE "%s"."%s" SET jsondata = %L ', in_schema, in_table, in_jsondata_arr[idx]);
-            IF (in_geo_arr IS NOT NULL AND in_geo_arr[idx] IS NOT NULL) THEN
-                stmt := stmt || format(', geo = %L ', ST_Force3D(ST_GeomFromWKB(in_geo_arr[idx],4326)));
+            -- Use NOWAIT feature for specific table (right now disabled)
+            IF (in_table = 'utm-schema:none') THEN
+                -- Obtain lock using "SELECT FOR UPDATE NOWAIT"
+                lock_stmt := format('SELECT 1 FROM "%s"."%s" WHERE jsondata->>''id'' = $1 ', in_schema, in_table);
+                IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
+                    lock_stmt := lock_stmt || format('AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $2 ');
+                END IF;
+                lock_stmt := lock_stmt || format('FOR UPDATE NOWAIT ');
+
+                -- execute LOCK statement
+                IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
+                    EXECUTE lock_stmt USING in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos];
+                ELSE
+                    EXECUTE lock_stmt USING in_id_arr[orig_idx_pos];
+                END IF;
+                GET CURRENT DIAGNOSTICS row_count = ROW_COUNT;
+                IF (row_count <= 0) THEN
+                    -- '55P03'
+                    RAISE LOCK_NOT_AVAILABLE USING MESSAGE = 'no matching document/version found to lock for Id '||in_id_arr[orig_idx_pos];
+                END IF;
+            END IF;
+
+            -- Prepare actual UPDATE statement
+            stmt := format('UPDATE "%s"."%s" SET jsondata = %L ', in_schema, in_table, in_jsondata_arr[orig_idx_pos]);
+            IF (in_geo_arr IS NOT NULL AND in_geo_arr[orig_idx_pos] IS NOT NULL) THEN
+                stmt := stmt || format(', geo = %L ', ST_Force3D(ST_GeomFromWKB(in_geo_arr[orig_idx_pos],4326)));
             END IF;
             stmt := stmt || format('WHERE jsondata->>''id'' = $1 ');
-            IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[idx] IS NOT NULL) THEN
+            IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
                 stmt := stmt || format('AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $2 ');
             END IF;
             stmt := stmt || format('RETURNING jsondata->''properties''->''@ns:com:here:xyz'' ');
 
-            -- execute statement
-            IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[idx] IS NOT NULL) THEN
-                EXECUTE stmt INTO xyz_ns USING in_id_arr[idx], in_uuid_arr[idx];
+            -- execute UPDATE statement
+            IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
+                EXECUTE stmt INTO xyz_ns USING in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos];
             ELSE
-                EXECUTE stmt INTO xyz_ns USING in_id_arr[idx];
+                EXECUTE stmt INTO xyz_ns USING in_id_arr[orig_idx_pos];
             END IF;
             GET CURRENT DIAGNOSTICS row_count = ROW_COUNT;
             IF (row_count <= 0) THEN
-                out_err_code_arr[idx] := 'P0002';
-                out_err_msg_arr[idx] := 'No data found';
+                -- 'P0002'
+                RAISE NO_DATA_FOUND USING MESSAGE = 'No data found for Id '||in_id_arr[orig_idx_pos];
             ELSE
                 -- Operation successful
-                out_success_arr[idx] := TRUE;
-                out_xyz_ns_arr[idx] := xyz_ns;
+                out_success_arr[orig_idx_pos] := TRUE;
+                out_xyz_ns_arr[orig_idx_pos] := xyz_ns;
             END IF;
         EXCEPTION
+            WHEN LOCK_NOT_AVAILABLE THEN
+                -- Exit program without executing UPDATE for rest of the features
+                RAISE LOCK_NOT_AVAILABLE USING MESSAGE = SQLERRM;
             WHEN OTHERS THEN
                 --RAISE NOTICE '% - %, sql = %', SQLSTATE, SQLERRM, stmt;
-                out_err_code_arr[idx] := SQLSTATE;
-                out_err_msg_arr[idx] := SQLERRM;
+                out_err_code_arr[orig_idx_pos] := SQLSTATE;
+                out_err_msg_arr[orig_idx_pos] := SQLERRM;
         END;
         idx := idx + 1;
     END LOOP;
