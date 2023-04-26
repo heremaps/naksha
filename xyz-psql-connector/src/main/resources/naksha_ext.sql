@@ -1103,11 +1103,14 @@ AS
 $BODY$
 DECLARE
     -- local variables
-    lock_stmt   TEXT;
-    stmt        TEXT;
+    lock_stmt           TEXT;
+    lock_with_uuid_stmt TEXT;
+    upd_stmt            TEXT;
+    upd_with_uuid_stmt  TEXT;
     arr_size    int;
     idx         int;
     orig_idx_pos int;
+    geo         geometry;
     xyz_ns      jsonb;
     row_count   bigint;
     id_pos_hstore       hstore; -- To store <key,value> pairs of <featureId,array-index-position>
@@ -1141,32 +1144,67 @@ BEGIN
     sorted_id_arr := akeys(id_pos_hstore); -- Sorted list of feature Ids
     orig_idx_arr := id_pos_hstore -> sorted_id_arr; -- Original array idx position of each sorted Id
 
+    -- Prepare statements upfront for perf optimization purpose
+    BEGIN
+        lock_stmt := format('PREPARE lock_stmt(text) AS SELECT 1 FROM "%s"."%s" '
+                            ||'WHERE jsondata->>''id'' = $1 '
+                            ||'FOR UPDATE NOWAIT ', in_schema, in_table);
+        EXECUTE lock_stmt;
+    EXCEPTION
+        WHEN duplicate_prepared_statement THEN NULL;
+    END;
+
+    BEGIN
+        lock_with_uuid_stmt := format('PREPARE lock_with_uuid_stmt(text,text) AS SELECT 1 FROM "%s"."%s" '
+                                    ||'WHERE jsondata->>''id'' = $1 '
+                                    ||'AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $2 '
+                                    ||'FOR UPDATE NOWAIT ', in_schema, in_table);
+        EXECUTE lock_with_uuid_stmt;
+    EXCEPTION
+        WHEN duplicate_prepared_statement THEN NULL;
+    END;
+
+    BEGIN
+        upd_stmt := format('PREPARE upd_stmt(jsonb,geometry,text) AS '
+                            ||'UPDATE "%s"."%s" SET jsondata = $1, geo = $2 '
+                            ||'WHERE jsondata->>''id'' = $3 '
+                            ||'RETURNING jsondata->''properties''->''@ns:com:here:xyz'' '
+                            , in_schema, in_table);
+        EXECUTE upd_stmt;
+    EXCEPTION
+        WHEN duplicate_prepared_statement THEN NULL;
+    END;
+
+    BEGIN
+        upd_with_uuid_stmt := format('PREPARE upd_with_uuid_stmt(jsonb,geometry,text,text) AS '
+                            ||'UPDATE "%s"."%s" SET jsondata = $1, geo = $2 '
+                            ||'WHERE jsondata->>''id'' = $3 '
+                            ||'AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $4 '
+                            ||'RETURNING jsondata->''properties''->''@ns:com:here:xyz'' '
+                            , in_schema, in_table);
+        EXECUTE upd_with_uuid_stmt;
+    EXCEPTION
+        WHEN duplicate_prepared_statement THEN NULL;
+    END;
+
     -- We loop here by referring orignal index position of input array's, as per sorted Id list
     -- We need output collection also prepared as per the same (input original) index positions
     idx := 1;
     WHILE idx <= arr_size
     LOOP
-        orig_idx_pos := orig_idx_arr[idx]::int;
+        orig_idx_pos := orig_idx_arr[idx]::int; -- retrive original index position of an input (unsorted) list
         -- initialize array elements
         out_success_arr[orig_idx_pos]    := FALSE;
         out_xyz_ns_arr[orig_idx_pos]     := null;
         out_err_code_arr[orig_idx_pos]   := null;
         out_err_msg_arr[orig_idx_pos]    := null;
         BEGIN
-            -- Use NOWAIT feature for specific table (right now disabled)
-            IF (in_table = 'utm-schema:none') THEN
-                -- Obtain lock using "SELECT FOR UPDATE NOWAIT"
-                lock_stmt := format('SELECT 1 FROM "%s"."%s" WHERE jsondata->>''id'' = $1 ', in_schema, in_table);
+            -- Use NOWAIT feature for specific table
+            IF (in_table = 'utm-e2e_qa:none') THEN
                 IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                    lock_stmt := lock_stmt || format('AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $2 ');
-                END IF;
-                lock_stmt := lock_stmt || format('FOR UPDATE NOWAIT ');
-
-                -- execute LOCK statement
-                IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                    EXECUTE lock_stmt USING in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos];
+                    EXECUTE format('EXECUTE lock_with_uuid_stmt(%s, %s)', quote_literal(in_id_arr[orig_idx_pos]), quote_literal(in_uuid_arr[orig_idx_pos]) );
                 ELSE
-                    EXECUTE lock_stmt USING in_id_arr[orig_idx_pos];
+                    EXECUTE format('EXECUTE lock_stmt(%s)', quote_literal(in_id_arr[orig_idx_pos]));
                 END IF;
                 GET CURRENT DIAGNOSTICS row_count = ROW_COUNT;
                 IF (row_count <= 0) THEN
@@ -1175,22 +1213,21 @@ BEGIN
                 END IF;
             END IF;
 
-            -- Prepare actual UPDATE statement
-            stmt := format('UPDATE "%s"."%s" SET jsondata = %L ', in_schema, in_table, in_jsondata_arr[orig_idx_pos]);
+            -- Prepare parameters for UPDATE statement
+            geo := NULL;
             IF (in_geo_arr IS NOT NULL AND in_geo_arr[orig_idx_pos] IS NOT NULL) THEN
-                stmt := stmt || format(', geo = %L ', ST_Force3D(ST_GeomFromWKB(in_geo_arr[orig_idx_pos],4326)));
+                geo := ST_Force3D(ST_GeomFromWKB(in_geo_arr[orig_idx_pos],4326));
             END IF;
-            stmt := stmt || format('WHERE jsondata->>''id'' = $1 ');
-            IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                stmt := stmt || format('AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $2 ');
-            END IF;
-            stmt := stmt || format('RETURNING jsondata->''properties''->''@ns:com:here:xyz'' ');
 
-            -- execute UPDATE statement
+            -- Execute UPDATE statement
             IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                EXECUTE stmt INTO xyz_ns USING in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos];
+                EXECUTE format('EXECUTE upd_with_uuid_stmt(%L, %L, %s, %s)',
+                        in_jsondata_arr[orig_idx_pos], geo, quote_literal(in_id_arr[orig_idx_pos]), quote_literal(in_uuid_arr[orig_idx_pos]) )
+                    INTO xyz_ns;
             ELSE
-                EXECUTE stmt INTO xyz_ns USING in_id_arr[orig_idx_pos];
+                EXECUTE format('EXECUTE upd_stmt(%L, %L, %s)',
+                        in_jsondata_arr[orig_idx_pos], geo, quote_literal(in_id_arr[orig_idx_pos]) )
+                    INTO xyz_ns;
             END IF;
             GET CURRENT DIAGNOSTICS row_count = ROW_COUNT;
             IF (row_count <= 0) THEN
