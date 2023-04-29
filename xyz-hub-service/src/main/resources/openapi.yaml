@@ -255,7 +255,35 @@ paths:
       tags:
         - Write Features
       summary: Create or replace multiple features
-      description: Create or replace the provided features.
+      description: >
+        Create or replace the provided features.
+        
+        
+        The behavior is controlled by query parameters described in
+        detail below. The name of the parameter reflects a condition to be
+        matched. Its value reflects the corresponding action to be performed for
+        this case.
+
+        If no values are provided, the request is handled with the default
+        values:
+
+
+        ```
+
+        rlock=abort
+
+        ```
+
+        The respective parameters and their possible values are:
+
+        ### _rlock_ - If Row-level Lock found in DB
+
+        (normally useful for backend consumers) During DB update, if any of the features find row-level lock due to other ongoing concurrent mutation on the same feature, then one of the following actions can be chosen:
+
+        * __wait__  (default) - This transaction will _wait_ to acquire a lock, until either other transaction releases a lock or API timeout occurs.
+
+
+        * __abort__ - This transaction will be _aborted_ (without wait), returning an error immediately back to API consumers, thereby avoiding unnecessary waits pile-up at Database level under high concurrency updates. In case of bulk operation, updates on rest of the features won't be attempted (i.e. _abort_ at feature _#1_ will skip any update on feature _#1...N_ as well).
       operationId: putFeatures
       parameters:
         - $ref: '#/components/parameters/SpaceId'
@@ -288,7 +316,7 @@ paths:
       summary: Modify features in the space
       description: >
         This method allows to create, update and delete features. The behavior
-        of the POST handler is controlled by three query parameters described in
+        of the POST handler is controlled by query parameters described in
         detail below. The name of the parameter reflects a condition to be
         matched. Its value reflects the corresponding action to be performed for
         this case.
@@ -301,13 +329,13 @@ paths:
         ```
 
 
-        ne=create&e=patch&transactional=true
+        ne=create&e=patch&transactional=true&rlock=abort
 
 
         ```
 
 
-        The three parameters and their possible values are:
+        The respective parameters and their possible values are:
 
 
         ### _ne_ - If Not Exists
@@ -387,6 +415,15 @@ paths:
         operations (_false_).
 
         There is a limit of 10 megs of data allowed for this operation.
+
+        ### _rlock_ - If Row-level Lock found in DB
+
+        (normally useful for backend consumers) During DB update, if any of the features find row-level lock due to other ongoing concurrent mutation on the same feature, then one of the following actions can be chosen:
+
+        * __wait__  (default) - This transaction will _wait_ to acquire a lock, until either other transaction releases a lock or API timeout occurs.
+
+
+        * __abort__ - This transaction will be _aborted_ (without wait), returning an error immediately back to API consumers, thereby avoiding unnecessary waits pile-up at Database level under high concurrency updates. In case of bulk operation, updates on rest of the features won't be attempted (i.e. _abort_ at feature _#1_ will skip any update on feature _#1...N_ as well).
       operationId: postFeatures
       parameters:
         - $ref: '#/components/parameters/SpaceId'
@@ -500,7 +537,35 @@ paths:
       tags:
         - Write Features
       summary: Patch a feature
-      description: Patches an existing feature.
+      description: >
+        Patches an existing feature.
+
+
+        The behavior is controlled by query parameters described in
+        detail below. The name of the parameter reflects a condition to be
+        matched. Its value reflects the corresponding action to be performed for
+        this case.
+
+        If no values are provided, the request is handled with the default
+        values:
+
+
+        ```
+
+        rlock=abort
+
+        ```
+
+        The respective parameters and their possible values are:
+
+        ### _rlock_ - If Row-level Lock found in DB
+
+        (normally useful for backend consumers) During DB update, if any of the features find row-level lock due to other ongoing concurrent mutation on the same feature, then one of the following actions can be chosen:
+
+        * __wait__  (default) - This transaction will _wait_ to acquire a lock, until either other transaction releases a lock or API timeout occurs.
+
+
+        * __abort__ - This transaction will be _aborted_ (without wait), returning an error immediately back to API consumers, thereby avoiding unnecessary waits pile-up at Database level under high concurrency updates. In case of bulk operation, updates on rest of the features won't be attempted (i.e. _abort_ at feature _#1_ will skip any update on feature _#1...N_ as well).
       operationId: patchFeature
       parameters:
         - $ref: '#/components/parameters/SpaceId'
@@ -2377,27 +2442,27 @@ components:
           items:
             type: string
             enum: [
-                ModifySpaceEvent.request,
-                ModifySpaceEvent.response,
-                GetStatisticsEvent.request,
-                GetStatisticsEvent.response,
-                GetFeaturesByIdEvent.request,
-                GetFeaturesByIdEvent.response,
-                SearchForFeaturesEvent.request,
-                SearchForFeaturesEvent.response,
-                IterateFeaturesEvent.request,
-                IterateFeaturesEvent.response,
-                GetFeaturesByTileEvent.request,
-                GetFeaturesByTileEvent.response,
-                GetFeaturesByBBoxEvent.request,
-                GetFeaturesByBBoxEvent.response,
-                GetFeaturesByGeometryEvent.request,
-                GetFeaturesByGeometryEvent.response,
-                ModifyFeaturesEvent.request,
-                ModifyFeaturesEvent.response,
-                DeleteFeaturesByTagEvent.request,
-                DeleteFeaturesByTagEvent.response,
-                ContentModifiedNotification.request
+              ModifySpaceEvent.request,
+              ModifySpaceEvent.response,
+              GetStatisticsEvent.request,
+              GetStatisticsEvent.response,
+              GetFeaturesByIdEvent.request,
+              GetFeaturesByIdEvent.response,
+              SearchForFeaturesEvent.request,
+              SearchForFeaturesEvent.response,
+              IterateFeaturesEvent.request,
+              IterateFeaturesEvent.response,
+              GetFeaturesByTileEvent.request,
+              GetFeaturesByTileEvent.response,
+              GetFeaturesByBBoxEvent.request,
+              GetFeaturesByBBoxEvent.response,
+              GetFeaturesByGeometryEvent.request,
+              GetFeaturesByGeometryEvent.response,
+              ModifyFeaturesEvent.request,
+              ModifyFeaturesEvent.response,
+              DeleteFeaturesByTagEvent.request,
+              DeleteFeaturesByTagEvent.response,
+              ContentModifiedNotification.request
             ]
         contactEmails:
           description: >-
@@ -3433,7 +3498,7 @@ components:
       description: A subscription object that contains notification information.
       properties:
         id:
-          description: >- 
+          description: >-
             The uniques identifier for the subscription.
           type: string
           example: my-subscription-id
@@ -3465,7 +3530,7 @@ components:
       description: The subscription configuration.
       properties:
         type:
-          description: >- 
+          description: >-
             The type of subscribed notification.
           type: string
           enum:
