@@ -31,15 +31,7 @@ import com.here.xyz.XyzSerializable;
 import com.here.xyz.connectors.ErrorResponseException;
 import com.here.xyz.connectors.SimulatedContext;
 import com.here.xyz.connectors.StorageConnector;
-import com.here.xyz.events.DeleteFeaturesByTagEvent;
-import com.here.xyz.events.Event;
-import com.here.xyz.events.HealthCheckEvent;
-import com.here.xyz.events.IterateFeaturesEvent;
-import com.here.xyz.events.IterateHistoryEvent;
-import com.here.xyz.events.ModifyFeaturesEvent;
-import com.here.xyz.events.ModifySpaceEvent;
-import com.here.xyz.events.ModifySubscriptionEvent;
-import com.here.xyz.events.SearchForFeaturesEvent;
+import com.here.xyz.events.*;
 import com.here.xyz.models.geojson.coordinates.BBox;
 import com.here.xyz.models.geojson.implementation.Feature;
 import com.here.xyz.models.geojson.implementation.FeatureCollection;
@@ -517,6 +509,7 @@ public abstract class DatabaseHandler extends StorageConnector {
         final boolean handleUUID = event.getEnableUUID() == Boolean.TRUE;
         final boolean transactional = event.getTransaction() == Boolean.TRUE;
         final boolean includeOldStates = event.getParams() != null && event.getParams().get(INCLUDE_OLD_STATES) == Boolean.TRUE;
+        final boolean enableNowait = event.getActionIfRowLocked() != null && event.getActionIfRowLocked() == IfRowLock.ABORT;
         List<Feature> oldFeatures = null;
 
         final String schema = config.getDatabaseSettings().getSchema();
@@ -607,7 +600,7 @@ public abstract class DatabaseHandler extends StorageConnector {
                     DatabaseWriter.insertFeatures(this, schema, table, traceItem, collection, fails, inserts, connection, transactional, version, forExtendingSpace);
                 }
                 if (updates.size() > 0) {
-                    DatabaseWriter.updateFeatures(this, schema, table, traceItem, collection, fails, updates, connection, transactional, handleUUID, version, forExtendingSpace);
+                    DatabaseWriter.updateFeatures(this, schema, table, traceItem, collection, fails, updates, connection, transactional, handleUUID, enableNowait, version, forExtendingSpace);
                 }
 
                 if (transactional) {

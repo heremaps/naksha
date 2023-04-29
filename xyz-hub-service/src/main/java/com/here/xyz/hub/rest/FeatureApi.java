@@ -27,18 +27,15 @@ import static com.here.xyz.hub.rest.ApiParam.Query.FORCE_2D;
 import static com.here.xyz.hub.rest.ApiParam.Query.SKIP_CACHE;
 import static io.vertx.core.http.HttpHeaders.ACCEPT;
 
+import com.here.xyz.events.*;
 import com.here.xyz.events.ContextAwareEvent.SpaceContext;
-import com.here.xyz.events.DeleteFeaturesByTagEvent;
-import com.here.xyz.events.GetFeaturesByIdEvent;
-import com.here.xyz.events.ModifyFeaturesEvent;
-import com.here.xyz.events.PropertyQuery;
-import com.here.xyz.events.TagsQuery;
 import com.here.xyz.hub.rest.ApiParam.Path;
 import com.here.xyz.hub.rest.ApiParam.Query;
 import com.here.xyz.hub.task.FeatureTask.ConditionalOperation;
 import com.here.xyz.hub.task.FeatureTask.DeleteOperation;
 import com.here.xyz.hub.task.FeatureTask.IdsQuery;
 import com.here.xyz.hub.task.ModifyFeatureOp;
+import com.here.xyz.hub.task.ModifyOp;
 import com.here.xyz.hub.task.ModifyOp.IfExists;
 import com.here.xyz.hub.task.ModifyOp.IfNotExists;
 import com.here.xyz.hub.util.diff.Patcher.ConflictResolution;
@@ -219,6 +216,7 @@ public class FeatureApi extends SpaceBasedApi {
       return;
 
     ModifyFeaturesEvent event = new ModifyFeaturesEvent().withTransaction(transactional).withContext(spaceContext);
+    event.setActionIfRowLocked(IfRowLock.of(Query.getString(context, Query.IF_ROW_LOCKED, IfRowLock.WAIT.toString())));
     int bodySize = context.getBody() != null ? context.getBody().length() : 0;
     ConditionalOperation task = buildConditionalOperation(event, context, apiResponseTypeType, featureModifications, ifNotExists, ifExists, transactional, cr, requireResourceExists, bodySize);
     final List<String> addTags = Query.queryParam(Query.ADD_TAGS, context);

@@ -1087,10 +1087,10 @@ BEGIN
 END
 $BODY$;
 
-DROP FUNCTION IF EXISTS xyz_config.naksha_bulk_update(TEXT, TEXT, TEXT[], TEXT[], jsonb[], geometry[]);
+DROP FUNCTION IF EXISTS xyz_config.naksha_bulk_update(TEXT, TEXT, TEXT[], TEXT[], jsonb[], geometry[], bool);
 
 CREATE OR REPLACE FUNCTION xyz_config.naksha_bulk_update( in_schema TEXT, in_table TEXT,
-        in_id_arr TEXT[], in_uuid_arr TEXT[], in_jsondata_arr jsonb[], in_geo_arr geometry[] )
+        in_id_arr TEXT[], in_uuid_arr TEXT[], in_jsondata_arr jsonb[], in_geo_arr geometry[], enable_nowait bool)
     RETURNS TABLE
             (
                 success   bool[],
@@ -1192,7 +1192,7 @@ BEGIN
     idx := 1;
     WHILE idx <= arr_size
     LOOP
-        orig_idx_pos := orig_idx_arr[idx]::int; -- retrive original index position of an input (unsorted) list
+        orig_idx_pos := orig_idx_arr[idx]::int; -- retrieve original index position of an input (unsorted) list
         -- initialize array elements
         out_success_arr[orig_idx_pos]    := FALSE;
         out_xyz_ns_arr[orig_idx_pos]     := null;
@@ -1200,7 +1200,7 @@ BEGIN
         out_err_msg_arr[orig_idx_pos]    := null;
         BEGIN
             -- Use NOWAIT feature for specific table
-            IF (in_table = 'utm-e2e_qa:none') THEN
+            IF (enable_nowait) THEN
                 IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
                     EXECUTE format('EXECUTE lock_with_uuid_stmt(%s, %s)', quote_literal(in_id_arr[orig_idx_pos]), quote_literal(in_uuid_arr[orig_idx_pos]) );
                 ELSE

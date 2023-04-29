@@ -112,7 +112,7 @@ public class DatabaseStreamWriter extends DatabaseWriter{
     protected static FeatureCollection updateFeatures(DatabaseHandler dbh, String schema, String table, TraceItem traceItem, FeatureCollection collection,
                                                       List<FeatureCollection.ModificationFailure> fails,
                                                       List<Feature> updates, Connection connection,
-                                                      boolean handleUUID, boolean forExtendedSpace)
+                                                      boolean handleUUID, boolean enableNowait, boolean forExtendedSpace)
             throws SQLException {
 
         final PreparedStatement updateStmt = createUpdateStatement(connection, schema, table, handleUUID, forExtendedSpace);
@@ -157,6 +157,7 @@ public class DatabaseStreamWriter extends DatabaseWriter{
                     updateWithoutGeometryStmt.setArray(++paramIdx, connection.createArrayOf("text", fIdList.toArray()));
                     updateWithoutGeometryStmt.setArray(++paramIdx, connection.createArrayOf("text", uuidList.toArray()));
                     updateWithoutGeometryStmt.setArray(++paramIdx, connection.createArrayOf("jsonb", jsonbObjectList.toArray()));
+                    updateWithoutGeometryStmt.setBoolean(++paramIdx, enableNowait);
                     /*if (forExtendedSpace)
                         updateWithoutGeometryStmt.setBoolean(++paramIdx, getDeletedFlagFromFeature(feature));*/
 
@@ -174,6 +175,7 @@ public class DatabaseStreamWriter extends DatabaseWriter{
                     assure3d(jtsGeometry.getCoordinates());
                     geometryList.add(jtsGeometry);
                     updateStmt.setArray(++paramIdx, connection.createArrayOf("geometry", geometryList.toArray()));
+                    updateStmt.setBoolean(++paramIdx, enableNowait);;
                     /*if (forExtendedSpace)
                         updateStmt.setBoolean(++paramIdx, getDeletedFlagFromFeature(feature));*/
 

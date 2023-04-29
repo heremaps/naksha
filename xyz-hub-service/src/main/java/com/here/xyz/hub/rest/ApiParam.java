@@ -123,6 +123,7 @@ public class ApiParam {
     static final String IF_EXISTS = "e";
     static final String IF_NOT_EXISTS = "ne";
     static final String TRANSACTIONAL = "transactional";
+    static final String IF_ROW_LOCKED = "rlock";
     static final String CONFLICT_RESOLUTION = "cr";
     static final String PREFIX_ID = "prefixId";
     static final String CLIP = "clip";

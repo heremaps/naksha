@@ -139,14 +139,15 @@ public class DatabaseWriter {
     protected static FeatureCollection updateFeatures(DatabaseHandler dbh, String schema, String table, TraceItem traceItem, FeatureCollection collection,
                                                       List<FeatureCollection.ModificationFailure> fails,
                                                       List<Feature> updates, Connection connection,
-                                                      boolean transactional, boolean handleUUID, Integer version, boolean forExtendedSpace)
+                                                      boolean transactional, boolean handleUUID, boolean enableNowait,
+                                                      Integer version, boolean forExtendedSpace)
             throws SQLException, JsonProcessingException {
         if(transactional) {
             setAutocommit(connection,false);
-            return DatabaseTransactionalWriter.updateFeatures(dbh, schema, table, traceItem, collection, fails, updates, connection,handleUUID, version, forExtendedSpace);
+            return DatabaseTransactionalWriter.updateFeatures(dbh, schema, table, traceItem, collection, fails, updates, connection,handleUUID, enableNowait, version, forExtendedSpace);
         }
         setAutocommit(connection,true);
-        return DatabaseStreamWriter.updateFeatures(dbh, schema, table, traceItem, collection, fails, updates, connection, handleUUID, forExtendedSpace);
+        return DatabaseStreamWriter.updateFeatures(dbh, schema, table, traceItem, collection, fails, updates, connection, handleUUID, enableNowait, forExtendedSpace);
     }
 
     protected static void deleteFeatures(DatabaseHandler dbh, String schema, String table, TraceItem traceItem,
