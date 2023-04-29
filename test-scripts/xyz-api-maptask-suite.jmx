@@ -175,7 +175,7 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - Local" enabled="false">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - Local" enabled="true">
         <collectionProp name="Arguments.arguments">
           <elementProp name="XYZ_API_PROTOCOL" elementType="Argument">
             <stringProp name="Argument.name">XYZ_API_PROTOCOL</stringProp>
@@ -282,7 +282,7 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - E2E Demo" enabled="true">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - E2E Demo" enabled="false">
         <collectionProp name="Arguments.arguments">
           <elementProp name="XYZ_API_PROTOCOL" elementType="Argument">
             <stringProp name="Argument.name">XYZ_API_PROTOCOL</stringProp>
@@ -715,7 +715,7 @@ vars.put(&quot;V_Update_Request_Str&quot;, JSON.stringify(updateTaskObj));
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol"></stringProp>
           <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features/${TASK_ID_P01_01}?access_token=${WR_API_KEY}</stringProp>
+          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features/${TASK_ID_P01_01}?access_token=${WR_API_KEY}&amp;rlock=abort</stringProp>
           <stringProp name="HTTPSampler.method">PUT</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
@@ -1274,7 +1274,7 @@ vars.put(&quot;V_Update_Request_Str_02&quot;, JSON.stringify(updateTaskObj));
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol"></stringProp>
           <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features?access_token=${WR_API_KEY}</stringProp>
+          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features?access_token=${WR_API_KEY}&amp;rlock=abort</stringProp>
           <stringProp name="HTTPSampler.method">PUT</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
@@ -2938,7 +2938,7 @@ else {
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pos5 - Read Access Control (wikvaya)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pos5 - Read Access Control (wikvaya)" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -3228,7 +3228,7 @@ else {
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pos6 - Write Access Control (wikvaya)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pos6 - Write Access Control (wikvaya)" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -3721,7 +3721,7 @@ vars.put(&quot;V_Patched_Task_Str&quot;, JSON.stringify(patchedTaskObj));
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol"></stringProp>
           <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features/${TASK_ID_P07_01}?access_token=${WR_API_KEY}&amp;removeTags=${V_Remove_Tag}&amp;addTags=${V_New_Tag}</stringProp>
+          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features/${TASK_ID_P07_01}?access_token=${WR_API_KEY}&amp;removeTags=${V_Remove_Tag}&amp;addTags=${V_New_Tag}&amp;rlock=abort</stringProp>
           <stringProp name="HTTPSampler.method">PATCH</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
@@ -3937,7 +3937,7 @@ else {
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pos8 - Connector Operations (wikvaya)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pos8 - Connector Operations (wikvaya)" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -5129,7 +5129,7 @@ else {
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Neg3 - Invalid API Key (wikvaya)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Neg3 - Invalid API Key (wikvaya)" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -6587,14 +6587,17 @@ else {
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-	&quot;id&quot;: &quot;utm-e2e_qa:backup3&quot;,&#xd;
-	&quot;title&quot;: &quot;UTM E2E_QA - Backup3 space&quot;,&#xd;
-	&quot;description&quot;: &quot;Data Backup3 Space for UTM E2E_QA environment&quot;,&#xd;
+	&quot;id&quot;: &quot;utm-dev:maptask&quot;,&#xd;
+	&quot;title&quot;: &quot;UTM Dev - MapTask space&quot;,&#xd;
+	&quot;description&quot;: &quot;MapTask Space for UTM Dev environment&quot;,&#xd;
 	&quot;storage&quot;: {&#xd;
-		&quot;id&quot;: &quot;psql-task-mgmt&quot;&#xd;
+		&quot;id&quot;: &quot;psql-utm-poc&quot;&#xd;
 	},&#xd;
 	&quot;enableUUID&quot;: true,&#xd;
 	&quot;packages&quot;: [&#xd;
+	    &quot;CM_SOURCING_DEV&quot;,&#xd;
+	    &quot;CM_MAPCREATOR_DEV&quot;,&#xd;
+	    &quot;CM_MAPCREATOR_DELTA_DEV&quot;,&#xd;
 	    &quot;CM_SOURCING_E2E&quot;,&#xd;
 	    &quot;CM_MAPCREATOR_E2E&quot;,&#xd;
 	    &quot;CM_MAPCREATOR_DELTA_E2E&quot;&#xd;
@@ -6608,7 +6611,7 @@ else {
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol"></stringProp>
           <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces?access_token=ACyPrUjSzW3XkQKdGgr-o8g</stringProp>
+          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces</stringProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <boolProp name="HTTPSampler.auto_redirects">false</boolProp>

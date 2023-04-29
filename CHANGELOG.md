@@ -1,5 +1,7 @@
 ## Naksha_1.1.1
 
+- Introduced new query parameter `rlock` to indicate whether API transaction should `WAIT` or `ABORT` when there is DB row-level lock found during Updates.
+  `ABORT` returns an error immediately back to consumers, thereby avoiding unnecessary waits at Database level under high concurrency updates. 
 - Fixes:
   - PGSQL triggers fixed to handle missing `rtcts` and `version` fields for existing data migrated to newly created Naksha spaces
   - `xyz` namespace object fixed to return correct field values in API responses. We now use PGSQL based insert/update/delete feature operations.

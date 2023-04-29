@@ -61,6 +61,9 @@ public final class ModifyFeaturesEvent extends ContextAwareEvent<ModifyFeaturesE
   private boolean enableGlobalVersioning;
   private List<ModificationFailure> failed;
   private Integer maxVersionCount;
+  @JsonInclude(Include.NON_DEFAULT)
+  private IfRowLock actionIfRowLocked;
+
 
   /**
    * Returns the list of all features to be inserted.
@@ -267,6 +270,19 @@ public final class ModifyFeaturesEvent extends ContextAwareEvent<ModifyFeaturesE
 
   public ModifyFeaturesEvent withEnableGlobalVersioning(final boolean enableGlobalVersioning) {
     this.enableGlobalVersioning = enableGlobalVersioning;
+    return this;
+  }
+
+  public IfRowLock getActionIfRowLocked() {
+    return actionIfRowLocked;
+  }
+
+  public void setActionIfRowLocked(final IfRowLock actionIfRowLocked) {
+    this.actionIfRowLocked = actionIfRowLocked;
+  }
+
+  public ModifyFeaturesEvent withActionIfRowLocked(final IfRowLock actionIfRowLocked) {
+    this.actionIfRowLocked = actionIfRowLocked;
     return this;
   }
 }

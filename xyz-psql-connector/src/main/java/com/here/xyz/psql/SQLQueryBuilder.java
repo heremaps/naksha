@@ -748,13 +748,13 @@ public class SQLQueryBuilder {
 
     protected static String updateStmtSQL(final String schema, final String table, final boolean handleUUID, boolean withDeletedColumn) {
         String updateStmtSQL = "SELECT success, xyz_ns, err_code, err_msg "
-                + "FROM xyz_config.naksha_bulk_update( '"+schema+"', '"+table+"', ?, ?, ?, ? ) ";
+                + "FROM xyz_config.naksha_bulk_update( '"+schema+"', '"+table+"', ?, ?, ?, ?, ?) ";
         return SQLQuery.replaceVars(updateStmtSQL, schema, table);
     }
 
     protected static String updateWithoutGeometryStmtSQL(final String schema, final String table, final boolean handleUUID, boolean withDeletedColumn) {
         String updateWithoutGeometryStmtSQL = "SELECT success, xyz_ns, err_code, err_msg "
-                + "FROM xyz_config.naksha_bulk_update( '"+schema+"', '"+table+"', ?, ?, ?, NULL ) ";
+                + "FROM xyz_config.naksha_bulk_update( '"+schema+"', '"+table+"', ?, ?, ?, NULL, ? ) ";
         return SQLQuery.replaceVars(updateWithoutGeometryStmtSQL, schema, table);
     }
 

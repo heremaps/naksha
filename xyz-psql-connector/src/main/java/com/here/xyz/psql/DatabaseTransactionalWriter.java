@@ -106,7 +106,8 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
 
     public static FeatureCollection updateFeatures(DatabaseHandler dbh, String schema, String table, TraceItem traceItem, FeatureCollection collection,
                                                    List<FeatureCollection.ModificationFailure> fails, List<Feature> updates,
-                                                   Connection connection, boolean handleUUID, Integer version, boolean forExtendedSpace)
+                                                   Connection connection, boolean handleUUID, boolean enableNowait,
+                                                   Integer version, boolean forExtendedSpace)
             throws SQLException, JsonProcessingException {
 
         final PreparedStatement updateStmt = createUpdateStatement(connection, schema, table, handleUUID, forExtendedSpace);
@@ -165,12 +166,14 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
             updateWithoutGeometryStmt.setArray(1, connection.createArrayOf("text", updateWithoutGeometryIdList.toArray()));
             updateWithoutGeometryStmt.setArray(2, handleUUID ? connection.createArrayOf("text", updateWithoutGeoUuidList.toArray()) : null);
             updateWithoutGeometryStmt.setArray(3, connection.createArrayOf("jsonb", updateWithoutGeoJsonbObjectList.toArray()));
+            updateWithoutGeometryStmt.setBoolean(4, enableNowait);
         }
         if (updateIdList.size() > 0) {
             updateStmt.setArray(1, connection.createArrayOf("text", updateIdList.toArray()));
             updateStmt.setArray(2, handleUUID ? connection.createArrayOf("text", updateUuidList.toArray()) : null);
             updateStmt.setArray(3, connection.createArrayOf("jsonb", updateJsonbObjectList.toArray()));
             updateStmt.setArray(4, connection.createArrayOf("geometry", updateGeometryList.toArray()));
+            updateStmt.setBoolean(5, enableNowait);
         }
 
         executeBatchesAndCheckOnFailures(dbh, updateIdList, updateWithoutGeometryIdList,
