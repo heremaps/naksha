@@ -1103,10 +1103,13 @@ AS
 $BODY$
 DECLARE
     -- local variables
+    stmt           TEXT;
     lock_stmt           TEXT;
     lock_with_uuid_stmt TEXT;
     upd_stmt            TEXT;
+    upd_stmt_name       TEXT;
     upd_with_uuid_stmt  TEXT;
+    upd_with_uuid_stmt_name TEXT;
     arr_size    int;
     idx         int;
     orig_idx_pos int;
@@ -1165,7 +1168,8 @@ BEGIN
     END;
 
     BEGIN
-        upd_stmt := format('PREPARE upd_stmt(jsonb,geometry,text) AS '
+        upd_stmt_name := 'upd_stmt_'||round(random()*1000000)::TEXT;
+        upd_stmt := format('PREPARE '||upd_stmt_name||'(jsonb,geometry,text) AS '
                             ||'UPDATE "%s"."%s" SET jsondata = $1, geo = $2 '
                             ||'WHERE jsondata->>''id'' = $3 '
                             ||'RETURNING jsondata->''properties''->''@ns:com:here:xyz'' '
@@ -1176,7 +1180,8 @@ BEGIN
     END;
 
     BEGIN
-        upd_with_uuid_stmt := format('PREPARE upd_with_uuid_stmt(jsonb,geometry,text,text) AS '
+        upd_with_uuid_stmt_name := 'upd_with_uuid_stmt_'||round(random()*1000000)::TEXT;
+        upd_with_uuid_stmt := format('PREPARE '||upd_with_uuid_stmt_name||'(jsonb,geometry,text,text) AS '
                             ||'UPDATE "%s"."%s" SET jsondata = $1, geo = $2 '
                             ||'WHERE jsondata->>''id'' = $3 '
                             ||'AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $4 '
@@ -1202,9 +1207,9 @@ BEGIN
             -- Use NOWAIT feature for specific table
             IF (enable_nowait) THEN
                 IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                    EXECUTE format('EXECUTE lock_with_uuid_stmt(%s, %s)', quote_literal(in_id_arr[orig_idx_pos]), quote_literal(in_uuid_arr[orig_idx_pos]) );
+                    EXECUTE format('EXECUTE lock_with_uuid_stmt(%L, %L)', in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos] );
                 ELSE
-                    EXECUTE format('EXECUTE lock_stmt(%s)', quote_literal(in_id_arr[orig_idx_pos]));
+                    EXECUTE format('EXECUTE lock_stmt(%L)', in_id_arr[orig_idx_pos]);
                 END IF;
                 GET CURRENT DIAGNOSTICS row_count = ROW_COUNT;
                 IF (row_count <= 0) THEN
@@ -1221,18 +1226,22 @@ BEGIN
 
             -- Execute UPDATE statement
             IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                EXECUTE format('EXECUTE upd_with_uuid_stmt(%L, %L, %s, %s)',
-                        in_jsondata_arr[orig_idx_pos], geo, quote_literal(in_id_arr[orig_idx_pos]), quote_literal(in_uuid_arr[orig_idx_pos]) )
-                    INTO xyz_ns;
+                stmt := format('EXECUTE '||upd_with_uuid_stmt_name||'(%L, %L, %L, %L)',
+                        in_jsondata_arr[orig_idx_pos], geo, in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos] );
             ELSE
-                EXECUTE format('EXECUTE upd_stmt(%L, %L, %s)',
-                        in_jsondata_arr[orig_idx_pos], geo, quote_literal(in_id_arr[orig_idx_pos]) )
-                    INTO xyz_ns;
+                stmt := format('EXECUTE '||upd_stmt_name||'(%L, %L, %L)',
+                        in_jsondata_arr[orig_idx_pos], geo, in_id_arr[orig_idx_pos] );
             END IF;
-            GET CURRENT DIAGNOSTICS row_count = ROW_COUNT;
+            --RAISE NOTICE 'Statement to be executed is [%]', stmt;
+            EXECUTE stmt INTO xyz_ns;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
             IF (row_count <= 0) THEN
                 -- 'P0002'
-                RAISE NO_DATA_FOUND USING MESSAGE = 'No data found for Id '||in_id_arr[orig_idx_pos];
+                IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
+                    RAISE NO_DATA_FOUND USING MESSAGE = 'No data found for Id '||in_id_arr[orig_idx_pos]||', Uuid '||in_uuid_arr[orig_idx_pos];
+                ELSE
+                    RAISE NO_DATA_FOUND USING MESSAGE = 'No data found for Id '||in_id_arr[orig_idx_pos];
+                END IF;
             ELSE
                 -- Operation successful
                 out_success_arr[orig_idx_pos] := TRUE;
