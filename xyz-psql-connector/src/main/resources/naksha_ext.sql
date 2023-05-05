@@ -1103,13 +1103,16 @@ AS
 $BODY$
 DECLARE
     -- local variables
+    random_num          TEXT;
     stmt           TEXT;
     lock_stmt           TEXT;
+    lock_stmt_name      TEXT;
     lock_with_uuid_stmt TEXT;
+    lock_with_uuid_stmt_name    TEXT;
     upd_stmt            TEXT;
     upd_stmt_name       TEXT;
     upd_with_uuid_stmt  TEXT;
-    upd_with_uuid_stmt_name TEXT;
+    upd_with_uuid_stmt_name     TEXT;
     arr_size    int;
     idx         int;
     orig_idx_pos int;
@@ -1148,8 +1151,10 @@ BEGIN
     orig_idx_arr := id_pos_hstore -> sorted_id_arr; -- Original array idx position of each sorted Id
 
     -- Prepare statements upfront for perf optimization purpose
+    random_num := round(random()*1000000)::TEXT;
     BEGIN
-        lock_stmt := format('PREPARE lock_stmt(text) AS SELECT 1 FROM "%s"."%s" '
+        lock_stmt_name := 'lock_stmt_'||random_num;
+        lock_stmt := format('PREPARE '||lock_stmt_name||'(text) AS SELECT 1 FROM "%s"."%s" '
                             ||'WHERE jsondata->>''id'' = $1 '
                             ||'FOR UPDATE NOWAIT ', in_schema, in_table);
         EXECUTE lock_stmt;
@@ -1158,7 +1163,8 @@ BEGIN
     END;
 
     BEGIN
-        lock_with_uuid_stmt := format('PREPARE lock_with_uuid_stmt(text,text) AS SELECT 1 FROM "%s"."%s" '
+        lock_with_uuid_stmt_name := 'lock_with_uuid_stmt_'||random_num;
+        lock_with_uuid_stmt := format('PREPARE '||lock_with_uuid_stmt_name||'(text,text) AS SELECT 1 FROM "%s"."%s" '
                                     ||'WHERE jsondata->>''id'' = $1 '
                                     ||'AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $2 '
                                     ||'FOR UPDATE NOWAIT ', in_schema, in_table);
@@ -1168,7 +1174,7 @@ BEGIN
     END;
 
     BEGIN
-        upd_stmt_name := 'upd_stmt_'||round(random()*1000000)::TEXT;
+        upd_stmt_name := 'upd_stmt_'||random_num;
         upd_stmt := format('PREPARE '||upd_stmt_name||'(jsonb,geometry,text) AS '
                             ||'UPDATE "%s"."%s" SET jsondata = $1, geo = $2 '
                             ||'WHERE jsondata->>''id'' = $3 '
@@ -1180,7 +1186,7 @@ BEGIN
     END;
 
     BEGIN
-        upd_with_uuid_stmt_name := 'upd_with_uuid_stmt_'||round(random()*1000000)::TEXT;
+        upd_with_uuid_stmt_name := 'upd_with_uuid_stmt_'||random_num;
         upd_with_uuid_stmt := format('PREPARE '||upd_with_uuid_stmt_name||'(jsonb,geometry,text,text) AS '
                             ||'UPDATE "%s"."%s" SET jsondata = $1, geo = $2 '
                             ||'WHERE jsondata->>''id'' = $3 '
@@ -1207,14 +1213,20 @@ BEGIN
             -- Use NOWAIT feature for specific table
             IF (enable_nowait) THEN
                 IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                    EXECUTE format('EXECUTE lock_with_uuid_stmt(%L, %L)', in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos] );
+                    stmt := format('EXECUTE %s(%L, %L)', lock_with_uuid_stmt_name, in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos] );
                 ELSE
-                    EXECUTE format('EXECUTE lock_stmt(%L)', in_id_arr[orig_idx_pos]);
+                    stmt := format('EXECUTE %s(%L)', lock_stmt_name, in_id_arr[orig_idx_pos]);
                 END IF;
-                GET CURRENT DIAGNOSTICS row_count = ROW_COUNT;
+                --RAISE NOTICE 'Lock statement to be executed is [%]', stmt;
+                EXECUTE stmt;
+                GET DIAGNOSTICS row_count = ROW_COUNT;
                 IF (row_count <= 0) THEN
                     -- '55P03'
-                    RAISE LOCK_NOT_AVAILABLE USING MESSAGE = 'no matching document/version found to lock for Id '||in_id_arr[orig_idx_pos];
+                    IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
+                        RAISE LOCK_NOT_AVAILABLE USING MESSAGE = 'no matching doc found to lock for Id '||in_id_arr[orig_idx_pos]||', Uuid '||in_uuid_arr[orig_idx_pos];
+                    ELSE
+                        RAISE LOCK_NOT_AVAILABLE USING MESSAGE = 'no matching doc found to lock for Id '||in_id_arr[orig_idx_pos];
+                    END IF;
                 END IF;
             END IF;
 
@@ -1226,13 +1238,13 @@ BEGIN
 
             -- Execute UPDATE statement
             IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                stmt := format('EXECUTE '||upd_with_uuid_stmt_name||'(%L, %L, %L, %L)',
-                        in_jsondata_arr[orig_idx_pos], geo, in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos] );
+                stmt := format('EXECUTE %s(%L, %L, %L, %L)',
+                        upd_with_uuid_stmt_name, in_jsondata_arr[orig_idx_pos], geo, in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos] );
             ELSE
-                stmt := format('EXECUTE '||upd_stmt_name||'(%L, %L, %L)',
-                        in_jsondata_arr[orig_idx_pos], geo, in_id_arr[orig_idx_pos] );
+                stmt := format('EXECUTE %s(%L, %L, %L)',
+                        upd_stmt_name, in_jsondata_arr[orig_idx_pos], geo, in_id_arr[orig_idx_pos] );
             END IF;
-            --RAISE NOTICE 'Statement to be executed is [%]', stmt;
+            --RAISE NOTICE 'Update statement to be executed is [%]', stmt;
             EXECUTE stmt INTO xyz_ns;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             IF (row_count <= 0) THEN
