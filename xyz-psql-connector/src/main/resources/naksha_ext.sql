@@ -576,42 +576,70 @@ BEGIN
     sql := format('CREATE TABLE IF NOT EXISTS %I.%I ('
                || 'jsondata jsonb, '
                || 'geo geometry(GeometryZ, 4326), '
-               || 'i int8 PRIMARY KEY NOT NULL)',
+               || 'i int8 NOT NULL)',
         _schema, _table);
     --RAISE NOTICE '%', sql;
     EXECUTE sql;
 
-    sql := format('CREATE SEQUENCE IF NOT EXISTS %I.%I AS int8 OWNED BY %I.i', _schema, format('%s_i_seq', _table), _table);
+    sql := format('CREATE SEQUENCE IF NOT EXISTS %I.%I AS int8 OWNED BY %I.%I.i', _schema, format('%s_i_seq', _table), _schema, _table);
     --RAISE NOTICE '%', sql;
     EXECUTE sql;
 
     -- Note: The HEAD table is updated very often, therefore we should not fill the indices too
     --       much to avoid too many page splits. This is as well helpful when doing bulk loads.
 
-    -- Indices with important constrains.
-    EXECUTE format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_id(jsondata) ASC) WITH (fillfactor=50)',
-                    format('%s_id_idx', _table), _schema, _table);
-    EXECUTE format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_uuid(jsondata) DESC) WITH (fillfactor=50)',
-                    format('%s_uuid_idx', _table), _schema, _table);
+    -- Mandatory indices with important constraints.
+    sql := format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree ((jsondata->>''id'') ASC)',
+                    format('%s_id_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
 
-    -- Indices that can be delayed in creation.
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                 || 'USING gist (geo) WITH (buffering=ON,fillfactor=50)',
-                    format('%s_geo_idx', _table), _schema, _table);
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_txn(jsondata) DESC) WITH (fillfactor=50)',
-                   format('%s_txn_idx', _table), _schema, _table);
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_createdAt(jsondata) DESC) WITH (fillfactor=50)',
-                   format('%s_createdAt_idx', _table), _schema, _table);
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_updatedAt(jsondata) DESC) WITH (fillfactor=50)',
-                   format('%s_updatedAt_idx', _table), _schema, _table);
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_lastUpdatedBy(jsondata) ASC) WITH (fillfactor=50)',
-                   format('%s_lastUpdatedBy_idx', _table), _schema, _table);
+    sql := format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree (i ASC) WITH (fillfactor=50)',
+                    format('%s_serial_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    -- Other default enabled (opt-out) indices.
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree ((jsondata->''properties''->''@ns:com:here:xyz''->''createdAt'') DESC, (jsondata->>''id''))',
+                   format('%s_createdAt_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING gist (geo)',
+                   format('%s_geo_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING gin ((jsondata->''properties''->''@ns:com:here:xyz''->''tags'') jsonb_ops)',
+                   format('%s_tags_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree ((jsondata->''properties''->''@ns:com:here:xyz''->''updatedAt'') DESC, (jsondata->>''id'')) WITH (fillfactor=50)',
+                   format('%s_updatedAt_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree (left( md5(''''||i),5)) WITH (fillfactor=50)',
+                   format('%s_viz_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    -- Other default disabled (opt-in) indices.
+    /*
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree (jsondata->''properties''->''@ns:com:here:mom:meta''->>''lastUpdatedBy'' ASC) WITH (fillfactor=50)',
+                   format('%s_lastUpdatedBy_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+    */
 
     -- We need the before trigger to update the XYZ namespace in jsondata.
     before_name := format('%s_before', _table);
@@ -684,7 +712,7 @@ BEGIN
     --       when doing bulk loads, because we may have more page splits.
     -- Therefore: Disable history for bulk loads by removing the triggers!
 
-    -- Indices with important constrains.
+    -- Mandatory indices with important constraints.
     sql := format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
                || 'USING btree (xyz_config.naksha_json_uuid(jsondata) DESC) '
                || 'INCLUDE (i) '
@@ -693,28 +721,20 @@ BEGIN
     RAISE NOTICE '%', sql;
     EXECUTE sql;
 
-    -- Indices that can be delayed in creation.
-    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_id(jsondata) ASC) '
-                || 'INCLUDE (i) '
-                || 'WITH (fillfactor=90) ',
-                  format('%s_id_idx', hst_part_name), _schema, hst_part_name);
-    RAISE NOTICE '%', sql;
-    EXECUTE sql;
-
-    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-               || 'USING gist (geo, xyz_config.naksha_json_id(jsondata), xyz_config.naksha_json_version(jsondata)) '
-               || 'INCLUDE (i) '
-               || 'WITH (buffering=ON,fillfactor=90) ',
-                  format('%s_geo_idx', hst_part_name), _schema, hst_part_name);
-    RAISE NOTICE '%', sql;
-    EXECUTE sql;
-
     sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
                || 'USING btree (xyz_config.naksha_json_txn(jsondata) DESC) '
                || 'INCLUDE (i) '
                || 'WITH (fillfactor=90) ',
                   format('%s_txn_idx', hst_part_name), _schema, hst_part_name);
+    RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    -- Other default enabled (opt-out) indices.
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree (xyz_config.naksha_json_id(jsondata) ASC) '
+                || 'INCLUDE (i) '
+                || 'WITH (fillfactor=90) ',
+                  format('%s_id_idx', hst_part_name), _schema, hst_part_name);
     RAISE NOTICE '%', sql;
     EXECUTE sql;
 
@@ -743,6 +763,17 @@ BEGIN
                   format('%s_lastUpdatedBy_idx', hst_part_name), _schema, hst_part_name);
     RAISE NOTICE '%', sql;
     EXECUTE sql;
+
+    -- Other default disabled (opt-in) indices.
+    /*
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+               || 'USING gist (geo, xyz_config.naksha_json_id(jsondata), xyz_config.naksha_json_version(jsondata)) '
+               || 'INCLUDE (i) '
+               || 'WITH (buffering=ON,fillfactor=90) ',
+                  format('%s_geo_idx', hst_part_name), _schema, hst_part_name);
+    RAISE NOTICE '%', sql;
+    EXECUTE sql;
+    */
 END
 $BODY$;
 
@@ -1103,10 +1134,16 @@ AS
 $BODY$
 DECLARE
     -- local variables
+    random_num          TEXT;
+    stmt           TEXT;
     lock_stmt           TEXT;
+    lock_stmt_name      TEXT;
     lock_with_uuid_stmt TEXT;
+    lock_with_uuid_stmt_name    TEXT;
     upd_stmt            TEXT;
+    upd_stmt_name       TEXT;
     upd_with_uuid_stmt  TEXT;
+    upd_with_uuid_stmt_name     TEXT;
     arr_size    int;
     idx         int;
     orig_idx_pos int;
@@ -1145,8 +1182,10 @@ BEGIN
     orig_idx_arr := id_pos_hstore -> sorted_id_arr; -- Original array idx position of each sorted Id
 
     -- Prepare statements upfront for perf optimization purpose
+    random_num := round(random()*1000000)::TEXT;
     BEGIN
-        lock_stmt := format('PREPARE lock_stmt(text) AS SELECT 1 FROM "%s"."%s" '
+        lock_stmt_name := 'lock_stmt_'||random_num;
+        lock_stmt := format('PREPARE '||lock_stmt_name||'(text) AS SELECT 1 FROM "%s"."%s" '
                             ||'WHERE jsondata->>''id'' = $1 '
                             ||'FOR UPDATE NOWAIT ', in_schema, in_table);
         EXECUTE lock_stmt;
@@ -1155,7 +1194,8 @@ BEGIN
     END;
 
     BEGIN
-        lock_with_uuid_stmt := format('PREPARE lock_with_uuid_stmt(text,text) AS SELECT 1 FROM "%s"."%s" '
+        lock_with_uuid_stmt_name := 'lock_with_uuid_stmt_'||random_num;
+        lock_with_uuid_stmt := format('PREPARE '||lock_with_uuid_stmt_name||'(text,text) AS SELECT 1 FROM "%s"."%s" '
                                     ||'WHERE jsondata->>''id'' = $1 '
                                     ||'AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $2 '
                                     ||'FOR UPDATE NOWAIT ', in_schema, in_table);
@@ -1165,7 +1205,8 @@ BEGIN
     END;
 
     BEGIN
-        upd_stmt := format('PREPARE upd_stmt(jsonb,geometry,text) AS '
+        upd_stmt_name := 'upd_stmt_'||random_num;
+        upd_stmt := format('PREPARE '||upd_stmt_name||'(jsonb,geometry,text) AS '
                             ||'UPDATE "%s"."%s" SET jsondata = $1, geo = $2 '
                             ||'WHERE jsondata->>''id'' = $3 '
                             ||'RETURNING jsondata->''properties''->''@ns:com:here:xyz'' '
@@ -1176,7 +1217,8 @@ BEGIN
     END;
 
     BEGIN
-        upd_with_uuid_stmt := format('PREPARE upd_with_uuid_stmt(jsonb,geometry,text,text) AS '
+        upd_with_uuid_stmt_name := 'upd_with_uuid_stmt_'||random_num;
+        upd_with_uuid_stmt := format('PREPARE '||upd_with_uuid_stmt_name||'(jsonb,geometry,text,text) AS '
                             ||'UPDATE "%s"."%s" SET jsondata = $1, geo = $2 '
                             ||'WHERE jsondata->>''id'' = $3 '
                             ||'AND jsondata->''properties''->''@ns:com:here:xyz''->>''uuid'' = $4 '
@@ -1202,14 +1244,20 @@ BEGIN
             -- Use NOWAIT feature for specific table
             IF (enable_nowait) THEN
                 IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                    EXECUTE format('EXECUTE lock_with_uuid_stmt(%s, %s)', quote_literal(in_id_arr[orig_idx_pos]), quote_literal(in_uuid_arr[orig_idx_pos]) );
+                    stmt := format('EXECUTE %s(%L, %L)', lock_with_uuid_stmt_name, in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos] );
                 ELSE
-                    EXECUTE format('EXECUTE lock_stmt(%s)', quote_literal(in_id_arr[orig_idx_pos]));
+                    stmt := format('EXECUTE %s(%L)', lock_stmt_name, in_id_arr[orig_idx_pos]);
                 END IF;
-                GET CURRENT DIAGNOSTICS row_count = ROW_COUNT;
+                --RAISE NOTICE 'Lock statement to be executed is [%]', stmt;
+                EXECUTE stmt;
+                GET DIAGNOSTICS row_count = ROW_COUNT;
                 IF (row_count <= 0) THEN
                     -- '55P03'
-                    RAISE LOCK_NOT_AVAILABLE USING MESSAGE = 'no matching document/version found to lock for Id '||in_id_arr[orig_idx_pos];
+                    IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
+                        RAISE LOCK_NOT_AVAILABLE USING MESSAGE = 'no matching doc found to lock for Id '||in_id_arr[orig_idx_pos]||', Uuid '||in_uuid_arr[orig_idx_pos];
+                    ELSE
+                        RAISE LOCK_NOT_AVAILABLE USING MESSAGE = 'no matching doc found to lock for Id '||in_id_arr[orig_idx_pos];
+                    END IF;
                 END IF;
             END IF;
 
@@ -1221,18 +1269,22 @@ BEGIN
 
             -- Execute UPDATE statement
             IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
-                EXECUTE format('EXECUTE upd_with_uuid_stmt(%L, %L, %s, %s)',
-                        in_jsondata_arr[orig_idx_pos], geo, quote_literal(in_id_arr[orig_idx_pos]), quote_literal(in_uuid_arr[orig_idx_pos]) )
-                    INTO xyz_ns;
+                stmt := format('EXECUTE %s(%L, %L, %L, %L)',
+                        upd_with_uuid_stmt_name, in_jsondata_arr[orig_idx_pos], geo, in_id_arr[orig_idx_pos], in_uuid_arr[orig_idx_pos] );
             ELSE
-                EXECUTE format('EXECUTE upd_stmt(%L, %L, %s)',
-                        in_jsondata_arr[orig_idx_pos], geo, quote_literal(in_id_arr[orig_idx_pos]) )
-                    INTO xyz_ns;
+                stmt := format('EXECUTE %s(%L, %L, %L)',
+                        upd_stmt_name, in_jsondata_arr[orig_idx_pos], geo, in_id_arr[orig_idx_pos] );
             END IF;
-            GET CURRENT DIAGNOSTICS row_count = ROW_COUNT;
+            --RAISE NOTICE 'Update statement to be executed is [%]', stmt;
+            EXECUTE stmt INTO xyz_ns;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
             IF (row_count <= 0) THEN
                 -- 'P0002'
-                RAISE NO_DATA_FOUND USING MESSAGE = 'No data found for Id '||in_id_arr[orig_idx_pos];
+                IF (in_uuid_arr IS NOT NULL AND in_uuid_arr[orig_idx_pos] IS NOT NULL) THEN
+                    RAISE NO_DATA_FOUND USING MESSAGE = 'No data found for Id '||in_id_arr[orig_idx_pos]||', Uuid '||in_uuid_arr[orig_idx_pos];
+                ELSE
+                    RAISE NO_DATA_FOUND USING MESSAGE = 'No data found for Id '||in_id_arr[orig_idx_pos];
+                END IF;
             ELSE
                 -- Operation successful
                 out_success_arr[orig_idx_pos] := TRUE;
