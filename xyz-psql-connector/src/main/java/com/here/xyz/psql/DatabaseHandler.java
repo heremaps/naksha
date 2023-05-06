@@ -835,8 +835,11 @@ public abstract class DatabaseHandler extends StorageConnector {
         // Note: We can assume that when the table exists, the postgis extensions are installed.
         if (hasTable()) return;
 
+        // Note: Table creation is using naksha_ext.sql, which should have been already done, hence returning error from here.
         final String tableName = config.readTableFromEvent(event);
+        throw new SQLException("Space table doesn't exist : "+tableName);
 
+        /*
         try (final Connection connection = dataSource.getConnection()) {
             advisoryLock( tableName, connection );
             boolean cStateFlag = connection.getAutoCommit();
@@ -867,6 +870,7 @@ public abstract class DatabaseHandler extends StorageConnector {
                  connection.setAutoCommit(true);
             }
         }
+        */
     }
 
     private void createSpaceStatement(Statement stmt, String tableName) throws SQLException {
@@ -918,8 +922,13 @@ public abstract class DatabaseHandler extends StorageConnector {
     }
 
     protected void ensureHistorySpace(Integer maxVersionCount, boolean compactHistory, boolean isEnableGlobalVersioning) throws SQLException {
-        final String tableName = config.readTableFromEvent(event);
+        if (hasTable()) return;
 
+        final String tableName = config.readTableFromEvent(event);
+        throw new SQLException("History table doesn't exist : "+tableName);
+
+        // Note: Table creation is using naksha_ext.sql, which should have been already done, hence returning error from here.
+        /*
         try (final Connection connection = dataSource.getConnection()) {
             advisoryLock( tableName, connection );
             boolean cStateFlag = connection.getAutoCommit();
@@ -928,7 +937,7 @@ public abstract class DatabaseHandler extends StorageConnector {
                  connection.setAutoCommit(false);
 
                 try (Statement stmt = connection.createStatement()) {
-                    /** Create Space-Table */
+                    // Create Space-Table
                     createSpaceStatement(stmt, tableName);
 
                     String query = "CREATE TABLE IF NOT EXISTS ${schema}.${hsttable} (uuid text NOT NULL, jsondata jsonb, geo geometry(GeometryZ,4326)," +
@@ -976,10 +985,10 @@ public abstract class DatabaseHandler extends StorageConnector {
                     }
 
                     if(!isEnableGlobalVersioning) {
-                        /** old naming */
+                        // old naming
                         query = SQLQueryBuilder.deleteHistoryTriggerSQL(config.getDatabaseSettings().getSchema(), tableName)[0];
                         stmt.addBatch(query);
-                        /** new naming */
+                        // new naming
                         query = SQLQueryBuilder.deleteHistoryTriggerSQL(config.getDatabaseSettings().getSchema(), tableName)[1];
                         stmt.addBatch(query);
                     }
@@ -1000,6 +1009,7 @@ public abstract class DatabaseHandler extends StorageConnector {
                 connection.setAutoCommit(true);
             }
         }
+        */
     }
 
     protected void updateHistoryTrigger(Integer maxVersionCount, boolean compactHistory, boolean isEnableGlobalVersioning) throws SQLException {

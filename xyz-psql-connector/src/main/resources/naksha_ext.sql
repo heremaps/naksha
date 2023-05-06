@@ -576,42 +576,70 @@ BEGIN
     sql := format('CREATE TABLE IF NOT EXISTS %I.%I ('
                || 'jsondata jsonb, '
                || 'geo geometry(GeometryZ, 4326), '
-               || 'i int8 PRIMARY KEY NOT NULL)',
+               || 'i int8 NOT NULL)',
         _schema, _table);
     --RAISE NOTICE '%', sql;
     EXECUTE sql;
 
-    sql := format('CREATE SEQUENCE IF NOT EXISTS %I.%I AS int8 OWNED BY %I.i', _schema, format('%s_i_seq', _table), _table);
+    sql := format('CREATE SEQUENCE IF NOT EXISTS %I.%I AS int8 OWNED BY %I.%I.i', _schema, format('%s_i_seq', _table), _schema, _table);
     --RAISE NOTICE '%', sql;
     EXECUTE sql;
 
     -- Note: The HEAD table is updated very often, therefore we should not fill the indices too
     --       much to avoid too many page splits. This is as well helpful when doing bulk loads.
 
-    -- Indices with important constrains.
-    EXECUTE format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_id(jsondata) ASC) WITH (fillfactor=50)',
-                    format('%s_id_idx', _table), _schema, _table);
-    EXECUTE format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_uuid(jsondata) DESC) WITH (fillfactor=50)',
-                    format('%s_uuid_idx', _table), _schema, _table);
+    -- Mandatory indices with important constraints.
+    sql := format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree ((jsondata->>''id'') ASC)',
+                    format('%s_id_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
 
-    -- Indices that can be delayed in creation.
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                 || 'USING gist (geo) WITH (buffering=ON,fillfactor=50)',
-                    format('%s_geo_idx', _table), _schema, _table);
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_txn(jsondata) DESC) WITH (fillfactor=50)',
-                   format('%s_txn_idx', _table), _schema, _table);
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_createdAt(jsondata) DESC) WITH (fillfactor=50)',
-                   format('%s_createdAt_idx', _table), _schema, _table);
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_updatedAt(jsondata) DESC) WITH (fillfactor=50)',
-                   format('%s_updatedAt_idx', _table), _schema, _table);
-    EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_lastUpdatedBy(jsondata) ASC) WITH (fillfactor=50)',
-                   format('%s_lastUpdatedBy_idx', _table), _schema, _table);
+    sql := format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree (i ASC) WITH (fillfactor=50)',
+                    format('%s_serial_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    -- Other default enabled (opt-out) indices.
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree ((jsondata->''properties''->''@ns:com:here:xyz''->''createdAt'') DESC, (jsondata->>''id''))',
+                   format('%s_createdAt_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING gist (geo)',
+                   format('%s_geo_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING gin ((jsondata->''properties''->''@ns:com:here:xyz''->''tags'') jsonb_ops)',
+                   format('%s_tags_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree ((jsondata->''properties''->''@ns:com:here:xyz''->''updatedAt'') DESC, (jsondata->>''id'')) WITH (fillfactor=50)',
+                   format('%s_updatedAt_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree (left( md5(''''||i),5)) WITH (fillfactor=50)',
+                   format('%s_viz_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    -- Other default disabled (opt-in) indices.
+    /*
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree (jsondata->''properties''->''@ns:com:here:mom:meta''->>''lastUpdatedBy'' ASC) WITH (fillfactor=50)',
+                   format('%s_lastUpdatedBy_idx',_table), _schema, _table);
+    --RAISE NOTICE '%', sql;
+    EXECUTE sql;
+    */
 
     -- We need the before trigger to update the XYZ namespace in jsondata.
     before_name := format('%s_before', _table);
@@ -684,7 +712,7 @@ BEGIN
     --       when doing bulk loads, because we may have more page splits.
     -- Therefore: Disable history for bulk loads by removing the triggers!
 
-    -- Indices with important constrains.
+    -- Mandatory indices with important constraints.
     sql := format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I '
                || 'USING btree (xyz_config.naksha_json_uuid(jsondata) DESC) '
                || 'INCLUDE (i) '
@@ -693,28 +721,20 @@ BEGIN
     RAISE NOTICE '%', sql;
     EXECUTE sql;
 
-    -- Indices that can be delayed in creation.
-    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-                || 'USING btree (xyz_config.naksha_json_id(jsondata) ASC) '
-                || 'INCLUDE (i) '
-                || 'WITH (fillfactor=90) ',
-                  format('%s_id_idx', hst_part_name), _schema, hst_part_name);
-    RAISE NOTICE '%', sql;
-    EXECUTE sql;
-
-    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
-               || 'USING gist (geo, xyz_config.naksha_json_id(jsondata), xyz_config.naksha_json_version(jsondata)) '
-               || 'INCLUDE (i) '
-               || 'WITH (buffering=ON,fillfactor=90) ',
-                  format('%s_geo_idx', hst_part_name), _schema, hst_part_name);
-    RAISE NOTICE '%', sql;
-    EXECUTE sql;
-
     sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
                || 'USING btree (xyz_config.naksha_json_txn(jsondata) DESC) '
                || 'INCLUDE (i) '
                || 'WITH (fillfactor=90) ',
                   format('%s_txn_idx', hst_part_name), _schema, hst_part_name);
+    RAISE NOTICE '%', sql;
+    EXECUTE sql;
+
+    -- Other default enabled (opt-out) indices.
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+                || 'USING btree (xyz_config.naksha_json_id(jsondata) ASC) '
+                || 'INCLUDE (i) '
+                || 'WITH (fillfactor=90) ',
+                  format('%s_id_idx', hst_part_name), _schema, hst_part_name);
     RAISE NOTICE '%', sql;
     EXECUTE sql;
 
@@ -743,6 +763,17 @@ BEGIN
                   format('%s_lastUpdatedBy_idx', hst_part_name), _schema, hst_part_name);
     RAISE NOTICE '%', sql;
     EXECUTE sql;
+
+    -- Other default disabled (opt-in) indices.
+    /*
+    sql := format('CREATE INDEX IF NOT EXISTS %I ON %I.%I '
+               || 'USING gist (geo, xyz_config.naksha_json_id(jsondata), xyz_config.naksha_json_version(jsondata)) '
+               || 'INCLUDE (i) '
+               || 'WITH (buffering=ON,fillfactor=90) ',
+                  format('%s_geo_idx', hst_part_name), _schema, hst_part_name);
+    RAISE NOTICE '%', sql;
+    EXECUTE sql;
+    */
 END
 $BODY$;
 
