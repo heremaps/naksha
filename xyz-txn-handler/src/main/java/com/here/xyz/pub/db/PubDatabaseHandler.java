@@ -223,9 +223,10 @@ public class PubDatabaseHandler {
                 rs.close();
             }
             final long duration = System.currentTimeMillis() - startTS;
-            if (duration > TimeUnit.SECONDS.toMillis(5) || logger.isDebugEnabled()) {
-                logger.info("Publisher took {}ms to fetch {} publishable transactions for space {}.",
-                        duration, rowCnt, spaceId);
+            // Log only if it is relevant (to avoid noisy logs)
+            if (rowCnt > 0 || duration > TimeUnit.MILLISECONDS.toMillis(100)) {
+                logger.info("Publisher transaction fetch stats format [eventType,spaceId,fetchCount,timeTakenMs] - {} {} {} {}",
+                        PubLogConstants.LOG_EVT_TXN_FETCH_STATS, spaceId, rowCnt, duration);
             }
         }
         return txnList;

@@ -71,8 +71,6 @@ public class PubSubscriptionHandler implements Runnable{
                     PubDatabaseHandler.fetchPublishableTransactions(spaceDBConnParams, spaceId, lastTxn, pubCfg.TXN_PUB_FETCH_SIZE)
                 ) != null
             ) {
-                logger.info("Fetched [{}] publishable records for subId [{}], space [{}]",
-                        txnList.size(), subId, spaceId);
                 txnFound = true;
                 // Handover transactions to appropriate Publisher (e.g. DefaultSNSPublisher)
                 lastTxn = PubUtil.getPubInstance(sub).publishTransactions(pubCfg, sub, txnList, lastTxn.getLastTxnId(), lastTxn.getLastTxnRecId());
