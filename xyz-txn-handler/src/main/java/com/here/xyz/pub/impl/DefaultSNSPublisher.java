@@ -1,6 +1,7 @@
 package com.here.xyz.pub.impl;
 
 import com.here.xyz.models.hub.Subscription;
+import com.here.xyz.pub.mapper.IPubMsgMapper;
 import com.here.xyz.pub.models.PubConfig;
 import com.here.xyz.pub.models.PubLogConstants;
 import com.here.xyz.pub.models.PubTransactionData;
@@ -34,16 +35,20 @@ public class DefaultSNSPublisher implements IPublisher {
         // local counters
         final PublishEntryDTO pubDTO = new PublishEntryDTO(lastStoredTxnId, lastStoredTxnRecId);
         long publishedRecCnt = 0;
-        SnsAsyncClient snsClient = null;
 
         try {
+            final IPubMsgMapper msgMapper = MessageUtil.getMsgMapperInstance(sub);
+            // TODO : Support multi-region based on subscription configuration.
+            // We may require region specific publisher job for the respective subscriptions.
+            final SnsAsyncClient snsClient = AwsUtil.getSnsAsyncClient(pubCfg.AWS_DEFAULT_REGION);
+
             // Publish all transactions on SNS Topic (in the same order they were fetched)
             for (final PubTransactionData txnData : txnList) {
                 final long crtTxnId = txnData.getTxnId();
                 final long crtTxnRecId = txnData.getTxnRecId();
                 final long startTS = System.currentTimeMillis();
                 // Convert transaction payload into expected publishable format
-                final String pubFormat = MessageUtil.getMsgMapperInstance(sub).mapToPublishableFormat(sub, txnData);
+                final String pubFormat = msgMapper.mapToPublishableFormat(sub, txnData);
 
                 // Prepare SNS Notification message
                 final String msg = MessageUtil.compressAndEncodeToString(pubFormat);
@@ -55,11 +60,6 @@ public class DefaultSNSPublisher implements IPublisher {
                 MessageUtil.addCustomFieldsToAttributeMap(msgAttrMap, sub, txnData.getJsonData());
 
                 // Publish message to SNS Topic
-                if (snsClient == null) {
-                    // TODO : Support multi-region based on subscription configuration.
-                    // We may require region specific publisher job for the respective subscriptions.
-                    snsClient = AwsUtil.getSnsAsyncClient(pubCfg.AWS_DEFAULT_REGION);
-                }
                 final PublishRequest request = PublishRequest.builder()
                         .message(msg)
                         .messageAttributes(msgAttrMap)
@@ -79,7 +79,7 @@ public class DefaultSNSPublisher implements IPublisher {
         }
         finally {
             final long lotTimeTaken = System.currentTimeMillis() - lotStartTS;
-            logger.info("Transaction publish stats format for SNS [{}] [eventType,subId,spaceId,msgCount,timeTakenMs,lastTxnId,lastTxnRecId] - {} {} {} {} {} {} {}",
+            logger.info("Transaction publish stats for SNS [{}] [format => eventType,subId,spaceId,msgCount,timeTakenMs,lastTxnId,lastTxnRecId] - {} {} {} {} {} {} {}",
                     snsTopic, PubLogConstants.LOG_EVT_TXN_PUBLISH_STATS, subId, spaceId, publishedRecCnt, lotTimeTaken, pubDTO.getLastTxnId(), pubDTO.getLastTxnRecId());
         }
 
