@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class DefaultSNSPublisher implements IPublisher {
+public class DefaultSNSSinglePublisher implements IPublisher {
     private static final Logger logger = LogManager.getLogger();
 
     // Convert and publish transactions to desired SNS Topic

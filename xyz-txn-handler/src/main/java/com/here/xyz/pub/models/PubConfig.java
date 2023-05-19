@@ -13,6 +13,7 @@ public class PubConfig {
 
     // Transaction Publisher specific configuration
     public boolean ENABLE_TXN_PUBLISHER;
+    public boolean ENABLE_TXN_PUB_DETAILED_LOGGING;
     public long TXN_PUB_JOB_INITIAL_DELAY_MS;
     public long TXN_PUB_JOB_SUBSEQUENT_DELAY_MS;
     public int TXN_PUB_FETCH_SIZE = 50;

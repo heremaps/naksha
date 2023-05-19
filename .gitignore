@@ -8,4 +8,5 @@ target/
 file-uploads/
 static/
 release.properties
-jmeter.log
+*.log
+*.jfr

@@ -46,6 +46,7 @@
     <startHub>false</startHub>
     <pathToConfig>deployment/local/config.json</pathToConfig>
     <dockerComposeFile>docker-compose.yml</dockerComposeFile>
+    <aws-sdk.version>2.20.11</aws-sdk.version>
   </properties>
 
   <build>
@@ -276,6 +277,7 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sns</artifactId>
+      <version>${aws-sdk.version}</version>
     </dependency>
     <dependency>
       <groupId>com.amazonaws</groupId>
