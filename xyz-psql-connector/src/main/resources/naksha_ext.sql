@@ -1470,3 +1470,63 @@ BEGIN
                         ;
 END
 $BODY$;
+
+DROP FUNCTION IF EXISTS xyz_config.naksha_fetch_newer_transactions(TEXT,TEXT,TEXT,int8,int8,int);
+
+DROP TYPE IF EXISTS xyz_config.Naksha_newer_transactions;
+
+CREATE TYPE xyz_config.Naksha_newer_transactions AS (
+    txn_id          int8,
+    txn_rec_id      int8,
+    feature_action  TEXT,
+    feature_id      TEXT,
+    feature_json    jsonb,
+    feature_geo     geometry
+);
+
+CREATE OR REPLACE FUNCTION xyz_config.naksha_fetch_newer_transactions( in_hst_schema TEXT, in_hst_table TEXT,
+        in_space TEXT, in_last_txn_id int8, in_last_txn_rec_id int8, in_limit_rows int)
+    RETURNS SETOF xyz_config.Naksha_newer_transactions
+    LANGUAGE 'plpgsql' STABLE
+AS
+$BODY$
+DECLARE
+    txn_stmt            TEXT;
+    txn_record          RECORD;
+    features_stmt       TEXT;
+    features_record     xyz_config.Naksha_newer_transactions;
+    fetched_count       int;
+BEGIN
+    -- Statement to fetch newer transaction Id(s) from Transactions table for a given space
+    txn_stmt:= format('SELECT t.id, t.txn FROM xyz_config.transactions t '
+                    ||'WHERE t.space = $1 AND t.id >= $2 ORDER BY t.id ASC LIMIT %s', in_limit_rows+1);
+
+    fetched_count := 0;
+    -- Fetch transaction Id(s)
+    FOR txn_record IN EXECUTE txn_stmt USING in_space, in_last_txn_id LOOP
+        EXIT WHEN fetched_count >= in_limit_rows;
+        --RAISE NOTICE 'Transaction fetched is %', txn_record;
+
+        -- Fetch feature(s) from History table for current transaction Id
+        features_stmt := format('SELECT ''%s'', h.i, h.jsondata->''properties''->''@ns:com:here:xyz''->>''action'' AS action, h.jsondata->>''id'' AS featureId, h.jsondata, h.geo '
+                            ||'FROM %I.%I h '
+                            ||'WHERE xyz_config.naksha_json_txn_ts(h.jsondata) = xyz_config.naksha_uuid_ts(xyz_config.naksha_uuid_to_bytes($1))'
+                            ||'AND xyz_config.naksha_json_txn(h.jsondata) = $2 '
+                            ||'AND h.i > $3 '
+                            ||'ORDER BY h.i ASC '
+                            ||'LIMIT %s', txn_record.id, in_hst_schema, in_hst_table, in_limit_rows);
+
+        FOR features_record IN EXECUTE features_stmt USING txn_record.txn, txn_record.txn, in_last_txn_rec_id LOOP
+            --RAISE NOTICE 'Feature fetched is %', features_record;
+            RETURN NEXT features_record;
+
+            fetched_count := fetched_count + 1;
+            EXIT WHEN fetched_count >= in_limit_rows;
+        END LOOP;
+
+    END LOOP;
+
+    RETURN;
+END
+$BODY$;
+

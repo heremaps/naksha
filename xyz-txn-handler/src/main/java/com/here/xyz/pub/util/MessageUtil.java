@@ -26,7 +26,7 @@ public class MessageUtil {
     final public static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 
-    public static IPubMsgMapper getMsgMapperInstance(final Subscription sub) {
+    public static IPubMsgMapper getMsgMapperInstance(final Subscription sub) throws Exception {
         Map<String, Object> paramsMap = null;
         String msgFormat = null;
         // find out, which message format is requested
@@ -35,7 +35,7 @@ public class MessageUtil {
                 || (paramsMap = sub.getConfig().getParams()) == null
                 || (msgFormat = paramsMap.get("msgFormat").toString()) == null
         ) {
-            throw new RuntimeException("msgFormat not found for subId "+sub.getId());
+            throw new Exception("msgFormat not found for subId "+sub.getId());
         }
 
         // reuse mapper class from cache (if available)
@@ -47,7 +47,7 @@ public class MessageUtil {
                     msgMapper = new DefaultPubMsgMapper();
                     break;
                 default:
-                    throw new RuntimeException("Unsupported msgFormat ["+msgFormat+"] for subscription id "+sub.getId());
+                    throw new Exception("Unsupported msgFormat ["+msgFormat+"] for subscription id "+sub.getId());
             }
             instanceMap.put(msgFormat, msgMapper);
         }

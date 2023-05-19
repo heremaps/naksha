@@ -8,3 +8,5 @@ target/
 file-uploads/
 static/
 release.properties
+*.log
+*.jfr

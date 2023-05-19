@@ -1,7 +1,8 @@
 package com.here.xyz.pub.util;
 
 import com.here.xyz.models.hub.Subscription;
-import com.here.xyz.pub.impl.DefaultSNSPublisher;
+import com.here.xyz.pub.impl.DefaultSNSBatchPublisher;
+import com.here.xyz.pub.impl.DefaultSNSSinglePublisher;
 import com.here.xyz.pub.impl.IPublisher;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,7 +34,10 @@ public class PubUtil {
             // create new impl instance and add it in cache
             switch (pubType) {
                 case "DEFAULT-SNS-PUBLISHER":
-                    publisher = new DefaultSNSPublisher();
+                    publisher = new DefaultSNSBatchPublisher();
+                    break;
+                case "DEFAULT-SNS-SINGLE-PUBLISHER":
+                    publisher = new DefaultSNSSinglePublisher();
                     break;
                 default:
                     throw new RuntimeException("Unsupported pubType ["+pubType+"] for subscription id "+sub.getId());

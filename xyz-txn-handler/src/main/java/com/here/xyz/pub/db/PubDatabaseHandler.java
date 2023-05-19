@@ -40,15 +40,10 @@ public class PubDatabaseHandler {
     //      It may require a fix in future, if it needs to be transactional batch publish.
     final private static String SCHEMA_STR = "{{SCHEMA}}";
     final private static String TABLE_STR = "{{TABLE}}";
-    final private static String LIMIT_STR = "{{LIMIT}}";
     final private static String FETCH_TXNS_FROM_SPACEDB =
-            "SELECT t.id, h.i, h.jsondata, h.jsondata->'properties'->'@ns:com:here:xyz'->>'action' AS action, h.jsondata->>'id' AS featureId " +
-            "FROM "+SCHEMA_STR+".\""+TABLE_STR+"\" h, "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".transactions t " +
-            "WHERE "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".naksha_json_txn(h.jsondata) = t.txn " +
-            //"AND "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".naksha_json_txn_ts(h.jsondata) = "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".naksha_uuid_ts("+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".naksha_uuid_to_bytes(t.txn)) " +
-            "AND t.space = ? AND (t.id > ? OR (t.id = ? AND h.i > ?)) " +
-            "ORDER BY t.id ASC, h.i ASC " +
-            "LIMIT "+LIMIT_STR;
+            "SELECT txn_id, txn_rec_id, feature_action, feature_id, feature_json, feature_geo " +
+            "FROM "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".naksha_fetch_newer_transactions" +
+            "( '"+SCHEMA_STR+"', '"+TABLE_STR+"', ?, ?, ?, ?) ";
 
     final private static String UPDATE_PUB_TXN_ID =
             "UPDATE "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".xyz_txn_pub " +
@@ -194,8 +189,7 @@ public class PubDatabaseHandler {
 
         try (final Connection conn = PubJdbcConnectionPool.getConnection(spaceDBConnParams);) {
             final String SEL_STMT_STR = FETCH_TXNS_FROM_SPACEDB.replace(SCHEMA_STR, spaceDBConnParams.getSchema())
-                                            .replace(TABLE_STR, spaceDBConnParams.getTableName()+"_hst")
-                                            .replace(LIMIT_STR, String.valueOf(limit));
+                                            .replace(TABLE_STR, spaceDBConnParams.getTableName()+"_hst");
             logger.debug("Fetch Transactions statement for spaceId [{}] is [{}]", spaceId, SEL_STMT_STR);
 
             final long startTS = System.currentTimeMillis();
@@ -203,16 +197,16 @@ public class PubDatabaseHandler {
             try (final PreparedStatement stmt = conn.prepareStatement(SEL_STMT_STR)) {
                 stmt.setString(1, spaceId);
                 stmt.setLong(2, lastTxn.getLastTxnId());
-                stmt.setLong(3, lastTxn.getLastTxnId());
-                stmt.setLong(4, lastTxn.getLastTxnRecId());
+                stmt.setLong(3, lastTxn.getLastTxnRecId());
+                stmt.setInt(4, limit);
                 final ResultSet rs = stmt.executeQuery();
                 while (rs.next()) {
                     final PubTransactionData pubTxnData = new PubTransactionData();
-                    pubTxnData.setTxnId(rs.getLong("id"));
-                    pubTxnData.setTxnRecId(rs.getLong("i"));
-                    pubTxnData.setJsonData(rs.getString("jsonData"));
-                    pubTxnData.setAction(rs.getString("action"));
-                    pubTxnData.setFeatureId(rs.getString("featureId"));
+                    pubTxnData.setTxnId(rs.getLong("txn_id"));
+                    pubTxnData.setTxnRecId(rs.getLong("txn_rec_id"));
+                    pubTxnData.setAction(rs.getString("feature_action"));
+                    pubTxnData.setFeatureId(rs.getString("feature_id"));
+                    pubTxnData.setJsonData(rs.getString("feature_json"));
                     // add to the list
                     if (txnList == null) {
                         txnList = new ArrayList<>();
@@ -223,9 +217,10 @@ public class PubDatabaseHandler {
                 rs.close();
             }
             final long duration = System.currentTimeMillis() - startTS;
-            if (duration > TimeUnit.SECONDS.toMillis(5) || logger.isDebugEnabled()) {
-                logger.info("Publisher took {}ms to fetch {} publishable transactions for space {}.",
-                        duration, rowCnt, spaceId);
+            // Log only if it is relevant (to avoid noisy logs)
+            if (rowCnt > 0 || duration > TimeUnit.MILLISECONDS.toMillis(100)) {
+                logger.info("Transaction fetch stats [format => eventType,spaceId,fetchCount,timeTakenMs,lastTxnId,lastTxnRecId] - {} {} {} {} {} {}",
+                        PubLogConstants.LOG_EVT_TXN_FETCH_STATS, spaceId, rowCnt, duration, lastTxn.getLastTxnId(), lastTxn.getLastTxnRecId());
             }
         }
         return txnList;

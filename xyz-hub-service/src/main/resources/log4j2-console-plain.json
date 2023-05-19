@@ -7,7 +7,7 @@
       "Console": {
         "name": "STDOUT",
         "PatternLayout": {
-          "pattern": "%d %-5p %c{1} %.-4096msg %enc{%ex}{JSON}%n%xEx{none}"
+          "pattern": "%d %-5p %c %marker %.-4096msg %enc{%ex}{JSON}%n%xEx{none}"
         }
       }
     },
