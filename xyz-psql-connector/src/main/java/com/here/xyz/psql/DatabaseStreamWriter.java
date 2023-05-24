@@ -23,6 +23,8 @@ import com.here.xyz.connectors.AbstractConnectorHandler.TraceItem;
 import com.here.xyz.models.geojson.implementation.Feature;
 import com.here.xyz.models.geojson.implementation.FeatureCollection;
 import com.vividsolutions.jts.geom.Geometry;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.postgresql.util.PGobject;
 
 import java.sql.Connection;
@@ -34,6 +36,11 @@ import java.util.List;
 import java.util.Map;
 
 public class DatabaseStreamWriter extends DatabaseWriter{
+    private static final Logger logger = LogManager.getLogger();
+
+    private static final int TYPE_INSERT = 1;
+    private static final int TYPE_UPDATE = 2;
+    private static final int TYPE_DELETE = 3;
 
     protected static FeatureCollection insertFeatures(DatabaseHandler dbh, String schema, String table, TraceItem traceItem, FeatureCollection collection,
                                                       List<FeatureCollection.ModificationFailure> fails,
@@ -42,6 +49,7 @@ public class DatabaseStreamWriter extends DatabaseWriter{
 
         final PreparedStatement insertStmt = createInsertStatement(connection, schema, table, forExtendedSpace);
         final PreparedStatement insertWithoutGeometryStmt = createInsertWithoutGeometryStatement(connection, schema, table, forExtendedSpace);
+        final long startTS = System.currentTimeMillis();
 
         for (int i = 0; i < inserts.size(); i++) {
 
@@ -105,6 +113,9 @@ public class DatabaseStreamWriter extends DatabaseWriter{
 
         insertStmt.close();
         insertWithoutGeometryStmt.close();
+        final long duration = System.currentTimeMillis() - startTS;
+        logger.info("{} NonTransactional DB Operation Stats [format => eventType,opType,timeTakenMs] - {} {} {}",
+                traceItem, "DBOperationStats", TYPE_INSERT, duration);
 
         return collection;
     }
@@ -117,6 +128,7 @@ public class DatabaseStreamWriter extends DatabaseWriter{
 
         final PreparedStatement updateStmt = createUpdateStatement(connection, schema, table, handleUUID, forExtendedSpace);
         final PreparedStatement updateWithoutGeometryStmt = createUpdateWithoutGeometryStatement(connection,schema,table,handleUUID, forExtendedSpace);
+        final long startTS = System.currentTimeMillis();
 
         for (int i = 0; i < updates.size(); i++) {
             String fId = "";
@@ -202,6 +214,9 @@ public class DatabaseStreamWriter extends DatabaseWriter{
 
         updateStmt.close();
         updateWithoutGeometryStmt.close();
+        final long duration = System.currentTimeMillis() - startTS;
+        logger.info("{} NonTransactional DB Operation Stats [format => eventType,opType,timeTakenMs] - {} {} {}",
+                traceItem, "DBOperationStats", TYPE_UPDATE, duration);
 
         return collection;
     }
@@ -213,6 +228,7 @@ public class DatabaseStreamWriter extends DatabaseWriter{
 
         final PreparedStatement deleteStmt = deleteStmtSQLStatement(connection,schema,table,handleUUID);
         final PreparedStatement deleteStmtWithoutUUID = deleteStmtSQLStatement(connection,schema,table,false);
+        final long startTS = System.currentTimeMillis();
 
         for (String deleteId : deletes.keySet()) {
             try {
@@ -256,5 +272,8 @@ public class DatabaseStreamWriter extends DatabaseWriter{
 
         deleteStmt.close();
         deleteStmtWithoutUUID.close();
+        final long duration = System.currentTimeMillis() - startTS;
+        logger.info("{} NonTransactional DB Operation Stats [format => eventType,opType,timeTakenMs] - {} {} {}",
+                traceItem, "DBOperationStats", TYPE_DELETE, duration);
     }
 }

@@ -277,6 +277,7 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
                                  boolean handleUUID, int type, TraceItem traceItem) throws SQLException, JsonProcessingException {
 
         try {
+            final long startTS = System.currentTimeMillis();
             if (idList.size() > 0) {
                 logger.debug("{} batch execution [{}]: {} ", traceItem, type, batchStmt);
 
@@ -296,6 +297,9 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
                 fillFeatureListAndFailList(rs, featureWithoutGeoList, fails, idList2, handleUUID, type, traceItem);
                 if (rs!=null) rs.close();
             }
+            final long duration = System.currentTimeMillis() - startTS;
+            logger.info("{} Transactional DB Operation Stats [format => eventType,opType,timeTakenMs] - {} {} {}",
+                    traceItem, "DBOperationStats", type, duration);
         }finally {
             batchStmt.close();
             batchStmt2.close();
