@@ -1,12 +1,15 @@
 name: test-workflow
-run-name: Triggered by [${{ github.actor }}] due to [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]
+run-name: [${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]
 on: [push]
 jobs:
   Build-Release-Deploy:
     runs-on: ubuntu-latest
+    env:
+      SERVICE_JAR_DIR: ${{ github.workspace }}/xyz-hub-service/target
+      CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
     steps:
       #- run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 The job has started on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "🎉 The job has started on a ${{ runner.os }} server hosted by GitHub!"
       #- run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: Check out repository code
         uses: actions/checkout@v3
@@ -30,7 +33,14 @@ jobs:
       - run: mvn -B clean package
       - name: List target artifacts
         run: |
-          ls -l ${{ github.workspace }}/xyz-hub-service/target/
+          ls -l $SERVICE_JAR_DIR
+
+      - name: Prepare CodeDeploy application revision
+        run: |
+          cp -p $SERVICE_JAR_DIR/xyz-hub-service.jar $CODEDEPLOY_DIR/contents
+      - name: List CodeDeploy artifacts
+        run: |
+          ls -ltR $CODEDEPLOY_DIR
       #- name: List files in the repository
         #run: |
           #ls ${{ github.workspace }}
