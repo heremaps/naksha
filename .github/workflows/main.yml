@@ -2,7 +2,7 @@ name: test-workflow
 #run-name: [${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]
 on: [push]
 jobs:
-  Build-Release-Deploy:
+  Build-and-Release:
     runs-on: ubuntu-latest
     env:
       SERVICE_JAR_DIR: ${{ github.workspace }}/xyz-hub-service/target
@@ -35,14 +35,54 @@ jobs:
       - name: List target artifacts
         run: |
           ls -l $SERVICE_JAR_DIR
-
       - name: Prepare CodeDeploy application revision
         run: |
           cp -p $SERVICE_JAR_DIR/xyz-hub-service.jar $CODEDEPLOY_DIR/contents/
       - name: List CodeDeploy artifacts
         run: |
           ls -ltR $CODEDEPLOY_DIR
-      #- name: List files in the repository
-        #run: |
-          #ls ${{ github.workspace }}
+      - name: Save CodeDeploy artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: codedeploy-artifact
+          path: $CODEDEPLOY_DIR
+          if-no-files-found: error
+      - run: echo "🍏 This job's status is ${{ job.status }}."
+
+
+
+  ### Job to Deploy to Dev environment
+  Dev-Deploy:
+    needs: Build-and-Release
+    runs-on: ubuntu-latest
+    env:
+      CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
+    steps:
+      - name: Fetch CodeDeploy artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: codedeploy-artifact
+          path: $CODEDEPLOY_DIR
+      - name: List CodeDeploy artifacts
+        run: |
+          ls -ltR $CODEDEPLOY_DIR
+      - run: echo "🍏 This job's status is ${{ job.status }}."
+
+
+
+  ### Job to Deploy to E2E environment
+  E2E-Deploy:
+    needs: Build-and-Release
+    runs-on: ubuntu-latest
+    env:
+      CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
+    steps:
+      - name: Fetch CodeDeploy artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: codedeploy-artifact
+          path: $CODEDEPLOY_DIR
+      - name: List CodeDeploy artifacts
+        run: |
+          ls -ltR $CODEDEPLOY_DIR
       - run: echo "🍏 This job's status is ${{ job.status }}."
