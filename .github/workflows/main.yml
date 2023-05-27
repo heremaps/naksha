@@ -38,7 +38,7 @@ jobs:
 
       - name: Prepare CodeDeploy application revision
         run: |
-          cp -p $SERVICE_JAR_DIR/xyz-hub-service.jar $CODEDEPLOY_DIR/contents
+          cp -p $SERVICE_JAR_DIR/xyz-hub-service.jar $CODEDEPLOY_DIR/contents/
       - name: List CodeDeploy artifacts
         run: |
           ls -ltR $CODEDEPLOY_DIR
