@@ -1,4 +1,4 @@
-name: ### test ###
+name: test-workflow
 run-name: ${{ github.actor }} triggered pipeline
 on: [push]
 jobs:
