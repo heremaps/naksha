@@ -45,7 +45,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: codedeploy-artifact
-          path: $CODEDEPLOY_DIR
+          path: ${{ env.CODEDEPLOY_DIR }}
           if-no-files-found: error
       - run: echo "🍏 This job's status is ${{ job.status }}."
 
@@ -62,7 +62,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: codedeploy-artifact
-          path: $CODEDEPLOY_DIR
+          path: ${{ env.CODEDEPLOY_DIR }}
       - name: List CodeDeploy artifacts
         run: |
           ls -ltR $CODEDEPLOY_DIR
@@ -81,7 +81,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: codedeploy-artifact
-          path: $CODEDEPLOY_DIR
+          path: ${{ env.CODEDEPLOY_DIR }}
       - name: List CodeDeploy artifacts
         run: |
           ls -ltR $CODEDEPLOY_DIR
