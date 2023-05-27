@@ -1,5 +1,5 @@
 name: test-workflow
-run-name: [${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]
+#run-name: [${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]
 on: [push]
 jobs:
   Build-Release-Deploy:
@@ -9,7 +9,8 @@ jobs:
       CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
     steps:
       #- run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🎉 The job has started on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "[${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]"
+      - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
       #- run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: Check out repository code
         uses: actions/checkout@v3
