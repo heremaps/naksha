@@ -40,7 +40,7 @@ jobs:
           cp -p $SERVICE_JAR_DIR/xyz-hub-service.jar $CODEDEPLOY_DIR/contents/
       - name: List CodeDeploy artifacts
         run: |
-          ls -ltR $CODEDEPLOY_DIR
+          ls -lR $CODEDEPLOY_DIR
       - name: Save CodeDeploy artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -65,14 +65,14 @@ jobs:
           path: ${{ env.CODEDEPLOY_DIR }}
       - name: List CodeDeploy artifacts
         run: |
-          ls -ltR $CODEDEPLOY_DIR
+          ls -lR $CODEDEPLOY_DIR
       - run: echo "🍏 This job's status is ${{ job.status }}."
 
 
 
   ### Job to Deploy to E2E environment
   E2E-Deploy:
-    needs: Build-and-Release
+    needs: [Build-and-Release, Dev-Deploy]
     runs-on: ubuntu-latest
     env:
       CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
@@ -84,5 +84,5 @@ jobs:
           path: ${{ env.CODEDEPLOY_DIR }}
       - name: List CodeDeploy artifacts
         run: |
-          ls -ltR $CODEDEPLOY_DIR
+          ls -lR $CODEDEPLOY_DIR
       - run: echo "🍏 This job's status is ${{ job.status }}."
