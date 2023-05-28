@@ -44,13 +44,11 @@ jobs:
           ls -lR $CODEDEPLOY_DIR
       - name: Save artifact name
         id: save-artifact-name
-        run: |
-          export ARTIFACT_NAME=${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
-          echo "name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+        run: echo "name=${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}" >> "$GITHUB_OUTPUT"
       - name: Save CodeDeploy artifact content
         uses: actions/upload-artifact@v3
         with:
-          name: $ARTIFACT_NAME
+          name: ${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
           path: ${{ env.CODEDEPLOY_DIR }}
           if-no-files-found: error
       - run: echo "🍏 This job's status is ${{ job.status }}."
