@@ -4,7 +4,7 @@ name: E2E Workflow
 on:
   push:
     branches:
-      - 'Naksha_develop'
+      - Naksha_develop
 
 jobs:
   ### Job to Build and Publish artifacts

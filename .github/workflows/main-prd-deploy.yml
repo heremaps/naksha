@@ -4,9 +4,9 @@ name: Prod Workflow
 on:
   push:
     branches:
-      - 'Naksha_master'
+      - Naksha_master
     tags:
-      - 'Naksha_*'
+      - Naksha_*
 
 jobs:
   ### Job to Build and Publish artifacts
