@@ -53,15 +53,15 @@ jobs:
           name: ${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
           path: ${{ env.CODEDEPLOY_DIR }}
           if-no-files-found: error
-      - name: Identify application version
+      - name: Identify and save application version
         id: save-app-version
         run: |
           APP_VERSION=`mvn org.apache.maven.plugins:maven-help-plugin:3.1.0:evaluate -Dexpression=project.version -q -DforceStdout`
           echo "version=$APP_VERSION" >> "$GITHUB_OUTPUT"
-      - name: Identify artifact version
+      - name: Identify and save artifact version
         id: save-artifact-version
         run: |
-          ARTIFACT_VERSION=`date -j "+%Y%m%d-%H%M%S"`_${{ github.sha }}
+          ARTIFACT_VERSION=`date +"%Y%m%d-%H%M%S"`_${{ github.sha }}
           echo "version=$ARTIFACT_VERSION" >> "$GITHUB_OUTPUT"
       - run: echo "🍏 This job's status is ${{ job.status }}."
 
