@@ -24,11 +24,10 @@ jobs:
       app-version: ${{ steps.save-app-version.outputs.version }}
       codedeploy-artifact-version: ${{ steps.save-artifact-version.outputs.version }}
     steps:
-      - run: echo "[${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]"
+      - run: echo "[${{ github.triggering_actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]"
       - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
       - name: Check out repository code
         uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
       - name: Setup Java
         uses: actions/setup-java@v3
         with:

@@ -7,9 +7,11 @@ on:
     types:
       - opened
       - reopened
-      - edited
+      - synchronize
     branches:
       - Naksha_develop
+
+run-name: '[${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]'
 
 jobs:
   ### Job to Build and Publish artifacts
