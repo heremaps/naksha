@@ -31,10 +31,10 @@ on:
     outputs:
       s3-artifact-path:
         description: 'AWS S3 artifact path, which was used for release (e.g. 1.1.1/deployment.tar.gz)'
-        value: ${{ jobs.release.outputs.s3-artifact-path }}
+        value: ${{ jobs.main.outputs.s3-artifact-path }}
 
 jobs:
-  release:
+  main:
     runs-on: ubuntu-latest
     outputs:
       # S3 bucket artifact path (e.g. 1.1.1/deployment.tar.gz)

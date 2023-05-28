@@ -39,7 +39,7 @@ on:
         required: true
 
 jobs:
-  deploy:
+  main:
     runs-on: ubuntu-latest
     steps:
       - name: Print deployment parameters
