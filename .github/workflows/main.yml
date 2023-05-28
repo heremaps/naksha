@@ -57,11 +57,13 @@ jobs:
         id: save-app-version
         run: |
           APP_VERSION=`mvn org.apache.maven.plugins:maven-help-plugin:3.1.0:evaluate -Dexpression=project.version -q -DforceStdout`
+          echo $APP_VERSION
           echo "version=$APP_VERSION" >> "$GITHUB_OUTPUT"
       - name: Identify and save artifact version
         id: save-artifact-version
         run: |
           ARTIFACT_VERSION=`date +"%Y%m%d-%H%M%S"`_${{ github.sha }}
+          echo $ARTIFACT_VERSION
           echo "version=$ARTIFACT_VERSION" >> "$GITHUB_OUTPUT"
       - run: echo "🍏 This job's status is ${{ job.status }}."
 
