@@ -61,6 +61,7 @@ jobs:
   S3-CodeDeploy-Release:
     needs: Build-and-Publish
     uses: ./.github/workflows/s3-codedeploy-release.yml
+    env: inherit
     with:
       aws-region: ${{ env.AWS_REGION }}
       github-artifact-name: ${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
