@@ -28,6 +28,10 @@ on:
       aws-secret:
         description: 'AWS Access secret of a user, who is allowed to upload artifact to S3 bucket'
         required: true
+    outputs:
+      s3-artifact-path:
+        description: 'AWS S3 artifact path, which was used for release (e.g. 1.1.1/deployment.tar.gz)'
+        value: ${{ jobs.release.outputs.s3-artifact-path }}
 
 jobs:
   release:
@@ -63,7 +67,7 @@ jobs:
           tar -tvf $BUNDLE_NAME
         env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
-      - name: Preparing full S3 bucket path
+      - name: Preparing S3 artifact path
         id: s3-artifact-path
         run: |
           S3_ARTIFACT_PATH="${{ inputs.s3-bucket-dir-path }}/$BUNDLE_NAME"

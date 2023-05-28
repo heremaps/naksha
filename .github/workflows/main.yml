@@ -93,7 +93,7 @@ jobs:
       aws-region: us-east-1
       codedeploy-app-name: Naksha_Dev_App
       codedeploy-group-name: Naksha_Dev_Deployment_Group
-      deployment-description: 'Deployment triggered from Github repo ${{ github.repository }}, ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
+      deployment-description: 'Deployment triggered from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
       s3-bucket-name: naksha-releases
       s3-artifact-path: ${{ needs.S3-CodeDeploy-Release.outputs.s3-artifact-path }}
       s3-artifact-type: tgz
@@ -112,7 +112,7 @@ jobs:
       aws-region: us-east-1
       codedeploy-app-name: Naksha_E2E_App
       codedeploy-group-name: Naksha_E2E_Deployment_Group
-      deployment-description: 'Deployment triggered from Github repo ${{ github.repository }}, ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
+      deployment-description: 'Deployment triggered from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
       s3-bucket-name: naksha-releases
       s3-artifact-path: ${{ needs.S3-CodeDeploy-Release.outputs.s3-artifact-path }}
       s3-artifact-type: tgz
