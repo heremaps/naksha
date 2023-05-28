@@ -1,0 +1,13 @@
+name: CI-Only Workflow
+
+# Trigger for commit on any branch, other than the ones in the list
+on:
+  push:
+    branches-ignore:
+      - 'Naksha_master'
+      - 'Naksha_develop'
+
+jobs:
+  ### Job to Build and Publish artifacts
+  Build-and-Publish:
+    uses: ./.github/workflows/reusable-build-and-publish.yml
