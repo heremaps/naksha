@@ -35,6 +35,8 @@ jobs:
   release_job:
     runs-on: ubuntu-latest
     steps:
+      # Move inside download directory
+      - run: mkdir download && cd download
       - name: Fetch CodeDeploy artifacts
         uses: actions/download-artifact@v3
         with:
@@ -50,8 +52,15 @@ jobs:
       - name: Preparing S3 artifact bundle
         run: |
           echo "$BUNDLE_NAME"
-          tar -cvzf $BUNDLE_NAME .
-          ls -lR .
+          tar -cvzf ../$BUNDLE_NAME .
+        env:
+          BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
+      # Move out of download directory
+      - name: List artifact bundle
+        run: |
+          cd ..
+          ls -l .
+          tar -tvf $BUNDLE_NAME
         env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
       - name: Preparing full S3 bucket path
