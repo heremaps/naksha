@@ -1,28 +1,22 @@
 name: test-workflow
+
 #run-name: [${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]
+
 on: [push]
+
 jobs:
-  Build-and-Release:
+  ### Job to Build and Publish Jar
+  Build-and-Publish:
     runs-on: ubuntu-latest
     env:
       SERVICE_JAR_DIR: ${{ github.workspace }}/xyz-hub-service/target
       CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
     steps:
-      #- run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "[${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]"
       - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
-      #- run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: Check out repository code
         uses: actions/checkout@v3
       - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      #- name: Cache local Maven repository
-        #uses: actions/cache@v3
-        #id: maven-cache
-        #with:
-          #path: ~/.m2/repository
-          #key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          #restore-keys: |
-            #${{ runner.os }}-maven-
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
@@ -31,6 +25,7 @@ jobs:
           java-package: jdk
           cache: maven
       - run: echo "🖥️ The workflow is now ready to build your code on the runner."
+      ### TODO : Run tests
       - run: mvn -B clean package
       - name: List target artifacts
         run: |
@@ -53,7 +48,7 @@ jobs:
 
   ### Job to Deploy to Dev environment
   Dev-Deploy:
-    needs: Build-and-Release
+    needs: Build-and-Publish
     runs-on: ubuntu-latest
     env:
       CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
@@ -72,7 +67,7 @@ jobs:
 
   ### Job to Deploy to E2E environment
   E2E-Deploy:
-    needs: [Build-and-Release, Dev-Deploy]
+    needs: [Build-and-Publish, Dev-Deploy]
     runs-on: ubuntu-latest
     env:
       CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
