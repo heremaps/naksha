@@ -44,13 +44,13 @@ jobs:
     steps:
       - name: Print deployment parameters
         run: |
-          echo "aws-region = $aws-region"
-          echo "codedeploy-app-name = $codedeploy-app-name"
-          echo "codedeploy-group-name = $codedeploy-group-name"
-          echo "deployment-description = $deployment-description"
-          echo "s3-bucket-name = $s3-bucket-name"
-          echo "s3-artifact-path = $s3-artifact-path"
-          echo "s3-artifact-type = $s3-artifact-type"
+          echo "aws-region = ${{ inputs.aws-region }}"
+          echo "codedeploy-app-name = ${{ inputs.codedeploy-app-name }}"
+          echo "codedeploy-group-name = ${{ inputs.codedeploy-group-name }}"
+          echo "deployment-description = ${{ inputs.deployment-description }}"
+          echo "s3-bucket-name = ${{ inputs.s3-bucket-name }}"
+          echo "s3-artifact-path = ${{ inputs.s3-artifact-path }}"
+          echo "s3-artifact-type = ${{ inputs.s3-artifact-type }}"
       ## TODO : Execute deployment command
       ## TODO : Print deployment Id
       ## TODO : Monitor deployment success
