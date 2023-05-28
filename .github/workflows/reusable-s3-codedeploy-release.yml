@@ -5,7 +5,7 @@ on:
         type: string
         description: 'AWS region the S3 bucket is associated with'
         required: true
-      github-artifact-name:
+      pipeline-artifact-name:
         type: string
         description: 'Github pipeline artifact name, which can be downloaded using actions/download-artifact'
         required: true
@@ -45,7 +45,7 @@ jobs:
       - name: Fetch CodeDeploy artifacts
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.github-artifact-name }}
+          name: ${{ inputs.pipeline-artifact-name }}
           path: download
       - name: List CodeDeploy artifacts
         run: |

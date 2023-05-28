@@ -1,5 +1,4 @@
 on:
-  # Log - deployment Id and deployment monitoring status
   workflow_call:
     inputs:
       aws-region:
@@ -54,4 +53,5 @@ jobs:
       ## TODO : Execute deployment command
       ## TODO : Print deployment Id
       ## TODO : Monitor deployment success
+      ## TODO : Log - deployment Id and deployment monitoring status
       - run: echo "🍏 This job's status is ${{ job.status }}."

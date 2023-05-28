@@ -1,80 +1,33 @@
 name: test-workflow
 
-on: [push]
+# Trigger for commit on any branch, other than the ones in the list
+on:
+  push:
+    branches-ignore:
+      - 'Naksha_master'
+      - 'Naksha_develop'
 
 jobs:
   ### Job to Build and Publish artifacts
+  # Output
+  #   - pipeline-artifact-name = Name of the pipeline artifact to be used in release step (e.g. codedeploy-artifact)
+  #   - app-version = Application version to be used in release step as S3 bucket directory (e.g. 1.1.1-SNAPSHOT, 1.2.0)
+  #   - codedeploy-artifact-version = CodeDeploy artifact version to be used in uniquely naming deployment bundle (e.g. 20230528-144100_d63fd762704ef242d9827662b872b305744f753e)
   Build-and-Publish:
-    runs-on: ubuntu-latest
-    env:
-      SERVICE_JAR_DIR: ${{ github.workspace }}/xyz-hub-service/target
-      CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
-      GITHUB_CODEDEPLOY_ARTIFACT_NAME: codedeploy-artifact
-    outputs:
-      artifact-name: ${{ steps.save-artifact-name.outputs.name }}
-      app-version: ${{ steps.save-app-version.outputs.version }}
-      codedeploy-artifact-version: ${{ steps.save-artifact-version.outputs.version }}
-    steps:
-      - run: echo "[${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]"
-      - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
-      - name: Check out repository code
-        uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: corretto
-          java-version: 17
-          java-package: jdk
-          cache: maven
-      ### TODO : Run tests
-      - name: Build package
-        run: |
-          mvn -B clean package
-      - name: List generated artifacts
-        run: |
-          ls -l $SERVICE_JAR_DIR
-      ### TODO : Publish to maven central repository
-      - name: Prepare CodeDeploy artifact content
-        run: |
-          cp -p $SERVICE_JAR_DIR/xyz-hub-service.jar $CODEDEPLOY_DIR/contents/
-      - name: List CodeDeploy artifact content
-        run: |
-          ls -lR $CODEDEPLOY_DIR
-      - name: Save artifact name
-        id: save-artifact-name
-        run: echo "name=${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}" >> "$GITHUB_OUTPUT"
-      - name: Save CodeDeploy artifact content
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
-          path: ${{ env.CODEDEPLOY_DIR }}
-          if-no-files-found: error
-      - name: Identify and save Application version
-        id: save-app-version
-        run: |
-          APP_VERSION=`mvn org.apache.maven.plugins:maven-help-plugin:3.1.0:evaluate -Dexpression=project.version -q -DforceStdout`
-          echo $APP_VERSION
-          echo "version=$APP_VERSION" >> "$GITHUB_OUTPUT"
-      - name: Identify and save CodeDeploy artifact version
-        id: save-artifact-version
-        run: |
-          ARTIFACT_VERSION=`date +"%Y%m%d-%H%M%S"`_${{ github.sha }}
-          echo $ARTIFACT_VERSION
-          echo "version=$ARTIFACT_VERSION" >> "$GITHUB_OUTPUT"
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+    uses: ./.github/workflows/reusable-build-and-publish.yml
 
 
 
   ### Job to Release CodeDeploy artifact to S3 bucket
-  # Output - s3 bucket artifact path (e.g. 1.1.1/deployment.tar.gz)
+  # Output
+  #   - s3-artifact-path = s3 bucket artifact path to be used for codedeploy (e.g. 1.1.1/deployment.tar.gz)
   S3-CodeDeploy-Release:
     needs: Build-and-Publish
-    uses: ./.github/workflows/reusable/s3-codedeploy-release.yml
+    uses: ./.github/workflows/reusable-s3-codedeploy-release.yml
     with:
       ## TODO : Should come from repository variables / secrets
       aws-region: us-east-1
-      github-artifact-name: ${{ needs.Build-and-Publish.outputs.artifact-name }}
+      pipeline-artifact-name: ${{ needs.Build-and-Publish.outputs.pipeline-artifact-name }}
       s3-bucket-name: naksha-releases
       s3-bucket-dir-path: ${{ needs.Build-and-Publish.outputs.app-version }}
       s3-artifact-version: ${{ needs.Build-and-Publish.outputs.codedeploy-artifact-version }}
@@ -87,7 +40,7 @@ jobs:
   ### Job to Deploy to Dev environment
   Dev-Deploy:
     needs: S3-CodeDeploy-Release
-    uses: ./.github/workflows/reusable/codedeploy-deployment.yml
+    uses: ./.github/workflows/reusable-codedeploy-deployment.yml
     with:
       ## TODO : Should come from repository variables / secrets
       aws-region: us-east-1
@@ -106,7 +59,7 @@ jobs:
   ### Job to Deploy to E2E environment
   E2E-Deploy:
     needs: [S3-CodeDeploy-Release, Dev-Deploy]
-    uses: ./.github/workflows/reusable/codedeploy-deployment.yml
+    uses: ./.github/workflows/reusable-codedeploy-deployment.yml
     with:
       ## TODO : Should come from repository variables / secrets
       aws-region: us-east-1
