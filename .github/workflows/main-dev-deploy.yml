@@ -1,11 +1,7 @@
-name: test-workflow
+name: Dev Workflow
 
-# Trigger for commit on any branch, other than the ones in the list
-on:
-  push:
-    branches-ignore:
-      - 'Naksha_master'
-      - 'Naksha_develop'
+# On manual trigger from Github
+on: [workflow_dispatch]
 
 jobs:
   ### Job to Build and Publish artifacts
@@ -37,7 +33,7 @@ jobs:
 
 
 
-  ### Job to Deploy to Dev environment
+  ### Job to Deploy CodeDeploy artifact to Dev environment
   Dev-Deploy:
     needs: S3-CodeDeploy-Release
     uses: ./.github/workflows/reusable-codedeploy-deployment.yml
@@ -46,25 +42,6 @@ jobs:
       aws-region: us-east-1
       codedeploy-app-name: Naksha_Dev_App
       codedeploy-group-name: Naksha_Dev_Deployment_Group
-      deployment-description: 'Deployment triggered from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
-      s3-bucket-name: naksha-releases
-      s3-artifact-path: ${{ needs.S3-CodeDeploy-Release.outputs.s3-artifact-path }}
-      s3-artifact-type: tgz
-    secrets:
-      aws-key: dummy-key
-      aws-secret: dummy-secret
-
-
-
-  ### Job to Deploy to E2E environment
-  E2E-Deploy:
-    needs: [S3-CodeDeploy-Release, Dev-Deploy]
-    uses: ./.github/workflows/reusable-codedeploy-deployment.yml
-    with:
-      ## TODO : Should come from repository variables / secrets
-      aws-region: us-east-1
-      codedeploy-app-name: Naksha_E2E_App
-      codedeploy-group-name: Naksha_E2E_Deployment_Group
       deployment-description: 'Deployment triggered from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
       s3-bucket-name: naksha-releases
       s3-artifact-path: ${{ needs.S3-CodeDeploy-Release.outputs.s3-artifact-path }}

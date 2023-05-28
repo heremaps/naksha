@@ -11,13 +11,14 @@ on:
         description: 'Unique version which should be used in next step(s) for CodeDeploy artifact (e.g. 20230528-144100_d63fd762704ef242d9827662b872b305744f753e)'
         value: ${{ jobs.main.outputs.codedeploy-artifact-version }}
 
+env:
+  SERVICE_JAR_DIR: ${{ github.workspace }}/xyz-hub-service/target
+  CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
+  GITHUB_CODEDEPLOY_ARTIFACT_NAME: codedeploy-artifact
+
 jobs:
   main:
     runs-on: ubuntu-latest
-    env:
-      SERVICE_JAR_DIR: ${{ github.workspace }}/xyz-hub-service/target
-      CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
-      GITHUB_CODEDEPLOY_ARTIFACT_NAME: codedeploy-artifact
     outputs:
       pipeline-artifact-name: ${{ steps.save-artifact-name.outputs.name }}
       app-version: ${{ steps.save-app-version.outputs.version }}
@@ -31,7 +32,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
-          distribution: corretto
+          distribution: adopt
           java-version: 17
           java-package: jdk
           cache: maven
