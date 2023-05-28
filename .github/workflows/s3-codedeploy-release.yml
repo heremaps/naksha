@@ -49,6 +49,7 @@ jobs:
           echo "name=$BUNDLE_NAME" >> "$GITHUB_OUTPUT"
       - name: Preparing S3 artifact bundle
         run: |
+          echo "$BUNDLE_NAME"
           tar -cvzf $BUNDLE_NAME .
           ls -lR .
         env:
