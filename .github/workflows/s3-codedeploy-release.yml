@@ -4,21 +4,24 @@ on:
   workflow_call:
     inputs:
       aws-region:
-        required: true
         type: string
+        description: 'AWS region the S3 bucket is associated with'
+        required: true
       github-artifact-name:
-        required: true
         type: string
+        description: 'Github pipeline artifact name, which can be downloaded using actions/download-artifact'
+        required: true
       s3-bucket-name:
-        required: true
         type: string
+        description: 'AWS S3 bucket name, where artifact is to be released to'
+        required: true
     secrets:
       aws-key:
+        description: 'AWS Access key of a user, who is allowed to upload artifact to S3 bucket'
         required: true
-        type: string
       aws-secret:
+        description: 'AWS Access secret of a user, who is allowed to upload artifact to S3 bucket'
         required: true
-        type: string
 
 jobs:
   release_job:
