@@ -35,30 +35,29 @@ jobs:
   release_job:
     runs-on: ubuntu-latest
     steps:
-      # Move inside download directory
-      - run: mkdir download && cd download
+      # create directory to download artifacts
+      - run: mkdir download
       - name: Fetch CodeDeploy artifacts
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.github-artifact-name }}
+          path: download
       - name: List CodeDeploy artifacts
         run: |
-          ls -lR .
+          ls -lR download/
       - name: Preparing S3 artifact name
         id: s3-artifact-name
         run: |
           BUNDLE_NAME=deployment_${{ inputs.s3-artifact-version }}.tar.gz
           echo "name=$BUNDLE_NAME" >> "$GITHUB_OUTPUT"
-      - name: Preparing S3 artifact bundle
+      - name: Preparing S3 artifact bundle [$BUNDLE_NAME]
         run: |
-          echo "$BUNDLE_NAME"
+          cd download
           tar -cvzf ../$BUNDLE_NAME .
         env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
-      # Move out of download directory
-      - name: List artifact bundle
+      - name: List artifact bundle content
         run: |
-          cd ..
           ls -l .
           tar -tvf $BUNDLE_NAME
         env:
@@ -68,4 +67,5 @@ jobs:
           echo "s3://${{ inputs.s3-bucket-name }}/${{ inputs.s3-bucket-dir-path }}/$BUNDLE_NAME"
         env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
+      ## TODO : Upload bundle to S3 bucket
       - run: echo "🍏 This job's status is ${{ job.status }}."
