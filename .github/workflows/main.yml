@@ -57,19 +57,14 @@ jobs:
   S3-CodeDeploy-Release:
     needs: Build-and-Publish
     uses: ./.github/workflows/s3-codedeploy-release.yml
-    env:
-      GITHUB_CODEDEPLOY_ARTIFACT_NAME: codedeploy-artifact
-      S3_BUCKET_NAME: naksha-releases
-      AWS_REGION: us-east-1
-      AWS_KEY: dummy-key
-      AWS_SECRET: dummy-secret
     with:
-      aws-region: ${{ env.AWS_REGION }}
-      github-artifact-name: ${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
-      s3-bucket-name: ${{ env.S3_BUCKET_NAME }}
+      ## TODO : Should come from repository variables / secrets / output
+      aws-region: us-east-1
+      github-artifact-name: codedeploy-artifact
+      s3-bucket-name: naksha-releases
     secrets:
-      aws-key: ${{ env.AWS_KEY }}
-      aws-secret: ${{ env.AWS_SECRET }}
+      aws-key: dummy-key
+      aws-secret: dummy-secret
 
 
 
