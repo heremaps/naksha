@@ -13,7 +13,8 @@ jobs:
   ### Job to Build and Publish artifacts
   Build-and-Publish:
     runs-on: ubuntu-latest
-    ## TODO : Output should be artifact name
+    outputs:
+      artifact-name: ${{ steps.save-artifact-name.outputs.name }}
     steps:
       - run: echo "[${{ github.actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }} [${{ github.ref_name }}]"
       - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
@@ -41,10 +42,15 @@ jobs:
       - name: List CodeDeploy artifact content
         run: |
           ls -lR $CODEDEPLOY_DIR
+      - name: Save artifact name
+        id: save-artifact-name
+        run: |
+          export ARTIFACT_NAME=${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
+          echo "name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
       - name: Save CodeDeploy artifact content
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
+          name: $ARTIFACT_NAME
           path: ${{ env.CODEDEPLOY_DIR }}
           if-no-files-found: error
       - run: echo "🍏 This job's status is ${{ job.status }}."
@@ -58,9 +64,9 @@ jobs:
     needs: Build-and-Publish
     uses: ./.github/workflows/s3-codedeploy-release.yml
     with:
-      ## TODO : Should come from repository variables / secrets / output
+      ## TODO : Should come from repository variables / secrets
       aws-region: us-east-1
-      github-artifact-name: codedeploy-artifact
+      github-artifact-name: ${{ needs.Build-and-Publish.outputs.artifact-name }}
       s3-bucket-name: naksha-releases
     secrets:
       aws-key: dummy-key
