@@ -50,15 +50,15 @@ jobs:
         run: |
           BUNDLE_NAME=deployment_${{ inputs.s3-artifact-version }}.tar.gz
           echo "name=$BUNDLE_NAME" >> "$GITHUB_OUTPUT"
-      - name: Preparing S3 artifact bundle [$BUNDLE_NAME]
+      - name: Preparing S3 artifact bundle
         run: |
           cd download
+          echo $BUNDLE_NAME
           tar -cvzf ../$BUNDLE_NAME .
         env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
       - name: List artifact bundle content
         run: |
-          ls -l .
           tar -tvf $BUNDLE_NAME
         env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
