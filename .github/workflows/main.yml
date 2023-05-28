@@ -8,10 +8,6 @@ env:
   SERVICE_JAR_DIR: ${{ github.workspace }}/xyz-hub-service/target
   CODEDEPLOY_DIR: ${{ github.workspace }}/deployment/codedeploy
   GITHUB_CODEDEPLOY_ARTIFACT_NAME: codedeploy-artifact
-  S3_BUCKET_NAME: naksha-releases
-  AWS_REGION: us-east-1
-  AWS_KEY: dummy-key
-  AWS_SECRET: dummy-secret
 
 jobs:
   ### Job to Build and Publish artifacts
@@ -61,7 +57,12 @@ jobs:
   S3-CodeDeploy-Release:
     needs: Build-and-Publish
     uses: ./.github/workflows/s3-codedeploy-release.yml
-    env: inherit
+    env:
+      GITHUB_CODEDEPLOY_ARTIFACT_NAME: codedeploy-artifact
+      S3_BUCKET_NAME: naksha-releases
+      AWS_REGION: us-east-1
+      AWS_KEY: dummy-key
+      AWS_SECRET: dummy-secret
     with:
       aws-region: ${{ env.AWS_REGION }}
       github-artifact-name: ${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
