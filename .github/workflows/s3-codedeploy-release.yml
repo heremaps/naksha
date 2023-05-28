@@ -51,11 +51,11 @@ jobs:
         run: |
           tar -cvzf $BUNDLE_NAME .
           ls -lR .
-        with:
+        env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
       - name: Preparing full S3 bucket path
         run: |
           echo "s3://${{ inputs.s3-bucket-name }}/${{ inputs.s3-bucket-dir-path }}/$BUNDLE_NAME"
-        with:
+        env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
       - run: echo "🍏 This job's status is ${{ job.status }}."
