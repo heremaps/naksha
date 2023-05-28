@@ -1,10 +1,8 @@
 name: Prod Workflow
 
-# Trigger for push of a tag Naksha_* on Naksha_master branch
+# Trigger for push of a tag Naksha_*
 on:
   push:
-    branches:
-      - Naksha_master
     tags:
       - Naksha_*
 
