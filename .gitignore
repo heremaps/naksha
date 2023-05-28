@@ -11,3 +11,5 @@ release.properties
 *.log
 *.jfr
 *.versionsBackup
+*.jar
+*.gz
