@@ -1,6 +1,4 @@
 on:
-  # Input - aws_key, aws_secret, aws_region, github artifact name, s3 bucket name
-  # Output - S3 bucket artifact path (e.g. 1.1.1/deployment.tar.gz)
   workflow_call:
     inputs:
       aws-region:
@@ -32,8 +30,11 @@ on:
         required: true
 
 jobs:
-  release_job:
+  release:
     runs-on: ubuntu-latest
+    outputs:
+      # S3 bucket artifact path (e.g. 1.1.1/deployment.tar.gz)
+      s3-artifact-path: ${{ steps.s3-artifact-path.outputs.path }}
     steps:
       # create directory to download artifacts
       - run: mkdir download
@@ -63,8 +64,11 @@ jobs:
         env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
       - name: Preparing full S3 bucket path
+        id: s3-artifact-path
         run: |
-          echo "s3://${{ inputs.s3-bucket-name }}/${{ inputs.s3-bucket-dir-path }}/$BUNDLE_NAME"
+          S3_ARTIFACT_PATH="${{ inputs.s3-bucket-dir-path }}/$BUNDLE_NAME"
+          echo "S3 Artifact path is $S3_ARTIFACT_PATH"
+          echo "path=$S3_ARTIFACT_PATH" >> "$GITHUB_OUTPUT"
         env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
       ## TODO : Upload bundle to S3 bucket

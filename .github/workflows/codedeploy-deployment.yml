@@ -1,0 +1,57 @@
+on:
+  # Log - deployment Id and deployment monitoring status
+  workflow_call:
+    inputs:
+      aws-region:
+        type: string
+        description: 'AWS region the S3 bucket is associated with'
+        required: true
+      codedeploy-app-name:
+        type: string
+        description: 'CodeDeploy Application name, to be used for deployment'
+        required: true
+      codedeploy-group-name:
+        type: string
+        description: 'CodeDeploy DeploymentGroup name, to be used for deployment'
+        required: true
+      deployment-description:
+        type: string
+        description: 'CodeDeploy deployment description'
+        required: true
+      s3-bucket-name:
+        type: string
+        description: 'AWS S3 bucket name, which contains the artifact bundle to be deployed'
+        required: true
+      s3-artifact-path:
+        type: string
+        description: 'AWS S3 artifact path, which is to be used for deployment (e.g. 1.1.1/deployment.tar.gz)'
+        required: true
+      s3-artifact-type:
+        type: string
+        description: 'Type of the artifact to be deployed (e.g. tar, zip, tgz)'
+        required: true
+    secrets:
+      aws-key:
+        description: 'AWS Access key of a user, who is allowed to upload artifact to S3 bucket'
+        required: true
+      aws-secret:
+        description: 'AWS Access secret of a user, who is allowed to upload artifact to S3 bucket'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print deployment parameters
+        run: |
+          echo "aws-region = $aws-region"
+          echo "codedeploy-app-name = $codedeploy-app-name"
+          echo "codedeploy-group-name = $codedeploy-group-name"
+          echo "deployment-description = $deployment-description"
+          echo "s3-bucket-name = $s3-bucket-name"
+          echo "s3-artifact-path = $s3-artifact-path"
+          echo "s3-artifact-type = $s3-artifact-type"
+      ## TODO : Execute deployment command
+      ## TODO : Print deployment Id
+      ## TODO : Monitor deployment success
+      - run: echo "🍏 This job's status is ${{ job.status }}."
