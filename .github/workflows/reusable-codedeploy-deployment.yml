@@ -55,5 +55,5 @@ jobs:
       ## TODO : Monitor deployment success
       ## TODO : Log - deployment Id and deployment monitoring status
       - name: Monitor deployment status
-        run: sh MonitorDeploymentStatus.sh
+        run: sh ./.github/workflows/MonitorDeploymentStatus.sh
       - run: echo "🍏 This job's status is ${{ job.status }}."
