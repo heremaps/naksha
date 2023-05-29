@@ -54,6 +54,8 @@ jobs:
       ## TODO : Print deployment Id
       ## TODO : Monitor deployment success
       ## TODO : Log - deployment Id and deployment monitoring status
+      - name: Check out repository code
+        uses: actions/checkout@v3
       - name: Monitor deployment status
         run: sh ./.github/workflows/MonitorDeploymentStatus.sh
       - run: echo "🍏 This job's status is ${{ job.status }}."
