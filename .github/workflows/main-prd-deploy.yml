@@ -43,7 +43,7 @@ jobs:
     with:
       ## TODO : Should come from repository variables / secrets
       aws-region: us-east-1
-      codedeploy-app-name: Naksha_Prd_App
+      codedeploy-app-name: Naksha_App
       codedeploy-group-name: Naksha_Prd_Deployment_Group
       deployment-description: 'Deployment triggered from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
       s3-bucket-name: naksha-releases
