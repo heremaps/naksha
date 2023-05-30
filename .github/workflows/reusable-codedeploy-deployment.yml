@@ -70,15 +70,17 @@ jobs:
           cat deployment_command.log
           DEPLOYMENT_ID=`cat deployment_command.log | jq -r '.deploymentId'`
           echo "id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+      - name: Print Deployment status link
+        run: |
+          echo "Deployment status link : https://$AWS_REGION.console.aws.amazon.com/codesuite/codedeploy/deployments/$DEPLOYMENT_ID?region=$AWS_REGION"
+        env:
+          DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.id }}
+          AWS_REGION: ${{ inputs.aws-region }}
       - name: Monitor Deployment status
         run: |
           echo "Deployment Id = $DEPLOYMENT_ID, Timeout seconds = $TIMEOUT_SEC"
           bash ./.github/workflows/supporting-scripts/MonitorDeploymentStatus.sh $DEPLOYMENT_ID $TIMEOUT_SEC
-          # Set exit code to make pipeline fail in case of error
-          #exit $?
-          # AWS Deployment status link
-          #https://us-east-1.console.aws.amazon.com/codesuite/codedeploy/deployments/d-YF78XF0OO?region=us-east-1
         env:
           DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.id }}
-          TIMEOUT_SEC: 30
+          TIMEOUT_SEC: 600
       - run: echo "🍏 This job's status is ${{ job.status }}."

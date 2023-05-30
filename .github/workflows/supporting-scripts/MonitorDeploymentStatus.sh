@@ -71,7 +71,7 @@ do
 
   if [[ $WAIT_TIME -gt $MAX_TIMEOUT_SEC ]];
   then
-    echo "Exceeded timeout [$MAX_TIMEOUT_SEC] sec, while waiting for deployment [$DEPLOYMENT_ID] to complete."
+    echo "Error:: Exceeded timeout [$MAX_TIMEOUT_SEC] sec, while waiting for deployment [$DEPLOYMENT_ID] to complete."
     exit 1
   fi
 
