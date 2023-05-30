@@ -75,5 +75,19 @@ jobs:
           echo "path=$S3_ARTIFACT_PATH" >> "$GITHUB_OUTPUT"
         env:
           BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
-      ## TODO : Upload bundle to S3 bucket
+      # Upload artifact to S3 bucket
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws-key }}
+          aws-secret-access-key: ${{ secrets.aws-secret }}
+          aws-region: ${{ inputs.aws-region }}
+      - name: Upload artifact to S3 bucket s3://${{ input.s3-bucket-name }}
+        run: |
+          FULL_S3_PATH=s3://${{ input.s3-bucket-name }}/$S3_ARTIFACT_PATH
+          echo "Full S3 artifact path is [$FULL_S3_PATH]"
+          aws s3 cp $BUNDLE_NAME $FULL_S3_PATH
+        env:
+          BUNDLE_NAME: ${{ steps.s3-artifact-name.outputs.name }}
+          S3_ARTIFACT_PATH: ${{ steps.s3-artifact-path.outputs.path }}
       - run: echo "🍏 This job's status is ${{ job.status }}."
