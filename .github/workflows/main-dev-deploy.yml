@@ -9,7 +9,7 @@ on:
       - reopened
       - synchronize
     branches:
-      - Naksha_develop
+      - develop
 
 run-name: '[${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]'
 
