@@ -74,6 +74,8 @@ jobs:
         run: |
           echo "Deployment Id = $DEPLOYMENT_ID, Timeout seconds = $TIMEOUT_SEC"
           bash ./.github/workflows/supporting-scripts/MonitorDeploymentStatus.sh $DEPLOYMENT_ID $TIMEOUT_SEC
+          # Set exit code to make pipeline fail in case of error
+          exit $?
         env:
           DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.id }}
           TIMEOUT_SEC: 30
