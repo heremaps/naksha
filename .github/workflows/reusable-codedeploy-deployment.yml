@@ -52,10 +52,23 @@ jobs:
           echo "s3-bucket-name = ${{ inputs.s3-bucket-name }}"
           echo "s3-artifact-path = ${{ inputs.s3-artifact-path }}"
           echo "s3-artifact-type = ${{ inputs.s3-artifact-type }}"
-      ## TODO : Execute deployment command
-      ## TODO : Print deployment Id
-      ## TODO : Monitor deployment success
-      ## TODO : Log - deployment Id and deployment monitoring status
-      #- name: Monitor deployment status
-        #run: sh ./.github/workflows/supporting-scripts/MonitorDeploymentStatus.sh
+      - name: Submit AWS-CodeDeploy Deployment
+        id: create-deployment
+        run: |
+          aws deploy create-deployment \
+          	--application-name ${{ inputs.codedeploy-app-name }} \
+          	--deployment-group-name ${{ inputs.codedeploy-group-name }} \
+          	--s3-location bucket=${{ inputs.s3-bucket-name }},key=${{ inputs.s3-artifact-path }},bundleType=${{ inputs.s3-artifact-type }} \
+          	--description "${{ inputs.deployment-description }}" \
+            > deployment_command.log
+          cat deployment_command.log
+          DEPLOYMENT_ID=`cat deployment_command.log | jq -r '.deploymentId'`
+          echo "id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+      - name: Monitor Deployment status
+        run: |
+          echo "Deployment Id = $DEPLOYMENT_ID, Timeout seconds = $TIMEOUT_SEC"
+          bash ./.github/workflows/supporting-scripts/MonitorDeploymentStatus.sh $DEPLOYMENT_ID $TIMEOUT_SEC
+        with:
+          DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.id }}
+          TIMEOUT_SEC: 30
       - run: echo "🍏 This job's status is ${{ job.status }}."
