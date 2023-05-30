@@ -52,6 +52,12 @@ jobs:
           echo "s3-bucket-name = ${{ inputs.s3-bucket-name }}"
           echo "s3-artifact-path = ${{ inputs.s3-artifact-path }}"
           echo "s3-artifact-type = ${{ inputs.s3-artifact-type }}"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws-key }}
+          aws-secret-access-key: ${{ secrets.aws-secret }}
+          aws-region: ${{ inputs.aws-region }}
       - name: Submit AWS-CodeDeploy Deployment
         id: create-deployment
         run: |
