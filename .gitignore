@@ -1,0 +1,12 @@
+*.iml
+*.iws
+*.ipr
+.vertx/
+.xyz-hub/
+.idea/
+target/
+file-uploads/
+static/
+release.properties
+*.log
+*.jfr
