@@ -41,6 +41,8 @@ jobs:
   main:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
       - name: Print deployment parameters
         run: |
           echo "aws-region = ${{ inputs.aws-region }}"
@@ -50,8 +52,35 @@ jobs:
           echo "s3-bucket-name = ${{ inputs.s3-bucket-name }}"
           echo "s3-artifact-path = ${{ inputs.s3-artifact-path }}"
           echo "s3-artifact-type = ${{ inputs.s3-artifact-type }}"
-      ## TODO : Execute deployment command
-      ## TODO : Print deployment Id
-      ## TODO : Monitor deployment success
-      ## TODO : Log - deployment Id and deployment monitoring status
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws-key }}
+          aws-secret-access-key: ${{ secrets.aws-secret }}
+          aws-region: ${{ inputs.aws-region }}
+      - name: Submit AWS-CodeDeploy Deployment
+        id: create-deployment
+        run: |
+          aws deploy create-deployment \
+          	--application-name ${{ inputs.codedeploy-app-name }} \
+          	--deployment-group-name ${{ inputs.codedeploy-group-name }} \
+          	--s3-location bucket=${{ inputs.s3-bucket-name }},key=${{ inputs.s3-artifact-path }},bundleType=${{ inputs.s3-artifact-type }} \
+          	--description "${{ inputs.deployment-description }}" \
+            > deployment_command.log
+          cat deployment_command.log
+          DEPLOYMENT_ID=`cat deployment_command.log | jq -r '.deploymentId'`
+          echo "id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+      - name: Print Deployment status link
+        run: |
+          echo "Deployment status link : https://$AWS_REGION.console.aws.amazon.com/codesuite/codedeploy/deployments/$DEPLOYMENT_ID?region=$AWS_REGION"
+        env:
+          DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.id }}
+          AWS_REGION: ${{ inputs.aws-region }}
+      - name: Monitor Deployment status
+        run: |
+          echo "Deployment Id = $DEPLOYMENT_ID, Timeout seconds = $TIMEOUT_SEC"
+          bash ./.github/workflows/supporting-scripts/MonitorDeploymentStatus.sh $DEPLOYMENT_ID $TIMEOUT_SEC
+        env:
+          DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.id }}
+          TIMEOUT_SEC: 600
       - run: echo "🍏 This job's status is ${{ job.status }}."
