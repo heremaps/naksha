@@ -72,11 +72,11 @@ do
   if [[ $WAIT_TIME -gt $MAX_TIMEOUT_SEC ]];
   then
     echo "Exceeded timeout [$MAX_TIMEOUT_SEC] sec, while waiting for deployment [$DEPLOYMENT_ID] to complete."
-    exit 0
+    exit 1
   fi
 
   # Sleep and try checking status again
   sleep $SLEEP_INTERVAL_SEC
 done
 
-exit 0
+exit 1

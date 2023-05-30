@@ -75,7 +75,9 @@ jobs:
           echo "Deployment Id = $DEPLOYMENT_ID, Timeout seconds = $TIMEOUT_SEC"
           bash ./.github/workflows/supporting-scripts/MonitorDeploymentStatus.sh $DEPLOYMENT_ID $TIMEOUT_SEC
           # Set exit code to make pipeline fail in case of error
-          exit $?
+          #exit $?
+          # AWS Deployment status link
+          #https://us-east-1.console.aws.amazon.com/codesuite/codedeploy/deployments/d-YF78XF0OO?region=us-east-1
         env:
           DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.id }}
           TIMEOUT_SEC: 30
