@@ -41,6 +41,8 @@ jobs:
   main:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
       - name: Print deployment parameters
         run: |
           echo "aws-region = ${{ inputs.aws-region }}"
@@ -54,8 +56,6 @@ jobs:
       ## TODO : Print deployment Id
       ## TODO : Monitor deployment success
       ## TODO : Log - deployment Id and deployment monitoring status
-      - name: Check out repository code
-        uses: actions/checkout@v3
-      - name: Monitor deployment status
-        run: sh ./.github/workflows/MonitorDeploymentStatus.sh
+      #- name: Monitor deployment status
+        #run: sh ./.github/workflows/supporting-scripts/MonitorDeploymentStatus.sh
       - run: echo "🍏 This job's status is ${{ job.status }}."
