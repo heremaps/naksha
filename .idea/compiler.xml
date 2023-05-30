@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="xyz-hub-service" />
+        <module name="xyz-models" />
+        <module name="xyz-hub-test" />
+        <module name="xyz-txn-handler" />
+        <module name="xyz-psql-connector" />
+        <module name="xyz-connectors" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="xyz-connectors" target="1.8" />
+      <module name="xyz-handler-activitylog" target="17" />
+      <module name="xyz-handler-http" target="17" />
+      <module name="xyz-handler-psql" target="17" />
+      <module name="xyz-hub" target="1.8" />
+      <module name="xyz-hub-service" target="1.8" />
+      <module name="xyz-hub-test" target="1.8" />
+      <module name="xyz-lib-models" target="17" />
+      <module name="xyz-lib-psql" target="17" />
+      <module name="xyz-mock" target="17" />
+      <module name="xyz-models" target="1.8" />
+      <module name="xyz-psql" target="1.8" />
+      <module name="xyz-psql-connector" target="1.8" />
+      <module name="xyz-txn-handler" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+</project>

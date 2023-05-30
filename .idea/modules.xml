@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/xyz-connectors/xyz-connectors.iml" filepath="$PROJECT_DIR$/xyz-connectors/xyz-connectors.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xyz-hub.iml" filepath="$PROJECT_DIR$/xyz-hub.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xyz-hub-service/xyz-hub-service.iml" filepath="$PROJECT_DIR$/xyz-hub-service/xyz-hub-service.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xyz-hub-test/xyz-hub-test.iml" filepath="$PROJECT_DIR$/xyz-hub-test/xyz-hub-test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xyz-models/xyz-models.iml" filepath="$PROJECT_DIR$/xyz-models/xyz-models.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xyz-psql-connector/xyz-psql-connector.iml" filepath="$PROJECT_DIR$/xyz-psql-connector/xyz-psql-connector.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xyz-txn-handler/xyz-txn-handler.iml" filepath="$PROJECT_DIR$/xyz-txn-handler/xyz-txn-handler.iml" />
+    </modules>
+  </component>
+</project>

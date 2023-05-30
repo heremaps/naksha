@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-connectors/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-connectors/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-handler-activitylog/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-handler-activitylog/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-handler-http/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-handler-http/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-handler-psql/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-handler-psql/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-hub-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-hub-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-hub-test/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-hub-test/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-lib-models/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-lib-models/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-lib-psql/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-lib-psql/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-mock/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-mock/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-models/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-models/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-psql-connector/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-psql-connector/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-txn-handler/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xyz-txn-handler/src/main/resources" charset="UTF-8" />
+  </component>
+</project>
