@@ -3,13 +3,13 @@ name: Dev Workflow
 # On manual trigger from Github
 on:
   workflow_dispatch:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-    branches:
-      - develop
+  #pull_request:
+    #types:
+      #- opened
+      #- reopened
+      #- synchronize
+    #branches:
+      #- develop
 
 run-name: '[${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]'
 

@@ -37,7 +37,7 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - DEV" enabled="false">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - DEV" enabled="true">
         <collectionProp name="Arguments.arguments">
           <elementProp name="XYZ_API_PROTOCOL" elementType="Argument">
             <stringProp name="Argument.name">XYZ_API_PROTOCOL</stringProp>
@@ -72,7 +72,7 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - E2E" enabled="true">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - E2E" enabled="false">
         <collectionProp name="Arguments.arguments">
           <elementProp name="XYZ_API_PROTOCOL" elementType="Argument">
             <stringProp name="Argument.name">XYZ_API_PROTOCOL</stringProp>
