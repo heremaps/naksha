@@ -3,13 +3,13 @@ name: Dev Workflow
 # On manual trigger from Github
 on:
   workflow_dispatch:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-    branches:
-      - develop
+  #pull_request:
+    #types:
+      #- opened
+      #- reopened
+      #- synchronize
+    #branches:
+      #- develop
 
 run-name: '[${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]'
 
@@ -50,7 +50,7 @@ jobs:
       aws-region: ${{ vars.AWS_REGION }}
       codedeploy-app-name: ${{ vars.CODEDEPLOY_APP_NAME }}
       codedeploy-group-name: ${{ vars.CODEDEPLOY_DEV_GROUP_NAME }}
-      deployment-description: 'Deployment triggered from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
+      deployment-description: 'Deployment triggered by ${{ github.triggering_actor }} from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
       s3-bucket-name: ${{ vars.RELEASE_S3_BUCKET_NAME }}
       s3-artifact-path: ${{ needs.S3-CodeDeploy-Release.outputs.s3-artifact-path }}
       s3-artifact-type: tgz
