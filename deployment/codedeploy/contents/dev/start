@@ -4,10 +4,20 @@ if [ ! -d log ]; then
   mkdir log
 fi
 
+# TODO : Set environment variables with secrets
+
+# TODO : Set instance parameters
+# Get Current Instance Id
+#     curl http://169.254.169.254/latest/meta-data/instance-id
+# Retrieve all tags for current instance Id
+#     aws ec2 describe-tags --filters "Name=resource-id,Values=i-07ba7252ae25273dd" --region=us-east-1
+# Convert "dev" to upper case "DEV" :
+#     echo $environment | tr '[:lower:]' '[:upper:]'
+
 export XYZ_CONFIG_PATH
 XYZ_CONFIG_PATH=$(pwd)/.xyz-hub/
 echo "XYZ_CONFIG_PATH: $XYZ_CONFIG_PATH"
-OTEL_RESOURCE_ATTRIBUTES=service.name=Instance,service.namespace=Naksha-DEV \
+OTEL_RESOURCE_ATTRIBUTES=service.name=naksha-dev-1-us-east-1,service.namespace=Naksha-DEV \
   java -javaagent:/home/admin/aws-opentelemetry/aws-opentelemetry-agent.jar \
   -server -Xms2g -Xmx28g -Xss1024k \
   -XX:+UnlockDiagnosticVMOptions \
