@@ -22,9 +22,12 @@ os: linux
 # If you are not copying any files to the Amazon EC2 instance, then remove the
 #   "files" section altogether. A blank or incomplete "files" section
 #   may cause associated deployments to fail.
+file_exists_behavior: OVERWRITE
 files:
-  - source: /contents/xyz-hub-service.jar
+  - source: /contents
     destination: /home/admin/xyz-hub
+  - source: /contents/xyz-hub.service
+    destination: /etc/systemd/system
 # For deployments to Amazon Linux, Ubuntu Server, or RHEL instances,
 #   you can specify a "permissions"
 #   section here that describes special permissions to apply to the files
@@ -48,6 +51,18 @@ permissions:
       #user:
       #type:
       #range:
+    type:
+      - file
+  - object: /home/admin/xyz-hub
+    pattern: "*.sh"
+    owner: admin
+    group: admin
+      mode: 755
+    type:
+      - file
+  - object: /etc/systemd/system/xyz-hub.service
+    owner: admin
+    group: admin
     type:
       - file
 # If you are not running any commands on the Amazon EC2 instance, then remove

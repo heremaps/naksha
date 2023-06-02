@@ -1,25 +1,28 @@
 #!/bin/bash
 
+# Set instance specific parameters
+. ./set-instance-params.sh
+
+# Set application specific parameters
+. ./set-app-params.sh
+
+# Set Auth keys for application
+. ./set-auth-keys.sh
+
 if [ ! -d log ]; then
   mkdir log
 fi
 
-# TODO : Set environment variables with secrets
-
-# TODO : Set instance parameters
-# Get Current Instance Id
-#     curl http://169.254.169.254/latest/meta-data/instance-id
-# Retrieve all tags for current instance Id
-#     aws ec2 describe-tags --filters "Name=resource-id,Values=i-07ba7252ae25273dd" --region=us-east-1
-# Convert "dev" to upper case "DEV" :
-#     echo $environment | tr '[:lower:]' '[:upper:]'
-
 export XYZ_CONFIG_PATH
 XYZ_CONFIG_PATH=$(pwd)/.xyz-hub/
-echo "XYZ_CONFIG_PATH: $XYZ_CONFIG_PATH"
-OTEL_RESOURCE_ATTRIBUTES=service.name=naksha-dev-1-us-east-1,service.namespace=Naksha-DEV \
+echo "XYZ_CONFIG_PATH : $XYZ_CONFIG_PATH"
+echo "EC2_INSTANCE_NAME : $EC2_INSTANCE_NAME"
+echo "EC2_ENV : $EC2_ENV"
+echo "-Xms : $JVM_XMS"
+echo "-Xmx : $JVM_XMX"
+OTEL_RESOURCE_ATTRIBUTES=service.name=${EC2_INSTANCE_NAME},service.namespace=Naksha-${EC2_ENV_UPPER} \
   java -javaagent:/home/admin/aws-opentelemetry/aws-opentelemetry-agent.jar \
-  -server -Xms2g -Xmx28g -Xss1024k \
+  -server -Xms${JVM_XMS} -Xmx${JVM_XMX} -Xss1024k \
   -XX:+UnlockDiagnosticVMOptions \
   -XX:+UseZGC \
   -XX:+UseNUMA \
