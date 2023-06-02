@@ -33,10 +33,10 @@ do
   FAIL_CNT=`echo $DEPLOYMENT_RESPONSE_JSON | jq '.deploymentInfo.deploymentOverview.Failed'`
   SKIP_CNT=`echo $DEPLOYMENT_RESPONSE_JSON | jq '.deploymentInfo.deploymentOverview.Skipped'`
 
-  # exit if failed
-  if [[ "$STATUS" == "Failed" ]];
+  # exit if failed or stopped
+  if [[ "$STATUS" == "Failed" ]] || [[ "$STATUS" == "Stopped" ]];
   then
-    echo "Error:: Deployment failed. Overall status is: "
+    echo "Error:: Deployment failed/stopped. Overall status is: "
     echo $DEPLOYMENT_RESPONSE_JSON | jq
     exit 1
   fi

@@ -1,10 +1,10 @@
 name: E2E Workflow
 
-# Trigger for commit on develop branch
+# Trigger for commit on int branch (i.e. integration)
 on:
   push:
     branches:
-      - develop
+      - int
 
 jobs:
   ### Job to Build and Publish artifacts
