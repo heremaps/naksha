@@ -1493,6 +1493,7 @@ $BODY$
 DECLARE
     txn_stmt            TEXT;
     txn_record          RECORD;
+    crt_txn_rec_id      int8;
     features_stmt       TEXT;
     features_record     xyz_config.Naksha_newer_transactions;
     fetched_count       int;
@@ -1507,6 +1508,13 @@ BEGIN
         EXIT WHEN fetched_count >= in_limit_rows;
         --RAISE NOTICE 'Transaction fetched is %', txn_record;
 
+        crt_txn_rec_id := 0;
+        IF txn_record.id = in_last_txn_id THEN
+            -- if crt txnId and last txnId are same, then we need only those records which are not already published
+            -- i.e. only those records where txnRecId is greater than previously recorded txnRecId
+            crt_txn_rec_id := in_last_txn_rec_id;
+        END IF;
+
         -- Fetch feature(s) from History table for current transaction Id
         features_stmt := format('SELECT ''%s'', h.i, h.jsondata->''properties''->''@ns:com:here:xyz''->>''action'' AS action, h.jsondata->>''id'' AS featureId, h.jsondata, h.geo '
                             ||'FROM %I.%I h '
@@ -1516,7 +1524,7 @@ BEGIN
                             ||'ORDER BY h.i ASC '
                             ||'LIMIT %s', txn_record.id, in_hst_schema, in_hst_table, in_limit_rows);
 
-        FOR features_record IN EXECUTE features_stmt USING txn_record.txn, txn_record.txn, in_last_txn_rec_id LOOP
+        FOR features_record IN EXECUTE features_stmt USING txn_record.txn, txn_record.txn, crt_txn_rec_id LOOP
             --RAISE NOTICE 'Feature fetched is %', features_record;
             RETURN NEXT features_record;
 

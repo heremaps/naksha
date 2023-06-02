@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Set config folder path
+export XYZ_CONFIG_PATH=$(pwd)/.config/
+
 # Set instance specific parameters
 . ./set-instance-params.sh
 
@@ -13,15 +16,19 @@ if [ ! -d log ]; then
   mkdir log
 fi
 
-export XYZ_CONFIG_PATH
-XYZ_CONFIG_PATH=$(pwd)/.xyz-hub/
+# Set local parameters
+export OTEL_RESOURCE_ATTRIBUTES=service.name=${EC2_INSTANCE_NAME},service.namespace=Naksha-${EC2_ENV_UPPER}
+
+# Print basic parameters (avoid printing secrets)
 echo "XYZ_CONFIG_PATH : $XYZ_CONFIG_PATH"
+echo "OTEL_RESOURCE_ATTRIBUTES : $OTEL_RESOURCE_ATTRIBUTES"
 echo "EC2_INSTANCE_NAME : $EC2_INSTANCE_NAME"
 echo "EC2_ENV : $EC2_ENV"
 echo "-Xms : $JVM_XMS"
 echo "-Xmx : $JVM_XMX"
-OTEL_RESOURCE_ATTRIBUTES=service.name=${EC2_INSTANCE_NAME},service.namespace=Naksha-${EC2_ENV_UPPER} \
-  java -javaagent:/home/admin/aws-opentelemetry/aws-opentelemetry-agent.jar \
+
+# Start service
+java -javaagent:/home/admin/aws-opentelemetry/aws-opentelemetry-agent.jar \
   -server -Xms${JVM_XMS} -Xmx${JVM_XMX} -Xss1024k \
   -XX:+UnlockDiagnosticVMOptions \
   -XX:+UseZGC \

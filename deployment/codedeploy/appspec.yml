@@ -52,7 +52,7 @@ permissions:
       #type:
       #range:
     type:
-      - file
+      - directory
   - object: /home/admin/xyz-hub
     pattern: "*.sh"
     owner: admin
