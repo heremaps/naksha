@@ -14,7 +14,8 @@ if [[ "$SECRET_ID" != "$RESPONSE_SECRET_ID" ]]; then
 fi
 
 # To convert JSON response secrets into environment variables
-for secret_key_value in `echo $SECRET_RESPONSE_JSON | jq '.SecretString | fromjson | to_entries | map("\(.key)=\(.value)") | .[]'`;
+while read secret_key_value;
 do
-  eval "export $secret_key_value";
-done
+  #echo "export $secret_key_value"
+  eval "export $secret_key_value"
+done < <(echo $SECRET_RESPONSE_JSON | jq -r '.SecretString | fromjson | to_entries | map(@sh "\(.key)=\(.value)") | .[]')

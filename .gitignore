@@ -3,7 +3,6 @@
 *.ipr
 .vertx/
 .xyz-hub/
-!deployment/**/.xyz-hub
 .idea/
 target/
 file-uploads/
