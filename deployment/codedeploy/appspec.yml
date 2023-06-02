@@ -57,7 +57,7 @@ permissions:
     pattern: "*.sh"
     owner: admin
     group: admin
-      mode: 755
+    mode: 755
     type:
       - file
   - object: /etc/systemd/system/xyz-hub.service
