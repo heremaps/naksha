@@ -7,7 +7,7 @@
       "RollingFile": {
         "name": "RollingFile",
         "fileName": "log/xyz_stdout.txt",
-        "filePattern": "log/xyz_stdout_%i.txt",
+        "filePattern": "log/xyz_stdout.txt.%i",
         "PatternLayout": {
           "pattern": "%d %-5p %c %marker %.-4096msg %enc{%ex}{JSON}%n%xEx{none}"
         },
