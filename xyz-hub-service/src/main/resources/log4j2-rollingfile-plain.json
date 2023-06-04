@@ -13,7 +13,7 @@
         },
         "Policies": {
           "SizeBasedTriggeringPolicy": {
-            "size": "10 KB"
+            "size": "250 KB"
           }
         },
         "DefaultRolloverStrategy": {
