@@ -7,7 +7,7 @@
       "RollingFile": {
         "name": "RollingFile",
         "fileName": "log/xyz_stdout.txt",
-        "filePattern": "log/xyz_stdout_%d{yyyy-MM-dd}_%i.txt",
+        "filePattern": "log/xyz_stdout_%i.txt",
         "PatternLayout": {
           "pattern": "%d %-5p %c %marker %.-4096msg %enc{%ex}{JSON}%n%xEx{none}"
         },
@@ -17,6 +17,7 @@
           }
         },
         "DefaultRolloverStrategy": {
+          "fileIndex": "min",
           "max": "100"
         }
       }
