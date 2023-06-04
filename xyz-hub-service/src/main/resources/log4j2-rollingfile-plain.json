@@ -13,12 +13,12 @@
         },
         "Policies": {
           "SizeBasedTriggeringPolicy": {
-            "size": "250 KB"
+            "size": "200 MB"
           }
         },
         "DefaultRolloverStrategy": {
           "fileIndex": "min",
-          "max": "100"
+          "max": "50"
         }
       }
     },
