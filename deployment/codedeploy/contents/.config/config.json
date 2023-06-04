@@ -1,5 +1,5 @@
 {
-    "LOG_CONFIG": "log4j2-console-plain.json",
+    "LOG_CONFIG": "log4j2-rollingfile-plain.json",
 
     "INSTANCE_COUNT": 1,
     "HOST_NAME": "localhost",
