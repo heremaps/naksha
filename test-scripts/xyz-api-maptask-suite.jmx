@@ -1324,12 +1324,19 @@ else {
 // Fail the test case (by default), unless it is found to have &quot;passed&quot; later on
 prev.setSuccessful(false);
 
-// Set expected response object
-var expectedResObj = {
+// Set expected response object in both ascending and descending orders (as we don&apos;t know in what order the response will have them)
+var expectedResObjWithIdAsc = {
   &quot;type&quot;: &quot;FeatureCollection&quot;,
   &quot;features&quot;: [
     ${V_Create_Request_Str_01},
     ${V_Create_Request_Str_02}
+  ]
+};
+var expectedResObjWithIdDesc = {
+  &quot;type&quot;: &quot;FeatureCollection&quot;,
+  &quot;features&quot;: [
+    ${V_Create_Request_Str_02},
+    ${V_Create_Request_Str_01}
   ]
 };
 
@@ -1358,7 +1365,16 @@ actualResObj.features.forEach(function(feature) {
 
 // Compare actual v/s expected
 var modifiedActualResString = JSON.stringify(actualResObj);
-var expectedResString = JSON.stringify(expectedResObj);
+var expectedResString = null;
+// Choose expectedResObj depending on the order in which response objects are found
+if ( actualResObj.features[0].id == &quot;${TASK_ID_P02_01}&quot; ) {
+	// choose ascending order
+	expectedResString = JSON.stringify(expectedResObjWithIdAsc);
+}
+else {
+	// choose descending order
+	expectedResString = JSON.stringify(expectedResObjWithIdDesc);
+}
 
 if ( expectedResString == modifiedActualResString ) {
 	prev.setSuccessful(true);
