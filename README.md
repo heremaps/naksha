@@ -213,14 +213,15 @@ The OpenAPI specification files are accessible under the following URIs:
 
 # 5. Acknowledgements
 
-XYZ Hub uses:
+Naksha (XYZ Hub) uses:
 
 * [Vertx](http://vertx.io/)
 * [Geotools](https://github.com/geotools/geotools)
 * [JTS](https://github.com/locationtech/jts)
 * [Jackson](https://github.com/FasterXML/jackson)
+* [AWS SDK](https://aws.amazon.com/sdk-for-java/)
 
-and [others](./pom.xml#L177-L479).
+and [others](./pom.xml#L198-L540).
 
 # 6. Contributing
 
