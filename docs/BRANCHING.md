@@ -6,10 +6,13 @@ The diagram below provides view of:
 * How various branches can be used for enhancements/maintenances/fixes to the repository
 * How deployment to various environments gets triggered automatically from various branches
 
-![Branching_Deployment_strategy][img_strategy]
+**In General**:
 
-In General:
-* `develop` branch - (under develop) should represent most up-to-date (may be unstable) version in **DEV** environment
-* `int` branch - (intergration) should represent most stable version in **E2E** environment
-* `master` branch - (main) should represent most stable version in **Prod** environment
-* `hot_xxx` branch - (hot fixes) is the branch, can be forked from any of the above branches, to make and merge a quick fix
+| Branch(es) | Description                                                                                               |
+|-----------|-----------------------------------------------------------------------------------------------------------|
+| `develop` | (under develop) should represent most up-to-date (may be unstable) version in **DEV** environment         |
+| `int`     | (intergration) should represent most stable version in **E2E** environment                                |
+| `master`  | (main) should represent most stable version in **Prod** environment                                       |
+| `hotfix_xxx` | (hot fixes) are the branches, can be forked from any of the above branches, to make and merge a quick fix |
+
+![Branching_Deployment_strategy][img_strategy]
