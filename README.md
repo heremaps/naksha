@@ -119,8 +119,8 @@ export STORAGE_DB_USER=postgres_user
 export STORAGE_DB_PASSWORD=postgres_pswd
 # (optional) below parameters required only for SNS publishing
 export ENABLE_TXN_PUBLISHER=true
-export AWS_ACCESS_KEY_ID=<<aws-user-key>>
-export AWS_SECRET_ACCESS_KEY=<<aws-user-secret>>
+export AWS_ACCESS_KEY_ID=aws-user-key
+export AWS_SECRET_ACCESS_KEY=aws-user-secret
 export AWS_DEFAULT_REGION=us-east-1
 
 # Then, start the service (usual command)
