@@ -7,7 +7,17 @@
 
 The meaning of [Naksha](https://en.wikipedia.org/wiki/Naksha) is “Map”.
 
-# Overview
+1. [Overview](#1-overview)
+2. [Prerequisites](#2-prerequisites)
+3. [Getting Started](#3-getting-started)
+4. [Usage](#4-usage)
+5. [Acknowledgements](#5-acknowledgements)
+6. [Contributing](#6-contributing)
+7. [License](#license)
+
+---
+
+# 1. Overview
 Naksha features are:
 * Organize geo datasets in _spaces_
 * Store and manipulate individual geo features (points, linestrings, polygons)
@@ -22,7 +32,9 @@ Naksha features are:
 
 Naksha uses [GeoJSON](https://tools.ietf.org/html/rfc79460) as the main geospatial data exchange format. Tiled data can also be provided as [MVT](https://github.com/mapbox/vector-tile-spec/blob/master/2.1/README.md).
 
-# Prerequisites
+---
+
+# 2. Prerequisites
 
 * Java 8+
 * Maven 3.6+
@@ -31,7 +43,10 @@ Naksha uses [GeoJSON](https://tools.ietf.org/html/rfc79460) as the main geospati
 * Docker 18+ (optional)
 * Docker Compose 1.24+ (optional)
 
-# Getting started
+---
+
+# 3. Getting started
+
 Clone and install the project using:
 
 ```bash
@@ -40,7 +55,7 @@ cd xyz-hub
 mvn clean install
 ```
 
-### With docker
+### 3.1 With docker
 
 The service and all dependencies could be started locally using Docker compose.
 ```bash
@@ -54,7 +69,7 @@ mvn clean install -Pdocker
 
 *Hint: Postgres with PostGIS will be automatically started if you use 'docker-compose up -d' to start the service.*
 
-### Without docker
+### 3.2 Without docker
 
 The service could also be started directly as a fat jar. In this case Postgres and the other optional dependencies need to be started separately.
 
@@ -62,7 +77,13 @@ The service could also be started directly as a fat jar. In this case Postgres a
 java -jar xyz-hub-service/target/xyz-hub-service.jar
 ```
 
-### Configuration
+### 3.3 Configuration
+
+There are two ways to provide runtime configuration:
+1. Using custom `config.json` file
+2. Using environment variables
+
+#### 3.3.1 Using Custom Config file
 
 The service persists out of modules with a bootstrap code to start the service. All configuration is done in the [config.json](./xyz-hub-service/src/main/resources/config.json).
 
@@ -72,15 +93,43 @@ The bootstrap code could be used to run only the `hub-verticle` or only the `con
 
 The location of the configuration file could be modified using environment variables or by creating the `config.json` file in the corresponding configuration folder. The exact configuration folder is platform dependent, but generally follows the [XGD user configuration directory](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html), standard, so on Linux being by default `~/.config/xyz-hub/`. For Windows the files will reside in the [CSIDL_PROFILE](https://learn.microsoft.com/en-us/windows/win32/shell/csidl?redirectedfrom=MSDN) folder, by default `C:\Users\{username}\.config\xyz-hub`. This path could be changed via environment variable `XDG_CONFIG_HOME`, which will result in the location `$XDG_CONFIG_HOME/xyz-hub/`. Next to this, an explicit location can be specified via the environment variable `XYZ_CONFIG_PATH`, this path will not be extended by the `xyz-hub` folder, so you can directly specify where to keep the config files. This is important when you want to start multiple versions of the service: `XYZ_CONFIG_PATH=~/.config/xyz-hub/a/ java -jar xyz-hub-service.jar`.
 
-The individual environment variable names can be found in the source code of the configuration files being [CoreConfig](xyz-models/src/main/java/com/here/xyz/config/CoreConfig.java), [HubConfig](xyz-models/src/main/java/com/here/xyz/config/HubConfig.java) and [ConnectorConfig](xyz-models/src/main/java/com/here/xyz/config/ConnectorConfig.java). All properties annotated with `@JsonProperty` can always be set as well as environment variable, prefixed with `XYZ_` unless they are always starting with that prefix, for example `XYZ_HUB_REMOTE_SERVICE_URLS`. If the environment variable name is different you will find an additional annotation `@EnvName`. If the name within the configuration file is different, then either `@JsonProperty` or `@JsonName` annotations can be found.
-
 ```bash
+# Create copy of default config file
 mkdir ~/.config/xyz-hub
 cp xyz-hub-service/src/main/resources/config.json ~/.config/xyz-hub/
-cp xyz-hub-service/src/main/resources/config-db.json ~/.config/xyz-hub/
+
+# Modify custom file as per need
+vi ~/.config/xyz-hub/config.json
+
+# Then, start the service (usual command)
+java -jar xyz-hub-service/target/xyz-hub-service.jar
 ```
 
-# Usage
+#### 3.3.2 Using Environment variables
+
+Environment variables can be explicitly set to override default parameters defined in [config.json](./xyz-hub-service/src/main/resources/config.json) file.
+
+For example:
+
+```shell
+# Set environment variables with custom values
+export HTTP_PORT=7080
+export STORAGE_DB_URL=jdbc:postgresql://localhost:5432/postgres
+export STORAGE_DB_USER=postgres_user
+export STORAGE_DB_PASSWORD=postgres_pswd
+# (optional) below parameters required only for SNS publishing
+export ENABLE_TXN_PUBLISHER=true
+export AWS_ACCESS_KEY_ID=aws-user-key
+export AWS_SECRET_ACCESS_KEY=aws-user-secret
+export AWS_DEFAULT_REGION=us-east-1
+
+# Then, start the service (usual command)
+java -jar xyz-hub-service/target/xyz-hub-service.jar
+```
+
+---
+
+# 4. Usage
 
 Start using the service by creating a _space_:
 
@@ -151,7 +200,7 @@ The service will respond with the inserted geo features:
 }
 ```
 
-### OpenAPI specification
+### 4.1 OpenAPI specification
 
 The OpenAPI specification files are accessible under the following URIs:
 * Full: [http://{host}:{port}/hub/static/openapi/full.yaml](http://localhost:8080/hub/static/openapi/full.yaml)
@@ -160,18 +209,21 @@ The OpenAPI specification files are accessible under the following URIs:
 * Contract: [http://{host}:{port}/hub/static/openapi/contract.yaml](http://localhost:8080/hub/static/openapi/contract.yaml)
 * Connector: [http://{host}:{port}/psql/static/openapi/openapi-http-connector.yaml](http://localhost:8080/psql/static/openapi/openapi-http-connector.yaml)
 
-# Acknowledgements
+---
 
-XYZ Hub uses:
+# 5. Acknowledgements
+
+Naksha (XYZ Hub) uses:
 
 * [Vertx](http://vertx.io/)
 * [Geotools](https://github.com/geotools/geotools)
 * [JTS](https://github.com/locationtech/jts)
 * [Jackson](https://github.com/FasterXML/jackson)
+* [AWS SDK](https://aws.amazon.com/sdk-for-java/)
 
-and [others](./pom.xml#L177-L479).
+and [others](./pom.xml#L198-L540).
 
-# Contributing
+# 6. Contributing
 
 Your contributions are always welcome! Please have a look at the [contribution guidelines](CONTRIBUTING.md) first.
 
