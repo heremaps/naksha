@@ -74,7 +74,7 @@ mvn clean install -Pdocker
 The service could also be started directly as a fat jar. In this case Postgres and the other optional dependencies need to be started separately.
 
 ```bash
-java -jar xyz-hub-service/target/xyz-hub-service.jar
+java -server -cp xyz-hub-service/target/xyz-hub-service.jar com.here.xyz.hub.Service
 ```
 
 ### 3.3 Configuration
@@ -102,7 +102,7 @@ cp xyz-hub-service/src/main/resources/config.json ~/.config/xyz-hub/
 vi ~/.config/xyz-hub/config.json
 
 # Then, start the service (usual command)
-java -jar xyz-hub-service/target/xyz-hub-service.jar
+java -server -cp xyz-hub-service/target/xyz-hub-service.jar com.here.xyz.hub.Service
 ```
 
 #### 3.3.2 Using Environment variables
@@ -124,7 +124,7 @@ export AWS_SECRET_ACCESS_KEY=aws-user-secret
 export AWS_DEFAULT_REGION=us-east-1
 
 # Then, start the service (usual command)
-java -jar xyz-hub-service/target/xyz-hub-service.jar
+java -server -cp xyz-hub-service/target/xyz-hub-service.jar com.here.xyz.hub.Service
 ```
 
 ---
