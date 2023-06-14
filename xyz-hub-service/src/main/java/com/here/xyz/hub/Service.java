@@ -36,6 +36,7 @@ import com.here.xyz.hub.rest.admin.messages.RelayedMessage;
 import com.here.xyz.hub.rest.admin.messages.brokers.Broker;
 import com.here.xyz.hub.rest.admin.messages.brokers.NoopBroker;
 import com.here.xyz.hub.util.ARN;
+import com.here.xyz.hub.util.OTelMetrics;
 import com.here.xyz.hub.util.metrics.GcDurationMetric;
 import com.here.xyz.hub.util.metrics.GlobalInflightRequestMemory;
 import com.here.xyz.hub.util.metrics.GlobalUsedRfcConnections;
@@ -215,6 +216,8 @@ public class Service extends Core {
         die(1, "Space config client failed", ar.cause());
       }
     });
+    // Initialize OpenTelemetry related metrics
+    OTelMetrics.init();
   }
 
   private static void onLocalConnectorsInserted(AsyncResult<Void> result, JsonObject config) {

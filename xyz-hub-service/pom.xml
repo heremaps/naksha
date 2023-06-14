@@ -47,6 +47,7 @@
     <pathToConfig>deployment/local/config.json</pathToConfig>
     <dockerComposeFile>docker-compose.yml</dockerComposeFile>
     <aws-sdk.version>2.20.11</aws-sdk.version>
+    <otel.version>1.27.0</otel.version>
   </properties>
 
   <build>
@@ -324,6 +325,13 @@
           <artifactId>jai_core</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+
+    <!-- io.opentelemetry -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-api</artifactId>
+      <version>${otel.version}</version>
     </dependency>
 
     <!-- Cache -->
