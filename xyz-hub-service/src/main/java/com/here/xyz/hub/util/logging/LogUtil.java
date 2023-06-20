@@ -115,7 +115,11 @@ public class LogUtil {
     AccessLog accessLog = Api.Context.getAccessLog(context);
     HttpMethod method = context.request().method();
     accessLog.reqInfo.method = context.request().method().name();
-    accessLog.reqInfo.uri = context.request().uri();
+    // Remove access_token part from uri for security concerns
+    //accessLog.reqInfo.uri = context.request().uri();
+    final String uri = context.request().uri();
+    final int endPos = uri.indexOf("?");
+    accessLog.reqInfo.uri = (endPos > 0) ? uri.substring(0, endPos) : uri;
     accessLog.reqInfo.referer = context.request().getHeader(REFERER);
     accessLog.reqInfo.origin = context.request().getHeader(ORIGIN);
     if (POST.equals(method) || PUT.equals(method) || PATCH.equals(method)) {
@@ -167,5 +171,15 @@ public class LogUtil {
 
     accessLog.streamId = marker.getName();
     logger.log(STREAM_LEVEL, ACCESS_LOG_MARKER, accessLog.serialize());
+
+    // Log relevant details for generating API metrics
+    final AccessLog.RequestInfo req = accessLog.reqInfo;
+    final AccessLog.ResponseInfo res = accessLog.respInfo;
+    final Map<String, Object> si = accessLog.streamInfo;
+    logger.info("REST API stats for [streamId={}] [format => eventType,spaceId,connectorId,method,uri,status,timeTakenMs,resSize] - RESTAPIStats {} {} {} {} {} {} {}",
+            accessLog.streamId,
+            (si == null) ? "-" : si.get("SpaceId"),
+            (si == null) ? "-" : si.get("SID"),
+            req.method, req.uri, res.statusCode, accessLog.ms, res.size);
   }
 }
