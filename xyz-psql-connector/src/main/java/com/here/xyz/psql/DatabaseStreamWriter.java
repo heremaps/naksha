@@ -114,8 +114,8 @@ public class DatabaseStreamWriter extends DatabaseWriter{
         insertStmt.close();
         insertWithoutGeometryStmt.close();
         final long duration = System.currentTimeMillis() - startTS;
-        logger.info("{} NonTransactional DB Operation Stats [format => eventType,opType,timeTakenMs] - {} {} {}",
-                traceItem, "DBOperationStats", TYPE_INSERT, duration);
+        logger.info("{} NonTransactional DB Operation Stats [format => eventType,table,opType,timeTakenMs] - {} {} {} {}",
+                traceItem, "DBOperationStats", table, TYPE_INSERT, duration);
 
         return collection;
     }
@@ -215,8 +215,8 @@ public class DatabaseStreamWriter extends DatabaseWriter{
         updateStmt.close();
         updateWithoutGeometryStmt.close();
         final long duration = System.currentTimeMillis() - startTS;
-        logger.info("{} NonTransactional DB Operation Stats [format => eventType,opType,timeTakenMs] - {} {} {}",
-                traceItem, "DBOperationStats", TYPE_UPDATE, duration);
+        logger.info("{} NonTransactional DB Operation Stats [format => eventType,table,opType,timeTakenMs] - {} {} {} {}",
+                traceItem, "DBOperationStats", table, TYPE_UPDATE, duration);
 
         return collection;
     }
@@ -273,7 +273,7 @@ public class DatabaseStreamWriter extends DatabaseWriter{
         deleteStmt.close();
         deleteStmtWithoutUUID.close();
         final long duration = System.currentTimeMillis() - startTS;
-        logger.info("{} NonTransactional DB Operation Stats [format => eventType,opType,timeTakenMs] - {} {} {}",
-                traceItem, "DBOperationStats", TYPE_DELETE, duration);
+        logger.info("{} NonTransactional DB Operation Stats [format => eventType,table,opType,timeTakenMs] - {} {} {} {}",
+                traceItem, "DBOperationStats", table, TYPE_DELETE, duration);
     }
 }
