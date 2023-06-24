@@ -155,7 +155,8 @@ public abstract class AbstractHttpServerVerticle extends AbstractVerticle {
       logger.info(marker, "The request was cancelled. No response has been sent.");
       onRequestCancelled(context);
     }
-    logger.info(marker, "{}", LogUtil.responseToLogEntry(context));
+    // Commented this log as it is already getting logged below
+    // logger.info(marker, "{}", LogUtil.responseToLogEntry(context));
     LogUtil.addResponseInfo(context).end();
     LogUtil.writeAccessLog(context);
   }
