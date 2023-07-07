@@ -644,7 +644,7 @@ public abstract class DatabaseHandler extends StorageConnector {
                         throw e;//Table does not exist yet - create it!
                     else {
 
-                        logger.warn("{} Transaction has failed. {]", traceItem, e);
+                        logger.warn("{} Transaction has failed. ", traceItem, e);
                         connection.close();
 
                         Map<String, Object> errorDetails = new HashMap<>();
