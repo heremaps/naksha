@@ -836,7 +836,6 @@ var createdTaskStr = vars.get(&quot;V_Created_Task_Str&quot;);
 var updateTaskObj = JSON.parse(createdTaskStr);
 updateTaskObj.properties[&quot;@ns:com:here:xyz&quot;].tags.push(&quot;${UTM_DUMMY_UPDATE_TAG}&quot;);
 
-
 vars.put(&quot;V_Update_Request_Str&quot;, JSON.stringify(updateTaskObj));
 </stringProp>
           <stringProp name="scriptLanguage">javascript</stringProp>
@@ -1423,8 +1422,8 @@ vars.put(&quot;V_Update_Request_Str_02&quot;, JSON.stringify(updateTaskObj));
                 <stringProp name="Argument.value">{&#xd;
   &quot;type&quot;: &quot;FeatureCollection&quot;,&#xd;
   &quot;features&quot;: [&#xd;
-    ${V_Update_Request_Str_01},&#xd;
-    ${V_Update_Request_Str_02}&#xd;
+    ${V_Update_Request_Str_02},&#xd;
+    ${V_Update_Request_Str_01}&#xd;
   ]&#xd;
 }&#xd;
 </stringProp>
@@ -1469,10 +1468,10 @@ prev.setSuccessful(false);
 var expectedResObj = {
   &quot;type&quot;: &quot;FeatureCollection&quot;,
   &quot;features&quot;: [
-    ${V_Update_Request_Str_01},
-    ${V_Update_Request_Str_02}
+    ${V_Update_Request_Str_02},
+    ${V_Update_Request_Str_01}
   ],
-  &quot;updated&quot;: [&quot;${TASK_ID_P02_01}&quot;, &quot;${TASK_ID_P02_02}&quot;]
+  &quot;updated&quot;: [&quot;${TASK_ID_P02_02}&quot;, &quot;${TASK_ID_P02_01}&quot;]
 };
 
 // Remove unwanted fields from RESPONSE object, before actual v/s expected comparison
