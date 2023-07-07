@@ -1178,8 +1178,11 @@ BEGIN
         END IF;
         idx := idx + 1;
     END LOOP;
-    sorted_id_arr := akeys(id_pos_hstore); -- Sorted list of feature Ids
-    orig_idx_arr := id_pos_hstore -> sorted_id_arr; -- Original array idx position of each sorted Id
+    -- Sorted list of feature Ids
+    stmt := 'SELECT ARRAY_AGG(x.val) FROM (SELECT unnest($1) AS val ORDER BY val ASC) AS x';
+    EXECUTE stmt INTO sorted_id_arr USING akeys(id_pos_hstore);
+    -- Original array idx position of each sorted Id
+    orig_idx_arr := id_pos_hstore -> sorted_id_arr;
 
     -- Prepare statements upfront for perf optimization purpose
     random_num := round(random()*1000000)::TEXT;
