@@ -39,18 +39,21 @@ files:
 #   "permissions" section altogether. A blank or incomplete "permissions"
 #   section may cause associated deployments to fail.
 permissions:
-  - object: /home/admin/xyz-hub
+  # change owner for xyz-hub directory
+  - object: /home/admin
+    pattern: "xyz-hub"
     owner: admin
     group: admin
     type:
       - directory
+  # change owner recursively for all subdirectories (except xyz-hub itself)
   - object: /home/admin/xyz-hub
     pattern: "**"
-    except: ["set-app-params.sh","set-auth-keys.sh","set-instance-params.sh","start-app.sh"]
     owner: admin
     group: admin
     type:
       - directory
+  # change owner for all files in xyz-hub directory (except shell scripts)
   - object: /home/admin/xyz-hub
     pattern: "**"
     except: ["set-app-params.sh","set-auth-keys.sh","set-instance-params.sh","start-app.sh"]
@@ -58,6 +61,7 @@ permissions:
     group: admin
     type:
       - file
+  # change owner+permission for all shell scripts in xyz-hub directory
   - object: /home/admin/xyz-hub
     pattern: "*.sh"
     owner: admin
@@ -65,19 +69,23 @@ permissions:
     mode: 755
     type:
       - file
+  # change owner for all files inside .config directory
   - object: /home/admin/xyz-hub/.config
     pattern: "**"
     owner: admin
     group: admin
     type:
       - file
+  # change owner for all files inside auth directory
   - object: /home/admin/xyz-hub/.config/auth
     pattern: "**"
     owner: admin
     group: admin
     type:
       - file
-  - object: /etc/systemd/system/xyz-hub.service
+  # change permission for file xyz-hub.service
+  - object: /etc/systemd/system
+    pattern: "xyz-hub.service"
     owner: admin
     group: admin
     type:
