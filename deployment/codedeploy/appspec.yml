@@ -69,20 +69,6 @@ permissions:
     mode: 755
     type:
       - file
-  # change owner for all files inside .config directory
-  - object: /home/admin/xyz-hub/.config
-    pattern: "**"
-    owner: admin
-    group: admin
-    type:
-      - file
-  # change owner for all files inside auth directory
-  - object: /home/admin/xyz-hub/.config/auth
-    pattern: "**"
-    owner: admin
-    group: admin
-    type:
-      - file
   # change permission for file xyz-hub.service
   - object: /etc/systemd/system
     pattern: "xyz-hub.service"
