@@ -59,8 +59,8 @@
   "TXN_PUB_TPOOL_MAX_SIZE" : 100,
   "TXN_PUB_TPOOL_KEEP_ALIVE_SEC" : 60,
 
-  "AWS_ACCESS_KEY_ID": "<<some-valid-value-for-publisher>>",
-  "AWS_SECRET_ACCESS_KEY": "<<some-valid-value-for-publisher>>",
+  "AWS_ACCESS_KEY_ID": "",
+  "AWS_SECRET_ACCESS_KEY": "",
   "AWS_DEFAULT_REGION": "us-east-1",
 
   "ENABLE_TXN_SEQUENCER" : true,
