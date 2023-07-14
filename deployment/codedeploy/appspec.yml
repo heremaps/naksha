@@ -25,7 +25,7 @@ os: linux
 file_exists_behavior: OVERWRITE
 files:
   - source: /contents
-    destination: /home/admin/xyz-hub
+    destination: /home/admin
   - source: /contents/xyz-hub.service
     destination: /etc/systemd/system
 # For deployments to Amazon Linux, Ubuntu Server, or RHEL instances,

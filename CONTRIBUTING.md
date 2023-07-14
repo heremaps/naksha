@@ -43,4 +43,4 @@ Eventually, before making a pull request, ensure following:
 
 1. If any **new secret** parameter is introduced, then mention in pull-request as an indication for the repo-owner to add the secret in respective cloud environments.
 2. If any **new config** (not a secret) parameter is introduced in default [config.json](xyz-hub-service/src/main/resources/config.json),
-ensure the same is added into **deployment** [config.json](deployment/codedeploy/contents/.config/config.json) as well.
+ensure the same is added into **deployment** [config.json](deployment/codedeploy/contents/xyz-hub/.config/config.json) as well.
