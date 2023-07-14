@@ -207,7 +207,13 @@ public class Service extends Core {
         });
         subscriptionConfigClient.init(subscriptionConfigReady -> {
           if (subscriptionConfigReady.succeeded()) {
-            XYZTransactionHandler.getInstance(rawConfiguration).start();
+            try {
+              XYZTransactionHandler.getInstance(rawConfiguration).start();
+            }
+            catch (Exception ex) {
+              logger.error("Failed to initiate background Transaction Handler job. ", ex);
+              die(1, "Background Transaction Handler job initialization failed", ex.getCause());
+            }
           } else {
             die(1, "Subscription config client failed", subscriptionConfigReady.cause());
           }
