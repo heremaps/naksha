@@ -40,8 +40,7 @@ files:
 #   section may cause associated deployments to fail.
 permissions:
   # change owner for xyz-hub directory
-  - object: /home/admin
-    pattern: "xyz-hub"
+  - object: /home/admin/xyz-hub
     owner: admin
     group: admin
     type:
