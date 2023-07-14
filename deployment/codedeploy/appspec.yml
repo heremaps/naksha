@@ -45,13 +45,6 @@ permissions:
     group: admin
     type:
       - directory
-  # change owner recursively for all subdirectories (except xyz-hub itself)
-  - object: /home/admin/xyz-hub
-    pattern: "**"
-    owner: admin
-    group: admin
-    type:
-      - directory
   # change owner for all files in xyz-hub directory (except shell scripts)
   - object: /home/admin/xyz-hub
     pattern: "**"
