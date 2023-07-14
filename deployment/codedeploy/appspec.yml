@@ -40,6 +40,13 @@ files:
 #   section may cause associated deployments to fail.
 permissions:
   # change owner for xyz-hub directory
+  - object: /home/admin
+    pattern: "xyz-hub"
+    owner: admin
+    group: admin
+    type:
+      - directory
+  # change owner for all subdirectories inside xyz-hub
   - object: /home/admin/xyz-hub
     owner: admin
     group: admin
