@@ -40,17 +40,15 @@ files:
 #   section may cause associated deployments to fail.
 permissions:
   - object: /home/admin/xyz-hub
+    owner: admin
+    group: admin
+    type:
+      - directory
+  - object: /home/admin/xyz-hub
     pattern: "**"
     except: ["set-app-params.sh","set-auth-keys.sh","set-instance-params.sh","start-app.sh"]
     owner: admin
     group: admin
-    #mode:
-    #acls:
-      #-
-    #context:
-      #user:
-      #type:
-      #range:
     type:
       - directory
   - object: /home/admin/xyz-hub
