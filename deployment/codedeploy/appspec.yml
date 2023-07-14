@@ -26,7 +26,7 @@ file_exists_behavior: OVERWRITE
 files:
   - source: /contents
     destination: /home/admin
-  - source: /contents/xyz-hub.service
+  - source: /contents/xyz-hub/xyz-hub.service
     destination: /etc/systemd/system
 # For deployments to Amazon Linux, Ubuntu Server, or RHEL instances,
 #   you can specify a "permissions"
