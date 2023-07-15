@@ -45,7 +45,7 @@ jobs:
       ### TODO : Publish to maven central repository
       - name: Prepare CodeDeploy artifact content
         run: |
-          cp -p $SERVICE_JAR_DIR/xyz-hub-service.jar $CODEDEPLOY_DIR/contents/
+          cp -p $SERVICE_JAR_DIR/xyz-hub-service.jar $CODEDEPLOY_DIR/contents/xyz-hub/
       - name: List CodeDeploy artifact content
         run: |
           ls -lR $CODEDEPLOY_DIR
