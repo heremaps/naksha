@@ -47,7 +47,7 @@
     <pathToConfig>deployment/local/config.json</pathToConfig>
     <dockerComposeFile>docker-compose.yml</dockerComposeFile>
     <aws-sdk.version>2.20.11</aws-sdk.version>
-    <otel.version>1.27.0</otel.version>
+    <otel.version>1.28.0</otel.version>
   </properties>
 
   <build>
