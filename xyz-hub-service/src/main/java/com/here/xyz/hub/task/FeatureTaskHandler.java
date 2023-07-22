@@ -773,6 +773,8 @@ public class FeatureTaskHandler {
       if (task.space != null) //If the space is already given we don't need to retrieve it
         return Future.succeededFuture(task.space);
 
+      AbstractHttpServerVerticle.addStreamInfo(task.context, "SpaceId", task.getEvent().getSpace());
+
       //Load the space definition.
       return Space.resolveSpace(task.getMarker(), task.getEvent().getSpace())
           .compose(

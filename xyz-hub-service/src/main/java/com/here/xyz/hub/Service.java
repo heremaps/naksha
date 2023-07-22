@@ -36,6 +36,7 @@ import com.here.xyz.hub.rest.admin.messages.RelayedMessage;
 import com.here.xyz.hub.rest.admin.messages.brokers.Broker;
 import com.here.xyz.hub.rest.admin.messages.brokers.NoopBroker;
 import com.here.xyz.hub.util.ARN;
+import com.here.xyz.hub.util.OTelMetrics;
 import com.here.xyz.hub.util.metrics.GcDurationMetric;
 import com.here.xyz.hub.util.metrics.GlobalInflightRequestMemory;
 import com.here.xyz.hub.util.metrics.GlobalUsedRfcConnections;
@@ -206,7 +207,13 @@ public class Service extends Core {
         });
         subscriptionConfigClient.init(subscriptionConfigReady -> {
           if (subscriptionConfigReady.succeeded()) {
-            XYZTransactionHandler.getInstance(rawConfiguration).start();
+            try {
+              XYZTransactionHandler.getInstance(rawConfiguration).start();
+            }
+            catch (Exception ex) {
+              logger.error("Failed to initiate background Transaction Handler job. ", ex);
+              die(1, "Background Transaction Handler job initialization failed", ex.getCause());
+            }
           } else {
             die(1, "Subscription config client failed", subscriptionConfigReady.cause());
           }
@@ -215,6 +222,8 @@ public class Service extends Core {
         die(1, "Space config client failed", ar.cause());
       }
     });
+    // Initialize OpenTelemetry related metrics
+    OTelMetrics.init();
   }
 
   private static void onLocalConnectorsInserted(AsyncResult<Void> result, JsonObject config) {

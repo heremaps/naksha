@@ -94,7 +94,7 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
         }
 
         executeBatchesAndCheckOnFailures(dbh, insertIdList, insertWithoutGeometryIdList,
-                insertStmt, insertWithoutGeometryStmt, featureList, featureWithoutGeoList, fails, false, TYPE_INSERT, traceItem);
+                insertStmt, insertWithoutGeometryStmt, featureList, featureWithoutGeoList, fails, false, TYPE_INSERT, traceItem, table);
 
         if(fails.size() > 0) {
             logException(null, traceItem, LOG_EXCEPTION_INSERT, table);
@@ -177,7 +177,7 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
         }
 
         executeBatchesAndCheckOnFailures(dbh, updateIdList, updateWithoutGeometryIdList,
-                updateStmt, updateWithoutGeometryStmt, featureList, featureWithoutGeoList, fails, handleUUID, TYPE_UPDATE, traceItem);
+                updateStmt, updateWithoutGeometryStmt, featureList, featureWithoutGeoList, fails, handleUUID, TYPE_UPDATE, traceItem, table);
 
         if(fails.size() > 0) {
             logException(null, traceItem, LOG_EXCEPTION_UPDATE, table);
@@ -250,7 +250,7 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
                 batchDeleteStmtVersioned.setArray(3, handleUUID ? connection.createArrayOf("text", versionedUuidList.toArray()) : null);
             }
             executeBatchesAndCheckOnFailures(dbh, deleteIdList, deleteIdListWithoutUUID,
-                    batchDeleteStmtVersioned, batchDeleteStmtVersionedWithoutUUID, null, null, fails, handleUUID, TYPE_DELETE, traceItem);
+                    batchDeleteStmtVersioned, batchDeleteStmtVersionedWithoutUUID, null, null, fails, handleUUID, TYPE_DELETE, traceItem, table);
 
         }else{
             if (deleteIdListWithoutUUID.size() > 0) {
@@ -261,7 +261,7 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
                 batchDeleteStmt.setArray(2, handleUUID ? connection.createArrayOf("text", deleteUuidList.toArray()) : null);
             }
             executeBatchesAndCheckOnFailures(dbh, deleteIdList, deleteIdListWithoutUUID,
-                batchDeleteStmt, batchDeleteStmtWithoutUUID, null, null, fails, handleUUID, TYPE_DELETE, traceItem);
+                batchDeleteStmt, batchDeleteStmtWithoutUUID, null, null, fails, handleUUID, TYPE_DELETE, traceItem, table);
         }
 
         if(fails.size() > 0) {
@@ -274,7 +274,7 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
                                  PreparedStatement batchStmt, PreparedStatement batchStmt2,
                                  final List<Feature> featureList, final List<Feature> featureWithoutGeoList,
                                  List<FeatureCollection.ModificationFailure> fails,
-                                 boolean handleUUID, int type, TraceItem traceItem) throws SQLException, JsonProcessingException {
+                                 boolean handleUUID, int type, TraceItem traceItem, final String table) throws SQLException, JsonProcessingException {
 
         try {
             final long startTS = System.currentTimeMillis();
@@ -298,8 +298,8 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
                 if (rs!=null) rs.close();
             }
             final long duration = System.currentTimeMillis() - startTS;
-            logger.info("{} Transactional DB Operation Stats [format => eventType,opType,timeTakenMs] - {} {} {}",
-                    traceItem, "DBOperationStats", type, duration);
+            logger.info("{} Transactional DB Operation Stats [format => eventType,table,opType,timeTakenMs] - {} {} {} {}",
+                    traceItem, "DBOperationStats", table, type, duration);
         }finally {
             batchStmt.close();
             batchStmt2.close();

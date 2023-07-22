@@ -25,8 +25,8 @@ os: linux
 file_exists_behavior: OVERWRITE
 files:
   - source: /contents
-    destination: /home/admin/xyz-hub
-  - source: /contents/xyz-hub.service
+    destination: /home/admin
+  - source: /contents/xyz-hub/xyz-hub.service
     destination: /etc/systemd/system
 # For deployments to Amazon Linux, Ubuntu Server, or RHEL instances,
 #   you can specify a "permissions"
@@ -39,20 +39,28 @@ files:
 #   "permissions" section altogether. A blank or incomplete "permissions"
 #   section may cause associated deployments to fail.
 permissions:
+  # change owner for xyz-hub directory
+  - object: /home/admin
+    pattern: "xyz-hub"
+    owner: admin
+    group: admin
+    type:
+      - directory
+  # change owner for all subdirectories inside xyz-hub
+  - object: /home/admin/xyz-hub
+    owner: admin
+    group: admin
+    type:
+      - directory
+  # change owner for all files in xyz-hub directory (except shell scripts)
   - object: /home/admin/xyz-hub
     pattern: "**"
     except: ["set-app-params.sh","set-auth-keys.sh","set-instance-params.sh","start-app.sh"]
     owner: admin
     group: admin
-    #mode:
-    #acls:
-      #-
-    #context:
-      #user:
-      #type:
-      #range:
     type:
-      - directory
+      - file
+  # change owner+permission for all shell scripts in xyz-hub directory
   - object: /home/admin/xyz-hub
     pattern: "*.sh"
     owner: admin
@@ -60,7 +68,9 @@ permissions:
     mode: 755
     type:
       - file
-  - object: /etc/systemd/system/xyz-hub.service
+  # change permission for file xyz-hub.service
+  - object: /etc/systemd/system
+    pattern: "xyz-hub.service"
     owner: admin
     group: admin
     type:
