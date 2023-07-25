@@ -39,7 +39,7 @@ class HeapCacheTest {
   }
 
   @Test
-  void basics() {
+  void CacheSoftReferenceTest() {
     final HeapCache cache = new HeapCache(new HeapCacheConfig(null));
     try (final IMasterTransaction tx = cache.openMasterTransaction(cache.createSettings())) {
       tx.writeFeatures(XyzFeature.class, new CollectionInfo("foo"))
@@ -50,10 +50,20 @@ class HeapCacheTest {
           tx.readFeatures(XyzFeature.class, new CollectionInfo("foo")).getFeatureById("x");
       assertNotNull(feature);
       assertEquals("x", feature.getId());
+    }
+  }
+
+  @Test
+  void CacheWeakReferenceTest() {
+    final HeapCache cache = new HeapCache(new HeapCacheConfig(null));
+    try (final IMasterTransaction tx = cache.openMasterTransaction(cache.createSettings())) {
+      tx.writeFeatures(XyzFeature.class, new CollectionInfo("foo"))
+          .modifyFeatures(new ModifyFeaturesReq<>().insert(new XyzFeature("x")));
+      tx.commit();
 
       gc(new WeakReference<>(new Object()));
 
-      feature =
+      XyzFeature feature =
           tx.readFeatures(XyzFeature.class, new CollectionInfo("foo")).getFeatureById("x");
       assertNull(feature);
     }
