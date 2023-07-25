@@ -22,8 +22,6 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.storage.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
-
 public class HeapFeatureWriter<F extends XyzFeature> extends HeapFeatureReader<F> implements IFeatureWriter<F> {
 
   HeapFeatureWriter(@NotNull HeapCache cache, @NotNull Class<F> featureClass, @NotNull CollectionInfo collection) {
