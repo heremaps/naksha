@@ -70,10 +70,5 @@ public class HeapFeatureReader<F extends XyzFeature> implements IFeatureReader<F
       }
     }
     return new CacheResultSet<>(featureClass, features);
-
-    // TODO: Implement me! -- Done plz review
-    // Note: The FibSet does currently miss a method to iterate entries!
-    //       I will add it when I'am back from vacation, except you want to try.
-    // throw new UnsupportedOperationException();
   }
 }

@@ -68,4 +68,20 @@ class HeapCacheTest {
       assertNull(feature);
     }
   }
+
+  @Test
+  void cacheGetFeaturesByIdTest() {
+    final HeapCache cache = new HeapCache(new HeapCacheConfig(null));
+    try (final IMasterTransaction tx = cache.openMasterTransaction(cache.createSettings())) {
+      tx.writeFeatures(XyzFeature.class, new CollectionInfo("bar"))
+          .modifyFeatures(new ModifyFeaturesReq<>().insert(new XyzFeature("r")));
+      tx.commit();
+
+      XyzFeature feature = tx.readFeatures(XyzFeature.class, new CollectionInfo("bar"))
+          .getFeaturesById("r")
+          .getFeature();
+      assertNotNull(feature);
+      assertEquals("r", feature.getId());
+    }
+  }
 }
