@@ -27,6 +27,8 @@ import com.here.naksha.lib.core.storage.ITransactionSettings;
 import com.here.naksha.lib.core.util.fib.FibSet;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.ref.WeakReference;
+
 public class HeapCache implements IStorage {
 
   public HeapCache(@NotNull HeapCacheConfig config) {
@@ -37,6 +39,20 @@ public class HeapCache implements IStorage {
 
   protected final @NotNull HeapCacheConfig config;
   protected final @NotNull FibSet<String, CacheEntry> cache = new FibSet<>(CacheEntry::new);
+
+  static void gc(@NotNull WeakReference<?> ref) {
+    System.gc();
+    while (ref.get() != null) {
+      Thread.yield();
+      System.gc();
+    }
+  }
+
+  //For Cache Eviction
+  public void setWeakReference(@NotNull Object){
+    gc(new WeakReference<>(new Object()));
+  }
+
 
   @Override
   public void maintain() {
