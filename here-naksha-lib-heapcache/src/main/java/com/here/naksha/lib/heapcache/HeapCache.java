@@ -27,9 +27,10 @@ import com.here.naksha.lib.core.storage.ITransactionSettings;
 import com.here.naksha.lib.core.util.fib.FibSet;
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.ref.WeakReference;
-
 public class HeapCache implements IStorage {
+
+  protected final @NotNull HeapCacheConfig config;
+  protected final @NotNull FibSet<String, CacheEntry> cache = new FibSet<>(CacheEntry::new);
 
   public HeapCache(@NotNull HeapCacheConfig config) {
     this.config = config;
@@ -37,35 +38,19 @@ public class HeapCache implements IStorage {
     // we need to implement listeners and other mechanisms to always keep up with the storage.
   }
 
-  protected final @NotNull HeapCacheConfig config;
-  protected final @NotNull FibSet<String, CacheEntry> cache = new FibSet<>(CacheEntry::new);
-
-  static void gc(@NotNull WeakReference<?> ref) {
-    System.gc();
-    while (ref.get() != null) {
-      Thread.yield();
-      System.gc();
-    }
-  }
-
-  //For Cache Eviction
-  public void setWeakReference(@NotNull Object){
-    gc(new WeakReference<>(new Object()));
-  }
-
-
   @Override
   public void maintain() {
-    if (config.storage != null) {
-      config.storage.maintain();
+    if (config.getStorage() != null) {
+      config.getStorage().maintain();
     }
   }
 
   @Override
   public @NotNull ITransactionSettings createSettings() {
-    // assert config.storage != null;
-    // return config.storage.createSettings();
-    return null;
+    if (config.getStorage() != null) {
+      return config.getStorage().createSettings();
+    }
+    return new TransactionSettings();
   }
 
   @Override
