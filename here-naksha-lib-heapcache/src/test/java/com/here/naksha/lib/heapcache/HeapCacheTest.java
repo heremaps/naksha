@@ -38,7 +38,6 @@ class HeapCacheTest {
     }
   }
 
-
   @Test
   void CacheSoftReferenceTest() {
     final HeapCache cache = new HeapCache(new HeapCacheConfig(null));
