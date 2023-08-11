@@ -131,6 +131,7 @@ public class MessageUtil {
         } catch (Exception ex) {
             payloadJson = null;
             logger.error("Exception converting Object to Json {} {}", object, ex.getMessage(), ex);
+            throw new RuntimeException(ex);
         }
         return payloadJson;
     }
@@ -160,6 +161,7 @@ public class MessageUtil {
         } catch (Exception ex) {
             payloadObj = null;
             logger.error("Exception converting Json to Object of type {} - {} , Error:{}", type, payloadJson, ex.getMessage(), ex);
+            throw new RuntimeException(ex);
         }
         return payloadObj;
     }
@@ -191,6 +193,7 @@ public class MessageUtil {
         } catch (Exception ex) {
             payloadObj = null;
             logger.error("Exception converting Json to Object of type {} - {}, Error:{}", ref.getClass().getComponentType(), payloadJson, ex.getMessage(), ex);
+            throw new RuntimeException(ex);
         }
         return payloadObj;
     }

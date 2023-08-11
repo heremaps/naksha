@@ -209,11 +209,13 @@ public class PubDatabaseHandler {
                     pubTxnData.setTxnRecId(rs.getLong("txn_rec_id"));
                     pubTxnData.setAction(rs.getString("feature_action"));
                     pubTxnData.setFeatureId(rs.getString("feature_id"));
-                    // Combine feature + geometry
+                    // Combine feature + geometry (if available)
                     final String featureJson = rs.getString("feature_json");
                     final String featureGeometry = rs.getString("geometry");
                     final Map<String, Object> jsonDataMap = MessageUtil.fromJson(featureJson, MAP_TYPE_REFERENCE);
-                    jsonDataMap.put("geometry", MessageUtil.fromJson(featureGeometry, MAP_TYPE_REFERENCE));
+                    if (featureGeometry!=null) {
+                        jsonDataMap.put("geometry", MessageUtil.fromJson(featureGeometry, MAP_TYPE_REFERENCE));
+                    }
                     final String jsonData = MessageUtil.toJson(jsonDataMap);
                     // store combined feature + geometry
                     pubTxnData.setJsonData(jsonData);
