@@ -24,6 +24,7 @@ public class MessageUtil {
 
     private static Map<String, IPubMsgMapper> instanceMap = new HashMap<>();
     final public static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    final public static TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE = new TypeReference<Map<String, Object>>() {};
 
 
     public static IPubMsgMapper getMsgMapperInstance(final Subscription sub) throws Exception {

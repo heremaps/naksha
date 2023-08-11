@@ -6,10 +6,12 @@ import com.here.xyz.pub.util.MessageUtil;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.here.xyz.pub.util.MessageUtil.MAP_TYPE_REFERENCE;
+
 public class DefaultPubMsgMapper implements IPubMsgMapper {
 
     public String mapToPublishableFormat(final Subscription sub, final PubTransactionData txnData) {
-        final Map<String, Object> jsonDataMap = MessageUtil.fromJson(txnData.getJsonData(), Map.class);
+        final Map<String, Object> jsonDataMap = MessageUtil.fromJson(txnData.getJsonData(), MAP_TYPE_REFERENCE);
         final String action = txnData.getAction();
         // prepare final message map
         final Map<String, Object> msgMap = new HashMap<>();

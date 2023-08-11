@@ -3,6 +3,7 @@ package com.here.xyz.pub.db;
 import com.here.xyz.models.hub.Subscription;
 import com.here.xyz.psql.config.PSQLConfig;
 import com.here.xyz.pub.models.*;
+import com.here.xyz.pub.util.MessageUtil;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
@@ -11,6 +12,8 @@ import java.security.GeneralSecurityException;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+
+import static com.here.xyz.pub.util.MessageUtil.MAP_TYPE_REFERENCE;
 
 public class PubDatabaseHandler {
     private static final Logger logger = LogManager.getLogger();
@@ -41,7 +44,7 @@ public class PubDatabaseHandler {
     final private static String SCHEMA_STR = "{{SCHEMA}}";
     final private static String TABLE_STR = "{{TABLE}}";
     final private static String FETCH_TXNS_FROM_SPACEDB =
-            "SELECT txn_id, txn_rec_id, feature_action, feature_id, feature_json, feature_geo " +
+            "SELECT txn_id, txn_rec_id, feature_action, feature_id, feature_json, REPLACE(ST_AsGeojson(ST_Force3D(feature_geo)),'nan','0') as geometry " +
             "FROM "+PubConfig.XYZ_ADMIN_DB_CFG_SCHEMA+".naksha_fetch_newer_transactions" +
             "( '"+SCHEMA_STR+"', '"+TABLE_STR+"', ?, ?, ?, ?) ";
 
@@ -206,7 +209,14 @@ public class PubDatabaseHandler {
                     pubTxnData.setTxnRecId(rs.getLong("txn_rec_id"));
                     pubTxnData.setAction(rs.getString("feature_action"));
                     pubTxnData.setFeatureId(rs.getString("feature_id"));
-                    pubTxnData.setJsonData(rs.getString("feature_json"));
+                    // Combine feature + geometry
+                    final String featureJson = rs.getString("feature_json");
+                    final String featureGeometry = rs.getString("geometry");
+                    final Map<String, Object> jsonDataMap = MessageUtil.fromJson(featureJson, MAP_TYPE_REFERENCE);
+                    jsonDataMap.put("geometry", MessageUtil.fromJson(featureGeometry, MAP_TYPE_REFERENCE));
+                    final String jsonData = MessageUtil.toJson(jsonDataMap);
+                    // store combined feature + geometry
+                    pubTxnData.setJsonData(jsonData);
                     // add to the list
                     if (txnList == null) {
                         txnList = new ArrayList<>();
