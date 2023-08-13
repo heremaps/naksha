@@ -188,4 +188,13 @@ public class DatabaseWriter {
         }
     }
 
+    protected static byte[][] twoDimensionalByteArray(final List<byte[]> listOfByteArray) {
+        final byte[][] twoDArray = new byte[listOfByteArray.size()][];
+        int idx = 0;
+        for (final byte[] bytes : listOfByteArray) {
+            twoDArray[idx++] = bytes;
+        }
+        return twoDArray;
+    }
+
 }

@@ -24,10 +24,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.xyz.models.geojson.implementation.Feature;
 import com.here.xyz.models.geojson.implementation.FeatureCollection;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.io.WKBWriter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.postgresql.util.PGobject;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,8 +56,9 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
         // parameters for with-geometry scenario
         final List<String> insertIdList = new ArrayList<>();
         final List<PGobject> insertJsonbObjectList = new ArrayList<>();
-        final List<Geometry> insertGeometryList = new ArrayList<>();
+        final List<byte[]> insertGeometryList = new ArrayList<>();
         final List<Feature> featureList = new ArrayList<>();
+        final WKBWriter wkbWriter = new WKBWriter(3);
 
         for (int i = 0; i < inserts.size(); i++) {
             final Feature feature = inserts.get(i);
@@ -72,13 +73,12 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
                 featureWithoutGeoList.add(feature);
             } else {
                 insertJsonbObjectList.add(jsonbObject);
-                Geometry jtsGeometry = feature.getGeometry().getJTSGeometry();
+                final Geometry jtsGeometry = feature.getGeometry().getJTSGeometry();
                 //Avoid NAN values
                 assure3d(jtsGeometry.getCoordinates());
-                insertGeometryList.add(jtsGeometry);
+                insertGeometryList.add(wkbWriter.write(jtsGeometry));
                 /*if (forExtendedSpace)
                     insertStmt.setBoolean(3, getDeletedFlagFromFeature(feature));*/
-
                 insertIdList.add(feature.getId());
                 featureList.add(feature);
             }
@@ -90,7 +90,7 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
         }
         if (insertIdList.size() > 0) {
             insertStmt.setArray(1, connection.createArrayOf("jsonb", insertJsonbObjectList.toArray()));
-            insertStmt.setArray(2, connection.createArrayOf("geometry", insertGeometryList.toArray()));
+            insertStmt.setArray(2, connection.createArrayOf("bytea", twoDimensionalByteArray(insertGeometryList)));
         }
 
         executeBatchesAndCheckOnFailures(dbh, insertIdList, insertWithoutGeometryIdList,
@@ -122,8 +122,9 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
         final List<String> updateIdList = new ArrayList<>();
         final List<PGobject> updateJsonbObjectList = new ArrayList<>();
         final List<String> updateUuidList = handleUUID ? new ArrayList<>() : null;
-        final List<Geometry> updateGeometryList = new ArrayList<>();
+        final List<byte[]> updateGeometryList = new ArrayList<>();
         final List<Feature> featureList = new ArrayList<>();
+        final WKBWriter wkbWriter = new WKBWriter(3);
 
         for (int i = 0; i < updates.size(); i++) {
             final Feature feature = updates.get(i);
@@ -149,13 +150,12 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
                     updateUuidList.add(puuid);
                 }
                 updateJsonbObjectList.add(jsonbObject);
-                Geometry jtsGeometry = feature.getGeometry().getJTSGeometry();
+                final Geometry jtsGeometry = feature.getGeometry().getJTSGeometry();
                 //Avoid NAN values
                 assure3d(jtsGeometry.getCoordinates());
-                updateGeometryList.add(jtsGeometry);
+                updateGeometryList.add(wkbWriter.write(jtsGeometry));
                 /*if (forExtendedSpace)
                     updateStmt.setBoolean(++paramIdx, getDeletedFlagFromFeature(feature));*/
-
                 updateIdList.add(feature.getId());
                 featureList.add(feature);
             }
@@ -172,7 +172,7 @@ public class DatabaseTransactionalWriter extends  DatabaseWriter{
             updateStmt.setArray(1, connection.createArrayOf("text", updateIdList.toArray()));
             updateStmt.setArray(2, handleUUID ? connection.createArrayOf("text", updateUuidList.toArray()) : null);
             updateStmt.setArray(3, connection.createArrayOf("jsonb", updateJsonbObjectList.toArray()));
-            updateStmt.setArray(4, connection.createArrayOf("geometry", updateGeometryList.toArray()));
+            updateStmt.setArray(4, connection.createArrayOf("bytea", twoDimensionalByteArray(updateGeometryList)));
             updateStmt.setBoolean(5, enableNowait);
         }
 
