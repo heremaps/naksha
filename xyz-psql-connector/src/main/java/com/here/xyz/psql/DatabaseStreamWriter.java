@@ -23,6 +23,7 @@ import com.here.xyz.connectors.AbstractConnectorHandler.TraceItem;
 import com.here.xyz.models.geojson.implementation.Feature;
 import com.here.xyz.models.geojson.implementation.FeatureCollection;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.io.WKBWriter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.postgresql.util.PGobject;
@@ -62,7 +63,8 @@ public class DatabaseStreamWriter extends DatabaseWriter{
 
                 final PGobject jsonbObject= featureToPGobject(feature,null);
                 final List<PGobject> jsonbObjectList = new ArrayList<>();
-                final List<Geometry> geometryList = new ArrayList<>();
+                final List<byte[]> geometryList = new ArrayList<>();
+                final WKBWriter wkbWriter = new WKBWriter(3);
 
                 jsonbObjectList.add(jsonbObject);
                 if (feature.getGeometry() == null) {
@@ -79,8 +81,8 @@ public class DatabaseStreamWriter extends DatabaseWriter{
                     Geometry jtsGeometry = feature.getGeometry().getJTSGeometry();
                     //Avoid NAN values
                     assure3d(jtsGeometry.getCoordinates());
-                    geometryList.add(jtsGeometry);
-                    insertStmt.setArray(2, connection.createArrayOf("geometry", geometryList.toArray()));
+                    geometryList.add(wkbWriter.write(jtsGeometry));
+                    insertStmt.setArray(2, connection.createArrayOf("bytea", twoDimensionalByteArray(geometryList)));
                     /*if (forExtendedSpace)
                         insertStmt.setBoolean(3, getDeletedFlagFromFeature(feature));*/
                     insertStmt.setQueryTimeout(dbh.calculateTimeout());
@@ -154,7 +156,8 @@ public class DatabaseStreamWriter extends DatabaseWriter{
                 final List<String> fIdList = new ArrayList<>();
                 final List<String> uuidList = new ArrayList<>();
                 final List<PGobject> jsonbObjectList = new ArrayList<>();
-                final List<Geometry> geometryList = new ArrayList<>();
+                final List<byte[]> geometryList = new ArrayList<>();
+                final WKBWriter wkbWriter = new WKBWriter(3);
 
                 fIdList.add(fId);
                 if (handleUUID) {
@@ -185,12 +188,11 @@ public class DatabaseStreamWriter extends DatabaseWriter{
                     Geometry jtsGeometry = feature.getGeometry().getJTSGeometry();
                     //Avoid NAN values
                     assure3d(jtsGeometry.getCoordinates());
-                    geometryList.add(jtsGeometry);
-                    updateStmt.setArray(++paramIdx, connection.createArrayOf("geometry", geometryList.toArray()));
+                    geometryList.add(wkbWriter.write(jtsGeometry));
+                    updateStmt.setArray(++paramIdx, connection.createArrayOf("bytea", twoDimensionalByteArray(geometryList)));
                     updateStmt.setBoolean(++paramIdx, enableNowait);;
                     /*if (forExtendedSpace)
                         updateStmt.setBoolean(++paramIdx, getDeletedFlagFromFeature(feature));*/
-
                     updateStmt.setQueryTimeout(dbh.calculateTimeout());
                     success = updateStmt.execute();
                     if (success) {

@@ -1053,7 +1053,7 @@ $BODY$;
 
 DROP FUNCTION IF EXISTS xyz_config.naksha_bulk_insert(TEXT, TEXT, jsonb[], geometry[]);
 
-CREATE OR REPLACE FUNCTION xyz_config.naksha_bulk_insert( in_schema TEXT, in_table TEXT, in_jsondata_arr jsonb[], in_geo_arr geometry[] )
+CREATE OR REPLACE FUNCTION xyz_config.naksha_bulk_insert( in_schema TEXT, in_table TEXT, in_jsondata_arr jsonb[], in_geo_arr bytea[] )
     RETURNS TABLE
             (
                 success   bool[],

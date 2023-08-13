@@ -38,7 +38,13 @@
             <stringProp name="Argument.name">TASK_ID_P04_01</stringProp>
             <stringProp name="Argument.value">0000000000-p04-01</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">Prefix to allow iterate to work using index</stringProp>
+            <stringProp name="Argument.desc">Deliberate prefix to allow iterate to work using index</stringProp>
+          </elementProp>
+          <elementProp name="TASK_ID_P04_02" elementType="Argument">
+            <stringProp name="Argument.name">TASK_ID_P04_02</stringProp>
+            <stringProp name="Argument.value">0000000000-p04-02</stringProp>
+            <stringProp name="Argument.desc">Deliberate prefix to allow iterate to work using index</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="TASK_ID_P07_01" elementType="Argument">
             <stringProp name="Argument.name">TASK_ID_P07_01</stringProp>
@@ -72,7 +78,7 @@
           </elementProp>
           <elementProp name="ALL_TASK_IDS" elementType="Argument">
             <stringProp name="Argument.name">ALL_TASK_IDS</stringProp>
-            <stringProp name="Argument.value">${TASK_ID_P01_01},${TASK_ID_P02_01},${TASK_ID_P02_02},${TASK_ID_P03_01},${TASK_ID_P04_01},${TASK_ID_P07_01},${TASK_ID_N02_01},${TASK_ID_N03_01},${TASK_ID_N04_01},${TASK_ID_N04_02},${TASK_ID_N05_01}</stringProp>
+            <stringProp name="Argument.value">${TASK_ID_P01_01},${TASK_ID_P02_01},${TASK_ID_P02_02},${TASK_ID_P03_01},${TASK_ID_P04_01},${TASK_ID_P07_01},${TASK_ID_N02_01},${TASK_ID_N03_01},${TASK_ID_N04_01},${TASK_ID_N04_02},${TASK_ID_N05_01},${TASK_ID_P04_02}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="UTM_TAG_ID" elementType="Argument">
@@ -619,7 +625,7 @@ var requestStr = {
     &quot;coordinates&quot;: [
       8.68872,
       50.0561,
-      0
+      292.94377758
     ]
   },
   &quot;properties&quot;: {
@@ -1113,7 +1119,7 @@ var requestObj = {
     &quot;coordinates&quot;: [
       8.68872,
       50.0561,
-      0
+      292.94377758
     ]
   },
   &quot;properties&quot;: {
@@ -1660,7 +1666,7 @@ var expectedResObj = {
     },
     &quot;geometry&quot;: {
       &quot;type&quot;: &quot;Point&quot;,
-      &quot;coordinates&quot;: [8.68872, 50.0561, 0]
+      &quot;coordinates&quot;: [8.68872, 50.0561, 292.94377758]
     }
   }, {
     &quot;type&quot;: &quot;Feature&quot;,
@@ -1720,7 +1726,7 @@ var expectedResObj = {
     },
     &quot;geometry&quot;: {
       &quot;type&quot;: &quot;Point&quot;,
-      &quot;coordinates&quot;: [8.68872, 50.0561, 0]
+      &quot;coordinates&quot;: [8.68872, 50.0561, 292.94377758]
     }
   }]
 };
@@ -1911,7 +1917,7 @@ var expectedResObj = {
     },
     &quot;geometry&quot;: {
       &quot;type&quot;: &quot;Point&quot;,
-      &quot;coordinates&quot;: [8.68872, 50.0561, 0]
+      &quot;coordinates&quot;: [8.68872, 50.0561, 292.94377758]
     }
   }, {
     &quot;type&quot;: &quot;Feature&quot;,
@@ -1971,7 +1977,7 @@ var expectedResObj = {
     },
     &quot;geometry&quot;: {
       &quot;type&quot;: &quot;Point&quot;,
-      &quot;coordinates&quot;: [8.68872, 50.0561, 0]
+      &quot;coordinates&quot;: [8.68872, 50.0561, 292.94377758]
     }
   }]
 };
@@ -2186,7 +2192,7 @@ var requestObj = {
     &quot;coordinates&quot;: [
       8.68872,
       50.0561,
-      0
+      292.94377758
     ]
   },
   &quot;properties&quot;: {
@@ -2676,7 +2682,7 @@ else {
           <stringProp name="filename"></stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="script">
-var requestStr = {
+var requestObj = {
   &quot;type&quot;: &quot;Feature&quot;,
   &quot;id&quot;: &quot;${TASK_ID_P04_01}&quot;,
   &quot;geometry&quot;: {
@@ -2684,7 +2690,7 @@ var requestStr = {
     &quot;coordinates&quot;: [
       8.68872,
       50.0561,
-      0
+      292.94377758
     ]
   },
   &quot;properties&quot;: {
@@ -2744,18 +2750,33 @@ var requestStr = {
 };
 
 
-vars.put(&quot;V_Create_Request_Str&quot;, JSON.stringify(requestStr));
+vars.put(&quot;V_Create_Request_Str_01&quot;, JSON.stringify(requestObj));
+
+// use different geometry for 2nd request
+requestObj.id = &quot;${TASK_ID_P04_02}&quot;;
+requestObj.geometry.coordinates = [9.68872, 51.0561, 293.94377758];
+
+vars.put(&quot;V_Create_Request_Str_02&quot;, JSON.stringify(requestObj));
+
+
 </stringProp>
           <stringProp name="scriptLanguage">javascript</stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos4.2 - Create Task" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos4.2 - Bulk Create" enabled="true">
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">${V_Create_Request_Str}</stringProp>
+                <stringProp name="Argument.value">{&#xd;
+  &quot;type&quot;: &quot;FeatureCollection&quot;,&#xd;
+  &quot;features&quot;: [&#xd;
+    ${V_Create_Request_Str_01},&#xd;
+    ${V_Create_Request_Str_02}&#xd;
+  ]&#xd;
+}&#xd;
+</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
@@ -2764,8 +2785,8 @@ vars.put(&quot;V_Create_Request_Str&quot;, JSON.stringify(requestStr));
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol"></stringProp>
           <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features/${TASK_ID_P04_01}?access_token=${WR_API_KEY}</stringProp>
-          <stringProp name="HTTPSampler.method">PUT</stringProp>
+          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features?access_token=${WR_API_KEY}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
           <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
@@ -2793,28 +2814,40 @@ vars.put(&quot;V_Create_Request_Str&quot;, JSON.stringify(requestStr));
 // Fail the test case (by default), unless it is found to have &quot;passed&quot; later on
 prev.setSuccessful(false);
 
-// Remove unwanted fields from RESPONSE object, before actual v/s expected comparison
+// Set expected response object
+var expectedResObj = {
+  &quot;type&quot;: &quot;FeatureCollection&quot;,
+  &quot;features&quot;: [
+    ${V_Create_Request_Str_01},
+    ${V_Create_Request_Str_02}
+  ],
+  &quot;inserted&quot;: [&quot;${TASK_ID_P04_01}&quot;, &quot;${TASK_ID_P04_02}&quot;]
+};
+
+// Remove unwanted fields from response, before actual v/s expected comparison
 var actualResString = prev.getResponseDataAsString();
 var actualResObj = JSON.parse(actualResString);
-delete actualResObj.geometry.bbox;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].createdAt;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].muuid;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].puuid;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].space;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].updatedAt;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].uuid;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].version;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].txn;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].rtcts;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].rtuts;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].action;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].appId;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].author;
-delete actualResObj.properties[&quot;@ns:com:here:xyz&quot;].deleted;
+delete actualResObj.etag;
+actualResObj.features.forEach(function(feature) {
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].createdAt;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].muuid;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].puuid;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].space;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].updatedAt;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].uuid;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].version;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].txn;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].rtcts;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].rtuts;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].action;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].appId;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].author;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].deleted;
+});
 
 // Compare actual v/s expected
 var modifiedActualResString = JSON.stringify(actualResObj);
-var expectedResString = JSON.stringify(${V_Create_Request_Str});
+var expectedResString = JSON.stringify(expectedResObj);
 
 if ( expectedResString == modifiedActualResString ) {
 	prev.setSuccessful(true);
@@ -2898,121 +2931,131 @@ prev.setSuccessful(false);
 
 // Set expected response object
 // NOTE : ITERATE operation changes the order in which fields are returned, hence we have to put entire expected response object here, instead of reusing original Create request
-var expectedResObj = {
-  &quot;id&quot;: &quot;${TASK_ID_P04_01}&quot;,
-  &quot;type&quot;: &quot;Feature&quot;,
-  &quot;properties&quot;: {
-    &quot;due&quot;: 0,
-    &quot;status&quot;: &quot;OPEN&quot;,
-    &quot;options&quot;: [
-      {
-        &quot;key&quot;: &quot;EDIT&quot;,
-        &quot;value&quot;: [
-          {
-            &quot;lang&quot;: &quot;en&quot;,
-            &quot;text&quot;: &quot;Edit&quot;
-          }
-        ]
-      },
-      {
-        &quot;key&quot;: &quot;ENDORSED&quot;,
-        &quot;value&quot;: [
-          {
-            &quot;lang&quot;: &quot;en&quot;,
-            &quot;text&quot;: &quot;Endorsed&quot;
-          }
-        ]
-      },
-      {
-        &quot;key&quot;: &quot;ROLLBACK_MANUALLY&quot;,
-        &quot;value&quot;: [
-          {
-            &quot;lang&quot;: &quot;en&quot;,
-            &quot;text&quot;: &quot;Rollback - Code Manually&quot;
-          }
-        ]
-      },
-      {
-        &quot;key&quot;: &quot;ROLLBACK_REJECT&quot;,
-        &quot;value&quot;: [
-          {
-            &quot;lang&quot;: &quot;en&quot;,
-            &quot;text&quot;: &quot;Rollback - Reject&quot;
-          }
-        ]
-      }
-    ],
-    &quot;headline&quot;: [
-      {
-        &quot;lang&quot;: &quot;en&quot;,
-        &quot;text&quot;: &quot;A road has been CREATED&quot;
-      }
-    ],
-    &quot;priority&quot;: 0,
-    &quot;taskType&quot;: &quot;COLLECT&quot;,
-    &quot;audiences&quot;: [
-      &quot;INTERNAL&quot;
-    ],
-    &quot;references&quot;: [
-      {
-        &quot;ids&quot;: [
-          &quot;ad24b3d2-9f23-4b61-b007-4dc5aeea1bc0&quot;
-        ],
-        &quot;spaceId&quot;: &quot;QsZZzwyY&quot;,
-        &quot;featureType&quot;: &quot;Road&quot;
-      }
-    ],
-    &quot;description&quot;: [
-      {
-        &quot;lang&quot;: &quot;en&quot;,
-        &quot;text&quot;: &quot;A  Road has been CREATED, Please check this task for reference!&quot;
-      }
-    ],
-    &quot;featureType&quot;: &quot;MapTask&quot;,
-    &quot;isoCountryCode&quot;: &quot;DEU&quot;,
-    &quot;potentialValue&quot;: 0,
-    &quot;@ns:com:here:utm&quot;: {
-      &quot;tags&quot;: [
-        &quot;tool_mapcreator_moderation_category_community_feedback_road_isocc_deu_user_type_normal&quot;,
-        &quot;tool_mapcreator_moderation_category_road_geometry_isocc_deu_user_type_normal&quot;
-      ]
-    },
-    &quot;@ns:com:here:xyz&quot;: {
-      &quot;tags&quot;: [
-        &quot;@admin1_deu&quot;,
-        &quot;@admin2_hesse&quot;,
-        &quot;@admin3_neu-isenburg&quot;,
-        &quot;@adminlevels_deu_hesse_neu-isenburg&quot;,
-        &quot;audience_internal&quot;,
-        &quot;category_community_feedback_road&quot;,
-        &quot;category_road_geometry&quot;,
-        &quot;isocc_deu&quot;,
-        &quot;otm_maptask&quot;,
-        &quot;priority_1&quot;,
-        &quot;quadkey_1202033022101121&quot;,
-        &quot;skill_level_journeyman&quot;,
-        &quot;source_mapedit&quot;,
-        &quot;status_open&quot;,
-        &quot;taskproducer_mcpt&quot;,
-        &quot;tasktype_geometry&quot;,
-        &quot;tool_mapcreator_moderation&quot;,
-        &quot;tool_mapcreator_moderation_category_community_feedback_road_isocc_deu_user_type_normal&quot;,
-        &quot;tool_mapcreator_moderation_category_road_geometry_isocc_deu_user_type_normal&quot;,
-        &quot;user_type_normal&quot;,
-        &quot;${UTM_TAG_ID}&quot;
-      ]
-    }
-  },
-  &quot;geometry&quot;: {
-    &quot;type&quot;: &quot;Point&quot;,
-    &quot;coordinates&quot;: [
-      8.68872,
-      50.0561,
-      0
-    ]
-  }
-};
-
+var expectedFeatureArr = [{
+		&quot;type&quot;: &quot;Feature&quot;,
+		&quot;id&quot;: &quot;${TASK_ID_P04_01}&quot;,
+		&quot;geometry&quot;: {
+			&quot;type&quot;: &quot;Point&quot;,
+			&quot;coordinates&quot;: [8.68872, 50.0561, 292.94377758]
+		},
+		&quot;properties&quot;: {
+			&quot;@ns:com:here:xyz&quot;: {
+				&quot;tags&quot;: [&quot;@admin1_deu&quot;, &quot;@admin2_hesse&quot;, &quot;@admin3_neu-isenburg&quot;, &quot;@adminlevels_deu_hesse_neu-isenburg&quot;, &quot;audience_internal&quot;, &quot;category_community_feedback_road&quot;, &quot;category_road_geometry&quot;, &quot;isocc_deu&quot;, &quot;otm_maptask&quot;, &quot;priority_1&quot;, &quot;quadkey_1202033022101121&quot;, &quot;skill_level_journeyman&quot;, &quot;source_mapedit&quot;, &quot;status_open&quot;, &quot;taskproducer_mcpt&quot;, &quot;tasktype_geometry&quot;, &quot;tool_mapcreator_moderation&quot;, &quot;tool_mapcreator_moderation_category_community_feedback_road_isocc_deu_user_type_normal&quot;, &quot;tool_mapcreator_moderation_category_road_geometry_isocc_deu_user_type_normal&quot;, &quot;user_type_normal&quot;, &quot;${UTM_TAG_ID}&quot;]
+			},
+			&quot;references&quot;: [{
+				&quot;ids&quot;: [&quot;ad24b3d2-9f23-4b61-b007-4dc5aeea1bc0&quot;],
+				&quot;spaceId&quot;: &quot;QsZZzwyY&quot;,
+				&quot;featureType&quot;: &quot;Road&quot;
+			}],
+			&quot;@ns:com:here:utm&quot;: {
+				&quot;tags&quot;: [&quot;tool_mapcreator_moderation_category_community_feedback_road_isocc_deu_user_type_normal&quot;, &quot;tool_mapcreator_moderation_category_road_geometry_isocc_deu_user_type_normal&quot;]
+			},
+			&quot;isoCountryCode&quot;: &quot;DEU&quot;,
+			&quot;description&quot;: [{
+				&quot;lang&quot;: &quot;en&quot;,
+				&quot;text&quot;: &quot;A  Road has been CREATED, Please check this task for reference!&quot;
+			}],
+			&quot;priority&quot;: 0,
+			&quot;taskType&quot;: &quot;COLLECT&quot;,
+			&quot;due&quot;: 0,
+			&quot;options&quot;: [{
+				&quot;key&quot;: &quot;EDIT&quot;,
+				&quot;value&quot;: [{
+					&quot;lang&quot;: &quot;en&quot;,
+					&quot;text&quot;: &quot;Edit&quot;
+				}]
+			}, {
+				&quot;key&quot;: &quot;ENDORSED&quot;,
+				&quot;value&quot;: [{
+					&quot;lang&quot;: &quot;en&quot;,
+					&quot;text&quot;: &quot;Endorsed&quot;
+				}]
+			}, {
+				&quot;key&quot;: &quot;ROLLBACK_MANUALLY&quot;,
+				&quot;value&quot;: [{
+					&quot;lang&quot;: &quot;en&quot;,
+					&quot;text&quot;: &quot;Rollback - Code Manually&quot;
+				}]
+			}, {
+				&quot;key&quot;: &quot;ROLLBACK_REJECT&quot;,
+				&quot;value&quot;: [{
+					&quot;lang&quot;: &quot;en&quot;,
+					&quot;text&quot;: &quot;Rollback - Reject&quot;
+				}]
+			}],
+			&quot;featureType&quot;: &quot;MapTask&quot;,
+			&quot;audiences&quot;: [&quot;INTERNAL&quot;],
+			&quot;potentialValue&quot;: 0,
+			&quot;headline&quot;: [{
+				&quot;lang&quot;: &quot;en&quot;,
+				&quot;text&quot;: &quot;A road has been CREATED&quot;
+			}],
+			&quot;status&quot;: &quot;OPEN&quot;
+		}
+	},
+	{
+		&quot;type&quot;: &quot;Feature&quot;,
+		&quot;id&quot;: &quot;${TASK_ID_P04_02}&quot;,
+		&quot;geometry&quot;: {
+			&quot;type&quot;: &quot;Point&quot;,
+			&quot;coordinates&quot;: [9.68872, 51.0561, 293.94377758]
+		},
+		&quot;properties&quot;: {
+			&quot;@ns:com:here:xyz&quot;: {
+				&quot;tags&quot;: [&quot;@admin1_deu&quot;, &quot;@admin2_hesse&quot;, &quot;@admin3_neu-isenburg&quot;, &quot;@adminlevels_deu_hesse_neu-isenburg&quot;, &quot;audience_internal&quot;, &quot;category_community_feedback_road&quot;, &quot;category_road_geometry&quot;, &quot;isocc_deu&quot;, &quot;otm_maptask&quot;, &quot;priority_1&quot;, &quot;quadkey_1202033022101121&quot;, &quot;skill_level_journeyman&quot;, &quot;source_mapedit&quot;, &quot;status_open&quot;, &quot;taskproducer_mcpt&quot;, &quot;tasktype_geometry&quot;, &quot;tool_mapcreator_moderation&quot;, &quot;tool_mapcreator_moderation_category_community_feedback_road_isocc_deu_user_type_normal&quot;, &quot;tool_mapcreator_moderation_category_road_geometry_isocc_deu_user_type_normal&quot;, &quot;user_type_normal&quot;, &quot;${UTM_TAG_ID}&quot;]
+			},
+			&quot;references&quot;: [{
+				&quot;ids&quot;: [&quot;ad24b3d2-9f23-4b61-b007-4dc5aeea1bc0&quot;],
+				&quot;spaceId&quot;: &quot;QsZZzwyY&quot;,
+				&quot;featureType&quot;: &quot;Road&quot;
+			}],
+			&quot;@ns:com:here:utm&quot;: {
+				&quot;tags&quot;: [&quot;tool_mapcreator_moderation_category_community_feedback_road_isocc_deu_user_type_normal&quot;, &quot;tool_mapcreator_moderation_category_road_geometry_isocc_deu_user_type_normal&quot;]
+			},
+			&quot;isoCountryCode&quot;: &quot;DEU&quot;,
+			&quot;description&quot;: [{
+				&quot;lang&quot;: &quot;en&quot;,
+				&quot;text&quot;: &quot;A  Road has been CREATED, Please check this task for reference!&quot;
+			}],
+			&quot;priority&quot;: 0,
+			&quot;taskType&quot;: &quot;COLLECT&quot;,
+			&quot;due&quot;: 0,
+			&quot;options&quot;: [{
+				&quot;key&quot;: &quot;EDIT&quot;,
+				&quot;value&quot;: [{
+					&quot;lang&quot;: &quot;en&quot;,
+					&quot;text&quot;: &quot;Edit&quot;
+				}]
+			}, {
+				&quot;key&quot;: &quot;ENDORSED&quot;,
+				&quot;value&quot;: [{
+					&quot;lang&quot;: &quot;en&quot;,
+					&quot;text&quot;: &quot;Endorsed&quot;
+				}]
+			}, {
+				&quot;key&quot;: &quot;ROLLBACK_MANUALLY&quot;,
+				&quot;value&quot;: [{
+					&quot;lang&quot;: &quot;en&quot;,
+					&quot;text&quot;: &quot;Rollback - Code Manually&quot;
+				}]
+			}, {
+				&quot;key&quot;: &quot;ROLLBACK_REJECT&quot;,
+				&quot;value&quot;: [{
+					&quot;lang&quot;: &quot;en&quot;,
+					&quot;text&quot;: &quot;Rollback - Reject&quot;
+				}]
+			}],
+			&quot;featureType&quot;: &quot;MapTask&quot;,
+			&quot;audiences&quot;: [&quot;INTERNAL&quot;],
+			&quot;potentialValue&quot;: 0,
+			&quot;headline&quot;: [{
+				&quot;lang&quot;: &quot;en&quot;,
+				&quot;text&quot;: &quot;A road has been CREATED&quot;
+			}],
+			&quot;status&quot;: &quot;OPEN&quot;
+		}
+	}
+];
 
 
 // Remove unwanted fields from RESPONSE object, before actual v/s expected comparison
@@ -3023,50 +3066,77 @@ if (actualResObj.features.length &lt;= 0) {
 	prev.setSuccessful(false);
 	prev.setResponseMessage(&quot;:: ERROR :: Empty response collection&quot;);
 }
+if (actualResObj.features.length &lt; expectedFeatureArr.length) {
+	prev.setSuccessful(false);
+	prev.setResponseMessage(&quot;:: ERROR :: Not all features returned in response&quot;);
+}
 
-var feature = actualResObj.features[0];
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].createdAt;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].muuid;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].puuid;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].space;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].updatedAt;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].uuid;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].version;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].txn;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].rtcts;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].rtuts;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].action;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].appId;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].author;
-delete feature.properties[&quot;@ns:com:here:xyz&quot;].deleted;
+actualResObj.features.forEach(function(feature) {
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].createdAt;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].muuid;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].puuid;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].space;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].updatedAt;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].uuid;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].version;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].txn;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].rtcts;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].rtuts;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].action;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].appId;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].author;
+	delete feature.properties[&quot;@ns:com:here:xyz&quot;].deleted;
+});
 
+// Compare expected v/s actual feature array ONLY to a number of features limited to what we have in expectedFeatureArr
+var featureCount = expectedFeatureArr.length;
+var actualFeatureArr = actualResObj.features.slice(0, featureCount);
 // Compare actual v/s expected
-var modifiedActualResString = JSON.stringify(feature);
-var expectedResString = JSON.stringify(expectedResObj);
-
+var expectedResString = JSON.stringify(expectedFeatureArr);
+var modifiedActualResString = JSON.stringify(actualFeatureArr);
 if ( expectedResString == modifiedActualResString ) {
 	prev.setSuccessful(true);
 }
 else {
 	prev.setSuccessful(false);
-	prev.setResponseMessage(&quot;:: ERROR :: Response body doesn&apos;t match. \n\nExpected : [&quot;+ expectedResString +&quot;]\n\nActual : [&quot;+ modifiedActualResString +&quot;]&quot;);
+	prev.setResponseMessage(&quot;:: ERROR :: Feature response doesn&apos;t match. \n\nExpected : [&quot;+ expectedResString +&quot;]\n\nActual : [&quot;+ modifiedActualResString +&quot;]&quot;);
 }
-
-
 </stringProp>
             <stringProp name="scriptLanguage">javascript</stringProp>
           </JSR223PostProcessor>
           <hashTree/>
         </hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos4.4 - Delete Task" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos4.4 - Bulk Delete" enabled="true">
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-            <collectionProp name="Arguments.arguments"/>
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="access_token" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">${WR_API_KEY}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                <stringProp name="Argument.name">access_token</stringProp>
+              </elementProp>
+              <elementProp name="id" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">${TASK_ID_P04_01}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                <stringProp name="Argument.name">id</stringProp>
+              </elementProp>
+              <elementProp name="id" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">${TASK_ID_P04_02}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                <stringProp name="Argument.name">id</stringProp>
+              </elementProp>
+            </collectionProp>
           </elementProp>
           <stringProp name="HTTPSampler.domain"></stringProp>
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol"></stringProp>
           <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features/${TASK_ID_P04_01}?access_token=${WR_API_KEY}</stringProp>
+          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/features</stringProp>
           <stringProp name="HTTPSampler.method">DELETE</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
@@ -3615,7 +3685,7 @@ var requestStr = {
     &quot;coordinates&quot;: [
       8.68872,
       50.0561,
-      0
+      292.94377758
     ]
   },
   &quot;properties&quot;: {
@@ -4660,7 +4730,7 @@ var requestObj = {
     &quot;coordinates&quot;: [
       8.68872,
       50.0561,
-      0
+      292.94377758
     ]
   },
   &quot;properties&quot;: {
@@ -5374,7 +5444,7 @@ else {
       &quot;coordinates&quot;: [&#xd;
         8.68872,&#xd;
         50.0561,&#xd;
-        0&#xd;
+        292.94377758&#xd;
       ]&#xd;
     }&#xd;
   }]&#xd;
@@ -5489,7 +5559,7 @@ else {
       &quot;coordinates&quot;: [&#xd;
         8.68872,&#xd;
         50.0561,&#xd;
-        0&#xd;
+        292.94377758&#xd;
       ]&#xd;
     }&#xd;
   }]&#xd;
@@ -5562,7 +5632,7 @@ var requestObj = {
     &quot;coordinates&quot;: [
       8.68872,
       50.0561,
-      0
+      292.94377758
     ]
   },
   &quot;properties&quot;: {
@@ -5927,7 +5997,7 @@ var requestObj = {
     &quot;coordinates&quot;: [
       8.68872,
       50.0561,
-      0
+      292.94377758
     ]
   },
   &quot;properties&quot;: {
@@ -6348,7 +6418,7 @@ var requestStr = {
     &quot;coordinates&quot;: [
       8.68872,
       50.0561,
-      0
+      292.94377758
     ]
   },
   &quot;properties&quot;: {
