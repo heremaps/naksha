@@ -40,18 +40,14 @@ jobs:
     needs: S3-CodeDeploy-Release
     uses: ./.github/workflows/reusable-codedeploy-deployment.yml
     with:
-      #aws-region: ${{ vars.PRD_AWS_REGION }}
-      aws-region: eu-west-1
+      aws-region: ${{ vars.PRD_AWS_REGION }}
       codedeploy-app-name: ${{ vars.CODEDEPLOY_APP_NAME }}
-      #codedeploy-group-name: ${{ vars.CODEDEPLOY_PRD_GROUP_NAME }}
-      codedeploy-group-name: Naksha_PRD_Deployment_Group
+      codedeploy-group-name: ${{ vars.CODEDEPLOY_PRD_GROUP_NAME }}
       deployment-description: 'Deployment triggered by ${{ github.triggering_actor }} from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
       # we use Prod access point (eu-west-1) to fetch deployment artifacts from E2E S3 bucket (us-east-1)
       s3-bucket-name: arn:aws:s3:us-east-1:132512433756:accesspoint/naksha-rel
       s3-artifact-path: ${{ needs.S3-CodeDeploy-Release.outputs.s3-artifact-path }}
       s3-artifact-type: tgz
     secrets:
-      #aws-key: ${{ secrets.PRD_AWS_KEY }}
-      aws-key: AKIAR5WS3IZOBYE4IHEY
-      #aws-secret: ${{ secrets.PRD_AWS_SECRET }}
-      aws-secret: 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
+      aws-key: ${{ secrets.PRD_AWS_KEY }}
+      aws-secret: ${{ secrets.PRD_AWS_SECRET }}
