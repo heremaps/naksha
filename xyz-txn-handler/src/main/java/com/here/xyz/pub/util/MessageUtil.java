@@ -24,6 +24,7 @@ public class MessageUtil {
 
     private static Map<String, IPubMsgMapper> instanceMap = new HashMap<>();
     final public static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    final public static TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE = new TypeReference<Map<String, Object>>() {};
 
 
     public static IPubMsgMapper getMsgMapperInstance(final Subscription sub) throws Exception {
@@ -130,6 +131,7 @@ public class MessageUtil {
         } catch (Exception ex) {
             payloadJson = null;
             logger.error("Exception converting Object to Json {} {}", object, ex.getMessage(), ex);
+            throw new RuntimeException(ex);
         }
         return payloadJson;
     }
@@ -159,6 +161,7 @@ public class MessageUtil {
         } catch (Exception ex) {
             payloadObj = null;
             logger.error("Exception converting Json to Object of type {} - {} , Error:{}", type, payloadJson, ex.getMessage(), ex);
+            throw new RuntimeException(ex);
         }
         return payloadObj;
     }
@@ -190,6 +193,7 @@ public class MessageUtil {
         } catch (Exception ex) {
             payloadObj = null;
             logger.error("Exception converting Json to Object of type {} - {}, Error:{}", ref.getClass().getComponentType(), payloadJson, ex.getMessage(), ex);
+            throw new RuntimeException(ex);
         }
         return payloadObj;
     }
