@@ -499,6 +499,58 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Env variables - PRD Demo" enabled="false">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="XYZ_API_PROTOCOL" elementType="Argument">
+            <stringProp name="Argument.name">XYZ_API_PROTOCOL</stringProp>
+            <stringProp name="Argument.value">https</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="XYZ_HOST_URL" elementType="Argument">
+            <stringProp name="Argument.name">XYZ_HOST_URL</stringProp>
+            <stringProp name="Argument.value">naksha.ext.mapcreator.here.com</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="XYZ_URI_PREFIX" elementType="Argument">
+            <stringProp name="Argument.name">XYZ_URI_PREFIX</stringProp>
+            <stringProp name="Argument.value">/hub</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="XYZ_PORT" elementType="Argument">
+            <stringProp name="Argument.name">XYZ_PORT</stringProp>
+            <stringProp name="Argument.value">443</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="SPACE_ID" elementType="Argument">
+            <stringProp name="Argument.name">SPACE_ID</stringProp>
+            <stringProp name="Argument.value">demo:foo</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="WR_API_KEY" elementType="Argument">
+            <stringProp name="Argument.name">WR_API_KEY</stringProp>
+            <stringProp name="Argument.value">upm.r1fShJdsyGi6RguH</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="RD_API_KEY" elementType="Argument">
+            <stringProp name="Argument.name">RD_API_KEY</stringProp>
+            <stringProp name="Argument.value">upm.gZanIQd74nyAMWXu</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="CONN_API_KEY" elementType="Argument">
+            <stringProp name="Argument.name">CONN_API_KEY</stringProp>
+            <stringProp name="Argument.value">upm.4sgpBJ2aWbxrD365</stringProp>
+            <stringProp name="Argument.desc">Manage Connector API Key</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="SPACE_API_KEY" elementType="Argument">
+            <stringProp name="Argument.name">SPACE_API_KEY</stringProp>
+            <stringProp name="Argument.value">upm.WAlD2bvzczVvYGZv</stringProp>
+            <stringProp name="Argument.desc">Manage Space API Key</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
       <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request - Defaults" enabled="true">
         <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
           <collectionProp name="Arguments.arguments"/>
@@ -4182,63 +4234,7 @@ else {
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos8.1 - GET Connector by Id" enabled="true">
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-            <collectionProp name="Arguments.arguments"/>
-          </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/connectors/${DEF_CONNECTOR_ID}?access_token=${CONN_API_KEY}</stringProp>
-          <stringProp name="HTTPSampler.method">GET</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
-        </HTTPSamplerProxy>
-        <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Validate Res Code" enabled="true">
-            <collectionProp name="Asserion.test_strings">
-              <stringProp name="49586">200</stringProp>
-            </collectionProp>
-            <stringProp name="Assertion.custom_message"></stringProp>
-            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
-            <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">8</intProp>
-          </ResponseAssertion>
-          <hashTree/>
-          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Validate Res Body" enabled="true">
-            <stringProp name="cacheKey">false</stringProp>
-            <stringProp name="filename"></stringProp>
-            <stringProp name="parameters"></stringProp>
-            <stringProp name="script">
-// Fail the test case (by default), unless it is found to have &quot;passed&quot; later on
-prev.setSuccessful(false);
-
-// Compare actual v/s expected
-var actualResObj = JSON.parse(prev.getResponseDataAsString());
-var expectedConnectorId = &quot;psql&quot;;
-var actualConnectorId = actualResObj.id;
-
-if ( actualConnectorId == expectedConnectorId ) {
-	prev.setSuccessful(true);
-}
-else {
-	prev.setSuccessful(false);
-	prev.setResponseMessage(&quot;:: ERROR :: Response body doesn&apos;t match. \n\nExpected connector : [&quot;+ expectedConnectorId +&quot;]\n\nActual : [&quot;+ actualConnectorId +&quot;]&quot;);
-}
-
-
-</stringProp>
-            <stringProp name="scriptLanguage">javascript</stringProp>
-          </JSR223PostProcessor>
-          <hashTree/>
-        </hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos8.2 - Create Connector" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos8.1 - Create Connector" enabled="true">
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
@@ -4308,6 +4304,62 @@ prev.setSuccessful(false);
 var actualResObj = JSON.parse(prev.getResponseDataAsString());
 var expectedConnectorId = &quot;psql&quot;;
 var actualConnectorId = actualResObj[0].id;
+
+if ( actualConnectorId == expectedConnectorId ) {
+	prev.setSuccessful(true);
+}
+else {
+	prev.setSuccessful(false);
+	prev.setResponseMessage(&quot;:: ERROR :: Response body doesn&apos;t match. \n\nExpected connector : [&quot;+ expectedConnectorId +&quot;]\n\nActual : [&quot;+ actualConnectorId +&quot;]&quot;);
+}
+
+
+</stringProp>
+            <stringProp name="scriptLanguage">javascript</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos8.2 - GET Connector by Id" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain"></stringProp>
+          <stringProp name="HTTPSampler.port"></stringProp>
+          <stringProp name="HTTPSampler.protocol"></stringProp>
+          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+          <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/connectors/${DUMMY_CONNECTOR}?access_token=${CONN_API_KEY}</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+          <stringProp name="HTTPSampler.response_timeout"></stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Validate Res Code" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Validate Res Body" enabled="true">
+            <stringProp name="cacheKey">false</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="script">
+// Fail the test case (by default), unless it is found to have &quot;passed&quot; later on
+prev.setSuccessful(false);
+
+// Compare actual v/s expected
+var actualResObj = JSON.parse(prev.getResponseDataAsString());
+var expectedConnectorId = &quot;${DUMMY_CONNECTOR}&quot;;
+var actualConnectorId = actualResObj.id;
 
 if ( actualConnectorId == expectedConnectorId ) {
 	prev.setSuccessful(true);
