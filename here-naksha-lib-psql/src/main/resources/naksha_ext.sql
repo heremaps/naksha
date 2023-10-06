@@ -1594,7 +1594,7 @@ BEGIN
     END IF;
 
     -- prepare current yyyyMMdd as number i.e. 20231006
-    tx_date := extract('year' from current_timestamp)*10000 + extract('month' from current_timestamp)*100 + extract('day' from current_timestamp);
+    tx_date := extract('year' from current_timestamp) * 10000 + extract('month' from current_timestamp) * 100 + extract('day' from current_timestamp);
 
     txi := nextval('naksha_tx_object_id_seq');
     -- txi should start with current date  20231006 with seq number "at the end"
