@@ -1572,8 +1572,8 @@ END
 $$;
 
 -- returns current transaction i.e. 2023100600000000010, which is build as yyyyMMddXXXXXXXXXXX.
-CREATE OR REPLACE FUNCTION naksha_tx_current_mazurek()
-    RETURNS text
+CREATE OR REPLACE FUNCTION naksha_txn()
+    RETURNS int8
     LANGUAGE 'plpgsql' STABLE
 AS $$
 declare
@@ -1585,12 +1585,11 @@ declare
     txn      int8;
     tx_date  int4;
     seq_date int4;
-
 BEGIN
     value := current_setting('naksha.txn', true);
     IF coalesce(value, '') <> '' THEN
         -- RAISE NOTICE 'found value = %', value;
-        return value::text;
+        return value::int8;
     END IF;
 
     -- prepare current yyyyMMdd as number i.e. 20231006
@@ -1623,9 +1622,18 @@ BEGIN
     END IF;
 
     PERFORM SET_CONFIG('naksha.txn', txn::text, true);
-    RETURN txn::text;
+    RETURN txn::int8;
 
     EXCEPTION WHEN OTHERS then PERFORM pg_advisory_unlock(LOCK_NAME);
+END
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_txn(tstamp timestamp, num int8)
+    RETURNS int8
+    LANGUAGE 'plpgsql' STABLE
+AS $$
+BEGIN
+    return (extract('year' from tstamp) * 10000 + extract('month' from tstamp) * 100 + extract('day' from tstamp)) * 100000000000 + num;
 END
 $$;
 
