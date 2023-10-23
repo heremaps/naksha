@@ -21,6 +21,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "7.1.2"
     // Don't apply for all projects, we individually only apply where Kotlin is used.
     kotlin("jvm") version "1.8.21" apply false
+    id("jacoco")
 }
 
 group = "com.here.naksha"
@@ -125,6 +126,7 @@ subprojects {
     apply(plugin = "java")
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "java-library")
+    apply(plugin = "jacoco")
 
     repositories {
         maven(uri("https://repo.osgeo.org/repository/release/"))
@@ -171,6 +173,7 @@ subprojects {
         test {
             maxHeapSize = "4g"
             useJUnitPlatform()
+            finalizedBy(jacocoTestReport)
         }
 
         compileJava {
@@ -185,17 +188,24 @@ subprojects {
                 addStringOption("Xmaxwarns", "1")
             }
         }
+
+        jacocoTestReport {
+            dependsOn(test)
+            reports {
+                xml.required = true
+            }
+        }
     }
 
     java {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    
+
     testing {
         dependencies {
             implementation(slf4j_console)
-        } 
+        }
     }
 
     // Fix transitive dependencies.
