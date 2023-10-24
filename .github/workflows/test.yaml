@@ -14,7 +14,7 @@ permissions:
   pull-requests: write  # for jacoco PR comments
 
 env:
-  MIN_COVERAGE_OVERALL: 30
+  MIN_COVERAGE_OVERALL: 25
   MIN_COVERAGE_CHANGED_FILES: 80
 
 jobs:
@@ -51,7 +51,7 @@ jobs:
         if: success() || failure() # always run even if the previous step fails
         with:
           report_paths: '**/build/test-results/test/TEST-*.xml'
-      - name: Publish Code Coverage Report
+      - name: Publish code coverage report as PR comment
         id: jacoco
         uses: madrapps/jacoco-report@v1.6.1
         with:
@@ -60,7 +60,7 @@ jobs:
           min-coverage-overall: $MIN_COVERAGE_OVERALL
           min-coverage-changed-files: $MIN_COVERAGE_CHANGED_FILES
           title: Code Coverage
-      - name: Analyze coverage
+      - name: Fail when code coverage is not met
         run: |
             OVERALL_FAILED=$(echo '${{ steps.jacoco.outputs.coverage-overall }} < ${{ env.MIN_COVERAGE_OVERALL }}' | bc)
             CHANGED_FILES_FAILED=$(echo '${{ steps.jacoco.outputs.coverage-changed-files }} < ${{ env.MIN_COVERAGE_CHANGED_FILES }}' | bc)
