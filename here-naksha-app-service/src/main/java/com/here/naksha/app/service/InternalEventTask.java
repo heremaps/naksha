@@ -43,7 +43,7 @@ public class InternalEventTask extends AbstractEventTask<Event> {
     this.eventFeature = eventFeature;
   }
 
-        protected @NotNull EventFeature eventFeature;
+  protected @NotNull EventFeature eventFeature;
 
   @Override
   protected @NotNull XyzResponse errorResponse(@NotNull Throwable throwable) {
