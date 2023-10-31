@@ -25,6 +25,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+// TODO, Kuba: ta klasa nic nie wnosi - delegat na IStorage
 public class NHAdminStorage implements IStorage {
 
   /** Singleton instance of physical admin storage implementation */

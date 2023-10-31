@@ -16,28 +16,37 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.hub.storages;
+package com.here.naksha.lib.hub2.space;
 
+import com.here.naksha.lib.core.EventPipeline;
+import com.here.naksha.lib.core.IEventHandler;
+import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.WriteCollections;
+import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.models.storage.WriteRequest;
 import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.storage.IWriteSession;
+import com.here.naksha.lib.hub2.EventPipelineFactory;
+import com.here.naksha.lib.hub2.admin.AdminStorage;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-// TODO, Kuba: ta klasa nic nie wnosi, delegat wraper do IWriteSession
-public class NHAdminStorageWriter extends NHAdminStorageReader implements IWriteSession {
+final class AdminBasedSpaceStorageWriter extends AdminBasedSpaceStorageReader implements IWriteSession {
 
-  /** Current session, all write storage operations should be executed against */
-  final @NotNull IWriteSession session;
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public NHAdminStorageWriter(final @NotNull IWriteSession writer) {
-    super(writer);
-    this.session = writer;
+  AdminBasedSpaceStorageWriter(
+      final @NotNull EventPipelineFactory eventPipelineFactory,
+      final @NotNull AdminStorage adminStorage,
+      final @NotNull Map<String, List<IEventHandler>> virtualSpaces,
+      final @Nullable NakshaContext context,
+      boolean useMaster) {
+    super(eventPipelineFactory, adminStorage, virtualSpaces, context, useMaster);
   }
 
   /**
@@ -49,7 +58,44 @@ public class NHAdminStorageWriter extends NHAdminStorageReader implements IWrite
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull Result execute(@NotNull WriteRequest writeRequest) {
-    return session.execute(writeRequest);
+    if (writeRequest instanceof WriteCollections wc) {
+      return executeWriteCollections(wc);
+    } else if (writeRequest instanceof WriteFeatures wf) {
+      return executeWriteFeatures(wf);
+    }
+    throw new UnsupportedOperationException(
+        "WriteRequest with unsupported type " + writeRequest.getClass().getName());
+  }
+
+  private @NotNull Result executeWriteCollections(final @NotNull WriteCollections wc) {
+    try (final IWriteSession admin = adminStorage.newWriteSession(context, useMaster)) {
+      return admin.execute(wc);
+    }
+  }
+
+  private @NotNull Result executeWriteFeatures(final @NotNull WriteFeatures wf) {
+    if (virtualSpaces.containsKey(wf.collectionId)) {
+      // Request is to write to Naksha Admin space
+      return executeWriteFeaturesToAdminSpaces(wf);
+    } else {
+      // Request is to write to Custom space
+      return executeWriteFeaturesToCustomSpaces(wf);
+    }
+  }
+
+  private @NotNull Result executeWriteFeaturesToAdminSpaces(final @NotNull WriteFeatures wf) {
+    // Run pipeline against virtual space
+    final EventPipeline pipeline = eventPipelineFactory.eventPipeline();
+    // add internal Admin resource specific event handlers
+    for (final IEventHandler handler : virtualSpaces.get(wf.collectionId)) {
+      pipeline.addEventHandler(handler);
+    }
+    return pipeline.sendEvent(wf);
+  }
+
+  private @NotNull Result executeWriteFeaturesToCustomSpaces(final @NotNull WriteFeatures rf) {
+    // TODO : Add logic to support running pipeline for custom space
+    throw new UnsupportedOperationException("WriteFeatures to custom space not supported as of now");
   }
 
   /**
@@ -67,7 +113,7 @@ public class NHAdminStorageWriter extends NHAdminStorageReader implements IWrite
   public @NotNull IStorageLock lockFeature(
       @NotNull String collectionId, @NotNull String featureId, long timeout, @NotNull TimeUnit timeUnit)
       throws StorageLockException {
-    return session.lockFeature(collectionId, featureId, timeout, timeUnit);
+    throw new UnsupportedOperationException("Locking not supported by this storage instance!");
   }
 
   /**
@@ -83,7 +129,7 @@ public class NHAdminStorageWriter extends NHAdminStorageReader implements IWrite
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull IStorageLock lockStorage(@NotNull String lockId, long timeout, @NotNull TimeUnit timeUnit)
       throws StorageLockException {
-    return session.lockStorage(lockId, timeout, timeUnit);
+    throw new UnsupportedOperationException("Locking not supported by this storage instance!");
   }
 
   /**
@@ -91,16 +137,12 @@ public class NHAdminStorageWriter extends NHAdminStorageReader implements IWrite
    */
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void commit() {
-    session.commit();
-  }
+  public void commit() {}
 
   /**
    * Abort the transaction, revert all pending changes.
    */
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void rollback() {
-    session.rollback();
-  }
+  public void rollback() {}
 }

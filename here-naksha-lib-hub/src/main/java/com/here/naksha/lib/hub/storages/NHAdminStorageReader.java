@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
+// TODO, Kuba: ta klasa nic nie wnosi, 1:1 delegacja IReadSession
 public class NHAdminStorageReader implements IReadSession {
 
   /** Current session, all read storage operations should be executed against */
