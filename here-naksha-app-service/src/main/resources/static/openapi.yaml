@@ -109,8 +109,20 @@ paths:
           $ref: '#/components/responses/StoragesResponse'
         '404':
           $ref: '#/components/responses/ErrorResponse404'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
         '500':
           $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
 components:
   securitySchemes:
     AccessToken:
