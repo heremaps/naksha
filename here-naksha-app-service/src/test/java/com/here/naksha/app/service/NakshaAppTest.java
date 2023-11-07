@@ -129,7 +129,7 @@ class NakshaAppTest {
   }
 
   @Test
-  @Order(3)
+  @Order(2)
   void tc0003_testGetStorages() throws Exception {
     // Test API : GET /hub/storages
     // 1. Load test data
@@ -152,7 +152,7 @@ class NakshaAppTest {
   }
 
   @Test
-  @Order(3)
+  @Order(2)
   void tc0004_testInvalidUrlPath() throws Exception {
     // Test API : GET /hub/invalid_storages
     final HttpRequest request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
@@ -166,7 +166,7 @@ class NakshaAppTest {
   }
 
   @Test
-  @Order(3)
+  @Order(2)
   void tc0005_testGetStorageById() throws Exception {
     // Test API : GET /hub/storages/{storageId}
     // 1. Load test data
@@ -189,7 +189,7 @@ class NakshaAppTest {
   }
 
   @Test
-  @Order(3)
+  @Order(2)
   void tc0006_testGetStorageByWrongId() throws Exception {
     // Test API : GET /hub/storages/{storageId}
     // 1. Load test data
@@ -206,6 +206,45 @@ class NakshaAppTest {
     // 3. Perform assertions
     assertEquals(404, response.statusCode(), "ResCode mismatch");
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+  }
+
+  @Test
+  @Order(2)
+  void tc0007_testEventHandler() throws Exception {
+    // Test API : GET /hub/handlers
+    // 1. Load test data
+    final String bodyJson1 = loadFileOrFail("TC0007_eventHandlers/create_event_handler.json");
+    final String expectedCreationResponse = loadFileOrFail("TC0007_eventHandlers/response_create_1.json");
+    final String expectedDuplicateResponse = loadFileOrFail("TC0007_eventHandlers/response_conflict_1.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // 2. Perform REST API call creating handler
+    final HttpRequest request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
+        .uri(new URI(NAKSHA_HTTP_URI + "hub/handlers"))
+        .POST(HttpRequest.BodyPublishers.ofString(bodyJson1))
+        .header(HDR_STREAM_ID, streamId)
+        .build();
+    final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+    // 3. Perform assertions
+    assertEquals(200, response.statusCode(), "ResCode mismatch");
+    JSONAssert.assertEquals(
+        "Expecting new handler in response",
+        expectedCreationResponse,
+        response.body(),
+        JSONCompareMode.LENIENT);
+    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+
+    // 4. Perform REST API call creating duplicated handler
+    final HttpResponse<String> responseDuplicate = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+    // 5. Perform assertions
+    assertEquals(409, responseDuplicate.statusCode(), "ResCode mismatch");
+    JSONAssert.assertEquals(
+        "Expecting new storage in response",
+        expectedDuplicateResponse,
+        responseDuplicate.body(),
+        JSONCompareMode.LENIENT);
   }
 
   @Test
