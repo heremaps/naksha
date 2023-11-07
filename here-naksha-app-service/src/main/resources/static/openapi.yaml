@@ -21,6 +21,8 @@ security:
 tags:
   - name: Manage Storages
     description: Storage management endpoints.
+  - name: Manage Event Handlers
+    description: Event handler management endpoints.
 paths:
   '/hub/health-status':
     get:
@@ -93,7 +95,7 @@ paths:
     get:
       tags:
         - Manage Storages
-      summary: Get the storage with the specific ID
+      summary: Get the storage with the specific ID.
       description: >-
         Return the storage detail corresponding to the given ID if the current authenticated user has access to.
       operationId: getStorageById
@@ -107,12 +109,38 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/StoragesResponse'
-        '404':
-          $ref: '#/components/responses/ErrorResponse404'
         '401':
           $ref: '#/components/responses/ErrorResponse401'
         '403':
           $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
+  '/hub/handlers':
+    post:
+      tags:
+        - Manage Event Handlers
+      summary: Create event handler.
+      description: Create a new event handler.
+      operationId: createHandler
+      responses:
+        '201':
+          $ref: '#/components/responses/HandlerResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -304,6 +332,20 @@ components:
                   title: "UniMap Moderation Dev Storage"
                   description: "UniMap Moderation storage for Dev environment, holding collections managed by Naksha service"
                   className: "com.here.naksha.lib.psql.PsqlStorage"
+    HandlerResponse:
+      description: The handler details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EventHandler'
+          examples:
+            response:
+              value:
+                id: "um-mod-dev"
+                type: "EventHandler"
+                title: "Storage Handler for UniMap Moderation Dev Storage"
+                description: "Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage"
+                className: "com.here.naksha.lib.handlers.DefaultStorageHandler"
   schemas:
     Error:
       type: object
@@ -364,6 +406,45 @@ components:
             The URL holding connectivity details about backend physical storage instance.
           type: string
           example: 'jdbc:postgresql://localhost:5432/db_name?user=db_user&password=db_passwd&schema=naksha_moderation_dev'
+    EventHandler:
+      type: object
+      description: >-
+        A configured event handler.
+      properties:
+        id:
+          description: The unique identifier of the event handler.
+          type: string
+        type:
+          description: The feature type fixed as "EventHandler".
+          type: string
+        title:
+          description: The handler title.
+          type: string
+        description:
+          description: The handler description in markdown format.
+          type: string
+        className:
+          description: The FQCN (Fully Qualified Class Name) which implements event handler interactions.
+          type: string
+        active:
+          description: Whether the handler is active.
+          type: boolean
+        extensionId:
+          description: If this handler is running on an external Naksha extention, the ID will be specified, null otherwise.
+          type: string
+        properties:
+          $ref: '#/components/schemas/HandlerProperties'
+    HandlerProperties:
+      type: object
+      description: >-
+        This object represents properties, as supported by default Naksha Handler implementation, but it can be customized as per custom handler implementation.
+      properties:
+        storageId:
+          description: The storage this handler is bound to.
+          type: string
+        storageCollection:
+          $ref: '#/components/schemas/Collection'
+          description: By default, the backend storage collection details here is used, only if it is not available at space properties level.
     PsqlConfig:
       type: object
       description: >-
@@ -395,3 +476,16 @@ components:
           description: The maximum amount of concurrent connections this connector can use for storage operations.
           type: integer
           default: 20
+    Collection:
+      type: object
+      description: A collection is a virtual container for features. All collections optionally have a history and transaction log.
+      properties:
+        maxAge:
+          type: string
+        history:
+          type: string
+        delete:
+          type: string
+        number:
+          description: The unique storage ID.
+          type: number
