@@ -48,6 +48,7 @@ public class IntHandlerForEventHandlers extends AbstractEventHandler {
         return reader.execute(rr);
       }
     } else if (request instanceof WriteRequest<?, ?> wr) {
+      //TODO check if storageId is provided
       try (final IWriteSession writer = nakshaHub().getAdminStorage().newWriteSession(ctx, true)) {
         final Result result = writer.execute(wr);
         if (result instanceof SuccessResult) writer.commit();
