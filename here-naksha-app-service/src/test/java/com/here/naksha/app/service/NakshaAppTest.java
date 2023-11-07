@@ -235,7 +235,7 @@ class NakshaAppTest {
     // 5. Perform assertions
     assertEquals(409, responseDuplicate.statusCode(), "ResCode mismatch");
     JSONAssert.assertEquals(
-        "Expecting new storage in response",
+        "Expecting duplicated handler in response",
         expectedDuplicateResponse,
         responseDuplicate.body(),
         JSONCompareMode.LENIENT);
