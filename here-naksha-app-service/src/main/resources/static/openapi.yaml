@@ -481,11 +481,11 @@ components:
       description: A collection is a virtual container for features. All collections optionally have a history and transaction log.
       properties:
         maxAge:
-          type: string
+          type: number
         history:
-          type: string
-        delete:
-          type: string
+          type: boolean
+        deleted:
+          type: number
         number:
           description: The unique storage ID.
           type: number

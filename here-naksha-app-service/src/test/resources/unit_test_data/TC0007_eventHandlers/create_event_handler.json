@@ -7,6 +7,9 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "um-mod-dev"
+    "storageId": "um-mod-dev",
+    "storageCollection": {
+      "maxAge": 2
+    }
   }
 }
