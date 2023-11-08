@@ -813,12 +813,17 @@ components:
           description: The unique storage ID.
           type: string
         type:
+          description: The data type.
           type: string
         maxAge:
+          description: The maximum age of the history entries in days. Zero means no history.
           type: number
         history:
+          description: Toggle if the history is enabled.
           type: boolean
         deletedAt:
+          description: A value greater than zero implies that the collection shall be treated as deleted and represents the UTC Epoch timestamp in
+            milliseconds when the deletion has been done.
           type: number
 
     XyzNamespace:
