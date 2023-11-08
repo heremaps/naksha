@@ -813,7 +813,7 @@ components:
           description: The unique storage ID.
           type: string
         type:
-          description: The data type.
+          description: The data type fixed as "StorageCollection".
           type: string
         maxAge:
           description: The maximum age of the history entries in days. Zero means no history.
