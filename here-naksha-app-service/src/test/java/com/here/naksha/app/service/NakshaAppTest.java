@@ -23,7 +23,6 @@ import static com.here.naksha.app.service.NakshaApp.newInstance;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.psql.PsqlStorage;
 import java.net.URI;
@@ -204,12 +203,11 @@ class NakshaAppTest {
 
   @Test
   @Order(2)
-  void tc0007_testEventHandler() throws Exception {
-    // Test API : GET /hub/handlers
+  void tc0008_testCreateEventHandler() throws Exception {
+    // Test API : POST /hub/handlers
     // 1. Load test data
-    final String bodyJson1 = loadFileOrFail("TC0007_eventHandlers/create_event_handler.json");
-    final String expectedCreationResponse = loadFileOrFail("TC0007_eventHandlers/response_create_1.json");
-    final String expectedDuplicateResponse = loadFileOrFail("TC0007_eventHandlers/response_conflict_1.json");
+    final String bodyJson1 = loadFileOrFail("TC0008_eventHandlers/create_event_handler.json");
+    final String expectedCreationResponse = loadFileOrFail("TC0008_eventHandlers/response_create_1.json");
     final String streamId = UUID.randomUUID().toString();
 
     // 2. Perform REST API call creating handler
@@ -228,16 +226,30 @@ class NakshaAppTest {
         response.body(),
         JSONCompareMode.LENIENT);
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+  }
 
-    // 4. Perform REST API call creating duplicated handler
-    final HttpResponse<String> responseDuplicate = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
+  @Test
+  @Order(3)
+  void tc0009_testDuplicateEventHandler() throws Exception {
+    // Test API : POST /hub/handlers
+    // 1. Load test data
+    final String bodyJson1 = loadFileOrFail("TC0008_eventHandlers/create_event_handler.json");
+    final String expectedDuplicateResponse =
+        loadFileOrFail("TC0009_duplicateEventHandler/response_conflict_1.json");
+    final String streamId = UUID.randomUUID().toString();
+    // 2. Perform REST API call creating handler
+    final HttpRequest request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
+        .uri(new URI(NAKSHA_HTTP_URI + "hub/handlers"))
+        .POST(HttpRequest.BodyPublishers.ofString(bodyJson1))
+        .header(HDR_STREAM_ID, streamId)
+        .build();
+    final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     // 5. Perform assertions
-    assertEquals(409, responseDuplicate.statusCode(), "ResCode mismatch");
+    assertEquals(409, response.statusCode(), "ResCode mismatch");
     JSONAssert.assertEquals(
         "Expecting duplicated handler in response",
         expectedDuplicateResponse,
-        responseDuplicate.body(),
+        response.body(),
         JSONCompareMode.LENIENT);
   }
 
