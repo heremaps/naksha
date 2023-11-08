@@ -75,7 +75,7 @@ public class IntHandlerForEventHandlers extends AbstractEventHandler {
       result = validateWritePluginRequest(eventHandler);
       if (result instanceof ErrorResult) return result;
       // TODO : handler specific validations in future, as needed
-      if (!eventHandler.getClassName().equals("com.here.naksha.lib.handlers.DefaultStorageHandler")) {
+      if (eventHandler.getClassName().equals("com.here.naksha.lib.handlers.DefaultStorageHandler")) {
         final Object storageId = eventHandler.getProperties().get(EventHandlerProperties.STORAGE_ID);
         if (storageId == null || storageId.toString().isEmpty())
           return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "Mandatory parameter properties.storageId missing!");
