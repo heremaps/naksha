@@ -489,6 +489,8 @@ components:
                 title: "Storage Handler for UniMap Moderation Dev Storage"
                 description: "Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage"
                 className: "com.here.naksha.lib.handlers.DefaultStorageHandler"
+                properties:
+                  storageId: "ID"
   schemas:
     Error:
       type: object
@@ -737,7 +739,7 @@ components:
     EventHandler:
       type: object
       description: >-
-        A configured event handler.
+        A configured event handler responsible for defining processing behaviour of incoming event, by internally using other event handler or backend storage implementation as applicable.
       properties:
         id:
           description: The unique identifier of the event handler.
@@ -771,7 +773,7 @@ components:
           description: The storage this handler is bound to.
           type: string
         storageCollection:
-          $ref: '#/components/schemas/Collection'
+          $ref: '#/components/schemas/StorageCollection'
     PsqlConfig:
       type: object
       description: >-
@@ -803,18 +805,20 @@ components:
           description: The maximum amount of concurrent connections this connector can use for storage operations.
           type: integer
           default: 20
-    Collection:
+    StorageCollection:
       type: object
       description: A collection is a virtual container for features. All collections optionally have a history and transaction log.
       properties:
+        id:
+          description: The unique storage ID.
+          type: string
+        type:
+          type: string
         maxAge:
           type: number
         history:
           type: boolean
-        deleted:
-          type: number
-        number:
-          description: The unique storage ID.
+        deletedAt:
           type: number
 
     XyzNamespace:
