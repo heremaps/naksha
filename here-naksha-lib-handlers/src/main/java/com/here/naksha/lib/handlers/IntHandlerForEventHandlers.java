@@ -29,6 +29,8 @@ import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 public class IntHandlerForEventHandlers extends AbstractEventHandler {
 
   public IntHandlerForEventHandlers(final @NotNull INaksha hub) {
@@ -73,12 +75,12 @@ public class IntHandlerForEventHandlers extends AbstractEventHandler {
       result = validateWritePluginRequest(eventHandler);
       if (result instanceof ErrorResult) return result;
       // TODO : handler specific validations in future, as needed
-      // TODO check if storageId is valid
-      final Object storageId = eventHandler.getProperties().get(EventHandlerProperties.STORAGE_ID);
-      if (storageId == null)
-        return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "Mandatory parameter properties.storageId missing!");
-      if (storageId.toString().isEmpty())
-        return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "Mandatory parameter properties.storageId missing!");
+      if (!Objects.equals(eventHandler.getClassName(),"com.here.naksha.lib.handlers.DefaultStorageHandler")) {
+        final Object storageId = eventHandler.getProperties().get(EventHandlerProperties.STORAGE_ID);
+        if (storageId == null || storageId.toString().isEmpty())
+          return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "Mandatory parameter properties.storageId missing!");
+        // TODO check if storageId is valid
+      }
     }
     return new SuccessResult();
   }
