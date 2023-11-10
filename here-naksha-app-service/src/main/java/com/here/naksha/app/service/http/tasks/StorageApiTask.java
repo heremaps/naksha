@@ -110,14 +110,14 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
 
   private @NotNull XyzResponse executeGetStorages() {
     final ReadFeatures request = new ReadFeatures(STORAGES);
-    final Result rdResult = executeReadRequest(request);
+    final Result rdResult = executeReadRequestFromSpaceStorage(request);
     return transformReadResultToXyzCollectionResponse(rdResult, Storage.class);
   }
 
   private @NotNull XyzResponse executeGetStorageById() {
     final String storageId = routingContext.pathParam(STORAGE_ID_PATH_KEY);
     final ReadFeatures request = new ReadFeatures(STORAGES).withPropertyOp(POp.eq(PRef.id(), storageId));
-    final Result rdResult = executeReadRequest(request);
+    final Result rdResult = executeReadRequestFromSpaceStorage(request);
     return transformReadResultToXyzFeatureResponse(rdResult, Storage.class);
   }
 
@@ -131,12 +131,6 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
   private Result executeWriteRequest(WriteFeatures<Storage> writeRequest) {
     try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(context(), true)) {
       return writer.execute(writeRequest);
-    }
-  }
-
-  private Result executeReadRequest(ReadFeatures readRequest) {
-    try (final IReadSession reader = naksha().getSpaceStorage().newReadSession(context(), false)) {
-      return reader.execute(readRequest);
     }
   }
 
