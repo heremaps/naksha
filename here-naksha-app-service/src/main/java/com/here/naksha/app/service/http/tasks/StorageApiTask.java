@@ -103,7 +103,7 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
     } else {
       final WriteFeatures<Storage> updateStorageReq =
           RequestHelper.updateFeatureRequest(STORAGES, storageFromBody);
-      final Result updateStorageResult = executeWriteRequest(updateStorageReq);
+      final Result updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq);
       return transformWriteResultToXyzFeatureResponse(updateStorageResult, Storage.class);
     }
   }
@@ -124,14 +124,8 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
   private @NotNull XyzResponse executeCreateStorage() throws JsonProcessingException {
     final Storage newStorage = storageFromRequestBody();
     final WriteFeatures<Storage> wrRequest = RequestHelper.createFeatureRequest(STORAGES, newStorage, false);
-    final Result wrResult = executeWriteRequest(wrRequest);
+    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
     return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class);
-  }
-
-  private Result executeWriteRequest(WriteFeatures<Storage> writeRequest) {
-    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(context(), true)) {
-      return writer.execute(writeRequest);
-    }
   }
 
   private @NotNull Storage storageFromRequestBody() throws JsonProcessingException {

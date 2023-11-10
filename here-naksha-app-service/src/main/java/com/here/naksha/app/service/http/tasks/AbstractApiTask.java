@@ -29,6 +29,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollecti
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
+import com.here.naksha.lib.core.storage.IWriteSession;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -190,6 +191,12 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   protected Result executeReadRequestFromSpaceStorage(ReadFeatures readRequest) {
     try (final IReadSession reader = naksha().getSpaceStorage().newReadSession(context(), false)) {
       return reader.execute(readRequest);
+    }
+  }
+
+  protected Result executeWriteRequestFromSpaceStorage(WriteFeatures<?> writeRequest) {
+    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(context(), true)) {
+      return writer.execute(writeRequest);
     }
   }
 }
