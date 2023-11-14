@@ -18,8 +18,6 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
-
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.INaksha;
@@ -31,15 +29,17 @@ import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteFeatures;
-import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
-import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
+
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
 
 public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
@@ -127,13 +127,11 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         feature.getProperties().getXyzNamespace().addTags(addTags, true).removeTags(removeTags, true);
       }
     }
+    final WriteFeatures<XyzFeature> wrRequest = RequestHelper.createFeaturesRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
-    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(context(), true)) {
-      final WriteFeatures<XyzFeature> wrRequest = RequestHelper.createFeaturesRequest(spaceId, features);
-      final Result wrResult = writer.execute(wrRequest);
-      // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
-    }
+    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
   }
 }
