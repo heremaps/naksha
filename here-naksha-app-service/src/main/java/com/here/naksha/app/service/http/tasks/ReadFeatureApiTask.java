@@ -18,6 +18,8 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
+
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
@@ -29,13 +31,10 @@ import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import io.vertx.ext.web.RoutingContext;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
 
 public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
@@ -72,11 +71,11 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   protected @NotNull XyzResponse execute() {
     // TODO : Add custom execute logic to process input API request based on reqType
     try {
-        return switch (this.reqType) {
-          case GET_BY_ID -> executeFeatureById();
-          case GET_BY_IDS -> executeFeaturesById();
-          default -> executeUnsupported();
-        };
+      return switch (this.reqType) {
+        case GET_BY_ID -> executeFeatureById();
+        case GET_BY_IDS -> executeFeaturesById();
+        default -> executeUnsupported();
+      };
     } catch (Exception ex) {
       // unexpected exception
       return verticle.sendErrorResponse(
@@ -124,7 +123,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage writer instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
-      // transform Result to Http XyzFeature response
+    // transform Result to Http XyzFeature response
     return transformReadResultToXyzFeatureResponse(result, XyzFeature.class);
   }
 }

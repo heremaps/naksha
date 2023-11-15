@@ -18,6 +18,8 @@
  */
 package com.here.naksha.app.service.http.apis;
 
+import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.CREATE_FEATURES;
+
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.tasks.WriteFeatureApiTask;
 import com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType;
@@ -27,8 +29,6 @@ import io.vertx.ext.web.openapi.RouterBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.CREATE_FEATURES;
 
 public class WriteFeatureApi extends Api {
 
@@ -47,11 +47,12 @@ public class WriteFeatureApi extends Api {
   public void addManualRoutes(final @NotNull Router router) {}
 
   private void createFeatures(final @NotNull RoutingContext routingContext) {
-    startWriteFeatureApiTask(CREATE_FEATURES,routingContext);
+    startWriteFeatureApiTask(CREATE_FEATURES, routingContext);
   }
 
   private void startWriteFeatureApiTask(WriteFeatureApiReqType reqType, RoutingContext routingContext) {
-    new WriteFeatureApiTask<>(reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
-            .start();
+    new WriteFeatureApiTask<>(
+            reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
+        .start();
   }
 }
