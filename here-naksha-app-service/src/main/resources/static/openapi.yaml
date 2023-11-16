@@ -476,6 +476,44 @@ paths:
           $ref: '#/components/responses/ErrorResponse504'
         '513':
           $ref: '#/components/responses/ErrorResponse513'
+    put:
+      tags:
+        - Write Features
+      summary: Update features in the space
+      description: >
+        This method allows to update features in the storage associated (directly or via event handler) with the space.
+        It ensures an atomic operation, so either all features will be created or none (in case of failure).
+      operationId: putFeatures
+      parameters:
+        - $ref: '#/components/parameters/SpaceId'
+        - $ref: '#/components/parameters/AddTags'
+        - $ref: '#/components/parameters/RemoveTags'
+        - $ref: '#/components/parameters/PrefixId'
+      requestBody:
+        $ref: '#/components/requestBodies/FeatureCollectionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/FeatureCollectionModificationResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '409':
+          $ref: '#/components/responses/ErrorResponse409'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
   '/hub/spaces/{spaceId}/features/{featureId}':
     get:
       tags:

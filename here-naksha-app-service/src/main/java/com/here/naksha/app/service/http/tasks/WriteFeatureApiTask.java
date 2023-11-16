@@ -24,6 +24,7 @@ import static com.here.naksha.app.service.http.apis.ApiParams.REMOVE_TAGS;
 import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
 import static com.here.naksha.app.service.http.apis.ApiParams.pathParam;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.INaksha;
@@ -80,12 +81,11 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     logger.info("Received Http request {}", this.reqType);
     // Custom execute logic to process input API request based on reqType
     try {
-      switch (this.reqType) {
-        case CREATE_FEATURES:
-          return executeCreateFeatures();
-        default:
-          return executeUnsupported();
-      }
+      return switch (this.reqType) {
+        case CREATE_FEATURES -> executeCreateFeatures();
+        case MODIFY_FEATURES -> executeUpdateFeatures();
+        default -> executeUnsupported();
+      };
     } catch (Exception ex) {
       // unexpected exception
       logger.error("Exception processing Http request. ", ex);
@@ -96,13 +96,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeCreateFeatures() throws Exception {
     // Deserialize input request
-    final FeatureCollectionRequest collectionRequest;
-    try (final Json json = Json.get()) {
-      final String bodyJson = routingContext.body().asString();
-      collectionRequest = json.reader(ViewDeserialize.User.class)
-          .forType(FeatureCollectionRequest.class)
-          .readValue(bodyJson);
-    }
+    final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
     final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
     if (features.isEmpty()) {
       return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't create empty features");
@@ -136,5 +130,52 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
     // transform WriteResult to Http FeatureCollection response
     return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
+  }
+
+  private @NotNull XyzResponse executeUpdateFeatures() throws Exception {
+    // Deserialize input request
+    final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
+    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
+    if (features.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't update empty features");
+    }
+
+    // Parse API parameters
+    final String spaceId = pathParam(routingContext, SPACE_ID);
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    final String prefixId = (queryParams != null) ? queryParams.getValueOf(PREFIX_ID, String.class) : null;
+    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOf(ADD_TAGS, String.class) : null;
+    final List<String> removeTags =
+        (queryParams != null) ? queryParams.collectAllOf(REMOVE_TAGS, String.class) : null;
+
+    // Validate parameters
+    if (spaceId == null || spaceId.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
+    }
+
+    // as applicable, modify features based on parameters supplied
+    if (prefixId != null || addTags != null || removeTags != null) {
+      for (final XyzFeature feature : features) {
+        feature.setIdPrefix(prefixId);
+        feature.getProperties().getXyzNamespace().addTags(addTags, true).removeTags(removeTags, true);
+      }
+    }
+    final WriteFeatures<XyzFeature> wrRequest = RequestHelper.createFeaturesRequest(spaceId, features);
+
+    // Forward request to NH Space Storage writer instance
+    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
+  }
+
+  private @NotNull FeatureCollectionRequest featuresFromRequestBody() throws JsonProcessingException {
+    try (final Json json = Json.get()) {
+      final String bodyJson = routingContext.body().asString();
+      return json.reader(ViewDeserialize.User.class)
+          .forType(FeatureCollectionRequest.class)
+          .readValue(bodyJson);
+    }
   }
 }
