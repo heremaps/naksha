@@ -488,7 +488,6 @@ paths:
         - $ref: '#/components/parameters/SpaceId'
         - $ref: '#/components/parameters/AddTags'
         - $ref: '#/components/parameters/RemoveTags'
-        - $ref: '#/components/parameters/PrefixId'
       requestBody:
         $ref: '#/components/requestBodies/FeatureCollectionRequest'
       responses:
@@ -533,6 +532,42 @@ paths:
           $ref: '#/components/responses/ErrorResponse403'
         '404':
           $ref: '#/components/responses/ErrorResponse404'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
+    put:
+      tags:
+        - Write Features
+      summary: Update feature with specified ID in the space
+      description: >
+        This method allows to update one feature in the storage associated (directly or via event handler) with the space.
+      operationId: putFeature
+      parameters:
+        - $ref: '#/components/parameters/SpaceId'
+        - $ref: '#/components/parameters/AddTags'
+        - $ref: '#/components/parameters/RemoveTags'
+      requestBody:
+        $ref: '#/components/requestBodies/FeatureRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/FeatureModificationResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '409':
+          $ref: '#/components/responses/ErrorResponse409'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
         '513':
           $ref: '#/components/responses/ErrorResponse513'
 components:
@@ -601,8 +636,32 @@ components:
       schema:
         type: string
   requestBodies:
+    FeatureRequest:
+      description: A request detailing one specific feature
+      required: true
+      content:
+        application/geo+json:
+          schema:
+            $ref: '#/components/schemas/Feature'
+          example:
+            type: "Feature"
+            geometry:
+              type: "Point"
+              coordinates:
+                - 8.68872
+                - 50.0561
+                - 292.94377758
+            properties:
+              name: Anfield
+              '@ns:com:here:xyz':
+                tags:
+                  - football
+                  - stadium
+              amenity: Football Stadium
+              capacity: 54074
+              description: Home of Liverpool Football Club
     FeatureCollectionRequest:
-      description: An FeatureCollection request holding list of Feature objects.
+      description: A FeatureCollection request holding list of Feature objects.
       required: true
       content:
         application/geo+json:

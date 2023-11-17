@@ -52,7 +52,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   public enum WriteFeatureApiReqType {
     CREATE_FEATURES,
-    MODIFY_FEATURES
+    MODIFY_FEATURES,
+    UPDATE_BY_ID
   }
 
   public WriteFeatureApiTask(
