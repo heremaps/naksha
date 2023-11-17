@@ -136,9 +136,10 @@ public class CreateFeatureTestHelper {
 
     // Given: Space (uses above EventHandler) configured in Admin storage
     final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
+    final String spaceJsonString = loadFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json");
     request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
         .uri(new URI(nakshaHttpUri + "hub/spaces"))
-        .POST(HttpRequest.BodyPublishers.ofString(space.toString()))
+        .POST(HttpRequest.BodyPublishers.ofString(spaceJsonString))
         .header(HDR_STREAM_ID, streamId)
         .build();
     response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
