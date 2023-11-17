@@ -145,7 +145,6 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final QueryParameterList queryParams = (routingContext.request().query() != null)
         ? new QueryParameterList(routingContext.request().query())
         : null;
-    final String prefixId = (queryParams != null) ? queryParams.getValueOf(PREFIX_ID, String.class) : null;
     final List<String> addTags = (queryParams != null) ? queryParams.collectAllOf(ADD_TAGS, String.class) : null;
     final List<String> removeTags =
         (queryParams != null) ? queryParams.collectAllOf(REMOVE_TAGS, String.class) : null;
@@ -156,13 +155,12 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // as applicable, modify features based on parameters supplied
-    if (prefixId != null || addTags != null || removeTags != null) {
+    if (addTags != null || removeTags != null) {
       for (final XyzFeature feature : features) {
-        feature.setIdPrefix(prefixId);
         feature.getProperties().getXyzNamespace().addTags(addTags, true).removeTags(removeTags, true);
       }
     }
-    final WriteFeatures<XyzFeature> wrRequest = RequestHelper.createFeaturesRequest(spaceId, features);
+    final WriteFeatures<XyzFeature> wrRequest = RequestHelper.updateFeaturesRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);

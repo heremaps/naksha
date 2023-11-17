@@ -19,12 +19,11 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.NakshaAppInitializer.mockedNakshaApp;
-import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
-import static com.here.naksha.app.common.TestUtil.getHeader;
-import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.*;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.psql.PsqlStorage;
 import java.net.URI;
@@ -806,6 +805,36 @@ class NakshaAppTest {
   @Order(9)
   void tc0407_testReadFeaturesWithCommaSeparatedIds() throws Exception {
     readFeaturesByIdsTests.tc0407_testReadFeaturesWithCommaSeparatedIds();
+  }
+
+  @Test
+  @Order(10)
+  void tc0500_testUpdateFeatures() throws Exception {
+    // Test API : PUT /hub/spaces/{spaceId}/features
+    String streamId;
+    HttpRequest request;
+    HttpResponse<String> response;
+
+    // Read request body
+    final String bodyJson = loadFileOrFail("TC0500_updateFeatures/update_request.json");
+    // TODO: include geometry after Cursor-related changes ->
+    final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
+    final String expectedBodyPart = loadFileOrFail("TC0500_updateFeatures/response_no_geometry.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
+        .uri(new URI(NAKSHA_HTTP_URI + "hub/spaces/" + space.getId() + "/features"))
+        .PUT(HttpRequest.BodyPublishers.ofString(bodyJson))
+        .header(HDR_STREAM_ID, streamId)
+        .build();
+    response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+    // Then: Perform assertions
+    assertEquals(200, response.statusCode(), "ResCode mismatch");
+    JSONAssert.assertEquals(
+        "Get Feature response body doesn't match", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
+    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
   }
 
   @AfterAll

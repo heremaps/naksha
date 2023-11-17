@@ -112,6 +112,23 @@ public class RequestHelper {
   }
 
   /**
+   * Helper method to create WriteFeatures request for updating multiple features.
+   *
+   * @param collectionName name of the storage collection
+   * @param features       feature object array to be updated
+   * @param <T>            any object extending XyzFeature
+   * @return WriteFeatures request that can be used against IStorage methods
+   */
+  public static @NotNull <T extends XyzFeature> WriteFeatures<T> updateFeaturesRequest(
+      final @NotNull String collectionName, final @NotNull List<T> features) {
+    final List<@NotNull WriteOp<T>> opList = new ArrayList<>();
+    for (final T feature : features) {
+      opList.add(new WriteXyzOp<>(EWriteOp.UPDATE, feature));
+    }
+    return new WriteFeatures<>(collectionName, opList);
+  }
+
+  /**
    * Helper method to create WriteFeatures request with given list of features. If silentIfExists is true, function internally sets
    * IfExists.RETAIN and IfConflict.RETAIN (to silently ignoring create operation, if feature already exists). If set to false, both flags
    * will be set to FAIL, which will ensure that feature doesn't get overwritten in storage, if already exists.
