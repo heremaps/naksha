@@ -382,6 +382,16 @@ public final class PsqlStorage implements IStorage, DataSource {
     return this;
   }
 
+  @JsonIgnore
+  public long getSocketTimeout(@NotNull TimeUnit timeUnit) {
+    return storage().getSocketTimeout(timeUnit);
+  }
+
+  @JsonIgnore
+  public void setSocketTimeout(long timeout, @NotNull TimeUnit timeUnit) {
+    storage().setSocketTimeout(timeout, timeUnit);
+  }
+
   @JsonGetter("stmtTimeout")
   public long getStatementTimeoutInMillis() {
     return storage().getStatementTimeout(MILLISECONDS);
