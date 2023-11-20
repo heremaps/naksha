@@ -542,7 +542,6 @@ paths:
         This method allows to update one feature in the storage associated (directly or via event handler) with the space.
       operationId: putFeature
       parameters:
-        - $ref: '#/components/parameters/SpaceId'
         - $ref: '#/components/parameters/AddTags'
         - $ref: '#/components/parameters/RemoveTags'
       requestBody:
