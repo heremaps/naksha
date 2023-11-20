@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EChangeState;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.JsonSerializable;

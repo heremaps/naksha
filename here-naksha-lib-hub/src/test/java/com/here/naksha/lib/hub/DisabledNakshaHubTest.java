@@ -31,6 +31,7 @@ import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import com.here.naksha.lib.hub.util.ConfigUtil;
@@ -114,7 +115,7 @@ class DisabledNakshaHubTest {
         assertEquals(1, wr.results.size(), "Expected 1 storage in result");
         final List<Storage> storageResultList = new ArrayList<>();
         for (final WriteOpResult<?> wOpResult : wr.results) {
-          storageResultList.add((Storage) wOpResult.object);
+          storageResultList.add((Storage) wOpResult.feature);
         }
         JSONAssert.assertEquals(
             "Mismatch in Storage WriteResult",
@@ -146,7 +147,7 @@ class DisabledNakshaHubTest {
       admin.rollback();
       if (wrResult instanceof ErrorResult er) {
         assertEquals(
-            XyzError.CONFLICT.value, er.reason.value, "Expecting conflict error on duplicate storage!");
+            XyzError.CONFLICT.value(), er.reason.value(), "Expecting conflict error on duplicate storage!");
         return;
       }
       fail("Received different result while creating duplicate storage! " + wrResult);
@@ -170,23 +171,17 @@ class DisabledNakshaHubTest {
         fail("Storage read result is null!");
       } else if (result instanceof ErrorResult er) {
         fail("Exception reading storages " + er);
-      } else if (result instanceof ReadResult<?> rr) {
-        // Read all available storages (upto a max limit, e.g. 10)
-        final List<Storage> storages = new ArrayList<>();
-        int cnt = 0;
-        for (final Storage storage : rr.withFeatureType(Storage.class)) {
-          storages.add(storage);
-          if (++cnt >= 10) {
-            break;
-          }
-        }
-        rr.close();
-        // convert storage list to JSON string before comparison
-        final String storagesJson = toJson(storages);
-        JSONAssert.assertEquals(
-            "Expecting default psql Storage", expectedBodyPart, storagesJson, JSONCompareMode.LENIENT);
       } else {
-        fail("Unexpected result while reading storages : " + result.getClass());
+        try {
+          // Read all available storages (upto a max limit, e.g. 10)
+          final List<Storage> storages = ResultHelper.readFeaturesFromResult(result, Storage.class);
+          // convert storage list to JSON string before comparison
+          final String storagesJson = toJson(storages);
+          JSONAssert.assertEquals(
+              "Expecting default psql Storage", expectedBodyPart, storagesJson, JSONCompareMode.LENIENT);
+        } catch (Exception e) {
+          fail("Unexpected result while reading storages : " + result.getClass() + "/n" + e);
+        }
       }
     }
   }

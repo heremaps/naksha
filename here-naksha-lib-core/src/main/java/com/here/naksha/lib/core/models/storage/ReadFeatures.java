@@ -56,6 +56,12 @@ public class ReadFeatures extends ReadRequest<ReadFeatures> {
 
   @JsonProperty
   @AvailableSince(NakshaVersion.v2_0_7)
+  public @NotNull ReadFeatures withReturnDeleted(boolean returnDeleted) {
+    this.returnDeleted = returnDeleted;
+    return this;
+  }
+
+  @AvailableSince(NakshaVersion.v2_0_7)
   private boolean returnAllVersions;
 
   @AvailableSince(NakshaVersion.v2_0_7)

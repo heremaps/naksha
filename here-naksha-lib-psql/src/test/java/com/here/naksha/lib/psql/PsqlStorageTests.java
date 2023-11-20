@@ -18,15 +18,22 @@
  */
 package com.here.naksha.lib.psql;
 
+import static com.spatial4j.core.io.GeohashUtils.encodeLatLon;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
+import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates;
+import com.here.naksha.lib.core.models.geojson.implementation.*;
+import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
+import com.here.naksha.lib.core.models.naksha.NakshaFeature;
+import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.Point;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -34,6 +41,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.postgresql.util.PSQLException;
 
 @SuppressWarnings({"unused"})
 @TestMethodOrder(OrderAnnotation.class)
@@ -56,7 +64,7 @@ public class PsqlStorageTests extends PsqlTests {
   static final String SINGLE_FEATURE_ID = "TheFeature";
 
   @Test
-  @Order(60)
+  @Order(50)
   @EnabledIf("runTest")
   void singleFeatureCreate() throws NoCursor {
     assertNotNull(storage);
@@ -92,6 +100,24 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
+  @Order(51)
+  @EnabledIf("runTest")
+  void singleFeatureCreateWitSameId() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
+    feature.setGeometry(new XyzPoint(5.0d, 6.0d, 2.0d));
+    request.add(EWriteOp.CREATE, feature);
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+        session.execute(request).getXyzFeatureCursor()) {
+      assertFalse(cursor.next());
+    } finally {
+      session.commit(true);
+    }
+  }
+
+  @Test
   @Order(61)
   @EnabledIf("runTest")
   void singleFeatureRead() throws NoCursor {
@@ -105,9 +131,41 @@ public class PsqlStorageTests extends PsqlTests {
       assertTrue(cursor.next());
       final EExecutedOp op = cursor.getOp();
       assertSame(EExecutedOp.READ, op);
+
+      final XyzFeature feature = cursor.getFeature();
+      XyzNamespace xyz = feature.xyz();
+
+      // then
+      assertEquals(SINGLE_FEATURE_ID, feature.getId());
+      assertEquals(1, xyz.getVersion());
+      assertSame(EXyzAction.CREATE, xyz.getAction());
+      final XyzGeometry geometry = feature.getGeometry();
+      assertNotNull(geometry);
+      final Coordinate coordinate = geometry.getJTSGeometry().getCoordinate();
+      assertEquals(5.0d, coordinate.getOrdinate(0));
+      assertEquals(6.0d, coordinate.getOrdinate(1));
+      assertEquals(2.0d, coordinate.getOrdinate(2));
+
+      final String uuid = cursor.getUuid();
+      assertEquals(cursor.getUuid(), xyz.uuid);
+      final String[] uuidFields = uuid.split(":");
+      assertEquals(storage.getStorageId(), uuidFields[0]);
+      assertEquals(collectionId(), uuidFields[1]);
+      assertEquals(4, uuidFields[2].length()); // year (4- digits)
+      assertEquals(2, uuidFields[3].length()); // hour (2- digits)
+      assertEquals(2, uuidFields[4].length()); // minute (2- digits)
+      assertEquals("1", uuidFields[5]); // seq id
+      final String txnFromUuid = uuidFields[2] + uuidFields[3] + uuidFields[4] + "0000000000" + uuidFields[5];
+      assertEquals(txnFromUuid, xyz.getTxn().toString()); // seq id
+      assertEquals(TEST_APP_ID, xyz.getAppId());
+      assertEquals(TEST_AUTHOR, xyz.getAuthor());
+      assertNotEquals(xyz.getRealTimeCreateAt(), xyz.getCreatedAt());
+      assertEquals(xyz.getCreatedAt(), xyz.getUpdatedAt());
+
+      assertEquals(encodeLatLon(coordinate.y, coordinate.x, 7), xyz.get("grid"));
+
+      assertFalse(cursor.hasNext());
     }
-    // TODO: Read the created feature and review that it is in version 1, and everything else is good.
-    //       Optionally, ensure that the "grid" is the correct Geo-Hash!
   }
 
   @Test
@@ -116,7 +174,39 @@ public class PsqlStorageTests extends PsqlTests {
   void singleFeatureUpdate() throws NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
-    // TODO: Update the feature
+    // given
+    /**
+     * data inserted in {@link #singleFeatureCreate()} test
+     */
+    final NakshaFeature featureToUpdate = new NakshaFeature(SINGLE_FEATURE_ID);
+    // different geometry
+    XyzPoint newPoint1 = new XyzPoint(5.1d, 6.0d, 2.1d);
+    XyzPoint newPoint2 = new XyzPoint(5.15d, 6.0d, 2.15d);
+    XyzMultiPoint multiPoint = new XyzMultiPoint();
+    MultiPointCoordinates multiPointCoordinates = new MultiPointCoordinates(2);
+    multiPointCoordinates.add(0, newPoint1.getCoordinates());
+    multiPointCoordinates.add(0, newPoint2.getCoordinates());
+    multiPoint.withCoordinates(multiPointCoordinates);
+
+    featureToUpdate.setGeometry(multiPoint);
+    // new property added
+    featureToUpdate.setTitle("Bank");
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    request.add(EWriteOp.UPDATE, featureToUpdate);
+    // when
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+        session.execute(request).getXyzFeatureCursor()) {
+      cursor.next();
+
+      // then
+      final XyzFeature feature = cursor.getFeature();
+      assertSame(EExecutedOp.UPDATED, cursor.getOp());
+      assertEquals(SINGLE_FEATURE_ID, cursor.getId());
+      //      assertNotNull(cursor.getPropertiesType());
+      final Geometry coordinate = cursor.getGeometry();
+      assertEquals(multiPoint.convertToJTSGeometry(), coordinate);
+      assertEquals("Bank", feature.get("title").toString());
+    }
   }
 
   @Test
@@ -125,8 +215,48 @@ public class PsqlStorageTests extends PsqlTests {
   void singleFeatureUpdateVerify() throws NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
-    // TODO: Read the updated feature and review that it is in version 2, and everything else is good.
-    //       Optionally, ensure that the "grid" is the correct Geo-Hash!
+    // given
+    /**
+     * data inserted in {@link #singleFeatureCreate()} test and updated by {@link #singleFeatureUpdate()}.
+     */
+    final ReadFeatures request = RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
+
+    // when
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+        session.execute(request).getXyzFeatureCursor()) {
+      cursor.next();
+      final XyzFeature feature = cursor.getFeature();
+      XyzNamespace xyz = feature.xyz();
+
+      // then
+      assertEquals(SINGLE_FEATURE_ID, feature.getId());
+      assertEquals(2, xyz.getVersion());
+      assertSame(EXyzAction.UPDATE, xyz.getAction());
+      final XyzGeometry geometry = feature.getGeometry();
+      assertNotNull(geometry);
+      Coordinate expectedGeometry = new Coordinate(5.15d, 6.0d, 2.15d);
+      assertEquals(expectedGeometry, geometry.getJTSGeometry().getCoordinate());
+
+      final String uuid = cursor.getUuid();
+      assertEquals(cursor.getUuid(), xyz.uuid);
+      final String[] uuidFields = uuid.split(":");
+
+      assertEquals(storage.getStorageId(), uuidFields[0]);
+      assertEquals(collectionId(), uuidFields[1]);
+      assertEquals(4, uuidFields[2].length()); // year (4- digits)
+      assertEquals(2, uuidFields[3].length()); // hour (2- digits)
+      assertEquals(2, uuidFields[4].length()); // minute (2- digits)
+      // should have next seq id, which is 2:
+      assertEquals("2", uuidFields[5]); // seq id
+      final String txnFromUuid = uuidFields[2] + uuidFields[3] + uuidFields[4] + "0000000000" + uuidFields[5];
+      assertEquals(txnFromUuid, xyz.getTxn().toString()); // seq id
+      assertEquals(TEST_APP_ID, xyz.getAppId());
+      assertEquals(TEST_AUTHOR, xyz.getAuthor());
+
+      Point centroid = geometry.getJTSGeometry().getCentroid();
+      assertEquals(encodeLatLon(centroid.getY(), centroid.getX(), 7), xyz.get("grid"));
+      assertFalse(cursor.hasNext());
+    }
   }
 
   @Test
@@ -151,9 +281,11 @@ public class PsqlStorageTests extends PsqlTests {
       final Geometry geometry = cursor.getGeometry();
       assertNotNull(geometry);
       final Coordinate coordinate = geometry.getCoordinate();
-      assertEquals(5.0d, coordinate.getOrdinate(0));
+      // this geometry differs than requested, because value in db has been changed by update method, so we return
+      // what was actually deleted.
+      assertEquals(5.15d, coordinate.getOrdinate(0));
       assertEquals(6.0d, coordinate.getOrdinate(1));
-      assertEquals(2.0d, coordinate.getOrdinate(2));
+      assertEquals(2.15d, coordinate.getOrdinate(2));
       final XyzFeature f = cursor.getFeature();
       assertNotNull(f);
       assertEquals(SINGLE_FEATURE_ID, f.getId());
@@ -168,32 +300,120 @@ public class PsqlStorageTests extends PsqlTests {
   @Test
   @Order(65)
   @EnabledIf("runTest")
-  void singleFeatureDeleteVerify() {
+  void singleFeatureDeleteVerify() throws SQLException, NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
-    // TODO: Ensure that the feature is deleted (not found)
-    //       Ensure that the feature is available when reading including delete features, verify state (version 3)
-    // aso.
-    //       Directly query database in "del" table and review that the feature exists there in the correct staet.
+    // when
+    /**
+     * Read from feature should return nothing.
+     */
+    final ReadFeatures request = RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+        session.execute(request).getXyzFeatureCursor()) {
+      assertFalse(cursor.hasNext());
+    }
+    // also: direct query to feature table should return nothing.
+    try (final PsqlReadSession session = storage.newReadSession(null, true)) {
+      ResultSet rs = getFeatureFromTable(session, collectionId(), SINGLE_FEATURE_ID);
+      assertFalse(rs.next());
+    }
+
+    /**
+     * Read from deleted should return valid feature.
+     */
+    final ReadFeatures requestWithDeleted =
+        RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
+    requestWithDeleted.withReturnDeleted(true);
+    String featureJsonBeforeDeletion;
+
+    /* TODO uncomment it when read with deleted is ready.
+
+    try (final ResultCursor<XyzFeature> cursor =
+    session.execute(requestWithDeleted).cursor()) {
+    cursor.next();
+    final XyzFeature feature = cursor.getFeature();
+    XyzNamespace xyz = feature.xyz();
+
+    // then
+    assertSame(EExecutedOp.DELETED, cursor.getOp());
+    final String id = cursor.getId();
+    assertEquals(SINGLE_FEATURE_ID, id);
+    final String uuid = cursor.getUuid();
+    assertNotNull(uuid);
+    final Geometry geometry = cursor.getGeometry();
+    assertNotNull(geometry);
+    assertEquals(new Coordinate(5.1d, 6.0d, 2.1d), geometry.getCoordinate());
+    assertNotNull(feature);
+    assertEquals(SINGLE_FEATURE_ID, feature.getId());
+    assertEquals(uuid, feature.xyz().getUuid());
+    assertSame(EXyzAction.DELETE, feature.xyz().getAction());
+    featureJsonBeforeDeletion = cursor.getJson()
+    assertFalse(cursor.next());
+    }
+    */
+    /**
+     * Check directly _del table.
+     */
+    final String collectionDelTableName = collectionId() + "_del";
+    try (final PsqlReadSession session = storage.newReadSession(null, true)) {
+      ResultSet rs = getFeatureFromTable(session, collectionDelTableName, SINGLE_FEATURE_ID);
+
+      // feature exists in _del table
+      assertTrue(rs.next());
+
+      /* FIXME uncomment this when read with deleted is ready.
+      assertEquals(featureJsonBeforeDeletion, rs.getString(1));
+       */
+    }
   }
 
   @Test
   @Order(66)
   @EnabledIf("runTest")
-  void singleFeaturePurge() {
+  void singleFeaturePurge() throws NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
-    // TODO: Purge the deleted feature.
-    //       Ensure that the feature is no longer available in "_del" table
+
+    // given
+    /**
+     * Data inserted in {@link #singleFeatureCreate()} and deleted in {@link #singleFeatureDelete()}.
+     * We don't care about geometry or other properties during PURGE operation, feature_id is only required thing,
+     * thanks to that you don't have to read feature before purge operation.
+     */
+    final XyzFeature featureToPurge = new XyzFeature(SINGLE_FEATURE_ID);
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    request.add(EWriteOp.PURGE, featureToPurge);
+
+    // when
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+        session.execute(request).getXyzFeatureCursor()) {
+      cursor.next();
+
+      // then
+      final XyzFeature feature = cursor.getFeature();
+      assertSame(EExecutedOp.PURGED, cursor.getOp());
+      assertEquals(SINGLE_FEATURE_ID, cursor.getId());
+    } finally {
+      session.commit(true);
+    }
   }
 
   @Test
   @Order(67)
   @EnabledIf("runTest")
-  void singleFeaturePurgeVerify() {
+  void singleFeaturePurgeVerify() throws SQLException {
     assertNotNull(storage);
     assertNotNull(session);
-    // TODO: Ensure that the feature is no longer available in "_del" table.
+    // given
+    final String collectionDelTableName = collectionId() + "_del";
+
+    // when
+    try (final PsqlReadSession session = storage.newReadSession(null, true)) {
+      ResultSet rs = getFeatureFromTable(session, collectionDelTableName, SINGLE_FEATURE_ID);
+
+      // then
+      assertFalse(rs.next());
+    }
   }
 
   @Test
@@ -301,35 +521,47 @@ public class PsqlStorageTests extends PsqlTests {
   @Test
   @Order(120)
   @EnabledIf("runTest")
-  void dropFooCollection() {
-    // TODO: First try to DELETE the test collection
-    //       Then try to PURGE the test collection
-    //       Finally try to read the test collection (it should not exist)
+  void dropFooCollection() throws NoCursor, SQLException {
     assertNotNull(storage);
     assertNotNull(session);
-    //    StorageCollection storageCollection = new StorageCollection(COLLECTION_ID);
-    //    WriteOp<StorageCollection> writeOp = new WriteOp<>(EWriteOp.DELETE, storageCollection, false);
-    //    WriteCollections<StorageCollection> writeRequest = new WriteCollections<>(List.of(writeOp));
-    //    final WriteResult<StorageCollection> dropResult =
-    //        (WriteResult<StorageCollection>) session.execute(writeRequest);
-    //    session.commit();
-    //    assertNotNull(dropResult);
-    //    StorageCollection dropped = dropResult.results.get(0).feature;
-    //    if (dropFinally()) {
-    //      assertNotSame(storageCollection, dropped);
-    //    } else {
-    //      assertNotSame(storageCollection, dropped);
-    //    }
-    //    assertEquals(storageCollection.getId(), dropped.getId());
-    //    //    assertEquals(storageCollection.getHistory(), dropped.getHistory());
-    //    assertEquals(storageCollection.getMaxAge(), dropped.getMaxAge());
-    //    ReadCollections readRequest =
-    //        new ReadCollections().withIds(COLLECTION_ID).withReadDeleted(false);
-    //    XyzFeatureReadResult result = (XyzFeatureReadResult) session.execute(readRequest);
-    //    if (dropFinally()) {
-    //      assertFalse(result.hasNext());
-    //    } else {
-    //      assertTrue(result.hasNext());
-    //    }
+
+    final XyzCollection deleteCollection = new XyzCollection(collectionId());
+    final WriteXyzCollections deleteRequest = new WriteXyzCollections();
+    deleteRequest.add(EWriteOp.DELETE, deleteCollection);
+    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
+        session.execute(deleteRequest).getXyzCollectionCursor()) {
+      assertTrue(cursor.next());
+      session.commit(true);
+
+      PsqlReadSession readDeletedSession = storage.newReadSession(nakshaContext, false);
+      ResultSet readRs = getFeatureFromTable(readDeletedSession, collectionId(), SINGLE_FEATURE_ID);
+      // It should not have any data but table still exists.
+      assertFalse(readRs.next());
+      readDeletedSession.close();
+
+      // purge
+      final WriteXyzCollections purgeRequest = new WriteXyzCollections();
+      deleteRequest.add(EWriteOp.PURGE, deleteCollection);
+      try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursorPurge =
+          session.execute(deleteRequest).getXyzCollectionCursor()) {
+        session.commit(true);
+      }
+
+      // try readSession after purge, table doesn't exist anymore, so it should throw an exception.
+      PsqlReadSession readPurgedSession = storage.newReadSession(nakshaContext, false);
+      assertThrowsExactly(
+          PSQLException.class,
+          () -> getFeatureFromTable(readPurgedSession, collectionId(), SINGLE_FEATURE_ID),
+          "ERROR: relation \"foo\" does not exist");
+      readPurgedSession.close();
+    }
+  }
+
+  private ResultSet getFeatureFromTable(PsqlReadSession session, String table, String featureId) throws SQLException {
+    final PostgresSession pgSession = session.session();
+    final SQL sql = pgSession.sql().add("SELECT * from ").addIdent(table).add(" WHERE jsondata->>'id' = ? ;");
+    final PreparedStatement stmt = pgSession.prepareStatement(sql);
+    stmt.setString(1, featureId);
+    return stmt.executeQuery();
   }
 }
