@@ -18,11 +18,7 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.ADD_TAGS;
-import static com.here.naksha.app.service.http.apis.ApiParams.PREFIX_ID;
-import static com.here.naksha.app.service.http.apis.ApiParams.REMOVE_TAGS;
-import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
-import static com.here.naksha.app.service.http.apis.ApiParams.pathParam;
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -39,6 +35,7 @@ import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
+import com.here.naksha.lib.core.view.ViewDeserialize.User;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -85,6 +82,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       return switch (this.reqType) {
         case CREATE_FEATURES -> executeCreateFeatures();
         case MODIFY_FEATURES -> executeUpdateFeatures();
+        case UPDATE_BY_ID -> executeUpdateFeature();
         default -> executeUnsupported();
       };
     } catch (Exception ex) {
@@ -167,6 +165,54 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
     // transform WriteResult to Http FeatureCollection response
     return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
+  }
+
+  private @NotNull XyzResponse executeUpdateFeature() throws Exception {
+    // Deserialize input request
+    XyzFeature feature;
+    try (final Json json = Json.get()) {
+      final String bodyJson = routingContext.body().asString();
+      feature = json.reader(User.class).forType(XyzFeature.class).readValue(bodyJson);
+    }
+
+    // Parse API parameters
+    final String spaceId = pathParam(routingContext, SPACE_ID);
+    final String featureId = pathParam(routingContext, FEATURE_ID);
+
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOf(ADD_TAGS, String.class) : null;
+    final List<String> removeTags =
+        (queryParams != null) ? queryParams.collectAllOf(REMOVE_TAGS, String.class) : null;
+
+    // Validate parameters
+    if (spaceId == null || spaceId.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
+    }
+
+    if (featureId == null || featureId.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing id parameter");
+    }
+
+    if (!featureId.equals(feature.getId())) {
+      return verticle.sendErrorResponse(
+          routingContext,
+          XyzError.ILLEGAL_ARGUMENT,
+          "URI path parameter id is not the same as in feature request body.");
+    }
+
+    // as applicable, modify features based on parameters supplied
+    if (addTags != null || removeTags != null) {
+      feature.getProperties().getXyzNamespace().addTags(addTags, true).removeTags(removeTags, true);
+    }
+
+    final WriteFeatures<XyzFeature> wrRequest = RequestHelper.updateFeatureRequest(spaceId, feature);
+
+    // Forward request to NH Space Storage writer instance
+    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class);
   }
 
   private @NotNull FeatureCollectionRequest featuresFromRequestBody() throws JsonProcessingException {

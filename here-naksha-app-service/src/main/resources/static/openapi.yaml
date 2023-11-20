@@ -514,15 +514,15 @@ paths:
         '513':
           $ref: '#/components/responses/ErrorResponse513'
   '/hub/spaces/{spaceId}/features/{featureId}':
+    parameters:
+      - $ref: '#/components/parameters/SpaceId'
+      - $ref: '#/components/parameters/FeatureId'
     get:
       tags:
         - Read Features
       summary: Get a feature by ID
       description: Retrieves the feature with the provided identifier.
       operationId: getFeature
-      parameters:
-        - $ref: '#/components/parameters/SpaceId'
-        - $ref: '#/components/parameters/FeatureId'
       responses:
         '200':
           $ref: '#/components/responses/FeatureResponse'
@@ -549,7 +549,7 @@ paths:
         $ref: '#/components/requestBodies/FeatureRequest'
       responses:
         '200':
-          $ref: '#/components/responses/FeatureModificationResponse'
+          $ref: '#/components/responses/FeatureResponse'
         '400':
           $ref: '#/components/responses/ErrorResponse400'
         '401':
