@@ -849,10 +849,10 @@ class NakshaAppTest {
     HttpResponse<String> response;
 
     // Read request body
-    final String bodyJson = loadFileOrFail("TC0501_updateOneFeatureById/update_request.json");
+    final String bodyJson = loadFileOrFail("TC0501_updateOneFeatureById/update_request_and_response.json");
     // TODO: include geometry after Cursor-related changes ->
     final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
-    final String expectedBodyPart = loadFileOrFail("TC0501_updateOneFeatureById/response.json");
+    final String expectedBodyPart = bodyJson;
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
@@ -867,6 +867,39 @@ class NakshaAppTest {
     assertEquals(200, response.statusCode(), "ResCode mismatch");
     JSONAssert.assertEquals(
         "Update Feature response body doesn't match",
+        expectedBodyPart,
+        response.body(),
+        JSONCompareMode.LENIENT);
+    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+  }
+
+  @Test
+  @Order(11)
+  void tc0502_testUpdateFeatureByWrongUriId() throws Exception {
+    // Test API : PUT /hub/spaces/{spaceId}/features/{featureId}
+    String streamId;
+    HttpRequest request;
+    HttpResponse<String> response;
+
+    // Read request body
+    final String bodyJson = loadFileOrFail("TC0502_updateFeatureWithWrongUriId/request.json");
+    // TODO: include geometry after Cursor-related changes ->
+    final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
+    final String expectedBodyPart = loadFileOrFail("TC0502_updateFeatureWithWrongUriId/response.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
+        .uri(new URI(NAKSHA_HTTP_URI + "hub/spaces/" + space.getId() + "/features/wrong-id"))
+        .PUT(HttpRequest.BodyPublishers.ofString(bodyJson))
+        .header(HDR_STREAM_ID, streamId)
+        .build();
+    response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+    // Then: Perform assertions
+    assertEquals(409, response.statusCode(), "ResCode mismatch");
+    JSONAssert.assertEquals(
+        "Update Feature error response doesn't match",
         expectedBodyPart,
         response.body(),
         JSONCompareMode.LENIENT);
