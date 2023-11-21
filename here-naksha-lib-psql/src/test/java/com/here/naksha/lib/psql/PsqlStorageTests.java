@@ -102,24 +102,6 @@ public class PsqlStorageTests extends PsqlTests {
   @Test
   @Order(51)
   @EnabledIf("runTest")
-  void singleFeatureCreateWitSameId() throws NoCursor {
-    assertNotNull(storage);
-    assertNotNull(session);
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
-    feature.setGeometry(new XyzPoint(5.0d, 6.0d, 2.0d));
-    request.add(EWriteOp.CREATE, feature);
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-        session.execute(request).getXyzFeatureCursor()) {
-      assertFalse(cursor.next());
-    } finally {
-      session.commit(true);
-    }
-  }
-
-  @Test
-  @Order(61)
-  @EnabledIf("runTest")
   void singleFeatureRead() throws NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
@@ -169,7 +151,7 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(62)
+  @Order(55)
   @EnabledIf("runTest")
   void singleFeatureUpdate() throws NoCursor {
     assertNotNull(storage);
@@ -206,11 +188,13 @@ public class PsqlStorageTests extends PsqlTests {
       final Geometry coordinate = cursor.getGeometry();
       assertEquals(multiPoint.convertToJTSGeometry(), coordinate);
       assertEquals("Bank", feature.get("title").toString());
+    } finally {
+      session.commit(true);
     }
   }
 
   @Test
-  @Order(63)
+  @Order(56)
   @EnabledIf("runTest")
   void singleFeatureUpdateVerify() throws NoCursor {
     assertNotNull(storage);
@@ -260,6 +244,26 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
+  @Order(57)
+  @EnabledIf("runTest")
+  void singleFeatureCreateWitSameId() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
+    feature.setGeometry(new XyzPoint(5.0d, 6.0d, 2.0d));
+    request.add(EWriteOp.CREATE, feature);
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+        session.execute(request).getXyzFeatureCursor()) {
+      assertTrue(cursor.next());
+      // should change to operation update as row already exists.
+      assertSame(EExecutedOp.UPDATED, cursor.getOp());
+    } finally {
+      session.commit(true);
+    }
+  }
+
+  @Test
   @Order(64)
   @EnabledIf("runTest")
   void singleFeatureDelete() throws NoCursor {
@@ -283,9 +287,9 @@ public class PsqlStorageTests extends PsqlTests {
       final Coordinate coordinate = geometry.getCoordinate();
       // this geometry differs than requested, because value in db has been changed by update method, so we return
       // what was actually deleted.
-      assertEquals(5.15d, coordinate.getOrdinate(0));
+      assertEquals(5.0d, coordinate.getOrdinate(0));
       assertEquals(6.0d, coordinate.getOrdinate(1));
-      assertEquals(2.15d, coordinate.getOrdinate(2));
+      assertEquals(2.0d, coordinate.getOrdinate(2));
       final XyzFeature f = cursor.getFeature();
       assertNotNull(f);
       assertEquals(SINGLE_FEATURE_ID, f.getId());
