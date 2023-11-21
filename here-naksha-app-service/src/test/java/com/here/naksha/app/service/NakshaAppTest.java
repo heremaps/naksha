@@ -19,29 +19,17 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.NakshaAppInitializer.mockedNakshaApp;
-import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
-import static com.here.naksha.app.common.TestUtil.getHeader;
-import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static java.time.temporal.ChronoUnit.SECONDS;
+import static com.here.naksha.app.common.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.psql.PsqlStorage;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.*;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
@@ -680,24 +668,16 @@ class NakshaAppTest {
   @Order(10)
   void tc0500_testUpdateFeatures() throws Exception {
     // Test API : PUT /hub/spaces/{spaceId}/features
-    String streamId;
-    HttpRequest request;
-    HttpResponse<String> response;
-
     // Read request body
     final String bodyJson = loadFileOrFail("TC0500_updateFeatures/update_request.json");
     // TODO: include geometry after Cursor-related changes ->
     final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
     final String expectedBodyPart = loadFileOrFail("TC0500_updateFeatures/response_no_geometry.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
-        .uri(new URI(NAKSHA_HTTP_URI + "hub/spaces/" + space.getId() + "/features"))
-        .PUT(HttpRequest.BodyPublishers.ofString(bodyJson))
-        .header(HDR_STREAM_ID, streamId)
-        .build();
-    response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    final HttpResponse<String> response =
+        nakshaClient.put("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
     assertEquals(200, response.statusCode(), "ResCode mismatch");
@@ -713,24 +693,17 @@ class NakshaAppTest {
   @Order(11)
   void tc0501_testUpdateFeatureById() throws Exception {
     // Test API : PUT /hub/spaces/{spaceId}/features/{featureId}
-    String streamId;
-    HttpRequest request;
-    HttpResponse<String> response;
 
     // Read request body
     final String bodyJson = loadFileOrFail("TC0501_updateOneFeatureById/update_request_and_response.json");
     // TODO: include geometry after Cursor-related changes ->
     final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
     final String expectedBodyPart = bodyJson;
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
-        .uri(new URI(NAKSHA_HTTP_URI + "hub/spaces/" + space.getId() + "/features/my-custom-id-301-1"))
-        .PUT(HttpRequest.BodyPublishers.ofString(bodyJson))
-        .header(HDR_STREAM_ID, streamId)
-        .build();
-    response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    final HttpResponse<String> response =
+        nakshaClient.put("hub/spaces/" + space.getId() + "/features/my-custom-id-301-1", bodyJson, streamId);
 
     // Then: Perform assertions
     assertEquals(200, response.statusCode(), "ResCode mismatch");
@@ -746,24 +719,17 @@ class NakshaAppTest {
   @Order(11)
   void tc0502_testUpdateFeatureByWrongUriId() throws Exception {
     // Test API : PUT /hub/spaces/{spaceId}/features/{featureId}
-    String streamId;
-    HttpRequest request;
-    HttpResponse<String> response;
 
     // Read request body
     final String bodyJson = loadFileOrFail("TC0502_updateFeatureWithWrongUriId/request.json");
     // TODO: include geometry after Cursor-related changes ->
     final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
     final String expectedBodyPart = loadFileOrFail("TC0502_updateFeatureWithWrongUriId/response.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
-        .uri(new URI(NAKSHA_HTTP_URI + "hub/spaces/" + space.getId() + "/features/wrong-id"))
-        .PUT(HttpRequest.BodyPublishers.ofString(bodyJson))
-        .header(HDR_STREAM_ID, streamId)
-        .build();
-    response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    final HttpResponse<String> response =
+        nakshaClient.put("hub/spaces/" + space.getId() + "/features/wrong-id", bodyJson, streamId);
 
     // Then: Perform assertions
     assertEquals(409, response.statusCode(), "ResCode mismatch");
@@ -779,24 +745,17 @@ class NakshaAppTest {
   @Order(11)
   void tc0503_testUpdateFeatureWithMismatchingId() throws Exception {
     // Test API : PUT /hub/spaces/{spaceId}/features/{featureId}
-    String streamId;
-    HttpRequest request;
-    HttpResponse<String> response;
 
     // Read request body
     final String bodyJson = loadFileOrFail("TC0502_updateFeatureWithWrongUriId/request.json");
     // TODO: include geometry after Cursor-related changes ->
     final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
     final String expectedBodyPart = loadFileOrFail("TC0503_updateFeatureMismatchingId/response.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
-        .uri(new URI(NAKSHA_HTTP_URI + "hub/spaces/" + space.getId() + "/features/my-custom-id-301-1"))
-        .PUT(HttpRequest.BodyPublishers.ofString(bodyJson))
-        .header(HDR_STREAM_ID, streamId)
-        .build();
-    response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    final HttpResponse<String> response =
+        nakshaClient.put("hub/spaces/" + space.getId() + "/features/my-custom-id-301-1", bodyJson, streamId);
 
     // Then: Perform assertions
     assertEquals(400, response.statusCode(), "ResCode mismatch");
