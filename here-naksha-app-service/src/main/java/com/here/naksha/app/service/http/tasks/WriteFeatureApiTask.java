@@ -199,7 +199,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       return verticle.sendErrorResponse(
           routingContext,
           XyzError.ILLEGAL_ARGUMENT,
-          "URI path parameter id is not the same as in feature request body.");
+          "URI path parameter featureId is not the same as id in feature request body.");
     }
 
     // as applicable, modify features based on parameters supplied

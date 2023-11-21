@@ -906,6 +906,39 @@ class NakshaAppTest {
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
   }
 
+  @Test
+  @Order(11)
+  void tc0503_testUpdateFeatureWithMismatchingId() throws Exception {
+    // Test API : PUT /hub/spaces/{spaceId}/features/{featureId}
+    String streamId;
+    HttpRequest request;
+    HttpResponse<String> response;
+
+    // Read request body
+    final String bodyJson = loadFileOrFail("TC0502_updateFeatureWithWrongUriId/request.json");
+    // TODO: include geometry after Cursor-related changes ->
+    final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
+    final String expectedBodyPart = loadFileOrFail("TC0503_updateFeatureMismatchingId/response.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    request = HttpRequest.newBuilder(stdHttpRequest, (k, v) -> true)
+        .uri(new URI(NAKSHA_HTTP_URI + "hub/spaces/" + space.getId() + "/features/my-custom-id-301-1"))
+        .PUT(HttpRequest.BodyPublishers.ofString(bodyJson))
+        .header(HDR_STREAM_ID, streamId)
+        .build();
+    response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+    // Then: Perform assertions
+    assertEquals(400, response.statusCode(), "ResCode mismatch");
+    JSONAssert.assertEquals(
+        "Update Feature error response doesn't match",
+        expectedBodyPart,
+        response.body(),
+        JSONCompareMode.LENIENT);
+    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+  }
+
   @AfterAll
   static void close() throws InterruptedException {
     if (app != null) {
