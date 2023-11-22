@@ -18,9 +18,7 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readInsertedFeaturesFromResult;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readUpdatedFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.*;
 import static java.util.Collections.emptyList;
 
 import com.here.naksha.app.service.http.HttpResponseType;
@@ -34,14 +32,12 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteFeatures;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -164,8 +160,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return verticle.sendErrorResponse(routingContext, er.reason, er.message);
     } else {
       try {
-        final List<R> insertedFeatures = readInsertedFeaturesFromResult(wrResult, type, Long.MAX_VALUE);
-        final List<R> updatedFeatures = readUpdatedFeaturesFromResult(wrResult, type, Long.MAX_VALUE);
+        final Map<EExecutedOp, List<R>> featureMap = readFeaturesGroupedByOp(wrResult, type);
+        final List<R> insertedFeatures = featureMap.get(EExecutedOp.CREATED);
+        final List<R> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
+        //TODO later DELETED might be needed
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,

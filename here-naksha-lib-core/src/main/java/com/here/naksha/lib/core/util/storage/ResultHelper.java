@@ -23,9 +23,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.ResultCursor;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -95,62 +93,53 @@ public class ResultHelper {
   }
 
   /**
-   * Helper method to fetch only inserted features from given Result and return list of features with type T.
-   * Returned list is limited with respect to supplied `limit` parameter.
+   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link EExecutedOp} of features with type T.
+   * Returned lists are limited with respect to supplied `limit` parameter.
    *
    * @param result      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
    * @param limit       the max number of features to be extracted
    * @param <R>         type of feature
-   * @return list of features extracted from ReadResult
+   * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends XyzFeature> List<R> readInsertedFeaturesFromResult(
+  public static <R extends XyzFeature> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
       Result result, Class<R> featureType, long limit) throws NoCursor, NoSuchElementException {
     try (ResultCursor<R> resultCursor = result.cursor(featureType)) {
       if (!resultCursor.hasNext()) {
         throw new NoSuchElementException("Result Cursor is empty");
       }
-      List<R> features = new ArrayList<>();
+      final List<R> insertedFeatures = new ArrayList<>();
+      final List<R> updatedFeatures = new ArrayList<>();
       int cnt = 0;
       while (resultCursor.hasNext() && cnt++ < limit) {
         if (!resultCursor.next()) {
           throw new RuntimeException("Unexpected invalid result");
         }
         if (resultCursor.getOp().equals(EExecutedOp.CREATED)) {
-          features.add(resultCursor.getFeature());
+          insertedFeatures.add(resultCursor.getFeature());
+        } else if (resultCursor.getOp().equals(EExecutedOp.UPDATED)) {
+          updatedFeatures.add(resultCursor.getFeature());
         }
       }
+      final Map<EExecutedOp, List<R>> features = new HashMap<>();
+      features.put(EExecutedOp.CREATED, insertedFeatures);
+      features.put(EExecutedOp.UPDATED, updatedFeatures);
+      // TODO add other lists for DELETED,...
       return features;
     }
   }
 
   /**
-   * Helper method to fetch only updated features from given Result and return list of features with type T.
-   * Returned list is limited with respect to supplied `limit` parameter.
+   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link EExecutedOp} of features with type T.
+   * Returned list is not limited - to set the upper bound, use sibling method with limit argument.
    *
    * @param result      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
-   * @param limit       the max number of features to be extracted
    * @param <R>         type of feature
-   * @return list of features extracted from ReadResult
+   * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends XyzFeature> List<R> readUpdatedFeaturesFromResult(
-      Result result, Class<R> featureType, long limit) throws NoCursor, NoSuchElementException {
-    try (ResultCursor<R> resultCursor = result.cursor(featureType)) {
-      if (!resultCursor.hasNext()) {
-        throw new NoSuchElementException("Result Cursor is empty");
-      }
-      List<R> features = new ArrayList<>();
-      int cnt = 0;
-      while (resultCursor.hasNext() && cnt++ < limit) {
-        if (!resultCursor.next()) {
-          throw new RuntimeException("Unexpected invalid result");
-        }
-        if (resultCursor.getOp().equals(EExecutedOp.UPDATED)) {
-          features.add(resultCursor.getFeature());
-        }
-      }
-      return features;
-    }
+  public static <R extends XyzFeature> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
+      Result result, Class<R> featureType) throws NoCursor, NoSuchElementException {
+    return readFeaturesGroupedByOp(result, featureType, Long.MAX_VALUE);
   }
 }
