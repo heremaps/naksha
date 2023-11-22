@@ -482,7 +482,7 @@ paths:
       summary: Update features in the space
       description: >
         This method allows to update features in the storage associated (directly or via event handler) with the space.
-        It ensures an atomic operation, so either all features will be created or none (in case of failure).
+        It ensures an atomic operation, so either all features will be updated or none (in case of failure).
       operationId: putFeatures
       parameters:
         - $ref: '#/components/parameters/SpaceId'

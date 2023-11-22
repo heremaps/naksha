@@ -31,6 +31,7 @@ import com.here.naksha.lib.core.lambdas.F0;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection.EFeatureCollectionOp;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
@@ -135,7 +136,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
-            new XyzFeatureCollection().withInsertedFeatures(features));
+            new XyzFeatureCollection().withModifiedFeatures(features, EFeatureCollectionOp.INSERT));
       } catch (NoCursor | NoSuchElementException emptyException) {
         logger.info("No data found in ResultCursor, returning empty collection");
         return verticle.sendXyzResponse(
@@ -145,7 +146,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzCollectionResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type) {
+      final @Nullable Result wrResult, final @NotNull Class<R> type, EFeatureCollectionOp op) {
     if (wrResult == null) {
       // unexpected null response
       logger.error("Received null result!");
@@ -160,7 +161,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
-            new XyzFeatureCollection().withInsertedFeatures(features));
+            new XyzFeatureCollection().withModifiedFeatures(features, op));
       } catch (NoCursor | NoSuchElementException emptyException) {
         return verticle.sendErrorResponse(
             routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");

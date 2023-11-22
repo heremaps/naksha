@@ -15,5 +15,6 @@
         "speedLimit": "70"
       }
     }
-  ]
+  ],
+  "updated": ["my-custom-id-301-1","my-custom-id-301-2"]
 }

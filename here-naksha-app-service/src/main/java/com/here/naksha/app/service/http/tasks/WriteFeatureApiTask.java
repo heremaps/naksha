@@ -27,6 +27,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection.EFeatureCollectionOp;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
@@ -128,7 +129,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
     // transform WriteResult to Http FeatureCollection response
-    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
+    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class, EFeatureCollectionOp.INSERT);
   }
 
   private @NotNull XyzResponse executeUpdateFeatures() throws Exception {
@@ -164,7 +165,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
     // transform WriteResult to Http FeatureCollection response
-    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
+    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class, EFeatureCollectionOp.UPDATE);
   }
 
   private @NotNull XyzResponse executeUpdateFeature() throws Exception {
