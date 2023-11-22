@@ -119,11 +119,11 @@ public class RequestHelper {
    * @param <T>            any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static @NotNull <T extends XyzFeature> WriteFeatures<T> updateFeaturesRequest(
+  public static @NotNull <T extends XyzFeature> WriteFeatures<T> upsertFeaturesRequest(
       final @NotNull String collectionName, final @NotNull List<T> features) {
     final List<@NotNull WriteOp<T>> opList = new ArrayList<>();
     for (final T feature : features) {
-      opList.add(new WriteXyzOp<>(EWriteOp.UPDATE, feature));
+      opList.add(new WriteXyzOp<>(EWriteOp.PUT, feature));
     }
     return new WriteFeatures<>(collectionName, opList);
   }

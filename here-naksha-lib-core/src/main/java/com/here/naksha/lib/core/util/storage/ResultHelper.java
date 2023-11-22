@@ -20,6 +20,7 @@ package com.here.naksha.lib.core.util.storage;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.ResultCursor;
 import java.util.ArrayList;
@@ -90,6 +91,66 @@ public class ResultHelper {
       return null;
     } catch (NoCursor e) {
       return null;
+    }
+  }
+
+  /**
+   * Helper method to fetch only inserted features from given Result and return list of features with type T.
+   * Returned list is limited with respect to supplied `limit` parameter.
+   *
+   * @param result      the Result which is to be read
+   * @param featureType the type of feature to be extracted from result
+   * @param limit       the max number of features to be extracted
+   * @param <R>         type of feature
+   * @return list of features extracted from ReadResult
+   */
+  public static <R extends XyzFeature> List<R> readInsertedFeaturesFromResult(
+      Result result, Class<R> featureType, long limit) throws NoCursor, NoSuchElementException {
+    try (ResultCursor<R> resultCursor = result.cursor(featureType)) {
+      if (!resultCursor.hasNext()) {
+        throw new NoSuchElementException("Result Cursor is empty");
+      }
+      List<R> features = new ArrayList<>();
+      int cnt = 0;
+      while (resultCursor.hasNext() && cnt++ < limit) {
+        if (!resultCursor.next()) {
+          throw new RuntimeException("Unexpected invalid result");
+        }
+        if (resultCursor.getOp().equals(EExecutedOp.CREATED)) {
+          features.add(resultCursor.getFeature());
+        }
+      }
+      return features;
+    }
+  }
+
+  /**
+   * Helper method to fetch only updated features from given Result and return list of features with type T.
+   * Returned list is limited with respect to supplied `limit` parameter.
+   *
+   * @param result      the Result which is to be read
+   * @param featureType the type of feature to be extracted from result
+   * @param limit       the max number of features to be extracted
+   * @param <R>         type of feature
+   * @return list of features extracted from ReadResult
+   */
+  public static <R extends XyzFeature> List<R> readUpdatedFeaturesFromResult(
+      Result result, Class<R> featureType, long limit) throws NoCursor, NoSuchElementException {
+    try (ResultCursor<R> resultCursor = result.cursor(featureType)) {
+      if (!resultCursor.hasNext()) {
+        throw new NoSuchElementException("Result Cursor is empty");
+      }
+      List<R> features = new ArrayList<>();
+      int cnt = 0;
+      while (resultCursor.hasNext() && cnt++ < limit) {
+        if (!resultCursor.next()) {
+          throw new RuntimeException("Unexpected invalid result");
+        }
+        if (resultCursor.getOp().equals(EExecutedOp.UPDATED)) {
+          features.add(resultCursor.getFeature());
+        }
+      }
+      return features;
     }
   }
 }

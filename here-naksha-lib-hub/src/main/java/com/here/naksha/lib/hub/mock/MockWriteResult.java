@@ -19,6 +19,7 @@
 package com.here.naksha.lib.hub.mock;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.WriteOpResult;
 import java.util.List;
@@ -49,6 +50,14 @@ public class MockWriteResult<T extends XyzFeature> extends SuccessResult {
         throw new NoSuchElementException();
       }
       return writeOpResults.get(currentPos).feature;
+    }
+
+    @Override
+    public @NotNull EExecutedOp getOp() throws NoSuchElementException {
+      if (!isPositionValid()) {
+        throw new NoSuchElementException();
+      }
+      return writeOpResults.get(currentPos).op;
     }
   }
 }

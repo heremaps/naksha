@@ -19,6 +19,8 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readInsertedFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readUpdatedFeaturesFromResult;
 import static java.util.Collections.emptyList;
 
 import com.here.naksha.app.service.http.HttpResponseType;
@@ -31,7 +33,6 @@ import com.here.naksha.lib.core.lambdas.F0;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection.EFeatureCollectionOp;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
@@ -136,7 +137,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
-            new XyzFeatureCollection().withModifiedFeatures(features, EFeatureCollectionOp.INSERT));
+            new XyzFeatureCollection().withInsertedFeatures(features));
       } catch (NoCursor | NoSuchElementException emptyException) {
         logger.info("No data found in ResultCursor, returning empty collection");
         return verticle.sendXyzResponse(
@@ -146,7 +147,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzCollectionResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, EFeatureCollectionOp op) {
+      final @Nullable Result wrResult, final @NotNull Class<R> type) {
     if (wrResult == null) {
       // unexpected null response
       logger.error("Received null result!");
@@ -157,11 +158,14 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return verticle.sendErrorResponse(routingContext, er.reason, er.message);
     } else {
       try {
-        List<R> features = readFeaturesFromResult(wrResult, type);
+        final List<R> insertedFeatures = readInsertedFeaturesFromResult(wrResult, type, Long.MAX_VALUE);
+        final List<R> updatedFeatures = readUpdatedFeaturesFromResult(wrResult, type, Long.MAX_VALUE);
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
-            new XyzFeatureCollection().withModifiedFeatures(features, op));
+            new XyzFeatureCollection()
+                .withInsertedFeatures(insertedFeatures)
+                .withUpdatedFeatures(updatedFeatures));
       } catch (NoCursor | NoSuchElementException emptyException) {
         return verticle.sendErrorResponse(
             routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");

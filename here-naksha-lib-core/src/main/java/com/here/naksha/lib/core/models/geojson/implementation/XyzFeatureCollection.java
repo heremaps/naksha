@@ -451,31 +451,18 @@ public class XyzFeatureCollection extends XyzResponse {
   }
 
   @SuppressWarnings("unused")
-  private @NotNull XyzFeatureCollection withInsertedFeatures(
+  public @NotNull XyzFeatureCollection withInsertedFeatures(
       final @NotNull List<? extends @NotNull XyzFeature> insertedFeatures) {
     ((List<XyzFeature>) this.features.get()).addAll(insertedFeatures); // append features
     withInserted(insertedFeatures.stream().map(XyzFeature::getId).toList()); // overwrite inserted
     return this;
   }
 
-  private @NotNull XyzFeatureCollection withUpdatedFeatures(
+  public @NotNull XyzFeatureCollection withUpdatedFeatures(
       final @NotNull List<? extends @NotNull XyzFeature> updatedFeatures) {
     ((List<XyzFeature>) this.features.get()).addAll(updatedFeatures); // append features
-    withUpdated(updatedFeatures.stream().map(XyzFeature::getId).toList()); // overwrite inserted
+    withUpdated(updatedFeatures.stream().map(XyzFeature::getId).toList()); // overwrite updated
     return this;
-  }
-
-  public @NotNull XyzFeatureCollection withModifiedFeatures(
-      final @NotNull List<? extends @NotNull XyzFeature> features, @NotNull EFeatureCollectionOp op) {
-    return switch (op) {
-      case INSERT -> withInsertedFeatures(features);
-      case UPDATE -> withUpdatedFeatures(features);
-    };
-  }
-
-  public enum EFeatureCollectionOp {
-    INSERT,
-    UPDATE
   }
 
   public static class ModificationFailure {
