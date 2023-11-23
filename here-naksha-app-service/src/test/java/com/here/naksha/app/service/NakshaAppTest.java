@@ -695,6 +695,12 @@ class NakshaAppTest {
     updateFeatureTestHelper.tc0504_testUpdateFeaturesNoId();
   }
 
+  @Test
+  @Order(12)
+  void tc0505_testUpdateFeaturesWithUuid() throws Exception {
+    updateFeatureTestHelper.tc0505_testUpdateFeaturesWithUuid();
+  }
+
   @AfterAll
   static void close() throws InterruptedException {
     if (app != null) {
