@@ -14,7 +14,15 @@
       "properties": {
         "speedLimit": "70"
       }
+    },
+    {
+      "id": "newly-inserted",
+      "type": "Feature",
+      "properties": {
+        "isImportant": "no"
+      }
     }
   ],
-  "updated": ["my-custom-id-301-1","my-custom-id-301-2"]
+  "updated": ["my-custom-id-301-1","my-custom-id-301-2"],
+  "inserted": ["newly-inserted"]
 }

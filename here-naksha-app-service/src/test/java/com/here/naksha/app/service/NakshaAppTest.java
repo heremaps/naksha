@@ -689,6 +689,12 @@ class NakshaAppTest {
     updateFeatureTestHelper.tc0503_testUpdateFeatureWithMismatchingId();
   }
 
+  @Test
+  @Order(11)
+  void tc0504_testUpdateFeaturesNoId() throws Exception {
+    updateFeatureTestHelper.tc0504_testUpdateFeaturesNoId();
+  }
+
   @AfterAll
   static void close() throws InterruptedException {
     if (app != null) {

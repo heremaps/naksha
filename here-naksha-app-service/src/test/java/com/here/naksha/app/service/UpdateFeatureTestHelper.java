@@ -19,14 +19,16 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.TestUtil.*;
-import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Assertions;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
@@ -141,5 +143,27 @@ public class UpdateFeatureTestHelper {
         response.body(),
         JSONCompareMode.LENIENT);
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+  }
+
+  void tc0504_testUpdateFeaturesNoId() throws Exception {
+    // Test API : PUT /hub/spaces/{spaceId}/features
+    final String streamId = UUID.randomUUID().toString();
+
+    // Read request body
+    final String bodyJson = loadFileOrFail("TC0504_updateFeaturesNoIds/request.json");
+    // TODO: include geometry after Cursor-related changes ->
+    final Space space = parseJsonFileOrFail("TC0500_updateFeatures/create_space.json", Space.class);
+    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    final HttpResponse<String> response =
+        nakshaClient.put("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
+
+    // Then: Perform assertions
+    assertEquals(200, response.statusCode(), "ResCode mismatch");
+    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+
+    final XyzFeatureCollection responseFeatureCollection = parseJson(response.body(), XyzFeatureCollection.class);
+    Assertions.assertNotNull(responseFeatureCollection);
+    final List<String> inserted = responseFeatureCollection.getInserted();
+    Assertions.assertEquals(1, inserted.size());
   }
 }
