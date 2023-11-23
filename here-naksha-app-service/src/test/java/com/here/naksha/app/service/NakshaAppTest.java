@@ -23,7 +23,6 @@ import static com.here.naksha.app.common.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
-import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.psql.PsqlStorage;
 import java.net.URISyntaxException;
@@ -57,6 +56,7 @@ class NakshaAppTest {
     // create test helpers
     createFeatureTests = new CreateFeatureTestHelper(app, nakshaClient);
     readFeaturesByIdsTests = new ReadFeaturesByIdsTestHelper(app, nakshaClient);
+    updateFeatureTestHelper = new UpdateFeatureTestHelper(app, nakshaClient);
   }
 
   @Test

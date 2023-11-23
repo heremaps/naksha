@@ -466,7 +466,7 @@ public class XyzFeatureCollection extends XyzResponse {
   }
 
   public @NotNull XyzFeatureCollection withDeletedFeatures(
-          final @NotNull List<? extends @NotNull XyzFeature> deletedFeatures) {
+      final @NotNull List<? extends @NotNull XyzFeature> deletedFeatures) {
     ((List<XyzFeature>) this.features.get()).addAll(deletedFeatures); // append features
     withDeleted(deletedFeatures.stream().map(XyzFeature::getId).toList()); // overwrite deleted
     return this;

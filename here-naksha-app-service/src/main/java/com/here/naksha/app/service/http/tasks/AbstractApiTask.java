@@ -18,8 +18,8 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
 import static java.util.Collections.emptyList;
 
 import com.here.naksha.app.service.http.HttpResponseType;
@@ -171,7 +171,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
             new XyzFeatureCollection()
                 .withInsertedFeatures(insertedFeatures)
                 .withUpdatedFeatures(updatedFeatures)
-                    .withDeletedFeatures(deletedFeatures));
+                .withDeletedFeatures(deletedFeatures));
       } catch (NoCursor | NoSuchElementException emptyException) {
         return verticle.sendErrorResponse(
             routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");
