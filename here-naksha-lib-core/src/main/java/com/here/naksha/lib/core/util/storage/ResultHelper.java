@@ -110,6 +110,7 @@ public class ResultHelper {
       }
       final List<R> insertedFeatures = new ArrayList<>();
       final List<R> updatedFeatures = new ArrayList<>();
+      final List<R> deletedFeatures = new ArrayList<>();
       int cnt = 0;
       while (resultCursor.hasNext() && cnt++ < limit) {
         if (!resultCursor.next()) {
@@ -119,12 +120,14 @@ public class ResultHelper {
           insertedFeatures.add(resultCursor.getFeature());
         } else if (resultCursor.getOp().equals(EExecutedOp.UPDATED)) {
           updatedFeatures.add(resultCursor.getFeature());
+        } else if (resultCursor.getOp().equals(EExecutedOp.DELETED)) {
+          deletedFeatures.add(resultCursor.getFeature());
         }
       }
       final Map<EExecutedOp, List<R>> features = new HashMap<>();
       features.put(EExecutedOp.CREATED, insertedFeatures);
       features.put(EExecutedOp.UPDATED, updatedFeatures);
-      // TODO add other lists for DELETED,...
+      features.put(EExecutedOp.DELETED, deletedFeatures);
       return features;
     }
   }
