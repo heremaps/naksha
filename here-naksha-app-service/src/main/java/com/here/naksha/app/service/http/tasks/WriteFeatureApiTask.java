@@ -55,7 +55,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
   public enum WriteFeatureApiReqType {
     CREATE_FEATURES,
     MODIFY_FEATURES,
-    UPDATE_BY_ID
+    UPDATE_BY_ID,
+    DELETE_FEATURES
   }
 
   public WriteFeatureApiTask(
@@ -88,6 +89,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         case CREATE_FEATURES -> executeCreateFeatures();
         case MODIFY_FEATURES -> executeUpdateFeatures();
         case UPDATE_BY_ID -> executeUpdateFeature();
+        case DELETE_FEATURES -> executeDeleteFeatures();
         default -> executeUnsupported();
       };
     } catch (Exception ex) {
@@ -218,6 +220,30 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
     // transform WriteResult to Http FeatureCollection response
     return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class);
+  }
+
+  private @NotNull XyzResponse executeDeleteFeatures() throws Exception {
+    // Deserialize input request
+    final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
+    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
+    if (features.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't update empty features");
+    }
+
+    // Parse API parameters
+    final String spaceId = pathParam(routingContext, SPACE_ID);
+
+    // Validate parameters
+    if (spaceId == null || spaceId.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
+    }
+
+    final WriteFeatures<XyzFeature> wrRequest = RequestHelper.deleteFeaturesRequest(spaceId, features);
+
+    // Forward request to NH Space Storage writer instance
+    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
   }
 
   private @NotNull FeatureCollectionRequest featuresFromRequestBody() throws JsonProcessingException {
