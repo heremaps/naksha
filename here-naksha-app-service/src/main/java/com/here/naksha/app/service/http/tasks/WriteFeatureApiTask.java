@@ -54,8 +54,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   public enum WriteFeatureApiReqType {
     CREATE_FEATURES,
-    MODIFY_FEATURES,
-    UPDATE_BY_ID
+    UPSERT_FEATURES,
+    UPDATE_BY_ID,
+    DELETE_FEATURES
   }
 
   public WriteFeatureApiTask(
@@ -86,7 +87,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     try {
       return switch (this.reqType) {
         case CREATE_FEATURES -> executeCreateFeatures();
-        case MODIFY_FEATURES -> executeUpdateFeatures();
+        case UPSERT_FEATURES -> executeUpsertFeatures();
         case UPDATE_BY_ID -> executeUpdateFeature();
         default -> executeUnsupported();
       };
@@ -136,7 +137,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
   }
 
-  private @NotNull XyzResponse executeUpdateFeatures() throws Exception {
+  private @NotNull XyzResponse executeUpsertFeatures() throws Exception {
     // Deserialize input request
     final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
     final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
