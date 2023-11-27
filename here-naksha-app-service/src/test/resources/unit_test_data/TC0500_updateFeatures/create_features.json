@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
-      "id": "my-custom-id-301-1",
+      "id": "my-custom-feature-1",
       "type": "Feature",
       "properties": {
         "speedLimit": "60"
@@ -13,7 +13,7 @@
       }
     },
     {
-      "id": "my-custom-id-301-2",
+      "id": "my-custom-feature-2",
       "type": "Feature",
       "properties": {
         "speedLimit": "80"
