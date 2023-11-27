@@ -41,7 +41,6 @@ public class WriteFeatureApi extends Api {
   @Override
   public void addOperations(final @NotNull RouterBuilder rb) {
     rb.operation("postFeatures").handler(this::createFeatures);
-    rb.operation("putFeatures").handler(this::updateFeatures);
     rb.operation("putFeatures").handler(this::upsertFeatures);
     rb.operation("putFeature").handler(this::updateFeature);
   }
