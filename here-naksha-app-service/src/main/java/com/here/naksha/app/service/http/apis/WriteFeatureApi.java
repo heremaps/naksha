@@ -41,7 +41,7 @@ public class WriteFeatureApi extends Api {
   @Override
   public void addOperations(final @NotNull RouterBuilder rb) {
     rb.operation("postFeatures").handler(this::createFeatures);
-    rb.operation("putFeatures").handler(this::updateFeatures);
+    rb.operation("putFeatures").handler(this::upsertFeatures);
     rb.operation("deleteFeatures").handler(this::deleteFeatures);
     rb.operation("putFeature").handler(this::updateFeature);
   }
@@ -53,8 +53,8 @@ public class WriteFeatureApi extends Api {
     startWriteFeatureApiTask(CREATE_FEATURES, routingContext);
   }
 
-  private void updateFeatures(final @NotNull RoutingContext routingContext) {
-    startWriteFeatureApiTask(MODIFY_FEATURES, routingContext);
+  private void upsertFeatures(final @NotNull RoutingContext routingContext) {
+    startWriteFeatureApiTask(UPSERT_FEATURES, routingContext);
   }
 
   private void updateFeature(final @NotNull RoutingContext routingContext) {

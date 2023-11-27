@@ -112,7 +112,7 @@ public class RequestHelper {
   }
 
   /**
-   * Helper method to create WriteFeatures request for updating multiple features.
+   * Helper method to create WriteFeatures request for upserting multiple features.
    *
    * @param collectionName name of the storage collection
    * @param features       feature object array to be updated
