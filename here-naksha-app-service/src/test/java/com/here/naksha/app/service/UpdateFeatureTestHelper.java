@@ -48,17 +48,19 @@ public class UpdateFeatureTestHelper {
     // Test API : PUT /hub/spaces/{spaceId}/features
     final String streamId = UUID.randomUUID().toString();
 
-    // Preparation: create storage, event handler and space
+    // Preparation: create storage, event handler, space, and initial features
     final String storage = loadFileOrFail("TC0500_updateFeatures/create_storage.json");
     nakshaClient.post("hub/storages", storage, streamId);
     final String handler = loadFileOrFail("TC0500_updateFeatures/create_handler.json");
     nakshaClient.post("hub/handlers", handler, streamId);
     final String spaceJson = loadFileOrFail("TC0500_updateFeatures/create_space.json");
     nakshaClient.post("hub/spaces", spaceJson, streamId);
+    final Space space = parseJsonFileOrFail("TC0500_updateFeatures/create_space.json", Space.class);
+    final String createFeaturesJson = loadFileOrFail("TC0500_updateFeatures/create_features.json");
+    nakshaClient.post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
     // Read request body
     final String bodyJson = loadFileOrFail("TC0500_updateFeatures/update_request.json");
     // TODO: include geometry after Cursor-related changes ->
-    final Space space = parseJsonFileOrFail("TC0500_updateFeatures/create_space.json", Space.class);
     final String expectedBodyPart = loadFileOrFail("TC0500_updateFeatures/response_no_geometry.json");
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
@@ -87,7 +89,7 @@ public class UpdateFeatureTestHelper {
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
-        nakshaClient.put("hub/spaces/" + space.getId() + "/features/my-custom-id-301-1", bodyJson, streamId);
+        nakshaClient.put("hub/spaces/" + space.getId() + "/features/my-custom-feature-1", bodyJson, streamId);
 
     // Then: Perform assertions
     assertEquals(200, response.statusCode(), "ResCode mismatch");
@@ -135,7 +137,7 @@ public class UpdateFeatureTestHelper {
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
-        nakshaClient.put("hub/spaces/" + space.getId() + "/features/my-custom-id-301-1", bodyJson, streamId);
+        nakshaClient.put("hub/spaces/" + space.getId() + "/features/my-custom-feature-1", bodyJson, streamId);
 
     // Then: Perform assertions
     assertEquals(400, response.statusCode(), "ResCode mismatch");
