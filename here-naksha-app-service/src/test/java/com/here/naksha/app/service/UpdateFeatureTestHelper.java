@@ -19,7 +19,7 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.TestUtil.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -33,6 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
+import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
 public class UpdateFeatureTestHelper {
 
@@ -168,7 +169,21 @@ public class UpdateFeatureTestHelper {
     final XyzFeatureCollection responseFeatureCollection = parseJson(response.body(), XyzFeatureCollection.class);
     Assertions.assertNotNull(responseFeatureCollection);
     final List<String> inserted = responseFeatureCollection.getInserted();
-    Assertions.assertEquals(2, inserted.size());
+    final List<XyzFeature> insertedFeatures = responseFeatureCollection.getFeatures();
+    JSONAssert.assertEquals(
+        "{inserted:[" + inserted.size() + "]}",
+        response.body(),
+        new ArraySizeComparator(JSONCompareMode.LENIENT));
+
+    for (int i = 0; i < inserted.size(); i++) {
+      assertEquals(
+          inserted.get(i),
+          insertedFeatures.get(i).getId(),
+          "Mismatch between inserted v/s feature ID in the response at idx : " + i);
+      assertNotNull(
+          insertedFeatures.get(i).getProperties().getXyzNamespace().getUuid(),
+          "UUID found missing in response for feature at idx : " + i);
+    }
   }
 
   void tc0505_testUpdateFeaturesWithUuid() throws Exception {
