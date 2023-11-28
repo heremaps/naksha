@@ -122,12 +122,13 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // as applicable, modify features based on parameters supplied
-    if (prefixId != null || addTags != null || removeTags != null) {
-      for (final XyzFeature feature : features) {
-        feature.setIdPrefix(prefixId);
-        feature.getProperties().getXyzNamespace().addTags(addTags, true).removeTags(removeTags, true);
-      }
+
+    for (final XyzFeature feature : features) {
+      feature.setIdPrefix(prefixId);
+      addTagsToFeature(feature, addTags);
+      removeTagsFromFeature(feature, removeTags);
     }
+
     final WriteXyzFeatures wrRequest = RequestHelper.createFeaturesRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
@@ -159,10 +160,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // as applicable, modify features based on parameters supplied
-    if (addTags != null || removeTags != null) {
-      for (final XyzFeature feature : features) {
-        feature.getProperties().getXyzNamespace().addTags(addTags, true).removeTags(removeTags, true);
-      }
+    for (final XyzFeature feature : features) {
+      addTagsToFeature(feature, addTags);
+      removeTagsFromFeature(feature, removeTags);
     }
     final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, features);
 
@@ -208,9 +208,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // as applicable, modify features based on parameters supplied
-    if (addTags != null || removeTags != null) {
-      feature.getProperties().getXyzNamespace().addTags(addTags, true).removeTags(removeTags, true);
-    }
+    addTagsToFeature(feature, addTags);
+    removeTagsFromFeature(feature, removeTags);
 
     final WriteXyzFeatures wrRequest = RequestHelper.updateFeatureRequest(spaceId, feature);
 
@@ -226,6 +225,18 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       return json.reader(ViewDeserialize.User.class)
           .forType(FeatureCollectionRequest.class)
           .readValue(bodyJson);
+    }
+  }
+
+  private void addTagsToFeature(XyzFeature feature, List<String> addTags) {
+    if (addTags != null) {
+      feature.getProperties().getXyzNamespace().addTags(addTags, true);
+    }
+  }
+
+  private void removeTagsFromFeature(XyzFeature feature, List<String> removeTags) {
+    if (removeTags != null) {
+      feature.getProperties().getXyzNamespace().removeTags(removeTags, true);
     }
   }
 }
