@@ -117,7 +117,7 @@ public class UpdateFeatureTestHelper {
         nakshaClient.put("hub/spaces/" + space.getId() + "/features/wrong-id", bodyJson, streamId);
 
     // Then: Perform assertions
-    assertEquals(409, response.statusCode(), "ResCode mismatch");
+    assertEquals(404, response.statusCode(), "ResCode mismatch");
     JSONAssert.assertEquals(
         "Update Feature error response doesn't match",
         expectedBodyPart,
