@@ -20,15 +20,14 @@ package com.here.naksha.lib.core.util.storage;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
+import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import java.util.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import com.here.naksha.lib.core.models.storage.ResultCursor;
-import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -113,7 +112,7 @@ public class ResultHelper {
    */
   public static <R extends XyzFeature> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
       Result result, Class<R> featureType, long limit) throws NoCursor, NoSuchElementException {
-    try (ResultCursor<R> resultCursor = result.cursor(featureType)) {
+    try (ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
       if (!resultCursor.hasNext()) {
         throw new NoSuchElementException("Result Cursor is empty");
       }
@@ -126,11 +125,11 @@ public class ResultHelper {
           throw new RuntimeException("Unexpected invalid result");
         }
         if (resultCursor.getOp().equals(EExecutedOp.CREATED)) {
-          insertedFeatures.add(resultCursor.getFeature());
+          insertedFeatures.add(featureType.cast(resultCursor.getFeature()));
         } else if (resultCursor.getOp().equals(EExecutedOp.UPDATED)) {
-          updatedFeatures.add(resultCursor.getFeature());
+          updatedFeatures.add(featureType.cast(resultCursor.getFeature()));
         } else if (resultCursor.getOp().equals(EExecutedOp.DELETED)) {
-          deletedFeatures.add(resultCursor.getFeature());
+          deletedFeatures.add(featureType.cast(resultCursor.getFeature()));
         }
       }
       final Map<EExecutedOp, List<R>> features = new HashMap<>();

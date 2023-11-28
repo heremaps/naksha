@@ -164,12 +164,12 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         feature.getProperties().getXyzNamespace().addTags(addTags, true).removeTags(removeTags, true);
       }
     }
-    final WriteFeatures<XyzFeature> wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, features);
+    final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
     // transform WriteResult to Http FeatureCollection response
-    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
+    return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class);
   }
 
   private @NotNull XyzResponse executeUpdateFeature() throws Exception {
@@ -212,12 +212,12 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       feature.getProperties().getXyzNamespace().addTags(addTags, true).removeTags(removeTags, true);
     }
 
-    final WriteFeatures<XyzFeature> wrRequest = RequestHelper.updateFeatureRequest(spaceId, feature);
+    final WriteXyzFeatures wrRequest = RequestHelper.updateFeatureRequest(spaceId, feature);
 
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
     // transform WriteResult to Http FeatureCollection response
-    return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class);
+    return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
   }
 
   private @NotNull FeatureCollectionRequest featuresFromRequestBody() throws JsonProcessingException {
