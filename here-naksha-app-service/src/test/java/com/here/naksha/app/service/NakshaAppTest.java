@@ -210,7 +210,7 @@ class NakshaAppTest {
         nakshaClient.put("hub/storages/this-id-does-not-exist", updateStorageJson, streamId);
 
     // Then:
-    assertEquals(409, response.statusCode());
+    assertEquals(404, response.statusCode());
     JSONAssert.assertEquals(expectedErrorResponse, response.body(), JSONCompareMode.LENIENT);
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID));
   }
@@ -400,7 +400,7 @@ class NakshaAppTest {
         nakshaClient.put("hub/handlers/non-existent-test-handler", updateEventHandlerJson, streamId);
 
     // Then:
-    assertEquals(409, response.statusCode());
+    assertEquals(404, response.statusCode());
     JSONAssert.assertEquals(expectedRespBody, response.body(), JSONCompareMode.LENIENT);
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID));
   }
@@ -545,7 +545,7 @@ class NakshaAppTest {
         nakshaClient.put("hub/spaces/non-existent-space", updateSpaceJson, streamId);
 
     // Then:
-    assertEquals(409, response.statusCode());
+    assertEquals(404, response.statusCode());
     JSONAssert.assertEquals(expectedErrorResponse, response.body(), JSONCompareMode.LENIENT);
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID));
   }
