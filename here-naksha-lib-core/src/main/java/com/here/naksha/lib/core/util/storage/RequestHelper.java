@@ -122,7 +122,7 @@ public class RequestHelper {
    *
    * @param collectionName name of the storage collection
    * @param features       feature object array to be updated
-   * @param <FEATURE>            any object extending XyzFeature
+   * @param <FEATURE>      any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends XyzFeature> WriteXyzFeatures upsertFeaturesRequest(
@@ -139,7 +139,7 @@ public class RequestHelper {
    *
    * @param collectionName name of the storage collection
    * @param features       feature object array to be deleted
-   * @param <FEATURE>            any object extending XyzFeature
+   * @param <FEATURE>      any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends XyzFeature> WriteXyzFeatures deleteFeaturesRequest(
@@ -149,6 +149,20 @@ public class RequestHelper {
       request.delete(feature);
     }
     return request;
+  }
+
+  /**
+   * Helper method to create WriteFeatures request for deleting given feature.
+   *
+   * @param collectionName name of the storage collection
+   * @param feature        feature object to be deleted
+   * @param <FEATURE>      any object extending XyzFeature
+   * @return WriteFeatures request that can be used against IStorage methods
+   */
+  public static <FEATURE extends XyzFeature> @NotNull WriteXyzFeatures deleteFeatureRequest(
+      final @NotNull String collectionName, final @NotNull FEATURE feature) {
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
+    return request.delete(feature);
   }
 
   /**
