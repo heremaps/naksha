@@ -414,9 +414,10 @@ public class PsqlStorageTests extends PsqlTests {
     // then
     assertInstanceOf(ErrorResult.class, result);
     ErrorResult errorResult = (ErrorResult) result;
-    assertEquals(XyzError.EXCEPTION, errorResult.reason);
-    assertTrue(errorResult.message.startsWith(
-        "Operation failed, feature 'TheFeature' in invalid state, expected 'invalid_UUID'"));
+    assertEquals(XyzError.CONFLICT, errorResult.reason);
+    assertTrue(
+        errorResult.message.startsWith("The feature 'TheFeature' uuid 'invalid_UUID' does not match"),
+        errorResult.message);
     session.commit(true);
   }
 

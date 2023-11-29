@@ -259,7 +259,7 @@ Psql Error Codes are specific to `lib-naksha-psql` library and should be mapped 
 | N0000     | EXCEPTION            | Uninitialized session before write operation        |
 | N0001     | CONFLICT             | Requested collection (CREATE) already exists        |
 | N0002     | COLLECTION_NOT_FOUND | Requested collection doesn't exist                  |
-| 23514     | EXCEPTION            | UUIDs don't match                                   |
+| 23514     | EXCEPTION            | Violation check, i.e. invalid schema                |
 | 22023     | ILLEGAL_ARGUMENT     | null `geometry_arr` provided                        |
 | 23505     | CONFLICT             | Requested feature CREATE but feature already exists |
 | 02000     | NOT_FOUND            | Requested feature UPDATE but feature doesn't exist  |
