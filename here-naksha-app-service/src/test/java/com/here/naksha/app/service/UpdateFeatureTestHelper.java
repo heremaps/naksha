@@ -64,7 +64,7 @@ public class UpdateFeatureTestHelper {
     // TODO: include geometry after Cursor-related changes ->
     final String expectedBodyPart = loadFileOrFail("TC0500_updateFeatures/response_no_geometry.json");
 
-    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    // When: request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
         nakshaClient.put("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
 
@@ -88,7 +88,7 @@ public class UpdateFeatureTestHelper {
     final String expectedBodyPart = bodyJson;
     final String streamId = UUID.randomUUID().toString();
 
-    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    // When: request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
         nakshaClient.put("hub/spaces/" + space.getId() + "/features/my-custom-feature-1", bodyJson, streamId);
 
@@ -112,7 +112,7 @@ public class UpdateFeatureTestHelper {
     final String expectedBodyPart = loadFileOrFail("TC0502_updateFeatureWithWrongUriId/response.json");
     final String streamId = UUID.randomUUID().toString();
 
-    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    // When: request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
         nakshaClient.put("hub/spaces/" + space.getId() + "/features/wrong-id", bodyJson, streamId);
 
@@ -136,7 +136,7 @@ public class UpdateFeatureTestHelper {
     final String expectedBodyPart = loadFileOrFail("TC0503_updateFeatureMismatchingId/response.json");
     final String streamId = UUID.randomUUID().toString();
 
-    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    // When: request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
         nakshaClient.put("hub/spaces/" + space.getId() + "/features/my-custom-feature-1", bodyJson, streamId);
 
@@ -158,7 +158,7 @@ public class UpdateFeatureTestHelper {
     final String bodyJson = loadFileOrFail("TC0504_updateFeaturesNoIds/request.json");
     // TODO: include geometry after Cursor-related changes ->
     final Space space = parseJsonFileOrFail("TC0500_updateFeatures/create_space.json", Space.class);
-    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    // When: request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
         nakshaClient.put("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
 
