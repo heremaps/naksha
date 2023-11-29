@@ -135,37 +135,20 @@ public class RequestHelper {
   }
 
   /**
-   * Helper method to create WriteFeatures request for upserting multiple features.
-   *
-   * @param collectionName name of the storage collection
-   * @param features       feature object array to be updated
-   * @param <T>            any object extending XyzFeature
-   * @return WriteFeatures request that can be used against IStorage methods
-   */
-  public static @NotNull <T extends XyzFeature> WriteFeatures<T> upsertFeaturesRequest(
-      final @NotNull String collectionName, final @NotNull List<T> features) {
-    final List<@NotNull WriteOp<T>> opList = new ArrayList<>();
-    for (final T feature : features) {
-      opList.add(new WriteXyzOp<>(EWriteOp.PUT, feature));
-    }
-    return new WriteFeatures<>(collectionName, opList);
-  }
-
-  /**
    * Helper method to create WriteFeatures request for deleting multiple features.
    *
    * @param collectionName name of the storage collection
    * @param features       feature object array to be deleted
-   * @param <T>            any object extending XyzFeature
+   * @param <FEATURE>            any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static @NotNull <T extends XyzFeature> WriteFeatures<T> deleteFeaturesRequest(
-          final @NotNull String collectionName, final @NotNull List<T> features) {
-    final List<@NotNull WriteOp<T>> opList = new ArrayList<>();
-    for (final T feature : features) {
-      opList.add(new WriteXyzOp<>(EWriteOp.DELETE, feature));
+  public static @NotNull <FEATURE extends XyzFeature> WriteXyzFeatures deleteFeaturesRequest(
+      final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
+    for (FEATURE feature : features) {
+      request.delete(feature);
     }
-    return new WriteFeatures<>(collectionName, opList);
+    return request;
   }
 
   /**
