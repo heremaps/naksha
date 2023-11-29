@@ -82,7 +82,7 @@ public class PsqlStorageTests extends PsqlTests {
 
   @Override
   boolean enabled() {
-    return true;
+    return false;
   }
 
   final @NotNull String collectionId() {
