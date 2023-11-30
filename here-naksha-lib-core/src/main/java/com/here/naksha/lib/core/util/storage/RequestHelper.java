@@ -23,6 +23,9 @@ import static com.here.naksha.lib.core.models.storage.POp.or;
 import static com.here.naksha.lib.core.models.storage.PRef.id;
 
 import com.here.naksha.lib.core.NakshaVersion;
+import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
+import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates;
+import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
@@ -32,6 +35,7 @@ import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import com.vividsolutions.jts.geom.Geometry;
 import java.util.List;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -204,5 +208,13 @@ public class RequestHelper {
       writeXyzCollections.add(EWriteOp.CREATE, new XyzCollection(collectionId));
     }
     return writeXyzCollections;
+  }
+
+  public static @NotNull Geometry createBBoxEnvelope(
+      final double x1, final double y1, final double x2, final double y2) {
+    MultiPointCoordinates multiPoint = new MultiPointCoordinates();
+    multiPoint.add(new PointCoordinates(x1, y1));
+    multiPoint.add(new PointCoordinates(x2, y2));
+    return JTSHelper.toMultiPoint(multiPoint).getEnvelope();
   }
 }

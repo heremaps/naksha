@@ -497,6 +497,34 @@ paths:
           $ref: '#/components/responses/ErrorResponse404'
         '513':
           $ref: '#/components/responses/ErrorResponse513'
+  '/hub/spaces/{spaceId}/bbox':
+    get:
+      tags:
+        - Read Features
+      summary: Get features by bounding box
+      description: Return the features which intersect a bounding box stipulated by west, north, east and south parameters.
+      operationId: getFeaturesByBBox
+      parameters:
+        - $ref: '#/components/parameters/SpaceId'
+        - $ref: '#/components/parameters/West'
+        - $ref: '#/components/parameters/North'
+        - $ref: '#/components/parameters/East'
+        - $ref: '#/components/parameters/South'
+        - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/FeatureCollectionResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
 components:
   securitySchemes:
     AccessToken:
@@ -525,6 +553,18 @@ components:
         type: array
         items:
           type: string
+    East:
+      name: east
+      in: query
+      description: >-
+        The longitude in WGS'84 decimal degree (-180 to +180) of the east
+        (right) border of the bounding box.
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -180
+        maximum: 180
     FeatureId:
       name: featureId
       in: path
@@ -532,6 +572,26 @@ components:
       required: true
       schema:
         type: string
+    Limit:
+      name: limit
+      in: query
+      description: >-
+        The maximum number of features in the response.
+        Default is _30000_. Hard limit is _100000_.
+      schema:
+        type: integer
+    North:
+      name: north
+      in: query
+      description: >-
+        The latitude in WGS'84 decimal degree (-90 to +90) of the north
+        (top) border of the bounding box.
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -90
+        maximum: 90
     RemoveTags:
       name: removeTags
       in: query
@@ -562,6 +622,43 @@ components:
       required: false
       schema:
         type: string
+    South:
+      name: south
+      in: query
+      description: >-
+        The latitude in WGS'84 decimal degree (-90 to +90) of the south
+        (bottom) border of the bounding box.
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -90
+        maximum: 90
+    TagList:
+      name: tags
+      in: query
+      description: >-
+        A comma separated list of tags or combination of tags concatenated with
+        a plus sign (+). A comma separated list of tags means any tag may be
+        found. A plus sign concatenated list means every tag is required.
+      allowEmptyValue: false
+      style: form
+      schema:
+        type: array
+        items:
+          type: string
+    West:
+      name: west
+      in: query
+      description: >-
+        The longitude in WGS'84 decimal degree (-180 to +180) of the west
+        (left) border of the bounding box.
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -180
+        maximum: 180
   requestBodies:
     FeatureCollectionRequest:
       description: An FeatureCollection request holding list of Feature objects.

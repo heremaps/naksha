@@ -37,19 +37,38 @@ import com.here.naksha.lib.core.models.payload.events.QueryOperation;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterDecoder;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 public class QueryParameterListTest {
 
   @Test
-  public void basic() throws Exception {
-    final QueryParameterList params = new QueryParameterList("foo=bar&bar=1,'2'&foo=8&p%3Abee=p%3Ahello%26world");
+  public void tags() throws Exception {
+    final QueryParameterList params =
+        new QueryParameterList("tags=one&tags=two%2Cthree%2Cfour&tags=five%2Bsix%2Bseven&tags=eight");
     assertEquals(4, params.size());
-    assertEquals(3, params.keySize());
+    assertEquals(1, params.keySize());
+    assertEquals(4, params.count("tags"));
+
+    List<String> tagList = params.collectAllOf("tags", String.class);
+    assertEquals("one", tagList.get(0));
+    assertEquals("two,three,four", tagList.get(1));
+    assertEquals("five+six+seven", tagList.get(2));
+    assertEquals("eight", tagList.get(3));
+  }
+
+  @Test
+  public void basic() throws Exception {
+    final QueryParameterList params =
+        new QueryParameterList("foo=bar&bar=1,'2'&foo=8&p%3Abee=p%3Ahello%26world&west=-1.94377758&north=45");
+    assertEquals(6, params.size());
+    assertEquals(5, params.keySize());
     assertEquals(2, params.count("foo"));
     assertEquals(1, params.count("bar"));
     assertEquals(1, params.count("p:bee"));
+    assertEquals(1, params.count("west"));
+    assertEquals(1, params.count("north"));
     assertEquals(0, params.count("x"));
 
     // Test assign
@@ -57,6 +76,7 @@ public class QueryParameterListTest {
     final QueryParameter foo1 = params.get(0);
     assertNotNull(foo1);
     assertEquals(1, foo1.values().size());
+    assertFalse(foo1.values().isDouble(0));
     assertTrue(foo1.values().isString(0));
     assertEquals("bar", foo1.values().first());
 
@@ -80,6 +100,22 @@ public class QueryParameterListTest {
     assertEquals(1, pbee.values().size());
     assertTrue(pbee.values().isString(0));
     assertEquals("p:hello&world", pbee.values().getString(0));
+
+    final QueryParameter west = params.get(4);
+    assertNotNull(west);
+    assertEquals("west", west.key());
+    assertEquals(1, west.values().size());
+    assertTrue(west.values().isDouble(0));
+    assertFalse(west.values().isString(0));
+    assertEquals(-1.94377758, west.values().getDouble(0));
+
+    final QueryParameter north = params.get(5);
+    assertNotNull(north);
+    assertEquals("north", north.key());
+    assertEquals(1, north.values().size());
+    assertTrue(north.values().isLong(0));
+    assertFalse(north.values().isString(0));
+    assertEquals(45.0, north.values().getLong(0).doubleValue());
   }
 
   // ----------------------------------------------------------------------------------------------------------------------------------

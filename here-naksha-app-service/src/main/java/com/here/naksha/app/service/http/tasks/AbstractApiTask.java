@@ -126,6 +126,11 @@ public abstract class AbstractApiTask<T extends XyzResponse>
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
       final @Nullable Result rdResult, final @NotNull Class<R> type) {
+    return transformReadResultToXyzCollectionResponse(rdResult, type, 1000);
+  }
+
+  protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
+      final @Nullable Result rdResult, final @NotNull Class<R> type, final long maxLimit) {
     if (rdResult == null) {
       // return empty collection
       logger.warn("Unexpected null result, returning empty collection.");
@@ -137,7 +142,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return verticle.sendErrorResponse(routingContext, er.reason, er.message);
     } else {
       try {
-        List<R> features = readFeaturesFromResult(rdResult, type, 1000);
+        List<R> features = readFeaturesFromResult(rdResult, type, maxLimit);
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,

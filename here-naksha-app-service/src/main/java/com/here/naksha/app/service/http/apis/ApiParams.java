@@ -18,6 +18,11 @@
  */
 package com.here.naksha.app.service.http.apis;
 
+import com.here.naksha.lib.core.exceptions.XyzErrorException;
+import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.payload.events.QueryParameter;
+import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
+import com.here.naksha.lib.core.util.ValueList;
 import io.vertx.ext.web.RoutingContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,10 +33,75 @@ public final class ApiParams {
   public static String FEATURE_ID = "featureId";
   public static String ADD_TAGS = "addTags";
   public static String REMOVE_TAGS = "removeTags";
+  public static String TAG_LIST = "tagList";
   public static String FEATURE_IDS = "id";
+  public static String WEST = "west";
+  public static String NORTH = "north";
+  public static String EAST = "east";
+  public static String SOUTH = "south";
+  public static String LIMIT = "limit";
+
+  public static long DEF_FEATURE_LIMIT = 30_000;
 
   public static @Nullable String pathParam(
       final @NotNull RoutingContext routingContext, final @NotNull String param) {
     return routingContext.pathParam(param);
+  }
+
+  public static double extractQueryParamAsDouble(
+      final @NotNull QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
+    return extractQueryParamAsDouble(queryParams, key, isMandatory, 0.0);
+  }
+
+  public static double extractQueryParamAsDouble(
+      final @NotNull QueryParameterList queryParams,
+      final @NotNull String key,
+      final boolean isMandatory,
+      final double defVal) {
+    final QueryParameter queryParam = queryParams.get(key);
+    if (queryParam == null || queryParam.values().size() < 1) {
+      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
+      else return defVal;
+    }
+    final ValueList values = queryParam.values();
+    if (values.isDouble(0)) {
+      return values.getDouble(0, defVal);
+    } else if (values.isLong(0)) {
+      final Long longVal = values.getLong(0);
+      return (longVal == null) ? defVal : longVal.doubleValue();
+    }
+    throw new XyzErrorException(
+        XyzError.ILLEGAL_ARGUMENT, "Invalid value " + values.getString(0) + " for parameter " + key);
+  }
+
+  public static long extractQueryParamAsLong(
+      final @NotNull QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
+    return extractQueryParamAsLong(queryParams, key, isMandatory, 0);
+  }
+
+  public static long extractQueryParamAsLong(
+      final @NotNull QueryParameterList queryParams,
+      final @NotNull String key,
+      final boolean isMandatory,
+      final long defVal) {
+    final QueryParameter queryParam = queryParams.get(key);
+    if (queryParam == null || queryParam.values().size() < 1) {
+      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
+      else return defVal;
+    }
+    final ValueList values = queryParam.values();
+    if (!values.isLong(0)) {
+      throw new XyzErrorException(
+          XyzError.ILLEGAL_ARGUMENT, "Invalid value " + values.getString(0) + " for parameter " + key);
+    }
+    return values.getLong(0, defVal);
+  }
+
+  public static void validateParamRange(
+      final @NotNull String param, final double value, final double min, final double max) {
+    if (value < min || value > max) {
+      throw new XyzErrorException(
+          XyzError.ILLEGAL_ARGUMENT, "Invalid value " + value + " for parameter " + param);
+    }
   }
 }

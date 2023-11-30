@@ -18,20 +18,22 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.FEATURE_ID;
-import static com.here.naksha.app.service.http.apis.ApiParams.FEATURE_IDS;
-import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
-import static com.here.naksha.app.service.http.apis.ApiParams.pathParam;
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
+import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.apis.ApiUtil;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
+import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
+import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
@@ -46,7 +48,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
   public enum ReadFeatureApiReqType {
     GET_BY_ID,
-    GET_BY_IDS
+    GET_BY_IDS,
+    GET_BY_BBOX
   }
 
   public ReadFeatureApiTask(
@@ -77,6 +80,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       return switch (this.reqType) {
         case GET_BY_ID -> executeFeatureById();
         case GET_BY_IDS -> executeFeaturesById();
+        case GET_BY_BBOX -> executeFeaturesByBBox();
         default -> executeUnsupported();
       };
     } catch (Exception ex) {
@@ -128,5 +132,54 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
     // transform Result to Http XyzFeature response
     return transformReadResultToXyzFeatureResponse(result, XyzFeature.class);
+  }
+
+  private @NotNull XyzResponse executeFeaturesByBBox() {
+    // Parse and validate Path parameters
+    final String spaceId = pathParam(routingContext, SPACE_ID);
+    if (spaceId == null || spaceId.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
+    }
+
+    // Parse and validate Query parameters
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    if (queryParams == null || queryParams.size() <= 0) {
+      return verticle.sendErrorResponse(
+          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
+    }
+    double west, north, east, south;
+    long limit;
+    List<String> tagList;
+    try {
+      // extract parameters
+      west = ApiParams.extractQueryParamAsDouble(queryParams, WEST, true);
+      north = ApiParams.extractQueryParamAsDouble(queryParams, NORTH, true);
+      east = ApiParams.extractQueryParamAsDouble(queryParams, EAST, true);
+      south = ApiParams.extractQueryParamAsDouble(queryParams, SOUTH, true);
+      limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+      tagList = queryParams.collectAllOf(TAG_LIST, String.class);
+
+      // validate values
+      limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
+      ApiParams.validateParamRange(WEST, west, -180, 180);
+      ApiParams.validateParamRange(NORTH, north, -90, 90);
+      ApiParams.validateParamRange(EAST, east, -180, 180);
+      ApiParams.validateParamRange(SOUTH, south, -90, 90);
+    } catch (XyzErrorException ex) {
+      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
+    }
+
+    // Prepare read request based on parameters supplied
+    final SOp bboxOp = ApiUtil.buildOperationForBBox(west, south, east, north);
+    final POp tagsOp = ApiUtil.buildOperationForTagList(tagList);
+    final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
+    if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
+
+    // Forward request to NH Space Storage reader instance
+    final Result result = executeReadRequestFromSpaceStorage(rdRequest);
+    // transform Result to Http FeatureCollection response, restricted by given feature limit
+    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, limit);
   }
 }
