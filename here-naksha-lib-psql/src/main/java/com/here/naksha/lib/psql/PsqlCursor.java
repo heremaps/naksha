@@ -20,9 +20,13 @@ package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
+import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.storage.CodecError;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
+import com.here.naksha.lib.core.util.json.Json;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -34,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * A result-cursor that is not thread-safe.
  *
  * @param <FEATURE> The feature type that the cursor returns.
- * @param <CODEC> The codec type.
+ * @param <CODEC>   The codec type.
  */
 public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> extends ForwardCursor<FEATURE, CODEC> {
 
@@ -63,6 +67,7 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
         final String r_ptype = rs.getString(5); // may be null
         final String r_feature = rs.getString(6); // may be null
         final byte[] r_geo = rs.getBytes(7); // may be null
+        final String r_err = rs.getString(8); // may be null
         // Note: Only r_ptype, r_feature and r_geo may be null!
         assert r_op != null && r_id != null && r_uuid != null && r_type != null;
 
@@ -73,6 +78,8 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
         row.codec.setPropertiesType(r_ptype);
         row.codec.setJson(r_feature);
         row.codec.setWkb(r_geo);
+        row.codec.setRawError(r_err);
+        row.codec.setErr(mapToCodecError(r_err));
         row.valid = true;
         return true;
       }
@@ -85,4 +92,19 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
 
   @Override
   public void close() {}
+
+  private CodecError mapToCodecError(String r_err) {
+    CodecError codecError = null;
+    if (r_err != null) {
+      try (final Json jp = Json.get()) {
+        final CodecError decodedError = jp.reader().readValue(r_err, CodecError.class);
+        final XyzError xyzError = XyzErrorMapper.psqlCodeToXyzError(
+            decodedError.err.value().toString());
+        codecError = new CodecError(xyzError, decodedError.msg);
+      } catch (IOException e) {
+        throw unchecked(e);
+      }
+    }
+    return codecError;
+  }
 }

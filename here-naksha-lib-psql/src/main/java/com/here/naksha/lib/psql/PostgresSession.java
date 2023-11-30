@@ -528,15 +528,15 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         stmt.setBoolean(8, min_result);
         stmt.setBoolean(9, err_only);
         final ResultSet rs = stmt.executeQuery();
-        final PsqlCursor<XyzFeature, XyzFeatureCodec> cursor =
-            new PsqlCursor<>(XyzFeatureCodecFactory.get(), this, stmt, rs);
+        final PsqlCursor<FEATURE, CODEC> cursor =
+            new PsqlCursor<>(writeRequest.getCodecFactory(), this, stmt, rs);
         try (final PreparedStatement err_stmt = prepareStatement("SELECT naksha_err_no(), naksha_err_msg();")) {
           final ResultSet err_rs = err_stmt.executeQuery();
           err_rs.next();
           final String errNo = err_rs.getString(1);
           final String errMsg = err_rs.getString(2);
           if (errNo != null) {
-            return new PsqlError(XyzError.get(errNo), errMsg, cursor);
+            return new PsqlError(XyzErrorMapper.psqlCodeToXyzError(errNo), errMsg, cursor);
           }
         }
         return new PsqlSuccess(cursor);

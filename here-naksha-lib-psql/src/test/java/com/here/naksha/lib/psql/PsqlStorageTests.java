@@ -20,8 +20,10 @@ package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createBBoxEnvelope;
 import static com.spatial4j.core.io.GeohashUtils.encodeLatLon;
+import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -29,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
+import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
 import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates;
 import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
@@ -41,12 +45,15 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.NakshaFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
+import com.here.naksha.lib.core.models.storage.CodecError;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
+import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
@@ -90,7 +97,7 @@ public class PsqlStorageTests extends PsqlTests {
   static final String SINGLE_FEATURE_ID = "TheFeature";
 
   @Test
-  @Order(60)
+  @Order(50)
   @EnabledIf("runTest")
   void singleFeatureCreate() throws NoCursor {
     assertNotNull(storage);
@@ -126,7 +133,7 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(61)
+  @Order(51)
   @EnabledIf("runTest")
   void singleFeatureRead() throws NoCursor {
     assertNotNull(storage);
@@ -177,7 +184,7 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(62)
+  @Order(52)
   @EnabledIf("runTest")
   void readByBbox() throws NoCursor {
     assertNotNull(storage);
@@ -198,7 +205,7 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(63)
+  @Order(55)
   @EnabledIf("runTest")
   void singleFeatureUpdate() throws NoCursor {
     assertNotNull(storage);
@@ -241,7 +248,7 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(64)
+  @Order(56)
   @EnabledIf("runTest")
   void singleFeatureUpdateVerify() throws NoCursor {
     assertNotNull(storage);
@@ -291,15 +298,15 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(65)
+  @Order(57)
   @EnabledIf("runTest")
-  void singleFeatureCreateWitSameId() throws NoCursor {
+  void singleFeaturePutWithSameId() throws NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
     final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
     feature.setGeometry(new XyzPoint(5.0d, 6.0d, 2.0d));
-    request.add(EWriteOp.CREATE, feature);
+    request.add(EWriteOp.PUT, feature);
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
         session.execute(request).getXyzFeatureCursor()) {
       assertTrue(cursor.next());
@@ -311,7 +318,111 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(66)
+  @Order(60)
+  @EnabledIf("runTest")
+  void testDuplicateFeatureId() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+
+    // given
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
+    feature.setGeometry(new XyzPoint(0.0d, 0.0d, 0.0d));
+    request.add(EWriteOp.CREATE, feature);
+
+    // when
+    final Result result = session.execute(request);
+
+    // then
+    assertInstanceOf(ErrorResult.class, result);
+    ErrorResult errorResult = (ErrorResult) result;
+    assertEquals(XyzError.CONFLICT, errorResult.reason);
+    assertEquals("The feature with the id 'TheFeature' does exist already", errorResult.message);
+    session.commit(true);
+
+    // make sure feature hasn't been updated (has old geometry).
+    final ReadFeatures readRequest = RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+        session.execute(request).getXyzFeatureCursor()) {
+      assertTrue(cursor.next());
+      assertEquals(
+          new Coordinate(5d, 6d, 2d),
+          cursor.getFeature().getGeometry().getJTSGeometry().getCoordinate());
+    }
+  }
+
+  @Test
+  @Order(61)
+  @EnabledIf("runTest")
+  void testMultiOperationPartialFail() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+
+    final String UNIQUE_VIOLATION_MSG =
+        format("The feature with the id '%s' does exist already", SINGLE_FEATURE_ID);
+
+    // given
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    final XyzFeature featureToSucceed = new XyzFeature("123");
+    request.add(EWriteOp.CREATE, featureToSucceed);
+    final XyzFeature featureToFail = new XyzFeature(SINGLE_FEATURE_ID);
+    request.add(EWriteOp.CREATE, featureToFail);
+
+    // when
+    final Result result = session.execute(request);
+
+    // then
+    assertInstanceOf(ErrorResult.class, result);
+    ErrorResult errorResult = (ErrorResult) result;
+    assertEquals(XyzError.CONFLICT, errorResult.reason);
+    assertEquals(UNIQUE_VIOLATION_MSG, errorResult.message);
+    try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzFeatureCursor()) {
+      assertTrue(cursor.next());
+      assertEquals(featureToSucceed.getId(), cursor.getFeature().getId());
+
+      // error row check
+      assertTrue(cursor.next());
+      assertTrue(cursor.hasError());
+      assertSame(EExecutedOp.ERROR, cursor.getOp());
+      CodecError rowError = cursor.getError();
+      assertNotNull(rowError);
+      assertEquals(XyzError.CONFLICT, rowError.err);
+      assertEquals(UNIQUE_VIOLATION_MSG, rowError.msg);
+      // we still should be able to read the feature
+      assertEquals(featureToFail.getId(), cursor.getFeature().getId());
+    } finally {
+      session.commit(true);
+    }
+  }
+
+  @Test
+  @Order(62)
+  @EnabledIf("runTest")
+  void testInvalidUuid() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+
+    // given
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
+    feature.xyz().setUuid("invalid_UUID");
+    request.add(EWriteOp.UPDATE, feature);
+
+    // when
+    final Result result = session.execute(request);
+
+    // then
+    assertInstanceOf(ErrorResult.class, result);
+    ErrorResult errorResult = (ErrorResult) result;
+    assertEquals(XyzError.CONFLICT, errorResult.reason);
+    assertTrue(
+        errorResult.message.startsWith("The feature 'TheFeature' uuid 'invalid_UUID' does not match"),
+        errorResult.message);
+    session.commit(true);
+  }
+
+  @Test
+  @Order(64)
   @EnabledIf("runTest")
   void singleFeatureDelete() throws NoCursor {
     assertNotNull(storage);
@@ -349,7 +460,7 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(67)
+  @Order(65)
   @EnabledIf("runTest")
   void singleFeatureDeleteVerify() throws SQLException, NoCursor {
     assertNotNull(storage);
@@ -419,7 +530,7 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(68)
+  @Order(66)
   @EnabledIf("runTest")
   void singleFeaturePurge() throws NoCursor {
     assertNotNull(storage);
@@ -450,7 +561,7 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
-  @Order(69)
+  @Order(67)
   @EnabledIf("runTest")
   void singleFeaturePurgeVerify() throws SQLException {
     assertNotNull(storage);

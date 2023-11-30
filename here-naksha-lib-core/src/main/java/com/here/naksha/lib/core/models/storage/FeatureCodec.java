@@ -154,7 +154,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    * @return this.
    */
   public @NotNull SELF clearFeature() {
-    isDecoded = false;
+    isEncoded = false;
     err = null;
     feature = null;
     return self();
@@ -209,6 +209,10 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    * The JTS geometry build from the {@link #wkb}.
    */
   protected @Nullable Geometry geometry;
+  /**
+   * The JSON of the error.
+   */
+  protected @Nullable String errorJson;
 
   /**
    * Sets the given geometry and clears the WKB.
@@ -328,6 +332,15 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   public @NotNull SELF withJson(@Nullable String json) {
     setJson(json);
     return self();
+  }
+
+  /**
+   * Sets the JSON of the error.
+   *
+   * @param json The JSON to set.
+   */
+  public void setRawError(@Nullable String json) {
+    this.errorJson = json;
   }
 
   /**
@@ -476,5 +489,14 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    */
   public @Nullable CodecError getError() {
     return err;
+  }
+
+  /**
+   * Sets decoded PSQL error to naksha friendly error.
+   *
+   * @param err
+   */
+  public void setErr(@Nullable CodecError err) {
+    this.err = err;
   }
 }

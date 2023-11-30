@@ -14,14 +14,14 @@ CREATE EXTENSION IF NOT EXISTS btree_gin SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS postgis SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS postgis_topology SCHEMA topology;
 -- Restore search_path, because postgis_topology modifies it.
-SET SESSION search_path TO "${schema}", public, topology;
-CREATE EXTENSION IF NOT EXISTS pg_hint_plan SCHEMA hint_plan;
+--pg_hint_plan:SET SESSION search_path TO "${schema}", public, topology;
+--pg_hint_plan:CREATE EXTENSION IF NOT EXISTS pg_hint_plan SCHEMA hint_plan;
 -- Restore search_path, because hint_plan modifies it.
 SET SESSION search_path TO "${schema}", public, topology;
 --CREATE EXTENSION IF NOT EXISTS tsm_system_rows SCHEMA public;
 --CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS hstore SCHEMA public;
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA public;
+--pg_stat_statements:CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA public;
 COMMIT;
 SET SESSION search_path TO "${schema}", public, topology;
 
@@ -1270,6 +1270,7 @@ BEGIN
     r_geometry = NULL;
     r_err = NULL;
 
+    op = ops[i];
     feature = features[i];
     id = naksha_feature_id(feature);
     IF id IS NULL THEN
@@ -1300,7 +1301,6 @@ BEGIN
       r_geometry = geo;
     END IF;
 
-    op = ops[i];
     IF op = 'INSERT' THEN
       op = 'CREATE';
     ELSIF op = 'UPSERT' THEN
@@ -1316,7 +1316,7 @@ BEGIN
 
     BEGIN
       --RAISE NOTICE 'op=''%'', id=''%'', feature=''%'', uuid=''%''', op, id, feature, uuid;
-      IF op = 'CREATE' OR op = 'PUT' THEN
+      IF op = 'PUT' THEN
         BEGIN
           EXECUTE insert_stmt USING feature, geo INTO r_feature;
           GET DIAGNOSTICS rows_affected = ROW_COUNT;
@@ -1324,6 +1324,11 @@ BEGIN
         EXCEPTION WHEN unique_violation THEN
           op = 'UPDATE';
         END;
+      END IF;
+      IF op = 'CREATE' THEN
+        EXECUTE insert_stmt USING feature, geo INTO r_feature;
+        GET DIAGNOSTICS rows_affected = ROW_COUNT;
+        r_op = 'CREATED';
       END IF;
       IF op = 'UPDATE' THEN
         IF uuid IS NOT NULL THEN
@@ -1420,7 +1425,7 @@ BEGIN
         IF e_uuid IS NULL THEN
           r_err = nk_err_no_data(format('Operation failed, no feature with the id %L exists', id));
         ELSE
-          r_err = nk_err_check_violation(format('Operation failed, feature %L in invalid state, expected %L, but found %L', id, uuid, e_uuid));
+          r_err = nk_err_unique_violation(format('The feature %L uuid %L does not match: %L', id, uuid, e_uuid));
         END IF;
       END IF;
     END IF;
@@ -4006,8 +4011,6 @@ BEGIN
     --CREATE EXTENSION IF NOT EXISTS tsm_system_rows SCHEMA public;
     --CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
     CREATE EXTENSION IF NOT EXISTS hstore SCHEMA public;
-    CREATE EXTENSION IF NOT EXISTS pg_hint_plan SCHEMA public;
-    CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA public;
 
     IF __naksha_pg_version() < 14 THEN
         -- feature_not_supported

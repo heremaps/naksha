@@ -16,16 +16,22 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.json;
+package com.here.naksha.lib.psql;
 
-public class Truck extends Vehicle {
+import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import org.jetbrains.annotations.NotNull;
 
-  public static final Truck TRUCK = def(Truck.class, "TRUCK").with(Truck.class, (self) -> {
-    self.isTruck = true;
-  });
+class StringCodec extends FeatureCodec<String, StringCodec> {
 
-  public static final Truck CASE_INSENSITIVE =
-      defIgnoreCase(Truck.class, "FooTruck").aliasIgnoreCase(Truck.class, "fOO");
+  @Override
+  public @NotNull StringCodec decodeParts(boolean force) {
+    json = feature;
+    return this;
+  }
 
-  boolean isTruck;
+  @Override
+  public @NotNull StringCodec encodeFeature(boolean force) {
+    feature = json;
+    return this;
+  }
 }
