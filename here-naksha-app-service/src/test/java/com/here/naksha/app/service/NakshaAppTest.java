@@ -53,7 +53,7 @@ class NakshaAppTest {
 
   @BeforeAll
   static void prepare() throws InterruptedException, URISyntaxException {
-    app = localPsqlBasedNakshaApp();
+    app = localPsqlBasedNakshaApp(); // to use mock, call NakshaAppInitializer.mockedNakshaApp()
     config = app.getHub().getConfig();
     app.start();
     Thread.sleep(5000); // wait for server to come up

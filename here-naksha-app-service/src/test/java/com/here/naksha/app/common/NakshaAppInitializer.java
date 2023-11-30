@@ -24,14 +24,15 @@ import com.here.naksha.app.service.NakshaApp;
 
 public class NakshaAppInitializer {
 
+  private static final String LOCAL_CONFIGS_DIR = "config/";
   private static final String MOCK_CONFIG_ID = "mock-config";
 
-  private static final String LOCAL_TEST = "local-test-config";
+  private static final String TEST_CONFIG_ID = "test-config";
 
   private NakshaAppInitializer() {}
 
   public static NakshaApp mockedNakshaApp() {
-    return newInstance(MOCK_CONFIG_ID);
+    return newInstance(LOCAL_CONFIGS_DIR + MOCK_CONFIG_ID);
   }
 
   public static NakshaApp localPsqlBasedNakshaApp() {
@@ -45,6 +46,6 @@ public class NakshaAppInitializer {
           + "&schema=naksha_test_maint_app";
     }
 
-    return newInstance(LOCAL_TEST, dbUrl);
+    return newInstance(LOCAL_CONFIGS_DIR + TEST_CONFIG_ID, dbUrl);
   }
 }

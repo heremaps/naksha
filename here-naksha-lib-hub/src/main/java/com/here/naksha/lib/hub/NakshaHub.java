@@ -90,15 +90,14 @@ public class NakshaHub implements INaksha {
       final @NotNull String appName,
       final @NotNull PsqlInstanceConfig config,
       final @Nullable NakshaHubConfig customCfg,
-      final @Nullable String configId,
-      final @Nullable PsqlStorage.Params storageParams) {
+      final @Nullable String configId) {
     // create storage instance upfront
     this.psqlStorage =
         new PsqlStorage("naksha-admin-db", appName, "local_test_" + System.currentTimeMillis(), config);
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
     // setup backend storage DB and Hub config
-    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId, storageParams);
+    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId);
     if (finalCfg == null) {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
@@ -106,9 +105,7 @@ public class NakshaHub implements INaksha {
   }
 
   private @Nullable NakshaHubConfig storageSetup(
-      final @Nullable NakshaHubConfig customCfg,
-      final @Nullable String configId,
-      final @Nullable PsqlStorage.Params storageParams) {
+      final @Nullable NakshaHubConfig customCfg, final @Nullable String configId) {
     /**
      * 1. Init Admin Storage
      * 2. Create all Admin collections
@@ -117,10 +114,10 @@ public class NakshaHub implements INaksha {
      */
 
     // 1. Init Admin Storage
-    if (storageParams == null) {
-      getAdminStorage().initStorage();
+    if (customCfg != null && customCfg.storageParams != null) {
+      getAdminStorage().initStorage(customCfg.storageParams);
     } else {
-      getAdminStorage().initStorage(storageParams);
+      getAdminStorage().initStorage();
     }
 
     // 2. Create all Admin collections in Admin DB
@@ -278,18 +275,14 @@ public class NakshaHub implements INaksha {
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull IStorage getStorageById(final @NotNull String storageId) {
-    logger.info("getting storage by id: {}", storageId);
     try (final IReadSession reader = getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
-      logger.info("got reader for admin storage");
       final Result result = reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.STORAGES, storageId));
-      logger.info("got result from reader");
       if (result instanceof ErrorResult er) {
         throw unchecked(new Exception(
             "Exception fetching storage details for id " + storageId + ". " + er.message, er.exception));
       }
       final Storage storage = Objects.requireNonNull(
           readFeatureFromResult(result, Storage.class), "No storage found with id: " + storageId);
-      logger.info("got storage from result, about to instantiate");
       return storageInstance(storage);
     }
   }

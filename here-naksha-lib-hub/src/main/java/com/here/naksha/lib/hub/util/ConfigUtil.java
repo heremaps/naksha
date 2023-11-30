@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 public class ConfigUtil {
 
   private static final Logger logger = LoggerFactory.getLogger(ConfigUtil.class);
+
   public static final String DEF_CFG_PATH_ENV = "NAKSHA_CONFIG_PATH";
 
   private ConfigUtil() {}

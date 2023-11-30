@@ -141,14 +141,12 @@ public class ReadFeaturesByIdsTestHelper {
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
     response = nakshaClient.get("hub/spaces/" + space.getId() + "/features?" + idsQueryParam, streamId);
-    String body = response.body();
-    System.out.println("Body: \n" + body + "\n");
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
 
     // Then: also match individual JSON attributes (in addition to whole object comparison above)
-    additionalCustomAssertions(body);
+    additionalCustomAssertions(response.body());
   }
 
   public void tc0401_testReadFeaturesForMissingIds() throws Exception {
