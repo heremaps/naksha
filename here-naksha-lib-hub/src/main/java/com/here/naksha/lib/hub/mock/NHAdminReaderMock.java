@@ -23,24 +23,12 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Notification;
-import com.here.naksha.lib.core.models.storage.OpType;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.POpType;
-import com.here.naksha.lib.core.models.storage.PRef;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.ReadRequest;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.XyzCodecFactory;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -164,46 +152,202 @@ public class NHAdminReaderMock implements IReadSession {
       }
     } else if (pOp.op() == POpType.EQ && pOp.getPropertyRef() == PRef.id()) {
       // return features by Id from the given collections names
-      for (final String collectionName : rf.getCollections()) {
-        if (mockCollection.get(collectionName) == null) {
-          throw unchecked(new SQLException(
-              "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
-        }
-        // if feature not found, return empty list
-        if (mockCollection.get(collectionName).get(pOp.getValue()) == null) {
-          break;
-        }
-        features.add(mockCollection.get(collectionName).get(pOp.getValue()));
-      }
+      getFeatureById(rf.getCollections(), (String) pOp.getValue(), features);
     } else if (pOp.op() == OpType.OR) {
       final List<POp> pOpList = pOp.children();
-      final List<String> ids = new ArrayList<>();
       for (final POp orOp : pOpList) {
         if (orOp.op() == POpType.EQ && orOp.getPropertyRef() == PRef.id()) {
-          ids.add((String) orOp.getValue());
+          getFeatureById(rf.getCollections(), (String) orOp.getValue(), features);
+        } else if (orOp.op() == POpType.EXISTS
+            && orOp.getPropertyRef().getPath().size() == 3
+            && orOp.getPropertyRef().getPath().get(2).equals("tags")) {
+          getFeaturesByTagOrOperation(rf.getCollections(), pOp, features);
+          break;
         } else {
           // TODO : Operation Not supported
         }
       }
-      // fetch features for all given ids
-      for (final String collectionName : rf.getCollections()) {
-        if (mockCollection.get(collectionName) == null) {
-          throw unchecked(new SQLException(
-              "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
+    } else if (pOp.op() == POpType.EXISTS) {
+      if (pOp.getPropertyRef().getPath().size() == 3
+          && pOp.getPropertyRef().getPath().get(2).equals("tags")) {
+        getFeatureByTag(rf.getCollections(), pOp.getPropertyRef().getTagName(), features);
+      } else {
+        // TODO : Operation Not supported
+      }
+    } else if (pOp.op() == OpType.AND) {
+      final List<POp> pOpList = pOp.children();
+      for (final POp andOp : pOpList) {
+        if (andOp.op() == POpType.EXISTS
+            && andOp.getPropertyRef().getPath().size() == 3
+            && andOp.getPropertyRef().getPath().get(2).equals("tags")) {
+          getFeaturesByTagAndOperation(rf.getCollections(), pOp, features);
+          break;
+        } else {
+          // TODO : Operation Not supported
         }
-        features.addAll(ids.stream()
-            .map(id -> mockCollection.get(collectionName).get(id))
-            .filter(Objects::nonNull)
-            .toList());
       }
     } else {
       // TODO : Operation Not supported
     }
+
+    // Apply Spatial operation if was requested
+    final SOp sOp = rf.getSpatialOp();
+    List<Object> spatialFilteredFeatures = null;
+    if (sOp != null) {
+      if (sOp.op() == SOpType.INTERSECTS) {
+        spatialFilteredFeatures = features.stream()
+            .filter(feature -> ((XyzFeature) feature)
+                .getGeometry()
+                .getJTSGeometry()
+                .intersects(sOp.getGeometry()))
+            .toList();
+        features.clear();
+        features.addAll(spatialFilteredFeatures);
+      } else {
+        // TODO : Operation not supported
+      }
+    }
+
     XyzFeatureCodecFactory codecFactory = XyzCodecFactory.getFactory(XyzFeatureCodecFactory.class);
     List<XyzFeatureCodec> featuresAsXyzCodecs = features.stream()
         .map(feature -> codecFactory.newInstance().withFeature((XyzFeature) feature))
         .toList();
     return new MockResult<>(XyzFeature.class, featuresAsXyzCodecs);
+  }
+
+  private void getFeatureById(
+      final List<String> collectionNames, final String featureId, final List<Object> features) {
+    // fetch features for given input OR criteria
+    for (final String collectionName : collectionNames) {
+      if (mockCollection.get(collectionName) == null) {
+        throw unchecked(new SQLException(
+            "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
+      }
+      if (featureId != null) {
+        // fetch for given id
+        final Object feature = mockCollection.get(collectionName).get(featureId);
+        if (feature != null) features.add(feature);
+      }
+    }
+  }
+
+  private void getFeatureByTag(final List<String> collectionNames, final String tag, final List<Object> features) {
+    // fetch features for given input OR criteria
+    for (final String collectionName : collectionNames) {
+      if (mockCollection.get(collectionName) == null) {
+        throw unchecked(new SQLException(
+            "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
+      }
+      if (tag != null) {
+        // fetch for given tag
+        for (Object obj : mockCollection.get(collectionName).values()) {
+          XyzFeature feature = (XyzFeature) obj;
+          if (feature.getProperties().getXyzNamespace().getTags() != null
+              && feature.getProperties()
+                  .getXyzNamespace()
+                  .getTags()
+                  .contains(tag)) {
+            if (!features.contains(feature)) {
+              features.add(feature);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private void getFeaturesByTagOrOperation(
+      final List<String> collectionNames, final POp orOp, final List<Object> features) {
+    // fetch features for given input OR criteria
+    for (final String collectionName : collectionNames) {
+      if (mockCollection.get(collectionName) == null) {
+        throw unchecked(new SQLException(
+            "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
+      }
+      // for each available feature apply AND / OR condition on tag recursively
+      for (Object obj : mockCollection.get(collectionName).values()) {
+        XyzFeature feature = matchFeatureAgainstTagOrOperations((XyzFeature) obj, orOp);
+        if (feature != null) {
+          if (!features.contains(feature)) {
+            features.add(feature);
+          }
+        }
+      }
+    }
+  }
+
+  private void getFeaturesByTagAndOperation(
+      final List<String> collectionNames, final POp andOp, final List<Object> features) {
+    // fetch features for given input OR criteria
+    for (final String collectionName : collectionNames) {
+      if (mockCollection.get(collectionName) == null) {
+        throw unchecked(new SQLException(
+            "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
+      }
+      // for each available feature apply AND / OR condition on tag recursively
+      for (Object obj : mockCollection.get(collectionName).values()) {
+        XyzFeature feature = matchFeatureAgainstTagAndOperations((XyzFeature) obj, andOp);
+        if (feature != null) {
+          if (!features.contains(feature)) {
+            features.add(feature);
+          }
+        }
+      }
+    }
+  }
+
+  private XyzFeature matchFeatureAgainstTagAndOperations(final XyzFeature feature, final POp andOp) {
+    // fetch features for given input AND criteria
+    // so return feature as null, as soon as even one AND condition mismatch
+    for (final POp tagOp : andOp.children()) {
+      if (tagOp.op() == POpType.EXISTS
+          && tagOp.getPropertyRef().getPath().size() == 3
+          && tagOp.getPropertyRef().getPath().get(2).equals("tags")) {
+        if (feature.getProperties().getXyzNamespace().getTags() == null
+            || !feature.getProperties()
+                .getXyzNamespace()
+                .getTags()
+                .contains(tagOp.getPropertyRef().getTagName())) {
+          return null;
+        }
+      } else if (tagOp.op() == POpType.AND) {
+        XyzFeature matchingFeature = matchFeatureAgainstTagAndOperations(feature, tagOp);
+        if (matchingFeature == null) return null;
+      } else if (tagOp.op() == POpType.OR) {
+        XyzFeature matchingFeature = matchFeatureAgainstTagOrOperations(feature, tagOp);
+        if (matchingFeature == null) return null;
+      } else {
+        return null;
+      }
+    }
+    return feature;
+  }
+
+  private XyzFeature matchFeatureAgainstTagOrOperations(final XyzFeature feature, final POp orOp) {
+    // fetch features for given input OR criteria
+    // so return feature as null, as soon as even one OR condition match
+    for (final POp tagOp : orOp.children()) {
+      if (tagOp.op() == POpType.EXISTS
+          && tagOp.getPropertyRef().getPath().size() == 3
+          && tagOp.getPropertyRef().getPath().get(2).equals("tags")) {
+        if (feature.getProperties().getXyzNamespace().getTags() != null
+            && feature.getProperties()
+                .getXyzNamespace()
+                .getTags()
+                .contains(tagOp.getPropertyRef().getTagName())) {
+          return feature;
+        }
+      } else if (tagOp.op() == POpType.AND) {
+        XyzFeature matchingFeature = matchFeatureAgainstTagAndOperations(feature, tagOp);
+        if (matchingFeature != null) return matchingFeature;
+      } else if (tagOp.op() == POpType.OR) {
+        XyzFeature matchingFeature = matchFeatureAgainstTagOrOperations(feature, tagOp);
+        if (matchingFeature != null) return matchingFeature;
+      } else {
+        return null;
+      }
+    }
+    return null;
   }
 
   /**

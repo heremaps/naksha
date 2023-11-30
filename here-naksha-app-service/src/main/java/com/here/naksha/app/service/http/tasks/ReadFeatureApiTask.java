@@ -159,7 +159,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       east = ApiParams.extractQueryParamAsDouble(queryParams, EAST, true);
       south = ApiParams.extractQueryParamAsDouble(queryParams, SOUTH, true);
       limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
-      tagList = queryParams.collectAllOf(TAG_LIST, String.class);
+      tagList = queryParams.collectAllOf(TAGS, String.class);
 
       // validate values
       limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;

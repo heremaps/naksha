@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
 import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates;
 import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;

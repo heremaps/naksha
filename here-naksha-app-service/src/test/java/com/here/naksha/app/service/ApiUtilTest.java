@@ -34,8 +34,8 @@ public class ApiUtilTest {
   public void testBuildOperationForTagList() {
     final List<String> tagList = new ArrayList<>();
     tagList.add("one");
-    tagList.add("two%2CTHREE%2C@Four");
-    tagList.add("five%2B@sIx%2Bseven");
+    tagList.add("two,THREE,@Four");
+    tagList.add("five+@sIx+seven");
     tagList.add("eight");
 
     final POp op = ApiUtil.buildOperationForTagList(tagList);

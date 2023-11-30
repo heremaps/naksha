@@ -34,6 +34,7 @@ public final class ApiParams {
   public static String ADD_TAGS = "addTags";
   public static String REMOVE_TAGS = "removeTags";
   public static String TAG_LIST = "tagList";
+  public static String TAGS = "tags";
   public static String FEATURE_IDS = "id";
   public static String WEST = "west";
   public static String NORTH = "north";

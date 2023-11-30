@@ -43,6 +43,7 @@ class NakshaAppTest {
   static CreateFeatureTestHelper createFeatureTests;
   static ReadFeaturesByIdsTestHelper readFeaturesByIdsTests;
   static UpdateFeatureTestHelper updateFeatureTestHelper;
+  static ReadFeaturesByBBoxTestHelper readFeaturesByBBoxTestHelper;
 
   @BeforeAll
   static void prepare() throws InterruptedException, URISyntaxException {
@@ -57,6 +58,7 @@ class NakshaAppTest {
     createFeatureTests = new CreateFeatureTestHelper(app, nakshaClient);
     readFeaturesByIdsTests = new ReadFeaturesByIdsTestHelper(app, nakshaClient);
     updateFeatureTestHelper = new UpdateFeatureTestHelper(app, nakshaClient);
+    readFeaturesByBBoxTestHelper = new ReadFeaturesByBBoxTestHelper(app, nakshaClient);
   }
 
   @Test
@@ -705,6 +707,30 @@ class NakshaAppTest {
   @Order(12)
   void tc0506_testUpdateFeatureWithUuid() throws Exception {
     updateFeatureTestHelper.tc0506_testUpdateFeatureWithUuid();
+  }
+
+  @Test
+  @Order(13)
+  void tc0700_testGetByBBoxWithSingleTag() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0700_testGetByBBoxWithSingleTag();
+  }
+
+  @Test
+  @Order(14)
+  void tc0701_testGetByBBoxWithTagOrCondition() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0701_testGetByBBoxWithTagOrCondition();
+  }
+
+  @Test
+  @Order(14)
+  void tc0702_testGetByBBoxWithTagAndCondition() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0702_testGetByBBoxWithTagAndCondition();
+  }
+
+  @Test
+  @Order(14)
+  void tc0703_testGetByBBoxWithTagOrOrConditions() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0703_testGetByBBoxWithTagOrOrConditions();
   }
 
   @AfterAll

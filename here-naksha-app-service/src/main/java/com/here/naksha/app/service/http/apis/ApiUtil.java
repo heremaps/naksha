@@ -23,8 +23,6 @@ import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,7 +40,8 @@ public class ApiUtil {
       return null;
     }
     for (final String encodedTagParam : tagList) {
-      final String tagParam = URLDecoder.decode(encodedTagParam, StandardCharsets.UTF_8);
+      // final String tagParam = URLDecoder.decode(encodedTagParam, StandardCharsets.UTF_8);
+      final String tagParam = encodedTagParam;
       if (tagParam == null || tagParam.isEmpty()) continue;
       final String op = tagParam.contains(OR_CHAR) ? OR_CHAR : (tagParam.contains(AND_CHAR) ? AND_CHAR : null);
       final POp crtTagOp;
