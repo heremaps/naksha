@@ -441,8 +441,19 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Returns {@link SeekableCursor} limited to defined number of rows.
+   * Set limit to -1 to read and cache all available in current cursor data.
+   *
+   * @param limit
+   * @param reOrder
+   * @return
+   */
   public @NotNull SeekableCursor<FEATURE, CODEC> asSeekableCursor(long limit, boolean reOrder) {
-    throw new UnsupportedOperationException();
+    if (this.position > -1) {
+      throw new IllegalStateException("Cannot create seekable cursor after reading rows from ForwardCursor");
+    }
+    return new HeapCacheCursor<>(codecFactory, limit, reOrder, this);
   }
 
   /**
