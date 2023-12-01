@@ -270,4 +270,71 @@ public class ReadFeaturesByBBoxTestHelper {
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
+
+  public void tc0708_testGetByBBox2AndTagAndCondition() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate features returned match with given BBox condition and Tag AND condition
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
+    final String tagsQueryParam = "tags=three%2Bfour";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0708_BBox2_TagAndCondition/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response =
+        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 200, expectedBodyPart, streamId);
+  }
+
+  public void tc0709_testGetByBBoxWithoutBBox() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate API error when BBox coordinates are not provided
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0709_WithoutBBox/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response = nakshaClient.get("hub/spaces/" + spaceId + "/bbox", streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 400, expectedBodyPart, streamId);
+  }
+
+  public void tc0710_testGetByBBoxWithInvalidCoordinate() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate API error when BBox coordinates are invalid
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String bboxQueryParam = "west=-181&south=50.1175&east=8.6729&north=50.1248";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0710_InvalidCoordinate/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response = nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam, streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 400, expectedBodyPart, streamId);
+  }
 }
