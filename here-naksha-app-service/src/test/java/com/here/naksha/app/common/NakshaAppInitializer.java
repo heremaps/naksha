@@ -21,10 +21,10 @@ package com.here.naksha.app.common;
 import static com.here.naksha.app.service.NakshaApp.newInstance;
 
 import com.here.naksha.app.service.NakshaApp;
+import com.here.naksha.lib.hub.NakshaHubConfig;
 
 public class NakshaAppInitializer {
 
-  private static final String LOCAL_CONFIGS_DIR = "config/";
   private static final String MOCK_CONFIG_ID = "mock-config";
 
   private static final String TEST_CONFIG_ID = "test-config";
@@ -32,7 +32,7 @@ public class NakshaAppInitializer {
   private NakshaAppInitializer() {}
 
   public static NakshaApp mockedNakshaApp() {
-    return newInstance(LOCAL_CONFIGS_DIR + MOCK_CONFIG_ID);
+    return newInstance(MOCK_CONFIG_ID);
   }
 
   public static NakshaApp localPsqlBasedNakshaApp() {
@@ -43,9 +43,11 @@ public class NakshaAppInitializer {
     }
     if (dbUrl == null || dbUrl.isBlank()) {
       dbUrl = "jdbc:postgresql://localhost/postgres?user=postgres&password=" + password
-          + "&schema=naksha_test_maint_app";
+          + "&schema=naksha_test_maint_app_" + System.currentTimeMillis()
+          + "&app=" + NakshaHubConfig.defaultAppName()
+          + "&id=naksha-admin-db";
     }
 
-    return newInstance(LOCAL_CONFIGS_DIR + TEST_CONFIG_ID, dbUrl);
+    return newInstance(TEST_CONFIG_ID, dbUrl);
   }
 }

@@ -31,8 +31,6 @@ import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.NakshaHubFactory;
 import com.here.naksha.lib.hub.util.ConfigUtil;
-import com.here.naksha.lib.psql.PsqlInstanceConfig;
-import com.here.naksha.lib.psql.PsqlInstanceConfigBuilder;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -144,9 +142,7 @@ public final class NakshaApp extends Thread {
 
     // Potentially we could override the app-name:
     // NakshaHubConfig.APP_NAME = ?
-    final PsqlInstanceConfig config =
-        new PsqlInstanceConfigBuilder().parseUrl(url).build();
-    return new NakshaApp(NakshaHubConfig.defaultAppName(), config, cfgId, null);
+    return new NakshaApp(NakshaHubConfig.defaultAppName(), url, cfgId, null);
   }
 
   /**
@@ -168,17 +164,17 @@ public final class NakshaApp extends Thread {
    * Create a new Naksha-Hub instance, connect to the supplied database, initialize it and read the configuration from it, then bootstrap
    * the service.
    *
-   * @param appName       The name of the app
-   * @param adminDbConfig The PostgresQL configuration of the admin-db to connect to.
-   * @param configId      The identifier of the configuration to read.
-   * @param instanceId    The (optional) instance identifier; if {@code null}, then a new unique random one created, or derived from the
-   *                      environment.
+   * @param appName    The name of the app
+   * @param storageUrl The PostgresQL storage url of the admin-db to connect to.
+   * @param configId   The identifier of the configuration to read.
+   * @param instanceId The (optional) instance identifier; if {@code null}, then a new unique random one created, or derived from the
+   *                   environment.
    * @throws SQLException If any error occurred while accessing the database.
    * @throws IOException  If reading the SQL extensions from the resources fail.
    */
   public NakshaApp(
       @NotNull String appName,
-      @NotNull PsqlInstanceConfig adminDbConfig,
+      @NotNull String storageUrl,
       @NotNull String configId,
       @Nullable String instanceId) {
     super(hubs, "NakshaApp");
@@ -197,7 +193,7 @@ public final class NakshaApp extends Thread {
       log.warn("No external config available, will attempt using default. Error was [{}]", ex.getMessage());
     }
     // Instantiate NakshaHub instance
-    this.hub = NakshaHubFactory.getInstance(appName, adminDbConfig, config, configId);
+    this.hub = NakshaHubFactory.getInstance(appName, storageUrl, config, configId);
     config = hub.getConfig(); // use the config finally set by NakshaHub instance
     log.info("Using server config : {}", config);
 

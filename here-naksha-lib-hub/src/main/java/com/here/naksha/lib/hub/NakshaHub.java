@@ -47,7 +47,6 @@ import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
-import com.here.naksha.lib.psql.PsqlInstanceConfig;
 import com.here.naksha.lib.psql.PsqlStorage;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -88,12 +87,11 @@ public class NakshaHub implements INaksha {
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public NakshaHub(
       final @NotNull String appName,
-      final @NotNull PsqlInstanceConfig config,
+      final @NotNull String storageUrl,
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId) {
     // create storage instance upfront
-    this.psqlStorage =
-        new PsqlStorage("naksha-admin-db", appName, "local_test_" + System.currentTimeMillis(), config);
+    this.psqlStorage = new PsqlStorage("naksha-admin-db", appName, storageUrl);
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
     // setup backend storage DB and Hub config
