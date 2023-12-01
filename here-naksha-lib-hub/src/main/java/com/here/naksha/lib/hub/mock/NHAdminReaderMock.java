@@ -163,6 +163,19 @@ public class NHAdminReaderMock implements IReadSession {
             && orOp.getPropertyRef().getPath().get(2).equals("tags")) {
           getFeaturesByTagOrOperation(rf.getCollections(), pOp, features);
           break;
+        } else if (orOp.op() == OpType.AND) {
+          if (orOp.children().get(0).op() == POpType.EXISTS
+              && orOp.children().get(0).getPropertyRef().getPath().size() == 3
+              && orOp.children()
+                  .get(0)
+                  .getPropertyRef()
+                  .getPath()
+                  .get(2)
+                  .equals("tags")) {
+            getFeaturesByTagAndOperation(rf.getCollections(), orOp, features);
+          } else {
+            // TODO : Operation Not supported
+          }
         } else {
           // TODO : Operation Not supported
         }

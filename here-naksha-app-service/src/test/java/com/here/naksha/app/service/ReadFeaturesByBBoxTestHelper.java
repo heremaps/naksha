@@ -174,4 +174,100 @@ public class ReadFeaturesByBBoxTestHelper {
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
+
+  public void tc0704_testGetByBBoxWithTagOrAndConditions() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate features returned match with given BBox condition and combination of Tag OR and AND conditions
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tagsQueryParam = "tags=one" + "&tags=two%2Cthree";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0704_TagOrAndCondition/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response =
+        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 200, expectedBodyPart, streamId);
+  }
+
+  public void tc0705_testGetByBBoxWithTagAndOrAndConditions() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate features returned match with given BBox condition and combination of Tag AND, OR, AND conditions
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tagsQueryParam = "tags=three%2Bfour" + "&tags=four%2Bfive";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0705_TagAndOrAndCondition/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response =
+        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 200, expectedBodyPart, streamId);
+  }
+
+  public void tc0706_testGetByBBoxWithLimit() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate features returned match with given BBox condition and limit
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tagsQueryParam = "tags=one";
+    final String limitQueryParam = "limit=2";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0706_WithLimit/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response = nakshaClient.get(
+        "hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam + "&" + limitQueryParam,
+        streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 200, expectedBodyPart, streamId);
+  }
+
+  public void tc0707_testGetByBBox() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate features returned match with given BBox condition
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0707_BBoxOnly/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response = nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam, streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 200, expectedBodyPart, streamId);
+  }
 }

@@ -733,6 +733,30 @@ class NakshaAppTest {
     readFeaturesByBBoxTestHelper.tc0703_testGetByBBoxWithTagOrOrConditions();
   }
 
+  @Test
+  @Order(14)
+  void tc0704_testGetByBBoxWithTagOrAndConditions() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0704_testGetByBBoxWithTagOrAndConditions();
+  }
+
+  @Test
+  @Order(14)
+  void tc0705_testGetByBBoxWithTagAndOrAndConditions() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0705_testGetByBBoxWithTagAndOrAndConditions();
+  }
+
+  @Test
+  @Order(14)
+  void tc0706_testGetByBBoxWithLimit() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0706_testGetByBBoxWithLimit();
+  }
+
+  @Test
+  @Order(14)
+  void tc0707_testGetByBBox() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0707_testGetByBBox();
+  }
+
   @AfterAll
   static void close() throws InterruptedException {
     if (app != null) {
