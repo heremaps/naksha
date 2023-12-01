@@ -37,7 +37,6 @@ import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.hub.NakshaEventPipelineFactory;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
-import com.here.naksha.lib.psql.PsqlInstanceConfig;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.NotNull;
@@ -77,7 +76,7 @@ public class NakshaHubMock implements INaksha {
 
   public NakshaHubMock(
       final @NotNull String appName,
-      final @NotNull PsqlInstanceConfig config,
+      final @NotNull String storageConfig,
       final @NotNull NakshaHubConfig customCfg,
       final @Nullable String configId) {
     mockCollection = new ConcurrentHashMap<>();
