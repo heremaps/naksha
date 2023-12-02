@@ -151,7 +151,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     }
     double west, north, east, south;
     long limit;
-    List<String> tagList;
     try {
       // extract parameters
       west = ApiParams.extractQueryParamAsDouble(queryParams, WEST, true);
@@ -159,7 +158,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       east = ApiParams.extractQueryParamAsDouble(queryParams, EAST, true);
       south = ApiParams.extractQueryParamAsDouble(queryParams, SOUTH, true);
       limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
-      tagList = queryParams.collectAllOf(TAGS, String.class);
 
       // validate values
       limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
@@ -172,8 +170,14 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     }
 
     // Prepare read request based on parameters supplied
-    final SOp bboxOp = ApiUtil.buildOperationForBBox(west, south, east, north);
-    final POp tagsOp = ApiUtil.buildOperationForTagList(tagList);
+    final SOp bboxOp;
+    final POp tagsOp;
+    try {
+      bboxOp = ApiUtil.buildOperationForBBox(west, south, east, north);
+      tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
+    } catch (XyzErrorException ex) {
+      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
+    }
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
     if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
 

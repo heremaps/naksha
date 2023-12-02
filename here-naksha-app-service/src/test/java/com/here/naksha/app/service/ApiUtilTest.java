@@ -18,64 +18,102 @@
  */
 package com.here.naksha.app.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.here.naksha.app.service.http.apis.ApiUtil;
+import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.POpType;
-import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 public class ApiUtilTest {
 
   @Test
-  public void testBuildOperationForTagList() {
-    final List<String> tagList = new ArrayList<>();
-    tagList.add("one");
-    tagList.add("two,THREE,@Four");
-    tagList.add("five+@sIx+seven");
-    tagList.add("eight");
-
-    final POp op = ApiUtil.buildOperationForTagList(tagList);
+  public void testBuildOperationForTagsQueryParam() {
+    final QueryParameterList params = new QueryParameterList("tags=one"
+        + "&tags=two,three"
+        + "&tags=four+five"
+        + "&tags=six,seven,eight+nine"
+        + "&tags=ten+eleven,twelve,thirteen"
+        + "&tags=fourteen");
+    final POp op = ApiUtil.buildOperationForTagsQueryParam(params);
     assertEquals(POpType.OR, op.op());
     final List<POp> orList = op.children();
 
-    // ensure there are total 4 operations
-    assertNotNull(orList, "Expected multiple nested operations");
-    assertEquals(4, orList.size());
-
-    // validate first operation uses EXISTS
-    assertEquals(POpType.EXISTS, orList.get(0).op());
-    assertEquals("one", orList.get(0).getPropertyRef().getTagName());
-
-    // validate second operation uses OR
-    assertEquals(POpType.OR, orList.get(1).op());
-    final List<POp> secondOpList = orList.get(1).children();
-    assertNotNull(secondOpList, "Expected multiple nested operations");
-    assertEquals(3, secondOpList.size());
-    assertEquals(POpType.EXISTS, secondOpList.get(0).op());
-    assertEquals("two", secondOpList.get(0).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, secondOpList.get(1).op());
-    assertEquals("three", secondOpList.get(1).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, secondOpList.get(2).op());
-    assertEquals("@Four", secondOpList.get(2).getPropertyRef().getTagName());
-
-    // validate third operation uses AND
-    assertEquals(POpType.AND, orList.get(2).op());
-    final List<POp> thirdOpList = orList.get(2).children();
-    assertNotNull(thirdOpList, "Expected multiple nested operations");
-    assertEquals(3, thirdOpList.size());
-    assertEquals(POpType.EXISTS, thirdOpList.get(0).op());
-    assertEquals("five", thirdOpList.get(0).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, thirdOpList.get(1).op());
-    assertEquals("@sIx", thirdOpList.get(1).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, thirdOpList.get(2).op());
-    assertEquals("seven", thirdOpList.get(2).getPropertyRef().getTagName());
-
-    // validate forth operation uses EXISTS
-    assertEquals(POpType.EXISTS, orList.get(3).op());
-    assertEquals("eight", orList.get(3).getPropertyRef().getTagName());
+    // ensure there are total 8 operations
+    assertNotNull(orList, "Expected multiple OR operations");
+    assertEquals(8, orList.size(), "Expected total 8 OR operations");
+    int i = 0;
+    POp crtOp = null;
+    List<POp> innerOpList = null;
+    // validate 1st operation uses EXISTS
+    crtOp = orList.get(i++);
+    assertEquals(POpType.EXISTS, crtOp.op());
+    assertEquals("one", crtOp.getPropertyRef().getTagName());
+    // validate 2nd operation uses OR
+    crtOp = orList.get(i++);
+    assertEquals(POpType.OR, crtOp.op());
+    innerOpList = crtOp.children();
+    assertNotNull(innerOpList, "Expected multiple operations");
+    assertEquals(2, innerOpList.size());
+    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
+    assertEquals("two", innerOpList.get(0).getPropertyRef().getTagName());
+    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
+    assertEquals("three", innerOpList.get(1).getPropertyRef().getTagName());
+    // validate 3rd operation uses AND
+    crtOp = orList.get(i++);
+    assertEquals(POpType.AND, crtOp.op());
+    innerOpList = crtOp.children();
+    assertNotNull(innerOpList, "Expected multiple operations");
+    assertEquals(2, innerOpList.size());
+    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
+    assertEquals("four", innerOpList.get(0).getPropertyRef().getTagName());
+    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
+    assertEquals("five", innerOpList.get(1).getPropertyRef().getTagName());
+    // validate 4th operation uses OR
+    crtOp = orList.get(i++);
+    assertEquals(POpType.OR, crtOp.op());
+    innerOpList = crtOp.children();
+    assertNotNull(innerOpList, "Expected multiple operations");
+    assertEquals(2, innerOpList.size());
+    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
+    assertEquals("six", innerOpList.get(0).getPropertyRef().getTagName());
+    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
+    assertEquals("seven", innerOpList.get(1).getPropertyRef().getTagName());
+    // validate 5th operation uses AND
+    crtOp = orList.get(i++);
+    assertEquals(POpType.AND, crtOp.op());
+    innerOpList = crtOp.children();
+    assertNotNull(innerOpList, "Expected multiple operations");
+    assertEquals(2, innerOpList.size());
+    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
+    assertEquals("eight", innerOpList.get(0).getPropertyRef().getTagName());
+    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
+    assertEquals("nine", innerOpList.get(1).getPropertyRef().getTagName());
+    // validate 6th operation uses AND
+    crtOp = orList.get(i++);
+    assertEquals(POpType.AND, crtOp.op());
+    innerOpList = crtOp.children();
+    assertNotNull(innerOpList, "Expected multiple operations");
+    assertEquals(2, innerOpList.size());
+    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
+    assertEquals("ten", innerOpList.get(0).getPropertyRef().getTagName());
+    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
+    assertEquals("eleven", innerOpList.get(1).getPropertyRef().getTagName());
+    // validate 7th operation uses OR
+    crtOp = orList.get(i++);
+    assertEquals(POpType.OR, crtOp.op());
+    innerOpList = crtOp.children();
+    assertNotNull(innerOpList, "Expected multiple operations");
+    assertEquals(2, innerOpList.size());
+    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
+    assertEquals("twelve", innerOpList.get(0).getPropertyRef().getTagName());
+    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
+    assertEquals("thirteen", innerOpList.get(1).getPropertyRef().getTagName());
+    // validate 8th operation uses EXISTS
+    crtOp = orList.get(i++);
+    assertEquals(POpType.EXISTS, crtOp.op());
+    assertEquals("fourteen", crtOp.getPropertyRef().getTagName());
   }
 }

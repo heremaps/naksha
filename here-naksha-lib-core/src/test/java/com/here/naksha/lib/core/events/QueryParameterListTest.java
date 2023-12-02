@@ -44,18 +44,26 @@ import org.junit.jupiter.api.Test;
 public class QueryParameterListTest {
 
   @Test
-  public void tags() throws Exception {
-    final QueryParameterList params =
-        new QueryParameterList("tags=one&tags=two%2Cthree%2Cfour&tags=five%2Bsix%2Bseven&tags=eight");
-    assertEquals(4, params.size());
+  public void tagsWithEncodedValues() throws Exception {
+    final QueryParameterList params = new QueryParameterList("tags=one" + "&tags=two,three"
+        + "&tags=four%2Cfive"
+        + "&tags=six+seven"
+        + "&tags=eight%2Bnine%40Ten"
+        + "&tags=eleven");
+    assertEquals(6, params.size());
     assertEquals(1, params.keySize());
-    assertEquals(4, params.count("tags"));
+    assertEquals(6, params.count("tags"));
 
     List<String> tagList = params.collectAllOf("tags", String.class);
-    assertEquals("one", tagList.get(0));
-    assertEquals("two,three,four", tagList.get(1));
-    assertEquals("five+six+seven", tagList.get(2));
-    assertEquals("eight", tagList.get(3));
+    int i = 0;
+    assertEquals("one", tagList.get(i++));
+    assertEquals("two", tagList.get(i++));
+    assertEquals("three", tagList.get(i++));
+    assertEquals("four,five", tagList.get(i++));
+    assertEquals("six", tagList.get(i++));
+    assertEquals("seven", tagList.get(i++));
+    assertEquals("eight+nine@Ten", tagList.get(i++));
+    assertEquals("eleven", tagList.get(i++));
   }
 
   @Test

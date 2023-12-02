@@ -775,6 +775,24 @@ class NakshaAppTest {
     readFeaturesByBBoxTestHelper.tc0710_testGetByBBoxWithInvalidCoordinate();
   }
 
+  @Test
+  @Order(14)
+  void tc0711_testGetByBBoxWithInvalidTagDelimiter() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0711_testGetByBBoxWithInvalidTagDelimiter();
+  }
+
+  @Test
+  @Order(14)
+  void tc0712_testGetByBBoxWithNonNormalizedTag() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0712_testGetByBBoxWithNonNormalizedTag();
+  }
+
+  @Test
+  @Order(14)
+  void tc0713_testGetByBBoxWithMixedTagConditions() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0713_testGetByBBoxWithMixedTagConditions();
+  }
+
   @AfterAll
   static void close() throws InterruptedException {
     if (app != null) {

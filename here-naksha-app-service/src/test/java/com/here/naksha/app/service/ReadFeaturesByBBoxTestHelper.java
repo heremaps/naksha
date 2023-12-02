@@ -114,7 +114,7 @@ public class ReadFeaturesByBBoxTestHelper {
     // Given: Features By BBox request (against configured space)
     final String spaceId = "local-space-4-feature-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
-    final String tagsQueryParam = "tags=two%2Cthree";
+    final String tagsQueryParam = "tags=two,three";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0701_TagOrCondition/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
@@ -138,7 +138,7 @@ public class ReadFeaturesByBBoxTestHelper {
     // Given: Features By BBox request (against configured space)
     final String spaceId = "local-space-4-feature-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
-    final String tagsQueryParam = "tags=four%2Bfive";
+    final String tagsQueryParam = "tags=four+five";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0702_TagAndCondition/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
@@ -162,7 +162,7 @@ public class ReadFeaturesByBBoxTestHelper {
     // Given: Features By BBox request (against configured space)
     final String spaceId = "local-space-4-feature-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
-    final String tagsQueryParam = "tags=three" + "&tags=four%2Cfive";
+    final String tagsQueryParam = "tags=three" + "&tags=four,five";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0703_TagOrOrCondition/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
@@ -186,7 +186,7 @@ public class ReadFeaturesByBBoxTestHelper {
     // Given: Features By BBox request (against configured space)
     final String spaceId = "local-space-4-feature-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
-    final String tagsQueryParam = "tags=one" + "&tags=two%2Cthree";
+    final String tagsQueryParam = "tags=one" + "&tags=two+three";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0704_TagOrAndCondition/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
@@ -210,7 +210,7 @@ public class ReadFeaturesByBBoxTestHelper {
     // Given: Features By BBox request (against configured space)
     final String spaceId = "local-space-4-feature-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
-    final String tagsQueryParam = "tags=three%2Bfour" + "&tags=four%2Bfive";
+    final String tagsQueryParam = "tags=three+four" + "&tags=four+five";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0705_TagAndOrAndCondition/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
@@ -282,7 +282,7 @@ public class ReadFeaturesByBBoxTestHelper {
     // Given: Features By BBox request (against configured space)
     final String spaceId = "local-space-4-feature-by-bbox";
     final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
-    final String tagsQueryParam = "tags=three%2Bfour";
+    final String tagsQueryParam = "tags=three+four";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0708_BBox2_TagAndCondition/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
@@ -336,5 +336,77 @@ public class ReadFeaturesByBBoxTestHelper {
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
+  }
+
+  public void tc0711_testGetByBBoxWithInvalidTagDelimiter() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate API error when BBox condition is valid but invalid Tag delimiter is used
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tagsQueryParam = "tags=one@two";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0711_InvalidTagDelimiter/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response =
+        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 400, expectedBodyPart, streamId);
+  }
+
+  public void tc0712_testGetByBBoxWithNonNormalizedTag() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate features returned match with given BBox condition and Tag combination having NonNormalized Tag value
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tagsQueryParam = "tags=non-matching-tag+%40ThRee";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0712_NonNormalizedTag/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response =
+        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 200, expectedBodyPart, streamId);
+  }
+
+  public void tc0713_testGetByBBoxWithMixedTagConditions() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate features returned match with given BBox condition and Tag combination having mixed AND/OR conditions
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By BBox request (against configured space)
+    final String spaceId = "local-space-4-feature-by-bbox";
+    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tagsQueryParam = "tags=six,three+four" + "&tags=non-existing-tag";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0713_MixedTagConditions/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    response =
+        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 }
