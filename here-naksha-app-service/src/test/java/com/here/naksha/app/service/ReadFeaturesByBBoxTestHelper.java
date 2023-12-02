@@ -19,6 +19,7 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.TestUtil.*;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
@@ -373,7 +374,7 @@ public class ReadFeaturesByBBoxTestHelper {
     // Given: Features By BBox request (against configured space)
     final String spaceId = "local-space-4-feature-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
-    final String tagsQueryParam = "tags=non-matching-tag+%40ThRee";
+    final String tagsQueryParam = "tags=non-matching-tag+" + urlEncoded("@ThRee");
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0712_NonNormalizedTag/feature_response_part.json");
     streamId = UUID.randomUUID().toString();

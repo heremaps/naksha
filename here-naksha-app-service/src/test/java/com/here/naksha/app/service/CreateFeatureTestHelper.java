@@ -18,15 +18,9 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
-import static com.here.naksha.app.common.TestUtil.getHeader;
-import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static com.here.naksha.app.common.TestUtil.parseJson;
-import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
+import static com.here.naksha.app.common.TestUtil.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
@@ -195,7 +189,7 @@ public class CreateFeatureTestHelper {
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
     response = nakshaClient.post(
-        "hub/spaces/" + spaceId + "/features?prefixId=" + utf8Encoded(prefixId), bodyJson, streamId);
+        "hub/spaces/" + spaceId + "/features?prefixId=" + urlEncoded(prefixId), bodyJson, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -217,9 +211,9 @@ public class CreateFeatureTestHelper {
     final String spaceId = "um-mod-topology-dev";
     // Given: addTags API query param
     final String tagQueryParam = "addTags=New_Normalized_Tag"
-        + "&addTags=" + utf8Encoded("@New_Non_Normalized_Tag")
+        + "&addTags=" + urlEncoded("@New_Non_Normalized_Tag")
         + "&addTags=Existing_Normalized_Tag"
-        + "&addTags=" + utf8Encoded("@Existing_Non_Normalized_Tag");
+        + "&addTags=" + urlEncoded("@Existing_Non_Normalized_Tag");
     // Given: Create Features request
     final String bodyJson = loadFileOrFail("TC0303_createFeaturesWithAddTags/create_features.json");
     // TODO: include geometry after Cursor-related changes ->
@@ -339,9 +333,5 @@ public class CreateFeatureTestHelper {
 
     // Then: Perform assertions
     standardAssertions(response, 404, expectedBodyPart, streamId);
-  }
-
-  private String utf8Encoded(String text) {
-    return URLEncoder.encode(text, UTF_8);
   }
 }
