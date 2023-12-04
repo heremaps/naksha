@@ -438,7 +438,7 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
   }
 
   public @NotNull MutableCursor<FEATURE, CODEC> toMutableCursor(long limit, boolean reOrder) {
-    throw new UnsupportedOperationException();
+    return new HeapCacheCursor<>(codecFactory, limit, reOrder, this);
   }
 
   /**
@@ -450,9 +450,6 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
    * @return
    */
   public @NotNull SeekableCursor<FEATURE, CODEC> asSeekableCursor(long limit, boolean reOrder) {
-    if (this.position > -1) {
-      throw new IllegalStateException("Cannot create seekable cursor after reading rows from ForwardCursor");
-    }
     return new HeapCacheCursor<>(codecFactory, limit, reOrder, this);
   }
 

@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 
 public class HeapCacheCursorTest {
@@ -33,16 +34,18 @@ public class HeapCacheCursorTest {
   @Test
   void testAlreadyUsedFrowardCursorConversion() {
     // given
+    long limit = 10;
     ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteForwardCursor();
 
     // when
     cursor.next();
+    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor = cursor.asSeekableCursor(limit, false);
 
-    // expect
-    assertThrows(
-        IllegalStateException.class,
-        () -> cursor.asSeekableCursor(10, false),
-        "Cannot create seekable cursor after reading rows from ForwardCursor");
+    // then
+    assertEquals(limit, cursor.position);
+    // check if seekable cursor position change doesn't affect original cursor position change.
+    seekableCursor.afterLast();
+    assertEquals(limit, cursor.position);
   }
 
   @Test
@@ -250,6 +253,142 @@ public class HeapCacheCursorTest {
 
     // then
     assertEquals(rsSize, cursor.position);
+  }
+
+  @Test
+  void testAddFeature() {
+    // given
+    long limit = 5;
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        infiniteForwardCursor().toMutableCursor(limit, false);
+
+    XyzFeature newFeature = new XyzFeature("new_feature_1");
+
+    // when
+    cursor.last();
+    XyzFeature lastFeatureBeforeAdd = cursor.getFeature();
+    cursor.addFeature(newFeature);
+    cursor.last();
+    XyzFeature lastFeatureAfterAdd = cursor.getFeature();
+
+    // then
+    assertNotEquals(newFeature, lastFeatureBeforeAdd);
+    assertEquals(newFeature, lastFeatureAfterAdd);
+  }
+
+  @Test
+  void testSetFeatureAtPosition() {
+    // given
+    long limit = 5;
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        infiniteForwardCursor().toMutableCursor(limit, false);
+
+    XyzFeature newFeature = new XyzFeature("new_feature_1");
+
+    // when
+    cursor.first();
+    XyzFeature firstFeatureBeforeReplace = cursor.getFeature();
+    XyzFeature replacedFeature = cursor.setFeature(0, newFeature);
+    cursor.last();
+    cursor.first();
+    XyzFeature firstFeatureAfterReplace = cursor.getFeature();
+
+    // then
+    assertNotEquals(newFeature, firstFeatureBeforeReplace);
+    assertEquals(replacedFeature, firstFeatureBeforeReplace);
+    assertEquals(newFeature, firstFeatureAfterReplace);
+    // size of cursor has not changed
+    cursor.afterLast();
+    assertEquals(limit, cursor.position);
+  }
+
+  @Test
+  void testSetFeature() {
+    // given
+    long limit = 5;
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        infiniteForwardCursor().toMutableCursor(limit, false);
+
+    XyzFeature newFeature = new XyzFeature("new_feature_1");
+
+    // when
+    cursor.last();
+    XyzFeature firstFeatureBeforeReplace = cursor.getFeature();
+    XyzFeature replacedFeature = cursor.setFeature(newFeature);
+    XyzFeature firstFeatureAfterReplace = cursor.getFeature();
+
+    // then
+    assertNotEquals(newFeature, firstFeatureBeforeReplace);
+    assertEquals(replacedFeature, firstFeatureBeforeReplace);
+    assertEquals(newFeature, firstFeatureAfterReplace);
+    // size of cursor has not changed
+    cursor.afterLast();
+    assertEquals(limit, cursor.position);
+  }
+
+  @Test
+  void testRemoveFeatureAtPosition() {
+    // given
+    long limit = 5;
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        infiniteForwardCursor().toMutableCursor(limit, false);
+
+    // when
+    cursor.first();
+    XyzFeature firstFeatureBeforeRemove = cursor.getFeature();
+    cursor.next();
+    XyzFeature secondFeatureBeforeRemove = cursor.getFeature();
+    XyzFeature removedFeature = cursor.removeFeature(0);
+    cursor.last();
+    cursor.first();
+    XyzFeature firstFeatureAfterRemove = cursor.getFeature();
+
+    // then
+    assertEquals(removedFeature, firstFeatureBeforeRemove);
+    assertEquals(secondFeatureBeforeRemove, firstFeatureAfterRemove);
+    assertEquals(secondFeatureBeforeRemove, firstFeatureAfterRemove);
+    // size of cursor has changed
+    cursor.afterLast();
+    assertEquals(limit - 1, cursor.position);
+  }
+
+  @Test
+  void testRemoveFeatureAtCurrentPosition() {
+    // given
+    long limit = 3;
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        infiniteForwardCursor().toMutableCursor(limit, false);
+
+    // when
+    cursor.first();
+    XyzFeature firstFeatureBeforeRemove = cursor.getFeature();
+    cursor.last();
+    cursor.removeFeature();
+    cursor.last();
+    cursor.removeFeature();
+    cursor.last();
+    XyzFeature lastFeatureAfterRemovals = cursor.getFeature();
+
+    // then
+    assertEquals(lastFeatureAfterRemovals, firstFeatureBeforeRemove);
+    // size of cursor has changed
+    cursor.afterLast();
+    assertEquals(1, cursor.position);
+  }
+
+  @Test
+  void shouldThrowExceptionWhenAskingForPositionOutOfRange() {
+    // given
+    long limit = 3;
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        infiniteForwardCursor().toMutableCursor(limit, false);
+    XyzFeature newFeature = new XyzFeature("new_feature_1");
+
+    // expect
+    assertThrows(NoSuchElementException.class, () -> cursor.removeFeature(100));
+    assertThrows(NoSuchElementException.class, () -> cursor.removeFeature(-1));
+    assertThrows(NoSuchElementException.class, () -> cursor.setFeature(-100, newFeature));
+    assertThrows(NoSuchElementException.class, () -> cursor.setFeature(-1, newFeature));
   }
 
   private InfiniteForwardCursor<XyzFeature, XyzFeatureCodec> infiniteForwardCursor() {

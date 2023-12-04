@@ -39,6 +39,20 @@ public abstract class MutableCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
   }
 
   /**
+   * Adds feature at the end of the cursor.
+   * @param feature The new feature.
+   * @return the old feature.
+   */
+  public abstract @NotNull FEATURE addFeature(@NotNull FEATURE feature);
+
+  /**
+   * Replace the feature with the given one at given position.
+   * @param feature The new feature.
+   * @return the old feature.
+   */
+  public abstract @NotNull FEATURE setFeature(long position, @NotNull FEATURE feature);
+
+  /**
    * Replace the feature with the given one.
    * @param feature The new feature.
    * @return the old feature.
@@ -50,6 +64,12 @@ public abstract class MutableCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
    * @return The removed feature.
    */
   public abstract @NotNull FEATURE removeFeature();
+
+  /**
+   * Removes the feature at the position and returns it.
+   * @return The removed feature.
+   */
+  public abstract @NotNull FEATURE removeFeature(long position);
 
   // TODO: spliceFeatures, addFeature, insertFeature, pushFeature, popFeature, shiftFeature, ...?
 }

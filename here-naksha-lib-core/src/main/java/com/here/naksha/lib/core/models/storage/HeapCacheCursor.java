@@ -18,8 +18,11 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import java.util.HashMap;
-import java.util.Map;
+import static java.lang.Math.toIntExact;
+import static java.lang.String.format;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,13 +35,14 @@ import org.jetbrains.annotations.NotNull;
  * @param <CODEC>
  */
 public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-    extends SeekableCursor<FEATURE, CODEC> {
+    extends MutableCursor<FEATURE, CODEC> {
 
   protected static final long BEFORE_FIRST_POSITION = -1;
+  protected static final int INITIAL_ARRAY_SIZE_FOR_UNLIMITED_CURSOR = 100_000;
 
   protected final ForwardCursor<FEATURE, CODEC> originalCursor;
 
-  protected final Map<Long, ForwardCursor<FEATURE, CODEC>.Row> inMemoryData = new HashMap<>();
+  protected final List<FeatureCodec<FEATURE, ?>> inMemoryData;
 
   protected final long limit;
   protected final boolean reOrder;
@@ -51,20 +55,30 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
       @NotNull ForwardCursor<FEATURE, CODEC> originalCursor) {
     super(codecFactory);
     this.originalCursor = originalCursor;
-    this.position = originalCursor.position;
+    this.position = BEFORE_FIRST_POSITION;
     this.limit = limit;
     // TODO FIXME re-order elements if needed
     this.reOrder = reOrder;
+
+    this.inMemoryData = new ArrayList<>(initialSize(limit));
 
     final boolean isReadAllRequested = limit == -1;
 
     long count = 0;
     while (originalCursor.hasNext() && (isReadAllRequested || count < limit)) {
       originalCursor.next();
-      inMemoryData.put(originalCursor.position, new Row(originalCursor.currentRow));
-      positionOfLastElement = originalCursor.position;
+      inMemoryData.add(originalCursor.currentRow.codec);
+      positionOfLastElement++;
       count++;
     }
+  }
+
+  private int initialSize(long limit) {
+    if (limit > Integer.MAX_VALUE - 2) {
+      throw new UnsupportedOperationException(
+          format("Current implementation does not support %s cache size", limit));
+    }
+    return limit == -1 ? INITIAL_ARRAY_SIZE_FOR_UNLIMITED_CURSOR : toIntExact(limit);
   }
 
   @Override
@@ -75,8 +89,8 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     if (this.positionOfLastElement == BEFORE_FIRST_POSITION) {
       throw new NoSuchElementException("Empty rs");
     }
-    this.currentRow = inMemoryData.get(this.position);
-    return super.getFeature();
+    FeatureCodec<FEATURE, ?> currentPositionCodec = inMemoryData.get(toIntExact(this.position));
+    return currentPositionCodec.encodeFeature(false).getFeature();
   }
 
   @Override
@@ -154,5 +168,55 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     }
     this.position = position;
     return true;
+  }
+
+  @Override
+  public @NotNull FEATURE addFeature(@NotNull FEATURE feature) {
+    inMemoryData.add(createCodec(feature));
+    positionOfLastElement++;
+    return feature;
+  }
+
+  @Override
+  public @NotNull FEATURE setFeature(long position, @NotNull FEATURE feature) {
+    int idx = toIdx(position);
+    FeatureCodec<FEATURE, ?> currentPositionCodec = inMemoryData.get(idx);
+    inMemoryData.set(toIdx(position), createCodec(feature));
+    return currentPositionCodec.encodeFeature(false).getFeature();
+  }
+
+  @Override
+  public @NotNull FEATURE setFeature(@NotNull FEATURE feature) {
+    return setFeature(this.positionOfLastElement, feature);
+  }
+
+  @Override
+  public @NotNull FEATURE removeFeature() {
+    return removeFeature(this.position);
+  }
+
+  @Override
+  public @NotNull FEATURE removeFeature(long position) {
+    int idx = toIdx(position);
+    FeatureCodec<FEATURE, ?> featureToRemove = inMemoryData.get(idx);
+    inMemoryData.remove(idx);
+    this.positionOfLastElement--;
+    return featureToRemove.encodeFeature(false).getFeature();
+  }
+
+  private int toIdx(long position) {
+    if (position > this.positionOfLastElement) {
+      throw new NoSuchElementException("Position is over last element");
+    }
+    if (position <= BEFORE_FIRST_POSITION) {
+      throw new NoSuchElementException("Position is before first element");
+    }
+    return toIntExact(position);
+  }
+
+  private CODEC createCodec(FEATURE feature) {
+    CODEC codec = originalCursor.codecFactory.newInstance();
+    codec.setFeature(feature);
+    return codec;
   }
 }
