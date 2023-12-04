@@ -43,7 +43,7 @@ public class NakshaAppInitializer {
     }
     if (dbUrl == null || dbUrl.isBlank()) {
       dbUrl = "jdbc:postgresql://localhost/postgres?user=postgres&password=" + password
-          + "&schema=naksha_test_maint_app_" + System.currentTimeMillis()
+          + "&schema=naksha_test_maint_app_jakub_5" // + System.currentTimeMillis()
           + "&app=" + NakshaHubConfig.defaultAppName()
           + "&id=naksha-admin-db";
     }

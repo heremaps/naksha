@@ -281,7 +281,7 @@ public final class PluginCache {
         }
         if (c == null) {
           throw new NoSuchMethodException(
-              "The class " + theClass.getName() + " does not valid a valid constructor");
+              "The class " + theClass.getName() + " does not have a valid constructor");
         }
         constructorByTarget.put(targetClass, c);
         return c;

@@ -285,6 +285,10 @@ public class NakshaHub implements INaksha {
     }
   }
 
+  // TODO
+  /*
+
+  */
   private IStorage storageInstance(@NotNull Storage storage) {
     Fe1<IStorage, Storage> constructor = getStorageConstructor(storage.getClassName(), Storage.class);
     try {

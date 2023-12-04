@@ -753,9 +753,9 @@ components:
                 eventHandlerIds:
                   - "um-mod-dev-handler"
                 properties:
-                  storageCollection:
+                  collection:
                     id: "um-mod-dev:topology"
-                    type: "StorageCollection"
+                    type: "NakshaCollection"
   responses:
     EmptyResponse:
       description: >-

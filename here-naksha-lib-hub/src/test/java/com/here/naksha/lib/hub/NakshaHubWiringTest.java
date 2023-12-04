@@ -248,7 +248,7 @@ public class NakshaHubWiringTest {
     assertTrue(reqCaptor.getValue() instanceof WriteFeatures);
     final List<WriteRequest> requests = reqCaptor.getAllValues();
     final String collectionId =
-        ((Map) space.getProperties().get("storageCollection")).get("id").toString();
+        ((Map) space.getProperties().get("xyzCollection")).get("id").toString();
     // Verify: WriteFeature into collection got called
     assertTrue(
         requests.get(0) instanceof WriteFeatures<?, ?, ?> wr
