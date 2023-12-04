@@ -793,6 +793,18 @@ class NakshaAppTest {
     readFeaturesByBBoxTestHelper.tc0713_testGetByBBoxWithMixedTagConditions();
   }
 
+  @Test
+  @Order(14)
+  void tc0714_testGetByBBoxWithTagMismatch() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0714_testGetByBBoxWithTagMismatch();
+  }
+
+  @Test
+  @Order(14)
+  void tc0715_testGetByBBoxWithBBoxMismatch() throws Exception {
+    readFeaturesByBBoxTestHelper.tc0715_testGetByBBoxWithBBoxMismatch();
+  }
+
   @AfterAll
   static void close() throws InterruptedException {
     if (app != null) {
