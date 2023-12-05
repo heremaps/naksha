@@ -41,6 +41,7 @@ public class DeleteFeatureTestHelper {
         final String expectedBodyPart = loadFileOrFail("TC0900_deleteFeatures/create_features.json");
 
         // When: request is submitted to NakshaHub Space Storage instance
+        //TODO how to add feature ids
         final HttpResponse<String> response =
                 nakshaClient.delete("hub/spaces/" + space.getId() + "/features", streamId);
 
