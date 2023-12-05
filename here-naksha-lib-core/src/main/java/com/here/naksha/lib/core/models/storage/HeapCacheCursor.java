@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * HeapCacheCursor reads all data (up to provided limit) ahead of time to memory, and that allows to go back and forth.
@@ -38,7 +39,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     extends MutableCursor<FEATURE, CODEC> {
 
   protected static final long BEFORE_FIRST_POSITION = -1;
-  protected static final int INITIAL_ARRAY_SIZE_FOR_UNLIMITED_CURSOR = 100_000;
+  protected static final int INITIAL_ARRAY_SIZE_FOR_UNLIMITED_CURSOR = 126;
 
   protected final ForwardCursor<FEATURE, CODEC> originalCursor;
 
@@ -46,7 +47,6 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   protected final long limit;
   protected final boolean reOrder;
-  protected long positionOfLastElement = BEFORE_FIRST_POSITION;
 
   public HeapCacheCursor(
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
@@ -57,7 +57,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     this.originalCursor = originalCursor;
     this.position = BEFORE_FIRST_POSITION;
     this.limit = limit;
-    // TODO FIXME re-order elements if needed
+    // TODO FIXME restore-order elements if needed
     this.reOrder = reOrder;
 
     this.inMemoryData = new ArrayList<>(initialSize(limit));
@@ -68,7 +68,6 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     while (originalCursor.hasNext() && (isReadAllRequested || count < limit)) {
       originalCursor.next();
       inMemoryData.add(originalCursor.currentRow.codec);
-      positionOfLastElement++;
       count++;
     }
   }
@@ -83,10 +82,10 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   @Override
   public @NotNull FEATURE getFeature() throws NoSuchElementException {
-    if (this.position > this.positionOfLastElement) {
+    if (this.position > positionOfLastElement()) {
       throw new NoSuchElementException("Position is over last element");
     }
-    if (this.positionOfLastElement == BEFORE_FIRST_POSITION) {
+    if (positionOfLastElement() == BEFORE_FIRST_POSITION) {
       throw new NoSuchElementException("Empty rs");
     }
     FeatureCodec<FEATURE, ?> currentPositionCodec = inMemoryData.get(toIntExact(this.position));
@@ -104,7 +103,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   @Override
   public boolean hasNext() {
-    return this.position < this.positionOfLastElement;
+    return this.position < positionOfLastElement();
   }
 
   @Override
@@ -113,9 +112,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
   }
 
   @Override
-  public void close() {
-    originalCursor.close();
-  }
+  public void close() {}
 
   @Override
   public boolean previous() {
@@ -133,7 +130,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   @Override
   public boolean first() {
-    if (positionOfLastElement > -1) {
+    if (positionOfLastElement() > -1) {
       this.position = 0;
       return true;
     }
@@ -142,12 +139,12 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   @Override
   public void afterLast() {
-    this.position = positionOfLastElement + 1;
+    this.position = positionOfLastElement() + 1;
   }
 
   @Override
   public boolean last() {
-    this.position = this.positionOfLastElement;
+    this.position = positionOfLastElement();
     return this.position > BEFORE_FIRST_POSITION;
   }
 
@@ -158,7 +155,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   @Override
   public boolean absolute(long position) {
-    if (position > this.positionOfLastElement) {
+    if (position > positionOfLastElement()) {
       afterLast();
       return false;
     }
@@ -173,7 +170,6 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
   @Override
   public @NotNull FEATURE addFeature(@NotNull FEATURE feature) {
     inMemoryData.add(createCodec(feature));
-    positionOfLastElement++;
     return feature;
   }
 
@@ -187,7 +183,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   @Override
   public @NotNull FEATURE setFeature(@NotNull FEATURE feature) {
-    return setFeature(this.positionOfLastElement, feature);
+    return setFeature(this.position, feature);
   }
 
   @Override
@@ -196,16 +192,15 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
   }
 
   @Override
-  public @NotNull FEATURE removeFeature(long position) {
+  public @Nullable FEATURE removeFeature(long position) {
     int idx = toIdx(position);
     FeatureCodec<FEATURE, ?> featureToRemove = inMemoryData.get(idx);
     inMemoryData.remove(idx);
-    this.positionOfLastElement--;
     return featureToRemove.encodeFeature(false).getFeature();
   }
 
   private int toIdx(long position) {
-    if (position > this.positionOfLastElement) {
+    if (position > positionOfLastElement()) {
       throw new NoSuchElementException("Position is over last element");
     }
     if (position <= BEFORE_FIRST_POSITION) {
@@ -214,8 +209,12 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     return toIntExact(position);
   }
 
+  private int positionOfLastElement() {
+    return this.inMemoryData.size() - 1;
+  }
+
   private CODEC createCodec(FEATURE feature) {
-    CODEC codec = originalCursor.codecFactory.newInstance();
+    CODEC codec = codecFactory.newInstance();
     codec.setFeature(feature);
     return codec;
   }
