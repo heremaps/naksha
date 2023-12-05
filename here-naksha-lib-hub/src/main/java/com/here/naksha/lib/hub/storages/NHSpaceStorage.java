@@ -147,6 +147,6 @@ public class NHSpaceStorage implements IStorage {
    */
   @Override
   public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    return null;
+    return nakshaHub.getAdminStorage().shutdown(onShutdown);
   }
 }

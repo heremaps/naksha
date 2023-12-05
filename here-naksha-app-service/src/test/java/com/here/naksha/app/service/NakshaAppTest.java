@@ -26,10 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.lib.hub.NakshaHubConfig;
-import com.here.naksha.lib.psql.PsqlStorage;
-import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
@@ -52,7 +51,7 @@ class NakshaAppTest {
   static UpdateFeatureTestHelper updateFeatureTestHelper;
 
   @BeforeAll
-  static void prepare() throws InterruptedException, URISyntaxException {
+  static void prepare() throws InterruptedException, ExecutionException {
     app = localPsqlBasedNakshaApp(); // to use mock, call NakshaAppInitializer.mockedNakshaApp()
     config = app.getHub().getConfig();
     app.start();
@@ -715,14 +714,8 @@ class NakshaAppTest {
   }
 
   @AfterAll
-  static void close() throws InterruptedException {
+  static void close() {
     if (app != null) {
-      // drop schema after test execution
-      if (app.getHub().getAdminStorage() instanceof PsqlStorage psqlStorage) {
-        psqlStorage.dropSchema();
-      }
-      // To do some manual testing with the running service, uncomment this:
-      // app.join(java.util.concurrent.TimeUnit.SECONDS.toMillis(3600));
       app.stopInstance();
     }
   }

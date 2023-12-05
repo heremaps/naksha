@@ -63,6 +63,8 @@ public final class NakshaApp extends Thread {
 
   private static final Logger log = LoggerFactory.getLogger(NakshaApp.class);
   private static final String DEFAULT_CONFIG_ID = "default-config";
+
+  // TODO: extract default schema (to be used when url is provided without schema)
   private static final String DEFAULT_URL =
       "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha";
   private final AtomicReference<Boolean> stopInstance = new AtomicReference<>(false);

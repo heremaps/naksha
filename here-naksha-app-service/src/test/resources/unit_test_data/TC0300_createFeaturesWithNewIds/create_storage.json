@@ -13,6 +13,6 @@
       "readOnly": false
     },
     "appName": "test-app-name",
-    "schema": "naksha_test_maint_app_jakub_5"
+    "schema": "naksha_test_schema"
   }
 }

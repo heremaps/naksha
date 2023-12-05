@@ -26,15 +26,20 @@ import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.lambdas.Fe3;
 import com.here.naksha.lib.core.storage.IStorage;
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Cache for plug-ins.
  */
 @SuppressWarnings({"StringOperationCanBeSimplified", "DuplicatedCode"})
 public final class PluginCache {
+
+  private static Logger log = LoggerFactory.getLogger(PluginCache.class);
 
   static class EventHandlerConstructorByTarget
       extends ConcurrentHashMap<Class<?>, Fe3<IEventHandler, INaksha, ?, ?>> {}
@@ -175,6 +180,7 @@ public final class PluginCache {
    */
   static <CONFIG> @Nullable Fe1<IStorage, CONFIG> wrapStorageConstructor(
       @NotNull Constructor<? extends IStorage> constructor, @NotNull Class<CONFIG> configClass) {
+    log.info("Wrapping constructor: {}", constructor);
     if (constructor.getParameterCount() > 1) {
       return null;
     }
@@ -182,12 +188,15 @@ public final class PluginCache {
     assert parameterTypes.length <= 1;
 
     if (parameterTypes.length == 0) {
+      log.info("Returning constuctor without params");
       return ((config) -> constructor.newInstance());
     }
 
     if (configClass.isAssignableFrom(parameterTypes[0])) {
+      log.info("Returning assignable constructor from: {}", parameterTypes[0].getName());
       return constructor::newInstance;
     }
+    log.info("Returning null");
     return null;
   }
 
@@ -325,11 +334,14 @@ public final class PluginCache {
         final Constructor<? extends IStorage>[] constructors =
             (Constructor<IStorage>[]) theClass.getConstructors();
         int cParameterCount = -1;
+        log.info("Constructors found: {}", Arrays.toString(constructors));
         for (final Constructor<? extends IStorage> constructor : constructors) {
           if (constructor.getParameterCount() < cParameterCount) {
+            log.info("Too low parameter count, constructor: {}", constructor);
             continue;
           }
           if (constructor.getParameterCount() > 1) {
+            log.info("Param count > 1, constructor: {}", constructor);
             continue;
           }
           c = wrapStorageConstructor(constructor, configClass);

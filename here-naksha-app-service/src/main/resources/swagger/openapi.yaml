@@ -1041,9 +1041,9 @@ components:
                 eventHandlerIds:
                   - "um-mod-dev-handler"
                 properties:
-                  storageCollection:
+                  collection:
                     id: "um-mod-dev:topology"
-                    type: "StorageCollection"
+                    type: "NakshaCollection"
     SpacesResponse:
       description: The list of spaces.
       content:
@@ -1062,9 +1062,9 @@ components:
                   eventHandlerIds:
                     - "um-mod-dev-handler"
                   properties:
-                    storageCollection:
+                    collection:
                       id: "um-mod-dev:topology"
-                      type: "StorageCollection"
+                      type: "NakshaCollection"
   schemas:
     Error:
       type: object
@@ -1346,8 +1346,8 @@ components:
         storageId:
           description: The storage this handler is bound to.
           type: string
-        storageCollection:
-          $ref: '#/components/schemas/StorageCollection'
+        collection:
+          $ref: '#/components/schemas/NakshaCollection'
     Space:
       type: object
       description: >-
@@ -1377,8 +1377,8 @@ components:
       type: object
       description: Properties of Space
       properties:
-        storageCollection:
-          $ref: '#/components/schemas/StorageCollection'
+        collection:
+          $ref: '#/components/schemas/NakshaCollection'
     PsqlConfig:
       type: object
       description: >-
@@ -1410,7 +1410,7 @@ components:
           description: The maximum amount of concurrent connections this connector can use for storage operations.
           type: integer
           default: 20
-    StorageCollection:
+    NakshaCollection:
       type: object
       description: A collection is a virtual container for features. All collections optionally have a history and transaction log.
       properties:
@@ -1418,7 +1418,7 @@ components:
           description: The unique storage ID.
           type: string
         type:
-          description: The data type fixed as "StorageCollection".
+          description: The data type fixed as "NakshaCollection".
           type: string
         maxAge:
           description: The maximum age of the history entries in days. Zero means no history.
