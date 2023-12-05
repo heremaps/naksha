@@ -32,6 +32,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.Result;
@@ -55,7 +56,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     CREATE_FEATURES,
     UPSERT_FEATURES,
     UPDATE_BY_ID,
-    DELETE_FEATURES
+    DELETE_FEATURES,
+    DELETE_BY_ID
   }
 
   public WriteFeatureApiTask(
@@ -88,6 +90,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         case CREATE_FEATURES -> executeCreateFeatures();
         case UPSERT_FEATURES -> executeUpsertFeatures();
         case UPDATE_BY_ID -> executeUpdateFeature();
+        case DELETE_FEATURES -> executeDeleteFeatures();
+        case DELETE_BY_ID -> executeDeleteFeature();
         default -> executeUnsupported();
       };
     } catch (Exception ex) {
@@ -195,11 +199,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     if (spaceId == null || spaceId.isEmpty()) {
       return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
     }
-
     if (featureId == null || featureId.isEmpty()) {
       return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing featureId parameter");
     }
-
     if (!featureId.equals(feature.getId())) {
       return verticle.sendErrorResponse(
           routingContext,
@@ -212,6 +214,64 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     removeTagsFromFeature(feature, removeTags);
 
     final WriteXyzFeatures wrRequest = RequestHelper.updateFeatureRequest(spaceId, feature);
+
+    // Forward request to NH Space Storage writer instance
+    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+  }
+
+  private @NotNull XyzResponse executeDeleteFeatures() throws Exception {
+    // Deserialize input request
+    final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
+    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
+    if (features.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't update empty features");
+    }
+
+    // Parse API parameters
+    final String spaceId = pathParam(routingContext, SPACE_ID);
+
+    // Validate parameters
+    if (spaceId == null || spaceId.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
+    }
+
+    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeaturesRequest(spaceId, features);
+
+    // Forward request to NH Space Storage writer instance
+    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
+  }
+
+  private @NotNull XyzResponse executeDeleteFeature() throws Exception {
+    // Deserialize input request
+    XyzFeature feature;
+    try (final Json json = Json.get()) {
+      final String bodyJson = routingContext.body().asString();
+      feature = json.reader(User.class).forType(XyzFeature.class).readValue(bodyJson);
+    }
+
+    // Parse API parameters
+    final String spaceId = pathParam(routingContext, SPACE_ID);
+    final String featureId = pathParam(routingContext, FEATURE_ID);
+
+    // Validate parameters
+    if (spaceId == null || spaceId.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
+    }
+    if (featureId == null || featureId.isEmpty()) {
+      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing featureId parameter");
+    }
+    if (!featureId.equals(feature.getId())) {
+      return verticle.sendErrorResponse(
+          routingContext,
+          XyzError.ILLEGAL_ARGUMENT,
+          "URI path parameter featureId is not the same as id in feature request body.");
+    }
+
+    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureRequest(spaceId, feature);
 
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);

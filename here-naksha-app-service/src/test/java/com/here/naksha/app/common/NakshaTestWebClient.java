@@ -89,6 +89,17 @@ public class NakshaTestWebClient {
     return sendOnce(putRequest);
   }
 
+  public HttpResponse<String> delete(String subPath, String streamId)
+          throws URISyntaxException, IOException, InterruptedException {
+    HttpRequest deleteRequest = requestBuilder()
+            .uri(nakshaPath(subPath))
+            .DELETE()
+            .header("Content-Type", "application/json")
+            .header(HDR_STREAM_ID, streamId)
+            .build();
+    return sendOnce(deleteRequest);
+  }
+
   // TODO : Remove this function once JUnit pipeline has got multiple stable executions
   /**
    * This Http retry function was temporarily introduced as a workaround to resolve JUnit test hanging
