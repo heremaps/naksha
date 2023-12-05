@@ -24,18 +24,25 @@ import org.jetbrains.annotations.NotNull;
 public class InfiniteForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
     extends ForwardCursor<FEATURE, CODEC> {
 
+  private String json = "{\"type\":\"Feature\"}";
+
   protected InfiniteForwardCursor(@NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
     super(codecFactory);
   }
 
+  protected InfiniteForwardCursor(@NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, String json) {
+    super(codecFactory);
+    this.json = json;
+  }
+
   @Override
   protected boolean loadNextRow(ForwardCursor<FEATURE, CODEC>.@NotNull Row row) {
-    row.codec.setOp("CREATE");
+    row.codec.setOp("CREATED");
     row.codec.setId(UUID.randomUUID().toString());
     row.codec.setUuid(UUID.randomUUID().toString());
     row.codec.setFeatureType("Feature");
     row.codec.setPropertiesType(null);
-    row.codec.setJson("{\"type\":\"Feature\"}");
+    row.codec.setJson(json);
     row.codec.setWkb(null);
     row.codec.setRawError(null);
     row.codec.setErr(null);

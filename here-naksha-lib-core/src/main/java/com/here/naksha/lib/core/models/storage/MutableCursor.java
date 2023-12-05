@@ -19,6 +19,7 @@
 package com.here.naksha.lib.core.models.storage;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A seekable cursor that allows the modification of the features.
@@ -50,26 +51,26 @@ public abstract class MutableCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
    * @param feature The new feature.
    * @return the old feature.
    */
-  public abstract @NotNull FEATURE setFeature(long position, @NotNull FEATURE feature);
+  public abstract @Nullable FEATURE setFeature(long position, @NotNull FEATURE feature);
 
   /**
    * Replace the feature with the given one.
    * @param feature The new feature.
    * @return the old feature.
    */
-  public abstract @NotNull FEATURE setFeature(@NotNull FEATURE feature);
+  public abstract @Nullable FEATURE setFeature(@NotNull FEATURE feature);
 
   /**
    * Removes the feature at the current cursor position and returns it.
    * @return The removed feature.
    */
-  public abstract @NotNull FEATURE removeFeature();
+  public abstract @Nullable FEATURE removeFeature();
 
   /**
    * Removes the feature at the position and returns it.
    * @return The removed feature.
    */
-  public abstract @NotNull FEATURE removeFeature(long position);
+  public abstract @Nullable FEATURE removeFeature(long position);
 
   // TODO: spliceFeatures, addFeature, insertFeature, pushFeature, popFeature, shiftFeature, ...?
 }

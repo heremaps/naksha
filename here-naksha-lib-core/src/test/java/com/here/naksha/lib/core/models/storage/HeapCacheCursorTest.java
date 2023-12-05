@@ -22,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,6 +48,11 @@ public class HeapCacheCursorTest {
     // check if seekable cursor position change doesn't affect original cursor position change.
     seekableCursor.afterLast();
     assertEquals(limit, cursor.position);
+    assertNotNull(cursor.getId());
+    assertNotNull(cursor.getUuid());
+    assertNull(cursor.getError());
+    assertFalse(cursor.hasError());
+    assertSame(EExecutedOp.CREATED, cursor.getOp());
   }
 
   @Test
@@ -389,6 +396,44 @@ public class HeapCacheCursorTest {
     assertThrows(NoSuchElementException.class, () -> cursor.removeFeature(-1));
     assertThrows(NoSuchElementException.class, () -> cursor.setFeature(-100, newFeature));
     assertThrows(NoSuchElementException.class, () -> cursor.setFeature(-1, newFeature));
+  }
+
+  @Test
+  void emptyJsonShouldGiveNullFeature() {
+    // given
+    String json = null;
+    InfiniteForwardCursor<XyzFeature, XyzFeatureCodec> infiniteForwardCursor =
+        new InfiniteForwardCursor<>(XyzFeatureCodecFactory.get(), json);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteForwardCursor.toMutableCursor(5, false);
+
+    // when
+    cursor.first();
+
+    // then
+    assertNotNull(cursor.getId());
+    assertNull(cursor.getFeature());
+  }
+
+  @Test
+  void codecChange() {
+    // given
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        infiniteForwardCursor().toMutableCursor(1, false);
+
+    // when
+    cursor.next();
+    cursor.getFeature();
+    MutableCursor<String, StringCodec> cursorString = cursor.withCodecFactory(new StringCodecFactory(), true);
+    cursorString.first();
+    String feature = cursorString.getFeature();
+
+    // then
+    assertEquals("{\"type\":\"Feature\"}", feature);
+    assertNotNull(cursorString.getId());
+    assertNotNull(cursorString.getUuid());
+    assertNull(cursorString.getError());
+    assertFalse(cursorString.hasError());
+    assertSame(EExecutedOp.CREATED, cursorString.getOp());
   }
 
   private InfiniteForwardCursor<XyzFeature, XyzFeatureCodec> infiniteForwardCursor() {
