@@ -538,8 +538,7 @@ paths:
       operationId: deleteFeatures
       parameters:
         - $ref: '#/components/parameters/SpaceId'
-      requestBody:
-        $ref: '#/components/requestBodies/FeatureCollectionRequest'
+        - $ref: '#/components/parameters/RequiredIds'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionModificationResponse'

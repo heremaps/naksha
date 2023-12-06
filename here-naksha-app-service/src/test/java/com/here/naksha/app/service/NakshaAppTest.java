@@ -43,6 +43,7 @@ class NakshaAppTest {
   static CreateFeatureTestHelper createFeatureTests;
   static ReadFeaturesByIdsTestHelper readFeaturesByIdsTests;
   static UpdateFeatureTestHelper updateFeatureTestHelper;
+  static DeleteFeatureTestHelper deleteFeatureTestHelper;
 
   @BeforeAll
   static void prepare() throws InterruptedException, URISyntaxException {
@@ -57,6 +58,7 @@ class NakshaAppTest {
     createFeatureTests = new CreateFeatureTestHelper(app, nakshaClient);
     readFeaturesByIdsTests = new ReadFeaturesByIdsTestHelper(app, nakshaClient);
     updateFeatureTestHelper = new UpdateFeatureTestHelper(app, nakshaClient);
+    deleteFeatureTestHelper = new DeleteFeatureTestHelper(app, nakshaClient);
   }
 
   @Test
@@ -705,6 +707,12 @@ class NakshaAppTest {
   @Order(12)
   void tc0506_testUpdateFeatureWithUuid() throws Exception {
     updateFeatureTestHelper.tc0506_testUpdateFeatureWithUuid();
+  }
+
+  @Test
+  @Order(12)
+  void tc0900_testUpdateFeatures() throws Exception {
+    deleteFeatureTestHelper.tc0900_testDeleteFeatures();
   }
 
   @AfterAll

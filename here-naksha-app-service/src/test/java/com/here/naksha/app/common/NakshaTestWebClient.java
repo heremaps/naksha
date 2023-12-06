@@ -90,13 +90,13 @@ public class NakshaTestWebClient {
   }
 
   public HttpResponse<String> delete(String subPath, String streamId)
-          throws URISyntaxException, IOException, InterruptedException {
+      throws URISyntaxException, IOException, InterruptedException {
     HttpRequest deleteRequest = requestBuilder()
-            .uri(nakshaPath(subPath))
-            .DELETE()
-            .header("Content-Type", "application/json")
-            .header(HDR_STREAM_ID, streamId)
-            .build();
+        .uri(nakshaPath(subPath))
+        .DELETE()
+        .header("Content-Type", "application/json")
+        .header(HDR_STREAM_ID, streamId)
+        .build();
     return sendOnce(deleteRequest);
   }
 
