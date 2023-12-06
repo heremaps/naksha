@@ -58,6 +58,12 @@ public class ReadFeaturesByBBoxTestHelper {
     assertEquals(expectedStreamId, getHeader(actualResponse, HDR_STREAM_ID), "StreamId mismatch");
   }
 
+  /*
+    For this test suite, we upfront create various Features using different combination of Tags and Geometry.
+    To know what exact features we create, check the create_features.json test file for test tc0700_xx().
+    And then in subsequent tests, we validate the various GetByBox APIs using different query parameters.
+  */
+
   public void tc0700_testGetByBBoxWithSingleTag() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features getting returned for given BBox coordinate and given single tag value
