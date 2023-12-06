@@ -39,6 +39,7 @@ import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import com.here.naksha.lib.psql.PsqlInstanceConfig;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -59,7 +60,7 @@ public class NakshaHubMock implements INaksha {
    * where, mock collection, will: - mandatorily hold admin virtual spaces e.g. naksha:storages, naksha:event_handlers, naksha:spaces -
    * optional custom spaces e.g. "foo", "bar"
    */
-  protected final @NotNull Map<String, Map<String, Object>> mockCollection;
+  protected final @NotNull Map<String, TreeMap<String, Object>> mockCollection;
 
   /**
    * The NakshaHub config.

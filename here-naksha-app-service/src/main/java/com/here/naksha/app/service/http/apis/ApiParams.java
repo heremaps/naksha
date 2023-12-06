@@ -25,6 +25,7 @@ import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.util.ValueList;
 import io.vertx.ext.web.RoutingContext;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public final class ApiParams {
   public static String STORAGE_ID = "storageId";
@@ -86,10 +87,14 @@ public final class ApiParams {
   }
 
   public static long extractQueryParamAsLong(
-      final @NotNull QueryParameterList queryParams,
+      final @Nullable QueryParameterList queryParams,
       final @NotNull String key,
       final boolean isMandatory,
       final long defVal) {
+    if (queryParams == null) {
+      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Query parameters missing");
+      else return defVal;
+    }
     final QueryParameter queryParam = queryParams.get(key);
     if (queryParam == null || queryParam.values().size() < 1) {
       if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");

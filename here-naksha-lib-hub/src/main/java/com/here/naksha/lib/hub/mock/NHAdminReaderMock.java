@@ -29,6 +29,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -36,9 +37,9 @@ import org.postgresql.util.PSQLState;
 
 public class NHAdminReaderMock implements IReadSession {
 
-  protected static @NotNull Map<String, Map<String, Object>> mockCollection;
+  protected static @NotNull Map<String, TreeMap<String, Object>> mockCollection;
 
-  public NHAdminReaderMock(final @NotNull Map<String, Map<String, Object>> mockCollection) {
+  public NHAdminReaderMock(final @NotNull Map<String, TreeMap<String, Object>> mockCollection) {
     this.mockCollection = mockCollection;
   }
 

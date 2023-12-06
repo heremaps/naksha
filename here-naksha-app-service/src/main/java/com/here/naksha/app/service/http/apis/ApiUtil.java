@@ -24,6 +24,7 @@ import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMM
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
@@ -34,6 +35,7 @@ import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.util.ValueList;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.vividsolutions.jts.geom.Geometry;
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -42,6 +44,19 @@ import org.jetbrains.annotations.Nullable;
 public class ApiUtil {
 
   private static final int NONE = 0, OR = 1, AND = 2;
+
+  public static @NotNull SOp buildOperationForTile(final @NotNull String tileType, final @NotNull String tileId) {
+    try {
+      if (!tileType.equals("quadkey")) {
+        throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Tile type " + tileType + " not supported");
+      }
+      final Geometry geo =
+          WebMercatorTile.forQuadkey(tileId).getAsPolygon().getGeometry();
+      return SOp.intersects(geo);
+    } catch (IllegalArgumentException ex) {
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, ex.getMessage());
+    }
+  }
 
   public static @NotNull SOp buildOperationForBBox(
       final double west, final double south, final double east, final double north) {
@@ -76,9 +91,8 @@ public class ApiUtil {
    * @param queryParams API query parameter from where "tags" needs to be extracted
    * @return POp property operation that can be used as part of {@link ReadRequest}
    */
-  public static @Nullable POp buildOperationForTagsQueryParam(final @NotNull QueryParameterList queryParams) {
-    /*
-     */
+  public static @Nullable POp buildOperationForTagsQueryParam(final @Nullable QueryParameterList queryParams) {
+    if (queryParams == null) return null;
     QueryParameter tagParams = queryParams.get(TAGS);
     if (tagParams == null) return null;
 
