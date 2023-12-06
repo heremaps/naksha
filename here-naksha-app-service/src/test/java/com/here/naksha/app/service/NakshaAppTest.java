@@ -872,37 +872,37 @@ class NakshaAppTest {
   void tc0810_testGetByTileWithInvalidTileId() throws Exception {
     readFeaturesByTileTestHelper.tc0810_testGetByTileWithInvalidTileId();
   }
-  /*
+
   @Test
   @Order(16)
   void tc0811_testGetByTileWithInvalidTagDelimiter() throws Exception {
-  readFeaturesByTileTestHelper.tc0811_testGetByTileWithInvalidTagDelimiter();
+    readFeaturesByTileTestHelper.tc0811_testGetByTileWithInvalidTagDelimiter();
   }
 
   @Test
   @Order(16)
   void tc0812_testGetByTileWithNonNormalizedTag() throws Exception {
-  readFeaturesByTileTestHelper.tc0812_testGetByTileWithNonNormalizedTag();
+    readFeaturesByTileTestHelper.tc0812_testGetByTileWithNonNormalizedTag();
   }
 
   @Test
   @Order(16)
   void tc0813_testGetByTileWithMixedTagConditions() throws Exception {
-  readFeaturesByTileTestHelper.tc0813_testGetByTileWithMixedTagConditions();
+    readFeaturesByTileTestHelper.tc0813_testGetByTileWithMixedTagConditions();
   }
 
   @Test
   @Order(16)
   void tc0814_testGetByTileWithTagMismatch() throws Exception {
-  readFeaturesByTileTestHelper.tc0814_testGetByTileWithTagMismatch();
+    readFeaturesByTileTestHelper.tc0814_testGetByTileWithTagMismatch();
   }
 
   @Test
   @Order(16)
-  void tc0815_testGetByTileWithBBoxMismatch() throws Exception {
-  readFeaturesByTileTestHelper.tc0815_testGetByTileWithBBoxMismatch();
+  void tc0815_testGetByTileWithTileMismatch() throws Exception {
+    readFeaturesByTileTestHelper.tc0815_testGetByTileWithTileMismatch();
   }
-  */
+
   @AfterAll
   static void close() throws InterruptedException {
     if (app != null) {

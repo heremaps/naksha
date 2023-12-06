@@ -80,14 +80,14 @@ public class ReadFeaturesByBBoxTestHelper {
     final String handlerJson = loadFileOrFail("ReadFeatures/ByBBox/TC0700_SingleTag/create_event_handler.json");
     streamId = UUID.randomUUID().toString();
     response = nakshaClient.post("hub/handlers", handlerJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
+    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 
     // Given: Space (uses above EventHandler) configured in Admin storage
     final String spaceJson = loadFileOrFail("ReadFeatures/ByBBox/TC0700_SingleTag/create_space.json");
     final Space space = TestUtil.parseJson(spaceJson, Space.class);
     streamId = UUID.randomUUID().toString();
     response = nakshaClient.post("hub/spaces", spaceJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
+    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Space");
 
     // Given: New Features persisted in above Space
     String bodyJson = loadFileOrFail("ReadFeatures/ByBBox/TC0700_SingleTag/create_features.json");
@@ -113,7 +113,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0701_testGetByBBoxWithTagOrCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition and Tag OR condition
     String streamId;
     HttpResponse<String> response;
@@ -137,7 +137,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0702_testGetByBBoxWithTagAndCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition and Tag AND condition
     String streamId;
     HttpResponse<String> response;
@@ -161,7 +161,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0703_testGetByBBoxWithTagOrOrConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition and Tag OR condition using comma separated value
     String streamId;
     HttpResponse<String> response;
@@ -185,7 +185,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0704_testGetByBBoxWithTagOrAndConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition and combination of Tag OR and AND conditions
     String streamId;
     HttpResponse<String> response;
@@ -209,7 +209,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0705_testGetByBBoxWithTagAndOrAndConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition and combination of Tag AND, OR, AND conditions
     String streamId;
     HttpResponse<String> response;
@@ -233,7 +233,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0706_testGetByBBoxWithLimit() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition and limit
     String streamId;
     HttpResponse<String> response;
@@ -259,7 +259,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0707_testGetByBBox() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition
     String streamId;
     HttpResponse<String> response;
@@ -281,7 +281,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0708_testGetByBBox2AndTagAndCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition and Tag AND condition
     String streamId;
     HttpResponse<String> response;
@@ -305,7 +305,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0709_testGetByBBoxWithoutBBox() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate API error when BBox coordinates are not provided
     String streamId;
     HttpResponse<String> response;
@@ -326,7 +326,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0710_testGetByBBoxWithInvalidCoordinate() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate API error when BBox coordinates are invalid
     String streamId;
     HttpResponse<String> response;
@@ -348,7 +348,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0711_testGetByBBoxWithInvalidTagDelimiter() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate API error when BBox condition is valid but invalid Tag delimiter is used
     String streamId;
     HttpResponse<String> response;
@@ -372,7 +372,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0712_testGetByBBoxWithNonNormalizedTag() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition and Tag combination having NonNormalized Tag value
     String streamId;
     HttpResponse<String> response;
@@ -396,7 +396,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0713_testGetByBBoxWithMixedTagConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox condition and Tag combination having mixed AND/OR conditions
     String streamId;
     HttpResponse<String> response;
@@ -420,7 +420,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0714_testGetByBBoxWithTagMismatch() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate NO features returned when features match given BBox, but NOT the given tags
     String streamId;
     HttpResponse<String> response;
@@ -444,7 +444,7 @@ public class ReadFeaturesByBBoxTestHelper {
   public void tc0715_testGetByBBoxWithBBoxMismatch() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate NO features returned when features match given Tags, but NOT the given BBox coordinates
     String streamId;
     HttpResponse<String> response;

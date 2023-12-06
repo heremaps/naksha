@@ -63,7 +63,7 @@ public class ReadFeaturesByTileTestHelper {
   */
 
   public void tc0800_testGetByTileWithSingleTag() throws Exception {
-    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features getting returned for given Tile and given single tag value
     String streamId;
     HttpResponse<String> response;
@@ -78,14 +78,14 @@ public class ReadFeaturesByTileTestHelper {
     final String handlerJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_event_handler.json");
     streamId = UUID.randomUUID().toString();
     response = nakshaClient.post("hub/handlers", handlerJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
+    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 
     // Given: Space (uses above EventHandler) configured in Admin storage
     final String spaceJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_space.json");
     final Space space = TestUtil.parseJson(spaceJson, Space.class);
     streamId = UUID.randomUUID().toString();
     response = nakshaClient.post("hub/spaces", spaceJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
+    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Space");
 
     // Given: New Features persisted in above Space
     String bodyJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_features.json");
@@ -111,7 +111,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0801_testGetByTileWithTagOrCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile and Tag OR condition
     String streamId;
     HttpResponse<String> response;
@@ -135,7 +135,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0802_testGetByTileWithTagAndCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile and Tag AND condition
     String streamId;
     HttpResponse<String> response;
@@ -159,7 +159,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0803_testGetByTileWithTagOrOrConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and Tag OR condition using comma separated value
     String streamId;
     HttpResponse<String> response;
@@ -183,7 +183,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0804_testGetByTileWithTagOrAndConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and combination of Tag OR and AND conditions
     String streamId;
     HttpResponse<String> response;
@@ -207,7 +207,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0805_testGetByTileWithTagAndOrAndConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and combination of Tag AND, OR, AND conditions
     String streamId;
     HttpResponse<String> response;
@@ -231,7 +231,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0806_testGetByTileWithLimit() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and limit
     String streamId;
     HttpResponse<String> response;
@@ -257,7 +257,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0807_testGetByTile() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition
     String streamId;
     HttpResponse<String> response;
@@ -279,7 +279,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0808_testGetByTile2AndTagAndCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and Tag AND condition
     String streamId;
     HttpResponse<String> response;
@@ -303,7 +303,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0809_testGetByTileWithoutTile() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate API error when Tile coordinates are not provided
     String streamId;
     HttpResponse<String> response;
@@ -325,7 +325,7 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0810_testGetByTileWithInvalidTileId() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate API error when Tile Id is invalid
     String streamId;
     HttpResponse<String> response;
@@ -347,14 +347,14 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0811_testGetByTileWithInvalidTagDelimiter() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate API error when Tile condition is valid but invalid Tag delimiter is used
     String streamId;
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
     final String spaceId = "local-space-4-feature-by-tile";
-    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tileId = "1";
     final String tagsQueryParam = "tags=one@two";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0811_InvalidTagDelimiter/feature_response_part.json");
@@ -362,7 +362,7 @@ public class ReadFeaturesByTileTestHelper {
 
     // When: Get Features By Tile request is submitted to NakshaHub
     response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
@@ -371,14 +371,14 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0812_testGetByTileWithNonNormalizedTag() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and Tag combination having NonNormalized Tag value
     String streamId;
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
     final String spaceId = "local-space-4-feature-by-tile";
-    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tileId = "1";
     final String tagsQueryParam = "tags=non-matching-tag+" + urlEncoded("@ThRee");
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0812_NonNormalizedTag/feature_response_part.json");
@@ -386,7 +386,7 @@ public class ReadFeaturesByTileTestHelper {
 
     // When: Get Features By Tile request is submitted to NakshaHub
     response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -395,14 +395,14 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0813_testGetByTileWithMixedTagConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and Tag combination having mixed AND/OR conditions
     String streamId;
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
     final String spaceId = "local-space-4-feature-by-tile";
-    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tileId = "1";
     final String tagsQueryParam = "tags=six,three+four" + "&tags=non-existing-tag";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0813_MixedTagConditions/feature_response_part.json");
@@ -410,7 +410,7 @@ public class ReadFeaturesByTileTestHelper {
 
     // When: Get Features By Tile request is submitted to NakshaHub
     response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -419,14 +419,14 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0814_testGetByTileWithTagMismatch() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate NO features returned when features match given Tile, but NOT the given tags
     String streamId;
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
     final String spaceId = "local-space-4-feature-by-tile";
-    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tileId = "1";
     final String tagsQueryParam = "tags=non-existing-tag";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0814_NonMatchingTag/feature_response_part.json");
@@ -434,7 +434,7 @@ public class ReadFeaturesByTileTestHelper {
 
     // When: Get Features By Tile request is submitted to NakshaHub
     response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -443,15 +443,14 @@ public class ReadFeaturesByTileTestHelper {
   public void tc0815_testGetByTileWithTileMismatch() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
-    // Test API : GET /hub/spaces/{spaceId}/features
-    // Validate NO features returned when features match given Tags, but NOT the given Tile coordinates
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
+    // Validate NO features returned when features match given Tags, but NOT the given Tile id
     String streamId;
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
     final String spaceId = "local-space-4-feature-by-tile";
-    // final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
-    final String bboxQueryParam = "west=8.2&south=49.9&east=8.3&north=50";
+    final String tileId = "0";
     final String tagsQueryParam = "tags=one";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0815_NonMatchingTile/feature_response_part.json");
@@ -459,7 +458,7 @@ public class ReadFeaturesByTileTestHelper {
 
     // When: Get Features By Tile request is submitted to NakshaHub
     response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
