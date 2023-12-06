@@ -39,18 +39,18 @@ public class ResultTest {
     ForwardCursor<XyzFeature, XyzFeatureCodec> forwardCursor = result.getXyzFeatureCursor();
     assertTrue(forwardCursor.next());
 
-    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor = result.getXyzSeekableCursor(5, false);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor = result.getXyzSeekableCursor(5);
     assertTrue(seekableCursor.next());
 
-    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor2 = result.getXyzSeekableCursor(5, false);
-    assertTrue(seekableCursor.next());
+    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor2 = result.getXyzSeekableCursor(5);
+    assertTrue(seekableCursor2.next());
     assertSame(seekableCursor, seekableCursor2);
 
     ForwardCursor<XyzFeature, XyzFeatureCodec> forwardCursorAgain = result.getXyzFeatureCursor();
     assertEquals(5, forwardCursorAgain.position);
     assertSame(forwardCursor, forwardCursorAgain);
 
-    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursorWithNewRows = result.getXyzSeekableCursor(15, false);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursorWithNewRows = result.getXyzSeekableCursor(15);
     assertTrue(seekableCursorWithNewRows.next());
     assertNotSame(seekableCursor, seekableCursorWithNewRows);
     assertNotEquals(seekableCursor.getId(), seekableCursorWithNewRows.getId());

@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,22 +46,32 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
   protected List<FeatureCodec<FEATURE, ?>> inMemoryData;
 
   protected final ForwardCursor<?, ?> originalCursor;
-  protected final boolean reOrder;
 
   public HeapCacheCursor(
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       long limit,
-      boolean reOrder,
       @NotNull ForwardCursor<?, ?> originalCursor) {
     super(codecFactory);
     this.originalCursor = originalCursor;
     this.position = BEFORE_FIRST_POSITION;
-    // TODO FIXME restore-order elements if needed
-    this.reOrder = reOrder;
-
     this.inMemoryData = new ArrayList<>(initialSize(limit));
 
+    fetchMore(limit);
+  }
+
+  @Override
+  public void restoreInputOrder() {
+    // TODO
+    throw new NotImplementedException("Restore input order not yet implemented");
+  }
+
+  @Override
+  public boolean fetchMore(long limit) {
     final boolean isReadAllRequested = limit == -1;
+
+    if (!originalCursor.hasNext()) {
+      return false;
+    }
 
     long count = 0;
     while (originalCursor.hasNext() && (isReadAllRequested || count < limit)) {
@@ -69,6 +80,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
       inMemoryData.add(codec);
       count++;
     }
+    return true;
   }
 
   private int initialSize(long limit) {

@@ -18,6 +18,8 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
+import static com.here.naksha.lib.core.LibraryConstants.DEFAULT_HEAP_CACHE_CURSOR_LIMIT;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.Typed;
@@ -79,10 +81,10 @@ public abstract class Result implements Typed, AutoCloseable {
   @SuppressWarnings("unchecked")
   @JsonIgnore
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull MutableCursor<FEATURE, CODEC> mutableCursor(
-      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, long limit, boolean reOrder) throws NoCursor {
+      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, long limit) throws NoCursor {
     if (cursor != null) {
       if (!(cursor instanceof HeapCacheCursor)) {
-        cursor = new HeapCacheCursor<>(codecFactory, limit, reOrder, cursor);
+        cursor = new HeapCacheCursor<>(codecFactory, limit, cursor);
       }
       return (MutableCursor<FEATURE, CODEC>) cursor;
     }
@@ -91,7 +93,7 @@ public abstract class Result implements Typed, AutoCloseable {
 
   /**
    * {@link MutableCursor} with original cursor codec factory.
-   * @see #mutableCursor(FeatureCodecFactory, long, boolean)
+   * @see #mutableCursor(FeatureCodecFactory, long)
    *
    * @return
    * @param <FEATURE>
@@ -101,18 +103,18 @@ public abstract class Result implements Typed, AutoCloseable {
   @SuppressWarnings("unchecked")
   @JsonIgnore
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull MutableCursor<FEATURE, CODEC> mutableCursor(
-      long limit, boolean reOrder) throws NoCursor {
+      long limit) throws NoCursor {
     if (cursor != null) {
-      return (MutableCursor<FEATURE, CODEC>) mutableCursor(cursor.codecFactory, limit, reOrder);
+      return (MutableCursor<FEATURE, CODEC>) mutableCursor(cursor.codecFactory, limit);
     }
     throw new NoCursor(this);
   }
 
   /**
-   * {@link MutableCursor} with original cursor codec factory and default 1_000_000 rows cached.
-   * @see #mutableCursor(FeatureCodecFactory, long, boolean)
+   * {@link MutableCursor} with original cursor codec factory and {@link com.here.naksha.lib.core.LibraryConstants#DEFAULT_HEAP_CACHE_CURSOR_LIMIT} rows cached.
+   * If default is not suitable for you, please change {@link com.here.naksha.lib.core.LibraryConstants#DEFAULT_HEAP_CACHE_CURSOR_LIMIT},
+   * or use {@link #mutableCursor(long)} to declare different cache size.
    *
-   * @param reOrder
    * @return
    * @param <FEATURE>
    * @param <CODEC>
@@ -120,10 +122,10 @@ public abstract class Result implements Typed, AutoCloseable {
    */
   @SuppressWarnings("unchecked")
   @JsonIgnore
-  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull MutableCursor<FEATURE, CODEC> mutableCursor(
-      boolean reOrder) throws NoCursor {
+  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull MutableCursor<FEATURE, CODEC> mutableCursor()
+      throws NoCursor {
     if (cursor != null) {
-      return (MutableCursor<FEATURE, CODEC>) mutableCursor(cursor.codecFactory, 1_000_000, reOrder);
+      return (MutableCursor<FEATURE, CODEC>) mutableCursor(cursor.codecFactory, DEFAULT_HEAP_CACHE_CURSOR_LIMIT);
     }
     throw new NoCursor(this);
   }
@@ -141,9 +143,11 @@ public abstract class Result implements Typed, AutoCloseable {
   @SuppressWarnings("unchecked")
   @JsonIgnore
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull SeekableCursor<FEATURE, CODEC> seekableCursor(
-      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, long limit, boolean reOrder) throws NoCursor {
+      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, long limit) throws NoCursor {
     if (cursor != null) {
-      cursor = new HeapCacheCursor<>(codecFactory, limit, reOrder, cursor);
+      if (!(cursor instanceof HeapCacheCursor)) {
+        cursor = new HeapCacheCursor<>(codecFactory, limit, cursor);
+      }
       return (SeekableCursor<FEATURE, CODEC>) cursor;
     }
     throw new NoCursor(this);
@@ -161,9 +165,9 @@ public abstract class Result implements Typed, AutoCloseable {
   @SuppressWarnings("unchecked")
   @JsonIgnore
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull SeekableCursor<FEATURE, CODEC> seekableCursor(
-      long limit, boolean reOrder) throws NoCursor {
+      long limit) throws NoCursor {
     if (cursor != null) {
-      return (SeekableCursor<FEATURE, CODEC>) seekableCursor(cursor.codecFactory, limit, reOrder);
+      return (SeekableCursor<FEATURE, CODEC>) seekableCursor(cursor.codecFactory, limit);
     }
     throw new NoCursor(this);
   }
@@ -197,15 +201,13 @@ public abstract class Result implements Typed, AutoCloseable {
    * Returns {@link MutableCursor} for {@link XyzFeature}.
    *
    * @param limit
-   * @param reOrder
    * @return
    * @throws NoCursor
    */
   @JsonIgnore
-  public @NotNull MutableCursor<XyzFeature, XyzFeatureCodec> getXyzMutableCursor(long limit, boolean reOrder)
-      throws NoCursor {
+  public @NotNull MutableCursor<XyzFeature, XyzFeatureCodec> getXyzMutableCursor(long limit) throws NoCursor {
     if (cursor != null) {
-      return mutableCursor(XyzFeatureCodecFactory.get(), limit, reOrder);
+      return mutableCursor(XyzFeatureCodecFactory.get(), limit);
     }
     throw new NoCursor(this);
   }
@@ -214,15 +216,13 @@ public abstract class Result implements Typed, AutoCloseable {
    * Returns {@link SeekableCursor} for {@link XyzFeature}.
    *
    * @param limit
-   * @param reOrder
    * @return
    * @throws NoCursor
    */
   @JsonIgnore
-  public @NotNull SeekableCursor<XyzFeature, XyzFeatureCodec> getXyzSeekableCursor(long limit, boolean reOrder)
-      throws NoCursor {
+  public @NotNull SeekableCursor<XyzFeature, XyzFeatureCodec> getXyzSeekableCursor(long limit) throws NoCursor {
     if (cursor != null) {
-      return mutableCursor(XyzFeatureCodecFactory.get(), limit, reOrder);
+      return seekableCursor(XyzFeatureCodecFactory.get(), limit);
     }
     throw new NoCursor(this);
   }
