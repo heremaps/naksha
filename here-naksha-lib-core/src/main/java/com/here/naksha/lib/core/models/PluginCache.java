@@ -26,7 +26,6 @@ import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.lambdas.Fe3;
 import com.here.naksha.lib.core.storage.IStorage;
 import java.lang.reflect.Constructor;
-import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -184,6 +183,7 @@ public final class PluginCache {
     if (constructor.getParameterCount() > 1) {
       return null;
     }
+    // TODO(Kuba): we allow only constructors with 0 or 1 params
     final Class<?>[] parameterTypes = constructor.getParameterTypes();
     assert parameterTypes.length <= 1;
 
@@ -316,7 +316,7 @@ public final class PluginCache {
     final ConcurrentHashMap<Class<CONFIG>, Fe1<IStorage, CONFIG>> map =
         storageConstructorMap(className, configClass);
     Fe1<IStorage, CONFIG> c = map.get(configClass);
-    if (c != null) {
+    if (c != null) { // TODO(Kuba): why do we repeat this in synchronized block?
       return c;
     }
     synchronized (PluginCache.class) {
@@ -330,31 +330,26 @@ public final class PluginCache {
           throw new ClassCastException(
               "The class " + theClass.getName() + " does not implement the IStorage interface");
         }
-        //noinspection unchecked
-        final Constructor<? extends IStorage>[] constructors =
-            (Constructor<IStorage>[]) theClass.getConstructors();
-        int cParameterCount = -1;
-        log.info("Constructors found: {}", Arrays.toString(constructors));
-        for (final Constructor<? extends IStorage> constructor : constructors) {
-          if (constructor.getParameterCount() < cParameterCount) {
-            log.info("Too low parameter count, constructor: {}", constructor);
-            continue;
-          }
-          if (constructor.getParameterCount() > 1) {
-            log.info("Param count > 1, constructor: {}", constructor);
-            continue;
-          }
-          c = wrapStorageConstructor(constructor, configClass);
-          if (c != null) {
-            cParameterCount = constructor.getParameterCount();
+        Fe1<IStorage, CONFIG> noParamConstructorCall = null;
+        Fe1<IStorage, CONFIG> configParamConstructorCall = null;
+        for (final Constructor<? extends IStorage> constructor :
+            (Constructor<IStorage>[]) theClass.getConstructors()) {
+          if (constructor.getParameterCount() == 0) {
+            noParamConstructorCall = constructor::newInstance;
+          } else if (constructor.getParameterCount() == 1
+              && constructor.getParameterTypes()[0].isAssignableFrom(configClass)) {
+            configParamConstructorCall = constructor::newInstance;
           }
         }
-        if (c == null) {
+        if (configParamConstructorCall != null) {
+          map.put(configClass, configParamConstructorCall);
+          return configParamConstructorCall;
+        } else if (noParamConstructorCall != null) {
+          return noParamConstructorCall;
+        } else {
           throw new NoSuchMethodException(
               "The class " + theClass.getName() + " does not valid a valid constructor");
         }
-        map.put(configClass, c);
-        return c;
       } catch (Throwable t) {
         throw unchecked(t);
       }
