@@ -59,9 +59,9 @@ public class ReadFeaturesByBBoxTestHelper {
   }
 
   /*
-    For this test suite, we upfront create various Features using different combination of Tags and Geometry.
-    To know what exact features we create, check the create_features.json test file for test tc0700_xx().
-    And then in subsequent tests, we validate the various GetByBox APIs using different query parameters.
+  For this test suite, we upfront create various Features using different combination of Tags and Geometry.
+  To know what exact features we create, check the create_features.json test file for test tc0700_xx().
+  And then in subsequent tests, we validate the various GetByBox APIs using different query parameters.
   */
 
   public void tc0700_testGetByBBoxWithSingleTag() throws Exception {

@@ -619,6 +619,42 @@ paths:
           $ref: '#/components/responses/ErrorResponse504'
         '513':
           $ref: '#/components/responses/ErrorResponse513'
+  '/hub/spaces/{spaceId}/tile/{type}/{tileId}':
+    get:
+      tags:
+        - Read Features
+      summary: Get features in tile
+      description: |
+        List the features selected by tile type and tile id.
+        Tile type of "quadkey" is supported.
+      operationId: getFeaturesByTile
+      parameters:
+        - $ref: '#/components/parameters/SpaceId'
+        - $ref: '#/components/parameters/TileType'
+        - $ref: '#/components/parameters/TileId'
+        - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/FeatureCollectionResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
 components:
   securitySchemes:
     AccessToken:
@@ -741,6 +777,24 @@ components:
         type: array
         items:
           type: string
+    TileId:
+      name: tileId
+      in: path
+      description: >-
+        The tile identifier can be provided as quadkey (e.g. 120203302030322200).
+      required: true
+      schema:
+        type: string
+    TileType:
+      name: type
+      in: path
+      description: >-
+        The type of tile identifier, e.g. "quadkey" - Virtual Earth.
+      required: true
+      schema:
+        type: string
+        enum:
+          - quadkey
     West:
       name: west
       in: query

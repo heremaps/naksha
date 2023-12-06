@@ -43,6 +43,7 @@ public class ReadFeatureApi extends Api {
     rb.operation("getFeature").handler(this::getFeatureById);
     rb.operation("getFeatures").handler(this::getFeaturesById);
     rb.operation("getFeaturesByBBox").handler(this::getFeaturesByBBox);
+    rb.operation("getFeaturesByTile").handler(this::getFeaturesByTile);
   }
 
   @Override
@@ -58,6 +59,10 @@ public class ReadFeatureApi extends Api {
 
   private void getFeaturesByBBox(final @NotNull RoutingContext routingContext) {
     startReadFeatureApiTask(GET_BY_BBOX, routingContext);
+  }
+
+  private void getFeaturesByTile(final @NotNull RoutingContext routingContext) {
+    startReadFeatureApiTask(GET_BY_TILE, routingContext);
   }
 
   private void startReadFeatureApiTask(ReadFeatureApiReqType reqType, RoutingContext routingContext) {

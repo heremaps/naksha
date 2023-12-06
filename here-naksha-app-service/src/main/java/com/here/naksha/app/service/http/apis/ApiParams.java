@@ -25,15 +25,14 @@ import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.util.ValueList;
 import io.vertx.ext.web.RoutingContext;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public final class ApiParams {
+  public static String STORAGE_ID = "storageId";
   public static String SPACE_ID = "spaceId";
   public static String PREFIX_ID = "prefixId";
   public static String FEATURE_ID = "featureId";
   public static String ADD_TAGS = "addTags";
   public static String REMOVE_TAGS = "removeTags";
-  public static String TAG_LIST = "tagList";
   public static String TAGS = "tags";
   public static String FEATURE_IDS = "id";
   public static String WEST = "west";
@@ -41,12 +40,18 @@ public final class ApiParams {
   public static String EAST = "east";
   public static String SOUTH = "south";
   public static String LIMIT = "limit";
+  public static String TILE_TYPE = "type";
+  public static String TILE_ID = "tileId";
 
   public static long DEF_FEATURE_LIMIT = 30_000;
 
-  public static @Nullable String pathParam(
+  public static @NotNull String extractMandatoryPathParam(
       final @NotNull RoutingContext routingContext, final @NotNull String param) {
-    return routingContext.pathParam(param);
+    final String value = routingContext.pathParam(param);
+    if (value == null || value.isEmpty()) {
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing " + param + " parameter");
+    }
+    return value;
   }
 
   public static double extractQueryParamAsDouble(

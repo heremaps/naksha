@@ -49,7 +49,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   public enum ReadFeatureApiReqType {
     GET_BY_ID,
     GET_BY_IDS,
-    GET_BY_BBOX
+    GET_BY_BBOX,
+    GET_BY_TILE
   }
 
   public ReadFeatureApiTask(
@@ -83,6 +84,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         case GET_BY_BBOX -> executeFeaturesByBBox();
         default -> executeUnsupported();
       };
+    } catch (XyzErrorException ex) {
+      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
     } catch (Exception ex) {
       // unexpected exception
       return verticle.sendErrorResponse(
@@ -91,18 +94,15 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   }
 
   private @NotNull XyzResponse executeFeaturesById() {
-    // Parse parameters
-    final String spaceId = pathParam(routingContext, SPACE_ID);
+    // Parse and validate Path parameters
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+
+    // Parse and Validate Query parameters
     final QueryParameterList queryParams = (routingContext.request().query() != null)
         ? new QueryParameterList(routingContext.request().query())
         : null;
     final List<String> featureIds =
         (queryParams != null) ? queryParams.collectAllOf(FEATURE_IDS, String.class) : null;
-
-    // Validate parameters
-    if (spaceId == null || spaceId.isEmpty()) {
-      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
-    }
     if (featureIds == null || featureIds.isEmpty()) {
       return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing id parameter");
     }
@@ -115,17 +115,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   }
 
   private @NotNull XyzResponse executeFeatureById() {
-    // Parse parameters
-    final String spaceId = pathParam(routingContext, SPACE_ID);
-    final String featureId = pathParam(routingContext, FEATURE_ID);
+    // Parse and validate Path parameters
+    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String featureId = extractMandatoryPathParam(routingContext, FEATURE_ID);
 
-    // Validate parameters
-    if (spaceId == null || spaceId.isEmpty()) {
-      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
-    }
-    if (featureId == null || featureId.isEmpty()) {
-      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing id parameter");
-    }
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdRequest(spaceId, featureId);
 
     // Forward request to NH Space Storage writer instance
@@ -136,10 +129,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
   private @NotNull XyzResponse executeFeaturesByBBox() {
     // Parse and validate Path parameters
-    final String spaceId = pathParam(routingContext, SPACE_ID);
-    if (spaceId == null || spaceId.isEmpty()) {
-      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
-    }
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
 
     // Parse and validate Query parameters
     final QueryParameterList queryParams = (routingContext.request().query() != null)
@@ -149,36 +139,59 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       return verticle.sendErrorResponse(
           routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
     }
-    double west, north, east, south;
-    long limit;
-    try {
-      // extract parameters
-      west = ApiParams.extractQueryParamAsDouble(queryParams, WEST, true);
-      north = ApiParams.extractQueryParamAsDouble(queryParams, NORTH, true);
-      east = ApiParams.extractQueryParamAsDouble(queryParams, EAST, true);
-      south = ApiParams.extractQueryParamAsDouble(queryParams, SOUTH, true);
-      limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    final double west = ApiParams.extractQueryParamAsDouble(queryParams, WEST, true);
+    final double north = ApiParams.extractQueryParamAsDouble(queryParams, NORTH, true);
+    final double east = ApiParams.extractQueryParamAsDouble(queryParams, EAST, true);
+    final double south = ApiParams.extractQueryParamAsDouble(queryParams, SOUTH, true);
+    long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    // validate values
+    limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
+    ApiParams.validateParamRange(WEST, west, -180, 180);
+    ApiParams.validateParamRange(NORTH, north, -90, 90);
+    ApiParams.validateParamRange(EAST, east, -180, 180);
+    ApiParams.validateParamRange(SOUTH, south, -90, 90);
 
-      // validate values
-      limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
-      ApiParams.validateParamRange(WEST, west, -180, 180);
-      ApiParams.validateParamRange(NORTH, north, -90, 90);
-      ApiParams.validateParamRange(EAST, east, -180, 180);
-      ApiParams.validateParamRange(SOUTH, south, -90, 90);
-    } catch (XyzErrorException ex) {
-      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
+    // Prepare read request based on parameters supplied
+    final SOp bboxOp = ApiUtil.buildOperationForBBox(west, south, east, north);
+    ;
+    final POp tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
+    final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
+    if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
+
+    // Forward request to NH Space Storage reader instance
+    final Result result = executeReadRequestFromSpaceStorage(rdRequest);
+    // transform Result to Http FeatureCollection response, restricted by given feature limit
+    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, limit);
+  }
+
+  private @NotNull XyzResponse executeFeaturesByTile() {
+    // Parse and validate Path parameters
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String tileType = ApiParams.extractMandatoryPathParam(routingContext, TILE_TYPE);
+    final String tileId = ApiParams.extractMandatoryPathParam(routingContext, TILE_ID);
+
+    // Parse and validate Query parameters
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    if (queryParams == null || queryParams.size() <= 0) {
+      return verticle.sendErrorResponse(
+          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
     }
+    long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    // validate values
+    limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
 
     // Prepare read request based on parameters supplied
     final SOp bboxOp;
     final POp tagsOp;
     try {
-      bboxOp = ApiUtil.buildOperationForBBox(west, south, east, north);
+      // bboxOp = ApiUtil.buildOperationForBBox(west, south, east, north);
       tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
     } catch (XyzErrorException ex) {
       return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
     }
-    final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
+    final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId);
     if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
 
     // Forward request to NH Space Storage reader instance
