@@ -227,11 +227,21 @@ public class RequestHelper {
     return writeXyzCollections;
   }
 
+  /**
+   * Helper function that returns Geometry representing BoundingBox for the co-ordinates
+   * supplied as arguments.
+   *
+   * @param west west co-ordinate
+   * @param south south co-ordinate
+   * @param east east co-ordinate
+   * @param north north co-ordinate
+   * @return Geometry representing BBox envelope
+   */
   public static @NotNull Geometry createBBoxEnvelope(
-      final double x1, final double y1, final double x2, final double y2) {
+      final double west, final double south, final double east, final double north) {
     MultiPointCoordinates multiPoint = new MultiPointCoordinates();
-    multiPoint.add(new PointCoordinates(x1, y1));
-    multiPoint.add(new PointCoordinates(x2, y2));
+    multiPoint.add(new PointCoordinates(west, south));
+    multiPoint.add(new PointCoordinates(east, north));
     return JTSHelper.toMultiPoint(multiPoint).getEnvelope();
   }
 }
