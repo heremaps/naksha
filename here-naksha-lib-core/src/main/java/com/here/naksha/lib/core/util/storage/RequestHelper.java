@@ -139,14 +139,13 @@ public class RequestHelper {
    *
    * @param collectionName name of the storage collection
    * @param features       feature object array to be deleted
-   * @param <FEATURE>      any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static @NotNull <FEATURE extends XyzFeature> WriteXyzFeatures deleteFeaturesRequest(
-      final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
+  public static @NotNull WriteXyzFeatures deleteFeaturesRequest(
+      final @NotNull String collectionName, final @NotNull List<String> features) {
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
-    for (FEATURE feature : features) {
-      request.delete(feature);
+    for (String feature : features) {
+      request.delete(feature, null);
     }
     return request;
   }

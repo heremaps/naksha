@@ -18,12 +18,7 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.ADD_TAGS;
-import static com.here.naksha.app.service.http.apis.ApiParams.FEATURE_ID;
-import static com.here.naksha.app.service.http.apis.ApiParams.PREFIX_ID;
-import static com.here.naksha.app.service.http.apis.ApiParams.REMOVE_TAGS;
-import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
-import static com.here.naksha.app.service.http.apis.ApiParams.pathParam;
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -32,7 +27,6 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.Result;
@@ -223,10 +217,14 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeDeleteFeatures() throws Exception {
     // Deserialize input request
-    final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
-    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
-    if (features.isEmpty()) {
-      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't update empty features");
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    final List<String> features =
+        (queryParams != null) ? queryParams.collectAllOf(FEATURE_IDS, String.class) : null;
+    if (features == null || features.isEmpty()) {
+      return verticle.sendErrorResponse(
+          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing feature id parameter");
     }
 
     // Parse API parameters
@@ -242,7 +240,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
     // transform WriteResult to Http FeatureCollection response
-    return transformWriteResultToXyzCollectionResponse(wrResult, Storage.class);
+    return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class);
   }
 
   private @NotNull XyzResponse executeDeleteFeature() throws Exception {
