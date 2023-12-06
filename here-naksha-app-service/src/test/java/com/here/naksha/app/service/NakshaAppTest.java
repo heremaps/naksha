@@ -711,8 +711,14 @@ class NakshaAppTest {
 
   @Test
   @Order(12)
-  void tc0900_testUpdateFeatures() throws Exception {
+  void tc0900_testDeleteFeatures() throws Exception {
     deleteFeatureTestHelper.tc0900_testDeleteFeatures();
+  }
+
+  @Test
+  @Order(13)
+  void tc0901_testDeleteNonExistingFeatures() throws Exception {
+    deleteFeatureTestHelper.tc0901_testDeleteNonExistingFeatures();
   }
 
   @AfterAll

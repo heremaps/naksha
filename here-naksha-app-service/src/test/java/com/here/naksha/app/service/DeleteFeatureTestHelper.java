@@ -69,4 +69,25 @@ public class DeleteFeatureTestHelper {
         JSONCompareMode.LENIENT);
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
   }
+
+  void tc0901_testDeleteNonExistingFeatures() throws Exception {
+    // Test API : DELETE /hub/spaces/{spaceId}/features
+    final String streamId = UUID.randomUUID().toString();
+
+    final Space space = parseJsonFileOrFail("TC0900_deleteFeatures/create_space.json", Space.class);
+
+    // When: request is submitted to NakshaHub Space Storage instance
+    final HttpResponse<String> response = nakshaClient.delete(
+        "hub/spaces/" + space.getId() + "/features?id=non-existing-phantom-feature&id=unreal-feature",
+        streamId);
+
+    // Then: Perform assertions
+    assertEquals(404, response.statusCode(), "ResCode mismatch");
+    //    JSONAssert.assertEquals(
+    //            "Delete Feature response body doesn't match",
+    //            expectedBodyPart,
+    //            response.body(),
+    //            JSONCompareMode.LENIENT);
+    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+  }
 }

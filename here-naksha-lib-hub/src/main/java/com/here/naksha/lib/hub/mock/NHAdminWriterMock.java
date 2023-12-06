@@ -232,7 +232,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
     mockCollection.get(collectionId).compute(id, (fId, oldF) -> {
       // nothing to delete if it is already absent
       if (oldF == null) {
-        result.set(featureCodec(id, EExecutedOp.DELETED));
+        exception.set(new SQLException("Feature does not exist: " + id, PSQLState.NO_DATA.getState()));
         return oldF;
       }
       // delete if UUID matches
