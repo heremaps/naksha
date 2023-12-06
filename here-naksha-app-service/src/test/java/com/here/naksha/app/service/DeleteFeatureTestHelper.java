@@ -54,7 +54,7 @@ public class DeleteFeatureTestHelper {
     final Space space = parseJsonFileOrFail("TC0900_deleteFeatures/create_space.json", Space.class);
     final String createFeaturesJson = loadFileOrFail("TC0900_deleteFeatures/create_features.json");
     nakshaClient.post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
-    final String expectedBodyPart = loadFileOrFail("TC0900_deleteFeatures/create_features.json");
+    final String expectedBodyPart = createFeaturesJson;
 
     // When: request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response = nakshaClient.delete(

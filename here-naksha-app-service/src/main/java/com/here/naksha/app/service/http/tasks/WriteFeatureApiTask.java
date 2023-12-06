@@ -106,13 +106,10 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
     // Parse API parameters
     final String spaceId = pathParam(routingContext, SPACE_ID);
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
-    final String prefixId = (queryParams != null) ? queryParams.getValueOf(PREFIX_ID, String.class) : null;
-    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOf(ADD_TAGS, String.class) : null;
-    final List<String> removeTags =
-        (queryParams != null) ? queryParams.collectAllOf(REMOVE_TAGS, String.class) : null;
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    final String prefixId = extractSpecificParam(queryParams, PREFIX_ID);
+    final List<String> addTags = extractSpecificParamList(queryParams, ADD_TAGS);
+    final List<String> removeTags = extractSpecificParamList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
     if (spaceId == null || spaceId.isEmpty()) {
@@ -145,12 +142,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
     // Parse API parameters
     final String spaceId = pathParam(routingContext, SPACE_ID);
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
-    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOf(ADD_TAGS, String.class) : null;
-    final List<String> removeTags =
-        (queryParams != null) ? queryParams.collectAllOf(REMOVE_TAGS, String.class) : null;
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    final List<String> addTags = extractSpecificParamList(queryParams, ADD_TAGS);
+    final List<String> removeTags = extractSpecificParamList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
     if (spaceId == null || spaceId.isEmpty()) {
@@ -182,12 +176,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final String spaceId = pathParam(routingContext, SPACE_ID);
     final String featureId = pathParam(routingContext, FEATURE_ID);
 
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
-    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOf(ADD_TAGS, String.class) : null;
-    final List<String> removeTags =
-        (queryParams != null) ? queryParams.collectAllOf(REMOVE_TAGS, String.class) : null;
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    final List<String> addTags = extractSpecificParamList(queryParams, ADD_TAGS);
+    final List<String> removeTags = extractSpecificParamList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
     if (spaceId == null || spaceId.isEmpty()) {
@@ -215,13 +206,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
   }
 
-  private @NotNull XyzResponse executeDeleteFeatures() throws Exception {
+  private @NotNull XyzResponse executeDeleteFeatures() {
     // Deserialize input request
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
-    final List<String> features =
-        (queryParams != null) ? queryParams.collectAllOf(FEATURE_IDS, String.class) : null;
+    final List<String> features = extractSpecificParamList(routingContext, FEATURE_IDS);
     if (features == null || features.isEmpty()) {
       return verticle.sendErrorResponse(
           routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing feature id parameter");

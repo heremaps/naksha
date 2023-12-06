@@ -18,10 +18,7 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.FEATURE_ID;
-import static com.here.naksha.app.service.http.apis.ApiParams.FEATURE_IDS;
-import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
-import static com.here.naksha.app.service.http.apis.ApiParams.pathParam;
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.lib.core.INaksha;
@@ -29,7 +26,6 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
-import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
@@ -89,11 +85,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   private @NotNull XyzResponse executeFeaturesById() {
     // Parse parameters
     final String spaceId = pathParam(routingContext, SPACE_ID);
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
-    final List<String> featureIds =
-        (queryParams != null) ? queryParams.collectAllOf(FEATURE_IDS, String.class) : null;
+    final List<String> featureIds = extractSpecificParamList(routingContext, FEATURE_IDS);
 
     // Validate parameters
     if (spaceId == null || spaceId.isEmpty()) {

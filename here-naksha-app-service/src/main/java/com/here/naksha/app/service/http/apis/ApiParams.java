@@ -18,7 +18,9 @@
  */
 package com.here.naksha.app.service.http.apis;
 
+import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import io.vertx.ext.web.RoutingContext;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,5 +35,29 @@ public final class ApiParams {
   public static @Nullable String pathParam(
       final @NotNull RoutingContext routingContext, final @NotNull String param) {
     return routingContext.pathParam(param);
+  }
+
+  public static QueryParameterList queryParamsFromRequest(final @NotNull RoutingContext routingContext) {
+    return (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+  }
+
+  public static @Nullable List<String> extractSpecificParamList(
+      final @NotNull RoutingContext routingContext, final @NotNull String apiParamType) {
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    return extractSpecificParamList(queryParams, apiParamType);
+  }
+
+  public static @Nullable List<String> extractSpecificParamList(
+      final @Nullable QueryParameterList queryParams, final @NotNull String apiParamType) {
+    return (queryParams != null) ? queryParams.collectAllOf(apiParamType, String.class) : null;
+  }
+
+  public static @Nullable String extractSpecificParam(
+      final @Nullable QueryParameterList queryParams, final @NotNull String apiParamType) {
+    return (queryParams != null) ? queryParams.getValueOf(apiParamType, String.class) : null;
   }
 }
