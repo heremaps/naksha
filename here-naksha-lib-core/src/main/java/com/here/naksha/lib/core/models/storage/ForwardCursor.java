@@ -437,22 +437,6 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
     return currentRow.codec.getError();
   }
 
-  public @NotNull MutableCursor<FEATURE, CODEC> toMutableCursor(long limit, boolean reOrder) {
-    return new HeapCacheCursor<>(codecFactory, limit, reOrder, this);
-  }
-
-  /**
-   * Returns {@link SeekableCursor} limited to defined number of rows.
-   * Set limit to -1 to read and cache all available in current cursor data.
-   *
-   * @param limit
-   * @param reOrder
-   * @return
-   */
-  public @NotNull SeekableCursor<FEATURE, CODEC> asSeekableCursor(long limit, boolean reOrder) {
-    return new HeapCacheCursor<>(codecFactory, limit, reOrder, this);
-  }
-
   /**
    * Close the cursor and drop all resources allocated for it.
    */

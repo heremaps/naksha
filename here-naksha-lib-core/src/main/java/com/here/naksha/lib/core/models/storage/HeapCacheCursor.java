@@ -22,7 +22,6 @@ import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-import com.vividsolutions.jts.geom.Geometry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -45,14 +44,16 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   protected List<FeatureCodec<FEATURE, ?>> inMemoryData;
 
+  protected final ForwardCursor<?, ?> originalCursor;
   protected final boolean reOrder;
 
   public HeapCacheCursor(
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       long limit,
       boolean reOrder,
-      @NotNull ForwardCursor<FEATURE, CODEC> originalCursor) {
+      @NotNull ForwardCursor<?, ?> originalCursor) {
     super(codecFactory);
+    this.originalCursor = originalCursor;
     this.position = BEFORE_FIRST_POSITION;
     // TODO FIXME restore-order elements if needed
     this.reOrder = reOrder;
@@ -64,7 +65,8 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     long count = 0;
     while (originalCursor.hasNext() && (isReadAllRequested || count < limit)) {
       originalCursor.next();
-      inMemoryData.add(originalCursor.currentRow.codec);
+      CODEC codec = codecFactory.newInstance().withParts(originalCursor.currentRow.codec);
+      inMemoryData.add(codec);
       count++;
     }
   }
@@ -78,20 +80,9 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
   }
 
   @Override
-  public @Nullable FEATURE getFeature() throws NoSuchElementException {
-    if (this.position > positionOfLastElement()) {
-      throw new NoSuchElementException("Position is over last element");
-    }
-    if (positionOfLastElement() == BEFORE_FIRST_POSITION) {
-      throw new NoSuchElementException("Empty rs");
-    }
-    FeatureCodec<FEATURE, ?> currentPositionCodec = inMemoryData.get(toIntExact(this.position));
-    return currentPositionCodec.encodeFeature(false).getFeature();
-  }
-
-  @Override
   public boolean next() {
     if (hasNext()) {
+      loadNextRow(currentRow);
       this.position++;
       return true;
     }
@@ -105,7 +96,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   @Override
   protected boolean loadNextRow(ForwardCursor<FEATURE, CODEC>.@NotNull Row row) {
-    throw new RuntimeException("Should not be implemented, in cache cursor use only hasNext() and next()");
+    return loadPosition(row, position + 1);
   }
 
   @Override
@@ -113,41 +104,34 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   @Override
   public boolean previous() {
-    if (this.position > BEFORE_FIRST_POSITION) {
-      this.position--;
-      return this.position > BEFORE_FIRST_POSITION;
-    }
-    return false;
+    return absolute(position - 1);
   }
 
   @Override
   public void beforeFirst() {
-    this.position = -1;
+    this.currentRow.valid = false;
+    this.position = BEFORE_FIRST_POSITION;
   }
 
   @Override
   public boolean first() {
-    if (positionOfLastElement() > -1) {
-      this.position = 0;
-      return true;
-    }
-    return false;
+    return absolute(0);
   }
 
   @Override
   public void afterLast() {
     this.position = positionOfLastElement() + 1;
+    this.currentRow.valid = false;
   }
 
   @Override
   public boolean last() {
-    this.position = positionOfLastElement();
-    return this.position > BEFORE_FIRST_POSITION;
+    return absolute(positionOfLastElement());
   }
 
   @Override
-  public boolean relative(long amount) {
-    return absolute(this.position + amount);
+  public boolean relative(long shift) {
+    return absolute(this.position + shift);
   }
 
   @Override
@@ -161,57 +145,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
       return false;
     }
     this.position = position;
-    return true;
-  }
-
-  @Override
-  public @NotNull EExecutedOp getOp() throws NoSuchElementException {
-    return EExecutedOp.get(currentPositionCodec().getOp());
-  }
-
-  @Override
-  public @NotNull String getFeatureType() throws NoSuchElementException {
-    return requireNonNull(currentPositionCodec().getFeatureType());
-  }
-
-  @Override
-  public @Nullable String getPropertiesType() throws NoSuchElementException {
-    return currentPositionCodec().getPropertiesType();
-  }
-
-  @Override
-  public @NotNull String getId() throws NoSuchElementException {
-    return requireNonNull(currentPositionCodec().getId());
-  }
-
-  @Override
-  public @NotNull String getUuid() throws NoSuchElementException {
-    return requireNonNull(currentPositionCodec().getUuid());
-  }
-
-  @Override
-  public @NotNull String getJson() throws NoSuchElementException {
-    return requireNonNull(currentPositionCodec().getJson());
-  }
-
-  @Override
-  public byte @Nullable [] getWkb() throws NoSuchElementException {
-    return currentPositionCodec().getWkb();
-  }
-
-  @Override
-  public @Nullable Geometry getGeometry() throws NoSuchElementException {
-    return currentPositionCodec().getGeometry();
-  }
-
-  @Override
-  public boolean hasError() {
-    return currentPositionCodec().hasError();
-  }
-
-  @Override
-  public @Nullable CodecError getError() {
-    return currentPositionCodec().getError();
+    return loadPosition(currentRow, position);
   }
 
   @Override
@@ -225,6 +159,9 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     int idx = toIdx(position);
     FeatureCodec<FEATURE, ?> currentPositionCodec = inMemoryData.get(idx);
     inMemoryData.set(toIdx(position), createCodec(feature));
+    if (position == this.position) {
+      loadPosition(currentRow, position);
+    }
     return requireNonNull(currentPositionCodec.encodeFeature(false).getFeature());
   }
 
@@ -243,6 +180,9 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     int idx = toIdx(position);
     FeatureCodec<FEATURE, ?> featureToRemove = inMemoryData.get(idx);
     inMemoryData.remove(idx);
+    if (position <= this.position) {
+      previous();
+    }
     return featureToRemove.encodeFeature(false).getFeature();
   }
 
@@ -260,6 +200,16 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
       inMemoryData.set(i, (FeatureCodec<FEATURE, ?>) newCodec);
     }
     return (N_CUR) this;
+  }
+
+  public ForwardCursor<?, ?> getOriginalCursor() {
+    return originalCursor;
+  }
+
+  private boolean loadPosition(ForwardCursor<FEATURE, CODEC>.@NotNull Row row, long positionToLoad) {
+    row.codec = inMemoryData.get(toIdx(positionToLoad));
+    row.valid = true;
+    return true;
   }
 
   private int toIdx(long position) {
@@ -280,9 +230,5 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     CODEC codec = codecFactory.newInstance();
     codec.setFeature(feature);
     return codec;
-  }
-
-  private FeatureCodec currentPositionCodec() {
-    return inMemoryData.get(toIntExact(this.position));
   }
 }

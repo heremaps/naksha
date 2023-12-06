@@ -16,18 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.hub.mock;
+package com.here.naksha.lib.core.models.storage;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
 public class MockResult<T extends XyzFeature> extends SuccessResult {
 
-  public MockResult(@NotNull Class<T> featureType, @NotNull List<XyzFeatureCodec> results) {
-    this.cursor = new MockResultCursor<T>(featureType, results);
+  public MockResult(@NotNull ForwardCursor<XyzFeature, XyzFeatureCodec> forwardCursor) {
+    this.cursor = forwardCursor;
   }
 }
