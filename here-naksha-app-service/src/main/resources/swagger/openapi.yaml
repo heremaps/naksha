@@ -624,11 +624,6 @@ paths:
       description: >
         This method allows to delete one feature in the storage associated (directly or via event handler) with the space.
       operationId: deleteFeature
-      parameters:
-        - $ref: '#/components/parameters/AddTags'
-        - $ref: '#/components/parameters/RemoveTags'
-      requestBody:
-        $ref: '#/components/requestBodies/FeatureRequest'
       responses:
         '200':
           $ref: '#/components/responses/FeatureResponse'

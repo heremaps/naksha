@@ -34,7 +34,6 @@ import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
-import com.here.naksha.lib.core.view.ViewDeserialize.User;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -166,11 +165,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeUpdateFeature() throws Exception {
     // Deserialize input request
-    XyzFeature feature;
-    try (final Json json = Json.get()) {
-      final String bodyJson = routingContext.body().asString();
-      feature = json.reader(User.class).forType(XyzFeature.class).readValue(bodyJson);
-    }
+    final XyzFeature feature = singleFeatureFromRequestBody();
 
     // Parse API parameters
     final String spaceId = pathParam(routingContext, SPACE_ID);
@@ -231,13 +226,6 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
   }
 
   private @NotNull XyzResponse executeDeleteFeature() throws Exception {
-    // Deserialize input request
-    XyzFeature feature;
-    try (final Json json = Json.get()) {
-      final String bodyJson = routingContext.body().asString();
-      feature = json.reader(User.class).forType(XyzFeature.class).readValue(bodyJson);
-    }
-
     // Parse API parameters
     final String spaceId = pathParam(routingContext, SPACE_ID);
     final String featureId = pathParam(routingContext, FEATURE_ID);
@@ -249,14 +237,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     if (featureId == null || featureId.isEmpty()) {
       return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing featureId parameter");
     }
-    if (!featureId.equals(feature.getId())) {
-      return verticle.sendErrorResponse(
-          routingContext,
-          XyzError.ILLEGAL_ARGUMENT,
-          "URI path parameter featureId is not the same as id in feature request body.");
-    }
 
-    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureRequest(spaceId, feature);
+    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureRequest(spaceId, featureId);
 
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
@@ -269,6 +251,15 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       final String bodyJson = routingContext.body().asString();
       return json.reader(ViewDeserialize.User.class)
           .forType(FeatureCollectionRequest.class)
+          .readValue(bodyJson);
+    }
+  }
+
+  private @NotNull XyzFeature singleFeatureFromRequestBody() throws JsonProcessingException {
+    try (final Json json = Json.get()) {
+      final String bodyJson = routingContext.body().asString();
+      return json.reader(ViewDeserialize.User.class)
+          .forType(XyzFeature.class)
           .readValue(bodyJson);
     }
   }

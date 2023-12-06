@@ -721,6 +721,18 @@ class NakshaAppTest {
     deleteFeatureTestHelper.tc0901_testDeleteNonExistingFeatures();
   }
 
+  @Test
+  @Order(13)
+  void tc0902_testDeleteFeatureById() throws Exception {
+    deleteFeatureTestHelper.tc0902_testDeleteFeatureById();
+  }
+
+  @Test
+  @Order(13)
+  void tc0903_testDeleteFeatureByWrongId() throws Exception {
+    deleteFeatureTestHelper.tc0903_testDeleteFeatureByWrongId();
+  }
+
   @AfterAll
   static void close() throws InterruptedException {
     if (app != null) {
