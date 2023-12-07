@@ -45,7 +45,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   protected List<FeatureCodec<FEATURE, ?>> inMemoryData;
 
-  protected final ForwardCursor<?, ?> originalCursor;
+  protected ForwardCursor<?, ?> originalCursor;
 
   public HeapCacheCursor(
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
@@ -112,7 +112,12 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
   }
 
   @Override
-  public void close() {}
+  public void close() {
+    if (originalCursor != null) {
+      originalCursor.close();
+      originalCursor = null;
+    }
+  }
 
   @Override
   public boolean previous() {
@@ -214,7 +219,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     return (N_CUR) this;
   }
 
-  public ForwardCursor<?, ?> getOriginalCursor() {
+  public @Nullable ForwardCursor<?, ?> getOriginalCursor() {
     return originalCursor;
   }
 

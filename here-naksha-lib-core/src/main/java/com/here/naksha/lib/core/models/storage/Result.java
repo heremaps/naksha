@@ -190,7 +190,10 @@ public abstract class Result implements Typed, AutoCloseable {
   public @NotNull ForwardCursor<XyzFeature, XyzFeatureCodec> getXyzFeatureCursor() throws NoCursor {
     if (cursor != null) {
       if (cursor instanceof HeapCacheCursor) {
-        cursor = ((HeapCacheCursor<?, ?>) cursor).getOriginalCursor();
+        ForwardCursor<?, ?> originalForwardCursor = ((HeapCacheCursor<?, ?>) cursor).getOriginalCursor();
+        if (originalForwardCursor != null) {
+          cursor = originalForwardCursor;
+        }
       }
       return cursor.withCodecFactory(XyzFeatureCodecFactory.get(), false);
     }
