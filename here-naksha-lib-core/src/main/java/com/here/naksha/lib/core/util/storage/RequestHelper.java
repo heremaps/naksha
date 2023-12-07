@@ -138,14 +138,14 @@ public class RequestHelper {
    * Helper method to create WriteFeatures request for deleting multiple features.
    *
    * @param collectionName name of the storage collection
-   * @param features       feature object array to be deleted
+   * @param ids       feature object array to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static @NotNull WriteXyzFeatures deleteFeaturesRequest(
-      final @NotNull String collectionName, final @NotNull List<String> features) {
+  public static @NotNull WriteXyzFeatures deleteFeaturesByIdsRequest(
+      final @NotNull String collectionName, final @NotNull List<String> ids) {
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
-    for (String feature : features) {
-      request.delete(feature, null);
+    for (String id : ids) {
+      request.delete(id, null);
     }
     return request;
   }
@@ -154,13 +154,13 @@ public class RequestHelper {
    * Helper method to create WriteFeatures request for deleting given feature.
    *
    * @param collectionName name of the storage collection
-   * @param feature        feature object to be deleted
+   * @param id        feature object to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static @NotNull WriteXyzFeatures deleteFeatureRequest(
-      final @NotNull String collectionName, final @NotNull String feature) {
+  public static @NotNull WriteXyzFeatures deleteFeatureByIdRequest(
+      final @NotNull String collectionName, final @NotNull String id) {
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
-    return request.delete(feature, null);
+    return request.delete(id, null);
   }
 
   /**

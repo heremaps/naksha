@@ -45,9 +45,7 @@ public final class ApiParams {
 
   public static @Nullable List<String> extractSpecificParamList(
       final @NotNull RoutingContext routingContext, final @NotNull String apiParamType) {
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     return extractSpecificParamList(queryParams, apiParamType);
   }
 

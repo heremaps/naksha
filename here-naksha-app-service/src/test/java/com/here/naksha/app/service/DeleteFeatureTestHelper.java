@@ -27,6 +27,7 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
@@ -43,31 +44,30 @@ public class DeleteFeatureTestHelper {
   void tc0900_testDeleteFeatures() throws Exception {
     // Test API : DELETE /hub/spaces/{spaceId}/features
     final String streamId = UUID.randomUUID().toString();
+    HttpResponse<String> response;
 
     // Preparation: create storage, event handler, space, and initial features
     final String storage = loadFileOrFail("TC0900_deleteFeatures/create_storage.json");
-    nakshaClient.post("hub/storages", storage, streamId);
+    response = nakshaClient.post("hub/storages", storage, streamId);
+    assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating storage");
     final String handler = loadFileOrFail("TC0900_deleteFeatures/create_handler.json");
-    nakshaClient.post("hub/handlers", handler, streamId);
+    response = nakshaClient.post("hub/handlers", handler, streamId);
+    assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating event handler");
     final String spaceJson = loadFileOrFail("TC0900_deleteFeatures/create_space.json");
-    nakshaClient.post("hub/spaces", spaceJson, streamId);
+    response = nakshaClient.post("hub/spaces", spaceJson, streamId);
+    assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating space");
     final Space space = parseJsonFileOrFail("TC0900_deleteFeatures/create_space.json", Space.class);
     final String createFeaturesJson = loadFileOrFail("TC0900_deleteFeatures/create_features.json");
-    nakshaClient.post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
+    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
+    assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating initial features");
     final String expectedBodyPart = loadFileOrFail("TC0900_deleteFeatures/response.json");
 
     // When: request is submitted to NakshaHub Space Storage instance
-    final HttpResponse<String> response = nakshaClient.delete(
+    response = nakshaClient.delete(
         "hub/spaces/" + space.getId() + "/features?id=feature-1-to-delete&id=feature-2-to-delete", streamId);
 
     // Then: Perform assertions
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Delete Feature response body doesn't match",
-        expectedBodyPart,
-        response.body(),
-        JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    standardAssertions(response,200,expectedBodyPart,streamId);
   }
 
   void tc0901_testDeleteNonExistingFeatures() throws Exception {
@@ -82,33 +82,25 @@ public class DeleteFeatureTestHelper {
         "hub/spaces/" + space.getId() + "/features?id=non-existing-phantom-feature", streamId);
 
     // Then: Perform assertions
-    assertEquals(404, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Error response body doesn't match", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    standardAssertions(response,404,expectedBodyPart,streamId);
   }
 
   void tc0902_testDeleteFeatureById() throws Exception {
     // Test API : DELETE /hub/spaces/{spaceId}/features/{featureId}
     final String streamId = UUID.randomUUID().toString();
+    HttpResponse<String> response;
 
     final Space space = parseJsonFileOrFail("TC0900_deleteFeatures/create_space.json", Space.class);
     final String createFeaturesJson = loadFileOrFail("TC0902_deleteFeatureById/create_features.json");
-    nakshaClient.post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
+    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
+    assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating initial features");
     final String expectedBodyPart = loadFileOrFail("TC0902_deleteFeatureById/response.json");
 
     // When: request is submitted to NakshaHub Space Storage instance
-    final HttpResponse<String> response =
-        nakshaClient.delete("hub/spaces/" + space.getId() + "/features/feature-3-to-delete", streamId);
+    response = nakshaClient.delete("hub/spaces/" + space.getId() + "/features/feature-3-to-delete", streamId);
 
     // Then: Perform assertions
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Delete Feature response body doesn't match",
-        expectedBodyPart,
-        response.body(),
-        JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    standardAssertions(response,200,expectedBodyPart,streamId);
   }
 
   void tc0903_testDeleteFeatureByWrongId() throws Exception {
@@ -123,9 +115,22 @@ public class DeleteFeatureTestHelper {
         nakshaClient.delete("hub/spaces/" + space.getId() + "/features/phantom-feature-not-real", streamId);
 
     // Then: Perform assertions
-    assertEquals(404, response.statusCode(), "ResCode mismatch");
+    standardAssertions(response,404,expectedBodyPart,streamId);
+  }
+
+  private void standardAssertions(
+          final @NotNull HttpResponse<String> actualResponse,
+          final int expectedStatusCode,
+          final String expectedBodyPart,
+          final @NotNull String expectedStreamId)
+          throws JSONException {
+    assertEquals(expectedStatusCode, actualResponse.statusCode(), "ResCode mismatch");
     JSONAssert.assertEquals(
-        "Error response body doesn't match", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+            "Delete Feature response body doesn't match",
+            expectedBodyPart,
+            actualResponse.body(),
+            JSONCompareMode.LENIENT);
+    assertEquals(expectedStreamId, getHeader(actualResponse, HDR_STREAM_ID), "StreamId mismatch");
+
   }
 }

@@ -217,7 +217,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
     }
 
-    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeaturesRequest(spaceId, features);
+    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeaturesByIdsRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
@@ -238,7 +238,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing featureId parameter");
     }
 
-    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureRequest(spaceId, featureId);
+    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(spaceId, featureId);
 
     // Forward request to NH Space Storage writer instance
     final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
