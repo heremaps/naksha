@@ -18,14 +18,16 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.NakshaAppInitializer.localPsqlBasedNakshaApp;
+import static com.here.naksha.app.common.InitializedTestNakshaApp.initLocalPsqlBasedNakshaApp;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.here.naksha.app.common.InitializedTestNakshaApp;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.lib.hub.NakshaHubConfig;
+import com.here.naksha.lib.psql.PsqlStorage;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -41,7 +43,7 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class NakshaAppTest {
 
-  static NakshaApp app;
+  static InitializedTestNakshaApp initializedTestNakshaApp;
   static NakshaHubConfig config;
 
   static NakshaTestWebClient nakshaClient;
@@ -52,7 +54,9 @@ class NakshaAppTest {
 
   @BeforeAll
   static void prepare() throws InterruptedException, ExecutionException {
-    app = localPsqlBasedNakshaApp(); // to use mock, call NakshaAppInitializer.mockedNakshaApp()
+    initializedTestNakshaApp =
+        initLocalPsqlBasedNakshaApp(); // to use mock, call NakshaAppInitializer.mockedNakshaApp()
+    NakshaApp app = initializedTestNakshaApp.nakshaApp;
     config = app.getHub().getConfig();
     app.start();
     Thread.sleep(5000); // wait for server to come up
@@ -715,8 +719,13 @@ class NakshaAppTest {
 
   @AfterAll
   static void close() {
-    if (app != null) {
-      app.stopInstance();
+    if (initializedTestNakshaApp != null) {
+      initializedTestNakshaApp.nakshaApp.stopInstance();
+      if (initializedTestNakshaApp.testDbUrl != null) {
+        try (PsqlStorage psqlStorage = new PsqlStorage(initializedTestNakshaApp.testDbUrl)) {
+          psqlStorage.dropSchema();
+        }
+      }
     }
   }
 }

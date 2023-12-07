@@ -5,15 +5,14 @@
   "description": "UniMap Moderation storage for Dev environment, holding collections managed by Naksha service",
   "className": "com.here.naksha.lib.psql.PsqlStorage",
   "properties": {
-    "dbConfig": {
-      "host": "localhost",
-      "port": 5432,
-      "db": "db_name",
-      "user": "db_user",
-      "password": "db_password",
-      "schema": "naksha_moderation_dev",
-      "minPoolSize": 5,
-      "maxPoolSize": 50
-    }
+    "master": {
+      "host": "127.0.0.1",
+      "db": "postgres",
+      "user": "postgres",
+      "password": "postgres",
+      "readOnly": false
+    },
+    "appName": "test-lib-hub-app-name",
+    "schema": "naksha_lib_hub_test_schema"
   }
 }

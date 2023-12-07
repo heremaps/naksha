@@ -3,5 +3,16 @@
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose",
-  "className": "com.here.naksha.lib.psql.PsqlStorage"
+  "className": "com.here.naksha.lib.psql.PsqlStorage",
+  "properties": {
+    "master": {
+      "host": "127.0.0.1",
+      "db": "postgres",
+      "user": "postgres",
+      "password": "postgres",
+      "readOnly": false
+    },
+    "appName": "test-lib-hub-app-name",
+    "schema": "naksha_lib_hub_test_schema"
+  }
 }

@@ -24,6 +24,7 @@ import static java.lang.System.err;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.auth.NakshaAuthProvider;
 import com.here.naksha.app.service.metrics.OTelMetrics;
+import com.here.naksha.app.service.util.UrlUtil;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.util.IoHelp;
@@ -45,6 +46,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,8 +67,10 @@ public final class NakshaApp extends Thread {
   private static final String DEFAULT_CONFIG_ID = "default-config";
 
   // TODO: extract default schema (to be used when url is provided without schema)
+  private static final String DEFAULT_SCHEMA = "naksha";
+
   private static final String DEFAULT_URL =
-      "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha";
+      "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=" + DEFAULT_SCHEMA;
   private final AtomicReference<Boolean> stopInstance = new AtomicReference<>(false);
 
   /**
@@ -144,7 +148,7 @@ public final class NakshaApp extends Thread {
 
     // Potentially we could override the app-name:
     // NakshaHubConfig.APP_NAME = ?
-    return new NakshaApp(NakshaHubConfig.defaultAppName(), url, cfgId, null);
+    return new NakshaApp(NakshaHubConfig.defaultAppName(), urlWithEnsuredSchema(url), cfgId, null);
   }
 
   /**
@@ -428,5 +432,17 @@ public final class NakshaApp extends Thread {
     vertx.close();
     stopInstance.set(true);
     this.interrupt();
+  }
+
+  /**
+   * Ensures that provided url contains schema - if it doesn't, default schema is applied
+   *
+   * @param url url for admin db
+   * @return url with ensured schema
+   */
+  private static String urlWithEnsuredSchema(String url) {
+    Map<String, List<String>> queryParams = UrlUtil.queryParams(url);
+    queryParams.putIfAbsent("schema", List.of(DEFAULT_SCHEMA));
+    return UrlUtil.urlWithOverriddenParams(url, queryParams);
   }
 }

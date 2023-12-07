@@ -1317,10 +1317,11 @@ components:
             The configuration of all read-replicas.
           type: array
           items:
-          $ref: '#/components/schemas/PsqlInstanceConfig'
+            $ref: '#/components/schemas/PsqlInstanceConfig'
         appName:
           description: >-
             The application name to be used when connecting to the database.
+          type: string
     EventHandler:
       type: object
       description: >-
