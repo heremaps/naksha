@@ -463,4 +463,30 @@ public class ReadFeaturesByTileTestHelper {
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
+
+  public void tc0816_testGetByTileWithUnsupportedTileType() throws Exception {
+    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
+
+    // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
+    // Validate API error is returned when unsupported Tile Type is, even though tileId and Tags are valid
+    String streamId;
+    HttpResponse<String> response;
+
+    // Given: Features By Tile request (against configured space)
+    final String spaceId = "local-space-4-feature-by-tile";
+    final String unsupportedTileType = "here-quadkey";
+    final String tileId = "1";
+    final String tagsQueryParam = "tags=one";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByTile/TC0816_UnsupportedTileType/feature_response_part.json");
+    streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By Tile request is submitted to NakshaHub
+    response = nakshaClient.get(
+        "hub/spaces/" + spaceId + "/tile/" + unsupportedTileType + "/" + tileId + "?" + tagsQueryParam,
+        streamId);
+
+    // Then: Perform assertions
+    standardAssertions(response, 400, expectedBodyPart, streamId);
+  }
 }

@@ -903,6 +903,12 @@ class NakshaAppTest {
     readFeaturesByTileTestHelper.tc0815_testGetByTileWithTileMismatch();
   }
 
+  @Test
+  @Order(16)
+  void tc0816_testGetByTileWithUnsupportedTileType() throws Exception {
+    readFeaturesByTileTestHelper.tc0816_testGetByTileWithUnsupportedTileType();
+  }
+
   @AfterAll
   static void close() throws InterruptedException {
     if (app != null) {
