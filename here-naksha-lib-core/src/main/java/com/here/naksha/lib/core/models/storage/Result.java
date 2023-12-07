@@ -83,7 +83,9 @@ public abstract class Result implements Typed, AutoCloseable {
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull MutableCursor<FEATURE, CODEC> mutableCursor(
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, long limit) throws NoCursor {
     if (cursor != null) {
-      if (!(cursor instanceof HeapCacheCursor)) {
+      if (cursor instanceof HeapCacheCursor) {
+        ((HeapCacheCursor<?, ?>) cursor).fetchTill(limit);
+      } else {
         cursor = new HeapCacheCursor<>(codecFactory, limit, cursor);
       }
       return (MutableCursor<FEATURE, CODEC>) cursor;
@@ -145,7 +147,9 @@ public abstract class Result implements Typed, AutoCloseable {
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull SeekableCursor<FEATURE, CODEC> seekableCursor(
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, long limit) throws NoCursor {
     if (cursor != null) {
-      if (!(cursor instanceof HeapCacheCursor)) {
+      if (cursor instanceof HeapCacheCursor) {
+        ((HeapCacheCursor<?, ?>) cursor).fetchTill(limit);
+      } else {
         cursor = new HeapCacheCursor<>(codecFactory, limit, cursor);
       }
       return (SeekableCursor<FEATURE, CODEC>) cursor;

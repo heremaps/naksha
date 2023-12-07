@@ -69,7 +69,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
   public boolean fetchMore(long limit) {
     final boolean isReadAllRequested = limit == -1;
 
-    if (!originalCursor.hasNext()) {
+    if (originalCursor == null || !originalCursor.hasNext()) {
       return false;
     }
 
@@ -81,6 +81,14 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
       count++;
     }
     return true;
+  }
+
+  public boolean fetchTill(long limit) {
+    long numberOfElementsToLoad = limit - this.inMemoryData.size();
+    if (numberOfElementsToLoad > 0) {
+      return fetchMore(numberOfElementsToLoad);
+    }
+    return false;
   }
 
   private int initialSize(long limit) {

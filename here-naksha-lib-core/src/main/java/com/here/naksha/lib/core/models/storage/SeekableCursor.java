@@ -88,12 +88,22 @@ public abstract class SeekableCursor<FEATURE, CODEC extends FeatureCodec<FEATURE
   public abstract boolean absolute(long position);
 
   /**
+   * If original cursor is not closed it will try to fetch another set of features (max: newRecordsLimit).
+   * Be aware that the cursor position stays the same, if you previously were on after_last position then you're
+   * on first element of new set.
+   *
+   * @param newRecordsLimit
+   * @return {@code true}, if fetch succeeded.
+   */
+  public abstract boolean fetchMore(long newRecordsLimit);
+
+  /**
    * If original cursor is not closed it will try to fetch another set of features up to specified limit.
    * Be aware that the cursor position stays the same, if you previously were on after_last position then you're
    * on first element of new set.
    *
    * @param limit
-   * @return {@code true}, if fetch succeeded.
+   * @return
    */
-  public abstract boolean fetchMore(long limit);
+  public abstract boolean fetchTill(long limit);
 }

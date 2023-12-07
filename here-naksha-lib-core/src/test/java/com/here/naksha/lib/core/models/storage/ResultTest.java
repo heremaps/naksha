@@ -55,4 +55,20 @@ public class ResultTest {
     assertNotSame(seekableCursor, seekableCursorWithNewRows);
     assertNotEquals(seekableCursor.getId(), seekableCursorWithNewRows.getId());
   }
+
+  @Test
+  void shouldFetchMoreElements() throws NoCursor {
+    // given
+    SuccessResult result = new MockResult<>(new InfiniteForwardCursor<>(XyzFeatureCodecFactory.get()));
+
+    // expect
+
+    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor = result.getXyzSeekableCursor(5);
+    seekableCursor.last();
+    assertEquals(4, seekableCursor.position);
+
+    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursorWithNewLimit = result.getXyzSeekableCursor(15);
+    seekableCursorWithNewLimit.last();
+    assertEquals(14, seekableCursorWithNewLimit.position);
+  }
 }
