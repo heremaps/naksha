@@ -19,7 +19,6 @@
 package com.here.naksha.lib.core.models.storage;
 
 import static java.lang.Math.toIntExact;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -48,55 +47,23 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
   protected ForwardCursor<?, ?> originalCursor;
 
   public HeapCacheCursor(
-      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
-      long limit,
-      @NotNull ForwardCursor<?, ?> originalCursor) {
+      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, @NotNull ForwardCursor<?, ?> originalCursor) {
     super(codecFactory);
     this.originalCursor = originalCursor;
     this.position = BEFORE_FIRST_POSITION;
-    this.inMemoryData = new ArrayList<>(initialSize(limit));
+    this.inMemoryData = new ArrayList<>(INITIAL_ARRAY_SIZE_FOR_UNLIMITED_CURSOR);
 
-    fetchMore(limit);
+    while (originalCursor.hasNext()) {
+      originalCursor.next();
+      CODEC codec = codecFactory.newInstance().withParts(originalCursor.currentRow.codec);
+      inMemoryData.add(codec);
+    }
   }
 
   @Override
   public void restoreInputOrder() {
     // TODO
     throw new NotImplementedException("Restore input order not yet implemented");
-  }
-
-  @Override
-  public boolean fetchMore(long limit) {
-    final boolean isReadAllRequested = limit == -1;
-
-    if (originalCursor == null || !originalCursor.hasNext()) {
-      return false;
-    }
-
-    long count = 0;
-    while (originalCursor.hasNext() && (isReadAllRequested || count < limit)) {
-      originalCursor.next();
-      CODEC codec = codecFactory.newInstance().withParts(originalCursor.currentRow.codec);
-      inMemoryData.add(codec);
-      count++;
-    }
-    return true;
-  }
-
-  public boolean fetchTill(long limit) {
-    long numberOfElementsToLoad = limit - this.inMemoryData.size();
-    if (numberOfElementsToLoad > 0) {
-      return fetchMore(numberOfElementsToLoad);
-    }
-    return false;
-  }
-
-  private int initialSize(long limit) {
-    if (limit > Integer.MAX_VALUE - 2) {
-      throw new UnsupportedOperationException(
-          format("Current implementation does not support %s cache size", limit));
-    }
-    return limit == -1 ? INITIAL_ARRAY_SIZE_FOR_UNLIMITED_CURSOR : toIntExact(limit);
   }
 
   @Override

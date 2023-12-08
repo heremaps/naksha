@@ -38,18 +38,18 @@ public class HeapCacheCursorTest {
   void testAlreadyUsedFrowardCursorConversion() throws NoCursor {
     // given
     long limit = 10;
-    SuccessResult result = infiniteResult();
+    SuccessResult result = limitedResult(limit);
     ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzFeatureCursor();
 
     // when
     cursor.next();
-    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor = result.getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor = result.getXyzSeekableCursor();
 
     // then
-    assertEquals(limit, cursor.position);
+    assertEquals(limit - 1, cursor.position);
     // check if seekable cursor position change doesn't affect original cursor position change.
     seekableCursor.afterLast();
-    assertEquals(limit, cursor.position);
+    assertEquals(limit - 1, cursor.position);
     assertNotNull(cursor.getId());
     assertNotNull(cursor.getUuid());
     assertNull(cursor.getError());
@@ -61,7 +61,8 @@ public class HeapCacheCursorTest {
   void testLimitCacheElements() throws NoCursor {
     // given
     long limit = 100;
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        limitedResult(limit).getXyzSeekableCursor();
 
     // when
     long count = 0;
@@ -79,7 +80,8 @@ public class HeapCacheCursorTest {
   void testMoveCursorBeforeFirst() throws NoCursor {
     // given
     long limit = 50;
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        limitedResult(limit).getXyzSeekableCursor();
 
     // when
     cursor.next();
@@ -102,7 +104,8 @@ public class HeapCacheCursorTest {
   @Test
   void testBackToFirstElement() throws NoCursor {
     long limit = 5;
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        limitedResult(limit).getXyzSeekableCursor();
 
     // when
     cursor.next();
@@ -121,7 +124,8 @@ public class HeapCacheCursorTest {
   @Test
   void testGoToLast() throws NoCursor {
     long limit = 5;
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        limitedResult(limit).getXyzSeekableCursor();
 
     // when
     cursor.last();
@@ -142,7 +146,8 @@ public class HeapCacheCursorTest {
   void testAfterLast() throws NoCursor {
     // given
     long limit = 5;
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        limitedResult(limit).getXyzSeekableCursor();
 
     // when
     cursor.afterLast();
@@ -156,7 +161,8 @@ public class HeapCacheCursorTest {
   void testRelativeMove() throws NoCursor {
     // given
     long limit = 5;
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        limitedResult(limit).getXyzSeekableCursor();
 
     // expect
     assertEquals(-1, cursor.position);
@@ -181,7 +187,8 @@ public class HeapCacheCursorTest {
   void testAbsoluteMove() throws NoCursor {
     // given
     long limit = 5;
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        limitedResult(limit).getXyzSeekableCursor();
 
     // expect
     assertEquals(-1, cursor.position);
@@ -206,7 +213,8 @@ public class HeapCacheCursorTest {
   void testPrevious() throws NoCursor {
     // given
     long limit = 5;
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        limitedResult(limit).getXyzSeekableCursor();
 
     // expect
     assertTrue(cursor.next());
@@ -224,7 +232,8 @@ public class HeapCacheCursorTest {
   void testLimit0() throws NoCursor {
     // given
     long limit = 0;
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().getXyzSeekableCursor(limit);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        limitedResult(limit).getXyzSeekableCursor();
 
     // expect
     assertFalse(cursor.hasNext());
@@ -239,7 +248,7 @@ public class HeapCacheCursorTest {
     MockResult<XyzFeature> result = new MockResult<>(emptyForwardCursor);
 
     // when
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzSeekableCursor(5);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzSeekableCursor();
 
     // then
     assertFalse(cursor.hasNext());
@@ -254,7 +263,7 @@ public class HeapCacheCursorTest {
     MockResult<XyzFeature> result = new MockResult<>(limitedForwardCursor);
 
     // when
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzSeekableCursor(-1);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzSeekableCursor();
     cursor.afterLast();
 
     // then
@@ -265,7 +274,7 @@ public class HeapCacheCursorTest {
   void testAddFeature() throws NoCursor {
     // given
     long limit = 5;
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().mutableCursor(limit);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = limitedResult(limit).mutableCursor();
 
     XyzFeature newFeature = new XyzFeature("new_feature_1");
 
@@ -285,7 +294,7 @@ public class HeapCacheCursorTest {
   void testSetFeatureAtPosition() throws NoCursor {
     // given
     long limit = 5;
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().mutableCursor(limit);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = limitedResult(limit).mutableCursor();
 
     XyzFeature newFeature = new XyzFeature("new_feature_1");
 
@@ -310,7 +319,7 @@ public class HeapCacheCursorTest {
   void testSetFeature() throws NoCursor {
     // given
     long limit = 5;
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().mutableCursor(limit);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = limitedResult(limit).mutableCursor();
 
     XyzFeature newFeature = new XyzFeature("new_feature_1");
 
@@ -333,7 +342,7 @@ public class HeapCacheCursorTest {
   void testRemoveFeatureAtPosition() throws NoCursor {
     // given
     long limit = 5;
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().mutableCursor(limit);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = limitedResult(limit).mutableCursor();
 
     // when
     cursor.first();
@@ -358,7 +367,7 @@ public class HeapCacheCursorTest {
   void testRemoveFeatureAtCurrentPosition() throws NoCursor {
     // given
     long limit = 3;
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().mutableCursor(limit);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = limitedResult(limit).mutableCursor();
 
     // when
     cursor.first();
@@ -381,7 +390,7 @@ public class HeapCacheCursorTest {
   void shouldThrowExceptionWhenAskingForPositionOutOfRange() throws NoCursor {
     // given
     long limit = 3;
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().mutableCursor(limit);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = limitedResult(limit).mutableCursor();
     XyzFeature newFeature = new XyzFeature("new_feature_1");
 
     // expect
@@ -395,11 +404,11 @@ public class HeapCacheCursorTest {
   void emptyJsonShouldGiveNullFeature() throws NoCursor {
     // given
     String json = null;
-    InfiniteForwardCursor<XyzFeature, XyzFeatureCodec> infiniteForwardCursor =
-        new InfiniteForwardCursor<>(XyzFeatureCodecFactory.get(), json);
+    LimitedForwardCursor<XyzFeature, XyzFeatureCodec> infiniteForwardCursor =
+        new LimitedForwardCursor<>(XyzFeatureCodecFactory.get(), 1, json);
     MockResult<XyzFeature> result = new MockResult<>(infiniteForwardCursor);
 
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = result.mutableCursor(5);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = result.mutableCursor();
 
     // when
     cursor.first();
@@ -412,7 +421,7 @@ public class HeapCacheCursorTest {
   @Test
   void codecChange() throws NoCursor {
     // given
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().mutableCursor(1);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = limitedResult(1).mutableCursor();
 
     // when
     cursor.next();
@@ -433,7 +442,7 @@ public class HeapCacheCursorTest {
   @Test
   void getFeatureBeforeFirst() throws NoCursor {
     // given
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().mutableCursor(1);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = limitedResult(1).mutableCursor();
 
     // expect
     cursor.next();
@@ -442,46 +451,7 @@ public class HeapCacheCursorTest {
     assertThrows(NoSuchElementException.class, cursor::getFeature);
   }
 
-  @Test
-  void testFetchMore() throws NoCursor {
-    // given
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = infiniteResult().mutableCursor(10);
-
-    // expect
-    while (cursor.hasNext() && cursor.next()) {
-      // do nothing we just want to iterate to last element.
-    }
-    assertFalse(cursor.hasNext());
-    assertEquals(9, cursor.position);
-
-    assertTrue(cursor.fetchMore(5));
-    assertEquals(9, cursor.position);
-
-    while (cursor.hasNext() && cursor.next()) {
-      // do nothing we just want to iterate to last element.
-    }
-
-    assertEquals(14, cursor.position);
-  }
-
-  @Test
-  void testFetchMoreOnClosedOriginalCursor() throws NoCursor {
-    // given
-    LimitedForwardCursor<XyzFeature, XyzFeatureCodec> limitedForwardCursor =
-        new LimitedForwardCursor<>(XyzFeatureCodecFactory.get(), 5);
-    MockResult<XyzFeature> result = new MockResult<>(limitedForwardCursor);
-    SeekableCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzSeekableCursor(-1);
-
-    // expect
-    cursor.afterLast();
-    assertFalse(cursor.hasNext());
-    assertEquals(5, cursor.position);
-
-    assertFalse(cursor.fetchMore(5));
-    assertFalse(cursor.hasNext());
-  }
-
-  private SuccessResult infiniteResult() {
-    return new MockResult<>(new InfiniteForwardCursor<>(XyzFeatureCodecFactory.get()));
+  private SuccessResult limitedResult(long limit) {
+    return new MockResult<>(new LimitedForwardCursor<>(XyzFeatureCodecFactory.get(), limit));
   }
 }

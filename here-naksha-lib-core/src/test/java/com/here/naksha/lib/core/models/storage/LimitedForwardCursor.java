@@ -31,6 +31,12 @@ public class LimitedForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, C
     this.elementsInRs = elementsInRs;
   }
 
+  protected LimitedForwardCursor(
+      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, long elementsInRs, String json) {
+    super(codecFactory, json);
+    this.elementsInRs = elementsInRs;
+  }
+
   @Override
   protected boolean loadNextRow(@NotNull ForwardCursor<FEATURE, CODEC>.Row row) {
     if (numOfLoadedRows < elementsInRs) {

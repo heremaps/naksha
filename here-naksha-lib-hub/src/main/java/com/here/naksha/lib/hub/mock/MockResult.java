@@ -19,7 +19,6 @@
 package com.here.naksha.lib.hub.mock;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import java.util.List;

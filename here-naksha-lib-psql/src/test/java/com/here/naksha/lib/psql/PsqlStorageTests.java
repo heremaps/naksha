@@ -668,8 +668,9 @@ public class PsqlStorageTests extends PsqlTests {
     assertNotNull(storage);
     assertNotNull(session);
     final ReadFeatures request = new ReadFeatures(collectionId());
+    request.limit = null;
     try (final SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
-        session.execute(request).getXyzSeekableCursor(100)) {
+        session.execute(request).getXyzSeekableCursor()) {
 
       // commit closes original cursor, but as we have all rows cached SeekableCursor should work as normal.
       session.commit(true);

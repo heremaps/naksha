@@ -19,8 +19,6 @@
 package com.here.naksha.lib.core.models.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,42 +31,21 @@ public class ResultTest {
   @Test
   void shouldBeAbleToGetForwardCursorBack() throws NoCursor {
     // given
-    SuccessResult result = new MockResult<>(new InfiniteForwardCursor<>(XyzFeatureCodecFactory.get()));
+    SuccessResult result = new MockResult<>(new LimitedForwardCursor<>(XyzFeatureCodecFactory.get(), 10));
 
     // expect
     ForwardCursor<XyzFeature, XyzFeatureCodec> forwardCursor = result.getXyzFeatureCursor();
     assertTrue(forwardCursor.next());
 
-    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor = result.getXyzSeekableCursor(5);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor = result.getXyzSeekableCursor();
     assertTrue(seekableCursor.next());
 
-    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor2 = result.getXyzSeekableCursor(5);
+    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor2 = result.getXyzSeekableCursor();
     assertTrue(seekableCursor2.next());
     assertSame(seekableCursor, seekableCursor2);
 
     ForwardCursor<XyzFeature, XyzFeatureCodec> forwardCursorAgain = result.getXyzFeatureCursor();
-    assertEquals(5, forwardCursorAgain.position);
+    assertEquals(9, forwardCursorAgain.position);
     assertSame(forwardCursor, forwardCursorAgain);
-
-    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursorWithNewRows = result.getXyzSeekableCursor(15);
-    assertTrue(seekableCursorWithNewRows.next());
-    assertNotSame(seekableCursor, seekableCursorWithNewRows);
-    assertNotEquals(seekableCursor.getId(), seekableCursorWithNewRows.getId());
-  }
-
-  @Test
-  void shouldFetchMoreElements() throws NoCursor {
-    // given
-    SuccessResult result = new MockResult<>(new InfiniteForwardCursor<>(XyzFeatureCodecFactory.get()));
-
-    // expect
-
-    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursor = result.getXyzSeekableCursor(5);
-    seekableCursor.last();
-    assertEquals(4, seekableCursor.position);
-
-    SeekableCursor<XyzFeature, XyzFeatureCodec> seekableCursorWithNewLimit = result.getXyzSeekableCursor(15);
-    seekableCursorWithNewLimit.last();
-    assertEquals(14, seekableCursorWithNewLimit.position);
   }
 }

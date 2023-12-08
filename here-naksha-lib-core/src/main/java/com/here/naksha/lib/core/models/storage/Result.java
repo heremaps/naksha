@@ -18,8 +18,6 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import static com.here.naksha.lib.core.LibraryConstants.DEFAULT_HEAP_CACHE_CURSOR_LIMIT;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.Typed;
@@ -81,12 +79,10 @@ public abstract class Result implements Typed, AutoCloseable {
   @SuppressWarnings("unchecked")
   @JsonIgnore
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull MutableCursor<FEATURE, CODEC> mutableCursor(
-      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, long limit) throws NoCursor {
+      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) throws NoCursor {
     if (cursor != null) {
-      if (cursor instanceof HeapCacheCursor) {
-        ((HeapCacheCursor<?, ?>) cursor).fetchTill(limit);
-      } else {
-        cursor = new HeapCacheCursor<>(codecFactory, limit, cursor);
+      if (!(cursor instanceof HeapCacheCursor)) {
+        cursor = new HeapCacheCursor<>(codecFactory, cursor);
       }
       return (MutableCursor<FEATURE, CODEC>) cursor;
     }
@@ -95,27 +91,8 @@ public abstract class Result implements Typed, AutoCloseable {
 
   /**
    * {@link MutableCursor} with original cursor codec factory.
-   * @see #mutableCursor(FeatureCodecFactory, long)
-   *
-   * @return
-   * @param <FEATURE>
-   * @param <CODEC>
-   * @throws NoCursor
-   */
-  @SuppressWarnings("unchecked")
-  @JsonIgnore
-  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull MutableCursor<FEATURE, CODEC> mutableCursor(
-      long limit) throws NoCursor {
-    if (cursor != null) {
-      return (MutableCursor<FEATURE, CODEC>) mutableCursor(cursor.codecFactory, limit);
-    }
-    throw new NoCursor(this);
-  }
-
-  /**
-   * {@link MutableCursor} with original cursor codec factory and {@link com.here.naksha.lib.core.LibraryConstants#DEFAULT_HEAP_CACHE_CURSOR_LIMIT} rows cached.
-   * If default is not suitable for you, please change {@link com.here.naksha.lib.core.LibraryConstants#DEFAULT_HEAP_CACHE_CURSOR_LIMIT},
-   * or use {@link #mutableCursor(long)} to declare different cache size.
+   * You have to call {@link #cursor(FeatureCodecFactory)}, {@link #getXyzFeatureCursor()} or {@link #getXyzCollectionCursor()} first,
+   * other way basic cursor won't be initiated and exception will be thrown.
    *
    * @return
    * @param <FEATURE>
@@ -127,7 +104,7 @@ public abstract class Result implements Typed, AutoCloseable {
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull MutableCursor<FEATURE, CODEC> mutableCursor()
       throws NoCursor {
     if (cursor != null) {
-      return (MutableCursor<FEATURE, CODEC>) mutableCursor(cursor.codecFactory, DEFAULT_HEAP_CACHE_CURSOR_LIMIT);
+      return (MutableCursor<FEATURE, CODEC>) mutableCursor(cursor.codecFactory);
     }
     throw new NoCursor(this);
   }
@@ -145,12 +122,10 @@ public abstract class Result implements Typed, AutoCloseable {
   @SuppressWarnings("unchecked")
   @JsonIgnore
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull SeekableCursor<FEATURE, CODEC> seekableCursor(
-      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, long limit) throws NoCursor {
+      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) throws NoCursor {
     if (cursor != null) {
-      if (cursor instanceof HeapCacheCursor) {
-        ((HeapCacheCursor<?, ?>) cursor).fetchTill(limit);
-      } else {
-        cursor = new HeapCacheCursor<>(codecFactory, limit, cursor);
+      if (!(cursor instanceof HeapCacheCursor)) {
+        cursor = new HeapCacheCursor<>(codecFactory, cursor);
       }
       return (SeekableCursor<FEATURE, CODEC>) cursor;
     }
@@ -160,6 +135,8 @@ public abstract class Result implements Typed, AutoCloseable {
   /**
    * Converts current cursor to {@link SeekableCursor} and loads next data from point where current cursor is.
    * Calling it multiple times will return same cursor with same cached data.
+   * You have to call {@link #cursor(FeatureCodecFactory)}, {@link #getXyzFeatureCursor()} or {@link #getXyzCollectionCursor()} first,
+   * other way basic cursor won't be initiated and exception will be thrown.
    *
    * @return
    * @param <FEATURE>
@@ -168,10 +145,10 @@ public abstract class Result implements Typed, AutoCloseable {
    */
   @SuppressWarnings("unchecked")
   @JsonIgnore
-  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull SeekableCursor<FEATURE, CODEC> seekableCursor(
-      long limit) throws NoCursor {
+  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull
+      SeekableCursor<FEATURE, CODEC> seekableCursor() throws NoCursor {
     if (cursor != null) {
-      return (SeekableCursor<FEATURE, CODEC>) seekableCursor(cursor.codecFactory, limit);
+      return (SeekableCursor<FEATURE, CODEC>) seekableCursor(cursor.codecFactory);
     }
     throw new NoCursor(this);
   }
@@ -206,30 +183,30 @@ public abstract class Result implements Typed, AutoCloseable {
 
   /**
    * Returns {@link MutableCursor} for {@link XyzFeature}.
+   * @see #mutableCursor(FeatureCodecFactory) for more information.
    *
-   * @param limit
    * @return
    * @throws NoCursor
    */
   @JsonIgnore
-  public @NotNull MutableCursor<XyzFeature, XyzFeatureCodec> getXyzMutableCursor(long limit) throws NoCursor {
+  public @NotNull MutableCursor<XyzFeature, XyzFeatureCodec> getXyzMutableCursor() throws NoCursor {
     if (cursor != null) {
-      return mutableCursor(XyzFeatureCodecFactory.get(), limit);
+      return mutableCursor(XyzFeatureCodecFactory.get());
     }
     throw new NoCursor(this);
   }
 
   /**
    * Returns {@link SeekableCursor} for {@link XyzFeature}.
+   * @see #seekableCursor(FeatureCodecFactory)
    *
-   * @param limit
    * @return
    * @throws NoCursor
    */
   @JsonIgnore
-  public @NotNull SeekableCursor<XyzFeature, XyzFeatureCodec> getXyzSeekableCursor(long limit) throws NoCursor {
+  public @NotNull SeekableCursor<XyzFeature, XyzFeatureCodec> getXyzSeekableCursor() throws NoCursor {
     if (cursor != null) {
-      return seekableCursor(XyzFeatureCodecFactory.get(), limit);
+      return seekableCursor(XyzFeatureCodecFactory.get());
     }
     throw new NoCursor(this);
   }
