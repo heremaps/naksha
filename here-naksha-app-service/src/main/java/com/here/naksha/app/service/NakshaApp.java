@@ -32,6 +32,7 @@ import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.NakshaHubFactory;
 import com.here.naksha.lib.hub.util.ConfigUtil;
+import com.here.naksha.lib.psql.PsqlStorage;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -68,8 +69,10 @@ public final class NakshaApp extends Thread {
 
   private static final String DEFAULT_SCHEMA = "naksha";
 
-  private static final String DEFAULT_URL =
-      "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=" + DEFAULT_SCHEMA;
+  private static final String DEFAULT_URL = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd"
+      + "&schema=" + DEFAULT_SCHEMA
+      + "&app=" + NakshaHubConfig.defaultAppName()
+      + "&id=" + PsqlStorage.ADMIN_STORAGE_ID;
   private final AtomicReference<Boolean> stopInstance = new AtomicReference<>(false);
 
   /**

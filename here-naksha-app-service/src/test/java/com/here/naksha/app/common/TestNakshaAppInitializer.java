@@ -22,6 +22,7 @@ import static com.here.naksha.app.service.NakshaApp.newInstance;
 
 import com.here.naksha.app.service.NakshaApp;
 import com.here.naksha.lib.hub.NakshaHubConfig;
+import com.here.naksha.lib.psql.PsqlStorage;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -77,6 +78,6 @@ public class TestNakshaAppInitializer {
     return "jdbc:postgresql://localhost/postgres?user=postgres&password=" + password
         + "&schema=" + TEST_SCHEMA
         + "&app=" + NakshaHubConfig.defaultAppName()
-        + "&id=naksha-admin-db";
+        + "&id=" + PsqlStorage.ADMIN_STORAGE_ID;
   }
 }

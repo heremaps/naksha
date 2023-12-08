@@ -20,10 +20,7 @@ package com.here.naksha.lib.hub;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.PluginCache.getStorageConstructor;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.*;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
 
 import com.here.naksha.lib.core.INaksha;
@@ -35,8 +32,6 @@ import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.IfConflict;
-import com.here.naksha.lib.core.models.storage.IfExists;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
@@ -47,6 +42,7 @@ import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
+import com.here.naksha.lib.psql.EPsqlState;
 import com.here.naksha.lib.psql.PsqlStorage;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -54,6 +50,7 @@ import java.util.Objects;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.postgresql.util.PSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,7 +88,7 @@ public class NakshaHub implements INaksha {
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId) {
     // create storage instance upfront
-    this.psqlStorage = new PsqlStorage("naksha-admin-db", appName, storageUrl);
+    this.psqlStorage = new PsqlStorage(PsqlStorage.ADMIN_STORAGE_ID, appName, storageUrl);
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
     // setup backend storage DB and Hub config
@@ -122,46 +119,29 @@ public class NakshaHub implements INaksha {
     final NakshaContext nakshaContext = new NakshaContext().withAppId(NakshaHubConfig.defaultAppName());
     nakshaContext.attachToCurrentThread();
     try (final IWriteSession admin = getAdminStorage().newWriteSession(nakshaContext, true)) {
-      final Result wrResult = admin.execute(createWriteCollectionsRequest(NakshaAdminCollection.ALL));
-      if (wrResult == null) {
-        admin.rollback(true);
-        throw unchecked(new Exception("Unable to create Admin collections in Admin DB. Null result!"));
-      } else if (wrResult instanceof ErrorResult er) {
-        admin.rollback(true);
-        throw unchecked(new Exception(
-            "Unable to create Admin collections in Admin DB. " + er.toString(), er.exception));
+      try {
+        final Result wrResult = admin.execute(createWriteCollectionsRequest(NakshaAdminCollection.ALL));
+        if (wrResult == null) {
+          admin.rollback(true);
+          throw unchecked(new Exception("Unable to create Admin collections in Admin DB. Null result!"));
+        } else if (wrResult instanceof ErrorResult er) {
+          admin.rollback(true);
+          throw unchecked(new Exception(
+              "Unable to create Admin collections in Admin DB. " + er.toString(), er.exception));
+        }
+        admin.commit(true);
+      } catch (Exception ex) {
+        if (ex.getCause() instanceof PSQLException pex
+            && pex.getSQLState().equals(EPsqlState.COLLECTION_EXISTS.toString())) {
+          logger.info("Admin collections already exists. {}. So moving to next step.", pex.getMessage());
+        } else {
+          throw ex;
+        }
       }
-      admin.commit(true);
     } // close Admin DB connection
 
     // 3. run one-time maintenance on Admin DB to ensure history partitions are available
     getAdminStorage().maintainNow();
-
-    // TODO HP : This step to be removed later (once we have ability to add custom storages)
-    // fetch / add default storage implementation
-    try (final IWriteSession admin = getAdminStorage().newWriteSession(nakshaContext, true)) {
-      Storage defStorage = null;
-      try (final Json json = Json.get()) {
-        final String storageJson = IoHelp.readResource("config/default-storage.json");
-        defStorage = json.reader(ViewDeserialize.Storage.class)
-            .forType(Storage.class)
-            .readValue(storageJson);
-      } catch (Exception e) {
-        throw unchecked(new Exception("Unable to read default Storage file. " + e.getMessage(), e));
-      }
-      // persist in Admin DB (if not already exists)
-      final Result wrResult =
-          admin.execute(createFeatureRequest(NakshaAdminCollection.STORAGES, defStorage, true));
-      if (wrResult == null) {
-        admin.rollback(true);
-        throw unchecked(new Exception("Unable to add default storage in Admin DB. Null result!"));
-      } else if (wrResult instanceof ErrorResult er) {
-        admin.rollback(true);
-        throw unchecked(
-            new Exception("Unable to add default storage in Admin DB. " + er.toString(), er.exception));
-      }
-      admin.commit(true);
-    } // close Admin DB connection
 
     // 4. fetch / add latest config
     return configSetup(nakshaContext, customCfg, configId);
@@ -182,8 +162,8 @@ public class NakshaHub implements INaksha {
     try (final IWriteSession admin = getAdminStorage().newWriteSession(nakshaContext, true)) {
       if (customCfg != null) {
         // Custom config provided. Persist in AdminDB.
-        final Result wrResult = admin.execute(createFeatureRequest(
-            NakshaAdminCollection.CONFIGS, customCfg, IfExists.REPLACE, IfConflict.REPLACE));
+        final Result wrResult =
+            admin.execute(upsertFeaturesRequest(NakshaAdminCollection.CONFIGS, List.of(customCfg)));
         if (wrResult == null) {
           admin.rollback(true);
           throw unchecked(new Exception("Unable to add custom config in Admin DB. Null result!"));
