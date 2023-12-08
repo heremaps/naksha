@@ -66,7 +66,6 @@ public final class NakshaApp extends Thread {
   private static final Logger log = LoggerFactory.getLogger(NakshaApp.class);
   private static final String DEFAULT_CONFIG_ID = "default-config";
 
-  // TODO: extract default schema (to be used when url is provided without schema)
   private static final String DEFAULT_SCHEMA = "naksha";
 
   private static final String DEFAULT_URL =

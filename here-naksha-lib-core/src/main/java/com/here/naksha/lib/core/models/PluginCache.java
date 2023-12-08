@@ -38,8 +38,6 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings({"StringOperationCanBeSimplified", "DuplicatedCode"})
 public final class PluginCache {
 
-  private static Logger log = LoggerFactory.getLogger(PluginCache.class);
-
   static class EventHandlerConstructorByTarget
       extends ConcurrentHashMap<Class<?>, Fe3<IEventHandler, INaksha, ?, ?>> {}
 
@@ -143,7 +141,7 @@ public final class PluginCache {
         if (parameterTypes[2].isAssignableFrom(targetClass)) { // target: Space, param[2]: EventTarget
           return ((naksha, config, target) -> constructor.newInstance(config, naksha, target));
         }
-        return null; // TODO() tutaj
+        return null;
       }
       if (targetClass.isAssignableFrom(parameterTypes[1])) {
         if (INaksha.class.isAssignableFrom(parameterTypes[2])) {
@@ -179,24 +177,19 @@ public final class PluginCache {
    */
   static <CONFIG> @Nullable Fe1<IStorage, CONFIG> wrapStorageConstructor(
       @NotNull Constructor<? extends IStorage> constructor, @NotNull Class<CONFIG> configClass) {
-    log.info("Wrapping constructor: {}", constructor);
     if (constructor.getParameterCount() > 1) {
       return null;
     }
-    // TODO(Kuba): we allow only constructors with 0 or 1 params
     final Class<?>[] parameterTypes = constructor.getParameterTypes();
     assert parameterTypes.length <= 1;
 
     if (parameterTypes.length == 0) {
-      log.info("Returning constuctor without params");
       return ((config) -> constructor.newInstance());
     }
 
     if (configClass.isAssignableFrom(parameterTypes[0])) {
-      log.info("Returning assignable constructor from: {}", parameterTypes[0].getName());
       return constructor::newInstance;
     }
-    log.info("Returning null");
     return null;
   }
 
@@ -316,7 +309,7 @@ public final class PluginCache {
     final ConcurrentHashMap<Class<CONFIG>, Fe1<IStorage, CONFIG>> map =
         storageConstructorMap(className, configClass);
     Fe1<IStorage, CONFIG> c = map.get(configClass);
-    if (c != null) { // TODO(Kuba): why do we repeat this in synchronized block?
+    if (c != null) {
       return c;
     }
     synchronized (PluginCache.class) {

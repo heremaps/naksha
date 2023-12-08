@@ -91,10 +91,7 @@ final class PostgresStorage extends ClosableRootResource {
     this.logLevel = logLevel == null ? EPsqlLogLevel.OFF : logLevel;
     this.masterConfig = masterConfig;
     if (masterConfig != null) {
-      log.info("creating PostgresStorage with masterConfig, storageId: {}, config: {}", storageId, masterConfig);
       master.set(PsqlInstance.get(masterConfig));
-    } else {
-      log.info("creating PostgresStorage without masterConfig, storageId: {}", storageId);
     }
     this.readerConfigs = readerConfigs;
     if (readerConfigs != null) {
@@ -262,7 +259,8 @@ final class PostgresStorage extends ClosableRootResource {
   private final long cancelSignalTimeout = TimeUnit.SECONDS.toMillis(15);
 
   @Override
-  protected void destruct() {}
+  protected void destruct() {
+  }
 
   /**
    * The default initializer for connections.
@@ -337,7 +335,6 @@ final class PostgresStorage extends ClosableRootResource {
   PsqlConnection getConnection(boolean useMaster, boolean readOnly, boolean init, @Nullable NakshaContext context)
       throws SQLException {
     final PsqlInstance psqlInstance;
-    // master = null, readers.size = 0
     if (!useMaster && readOnly && readers.size() > 0) {
       psqlInstance = readers.get(0);
     } else {
