@@ -65,16 +65,11 @@ import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHAdminStorageReader;
 import com.here.naksha.lib.hub.storages.NHAdminStorageWriter;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
-import com.here.naksha.lib.psql.PsqlStorage;
 import com.here.naksha.lib.psql.PsqlStorage.Params;
 import java.util.List;
 import java.util.Map;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.*;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -98,17 +93,9 @@ public class NakshaHubWiringTest {
 
   static NHSpaceStorage spaceStorage = null;
 
-  private static final String FEATURE_STORAGE_URL = "jdbc:postgresql://127.0.0.1/postgres?"
-      + "user=postgres&"
-      + "password=postgres&"
-      + "schema=naksha_lib_hub_test_schema&"
-      + "app=test-lib-hub-app-name&"
-      + "id=naksha_wiring_test";
-
   @BeforeEach
-  void setup() throws Exception {
+  void beforeEachTest() throws Exception {
     MockitoAnnotations.openMocks(this);
-    cleanUpDb();
     spyPipelineFactory = spy(new NakshaEventPipelineFactory(hub));
     spaceStorage = new NHSpaceStorage(hub, spyPipelineFactory);
     when(hub.getSpaceStorage()).thenReturn(spaceStorage);
@@ -284,11 +271,5 @@ public class NakshaHubWiringTest {
     return XyzCodecFactory.getFactory(XyzFeatureCodecFactory.class)
         .newInstance()
         .withFeature(feature);
-  }
-
-  private static void cleanUpDb() {
-    try (PsqlStorage psqlStorage = new PsqlStorage(FEATURE_STORAGE_URL)) {
-      psqlStorage.dropSchema();
-    }
   }
 }
