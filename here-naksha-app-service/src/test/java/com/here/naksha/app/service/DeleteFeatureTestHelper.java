@@ -67,7 +67,7 @@ public class DeleteFeatureTestHelper {
         "hub/spaces/" + space.getId() + "/features?id=feature-1-to-delete&id=feature-2-to-delete", streamId);
 
     // Then: Perform assertions
-    standardAssertions(response,200,expectedBodyPart,streamId);
+    standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
   void tc0901_testDeleteNonExistingFeatures() throws Exception {
@@ -82,7 +82,7 @@ public class DeleteFeatureTestHelper {
         "hub/spaces/" + space.getId() + "/features?id=non-existing-phantom-feature", streamId);
 
     // Then: Perform assertions
-    standardAssertions(response,404,expectedBodyPart,streamId);
+    standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
   void tc0902_testDeleteFeatureById() throws Exception {
@@ -100,7 +100,7 @@ public class DeleteFeatureTestHelper {
     response = nakshaClient.delete("hub/spaces/" + space.getId() + "/features/feature-3-to-delete", streamId);
 
     // Then: Perform assertions
-    standardAssertions(response,200,expectedBodyPart,streamId);
+    standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
   void tc0903_testDeleteFeatureByWrongId() throws Exception {
@@ -115,22 +115,21 @@ public class DeleteFeatureTestHelper {
         nakshaClient.delete("hub/spaces/" + space.getId() + "/features/phantom-feature-not-real", streamId);
 
     // Then: Perform assertions
-    standardAssertions(response,404,expectedBodyPart,streamId);
+    standardAssertions(response, 404, expectedBodyPart, streamId);
   }
 
   private void standardAssertions(
-          final @NotNull HttpResponse<String> actualResponse,
-          final int expectedStatusCode,
-          final String expectedBodyPart,
-          final @NotNull String expectedStreamId)
-          throws JSONException {
+      final @NotNull HttpResponse<String> actualResponse,
+      final int expectedStatusCode,
+      final String expectedBodyPart,
+      final @NotNull String expectedStreamId)
+      throws JSONException {
     assertEquals(expectedStatusCode, actualResponse.statusCode(), "ResCode mismatch");
     JSONAssert.assertEquals(
-            "Delete Feature response body doesn't match",
-            expectedBodyPart,
-            actualResponse.body(),
-            JSONCompareMode.LENIENT);
+        "Delete Feature response body doesn't match",
+        expectedBodyPart,
+        actualResponse.body(),
+        JSONCompareMode.LENIENT);
     assertEquals(expectedStreamId, getHeader(actualResponse, HDR_STREAM_ID), "StreamId mismatch");
-
   }
 }

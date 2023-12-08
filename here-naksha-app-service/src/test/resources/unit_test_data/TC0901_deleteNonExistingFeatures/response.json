@@ -1,5 +1,4 @@
 {
-  "type": "ErrorResponse",
-  "error": "NotFound",
-  "errorMessage": "No feature found for id non-existing-phantom-feature"
+  "type": "FeatureCollection",
+  "features": []
 }

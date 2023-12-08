@@ -18,8 +18,7 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.*;
 import static java.util.Collections.emptyList;
 
 import com.here.naksha.app.service.http.HttpResponseType;
@@ -37,6 +36,7 @@ import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import io.vertx.ext.web.RoutingContext;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -114,8 +114,17 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return verticle.sendErrorResponse(routingContext, er.reason, er.message);
     } else {
       try {
-        List<R> features = readFeaturesFromResult(result, type);
-        final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(features);
+        R feature = readFeatureFromResult(result, type);
+        if (feature == null) {
+          return verticle.sendErrorResponse(
+              routingContext,
+              XyzError.NOT_FOUND,
+              "No feature found for id "
+                  + result.getXyzFeatureCursor().getId());
+        }
+        final List<R> featureList = new ArrayList<>();
+        featureList.add(feature);
+        final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(featureList);
         return verticle.sendXyzResponse(routingContext, HttpResponseType.FEATURE, featureResponse);
       } catch (NoCursor | NoSuchElementException emptyException) {
         return onNoElementsReturned.call();
@@ -173,8 +182,9 @@ public abstract class AbstractApiTask<T extends XyzResponse>
                 .withUpdatedFeatures(updatedFeatures)
                 .withDeletedFeatures(deletedFeatures));
       } catch (NoCursor | NoSuchElementException emptyException) {
-        return verticle.sendErrorResponse(
-            routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");
+        logger.info("No data found in ResultCursor, returning empty collection");
+        return verticle.sendXyzResponse(
+            routingContext, HttpResponseType.FEATURE_COLLECTION, emptyFeatureCollection());
       }
     }
   }

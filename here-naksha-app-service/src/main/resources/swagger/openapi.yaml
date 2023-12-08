@@ -531,8 +531,7 @@ paths:
       description: >
         This method allows to delete features in the storage associated (directly or via event handler) with the space.
         It ensures an atomic operation, so either all features will be deleted or none (in case of failure).
-        Attempting to delete a non-existing feature using this API will not be considered a failure, 
-        hence will not result in an HTTP error status code.
+        Attempting to delete a non-existing feature using this API will not be considered a failure.
       operationId: deleteFeatures
       parameters:
         - $ref: '#/components/parameters/SpaceId'
