@@ -22,10 +22,11 @@ import static com.here.naksha.app.service.NakshaApp.newInstance;
 
 import com.here.naksha.app.service.NakshaApp;
 import com.here.naksha.lib.hub.NakshaHubConfig;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class InitializedTestNakshaApp {
+public class TestNakshaAppInitializer {
 
   private static final String MOCK_CONFIG_ID = "mock-config";
 
@@ -34,20 +35,34 @@ public class InitializedTestNakshaApp {
   private static final String TEST_SCHEMA = "naksha_test_schema";
 
   public final @Nullable String testDbUrl;
-  public final @NotNull NakshaApp nakshaApp;
+  public final @NotNull AtomicReference<NakshaApp> nakshaApp;
 
-  private InitializedTestNakshaApp(@Nullable String testDbUrl, @NotNull NakshaApp nakshaApp) {
+  private TestNakshaAppInitializer(@Nullable String testDbUrl) {
     this.testDbUrl = testDbUrl;
-    this.nakshaApp = nakshaApp;
+    this.nakshaApp = new AtomicReference<>();
   }
 
-  public static InitializedTestNakshaApp initMockedNakshaApp() {
-    return new InitializedTestNakshaApp(null, newInstance(MOCK_CONFIG_ID));
+  public NakshaApp initNaksha() {
+    if (testDbUrl != null) {
+      nakshaApp.compareAndSet(null, newInstance(TEST_CONFIG_ID, testDbUrl));
+    } else {
+      nakshaApp.compareAndSet(null, newInstance(MOCK_CONFIG_ID));
+    }
+    return nakshaApp.get();
   }
 
-  public static InitializedTestNakshaApp initLocalPsqlBasedNakshaApp() {
+  // null if not initialized
+  public @Nullable NakshaApp getNaksha() {
+    return nakshaApp.get();
+  }
+
+  public static TestNakshaAppInitializer mockedNakshaApp() {
+    return new TestNakshaAppInitializer(null);
+  }
+
+  public static TestNakshaAppInitializer localPsqlBasedNakshaApp() {
     String dbUrl = dbUrl();
-    return new InitializedTestNakshaApp(dbUrl, newInstance(TEST_CONFIG_ID, dbUrl));
+    return new TestNakshaAppInitializer(dbUrl);
   }
 
   private static String dbUrl() {

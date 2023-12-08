@@ -18,14 +18,14 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.InitializedTestNakshaApp.initLocalPsqlBasedNakshaApp;
+import static com.here.naksha.app.common.TestNakshaAppInitializer.localPsqlBasedNakshaApp;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.here.naksha.app.common.InitializedTestNakshaApp;
 import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.app.common.TestNakshaAppInitializer;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.psql.PsqlStorage;
 import java.net.http.HttpResponse;
@@ -43,7 +43,7 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class NakshaAppTest {
 
-  static InitializedTestNakshaApp initializedTestNakshaApp;
+  static TestNakshaAppInitializer nakshaAppInitializer;
   static NakshaHubConfig config;
 
   static NakshaTestWebClient nakshaClient;
@@ -54,9 +54,9 @@ class NakshaAppTest {
 
   @BeforeAll
   static void prepare() throws InterruptedException, ExecutionException {
-    initializedTestNakshaApp =
-        initLocalPsqlBasedNakshaApp(); // to use mock, call NakshaAppInitializer.mockedNakshaApp()
-    NakshaApp app = initializedTestNakshaApp.nakshaApp;
+    nakshaAppInitializer = localPsqlBasedNakshaApp(); // to use mock, call NakshaAppInitializer.mockedNakshaApp()
+    cleanUpDb(nakshaAppInitializer.testDbUrl);
+    NakshaApp app = nakshaAppInitializer.initNaksha();
     config = app.getHub().getConfig();
     app.start();
     Thread.sleep(5000); // wait for server to come up
@@ -719,12 +719,18 @@ class NakshaAppTest {
 
   @AfterAll
   static void close() {
-    if (initializedTestNakshaApp != null) {
-      initializedTestNakshaApp.nakshaApp.stopInstance();
-      if (initializedTestNakshaApp.testDbUrl != null) {
-        try (PsqlStorage psqlStorage = new PsqlStorage(initializedTestNakshaApp.testDbUrl)) {
-          psqlStorage.dropSchema();
-        }
+    if (nakshaAppInitializer != null) {
+      NakshaApp app = nakshaAppInitializer.getNaksha();
+      if (app != null) {
+        app.stopInstance();
+      }
+    }
+  }
+
+  private static void cleanUpDb(String testUrl) {
+    if (testUrl != null && !testUrl.isBlank()) {
+      try (PsqlStorage psqlStorage = new PsqlStorage(testUrl)) {
+        psqlStorage.dropSchema();
       }
     }
   }

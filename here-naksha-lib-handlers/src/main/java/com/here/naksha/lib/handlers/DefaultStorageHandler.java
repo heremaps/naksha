@@ -86,7 +86,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     addStorageIdToStreamInfo(storageId, ctx);
 
     // Obtain IStorage implementation using NakshaHub
-    // TODO: invocation eception start Jakub
     final IStorage storageImpl = nakshaHub().getStorageById(storageId);
 
     // Find collectionId from EventHandler, from Space, whichever is available first

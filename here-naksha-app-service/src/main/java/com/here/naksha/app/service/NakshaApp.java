@@ -148,7 +148,7 @@ public final class NakshaApp extends Thread {
 
     // Potentially we could override the app-name:
     // NakshaHubConfig.APP_NAME = ?
-    return new NakshaApp(NakshaHubConfig.defaultAppName(), urlWithEnsuredSchema(url), cfgId, null);
+    return new NakshaApp(NakshaHubConfig.defaultAppName(), url, cfgId, null);
   }
 
   /**

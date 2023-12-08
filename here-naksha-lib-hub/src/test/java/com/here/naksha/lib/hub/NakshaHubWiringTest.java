@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -64,6 +65,8 @@ import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHAdminStorageReader;
 import com.here.naksha.lib.hub.storages.NHAdminStorageWriter;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
+import com.here.naksha.lib.psql.PsqlStorage;
+import com.here.naksha.lib.psql.PsqlStorage.Params;
 import java.util.List;
 import java.util.Map;
 import org.jetbrains.annotations.NotNull;
@@ -95,9 +98,17 @@ public class NakshaHubWiringTest {
 
   static NHSpaceStorage spaceStorage = null;
 
+  private static final String FEATURE_STORAGE_URL = "jdbc:postgresql://127.0.0.1/postgres?"
+      + "user=postgres&"
+      + "password=postgres&"
+      + "schema=naksha_lib_hub_test_schema&"
+      + "app=test-lib-hub-app-name&"
+      + "id=naksha_wiring_test";
+
   @BeforeEach
   void setup() throws Exception {
     MockitoAnnotations.openMocks(this);
+    cleanUpDb();
     spyPipelineFactory = spy(new NakshaEventPipelineFactory(hub));
     spaceStorage = new NHSpaceStorage(hub, spyPipelineFactory);
     when(hub.getSpaceStorage()).thenReturn(spaceStorage);
@@ -116,7 +127,7 @@ public class NakshaHubWiringTest {
 
   @Test
   @Order(1)
-  void testCreateStorageRequestWiring() throws Exception {
+  void testCreateStorageRequestWiring() {
     // Given: Create Storage request
     final Storage storage = parseJsonFileOrFail("create_storage.json", Storage.class);
     final WriteXyzFeatures request =
@@ -181,7 +192,7 @@ public class NakshaHubWiringTest {
     assertTrue(reqCaptor.getValue() instanceof ReadFeatures);
   }
 
-  //  @Test TODO: fix psql setup ('function naksha_start_session(unknown, unknown, unknown, unknown) does not exist')
+  @Test
   @Order(3)
   void testCreateFeatureRequestWiring() throws Exception {
     // Given: Storage, EventHandler and Space objects
@@ -191,6 +202,7 @@ public class NakshaHubWiringTest {
     final Space space = parseJsonFileOrFail("createFeature/create_space.json", Space.class);
     final IStorage storageImpl = PluginCache.getStorageConstructor(storage.getClassName(), Storage.class)
         .call(storage);
+    storageImpl.initStorage(new Params().pg_hint_plan(false).pg_stat_statements(false));
 
     // And: mock in place to return given Storage, EventHandler and Space objects, when requested from Admin Storage
     final IStorage spyStorageImpl = spy(storageImpl);
@@ -212,11 +224,12 @@ public class NakshaHubWiringTest {
         .thenReturn(spyStorageImpl);
     // And: setup spy on Custom Storage Writer to intercept execute() method calls
     final IWriteSession spyWriter = spy(spyStorageImpl.newWriteSession(newTestNakshaContext(), true));
-    when(spyStorageImpl.newWriteSession(any(), anyBoolean())).thenReturn(spyWriter);
+    doReturn(spyWriter).when(spyStorageImpl).newWriteSession(any(), anyBoolean());
 
     // And: Create Feature request
     final XyzFeature feature = parseJsonFileOrFail("createFeature/create_feature.json", XyzFeature.class);
-    final WriteXyzFeatures request = createFeatureRequest(space.getId(), feature, IfExists.FAIL, IfConflict.FAIL);
+    final WriteXyzFeatures request =
+        createFeatureRequest(space.getCollectionId(), feature, IfExists.FAIL, IfConflict.FAIL);
 
     // And: spies and captors in place to return
     final EventPipeline spyPipeline = spy(spyPipelineFactory.eventPipeline());
@@ -247,11 +260,12 @@ public class NakshaHubWiringTest {
     verify(spyWriter, times(3)).execute(reqCaptor.capture());
     assertTrue(reqCaptor.getValue() instanceof WriteFeatures);
     final List<WriteRequest> requests = reqCaptor.getAllValues();
-    final String collectionId =
-        ((Map) space.getProperties().get("xyzCollection")).get("id").toString();
+    final String collectionId = ((Map) space.getProperties().get("collection"))
+        .get("id")
+        .toString(); // TODO: this is ambiguous (see Space::getCollectionId), discuss
     // Verify: WriteFeature into collection got called
     assertTrue(
-        requests.get(0) instanceof WriteFeatures<?, ?, ?> wr
+        requests.get(0) instanceof WriteXyzFeatures wr
             && wr.getCollectionId().equals(collectionId),
         "WriteFeature into collection request mismatch " + requests.get(0));
     // Verify: WriteCollection got called (to create missing table)
@@ -270,5 +284,11 @@ public class NakshaHubWiringTest {
     return XyzCodecFactory.getFactory(XyzFeatureCodecFactory.class)
         .newInstance()
         .withFeature(feature);
+  }
+
+  private static void cleanUpDb() {
+    try (PsqlStorage psqlStorage = new PsqlStorage(FEATURE_STORAGE_URL)) {
+      psqlStorage.dropSchema();
+    }
   }
 }
