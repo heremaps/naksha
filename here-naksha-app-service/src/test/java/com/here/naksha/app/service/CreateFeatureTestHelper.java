@@ -129,8 +129,7 @@ public class CreateFeatureTestHelper {
     final String bodyJson = loadFileOrFail("TC0300_createFeaturesWithNewIds/create_features.json");
     // TODO: include geometry after Cursor-related changes ->
     // loadFileOrFail("TC0300_createFeaturesWithNewIds/feature_response_part.json");
-    final String expectedBodyPart =
-        loadFileOrFail("TC0300_createFeaturesWithNewIds/feature_response_part_without_geometry.json");
+    final String expectedBodyPart = loadFileOrFail("TC0300_createFeaturesWithNewIds/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
@@ -158,8 +157,7 @@ public class CreateFeatureTestHelper {
     final String bodyJson = loadFileOrFail("TC0301_createFeaturesWithGivenIds/create_features.json");
     // TODO: include geometry after Cursor-related changes ->
     // loadFileOrFail("TC0301_createFeaturesWithGivenIds/feature_response_part.json");
-    final String expectedBodyPart =
-        loadFileOrFail("TC0301_createFeaturesWithGivenIds/feature_response_part_without_geometry.json");
+    final String expectedBodyPart = loadFileOrFail("TC0301_createFeaturesWithGivenIds/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
@@ -189,8 +187,7 @@ public class CreateFeatureTestHelper {
     final String bodyJson = loadFileOrFail("TC0302_createFeaturesWithPrefixId/create_features.json");
     // TODO: include geometry after Cursor-related changes ->
     // loadFileOrFail("TC0302_createFeaturesWithPrefixId/feature_response_part.json");
-    final String expectedBodyPart =
-        loadFileOrFail("TC0302_createFeaturesWithPrefixId/feature_response_part_without_geometry.json");
+    final String expectedBodyPart = loadFileOrFail("TC0302_createFeaturesWithPrefixId/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
@@ -224,8 +221,7 @@ public class CreateFeatureTestHelper {
     final String bodyJson = loadFileOrFail("TC0303_createFeaturesWithAddTags/create_features.json");
     // TODO: include geometry after Cursor-related changes ->
     // loadFileOrFail("TC0303_createFeaturesWithAddTags/feature_response_part.json");
-    final String expectedBodyPart =
-        loadFileOrFail("TC0303_createFeaturesWithAddTags/feature_response_part_without_geometry.json");
+    final String expectedBodyPart = loadFileOrFail("TC0303_createFeaturesWithAddTags/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
@@ -258,7 +254,7 @@ public class CreateFeatureTestHelper {
     // TODO: include geometry after Cursor-related changes ->
     // loadFileOrFail("TC0304_createFeaturesWithRemoveTags/feature_response_part.json");
     final String expectedBodyPart =
-        loadFileOrFail("TC0304_createFeaturesWithRemoveTags/feature_response_part_without_geometry.json");
+        loadFileOrFail("TC0304_createFeaturesWithRemoveTags/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
