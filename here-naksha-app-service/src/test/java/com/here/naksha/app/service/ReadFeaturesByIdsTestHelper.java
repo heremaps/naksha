@@ -135,8 +135,8 @@ public class ReadFeaturesByIdsTestHelper {
         "id=my-custom-id-400-1" + "&id=my-custom-id-400-2" + "&id=missing-id-1" + "&id=missing-id-2";
     // TODO: include geometry after Cursor-related changes ->
     // loadFileOrFail("ReadFeatures/ByIds/TC0400_ExistingAndMissingIds/feature_response_part.json");
-    final String expectedBodyPart = loadFileOrFail(
-        "ReadFeatures/ByIds/TC0400_ExistingAndMissingIds/feature_response_part_without_geometry.json");
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByIds/TC0400_ExistingAndMissingIds/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
@@ -232,7 +232,7 @@ public class ReadFeaturesByIdsTestHelper {
     // TODO: include geometry after Cursor-related changes ->
     // loadFileOrFail("ReadFeatures/ByIds/TC0404_ExistingId/feature_response_part.json");
     final String expectedBodyPart =
-        loadFileOrFail("ReadFeatures/ByIds/TC0404_ExistingId/feature_response_part_without_geometry.json");
+        loadFileOrFail("ReadFeatures/ByIds/TC0404_ExistingId/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
@@ -307,8 +307,8 @@ public class ReadFeaturesByIdsTestHelper {
     final String idsQueryParam = "id=my-custom-id-400-1,my-custom-id-400-2,missing-id-1,missing-id-2";
     // TODO: include geometry after Cursor-related changes ->
     // loadFileOrFail("ReadFeatures/ByIds/TC0407_CommaSeparatedIds/feature_response_part.json");
-    final String expectedBodyPart = loadFileOrFail(
-        "ReadFeatures/ByIds/TC0407_CommaSeparatedIds/feature_response_part_without_geometry.json");
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByIds/TC0407_CommaSeparatedIds/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
