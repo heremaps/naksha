@@ -3,16 +3,5 @@
   "type": "Storage",
   "title": "UniMap Moderation Dev Storage",
   "description": "UniMap Moderation storage for Dev environment, holding collections managed by Naksha service",
-  "className": "com.here.naksha.lib.psql.PsqlStorage",
-  "properties": {
-    "master": {
-      "host": "127.0.0.1",
-      "db": "postgres",
-      "user": "postgres",
-      "password": "password",
-      "readOnly": false
-    },
-    "appName": "test-lib-hub-app-name",
-    "schema": "naksha_lib_hub_test_schema"
-  }
+  "className": "com.here.naksha.lib.hub.mock.NHAdminMock"
 }
