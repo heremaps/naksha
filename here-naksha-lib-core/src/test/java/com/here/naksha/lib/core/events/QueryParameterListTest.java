@@ -44,6 +44,18 @@ import org.junit.jupiter.api.Test;
 public class QueryParameterListTest {
 
   @Test
+  public void paramWithNumericValue() throws Exception {
+    final QueryParameterList params = new QueryParameterList("id=100");
+    assertEquals(1, params.size());
+    assertEquals(1, params.keySize());
+    assertEquals(1, params.count("id"));
+
+    String id = params.getValueAsString("id");
+    assertNotNull(id);
+    assertEquals(id, "100");
+  }
+
+  @Test
   public void tagsWithEncodedValues() throws Exception {
     final QueryParameterList params = new QueryParameterList("tags=one" + "&tags=two,three"
         + "&tags=four%2Cfive"
@@ -54,7 +66,7 @@ public class QueryParameterListTest {
     assertEquals(1, params.keySize());
     assertEquals(6, params.count("tags"));
 
-    List<String> tagList = params.collectAllOf("tags", String.class);
+    List<String> tagList = params.collectAllOfAsString("tags");
     int i = 0;
     assertEquals("one", tagList.get(i++));
     assertEquals("two", tagList.get(i++));

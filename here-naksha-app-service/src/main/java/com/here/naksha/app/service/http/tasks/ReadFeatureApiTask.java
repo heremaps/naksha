@@ -102,8 +102,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final QueryParameterList queryParams = (routingContext.request().query() != null)
         ? new QueryParameterList(routingContext.request().query())
         : null;
-    final List<String> featureIds =
-        (queryParams != null) ? queryParams.collectAllOf(FEATURE_IDS, String.class) : null;
+    final List<String> featureIds = (queryParams != null) ? queryParams.collectAllOfAsString(FEATURE_IDS) : null;
     if (featureIds == null || featureIds.isEmpty()) {
       return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing id parameter");
     }

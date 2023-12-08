@@ -178,7 +178,7 @@ public class CreateFeatureTestHelper {
     // Given: existing space
     final String spaceId = "um-mod-topology-dev";
     // Given: Feature ID prefix
-    final String prefixId = "my-custom-prefix:";
+    final String prefixId = "1000";
     // Given: Create Features request
     final String bodyJson = loadFileOrFail("TC0302_createFeaturesWithPrefixId/create_features.json");
     // TODO: include geometry after Cursor-related changes ->
@@ -210,7 +210,8 @@ public class CreateFeatureTestHelper {
     // Given: existing space
     final String spaceId = "um-mod-topology-dev";
     // Given: addTags API query param
-    final String tagQueryParam = "addTags=New_Normalized_Tag"
+    final String tagQueryParam = "addTags=100"
+        + "&addTags=New_Normalized_Tag"
         + "&addTags=" + urlEncoded("@New_Non_Normalized_Tag")
         + "&addTags=Existing_Normalized_Tag"
         + "&addTags=" + urlEncoded("@Existing_Non_Normalized_Tag");

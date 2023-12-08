@@ -114,10 +114,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final QueryParameterList queryParams = (routingContext.request().query() != null)
         ? new QueryParameterList(routingContext.request().query())
         : null;
-    final String prefixId = (queryParams != null) ? queryParams.getValueOf(PREFIX_ID, String.class) : null;
-    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOf(ADD_TAGS, String.class) : null;
-    final List<String> removeTags =
-        (queryParams != null) ? queryParams.collectAllOf(REMOVE_TAGS, String.class) : null;
+    final String prefixId = (queryParams != null) ? queryParams.getValueAsString(PREFIX_ID) : null;
+    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOfAsString(ADD_TAGS) : null;
+    final List<String> removeTags = (queryParams != null) ? queryParams.collectAllOfAsString(REMOVE_TAGS) : null;
 
     // as applicable, modify features based on parameters supplied
     for (final XyzFeature feature : features) {
@@ -147,9 +146,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final QueryParameterList queryParams = (routingContext.request().query() != null)
         ? new QueryParameterList(routingContext.request().query())
         : null;
-    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOf(ADD_TAGS, String.class) : null;
-    final List<String> removeTags =
-        (queryParams != null) ? queryParams.collectAllOf(REMOVE_TAGS, String.class) : null;
+    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOfAsString(ADD_TAGS) : null;
+    final List<String> removeTags = (queryParams != null) ? queryParams.collectAllOfAsString(REMOVE_TAGS) : null;
 
     // as applicable, modify features based on parameters supplied
     for (final XyzFeature feature : features) {
@@ -179,9 +177,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final QueryParameterList queryParams = (routingContext.request().query() != null)
         ? new QueryParameterList(routingContext.request().query())
         : null;
-    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOf(ADD_TAGS, String.class) : null;
-    final List<String> removeTags =
-        (queryParams != null) ? queryParams.collectAllOf(REMOVE_TAGS, String.class) : null;
+    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOfAsString(ADD_TAGS) : null;
+    final List<String> removeTags = (queryParams != null) ? queryParams.collectAllOfAsString(REMOVE_TAGS) : null;
 
     if (!featureId.equals(feature.getId())) {
       return verticle.sendErrorResponse(
