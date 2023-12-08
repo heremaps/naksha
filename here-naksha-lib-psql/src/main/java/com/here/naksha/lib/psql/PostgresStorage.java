@@ -259,8 +259,7 @@ final class PostgresStorage extends ClosableRootResource {
   private final long cancelSignalTimeout = TimeUnit.SECONDS.toMillis(15);
 
   @Override
-  protected void destruct() {
-  }
+  protected void destruct() {}
 
   /**
    * The default initializer for connections.

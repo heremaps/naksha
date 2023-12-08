@@ -221,8 +221,8 @@ public class NakshaHub implements INaksha {
             return defDbCfg; // return default config from DB
           }
         } catch (NoCursor | NoSuchElementException er) {
-          logger.info("Not found any db configuration in '" + NakshaAdminCollection.CONFIGS
-              + "' admin collection");
+          throw unchecked(new Exception(
+              "Unable to read custom/default config from Admin DB - ResultCursor has no data"));
         }
       }
 
