@@ -137,6 +137,7 @@ public class NakshaHub implements INaksha {
         } else {
           throw ex;
         }
+        admin.rollback(true);
       }
     } // close Admin DB connection
 
