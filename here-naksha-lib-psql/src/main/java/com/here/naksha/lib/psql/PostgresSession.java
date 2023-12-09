@@ -80,7 +80,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     super(proxy, storage);
     this.context = context;
     this.psqlConnection = psqlConnection;
-    this.readOnly = psqlConnection.connection.parent().config.readOnly;
+    this.readOnly = psqlConnection.postgresConnection.parent().config.readOnly;
     this.sql = new SQL();
     this.fetchSize = storage.getFetchSize();
     this.stmtTimeoutMillis = storage.getLockTimeout(MILLISECONDS);
@@ -400,6 +400,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           }
           if (props_where.length() > 0) {
             sql.add(props_where);
+          }
+          if (readRequest.limit != null) {
+            sql.add(" LIMIT ").add(readRequest.limit);
           }
         }
       }

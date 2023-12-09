@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
@@ -55,6 +56,7 @@ import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SOp;
+import com.here.naksha.lib.core.models.storage.SeekableCursor;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
@@ -174,8 +176,6 @@ public class PsqlStorageTests extends PsqlTests {
       assertEquals(2, uuidFields[3].length()); // hour (2- digits)
       assertEquals(2, uuidFields[4].length()); // minute (2- digits)
       assertEquals("1", uuidFields[5]); // seq id
-      final String txnFromUuid = uuidFields[2] + uuidFields[3] + uuidFields[4] + "0000000000" + uuidFields[5];
-      assertEquals(txnFromUuid, xyz.getTxnUuid()); // seq id
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
       assertNotEquals(xyz.getRealTimeUpdatedAt(), xyz.getUpdatedAt());
@@ -346,8 +346,8 @@ public class PsqlStorageTests extends PsqlTests {
       // - Upsert the single feature (2) <- commit
       // - Update the single feature (3) <- commit
       if (dropInitially()) {
-        final String txnFromUuid =
-            uuidFields[GUID_YEAR] + uuidFields[GUID_MONTH] + uuidFields[GUID_DAY] + "00000000003";
+        final long txnFromUuid = Long.parseLong(
+            uuidFields[GUID_YEAR] + uuidFields[GUID_MONTH] + uuidFields[GUID_DAY] + "00000000003");
         assertEquals(txnFromUuid, xyz.getTxn()); // seq id
       }
       assertEquals(TEST_APP_ID, xyz.getAppId());
@@ -438,20 +438,26 @@ public class PsqlStorageTests extends PsqlTests {
     ErrorResult errorResult = (ErrorResult) result;
     assertEquals(XyzError.CONFLICT, errorResult.reason);
     assertEquals(UNIQUE_VIOLATION_MSG, errorResult.message);
+    int expectedResults = 2;
     try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzFeatureCursor()) {
-      assertTrue(cursor.next());
-      assertEquals(featureToSucceed.getId(), cursor.getFeature().getId());
-
-      // error row check
-      assertTrue(cursor.next());
-      assertTrue(cursor.hasError());
-      assertSame(EExecutedOp.ERROR, cursor.getOp());
-      CodecError rowError = cursor.getError();
-      assertNotNull(rowError);
-      assertEquals(XyzError.CONFLICT, rowError.err);
-      assertEquals(UNIQUE_VIOLATION_MSG, rowError.msg);
-      // we still should be able to read the feature
-      assertEquals(featureToFail.getId(), cursor.getFeature().getId());
+      while (expectedResults-- > 0) {
+        assertTrue(cursor.next());
+        final String id = cursor.getFeature().getId();
+        if (featureToSucceed.getId().equals(id)) {
+          // OK
+        } else if (featureToFail.getId().equals(id)) {
+          assertTrue(cursor.hasError());
+          assertSame(EExecutedOp.ERROR, cursor.getOp());
+          CodecError rowError = cursor.getError();
+          assertNotNull(rowError);
+          assertEquals(XyzError.CONFLICT, rowError.err);
+          assertEquals(UNIQUE_VIOLATION_MSG, rowError.msg);
+          // we still should be able to read the feature
+          assertEquals(featureToFail.getId(), cursor.getFeature().getId());
+        } else {
+          fail("Received invalid feature id: " + id);
+        }
+      }
     } finally {
       session.commit(true);
     }
@@ -719,6 +725,37 @@ public class PsqlStorageTests extends PsqlTests {
       }
     } finally {
       session.commit(true);
+    }
+  }
+
+  @Test
+  @Order(72)
+  @EnabledIf("runTest")
+  void seekableCursorRead() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+    final ReadFeatures request = new ReadFeatures(collectionId());
+    request.limit = null;
+    try (final SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        session.execute(request).getXyzSeekableCursor()) {
+
+      // commit closes original cursor, but as we have all rows cached SeekableCursor should work as normal.
+      session.commit(true);
+
+      // We expect that at least one feature was found!
+      assertTrue(cursor.hasNext());
+      cursor.next();
+      XyzFeature firstFeature = cursor.getFeature();
+      while (cursor.hasNext()) {
+        assertTrue(cursor.next());
+        final XyzFeature f = cursor.getFeature();
+        assertNotNull(f);
+      }
+      assertFalse(cursor.hasNext());
+
+      cursor.beforeFirst();
+      assertTrue(cursor.next());
+      assertEquals(firstFeature, cursor.getFeature());
     }
   }
 
