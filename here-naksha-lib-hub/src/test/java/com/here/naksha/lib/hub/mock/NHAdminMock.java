@@ -62,10 +62,12 @@ public class NHAdminMock implements IStorage {
   public NHAdminMock(
       final @NotNull Map<String, TreeMap<String, Object>> mockCollection,
       final @NotNull NakshaHubConfig customCfg) {
-    this.mockCollection = mockCollection;
+    throw new UnsupportedOperationException(
+        "NHAdminMock storage should not be used"); // comment to use mock in local env
+    /*this.mockCollection = mockCollection;
     this.nakshaHubConfig = customCfg;
     this.initStorage();
-    this.setupConfig();
+    this.setupConfig();*/
   }
 
   @Override

@@ -119,7 +119,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=two,three";
     final String expectedBodyPart =
@@ -143,7 +143,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=four+five";
     final String expectedBodyPart =
@@ -167,7 +167,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=three" + "&tags=four,five";
     final String expectedBodyPart =
@@ -191,7 +191,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=one" + "&tags=two+three";
     final String expectedBodyPart =
@@ -215,7 +215,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=three+four" + "&tags=four+five";
     final String expectedBodyPart =
@@ -239,7 +239,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=one";
     final String limitQueryParam = "limit=2";
@@ -265,7 +265,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0707_BBoxOnly/feature_response_part.json");
@@ -287,7 +287,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
     final String tagsQueryParam = "tags=three+four";
     final String expectedBodyPart =
@@ -311,7 +311,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0709_WithoutBBox/feature_response_part.json");
     streamId = UUID.randomUUID().toString();
@@ -332,7 +332,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-181&south=50.1175&east=8.6729&north=50.1248";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByBBox/TC0710_InvalidCoordinate/feature_response_part.json");
@@ -354,7 +354,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=one@two";
     final String expectedBodyPart =
@@ -378,7 +378,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=non-matching-tag+" + urlEncoded("@ThRee");
     final String expectedBodyPart =
@@ -402,7 +402,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=six,three+four" + "&tags=non-existing-tag";
     final String expectedBodyPart =
@@ -426,7 +426,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=non-existing-tag";
     final String expectedBodyPart =
@@ -450,7 +450,7 @@ public class ReadFeaturesByBBoxTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By BBox request (against configured space)
-    final String spaceId = "local-space-4-feature-by-bbox";
+    final String spaceId = "local-space-4-features-by-bbox";
     // final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String bboxQueryParam = "west=8.2&south=49.9&east=8.3&north=50";
     final String tagsQueryParam = "tags=one";

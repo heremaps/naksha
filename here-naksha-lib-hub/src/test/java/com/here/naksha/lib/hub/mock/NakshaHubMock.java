@@ -37,7 +37,6 @@ import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

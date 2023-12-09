@@ -117,7 +117,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=two,three";
     final String expectedBodyPart =
@@ -141,7 +141,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=four+five";
     final String expectedBodyPart =
@@ -165,7 +165,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=three" + "&tags=four,five";
     final String expectedBodyPart =
@@ -189,7 +189,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=one" + "&tags=two+three";
     final String expectedBodyPart =
@@ -213,7 +213,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=three+four" + "&tags=four+five";
     final String expectedBodyPart =
@@ -237,7 +237,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=one";
     final String limitQueryParam = "limit=2";
@@ -263,7 +263,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "120203302030322200";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0807_TileOnly/feature_response_part.json");
@@ -285,7 +285,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "120203302030322200";
     final String tagsQueryParam = "tags=three+four";
     final String expectedBodyPart =
@@ -309,7 +309,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0809_WithoutTile/feature_response_part.json");
@@ -331,7 +331,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "A";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0810_InvalidTileId/feature_response_part.json");
@@ -353,7 +353,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=one@two";
     final String expectedBodyPart =
@@ -377,7 +377,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=non-matching-tag+" + urlEncoded("@ThRee");
     final String expectedBodyPart =
@@ -401,7 +401,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=six,three+four" + "&tags=non-existing-tag";
     final String expectedBodyPart =
@@ -425,7 +425,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=non-existing-tag";
     final String expectedBodyPart =
@@ -449,7 +449,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "0";
     final String tagsQueryParam = "tags=one";
     final String expectedBodyPart =
@@ -473,7 +473,7 @@ public class ReadFeaturesByTileTestHelper {
     HttpResponse<String> response;
 
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-feature-by-tile";
+    final String spaceId = "local-space-4-features-by-tile";
     final String unsupportedTileType = "here-quadkey";
     final String tileId = "1";
     final String tagsQueryParam = "tags=one";

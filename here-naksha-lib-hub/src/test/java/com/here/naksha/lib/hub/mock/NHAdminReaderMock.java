@@ -34,10 +34,16 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
+import org.postgresql.util.PSQLState;
 
 public class NHAdminReaderMock implements IReadSession {
 
   protected static @NotNull Map<String, TreeMap<String, Object>> mockCollection;
+
+  public NHAdminReaderMock() {
+    throw new UnsupportedOperationException(
+        "NHAdminReaderMock storage should not be used"); // comment to use mock in local env
+  }
 
   public NHAdminReaderMock(final @NotNull Map<String, TreeMap<String, Object>> mockCollection) {
     this.mockCollection = mockCollection;
