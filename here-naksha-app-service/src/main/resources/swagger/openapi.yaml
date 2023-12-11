@@ -1295,13 +1295,15 @@ components:
               description: The unique identifier of the feature.
               type: string
             geometry:
-              oneOf:
+              nullable: true
+              anyOf:
                 - $ref: '#/components/schemas/LineString'
                 - $ref: '#/components/schemas/MultiLineString'
                 - $ref: '#/components/schemas/MultiPoint'
                 - $ref: '#/components/schemas/MultiPolygon'
                 - $ref: '#/components/schemas/Point'
                 - $ref: '#/components/schemas/Polygon'
+                - $ref: '#/components/schemas/Nullable'
             properties:
               type: object
               description: The properties of the feature.
@@ -1411,6 +1413,9 @@ components:
                     maxItems: 3
                     minItems: 2
                   minItems: 4
+    Nullable:
+      type: object
+      nullable: true
     Point:
       allOf:
         - $ref: '#/components/schemas/Geometry'
