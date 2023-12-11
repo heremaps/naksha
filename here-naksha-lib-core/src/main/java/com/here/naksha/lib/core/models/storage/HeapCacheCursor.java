@@ -47,7 +47,6 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   protected ForwardCursor<?, ?> originalCursor;
   protected Map<String, Integer> originalFeaturesOrder;
-  protected boolean restoreOrderPossible = true;
 
   public HeapCacheCursor(
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
@@ -68,7 +67,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
 
   @Override
   public boolean restoreInputOrder() {
-    if (originalFeaturesOrder == null || !restoreOrderPossible) {
+    if (originalFeaturesOrder == null) {
       return false;
     }
 
@@ -162,7 +161,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
   @Override
   public @NotNull FEATURE addFeature(@NotNull FEATURE feature) {
     inMemoryData.add(createCodec(feature));
-    restoreOrderPossible = false;
+    this.originalFeaturesOrder = null;
     return feature;
   }
 
@@ -174,7 +173,7 @@ public class HeapCacheCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>
     if (position == this.position) {
       loadPosition(currentRow, position);
     }
-    restoreOrderPossible = false;
+    this.originalFeaturesOrder = null;
     return requireNonNull(currentPositionCodec.encodeFeature(false).getFeature());
   }
 
