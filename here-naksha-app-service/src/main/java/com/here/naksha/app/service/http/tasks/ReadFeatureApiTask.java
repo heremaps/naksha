@@ -155,7 +155,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Prepare read request based on parameters supplied
     final SOp bboxOp = ApiUtil.buildOperationForBBox(west, south, east, north);
-    ;
     final POp tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
     if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);

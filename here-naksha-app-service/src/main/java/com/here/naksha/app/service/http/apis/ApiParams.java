@@ -45,6 +45,9 @@ public final class ApiParams {
   public static String TILE_ID = "tileId";
 
   public static long DEF_FEATURE_LIMIT = 30_000;
+  public static long DEF_ADMIN_FEATURE_LIMIT = 1_000;
+
+  public static String TILE_TYPE_QUADKEY = "quadkey";
 
   public static @NotNull String extractMandatoryPathParam(
       final @NotNull RoutingContext routingContext, final @NotNull String param) {

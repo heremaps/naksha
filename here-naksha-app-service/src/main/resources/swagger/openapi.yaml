@@ -771,6 +771,30 @@ components:
         A comma separated list of tags or combination of tags concatenated with
         a plus sign (+). A comma separated list of tags means any tag may be
         found. A plus sign concatenated list means every tag is required.
+
+
+        #### For example:
+
+
+        - **tags**=first,two
+        
+            * will result into logical OR condition between the tags i.e. "first" OR "two"
+
+        - **tags**=first+two
+        
+            * will result into logical AND condition between the tags i.e. "first" AND "two"
+
+        - **tags**=first,two,three+four
+        
+            * will result into mixed logical conditions, with AND having higher preference i.e. "first" OR "two" OR ("three" AND "four")
+
+        - **tags**=first+two,three,four
+        
+            * i.e. ("first" AND "two") OR "three" OR "four"
+
+        - **tags**=first    **tags**=two+three
+        
+            * multiple tags parameters form OR conditions between them i.e. "first" OR ("two" AND "three")
       allowEmptyValue: false
       style: form
       schema:

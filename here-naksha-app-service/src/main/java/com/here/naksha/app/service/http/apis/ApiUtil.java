@@ -19,6 +19,7 @@
 package com.here.naksha.app.service.http.apis;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.TAGS;
+import static com.here.naksha.app.service.http.apis.ApiParams.TILE_TYPE_QUADKEY;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.*;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
 
@@ -47,7 +48,7 @@ public class ApiUtil {
 
   public static @NotNull SOp buildOperationForTile(final @NotNull String tileType, final @NotNull String tileId) {
     try {
-      if (!tileType.equals("quadkey")) {
+      if (!tileType.equals(TILE_TYPE_QUADKEY)) {
         throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Tile type " + tileType + " not supported");
       }
       final Geometry geo =
@@ -112,6 +113,7 @@ public class ApiUtil {
       for (final Object obj : tagTokenList) {
         if (obj == null) continue;
         final String tag = (String) obj;
+        if (tag.isEmpty()) continue;
         final QueryDelimiter delimiter = delimList.get(delimIdx++);
         if (delimiter != AMPERSAND && delimiter != END && delimiter != COMMA && delimiter != PLUS) {
           throw new XyzErrorException(
