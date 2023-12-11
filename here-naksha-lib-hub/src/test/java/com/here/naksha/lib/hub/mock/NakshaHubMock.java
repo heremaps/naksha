@@ -34,12 +34,9 @@ import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
-import com.here.naksha.lib.hub.NakshaEventPipelineFactory;
 import com.here.naksha.lib.hub.NakshaHubConfig;
-import com.here.naksha.lib.hub.storages.NHSpaceStorage;
-import com.here.naksha.lib.psql.PsqlInstanceConfig;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.TreeMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -59,7 +56,7 @@ public class NakshaHubMock implements INaksha {
    * where, mock collection, will: - mandatorily hold admin virtual spaces e.g. naksha:storages, naksha:event_handlers, naksha:spaces -
    * optional custom spaces e.g. "foo", "bar"
    */
-  protected final @NotNull Map<String, Map<String, Object>> mockCollection;
+  protected final @NotNull Map<String, TreeMap<String, Object>> mockCollection;
 
   /**
    * The NakshaHub config.
@@ -77,14 +74,15 @@ public class NakshaHubMock implements INaksha {
 
   public NakshaHubMock(
       final @NotNull String appName,
-      final @NotNull PsqlInstanceConfig config,
+      final @NotNull String storageConfig,
       final @NotNull NakshaHubConfig customCfg,
       final @Nullable String configId) {
-    mockCollection = new ConcurrentHashMap<>();
-    // create storage instances upfront
-    this.adminStorageInstance = new NHAdminMock(mockCollection, customCfg);
-    this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
-    this.nakshaHubConfig = customCfg;
+    throw new UnsupportedOperationException("NakshaHubMock should not be used"); // comment to use mock in local env
+    //    mockCollection = new ConcurrentHashMap<>();
+    //    // create storage instances upfront
+    //    this.adminStorageInstance = new NHAdminMock(mockCollection, customCfg);
+    //    this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
+    //    this.nakshaHubConfig = customCfg;
   }
 
   /**

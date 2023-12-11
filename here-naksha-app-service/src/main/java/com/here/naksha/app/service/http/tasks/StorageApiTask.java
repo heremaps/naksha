@@ -18,12 +18,15 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
+import static com.here.naksha.app.service.http.apis.ApiParams.STORAGE_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
+import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
+import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
@@ -42,7 +45,6 @@ import org.slf4j.LoggerFactory;
 
 public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
-  private static final String STORAGE_ID_PATH_KEY = "storageId";
   private static final Logger logger = LoggerFactory.getLogger(StorageApiTask.class);
   private final @NotNull StorageApiReqType reqType;
 
@@ -85,6 +87,8 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
         case UPDATE_STORAGE -> executeUpdateStorage();
         default -> executeUnsupported();
       };
+    } catch (XyzErrorException ex) {
+      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
     } catch (Exception ex) {
       // unexpected exception
       return verticle.sendErrorResponse(
@@ -94,34 +98,38 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
 
   private @NotNull XyzResponse executeGetStorages() {
     final ReadFeatures request = new ReadFeatures(STORAGES);
-    final Result rdResult = executeReadRequestFromSpaceStorage(request);
-    return transformReadResultToXyzCollectionResponse(rdResult, Storage.class);
+    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
+      return transformReadResultToXyzCollectionResponse(rdResult, Storage.class);
+    }
   }
 
   private @NotNull XyzResponse executeGetStorageById() {
-    final String storageId = routingContext.pathParam(STORAGE_ID_PATH_KEY);
+    final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final ReadFeatures request = new ReadFeatures(STORAGES).withPropertyOp(POp.eq(PRef.id(), storageId));
-    final Result rdResult = executeReadRequestFromSpaceStorage(request);
-    return transformReadResultToXyzFeatureResponse(rdResult, Storage.class);
+    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
+      return transformReadResultToXyzFeatureResponse(rdResult, Storage.class);
+    }
   }
 
   private @NotNull XyzResponse executeCreateStorage() throws JsonProcessingException {
     final Storage newStorage = storageFromRequestBody();
     final WriteXyzFeatures wrRequest = RequestHelper.createFeatureRequest(STORAGES, newStorage, false);
-    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
-    return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class);
+    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
+      return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class);
+    }
   }
 
   private @NotNull XyzResponse executeUpdateStorage() throws JsonProcessingException {
-    final String storageIdFromPath = routingContext.pathParam(STORAGE_ID_PATH_KEY);
+    final String storageIdFromPath = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final Storage storageFromBody = storageFromRequestBody();
     if (!storageFromBody.getId().equals(storageIdFromPath)) {
       return verticle.sendErrorResponse(
           routingContext, XyzError.ILLEGAL_ARGUMENT, mismatchMsg(storageIdFromPath, storageFromBody));
     } else {
       final WriteXyzFeatures updateStorageReq = RequestHelper.updateFeatureRequest(STORAGES, storageFromBody);
-      final Result updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq);
-      return transformWriteResultToXyzFeatureResponse(updateStorageResult, Storage.class);
+      try (Result updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq)) {
+        return transformWriteResultToXyzFeatureResponse(updateStorageResult, Storage.class);
+      }
     }
   }
 

@@ -18,13 +18,19 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.app.service.http.apis.ApiParams.ADD_TAGS;
+import static com.here.naksha.app.service.http.apis.ApiParams.FEATURE_ID;
+import static com.here.naksha.app.service.http.apis.ApiParams.PREFIX_ID;
+import static com.here.naksha.app.service.http.apis.ApiParams.REMOVE_TAGS;
+import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
+import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
+import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
@@ -34,6 +40,7 @@ import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
+import com.here.naksha.lib.core.view.ViewDeserialize.User;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -87,6 +94,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         case DELETE_BY_ID -> executeDeleteFeature();
         default -> executeUnsupported();
       };
+    } catch (XyzErrorException ex) {
+      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
     } catch (Exception ex) {
       // unexpected exception
       logger.error("Exception processing Http request. ", ex);
@@ -104,11 +113,18 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // Parse API parameters
-    final String spaceId = pathParam(routingContext, SPACE_ID);
-    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
-    final String prefixId = extractSpecificParam(queryParams, PREFIX_ID);
-    final List<String> addTags = extractSpecificParamList(queryParams, ADD_TAGS);
-    final List<String> removeTags = extractSpecificParamList(queryParams, REMOVE_TAGS);
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    final String prefixId = (queryParams != null) ? queryParams.getValueAsString(PREFIX_ID) : null;
+    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOfAsString(ADD_TAGS) : null;
+    final List<String> removeTags = (queryParams != null) ? queryParams.collectAllOfAsString(REMOVE_TAGS) : null;
+//    final String spaceId = pathParam(routingContext, SPACE_ID);
+//    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+//    final String prefixId = extractSpecificParam(queryParams, PREFIX_ID);
+//    final List<String> addTags = extractSpecificParamList(queryParams, ADD_TAGS);
+//    final List<String> removeTags = extractSpecificParamList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
     if (spaceId == null || spaceId.isEmpty()) {
@@ -116,7 +132,6 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // as applicable, modify features based on parameters supplied
-
     for (final XyzFeature feature : features) {
       feature.setIdPrefix(prefixId);
       addTagsToFeature(feature, addTags);
@@ -126,9 +141,10 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final WriteXyzFeatures wrRequest = RequestHelper.createFeaturesRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
-    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
-    // transform WriteResult to Http FeatureCollection response
-    return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class);
+    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
+      // transform WriteResult to Http FeatureCollection response
+      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class);
+    }
   }
 
   private @NotNull XyzResponse executeUpsertFeatures() throws Exception {
@@ -140,10 +156,16 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // Parse API parameters
-    final String spaceId = pathParam(routingContext, SPACE_ID);
-    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
-    final List<String> addTags = extractSpecificParamList(queryParams, ADD_TAGS);
-    final List<String> removeTags = extractSpecificParamList(queryParams, REMOVE_TAGS);
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOfAsString(ADD_TAGS) : null;
+    final List<String> removeTags = (queryParams != null) ? queryParams.collectAllOfAsString(REMOVE_TAGS) : null;
+//    final String spaceId = pathParam(routingContext, SPACE_ID);
+//    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+//    final List<String> addTags = extractSpecificParamList(queryParams, ADD_TAGS);
+//    final List<String> removeTags = extractSpecificParamList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
     if (spaceId == null || spaceId.isEmpty()) {
@@ -158,9 +180,10 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
-    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
-    // transform WriteResult to Http FeatureCollection response
-    return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class);
+    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
+      // transform WriteResult to Http FeatureCollection response
+      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class);
+    }
   }
 
   private @NotNull XyzResponse executeUpdateFeature() throws Exception {
@@ -168,12 +191,18 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final XyzFeature feature = singleFeatureFromRequestBody();
 
     // Parse API parameters
-    final String spaceId = pathParam(routingContext, SPACE_ID);
-    final String featureId = pathParam(routingContext, FEATURE_ID);
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String featureId = ApiParams.extractMandatoryPathParam(routingContext, FEATURE_ID);
 
-    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
-    final List<String> addTags = extractSpecificParamList(queryParams, ADD_TAGS);
-    final List<String> removeTags = extractSpecificParamList(queryParams, REMOVE_TAGS);
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    final List<String> addTags = (queryParams != null) ? queryParams.collectAllOfAsString(ADD_TAGS) : null;
+    final List<String> removeTags = (queryParams != null) ? queryParams.collectAllOfAsString(REMOVE_TAGS) : null;
+
+//    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+//    final List<String> addTags = extractSpecificParamList(queryParams, ADD_TAGS);
+//    final List<String> removeTags = extractSpecificParamList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
     if (spaceId == null || spaceId.isEmpty()) {
@@ -241,9 +270,10 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(spaceId, featureId);
 
     // Forward request to NH Space Storage writer instance
-    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
-    // transform WriteResult to Http FeatureCollection response
-    return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
+      // transform WriteResult to Http FeatureCollection response
+      return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+    }
   }
 
   private @NotNull FeatureCollectionRequest featuresFromRequestBody() throws JsonProcessingException {

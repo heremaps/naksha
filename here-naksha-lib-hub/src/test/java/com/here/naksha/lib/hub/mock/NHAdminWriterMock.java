@@ -42,13 +42,9 @@ import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.storage.IWriteSession;
+import com.here.naksha.lib.psql.EPsqlState;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jetbrains.annotations.NotNull;
@@ -57,7 +53,7 @@ import org.postgresql.util.PSQLState;
 
 public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSession {
 
-  public NHAdminWriterMock(final @NotNull Map<String, Map<String, Object>> mockCollection) {
+  public NHAdminWriterMock(final @NotNull Map<String, TreeMap<String, Object>> mockCollection) {
     super(mockCollection);
   }
 
@@ -84,7 +80,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
     for (final XyzCollectionCodec collectionCodec : wc.features) {
       // persist collection (if not already)
       EExecutedOp execOp = EExecutedOp.RETAINED;
-      if (mockCollection.putIfAbsent(collectionCodec.getFeature().getId(), new ConcurrentHashMap<>()) == null) {
+      if (mockCollection.putIfAbsent(collectionCodec.getFeature().getId(), new TreeMap<>()) == null) {
         execOp = EExecutedOp.CREATED;
       }
       collectionCodec.setOp(execOp);
@@ -99,7 +95,8 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
     // Raise exception if collection doesn't exist already
     if (mockCollection.get(wf.getCollectionId()) == null) {
       throw unchecked(new SQLException(
-          "Collection " + wf.getCollectionId() + " doesn't exist.", PSQLState.UNDEFINED_TABLE.getState()));
+          "Collection " + wf.getCollectionId() + " doesn't exist.",
+          EPsqlState.COLLECTION_DOES_NOT_EXIST.toString()));
     }
     // Perform write operation for each feature
     for (final XyzFeatureCodec featureCodec : wf.features) {
@@ -180,7 +177,8 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
       } else {
         // throw error if UUID mismatches
         exception.set(new SQLException(
-            "Uuid " + uuidOf(ef) + " mismatch for id " + fId, PSQLState.UNIQUE_VIOLATION.getState()));
+            "Uuid " + uuidOf(ef) + " mismatch for id " + fId,
+            EPsqlState.COLLECTION_DOES_NOT_EXIST.toString()));
         return oldF;
       }
     });

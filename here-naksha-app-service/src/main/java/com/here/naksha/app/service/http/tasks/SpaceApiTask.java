@@ -18,12 +18,15 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
+import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
+import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
+import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
@@ -42,7 +45,6 @@ import org.slf4j.LoggerFactory;
 
 public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
-  private static final String SPACE_ID_PATH_KEY = "spaceId";
   private static final Logger logger = LoggerFactory.getLogger(SpaceApiTask.class);
   private final @NotNull SpaceApiReqType reqType;
 
@@ -85,6 +87,8 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
         case GET_SPACE_BY_ID -> executeGetSpaceById();
         default -> executeUnsupported();
       };
+    } catch (XyzErrorException ex) {
+      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
     } catch (Exception ex) {
       // unexpected exception
       return verticle.sendErrorResponse(
@@ -95,34 +99,38 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   private @NotNull XyzResponse executeCreateSpace() throws JsonProcessingException {
     final Space newSpace = spaceFromRequestBody();
     final WriteXyzFeatures wrRequest = RequestHelper.createFeatureRequest(SPACES, newSpace, false);
-    final Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
-    return transformWriteResultToXyzFeatureResponse(wrResult, Space.class);
+    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
+      return transformWriteResultToXyzFeatureResponse(wrResult, Space.class);
+    }
   }
 
   private @NotNull XyzResponse executeUpdateSpace() throws JsonProcessingException {
-    final String spaceIdFromPath = routingContext.pathParam(SPACE_ID_PATH_KEY);
+    final String spaceIdFromPath = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
     final Space spaceFromBody = spaceFromRequestBody();
     if (!spaceFromBody.getId().equals(spaceIdFromPath)) {
       return verticle.sendErrorResponse(
           routingContext, XyzError.ILLEGAL_ARGUMENT, mismatchMsg(spaceIdFromPath, spaceFromBody));
     } else {
       final WriteXyzFeatures updateSpaceReq = RequestHelper.updateFeatureRequest(SPACES, spaceFromBody);
-      final Result updateSpaceResult = executeWriteRequestFromSpaceStorage(updateSpaceReq);
-      return transformWriteResultToXyzFeatureResponse(updateSpaceResult, Space.class);
+      try (Result updateSpaceResult = executeWriteRequestFromSpaceStorage(updateSpaceReq)) {
+        return transformWriteResultToXyzFeatureResponse(updateSpaceResult, Space.class);
+      }
     }
   }
 
   private @NotNull XyzResponse executeGetSpaces() {
     final ReadFeatures request = new ReadFeatures(SPACES);
-    final Result rdResult = executeReadRequestFromSpaceStorage(request);
-    return transformReadResultToXyzCollectionResponse(rdResult, Space.class);
+    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
+      return transformReadResultToXyzCollectionResponse(rdResult, Space.class);
+    }
   }
 
   private @NotNull XyzResponse executeGetSpaceById() {
-    final String spaceId = routingContext.pathParam(SPACE_ID_PATH_KEY);
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
     final ReadFeatures request = new ReadFeatures(SPACES).withPropertyOp(POp.eq(PRef.id(), spaceId));
-    final Result rdResult = executeReadRequestFromSpaceStorage(request);
-    return transformReadResultToXyzFeatureResponse(rdResult, Space.class);
+    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
+      return transformReadResultToXyzFeatureResponse(rdResult, Space.class);
+    }
   }
 
   private Space spaceFromRequestBody() throws JsonProcessingException {
