@@ -20,18 +20,26 @@ package com.here.naksha.app.service.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.here.naksha.app.service.http.apis.ApiUtil;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
+import com.here.naksha.lib.core.models.storage.OpType;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.POpType;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-public class ApiUtilTest {
+class ApiUtilTest {
 
   @Test
-  public void testBuildOperationForTagsQueryParam() {
+  void testBuildOperationForTagsQueryParam() {
     final QueryParameterList params = new QueryParameterList("tags=one"
         + "&tags=two,three"
         + "&tags=four+five"
@@ -39,82 +47,132 @@ public class ApiUtilTest {
         + "&tags=ten+eleven,twelve,thirteen"
         + "&tags=fourteen");
     final POp op = ApiUtil.buildOperationForTagsQueryParam(params);
-    assertEquals(POpType.OR, op.op());
+    assertThatOperation(op).hasType(OpType.OR);
     final List<POp> orList = op.children();
 
     // ensure there are total 8 operations
     assertNotNull(orList, "Expected multiple OR operations");
     assertEquals(8, orList.size(), "Expected total 8 OR operations");
-    int i = 0;
-    POp crtOp = null;
-    List<POp> innerOpList = null;
+    int innerOpsInd = 0;
+
     // validate 1st operation uses EXISTS
-    crtOp = orList.get(i++);
-    assertEquals(POpType.EXISTS, crtOp.op());
-    assertEquals("one", crtOp.getPropertyRef().getTagName());
+    assertThatOperation(orList.get(innerOpsInd++)).hasType(POpType.EXISTS).hasTagName("one");
+
     // validate 2nd operation uses OR
-    crtOp = orList.get(i++);
-    assertEquals(POpType.OR, crtOp.op());
-    innerOpList = crtOp.children();
-    assertNotNull(innerOpList, "Expected multiple operations");
-    assertEquals(2, innerOpList.size());
-    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
-    assertEquals("two", innerOpList.get(0).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
-    assertEquals("three", innerOpList.get(1).getPropertyRef().getTagName());
+    assertThatOperation(orList.get(innerOpsInd++))
+        .hasType(POpType.OR)
+        .hasChildrenThat(second -> second.existsWithTagName("two"), third -> third.existsWithTagName("three"));
+
     // validate 3rd operation uses AND
-    crtOp = orList.get(i++);
-    assertEquals(POpType.AND, crtOp.op());
-    innerOpList = crtOp.children();
-    assertNotNull(innerOpList, "Expected multiple operations");
-    assertEquals(2, innerOpList.size());
-    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
-    assertEquals("four", innerOpList.get(0).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
-    assertEquals("five", innerOpList.get(1).getPropertyRef().getTagName());
+    assertThatOperation(orList.get(innerOpsInd++))
+        .hasType(OpType.AND)
+        .hasChildrenThat(fourth -> fourth.existsWithTagName("four"), fifth -> fifth.existsWithTagName("five"));
+
     // validate 4th operation uses OR
-    crtOp = orList.get(i++);
-    assertEquals(POpType.OR, crtOp.op());
-    innerOpList = crtOp.children();
-    assertNotNull(innerOpList, "Expected multiple operations");
-    assertEquals(2, innerOpList.size());
-    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
-    assertEquals("six", innerOpList.get(0).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
-    assertEquals("seven", innerOpList.get(1).getPropertyRef().getTagName());
+    assertThatOperation(orList.get(innerOpsInd++))
+        .hasType(OpType.OR)
+        .hasChildrenThat(
+            sixth -> sixth.existsWithTagName("six"), seventh -> seventh.existsWithTagName("seven"));
+
     // validate 5th operation uses AND
-    crtOp = orList.get(i++);
-    assertEquals(POpType.AND, crtOp.op());
-    innerOpList = crtOp.children();
-    assertNotNull(innerOpList, "Expected multiple operations");
-    assertEquals(2, innerOpList.size());
-    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
-    assertEquals("eight", innerOpList.get(0).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
-    assertEquals("nine", innerOpList.get(1).getPropertyRef().getTagName());
+    assertThatOperation(orList.get(innerOpsInd++))
+        .hasType(OpType.AND)
+        .hasChildrenThat(eighth -> eighth.existsWithTagName("eight"), ninth -> ninth.existsWithTagName("nine"));
+
     // validate 6th operation uses AND
-    crtOp = orList.get(i++);
-    assertEquals(POpType.AND, crtOp.op());
-    innerOpList = crtOp.children();
-    assertNotNull(innerOpList, "Expected multiple operations");
-    assertEquals(2, innerOpList.size());
-    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
-    assertEquals("ten", innerOpList.get(0).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
-    assertEquals("eleven", innerOpList.get(1).getPropertyRef().getTagName());
+    assertThatOperation(orList.get(innerOpsInd++))
+        .hasType(OpType.AND)
+        .hasChildrenThat(
+            tenth -> tenth.existsWithTagName("ten"), eleventh -> eleventh.existsWithTagName("eleven"));
+
     // validate 7th operation uses OR
-    crtOp = orList.get(i++);
-    assertEquals(POpType.OR, crtOp.op());
-    innerOpList = crtOp.children();
-    assertNotNull(innerOpList, "Expected multiple operations");
-    assertEquals(2, innerOpList.size());
-    assertEquals(POpType.EXISTS, innerOpList.get(0).op());
-    assertEquals("twelve", innerOpList.get(0).getPropertyRef().getTagName());
-    assertEquals(POpType.EXISTS, innerOpList.get(1).op());
-    assertEquals("thirteen", innerOpList.get(1).getPropertyRef().getTagName());
+    assertThatOperation(orList.get(innerOpsInd++))
+        .hasType(OpType.OR)
+        .hasChildrenThat(
+            twelfth -> twelfth.existsWithTagName("twelve"),
+            thirteenth -> thirteenth.existsWithTagName("thirteen"));
+
     // validate 8th operation uses EXISTS
-    crtOp = orList.get(i++);
-    assertEquals(POpType.EXISTS, crtOp.op());
-    assertEquals("fourteen", crtOp.getPropertyRef().getTagName());
+    assertThatOperation(orList.get(innerOpsInd)).existsWithTagName("fourteen");
+  }
+
+  private static Stream<Arguments> simpleTagsSample() {
+    return Stream.of(
+        tagQuerySpec("tags=x", op -> op.existsWithTagName("x"), "only 'x'"),
+        tagQuerySpec(
+            "tags=this,that",
+            op -> op.hasType(OpType.OR)
+                .hasChildrenThat(
+                    child -> child.existsWithTagName("this"),
+                    child -> child.existsWithTagName("that")),
+            "'this' or 'that'"),
+        tagQuerySpec(
+            "tags=foo+bar",
+            op -> op.hasType(OpType.AND)
+                .hasChildrenThat(
+                    child -> child.existsWithTagName("foo"),
+                    child -> child.existsWithTagName("bar")),
+            "'foo' and 'bar'"),
+        tagQuerySpec(
+            "tags=,foo+bar",
+            op -> op.hasType(OpType.AND)
+                .hasChildrenThat(
+                    child -> child.existsWithTagName("foo"),
+                    child -> child.existsWithTagName("bar")),
+            "'foo' and 'bar' without preceeding empty tag"),
+        tagQuerySpec(
+            "tags=,foo+bar,",
+            op -> op.hasType(OpType.AND)
+                .hasChildrenThat(
+                    child -> child.existsWithTagName("foo"),
+                    child -> child.existsWithTagName("bar")),
+            "'foo' and 'bar' without tailing empty tag"));
+  }
+
+  @ParameterizedTest
+  @MethodSource("simpleTagsSample")
+  void shouldParseSimpleTags(String queryString, Consumer<POpAssertion> assertion) {
+    QueryParameterList queryParameters = new QueryParameterList(queryString);
+    POp op = ApiUtil.buildOperationForTagsQueryParam(queryParameters);
+    assertion.accept(new POpAssertion(op));
+  }
+
+  private static Arguments tagQuerySpec(String query, Consumer<POpAssertion> assertion, String assertionDesc) {
+    return arguments(query, named(assertionDesc, assertion));
+  }
+
+  private static POpAssertion assertThatOperation(POp subject) {
+    assertNotNull(subject);
+    return new POpAssertion(subject);
+  }
+
+  private record POpAssertion(POp subject) {
+
+    POpAssertion existsWithTagName(String tagName) {
+      return hasType(POpType.EXISTS).hasTagName(tagName);
+    }
+
+    POpAssertion hasType(OpType expectedOpType) {
+      assertEquals(expectedOpType, subject.op());
+      return this;
+    }
+
+    POpAssertion hasTagName(String expectedTagName) {
+      assertNotNull(subject.getPropertyRef());
+      assertEquals(expectedTagName, subject.getPropertyRef().getTagName());
+      return this;
+    }
+
+    @SafeVarargs
+    final POpAssertion hasChildrenThat(Consumer<POpAssertion>... childrenAssertions) {
+      List<POp> subjects = subject.children();
+      assertNotNull(subjects, "Expected multiple operations");
+      assertEquals(subjects.size(), childrenAssertions.length, "Expecting single assertion per POp");
+      for (int i = 0; i < subjects.size(); i++) {
+        POpAssertion childAssertion = new POpAssertion(subjects.get(i));
+        childrenAssertions[i].accept(childAssertion);
+      }
+      return this;
+    }
   }
 }
