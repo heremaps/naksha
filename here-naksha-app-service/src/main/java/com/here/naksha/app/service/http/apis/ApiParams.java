@@ -70,7 +70,7 @@ public final class ApiParams {
       final boolean isMandatory,
       final double defVal) {
     final QueryParameter queryParam = queryParams.get(key);
-    if (queryParam == null || queryParam.values().size() < 1) {
+    if (queryParam == null || queryParam.values().isEmpty()) {
       if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
       else return defVal;
     }
@@ -100,7 +100,7 @@ public final class ApiParams {
       else return defVal;
     }
     final QueryParameter queryParam = queryParams.get(key);
-    if (queryParam == null || queryParam.values().size() < 1) {
+    if (queryParam == null || queryParam.values().isEmpty()) {
       if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
       else return defVal;
     }
@@ -126,19 +126,19 @@ public final class ApiParams {
         : null;
   }
 
-  public static @Nullable List<String> extractSpecificParamList(
+  public static @Nullable List<String> extractParamAsStringList(
       final @NotNull RoutingContext routingContext, final @NotNull String apiParamType) {
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
-    return extractSpecificParamList(queryParams, apiParamType);
+    return extractParamAsStringList(queryParams, apiParamType);
   }
 
-  public static @Nullable List<String> extractSpecificParamList(
+  public static @Nullable List<String> extractParamAsStringList(
       final @Nullable QueryParameterList queryParams, final @NotNull String apiParamType) {
-    return (queryParams != null) ? queryParams.collectAllOf(apiParamType, String.class) : null;
+    return (queryParams != null) ? queryParams.collectAllOfAsString(apiParamType) : null;
   }
 
-  public static @Nullable String extractSpecificParam(
+  public static @Nullable String extractParamAsString(
       final @Nullable QueryParameterList queryParams, final @NotNull String apiParamType) {
-    return (queryParams != null) ? queryParams.getValueOf(apiParamType, String.class) : null;
+    return (queryParams != null) ? queryParams.getValueAsString(apiParamType) : null;
   }
 }

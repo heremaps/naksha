@@ -7,9 +7,9 @@
     "feature-delete-handler"
   ],
   "properties": {
-    "storageCollection": {
+    "collection": {
       "id": "um-mod-dev:topology",
-      "type": "StorageCollection"
+      "type": "NakshaCollection"
     }
   }
 }

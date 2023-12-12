@@ -97,12 +97,9 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   private @NotNull XyzResponse executeFeaturesById() {
     // Parse parameters
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
-    final List<String> featureIds = extractSpecificParamList(routingContext, FEATURE_IDS);
+    final List<String> featureIds = extractParamAsStringList(routingContext, FEATURE_IDS);
 
     // Validate parameters
-    if (spaceId == null || spaceId.isEmpty()) {
-      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing spaceId parameter");
-    }
     if (featureIds == null || featureIds.isEmpty()) {
       return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing id parameter");
     }
@@ -134,9 +131,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
 
     // Parse and validate Query parameters
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     if (queryParams == null || queryParams.size() <= 0) {
       return verticle.sendErrorResponse(
           routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
@@ -172,9 +167,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final String tileId = ApiParams.extractMandatoryPathParam(routingContext, TILE_ID);
 
     // Parse and validate Query parameters
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     // NOTE : queryParams can be null, but that is acceptable. We will move on with default values.
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // validate values
