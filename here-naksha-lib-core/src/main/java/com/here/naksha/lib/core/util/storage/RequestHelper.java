@@ -149,7 +149,7 @@ public class RequestHelper {
       final @NotNull String collectionName, final @NotNull List<String> ids) {
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
     for (String id : ids) {
-      request.delete(id, null);
+      request.delete(new XyzFeature(id));
     }
     return request;
   }
@@ -164,7 +164,8 @@ public class RequestHelper {
   public static @NotNull WriteXyzFeatures deleteFeatureByIdRequest(
       final @NotNull String collectionName, final @NotNull String id) {
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
-    return request.delete(id, null);
+    return request.delete(new XyzFeature(id));
+    //    return request.delete(id, null);
   }
 
   /**
