@@ -19,7 +19,11 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.DEF_ADMIN_FEATURE_LIMIT;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.*;
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
 import static java.util.Collections.emptyList;
 
 import com.here.naksha.app.service.http.HttpResponseType;
@@ -28,7 +32,6 @@ import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.lambdas.F0;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
@@ -88,28 +91,27 @@ public abstract class AbstractApiTask<T extends XyzResponse>
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzFeatureResponse(
       final @NotNull Result rdResult, final @NotNull Class<R> type) {
-    return transformResultToXyzFeatureResponse(
-        rdResult,
-        type,
-        () -> verticle.sendErrorResponse(
-            routingContext, XyzError.NOT_FOUND, "The desired feature does not exist."));
+    return transformResultToXyzFeatureResponse(rdResult, type, NOT_FOUND_ON_NO_ELEMENTS);
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzFeatureResponse(
       final @Nullable Result wrResult, final @NotNull Class<R> type) {
-    return transformResultToXyzFeatureResponse(
-        wrResult,
-        type,
-        () -> verticle.sendErrorResponse(
-            routingContext,
-            XyzError.EXCEPTION,
-            "Unexpected error while saving feature, the result cursor is empty / does not exist"));
+    return transformResultToXyzFeatureResponse(wrResult, type, FAIL_ON_NO_ELEMENTS);
+  }
+
+  protected <R extends XyzFeature> @NotNull XyzResponse transformDeleteResultToXyzFeatureResponse(
+      final @Nullable Result wrResult, final @NotNull Class<R> type) {
+    return transformResultToXyzFeatureResponse(wrResult, type, NOT_FOUND_ON_NO_ELEMENTS);
+  }
+
+  private XyzResponse handleNoElements(NoElementsStrategy noElementsStrategy) {
+    return verticle.sendErrorResponse(routingContext, noElementsStrategy.xyzError, noElementsStrategy.message);
   }
 
   private <R extends XyzFeature> @NotNull XyzResponse transformResultToXyzFeatureResponse(
       final @Nullable Result result,
       final @NotNull Class<R> type,
-      final @NotNull F0<XyzResponse> onNoElementsReturned) {
+      final @NotNull NoElementsStrategy noElementsStrategy) {
     if (result == null) {
       logger.error("Unexpected null result!");
       return verticle.sendErrorResponse(routingContext, XyzError.EXCEPTION, "Unexpected null result!");
@@ -132,7 +134,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(featureList);
         return verticle.sendXyzResponse(routingContext, HttpResponseType.FEATURE, featureResponse);
       } catch (NoCursor | NoSuchElementException emptyException) {
-        return onNoElementsReturned.call();
+        return handleNoElements(noElementsStrategy);
       }
     }
   }

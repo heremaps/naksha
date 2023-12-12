@@ -1,5 +1,5 @@
 {
   "type": "ErrorResponse",
   "error": "NotFound",
-  "errorMessage": "No feature found for id phantom-feature-not-real"
+  "errorMessage": "The desired feature does not exist."
 }
