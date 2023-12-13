@@ -18,16 +18,15 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.storage.IReadSession;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * {@link  ViewReadSession} operates on {@link View}, it queries simultaneously all the storages
- * and merge the results into one.
+ * {@link  ViewReadSession} operates on {@link View}, it queries simultaneously all the storages.
+ * Then it tries to feeth missing features {@link MissingIdResolver} if needed.
+ * At the end {@link MergeOperation} is executed and single result returned.
  * You can provide your own merge operation. The default is "take result from storage on the top".
  *
  * <strong>Important:</strong> {@link ViewReadSession} will always return mutable cursor, this is the only way we can
