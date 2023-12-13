@@ -662,8 +662,7 @@ paths:
       summary: Search for features
       description: >-
         Searches for features in the space. The results are unordered and the
-        request does not allow continuation of the search, which is the main
-        difference when compared to the _iterate_ request.
+        request does not allow continuation of the search.
       operationId: searchForFeatures
       parameters:
         - $ref: '#/components/parameters/SpaceId'
