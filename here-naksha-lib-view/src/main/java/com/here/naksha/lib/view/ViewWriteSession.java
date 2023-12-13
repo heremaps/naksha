@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteRequest;
 import com.here.naksha.lib.core.storage.IWriteSession;
@@ -38,8 +37,7 @@ public abstract class ViewWriteSession extends ViewReadSession implements IWrite
 
 
   /**
-   * It wraps the storages' rows and returns Result with {@link MultiRow}.
-   * It might happen that {@link MultiRow} has a success and error operation.
+   * Executes write on one (top by default storage).
    *
    * @param writeRequest
    * @return
