@@ -76,7 +76,11 @@ public class MultiStorageViewTest {
     final XyzFeature feature = new XyzFeature("feature_id_1");
     request.add(EWriteOp.CREATE, feature);
 
-    // how to read written data.
+    try (MutableCursor<XyzFeature, XyzFeatureCodec> cursor = writeSession.execute(request).getXyzMutableCursor()) {
+      cursor.next();
+    } finally {
+      writeSession.commit(true);
+    }
   }
 
   class CustomMergeOperation implements MergeOperation {
