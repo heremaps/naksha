@@ -24,50 +24,54 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.MutableCursor;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.storage.IStorage;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.Arrays;
 import java.util.Comparator;
 
 import static org.mockito.Mockito.mock;
 
-public class MultiStorageViewTest {
+public class ViewTest {
 
   private NakshaContext nakshaContext =
       new NakshaContext().withAppId("VIEW_API_TEST").withAuthor("VIEW_API_AUTHOR");
 
   void testReadApiNotation() {
 
-    IStorage deltaStorage = mock(IStorage.class);
-    IStorage dlbStorage = mock(IStorage.class);
-    IStorage consistentStorage = mock(IStorage.class);
+    ViewLayer topologiesDS = new ViewLayer(mock(IStorage.class), "topologies");
+    ViewLayer buildingsDS = new ViewLayer(mock(IStorage.class), "buildings");
+    ViewLayer topologiesCS = new ViewLayer(mock(IStorage.class), "topologies");
 
-    // create multi storage, order of elements is important (first is top)
-    MultiStorageView view = new MultiStorageView(deltaStorage, dlbStorage, consistentStorage);
+    ViewCollection viewCollection = new ViewCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
+
+    View view = new View(viewCollection);
 
     // to discuss if same context is valid to use across all storages
     ViewReadSession readSession = view.newReadSession(nakshaContext, true);
 
-    ReadFeatures readFeatures = new ReadFeatures("topologies", "buildings");
+    ViewReadFeaturesRequest readFeatures = new ViewReadFeaturesRequest();
 
     // custom merge operation
     MergeOperation customMergeOperation = new CustomMergeOperation();
 
+    // custom fetch ids resolver
+    MissingIdResolver skipFetchingResolver = new SkipFetchingMissing();
 
-    readSession.execute(readFeatures, customMergeOperation);
+    readSession.execute(readFeatures, customMergeOperation, skipFetchingResolver);
   }
 
   void testWriteApiNotation() throws NoCursor {
 
-    IStorage deltaStorage = mock(IStorage.class);
-    IStorage dlbStorage = mock(IStorage.class);
-    IStorage consistentStorage = mock(IStorage.class);
+    ViewLayer topologiesDS = new ViewLayer(mock(IStorage.class), "topologies");
+    ViewLayer buildingsDS = new ViewLayer(mock(IStorage.class), "buildings");
+    ViewLayer topologiesCS = new ViewLayer(mock(IStorage.class), "topologies");;
 
-    // create multi storage, order of elements is important (first is top)
-    MultiStorageView view = new MultiStorageView(deltaStorage, dlbStorage, consistentStorage);
+    ViewCollection viewCollection = new ViewCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
+
+    View view = new View(viewCollection);
 
     // to discuss if same context is valid to use across all storages
     ViewWriteSession writeSession = view.newWriteSession(nakshaContext, true);
@@ -83,14 +87,27 @@ public class MultiStorageViewTest {
     }
   }
 
+  class SkipFetchingMissing implements MissingIdResolver {
+
+    @Override
+    public boolean skip() {
+      return true;
+    }
+
+    @Override
+    public Pair<ViewLayer, String> idsToSearch(ViewLayerRow[] multipleResults) {
+      return null;
+    }
+  }
+
   class CustomMergeOperation implements MergeOperation {
 
     @Override
-    public FeatureCodec apply(SingleStorageRow[] sameFeatureFromEachStorage) {
+    public FeatureCodec apply(ViewLayerRow[] sameFeatureFromEachStorage) {
       return Arrays.stream(sameFeatureFromEachStorage)
-          .sorted(Comparator.comparing(SingleStorageRow::getStoragePriority))
+          .sorted(Comparator.comparing(ViewLayerRow::getStoragePriority))
           .findFirst()
-          .map(SingleStorageRow::getRow)
+          .map(ViewLayerRow::getRow)
           .get();
     }
   }

@@ -31,8 +31,8 @@ import org.jetbrains.annotations.NotNull;
 // FIXME it's abstract only to not implement all IReadSession methods at the moment
 public abstract class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
-  public ViewWriteSession(MultiStorageView multiStorageViewRef) {
-    super(multiStorageViewRef);
+  public ViewWriteSession(View viewRef) {
+    super(viewRef);
   }
 
 

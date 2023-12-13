@@ -29,13 +29,12 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class MultiStorageView implements IStorage {
+public class View implements IStorage {
 
-  private List<IStorage> storages = new ArrayList<>();
+  private ViewCollection viewCollection;
 
-  public MultiStorageView(@NotNull IStorage topStorage, IStorage... orderedLowerLevelStorages) {
-    this.storages.add(topStorage);
-    this.storages.addAll(Arrays.asList(orderedLowerLevelStorages));
+  public View(@NotNull ViewCollection viewCollection) {
+    this.viewCollection = viewCollection;
   }
 
   @Override

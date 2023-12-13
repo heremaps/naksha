@@ -19,16 +19,15 @@
 package com.here.naksha.lib.view;
 
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
-import com.here.naksha.lib.core.storage.IStorage;
 
-public class SingleStorageRow<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
+public class ViewLayerRow<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
 
   private CODEC row;
 
   // priority 0 - is highest
   private int storagePriority;
 
-  private IStorage storageRef;
+  private ViewLayer viewLayerRef;
 
   public int getStoragePriority() {
     return storagePriority;

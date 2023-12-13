@@ -23,5 +23,5 @@ import com.here.naksha.lib.core.models.storage.FeatureCodec;
 public interface MergeOperation<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
 
   // TODO should we know from which storage result comes from? If yes then we should return SingleStorageRow instead.
-  CODEC apply(SingleStorageRow<FEATURE, CODEC>... multipleResults);
+  CODEC apply(ViewLayerRow<FEATURE, CODEC>... multipleResults);
 }

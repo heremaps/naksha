@@ -23,9 +23,10 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.storage.IReadSession;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * {@link  ViewReadSession} operates on {@link MultiStorageView}, it queries simultaneously all the storages
+ * {@link  ViewReadSession} operates on {@link View}, it queries simultaneously all the storages
  * and merge the results into one.
  * You can provide your own merge operation. The default is "take result from storage on the top".
  *
@@ -37,22 +38,25 @@ import org.jetbrains.annotations.NotNull;
  * In this situation using Forward cursor would lead to N+1 issue, as after reading 1st row from each result we'd have
  * to fetch missing F_1 from B and C.
  * To be able to create query that fetches multiple missing features we have to know them first (by caching ahead of time)
- *
+ * <p>
  * TODO: Implementation when one of the databases is not returning a feature (when querying by bbox).
  * It might happen that feature has been moved (it's geometry changed). In such case after getting results for bbox
  * query we have to query again for all features (by id) that was missing in a least one storage  result.
- *
  */
 // FIXME it's abstract only to not implement all IReadSession methods at the moment
 public abstract class ViewReadSession implements IReadSession {
 
-  private final MultiStorageView multiStorageViewRef;
+  private final View viewRef;
 
-  protected ViewReadSession(MultiStorageView multiStorageViewRef) {
-    this.multiStorageViewRef = multiStorageViewRef;
+  protected ViewReadSession(View viewRef) {
+    this.viewRef = viewRef;
   }
 
-  Result execute(@NotNull ReadRequest<?> readRequest, MergeOperation mergeOperation) {
+  Result execute(
+      @NotNull ViewReadFeaturesRequest request,
+      @NotNull MergeOperation mergeOperation,
+      @NotNull MissingIdResolver missingIdResolver
+  ) {
     throw new NotImplementedException();
   }
 
