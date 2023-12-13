@@ -1,7 +1,5 @@
 package com.here.naksha.lib.view;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,11 +15,10 @@ public class ViewCollection {
     this.layers = Collections.unmodifiableList(layers);
   }
 
-  public ViewCollection(String name, @NotNull ViewLayer topStorage, ViewLayer... orderedLowerLevelStorages) {
+  public ViewCollection(String name, ViewLayer... orderedLowerLevelStorages) {
     this.name = name;
 
     List<ViewLayer> tempLayers = new ArrayList<>();
-    tempLayers.add(topStorage);
     tempLayers.addAll(Arrays.asList(orderedLowerLevelStorages));
     this.layers = Collections.unmodifiableList(tempLayers);
   }
