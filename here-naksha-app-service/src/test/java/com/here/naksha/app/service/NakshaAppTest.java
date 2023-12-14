@@ -934,43 +934,43 @@ class NakshaAppTest {
   }
 
   @Test
-  @Order(16)
+  @Order(12)
   void tc0900_testDeleteFeatures() throws Exception {
     deleteFeatureTestHelper.tc0900_testDeleteFeatures();
   }
 
   @Test
-  @Order(17)
+  @Order(13)
   void tc0901_testDeleteNonExistingFeatures() throws Exception {
     deleteFeatureTestHelper.tc0901_testDeleteNonExistingFeatures();
   }
 
   @Test
-  @Order(17)
+  @Order(13)
   void tc0902_testDeleteFeatureById() throws Exception {
     deleteFeatureTestHelper.tc0902_testDeleteFeatureById();
   }
 
   @Test
-  @Order(17)
+  @Order(13)
   void tc0903_testDeleteFeatureByWrongId() throws Exception {
     deleteFeatureTestHelper.tc0903_testDeleteFeatureByWrongId();
   }
 
   @Test
-  @Order(17)
+  @Order(16)
   void tc1000_testSearchFeatures() throws URISyntaxException, InterruptedException, JSONException, IOException {
     searchFeaturesTestHelper.tc1000_testSearchFeatures();
   }
 
   @Test
-  @Order(18)
+  @Order(17)
   void tc1001_testSearchNoResults() throws URISyntaxException, IOException, InterruptedException, JSONException {
     searchFeaturesTestHelper.tc1001_testSearchNoResults();
   }
 
   @Test
-  @Order(18)
+  @Order(17)
   void tc1002_testSearchWrongSpace() throws URISyntaxException, IOException, InterruptedException, JSONException {
     searchFeaturesTestHelper.tc1002_testSearchWrongSpace();
   }
