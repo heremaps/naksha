@@ -127,12 +127,6 @@ public final class ApiParams {
   }
 
   public static @Nullable List<String> extractParamAsStringList(
-      final @NotNull RoutingContext routingContext, final @NotNull String apiParamType) {
-    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
-    return extractParamAsStringList(queryParams, apiParamType);
-  }
-
-  public static @Nullable List<String> extractParamAsStringList(
       final @Nullable QueryParameterList queryParams, final @NotNull String apiParamType) {
     return (queryParams != null) ? queryParams.collectAllOfAsString(apiParamType) : null;
   }

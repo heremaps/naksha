@@ -109,5 +109,4 @@ public class NakshaTestWebClient {
   private URI nakshaPath(String subPath) throws URISyntaxException {
     return new URI(NAKSHA_HTTP_URI + subPath);
   }
-
 }

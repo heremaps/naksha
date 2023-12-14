@@ -192,7 +192,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeDeleteFeatures() {
     // Deserialize input request
-    final List<String> features = extractParamAsStringList(routingContext, FEATURE_IDS);
+    final QueryParameterList queryParameters = queryParamsFromRequest(routingContext);
+    final List<String> features = extractParamAsStringList(queryParameters, FEATURE_IDS);
     if (features == null || features.isEmpty()) {
       return verticle.sendErrorResponse(
           routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing feature id parameter");

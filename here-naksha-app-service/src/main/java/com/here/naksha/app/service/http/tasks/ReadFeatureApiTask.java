@@ -97,7 +97,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   private @NotNull XyzResponse executeFeaturesById() {
     // Parse parameters
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
-    final List<String> featureIds = extractParamAsStringList(routingContext, FEATURE_IDS);
+    final QueryParameterList queryParameters = queryParamsFromRequest(routingContext);
+    final List<String> featureIds = extractParamAsStringList(queryParameters, FEATURE_IDS);
 
     // Validate parameters
     if (featureIds == null || featureIds.isEmpty()) {
