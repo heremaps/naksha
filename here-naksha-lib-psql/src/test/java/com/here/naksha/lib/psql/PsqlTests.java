@@ -18,15 +18,19 @@
  */
 package com.here.naksha.lib.psql;
 
+import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
+import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
+import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
@@ -57,16 +61,11 @@ abstract class PsqlTests {
   static final Logger log = LoggerFactory.getLogger(PsqlTests.class);
 
   /**
-   * The test admin database read from the environment variable with the same name. Value example:
-   * <pre>{@code
-   * jdbc:postgresql://localhost/postgres?user=postgres&password=password&schema=test&app=test&id=test
-   * }</pre>
+   * The test database, if any is available.
    */
   @SuppressWarnings("unused")
-  static final String TEST_DB =
-      (System.getenv("TEST_DB") != null && System.getenv("TEST_DB").length() > "jdbc:postgresql://".length())
-          ? System.getenv("TEST_DB")
-          : null;
+  static final @NotNull PsqlStorageConfig config =
+      configFromFileOrEnv("test_psql_db.url", "NAKSHA_TEST_PSQL_DB_URL", "naksha_psql_schema");
 
   /**
    * Prevents that the test drops the schema at the start.
@@ -97,7 +96,7 @@ abstract class PsqlTests {
   }
 
   final boolean runTest() {
-    return TEST_DB != null && enabled();
+    return enabled();
   }
 
   final boolean dropInitially() {
@@ -166,7 +165,7 @@ abstract class PsqlTests {
   @Order(10)
   @EnabledIf("runTest")
   void createStorage() {
-    storage = new PsqlStorage(TEST_DB);
+    storage = new PsqlStorage(config);
     schema = storage.getSchema();
     if (!schema.equals(schema())) {
       storage.setSchema(schema());
@@ -185,6 +184,20 @@ abstract class PsqlTests {
 
   @Test
   @Order(12)
+  @EnabledIf("dropInitially")
+  void testStorageNotInitialized() {
+    assertNotNull(storage);
+    assertNotNull(nakshaContext);
+    assertThrows(StorageNotInitialized.class, () -> {
+      try (final PsqlWriteSession session = storage.newWriteSession(nakshaContext, true)) {}
+    });
+    assertThrows(StorageNotInitialized.class, () -> {
+      try (final PsqlReadSession session = storage.newReadSession(nakshaContext, true)) {}
+    });
+  }
+
+  @Test
+  @Order(13)
   @EnabledIf("runTest")
   void initStorage() {
     assertNotNull(storage);
@@ -234,6 +247,27 @@ abstract class PsqlTests {
           EXyzAction.CREATE,
           collection.getProperties().getXyzNamespace().getAction());
       assertFalse(cursor.hasNext());
+    } finally {
+      session.commit(true);
+    }
+  }
+
+  @Test
+  @Order(35)
+  @EnabledIf("runTest")
+  void createExistingCollection() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+    final WriteXyzCollections request = new WriteXyzCollections();
+    request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partition(), false, true));
+    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
+        session.execute(request).getXyzCollectionCursor()) {
+      assertTrue(cursor.next());
+      assertEquals(collectionId(), cursor.getId());
+      assertNotNull(cursor.getUuid());
+      assertNull(cursor.getGeometry());
+      assertSame(EExecutedOp.ERROR, cursor.getOp());
+      assertEquals(XyzError.CONFLICT.value(), cursor.getError().err.value());
     } finally {
       session.commit(true);
     }

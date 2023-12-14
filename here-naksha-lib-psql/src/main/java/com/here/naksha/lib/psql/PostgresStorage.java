@@ -19,8 +19,8 @@
 package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.NakshaVersion.latest;
+import static com.here.naksha.lib.core.exceptions.UncheckedException.cause;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.IoHelp.readResource;
 import static com.here.naksha.lib.psql.SQL.quote_ident;
 import static com.here.naksha.lib.psql.SQL.shouldEscapeIdent;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -31,8 +31,10 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.NakshaVersion;
+import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
 import com.here.naksha.lib.core.exceptions.Unauthorized;
 import com.here.naksha.lib.core.util.ClosableRootResource;
+import com.here.naksha.lib.core.util.IoHelp;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -350,7 +352,7 @@ final class PostgresStorage extends ClosableRootResource {
   }
 
   @SuppressWarnings("SqlSourceToSinkFlow")
-  synchronized void initStorage(@NotNull PsqlStorage.Params params) {
+  synchronized void initStorage(@NotNull PsqlStorage.Params params, @NotNull IoHelp ioHelp) {
     assertNotClosed();
     String SQL;
     // Note: We need to open a "raw connection", so one, that is not initialized!
@@ -400,7 +402,7 @@ final class PostgresStorage extends ClosableRootResource {
                   .addArgument(latest)
                   .log();
             }
-            SQL = readResource("naksha_plpgsql.sql");
+            SQL = ioHelp.readResource(ioHelp.findResource("/naksha_plpgsql.sql", PostgresStorage.class));
             if (logLevel.toLong() >= EPsqlLogLevel.DEBUG.toLong()) {
               SQL = SQL.replaceAll("--RAISE ", "RAISE ");
               SQL = SQL.replaceAll("--DEBUG ", " ");
@@ -471,7 +473,7 @@ final class PostgresStorage extends ClosableRootResource {
     try {
       return new PsqlWriteSession(this, context, getConnection(true, false, true, context));
     } catch (Exception e) {
-      throw unchecked(e);
+      throw wrapException(e);
     }
   }
 
@@ -483,7 +485,18 @@ final class PostgresStorage extends ClosableRootResource {
     try {
       return new PsqlReadSession(this, context, getConnection(useMaster, true, true, context));
     } catch (Exception e) {
-      throw unchecked(e);
+      throw wrapException(e);
     }
+  }
+
+  private @NotNull RuntimeException wrapException(@NotNull Exception e) {
+    final Throwable cause = cause(e);
+    if (cause instanceof SQLException) {
+      final EPsqlState psqlState = EPsqlState.get((SQLException) cause);
+      if (psqlState == EPsqlState.NAKSHA_STORAGE_NOT_INITIALIZED || psqlState == EPsqlState.UNDEFINED_FUNCTION) {
+        throw new StorageNotInitialized();
+      }
+    }
+    return unchecked(e);
   }
 }

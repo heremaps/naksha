@@ -1,5 +1,5 @@
 {
-  "id": "test-psql-storage-feature-by-ids",
+  "id": "tc_900_storage",
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose",
