@@ -126,7 +126,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class);
+      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, false);
     }
   }
 
@@ -154,7 +154,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class);
+      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, false);
     }
   }
 
@@ -207,7 +207,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class);
+      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, true);
     }
   }
 

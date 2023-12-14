@@ -171,7 +171,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzCollectionResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type) {
+      final @Nullable Result wrResult, final @NotNull Class<R> type, final @NotNull boolean isDeleteOperation) {
     if (wrResult == null) {
       // unexpected null response
       logger.error("Received null result!");
@@ -194,9 +194,13 @@ public abstract class AbstractApiTask<T extends XyzResponse>
                 .withUpdatedFeatures(updatedFeatures)
                 .withDeletedFeatures(deletedFeatures));
       } catch (NoCursor | NoSuchElementException emptyException) {
-        logger.info("No data found in ResultCursor, returning empty collection");
-        return verticle.sendXyzResponse(
-            routingContext, HttpResponseType.FEATURE_COLLECTION, emptyFeatureCollection());
+        if (isDeleteOperation) {
+          logger.info("No data found in ResultCursor, returning empty collection");
+          return verticle.sendXyzResponse(
+              routingContext, HttpResponseType.FEATURE_COLLECTION, emptyFeatureCollection());
+        }
+        return verticle.sendErrorResponse(
+            routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");
       }
     }
   }
