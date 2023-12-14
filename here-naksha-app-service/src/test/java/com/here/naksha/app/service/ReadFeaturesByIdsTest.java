@@ -26,27 +26,24 @@ import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
-public class ReadFeaturesByIdsTestHelper {
-
-  final @NotNull NakshaApp app;
-  final @NotNull NakshaTestWebClient nakshaClient;
-
-  public ReadFeaturesByIdsTestHelper(final @NotNull NakshaApp app, final @NotNull NakshaTestWebClient nakshaClient) {
-    this.app = app;
-    this.nakshaClient = nakshaClient;
-  }
+class ReadFeaturesByIdsTest extends ApiTest {
 
   private void standardAssertions(
       final @NotNull HttpResponse<String> actualResponse,
@@ -73,6 +70,8 @@ public class ReadFeaturesByIdsTestHelper {
     }
   }
 
+  @Test
+  @Order(8)
   public void tc0400_testReadFeaturesByIds() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/features
     // Validate features getting returned for existing Ids and not failing due to missing ids
@@ -83,18 +82,18 @@ public class ReadFeaturesByIdsTestHelper {
     final String storageJson =
         loadFileOrFail("ReadFeatures/ByIds/TC0400_ExistingAndMissingIds/create_storage.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/storages", storageJson, streamId);
+    response = getNakshaClient().post("hub/storages", storageJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
 
     // Given: EventHandler (uses above Storage) configured in Admin storage
     final String eventHandlerJson =
         loadFileOrFail("ReadFeatures/ByIds/TC0400_ExistingAndMissingIds/create_event_handler.json");
-    response = nakshaClient.post("hub/handlers", eventHandlerJson, streamId);
+    response = getNakshaClient().post("hub/handlers", eventHandlerJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
 
     // Given: Space (uses above EventHandler) configured in Admin storage
     final String spaceJson = loadFileOrFail("ReadFeatures/ByIds/TC0400_ExistingAndMissingIds/create_space.json");
-    response = nakshaClient.post("hub/spaces", spaceJson, streamId);
+    response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
 
     // Given: New Features persisted in above Space
@@ -102,7 +101,7 @@ public class ReadFeaturesByIdsTestHelper {
         parseJsonFileOrFail("ReadFeatures/ByIds/TC0400_ExistingAndMissingIds/create_space.json", Space.class);
     String bodyJson = loadFileOrFail("ReadFeatures/ByIds/TC0400_ExistingAndMissingIds/create_features.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating new Features");
 
     // Given: Features By Ids request (against above space)
@@ -113,7 +112,7 @@ public class ReadFeaturesByIdsTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.get("hub/spaces/" + space.getId() + "/features?" + idsQueryParam, streamId);
+    response = getNakshaClient().get("hub/spaces/" + space.getId() + "/features?" + idsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -122,6 +121,8 @@ public class ReadFeaturesByIdsTestHelper {
     additionalCustomAssertions(response.body());
   }
 
+  @Test
+  @Order(9)
   public void tc0401_testReadFeaturesForMissingIds() throws Exception {
     // NOTE : This test depends on setup done as part of tc0400_testReadFeaturesByIds
 
@@ -138,12 +139,14 @@ public class ReadFeaturesByIdsTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/features" + idsQueryParam, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/features" + idsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(9)
   public void tc0402_testReadFeaturesWithoutIds() throws Exception {
     // NOTE : This test depends on setup done as part of tc0400_testReadFeaturesByIds
 
@@ -159,12 +162,14 @@ public class ReadFeaturesByIdsTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/features", streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/features", streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(9)
   public void tc0403_testReadFeaturesByIdsFromMissingSpace() throws Exception {
     // NOTE : This test depends on setup done as part of tc0400_testReadFeaturesByIds
 
@@ -181,12 +186,14 @@ public class ReadFeaturesByIdsTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/features?" + idsQueryParam, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/features?" + idsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 404, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(9)
   public void tc0404_testReadFeatureById() throws Exception {
     // NOTE : This test depends on setup done as part of tc0400_testReadFeaturesByIds
 
@@ -203,7 +210,7 @@ public class ReadFeaturesByIdsTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/features/" + featureId, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/features/" + featureId, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -214,6 +221,8 @@ public class ReadFeaturesByIdsTestHelper {
         feature.getProperties().getXyzNamespace().getUuid(), "UUID found missing in response for feature");
   }
 
+  @Test
+  @Order(9)
   public void tc0405_testReadFeatureForMissingId() throws Exception {
     // NOTE : This test depends on setup done as part of tc0400_testReadFeaturesByIds
 
@@ -230,12 +239,14 @@ public class ReadFeaturesByIdsTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/features/" + featureId, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/features/" + featureId, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 404, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(9)
   public void tc0406_testReadFeatureByIdFromMissingSpace() throws Exception {
     // NOTE : This test depends on setup done as part of tc0400_testReadFeaturesByIds
 
@@ -252,12 +263,14 @@ public class ReadFeaturesByIdsTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/features/" + featureId, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/features/" + featureId, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 404, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(9)
   public void tc0407_testReadFeaturesWithCommaSeparatedIds() throws Exception {
     // NOTE : This test depends on setup done as part of tc0400_testReadFeaturesByIds
 
@@ -274,7 +287,7 @@ public class ReadFeaturesByIdsTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/features?" + idsQueryParam, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/features?" + idsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);

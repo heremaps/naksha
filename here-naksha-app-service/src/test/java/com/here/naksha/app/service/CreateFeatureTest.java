@@ -22,7 +22,7 @@ import static com.here.naksha.app.common.TestUtil.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
@@ -37,19 +37,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
-public class CreateFeatureTestHelper {
-
-  final @NotNull NakshaApp app;
-  final @NotNull NakshaTestWebClient nakshaClient;
-
-  public CreateFeatureTestHelper(final @NotNull NakshaApp app, final @NotNull NakshaTestWebClient nakshaClient) {
-    this.app = app;
-    this.nakshaClient = nakshaClient;
-  }
+class CreateFeatureTest extends ApiTest {
 
   private void standardAssertions(
       final @NotNull HttpResponse<String> actualResponse,
@@ -97,6 +91,8 @@ public class CreateFeatureTestHelper {
     }
   }
 
+  @Test
+  @Order(6)
   public void tc0300_testCreateFeaturesWithNewIds() throws Exception {
     // Test API : POST /hub/spaces/{spaceId}/features
     // Validate features getting created successfully with dynamic new Ids
@@ -107,18 +103,18 @@ public class CreateFeatureTestHelper {
     // Given: Storage (mock implementation) configured in Admin storage
     final String storageJson = loadFileOrFail("TC0300_createFeaturesWithNewIds/create_storage.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/storages", storageJson, streamId);
+    response = getNakshaClient().post("hub/storages", storageJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
 
     // Given: EventHandler (uses above Storage) configured in Admin storage
     final String eventHandlerJson = loadFileOrFail("TC0300_createFeaturesWithNewIds/create_event_handler.json");
-    response = nakshaClient.post("hub/handlers", eventHandlerJson, streamId);
+    response = getNakshaClient().post("hub/handlers", eventHandlerJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 
     // Given: Space (uses above EventHandler) configured in Admin storage
     final Space space = parseJsonFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json", Space.class);
     final String spaceJsonString = loadFileOrFail("TC0300_createFeaturesWithNewIds/create_space.json");
-    response = nakshaClient.post("hub/spaces", spaceJsonString, streamId);
+    response = getNakshaClient().post("hub/spaces", spaceJsonString, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Space");
 
     // Given: Create Features request (against above Space)
@@ -127,7 +123,7 @@ public class CreateFeatureTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -136,6 +132,8 @@ public class CreateFeatureTestHelper {
     additionalCustomAssertions(bodyJson, response.body(), null);
   }
 
+  @Test
+  @Order(7)
   public void tc0301_testCreateFeaturesWithGivenIds() throws Exception {
     // NOTE : This test depends on setup done as part of tc0300_testCreateFeaturesWithNewIds
 
@@ -153,7 +151,7 @@ public class CreateFeatureTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -162,6 +160,9 @@ public class CreateFeatureTestHelper {
     additionalCustomAssertions(bodyJson, response.body(), null);
   }
 
+  // Disabled - we don't want to verify prefix now
+  //  @Test
+  @Order(7)
   public void tc0302_testCreateFeaturesWithPrefixId() throws Exception {
     // NOTE : This test depends on setup done as part of tc0300_testCreateFeaturesWithNewIds
 
@@ -181,8 +182,8 @@ public class CreateFeatureTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.post(
-        "hub/spaces/" + spaceId + "/features?prefixId=" + urlEncoded(prefixId), bodyJson, streamId);
+    response = getNakshaClient()
+        .post("hub/spaces/" + spaceId + "/features?prefixId=" + urlEncoded(prefixId), bodyJson, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -191,6 +192,8 @@ public class CreateFeatureTestHelper {
     additionalCustomAssertions(bodyJson, response.body(), prefixId);
   }
 
+  @Test
+  @Order(7)
   public void tc0303_testCreateFeaturesWithAddTags() throws Exception {
     // NOTE : This test depends on setup done as part of tc0300_testCreateFeaturesWithNewIds
 
@@ -214,7 +217,7 @@ public class CreateFeatureTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.post("hub/spaces/" + spaceId + "/features?" + tagQueryParam, bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + spaceId + "/features?" + tagQueryParam, bodyJson, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -223,6 +226,8 @@ public class CreateFeatureTestHelper {
     additionalCustomAssertions(bodyJson, response.body(), null);
   }
 
+  @Test
+  @Order(7)
   public void tc0304_testCreateFeaturesWithRemoveTags() throws Exception {
     // NOTE : This test depends on setup done as part of tc0300_testCreateFeaturesWithNewIds
 
@@ -245,7 +250,7 @@ public class CreateFeatureTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.post("hub/spaces/" + spaceId + "/features?" + tagQueryParam, bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + spaceId + "/features?" + tagQueryParam, bodyJson, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -254,6 +259,8 @@ public class CreateFeatureTestHelper {
     additionalCustomAssertions(bodyJson, response.body(), null);
   }
 
+  @Test
+  @Order(7)
   public void tc0305_testCreateFeaturesWithDupIds() throws Exception {
     // NOTE : This test depends on setup done as part of tc0300_testCreateFeaturesWithNewIds
 
@@ -268,17 +275,19 @@ public class CreateFeatureTestHelper {
     // Given: New Features in place
     final String bodyJson = loadFileOrFail("TC0305_createFeaturesWithDupIds/create_features.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch");
 
     // When: Create Features request is submitted with the same Ids
     final String expectedBodyPart = loadFileOrFail("TC0305_createFeaturesWithDupIds/feature_response_part.json");
-    response = nakshaClient.post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(7)
   public void tc0307_testCreateFeaturesWithNoHandler() throws Exception {
     // NOTE : This test depends on setup done as part of tc0300_testCreateFeaturesWithNewIds
 
@@ -288,7 +297,7 @@ public class CreateFeatureTestHelper {
 
     // Given: Space (without EventHandler) configured in Admin storage
     final Space space = parseJsonFileOrFail("TC0307_createFeaturesWithNoHandler/create_space.json", Space.class);
-    HttpResponse<String> response = nakshaClient.post("hub/spaces", space.toString(), streamId);
+    HttpResponse<String> response = getNakshaClient().post("hub/spaces", space.toString(), streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 
     // Given: Create Features request (against above Space)
@@ -296,12 +305,14 @@ public class CreateFeatureTestHelper {
     final String expectedBodyPart = loadFileOrFail("TC0307_createFeaturesWithNoHandler/feature_response_part.json");
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 404, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(7)
   public void tc0308_testCreateFeaturesWithNoSpace() throws Exception {
     // NOTE : This test depends on setup done as part of tc0300_testCreateFeaturesWithNewIds
 
@@ -318,12 +329,14 @@ public class CreateFeatureTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 404, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(7)
   void tc0309_testCreateFeaturesWithUuid() throws Exception {
     // Test API : POST /hub/spaces/{spaceId}/features
     final String streamId = UUID.randomUUID().toString();
@@ -332,12 +345,12 @@ public class CreateFeatureTestHelper {
     final String spaceId = "um-mod-topology-dev";
     final String bodyJson = loadFileOrFail("TC0309_createFeaturesWithUuid/create_features.json");
     final HttpResponse<String> response =
-        nakshaClient.post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
+        getNakshaClient().post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch");
 
     // Given: existing feature is fetched
     final HttpResponse<String> getResponse =
-        nakshaClient.get("hub/spaces/" + spaceId + "/features/my-custom-id-309-1", streamId);
+        getNakshaClient().get("hub/spaces/" + spaceId + "/features/my-custom-id-309-1", streamId);
     final XyzFeature feature = parseJson(getResponse.body(), XyzFeature.class);
     Assertions.assertNotNull(feature);
     final XyzProperties newPropsOldUuid = feature.getProperties();
@@ -353,14 +366,15 @@ public class CreateFeatureTestHelper {
 
     // Execute request, correct UUID, should success
     feature.setProperties(newPropsOldUuid);
-    final HttpResponse<String> responseUpdateSuccess = nakshaClient.post(
-        "hub/spaces/" + spaceId + "/features",
-        """
+    final HttpResponse<String> responseUpdateSuccess = getNakshaClient()
+        .post(
+            "hub/spaces/" + spaceId + "/features",
+            """
 {
 "type": "FeatureCollection",
 "features": [
 """ + feature + "]}",
-        streamId);
+            streamId);
 
     // Perform first assertions
     assertEquals(200, responseUpdateSuccess.statusCode(), "ResCode mismatch");
@@ -374,28 +388,30 @@ public class CreateFeatureTestHelper {
 
     // Execute request, outdated UUID, should fail
     feature.setProperties(newPropsOutdatedUuid);
-    final HttpResponse<String> responseUpdateFail = nakshaClient.post(
-        "hub/spaces/" + spaceId + "/features",
-        """
+    final HttpResponse<String> responseUpdateFail = getNakshaClient()
+        .post(
+            "hub/spaces/" + spaceId + "/features",
+            """
 {
 "type": "FeatureCollection",
 "features": [
 """ + feature + "]}",
-        streamId);
+            streamId);
 
     // Perform second assertions
     assertEquals(409, responseUpdateFail.statusCode(), "ResCode mismatch");
 
     // Execute request, null UUID, should success with overriding
     feature.setProperties(nullUuidProps);
-    final HttpResponse<String> responseOverriding = nakshaClient.post(
-        "hub/spaces/" + spaceId + "/features",
-        """
+    final HttpResponse<String> responseOverriding = getNakshaClient()
+        .post(
+            "hub/spaces/" + spaceId + "/features",
+            """
 {
 "type": "FeatureCollection",
 "features": [
 """ + feature + "]}",
-        streamId);
+            streamId);
 
     // Perform third assertions
     assertEquals(200, responseOverriding.statusCode(), "ResCode mismatch");

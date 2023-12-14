@@ -21,25 +21,19 @@ package com.here.naksha.app.service;
 import static com.here.naksha.app.common.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
-public class ReadFeaturesByTileTestHelper {
-
-  final @NotNull NakshaApp app;
-  final @NotNull NakshaTestWebClient nakshaClient;
-
-  public ReadFeaturesByTileTestHelper(final @NotNull NakshaApp app, final @NotNull NakshaTestWebClient nakshaClient) {
-    this.app = app;
-    this.nakshaClient = nakshaClient;
-  }
+class ReadFeaturesByTileTest extends ApiTest {
 
   private void standardAssertions(
       final @NotNull HttpResponse<String> actualResponse,
@@ -62,6 +56,8 @@ public class ReadFeaturesByTileTestHelper {
   And then in subsequent tests, we validate the various GetByTile APIs using different query parameters.
   */
 
+  @Test
+  @Order(15)
   public void tc0800_testGetByTileWithSingleTag() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features getting returned for given Tile and given single tag value
@@ -71,26 +67,26 @@ public class ReadFeaturesByTileTestHelper {
     // Given: Storage (mock implementation) configured in Admin storage
     final String storageJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_storage.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/storages", storageJson, streamId);
+    response = getNakshaClient().post("hub/storages", storageJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
 
     // Given: EventHandler (uses above Storage) configured in Admin storage
     final String handlerJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_event_handler.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/handlers", handlerJson, streamId);
+    response = getNakshaClient().post("hub/handlers", handlerJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 
     // Given: Space (uses above EventHandler) configured in Admin storage
     final String spaceJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_space.json");
     final Space space = TestUtil.parseJson(spaceJson, Space.class);
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/spaces", spaceJson, streamId);
+    response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Space");
 
     // Given: New Features persisted in above Space
     String bodyJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_features.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating new Features");
 
     // Given: Features By Tile request (against above space)
@@ -101,13 +97,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = nakshaClient.get(
-        "hub/spaces/" + space.getId() + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + space.getId() + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0801_testGetByTileWithTagOrCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -125,13 +123,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0802_testGetByTileWithTagAndCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -149,13 +149,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0803_testGetByTileWithTagOrOrConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -173,13 +175,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0804_testGetByTileWithTagOrAndConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -197,13 +201,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0805_testGetByTileWithTagAndOrAndConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -221,13 +227,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0806_testGetByTileWithLimit() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -246,14 +254,18 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = nakshaClient.get(
-        "hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam + "&" + limitQueryParam,
-        streamId);
+    response = getNakshaClient()
+        .get(
+            "hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam + "&"
+                + limitQueryParam,
+            streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0807_testGetByTile() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -270,12 +282,14 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0808_testGetByTile2AndTagAndCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -293,13 +307,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0809_testGetByTileWithoutTile() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -316,12 +332,14 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0810_testGetByTileWithInvalidTileId() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -338,12 +356,14 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0811_testGetByTileWithInvalidTagDelimiter() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -361,13 +381,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0812_testGetByTileWithNonNormalizedTag() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -385,13 +407,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0813_testGetByTileWithMixedTagConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -409,13 +433,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0814_testGetByTileWithTagMismatch() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -433,13 +459,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0815_testGetByTileWithTileMismatch() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -457,13 +485,15 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(16)
   public void tc0816_testGetByTileWithUnsupportedTileType() throws Exception {
     // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
 
@@ -482,9 +512,10 @@ public class ReadFeaturesByTileTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = nakshaClient.get(
-        "hub/spaces/" + spaceId + "/tile/" + unsupportedTileType + "/" + tileId + "?" + tagsQueryParam,
-        streamId);
+    response = getNakshaClient()
+        .get(
+            "hub/spaces/" + spaceId + "/tile/" + unsupportedTileType + "/" + tileId + "?" + tagsQueryParam,
+            streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);

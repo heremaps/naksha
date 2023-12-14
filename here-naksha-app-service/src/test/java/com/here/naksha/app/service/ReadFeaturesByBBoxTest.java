@@ -22,26 +22,19 @@ import static com.here.naksha.app.common.TestUtil.*;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.storage.*;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
-public class ReadFeaturesByBBoxTestHelper {
-
-  final @NotNull NakshaApp app;
-  final @NotNull NakshaTestWebClient nakshaClient;
-
-  public ReadFeaturesByBBoxTestHelper(final @NotNull NakshaApp app, final @NotNull NakshaTestWebClient nakshaClient) {
-    this.app = app;
-    this.nakshaClient = nakshaClient;
-  }
+class ReadFeaturesByBBoxTest extends ApiTest {
 
   private void standardAssertions(
       final @NotNull HttpResponse<String> actualResponse,
@@ -64,6 +57,8 @@ public class ReadFeaturesByBBoxTestHelper {
   And then in subsequent tests, we validate the various GetByBBox APIs using different query parameters.
   */
 
+  @Test
+  @Order(13)
   public void tc0700_testGetByBBoxWithSingleTag() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features getting returned for given BBox coordinate and given single tag value
@@ -73,26 +68,26 @@ public class ReadFeaturesByBBoxTestHelper {
     // Given: Storage (mock implementation) configured in Admin storage
     final String storageJson = loadFileOrFail("ReadFeatures/ByBBox/TC0700_SingleTag/create_storage.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/storages", storageJson, streamId);
+    response = getNakshaClient().post("hub/storages", storageJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
 
     // Given: EventHandler (uses above Storage) configured in Admin storage
     final String handlerJson = loadFileOrFail("ReadFeatures/ByBBox/TC0700_SingleTag/create_event_handler.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/handlers", handlerJson, streamId);
+    response = getNakshaClient().post("hub/handlers", handlerJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 
     // Given: Space (uses above EventHandler) configured in Admin storage
     final String spaceJson = loadFileOrFail("ReadFeatures/ByBBox/TC0700_SingleTag/create_space.json");
     final Space space = TestUtil.parseJson(spaceJson, Space.class);
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/spaces", spaceJson, streamId);
+    response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Space");
 
     // Given: New Features persisted in above Space
     String bodyJson = loadFileOrFail("ReadFeatures/ByBBox/TC0700_SingleTag/create_features.json");
     streamId = UUID.randomUUID().toString();
-    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating new Features");
 
     // Given: Features By BBox request (against above space)
@@ -103,13 +98,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response = nakshaClient.get(
-        "hub/spaces/" + space.getId() + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + space.getId() + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0701_testGetByBBoxWithTagOrCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -127,13 +124,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0702_testGetByBBoxWithTagAndCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -151,13 +150,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0703_testGetByBBoxWithTagOrOrConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -175,13 +176,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0704_testGetByBBoxWithTagOrAndConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -199,13 +202,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0705_testGetByBBoxWithTagAndOrAndConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -223,13 +228,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0706_testGetByBBoxWithLimit() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -248,14 +255,18 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response = nakshaClient.get(
-        "hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam + "&" + limitQueryParam,
-        streamId);
+    response = getNakshaClient()
+        .get(
+            "hub/spaces/" + spaceId + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam + "&"
+                + limitQueryParam,
+            streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0707_testGetByBBox() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -272,12 +283,14 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0708_testGetByBBox2AndTagAndCondition() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -295,13 +308,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0709_testGetByBBoxWithoutBBox() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -317,12 +332,14 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/bbox", streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/bbox", streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0710_testGetByBBoxWithInvalidCoordinate() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -339,12 +356,14 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response = nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam, streamId);
+    response = getNakshaClient().get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0711_testGetByBBoxWithInvalidTagDelimiter() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -362,13 +381,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0712_testGetByBBoxWithNonNormalizedTag() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -386,13 +407,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0713_testGetByBBoxWithMixedTagConditions() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -410,13 +433,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0714_testGetByBBoxWithTagMismatch() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -434,13 +459,15 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
   }
 
+  @Test
+  @Order(14)
   public void tc0715_testGetByBBoxWithBBoxMismatch() throws Exception {
     // NOTE : This test depends on setup done as part of tc0700_testGetByBBoxWithSingleTag
 
@@ -459,8 +486,8 @@ public class ReadFeaturesByBBoxTestHelper {
     streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    response =
-        nakshaClient.get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
+    response = getNakshaClient()
+        .get("hub/spaces/" + spaceId + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
