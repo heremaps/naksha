@@ -201,6 +201,24 @@ class NakshaAppTest {
 
   @Test
   @Order(2)
+  void tc0041_testGetStoragesNoPasswords() throws Exception {
+    // Test API : GET /hub/storages
+    // 1. Load test data
+    final String expectedBodyPart = loadFileOrFail("TC0040_getStorages/response_part.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // 2. Perform REST API call
+    final HttpResponse<String> response = nakshaClient.get("hub/storages", streamId);
+
+    // 3. Perform assertions
+    assertEquals(200, response.statusCode(), "ResCode mismatch");
+    JSONAssert.assertEquals(
+            "Expecting previously created storage", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
+    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+  }
+
+  @Test
+  @Order(2)
   void tc0060_testUpdateStorage() throws Exception {
     // Test API : PUT /hub/storages/{storageId}
     // Given:
