@@ -59,7 +59,7 @@ public class PsqlHelper {
     final MessageDigest md5 = PsqlHelper.md5.get();
     md5.reset();
     final byte[] digest = md5.digest(id.getBytes(StandardCharsets.UTF_8));
-    return ((int) digest[0]) & 63;
+    return ((int) digest[0]) & 255;
   }
 
   /**

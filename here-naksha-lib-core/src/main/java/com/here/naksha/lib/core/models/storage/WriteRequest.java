@@ -69,6 +69,18 @@ public abstract class WriteRequest<
   }
 
   /**
+   * Creates a new abstract write request.
+   *
+   * @param codecFactory The codec factory to use when creating new feature codecs.
+   * @param capacity The capacity of the features list.
+   */
+  @AvailableSince(NakshaVersion.v2_0_10)
+  protected WriteRequest(@NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, int capacity) {
+    this.codecFactory = codecFactory;
+    this.features = new ArrayList<>(capacity);
+  }
+
+  /**
    * The codec factory to use, when adding new features.
    */
   protected @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory;

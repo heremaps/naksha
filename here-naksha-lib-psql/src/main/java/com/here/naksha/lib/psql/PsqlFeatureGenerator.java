@@ -18,14 +18,24 @@
  */
 package com.here.naksha.lib.psql;
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+
+import com.here.naksha.lib.core.lambdas.F0;
+import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
+import com.here.naksha.lib.core.models.geojson.coordinates.Position;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzLineString;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
+import com.here.naksha.lib.core.util.IoHelp;
+import com.here.naksha.lib.core.util.json.Json;
 import java.util.ArrayList;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A helper class to generate random {@link XyzFeature}'s.
@@ -33,6 +43,8 @@ import org.jetbrains.annotations.NotNull;
 public class PsqlFeatureGenerator {
 
   public PsqlFeatureGenerator() {}
+
+  private final Random rand = new Random();
 
   public @NotNull String @NotNull [] adverbs = new String[] {
     "abnormally",
@@ -378,6 +390,43 @@ public class PsqlFeatureGenerator {
     "Owens", "Perez", "Quinn", "Roberts", "Smith", "Taylor"
   };
 
+  private static final AtomicReference<String> topologyJsonRef = new AtomicReference<>();
+
+  /**
+   * Creates a new random point feature with a couple (0 to 4) of arbitrary random tags from the {@link #adverbs} list, a name with
+   * firstName, lastName and optional middleName as well as an age. To allow searching for names, we add tags with the first, middle and
+   * last names as well as the age.
+   *
+   * @return A new random feature.
+   */
+  public @NotNull String topologyTemplate() {
+    String topologyJson = topologyJsonRef.get();
+    if (topologyJson == null) {
+      topologyJson = IoHelp.readResource("topology.json");
+      topologyJsonRef.set(topologyJson);
+    }
+    return topologyJson;
+  }
+
+  public XyzGeometry newRandomPoint() {
+    final double longitude = rand.nextDouble(-180, +180);
+    final double latitude = rand.nextDouble(-90, +90);
+    return new XyzPoint(longitude, latitude);
+  }
+
+  public XyzGeometry newRandomLineString() {
+    double longitude = rand.nextDouble(-170, +170);
+    double latitude = rand.nextDouble(-80, +80);
+    final LineStringCoordinates coords = new LineStringCoordinates();
+    final int len = rand.nextInt(6) + 2;
+    for (int i = 0; i < len; i++) {
+      coords.add(new Position(longitude, latitude, 0.0));
+      longitude += rand.nextDouble() / 100;
+      latitude += rand.nextDouble() / 100;
+    }
+    return new XyzLineString(coords);
+  }
+
   /**
    * Creates a new random point feature with a couple (0 to 4) of arbitrary random tags from the {@link #adverbs} list, a name with
    * firstName, lastName and optional middleName as well as an age. To allow searching for names, we add tags with the first, middle and
@@ -386,73 +435,104 @@ public class PsqlFeatureGenerator {
    * @return A new random feature.
    */
   public @NotNull XyzFeature newRandomFeature() {
-    final ThreadLocalRandom rand = ThreadLocalRandom.current();
-    final String featureId = RandomStringUtils.randomAlphanumeric(20);
-    final XyzFeature feature = new XyzFeature(featureId);
-    final double longitude = rand.nextDouble(-180, +180);
-    final double latitude = rand.nextDouble(-90, +90);
-    final XyzGeometry geometry = new XyzPoint(longitude, latitude);
-    feature.setGeometry(geometry);
+    return newRandomFeature("{\"id\":\"0\",\"type\":\"Feature\"}", null, this::newRandomPoint);
+  }
 
-    final String firstName = firstNames[rand.nextInt(0, firstNames.length)];
-    final String lastName = lastNames[rand.nextInt(0, lastNames.length)];
-    final String name;
-    final String middleName;
-    if (rand.nextInt(0, 10) == 0) { // can be 0 .. 9, so 10% chance of middle name
-      middleName = firstNames[rand.nextInt(0, firstNames.length)];
-      name = firstName + " " + middleName + "-" + lastName;
-    } else {
-      middleName = null;
-      name = firstName + " " + lastName;
-    }
-    feature.getProperties().put("firstName", firstName);
-    if (middleName != null) {
-      feature.getProperties().put("middleName", middleName);
-    }
-    feature.getProperties().put("lastName", lastName);
-    feature.getProperties().put("name", name);
+  /**
+   * Creates a new random point feature with a couple (0 to 4) of arbitrary random tags from the {@link #adverbs} list, a name with
+   * firstName, lastName and optional middleName as well as an age. To allow searching for names, we add tags with the first, middle and
+   * last names as well as the age.
+   *
+   * @return A new random feature.
+   */
+  public @NotNull XyzFeature newRandomTopology() {
+    return newRandomFeature(topologyTemplate(), "urn:here::here:Topology:", this::newRandomLineString);
+  }
 
-    // We want a pyramid like distribution between 5/10 and 95/100.
-    int maxAge = 5;
-    int age;
-    do {
-      maxAge += 5;
-      age = rand.nextInt(5, 100); // first around max-age is 10, next 15 aso.
-    } while (age > maxAge);
-    feature.getProperties().put("age", age);
+  /**
+   * Creates a new random point feature with a couple (0 to 4) of arbitrary random tags from the {@link #adverbs} list, a name with
+   * firstName, lastName and optional middleName as well as an age. To allow searching for names, we add tags with the first, middle and
+   * last names as well as the age.
+   *
+   * @param template          The JSON template.
+   * @param idPrefix          The prefix for the ID, if any.
+   * @param geometryGenerator The function that generates the geometry, for example {@link #newRandomPoint()} or
+   *                          {@link #newRandomLineString()}.
+   * @return A new random feature.
+   */
+  public @NotNull XyzFeature newRandomFeature(
+      @NotNull String template, @Nullable String idPrefix, @NotNull F0<XyzGeometry> geometryGenerator) {
+    try (final Json jp = Json.get()) {
+      final XyzFeature feature = jp.reader().forType(XyzFeature.class).readValue(template);
+      feature.setGeometry(geometryGenerator.call());
+      if (idPrefix == null) {
+        feature.setId(RandomStringUtils.randomAlphanumeric(20));
+      } else {
+        feature.setId(idPrefix + RandomStringUtils.randomAlphanumeric(20));
+      }
 
-    // 33% to get tags
-    if (rand.nextInt(3) == 0) { // can be 0, 1 and 2
-      final XyzNamespace xyz = feature.xyz();
-      final ArrayList<String> tags = new ArrayList<>();
-      // We add between 1 and 4 tags.
-      for (int j = 0; j < 4; j++) {
-        int i = rand.nextInt(0, adverbs.length);
-        while (true) {
-          final String tag = adverbs[i];
-          if (!tags.contains(tag)) {
-            tags.add(tag);
+      final String firstName = firstNames[rand.nextInt(0, firstNames.length)];
+      final String lastName = lastNames[rand.nextInt(0, lastNames.length)];
+      final String name;
+      final String middleName;
+      if (rand.nextInt(0, 10) == 0) { // can be 0 .. 9, so 10% chance of middle name
+        middleName = firstNames[rand.nextInt(0, firstNames.length)];
+        name = firstName + " " + middleName + "-" + lastName;
+      } else {
+        middleName = null;
+        name = firstName + " " + lastName;
+      }
+      feature.getProperties().put("firstName", firstName);
+      if (middleName != null) {
+        feature.getProperties().put("middleName", middleName);
+      }
+      feature.getProperties().put("lastName", lastName);
+      feature.getProperties().put("name", name);
+
+      // We want a pyramid like distribution between 5/10 and 95/100.
+      int maxAge = 5;
+      int age;
+      do {
+        maxAge += 5;
+        age = rand.nextInt(5, 100); // first around max-age is 10, next 15 aso.
+      } while (age > maxAge);
+      feature.getProperties().put("age", age);
+
+      // 33% to get tags
+      if (rand.nextInt(3) == 0) { // can be 0, 1 and 2
+        final XyzNamespace xyz = feature.xyz();
+        final ArrayList<String> tags = new ArrayList<>();
+        // We add between 1 and 4 tags.
+        for (int j = 0; j < 4; j++) {
+          int i = rand.nextInt(0, adverbs.length);
+          while (true) {
+            final String tag = adverbs[i];
+            if (!tags.contains(tag)) {
+              tags.add(tag);
+              break;
+            }
+            i = (i + 1) % adverbs.length;
+          }
+          // 50% chance to continue, therefore:
+          // - 33,0% to get one tag
+          // - 16,7% to get two tags
+          // -  8,3% to get three tags
+          // -  4,1% to get four tags
+          if (rand.nextInt(0, 2) == 0) { // can be 0 and 1
             break;
           }
-          i = (i + 1) % adverbs.length;
         }
-        // 50% chance to continue, therefore:
-        // - 33,0% to get one tag
-        // - 16,7% to get two tags
-        // -  8,3% to get three tags
-        // -  4,1% to get four tags
-        if (rand.nextInt(0, 2) == 0) { // can be 0 and 1
-          break;
+        tags.add("@:firstName:" + firstName);
+        if (middleName != null) {
+          tags.add("@:middleName:" + middleName);
         }
+        tags.add("@:lastName:" + lastName);
+        tags.add("@:age:" + age);
+        xyz.setTags(tags, false);
       }
-      tags.add("@:firstName:" + firstName);
-      if (middleName != null) {
-        tags.add("@:middleName:" + middleName);
-      }
-      tags.add("@:lastName:" + lastName);
-      tags.add("@:age:" + age);
-      xyz.setTags(tags, false);
+      return feature;
+    } catch (Exception e) {
+      throw unchecked(e);
     }
-    return feature;
   }
 }

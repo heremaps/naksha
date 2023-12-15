@@ -20,7 +20,9 @@ package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.core.models.storage.XyzCodecFactory.getFactory;
 
+import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -28,7 +30,13 @@ import org.jetbrains.annotations.NotNull;
  */
 public class WriteXyzFeatures extends WriteFeatures<XyzFeature, XyzFeatureCodec, WriteXyzFeatures> {
 
+  @AvailableSince(NakshaVersion.v2_0_7)
   public WriteXyzFeatures(@NotNull String collectionId) {
     super(getFactory(XyzFeatureCodecFactory.class), collectionId);
+  }
+
+  @AvailableSince(NakshaVersion.v2_0_10)
+  public WriteXyzFeatures(@NotNull String collectionId, int capacity) {
+    super(getFactory(XyzFeatureCodecFactory.class), collectionId, capacity);
   }
 }

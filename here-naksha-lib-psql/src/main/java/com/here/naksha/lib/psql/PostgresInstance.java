@@ -23,7 +23,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import com.here.naksha.lib.core.util.ClosableRootResource;
 import java.sql.SQLException;
 import java.util.Enumeration;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -155,12 +154,14 @@ public class PostgresInstance extends ClosableRootResource {
             return psqlConnection;
           }
         }
-      } catch (NoSuchElementException ignore) {
+      } catch (Exception ignore) {
       }
     }
     // No idle connection found, create a new one.
-    return new PsqlConnection(
+    final PsqlConnection psqlConnection = new PsqlConnection(
         this, connTimeoutInMillis, cancelSignalTimeoutInMillis, getOptimalBufferSize(), getOptimalBufferSize());
+    psqlConnection.postgresConnection.withSocketReadTimeout(sockedReadTimeoutInMillis, MILLISECONDS);
+    return psqlConnection;
   }
 
   /**

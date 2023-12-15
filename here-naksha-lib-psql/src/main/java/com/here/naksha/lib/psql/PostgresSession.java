@@ -504,7 +504,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       try (final Json json = Json.get()) {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
-        features.forEach(codec -> codec.decodeParts(false));
+        for (final CODEC codec : features) {
+          codec.decodeParts(false);
+        }
         final Map<String, Integer> originalFeaturesOrder =
             IndexHelper.createKeyIndexMap(features, CODEC::getId);
         // sort to avoid deadlock

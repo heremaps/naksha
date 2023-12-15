@@ -48,6 +48,19 @@ public class WriteFeatures<
     super(codecFactory);
     this.collectionId = collectionId;
   }
+  /**
+   * Creates a new empty feature write request.
+   *
+   * @param codecFactory The codec factory to use when creating new feature codecs.
+   * @param collectionId The identifier of the collection to write into.
+   * @param capacity The capacity of the features list.
+   */
+  @AvailableSince(NakshaVersion.v2_0_10)
+  public WriteFeatures(
+      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, @NotNull String collectionId, int capacity) {
+    super(codecFactory, capacity);
+    this.collectionId = collectionId;
+  }
 
   /**
    * Returns the collection-id to write features into.

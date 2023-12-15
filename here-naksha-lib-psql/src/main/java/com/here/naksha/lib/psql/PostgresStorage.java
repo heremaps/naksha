@@ -88,6 +88,7 @@ final class PostgresStorage extends ClosableRootResource {
     this.storageId = storageId;
     this.schema = schema;
     this.appName = appName;
+    this.sockedReadTimeout = TimeUnit.SECONDS.toMillis(60);
     this.connTimeout = value(connTimeout, MIN_CONN_TIMEOUT_MILLIS, DEFAULT_CONN_TIMEOUT_MILLIS);
     this.stmtTimeout = value(stmtTimeout, MIN_STMT_TIMEOUT_MILLIS, DEFAULT_STMT_TIMEOUT_MILLIS);
     this.lockTimeout = value(lockTimeout, MIN_LOCK_TIMEOUT_MILLIS, DEFAULT_LOCK_TIMEOUT_MILLIS);
@@ -245,7 +246,7 @@ final class PostgresStorage extends ClosableRootResource {
     return fetchSize;
   }
 
-  private long sockedReadTimeout = TimeUnit.SECONDS.toMillis(15);
+  private long sockedReadTimeout;
 
   /**
    * Cancel command is sent out of band over its own connection, so cancel message can itself get stuck. This property controls "connect

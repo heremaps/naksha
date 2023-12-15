@@ -23,12 +23,21 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
+import org.jetbrains.annotations.NotNull;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "LineString")
 public class XyzLineString extends XyzGeometryItem {
 
-  private LineStringCoordinates coordinates = new LineStringCoordinates();
+  public XyzLineString() {
+    this.coordinates = new LineStringCoordinates();
+  }
+
+  public XyzLineString(@NotNull LineStringCoordinates coordinates) {
+    this.coordinates = coordinates;
+  }
+
+  private @NotNull LineStringCoordinates coordinates;
 
   @Override
   public LineStringCoordinates getCoordinates() {
@@ -39,7 +48,7 @@ public class XyzLineString extends XyzGeometryItem {
     this.coordinates = coordinates;
   }
 
-  public XyzLineString withCoordinates(LineStringCoordinates coordinates) {
+  public XyzLineString withCoordinates(@NotNull LineStringCoordinates coordinates) {
     setCoordinates(coordinates);
     return this;
   }
