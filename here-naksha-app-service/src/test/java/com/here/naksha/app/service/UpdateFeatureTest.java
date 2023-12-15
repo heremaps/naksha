@@ -41,6 +41,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
+// @ExtendWith({ApiTestMaintainer.class})
 class UpdateFeatureTest extends ApiTest {
 
   @Test

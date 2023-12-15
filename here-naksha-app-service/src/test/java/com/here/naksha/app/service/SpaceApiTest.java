@@ -37,7 +37,8 @@ import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
-public class SpaceApiTest extends ApiTest {
+// @ExtendWith({ApiTestMaintainer.class})
+class SpaceApiTest extends ApiTest {
 
   @Test
   @Order(3)

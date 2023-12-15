@@ -18,9 +18,16 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.TestUtil.*;
+import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
+import static com.here.naksha.app.common.TestUtil.getHeader;
+import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.parseJson;
+import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
@@ -43,6 +50,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
+// @ExtendWith({ApiTestMaintainer.class})
 class CreateFeatureTest extends ApiTest {
 
   private void standardAssertions(

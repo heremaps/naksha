@@ -18,9 +18,11 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.TestUtil.*;
+import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
+import static com.here.naksha.app.common.TestUtil.getHeader;
+import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.TestUtil;
@@ -34,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
+// @ExtendWith({ApiTestMaintainer.class})
 class ReadFeaturesByBBoxTest extends ApiTest {
 
   private void standardAssertions(
