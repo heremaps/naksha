@@ -18,13 +18,77 @@
  */
 package com.here.naksha.app.service;
 
+import static com.here.naksha.app.common.ResponseAssertions.assertThat;
+import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+
 import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.NakshaTestWebClient;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.http.HttpResponse;
+import java.util.UUID;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 class WriteFeaturesAtomicityTest extends ApiTest {
 
-  void tc_1101_postAtomicity() {}
+  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
+  private static final String SPACE_ID = "write_features_atomicity_test_space";
 
-  void tc_1102_putAtomicity() {}
+  public WriteFeaturesAtomicityTest() {
+    super(nakshaClient);
+  }
 
-  void tc_1103_deleteAtomicity() {}
+  @BeforeAll
+  static void prepareEnv() {
+    try {
+      createStorage();
+      createHandler();
+      createSpace();
+    } catch (URISyntaxException | IOException | InterruptedException e) {
+      throw new RuntimeException("Environment setup for atomicity tests failed", e);
+    }
+  }
+
+  @Test
+  void tc_1101_postAtomicity() {
+    boolean x = true;
+    Assertions.assertTrue(x);
+  }
+
+  @Test
+  void tc_1102_putAtomicity() {
+  }
+
+  @Test
+  void tc_1103_deleteAtomicity() {
+  }
+
+  private static void createSpace() throws URISyntaxException, IOException, InterruptedException {
+    HttpResponse<String> response = nakshaClient.post(
+        "hub/spaces",
+        loadFileOrFail("WriteFeaturesAtomicity/setup/create_space.json"),
+        UUID.randomUUID().toString()
+    );
+    assertThat(response).hasStatus(200);
+  }
+
+  private static void createStorage() throws URISyntaxException, IOException, InterruptedException {
+    HttpResponse<String> response = nakshaClient.post(
+        "hub/storages",
+        loadFileOrFail("WriteFeaturesAtomicity/setup/create_storage.json"),
+        UUID.randomUUID().toString()
+    );
+    assertThat(response).hasStatus(200);
+  }
+
+  private static void createHandler() throws URISyntaxException, IOException, InterruptedException {
+    HttpResponse<String> response = nakshaClient.post(
+        "hub/handlers",
+        loadFileOrFail("WriteFeaturesAtomicity/setup/create_event_handler.json"),
+        UUID.randomUUID().toString()
+    );
+    assertThat(response).hasStatus(200);
+  }
 }

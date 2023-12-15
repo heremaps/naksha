@@ -24,8 +24,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * Base class for all API-related tests.
- * Extending this class ensures that NakshaApp & all required storages are running
+ * Base class for all API-related tests. Extending this class ensures that NakshaApp & all required storages are running
  */
 @ExtendWith({ApiTestMaintainer.class})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -34,7 +33,11 @@ public abstract class ApiTest {
   private final NakshaTestWebClient nakshaClient;
 
   public ApiTest() {
-    nakshaClient = new NakshaTestWebClient();
+    this(new NakshaTestWebClient());
+  }
+
+  public ApiTest(NakshaTestWebClient nakshaClient) {
+    this.nakshaClient = nakshaClient;
   }
 
   public NakshaTestWebClient getNakshaClient() {
