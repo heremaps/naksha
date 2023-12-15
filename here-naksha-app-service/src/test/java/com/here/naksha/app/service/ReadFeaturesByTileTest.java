@@ -36,7 +36,6 @@ import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
-// @ExtendWith({ApiTestMaintainer.class})
 class ReadFeaturesByTileTest extends ApiTest {
 
   private void standardAssertions(

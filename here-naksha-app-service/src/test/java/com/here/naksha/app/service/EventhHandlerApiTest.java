@@ -18,11 +18,9 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
-import static com.here.naksha.app.common.TestUtil.getHeader;
+import static com.here.naksha.app.common.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -34,10 +32,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 
-// @ExtendWith({ApiTestMaintainer.class})
 class EventhHandlerApiTest extends ApiTest {
 
   @Test
@@ -53,13 +48,10 @@ class EventhHandlerApiTest extends ApiTest {
     final HttpResponse<String> response = getNakshaClient().post("hub/handlers", bodyJson, streamId);
 
     // 3. Perform assertions
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Expecting new handler in response",
-        expectedCreationResponse,
-        response.body(),
-        JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedCreationResponse);
   }
 
   @Test
@@ -75,12 +67,9 @@ class EventhHandlerApiTest extends ApiTest {
     final HttpResponse<String> response = getNakshaClient().post("hub/handlers", bodyJson, streamId);
 
     // 3. Perform assertions
-    assertEquals(409, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Expecting duplicated handler in response",
-        expectedDuplicateResponse,
-        response.body(),
-        JSONCompareMode.LENIENT);
+    assertThat(response)
+        .hasStatus(409)
+        .hasJsonBody(expectedDuplicateResponse, "Expecting duplicated handler in response");
   }
 
   @Test
@@ -96,10 +85,10 @@ class EventhHandlerApiTest extends ApiTest {
     final HttpResponse<String> response = getNakshaClient().post("hub/handlers", bodyJson, streamId);
 
     // 3. Perform assertions
-    assertEquals(400, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Expecting failure response", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Expecting failure response");
   }
 
   @Test
@@ -114,10 +103,10 @@ class EventhHandlerApiTest extends ApiTest {
     final HttpResponse<String> response = getNakshaClient().get("hub/handlers/test-handler", streamId);
 
     // 3. Perform assertions
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Expecting handler response", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Expecting handler response");
   }
 
   @Test
@@ -131,8 +120,9 @@ class EventhHandlerApiTest extends ApiTest {
     final HttpResponse<String> response = getNakshaClient().get("hub/handlers/not-real-handler", streamId);
 
     // 3. Perform assertions
-    assertEquals(404, response.statusCode(), "ResCode mismatch");
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    assertThat(response)
+        .hasStatus(404)
+        .hasStreamIdHeader(streamId);
   }
 
   @Test
@@ -149,9 +139,12 @@ class EventhHandlerApiTest extends ApiTest {
     // When: Fetching all handlers
     final HttpResponse<String> response = getNakshaClient().get("hub/handlers", streamId);
 
-    // Then: Expect all saved handlers are returned
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    // Then: Response is successful
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId);
+
+    // And: all saved handlers are returned
     List<XyzFeature> returnedXyzFeatures =
         parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
     boolean allReturnedFeaturesAreEventHandlers = returnedXyzFeatures.stream()
@@ -176,9 +169,10 @@ class EventhHandlerApiTest extends ApiTest {
         getNakshaClient().put("hub/handlers/test-handler", updateEventHandlerJson, streamId);
 
     // Then:
-    assertEquals(200, response.statusCode());
-    JSONAssert.assertEquals(expectedRespBody, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID));
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedRespBody);
   }
 
   @Test
@@ -196,9 +190,10 @@ class EventhHandlerApiTest extends ApiTest {
         getNakshaClient().put("hub/handlers/non-existent-test-handler", updateEventHandlerJson, streamId);
 
     // Then:
-    assertEquals(404, response.statusCode());
-    JSONAssert.assertEquals(expectedRespBody, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID));
+    assertThat(response)
+        .hasStatus(404)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedRespBody);
   }
 
   @Test
@@ -216,8 +211,9 @@ class EventhHandlerApiTest extends ApiTest {
         getNakshaClient().put("hub/handlers/test-handler", updateOtherHandlerJson, streamId);
 
     // Then:
-    assertEquals(400, response.statusCode());
-    JSONAssert.assertEquals(expectedErrorResponse, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID));
+    assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedErrorResponse);
   }
 }

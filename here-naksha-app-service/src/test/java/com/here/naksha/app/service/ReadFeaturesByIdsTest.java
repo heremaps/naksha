@@ -27,11 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.here.naksha.app.common.ApiTest;
-import com.here.naksha.lib.core.NakshaAdminCollection;
-import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.http.HttpResponse;
 import java.util.List;
@@ -43,7 +40,6 @@ import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
-// @ExtendWith({ApiTestMaintainer.class})
 class ReadFeaturesByIdsTest extends ApiTest {
 
   private void standardAssertions(

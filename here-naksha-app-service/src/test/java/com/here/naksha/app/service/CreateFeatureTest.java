@@ -18,6 +18,7 @@
  */
 package com.here.naksha.app.service;
 
+import static com.here.naksha.app.common.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
@@ -50,23 +51,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
-// @ExtendWith({ApiTestMaintainer.class})
 class CreateFeatureTest extends ApiTest {
-
-  private void standardAssertions(
-      final @NotNull HttpResponse<String> actualResponse,
-      final int expectedStatusCode,
-      final @NotNull String expectedBodyPart,
-      final @NotNull String expectedStreamId)
-      throws JSONException {
-    assertEquals(expectedStatusCode, actualResponse.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Create Feature response body doesn't match",
-        expectedBodyPart,
-        actualResponse.body(),
-        JSONCompareMode.LENIENT);
-    assertEquals(expectedStreamId, getHeader(actualResponse, HDR_STREAM_ID), "StreamId mismatch");
-  }
 
   private void additionalCustomAssertions(
       final @NotNull String reqBody, final @NotNull String resBody, final @Nullable String prefixId)
@@ -134,7 +119,10 @@ class CreateFeatureTest extends ApiTest {
     response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
 
     // Then: also match individual JSON attributes (in addition to whole object comparison above)
     additionalCustomAssertions(bodyJson, response.body(), null);
@@ -162,7 +150,10 @@ class CreateFeatureTest extends ApiTest {
     response = getNakshaClient().post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
 
     // Then: also match individual JSON attributes (in addition to whole object comparison above)
     additionalCustomAssertions(bodyJson, response.body(), null);
@@ -194,7 +185,10 @@ class CreateFeatureTest extends ApiTest {
         .post("hub/spaces/" + spaceId + "/features?prefixId=" + urlEncoded(prefixId), bodyJson, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
 
     // Then: also match individual JSON attributes (in addition to whole object comparison above)
     additionalCustomAssertions(bodyJson, response.body(), prefixId);
@@ -228,7 +222,10 @@ class CreateFeatureTest extends ApiTest {
     response = getNakshaClient().post("hub/spaces/" + spaceId + "/features?" + tagQueryParam, bodyJson, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
 
     // Then: also match individual JSON attributes (in addition to whole object comparison above)
     additionalCustomAssertions(bodyJson, response.body(), null);
@@ -261,7 +258,10 @@ class CreateFeatureTest extends ApiTest {
     response = getNakshaClient().post("hub/spaces/" + spaceId + "/features?" + tagQueryParam, bodyJson, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
 
     // Then: also match individual JSON attributes (in addition to whole object comparison above)
     additionalCustomAssertions(bodyJson, response.body(), null);
@@ -291,7 +291,10 @@ class CreateFeatureTest extends ApiTest {
     response = getNakshaClient().post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
   }
 
   @Test
@@ -316,7 +319,10 @@ class CreateFeatureTest extends ApiTest {
     response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 404, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(404)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
   }
 
   @Test
@@ -340,7 +346,10 @@ class CreateFeatureTest extends ApiTest {
     response = getNakshaClient().post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 404, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(404)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
   }
 
   @Test

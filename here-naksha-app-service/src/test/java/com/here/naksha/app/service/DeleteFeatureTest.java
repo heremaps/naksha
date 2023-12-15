@@ -18,29 +18,22 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.TestUtil.*;
-import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
+import static com.here.naksha.app.common.ResponseAssertions.assertThat;
+import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.http.HttpResponse;
 import java.util.UUID;
-import org.jetbrains.annotations.NotNull;
-import org.json.JSONException;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 
-public class DeleteFeatureTestHelper {
+class DeleteFeatureTest extends ApiTest {
 
-  final @NotNull NakshaApp app;
-  final @NotNull NakshaTestWebClient nakshaClient;
-
-  public DeleteFeatureTestHelper(final @NotNull NakshaApp app, final @NotNull NakshaTestWebClient nakshaClient) {
-    this.app = app;
-    this.nakshaClient = nakshaClient;
-  }
-
+  @Test
+  @Order(12)
   void tc0900_testDeleteFeatures() throws Exception {
     // Test API : DELETE /hub/spaces/{spaceId}/features
     final String streamId = UUID.randomUUID().toString();
@@ -48,28 +41,35 @@ public class DeleteFeatureTestHelper {
 
     // Preparation: create storage, event handler, space, and initial features
     final String storage = loadFileOrFail("TC0900_deleteFeatures/create_storage.json");
-    response = nakshaClient.post("hub/storages", storage, streamId);
+    response = getNakshaClient().post("hub/storages", storage, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating storage");
     final String handler = loadFileOrFail("TC0900_deleteFeatures/create_handler.json");
-    response = nakshaClient.post("hub/handlers", handler, streamId);
+    response = getNakshaClient().post("hub/handlers", handler, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating event handler");
     final String spaceJson = loadFileOrFail("TC0900_deleteFeatures/create_space.json");
-    response = nakshaClient.post("hub/spaces", spaceJson, streamId);
+    response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating space");
     final Space space = parseJsonFileOrFail("TC0900_deleteFeatures/create_space.json", Space.class);
     final String createFeaturesJson = loadFileOrFail("TC0900_deleteFeatures/create_features.json");
-    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating initial features");
     final String expectedBodyPart = loadFileOrFail("TC0900_deleteFeatures/response.json");
 
     // When: request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.delete(
-        "hub/spaces/" + space.getId() + "/features?id=feature-1-to-delete&id=feature-2-to-delete", streamId);
+    response = getNakshaClient()
+        .delete(
+            "hub/spaces/" + space.getId() + "/features?id=feature-1-to-delete&id=feature-2-to-delete",
+            streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Delete Feature response body doesn't match");
   }
 
+  @Test
+  @Order(13)
   void tc0901_testDeleteNonExistingFeatures() throws Exception {
     // Test API : DELETE /hub/spaces/{spaceId}/features
     final String streamId = UUID.randomUUID().toString();
@@ -79,29 +79,38 @@ public class DeleteFeatureTestHelper {
     final String expectedBodyPart = loadFileOrFail("TC0901_deleteNonExistingFeatures/response.json");
     // Create features to be deleted
     final String createFeaturesJson = loadFileOrFail("TC0900_deleteFeatures/create_features.json");
-    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating initial features");
 
     // Test deleting only non existing features
     // When: request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.delete(
-        "hub/spaces/" + space.getId() + "/features?id=non-existing-phantom-feature", streamId);
+    response = getNakshaClient()
+        .delete("hub/spaces/" + space.getId() + "/features?id=non-existing-phantom-feature", streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Delete Feature response body doesn't match");
 
     // Test deleting some phantom features among other existing features
     // When: request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.delete(
-        "hub/spaces/" + space.getId()
-            + "/features?id=non-existing-phantom-feature&id=feature-1-to-delete&id=feature-2-to-delete",
-        streamId);
+    response = getNakshaClient()
+        .delete(
+            "hub/spaces/" + space.getId()
+                + "/features?id=non-existing-phantom-feature&id=feature-1-to-delete&id=feature-2-to-delete",
+            streamId);
 
     // Then: Perform assertions
     final String expectedDeleteOfExisting = loadFileOrFail("TC0900_deleteFeatures/response.json");
-    standardAssertions(response, 200, expectedDeleteOfExisting, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedDeleteOfExisting, "Delete Feature response body doesn't match");
   }
 
+  @Test
+  @Order(13)
   void tc0902_testDeleteFeatureById() throws Exception {
     // Test API : DELETE /hub/spaces/{spaceId}/features/{featureId}
     final String streamId = UUID.randomUUID().toString();
@@ -109,17 +118,22 @@ public class DeleteFeatureTestHelper {
 
     final Space space = parseJsonFileOrFail("TC0900_deleteFeatures/create_space.json", Space.class);
     final String createFeaturesJson = loadFileOrFail("TC0902_deleteFeatureById/create_features.json");
-    response = nakshaClient.post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
+    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", createFeaturesJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating initial features");
     final String expectedBodyPart = loadFileOrFail("TC0902_deleteFeatureById/response.json");
 
     // When: request is submitted to NakshaHub Space Storage instance
-    response = nakshaClient.delete("hub/spaces/" + space.getId() + "/features/feature-3-to-delete", streamId);
+    response = getNakshaClient().delete("hub/spaces/" + space.getId() + "/features/feature-3-to-delete", streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Delete Feature response body doesn't match");
   }
 
+  @Test
+  @Order(13)
   void tc0903_testDeleteFeatureByWrongId() throws Exception {
     // Test API : DELETE /hub/spaces/{spaceId}/features/{featureId}
     final String streamId = UUID.randomUUID().toString();
@@ -128,25 +142,13 @@ public class DeleteFeatureTestHelper {
     final String expectedBodyPart = loadFileOrFail("TC0903_deleteFeatureByWrongId/response.json");
 
     // When: request is submitted to NakshaHub Space Storage instance
-    final HttpResponse<String> response =
-        nakshaClient.delete("hub/spaces/" + space.getId() + "/features/phantom-feature-not-real", streamId);
+    final HttpResponse<String> response = getNakshaClient()
+        .delete("hub/spaces/" + space.getId() + "/features/phantom-feature-not-real", streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 404, expectedBodyPart, streamId);
-  }
-
-  private void standardAssertions(
-      final @NotNull HttpResponse<String> actualResponse,
-      final int expectedStatusCode,
-      final String expectedBodyPart,
-      final @NotNull String expectedStreamId)
-      throws JSONException {
-    assertEquals(expectedStatusCode, actualResponse.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Delete Feature response body doesn't match",
-        expectedBodyPart,
-        actualResponse.body(),
-        JSONCompareMode.LENIENT);
-    assertEquals(expectedStreamId, getHeader(actualResponse, HDR_STREAM_ID), "StreamId mismatch");
+    assertThat(response)
+        .hasStatus(404)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Delete Feature response body doesn't match");
   }
 }

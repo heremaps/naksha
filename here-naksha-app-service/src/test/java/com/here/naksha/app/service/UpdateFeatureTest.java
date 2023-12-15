@@ -41,7 +41,6 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
-// @ExtendWith({ApiTestMaintainer.class})
 class UpdateFeatureTest extends ApiTest {
 
   @Test
@@ -90,7 +89,8 @@ class UpdateFeatureTest extends ApiTest {
     final String streamId = UUID.randomUUID().toString();
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
-    final HttpResponse<String> response = getNakshaClient().put("hub/spaces/" + space.getId() + "/features/my-custom-feature-1", bodyJson, streamId);
+    final HttpResponse<String> response = getNakshaClient()
+        .put("hub/spaces/" + space.getId() + "/features/my-custom-feature-1", bodyJson, streamId);
 
     // Then: Perform assertions
     assertEquals(200, response.statusCode(), "ResCode mismatch");
