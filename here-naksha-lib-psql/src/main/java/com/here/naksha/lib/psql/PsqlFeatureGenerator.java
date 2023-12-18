@@ -30,9 +30,12 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.Json;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.GZIPOutputStream;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -403,7 +406,22 @@ public class PsqlFeatureGenerator {
     String topologyJson = topologyJsonRef.get();
     if (topologyJson == null) {
       topologyJson = IoHelp.readResource("topology.json");
-      topologyJsonRef.set(topologyJson);
+      try (Json jp = Json.get()) {
+        // We deserialize and re-serialize to get rid of white-spaces (reduce the size).
+        final XyzFeature xyzFeature = jp.reader().forType(XyzFeature.class).readValue(topologyJson);
+        topologyJson = jp.writer().writeValueAsString(xyzFeature);
+//        System.out.println("Original length: " + topologyJson.getBytes(StandardCharsets.UTF_8).length);
+//        final ByteArrayOutputStream baOut = new ByteArrayOutputStream();
+//        try (final GZIPOutputStream gzipOut = new GZIPOutputStream(baOut)) {
+//          gzipOut.write(topologyJson.getBytes(StandardCharsets.UTF_8));
+//        }
+//        byte[] bytes = baOut.toByteArray();
+//        System.out.println("Compressed length: " + bytes.length);
+      } catch (Exception ignore) {
+        // Compaction failed, ignore it.
+      } finally {
+        topologyJsonRef.set(topologyJson);
+      }
     }
     return topologyJson;
   }
@@ -435,7 +453,7 @@ public class PsqlFeatureGenerator {
    * @return A new random feature.
    */
   public @NotNull XyzFeature newRandomFeature() {
-    return newRandomFeature("{\"id\":\"0\",\"type\":\"Feature\"}", null, this::newRandomPoint);
+    return newRandomFeature("{\"type\":\"Feature\"}", null, this::newRandomPoint);
   }
 
   /**
@@ -447,6 +465,35 @@ public class PsqlFeatureGenerator {
    */
   public @NotNull XyzFeature newRandomTopology() {
     return newRandomFeature(topologyTemplate(), "urn:here::here:Topology:", this::newRandomLineString);
+  }
+
+  protected final StringBuilder sb = new StringBuilder();
+
+  /**
+   * Creates a new JSON feature from the given template.
+   *
+   * @param template          The JSON template.
+   * @param idPrefix          The prefix for the ID, if any.
+   * @param id The id, if {@code null}, generating a random ID.
+   * @return A new random feature.
+   */
+  public @NotNull String newJsonFeature(
+      @NotNull String template, @Nullable String idPrefix, @Nullable CharSequence id) {
+    sb.setLength(0);
+    sb.setLength(0);
+    sb.append(template);
+    sb.setLength(sb.length() - 1);
+    sb.append(",\"id\":\"");
+    if (idPrefix != null) {
+      sb.append(idPrefix);
+    }
+    if (id != null) {
+      sb.append(id);
+    } else {
+      sb.append(RandomStringUtils.randomAlphanumeric(20));
+    }
+    sb.append("\"}");
+    return sb.toString();
   }
 
   /**
@@ -463,13 +510,9 @@ public class PsqlFeatureGenerator {
   public @NotNull XyzFeature newRandomFeature(
       @NotNull String template, @Nullable String idPrefix, @NotNull F0<XyzGeometry> geometryGenerator) {
     try (final Json jp = Json.get()) {
-      final XyzFeature feature = jp.reader().forType(XyzFeature.class).readValue(template);
+
+      final XyzFeature feature = jp.reader().forType(XyzFeature.class).readValue(sb.toString());
       feature.setGeometry(geometryGenerator.call());
-      if (idPrefix == null) {
-        feature.setId(RandomStringUtils.randomAlphanumeric(20));
-      } else {
-        feature.setId(idPrefix + RandomStringUtils.randomAlphanumeric(20));
-      }
 
       final String firstName = firstNames[rand.nextInt(0, firstNames.length)];
       final String lastName = lastNames[rand.nextInt(0, lastNames.length)];

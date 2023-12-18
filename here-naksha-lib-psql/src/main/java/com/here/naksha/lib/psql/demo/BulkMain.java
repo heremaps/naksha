@@ -18,22 +18,23 @@
  */
 package com.here.naksha.lib.psql.demo;
 
+import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
 import static java.lang.System.err;
 import static java.lang.System.out;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.SimpleTask;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.psql.PsqlFeatureGenerator;
 import com.here.naksha.lib.psql.PsqlHelper;
 import com.here.naksha.lib.psql.PsqlStorage;
 import com.here.naksha.lib.psql.PsqlStorage.Params;
+import com.here.naksha.lib.psql.PsqlStorageConfig;
 import com.here.naksha.lib.psql.PsqlWriteSession;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,11 +45,13 @@ import org.jetbrains.annotations.NotNull;
 
 public class BulkMain {
 
-  private static final String DB_URL =
-      "jdbc:postgresql://naksha-perftest.ccmrakfzvsi3.us-east-1.rds.amazonaws.com:5432/unimap?schema=java_perf_test&id=java_perf_test&app=Naksha-Perf-Test&user=postgres&password=csdhf78wef34f";
+  // Place the JDBC URL of the database into ~/.config/naksha/test_perf_db.url
+  private static final @NotNull PsqlStorageConfig perfTestDb =
+      configFromFileOrEnv("test_perf_db.url", "NAKSHA_TEST_ADMIN_DB_URL", "java_perf_test");
+  private static final String ID_PREFIX = "urn:here::here:Topology:";
 
-  private static int PARTITIONS = 256;
-  private static int CHUNK_SIZE = 500;
+  private static int PARTITIONS;
+  private static int CHUNK_SIZE;
   private static final String DB_COLLECTION = "topology_test";
   private static final NakshaContext context = new NakshaContext().withAppId("performance_test");
 
@@ -58,38 +61,34 @@ public class BulkMain {
     final PsqlFeatureGenerator fg = new PsqlFeatureGenerator();
     long total_nanos = 0, start, end;
     int chunk = 0, pos = 0;
-    out.printf("\t[%3d] Create random features\n", partitionId);
-    final XyzFeature[] features = new XyzFeature[CHUNK_SIZE];
-    final long START = System.nanoTime();
-    for (int i = 0; i < features.length; i++) {
-      features[i] = fg.newRandomFeature();
-    }
-    final long END = System.nanoTime();
-    out.printf(
-        "\t[%3d] Create %d random features in %.2f millis\n",
-        partitionId, features.length, (END - START) / 1_000_000d);
-
+    out.printf("\t[%3d] Start execute\n", partitionId);
     try (final PsqlWriteSession session = storage.newWriteSession(context, true)) {
       session.setFetchSize(10);
-      session.setStatementTimeout(1, TimeUnit.MINUTES);
+      session.setStatementTimeout(15, TimeUnit.MINUTES);
       while (pos < LEN) {
         final int featuresInChunk = Math.min(LEN - pos, CHUNK_SIZE);
         out.printf(
             "\t[%3d] Create request for chunk #%d with %d features\n", partitionId, chunk, featuresInChunk);
         final WriteXyzFeatures request = new WriteXyzFeatures(DB_COLLECTION, CHUNK_SIZE);
         request.minResults = true;
-        for (int i = 0; i < featuresInChunk; i++) {
-          final XyzFeature feature = features[i];
-          feature.setId(ids.get(pos++));
-          feature.setGeometry(fg.newRandomLineString());
-          request.add(EWriteOp.CREATE, feature);
+        for (int i = 0; i < featuresInChunk; i++, pos++) {
+          final XyzFeatureCodec codec = request.getCodecFactory().newInstance();
+          codec.setOp(EWriteOp.CREATE);
+          final String id = ids.get(i);
+          codec.setId(id);
+          codec.setUuid(null);
+          codec.setJson(fg.newJsonFeature(fg.topologyTemplate(), null, id));
+          codec.setGeometry(fg.newRandomLineString().getJTSGeometry());
+          codec.setDecoded(true);
+          request.features.add(codec);
         }
         out.printf(
             "\t[%3d] Execute request for chunk #%d with %d features\n",
             partitionId, chunk, featuresInChunk);
         out.flush();
         start = System.nanoTime();
-        try (final Result result = session.execute(request)) {
+        try {
+          session.execute(request).close();
           session.commit(true);
         } catch (Exception e) {
           e.printStackTrace(err);
@@ -113,8 +112,8 @@ public class BulkMain {
   }
 
   // gradle shadowJar -x test
-  // scp /Users/alweber/Documents/github/xeus2001/xyz-hub/build/libs/naksha-2.0.10-all.jar alweber@$AWS_IP:.
-  // java -Xmx32g -XX:+UseZGC -cp naksha-2.0.10-all.jar com.here.naksha.lib.psql.demo.BulkMain 1000000 1000 256
+  // scp /Users/alweber/Documents/github/xeus2001/xyz-hub/build/libs/naksha-2.0.11-all.jar alweber@$AWS_IP:.
+  // java -Xmx32g -XX:+UseZGC -cp naksha-2.0.11-all.jar com.here.naksha.lib.psql.demo.BulkMain 1000000 10000 96
   public static void main(String... args) throws Exception {
     if (args.length < 2) {
       out.println(
@@ -129,8 +128,8 @@ public class BulkMain {
       PARTITIONS = Math.max(1, Math.min(256, Runtime.getRuntime().availableProcessors()));
     }
     out.printf("Generate %d random features, in chunks of %d using %d partitions\n", LIMIT, CHUNK_SIZE, PARTITIONS);
-    try (final PsqlStorage storage = new PsqlStorage(DB_URL)) {
-      storage.setSocketTimeout(1, TimeUnit.MINUTES);
+    try (final PsqlStorage storage = new PsqlStorage(perfTestDb)) {
+      storage.setSocketTimeout(15, TimeUnit.MINUTES);
       out.println("Drop the schema " + storage.getSchema());
       storage.dropSchema();
       out.println("Create the schema " + storage.getSchema());
@@ -139,9 +138,8 @@ public class BulkMain {
       try (final PsqlWriteSession session = storage.newWriteSession(context, true)) {
         final WriteXyzCollections writeCollections = new WriteXyzCollections();
         writeCollections.add(EWriteOp.CREATE, new XyzCollection(DB_COLLECTION, true, false, true));
-        try (final Result result = session.execute(writeCollections)) {
-          session.commit(true);
-        }
+        session.execute(writeCollections).close();
+        session.commit(true);
       }
 
       // Done, write features.
@@ -159,7 +157,7 @@ public class BulkMain {
         ids[i] = new ArrayList<>();
       }
       for (int i = 0; i < LIMIT; i++) {
-        final String id = RandomStringUtils.randomAlphanumeric(20);
+        final String id = ID_PREFIX + RandomStringUtils.randomAlphanumeric(20);
         final int partitionId = PsqlHelper.partitionId(id) % PARTITIONS;
         ids[partitionId].add(id);
         if (i % 10000 == 0) {
