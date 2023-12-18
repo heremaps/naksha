@@ -57,6 +57,7 @@ class NakshaAppTest {
   static ReadFeaturesByBBoxTestHelper readFeaturesByBBoxTestHelper;
   static ReadFeaturesByTileTestHelper readFeaturesByTileTestHelper;
   static SearchFeaturesTestHelper searchFeaturesTestHelper;
+  static ValDryRunTestHelper valDryRunTestHelper;
 
   @BeforeAll
   static void prepare() throws InterruptedException, ExecutionException {
@@ -76,6 +77,7 @@ class NakshaAppTest {
     readFeaturesByBBoxTestHelper = new ReadFeaturesByBBoxTestHelper(app, nakshaClient);
     readFeaturesByTileTestHelper = new ReadFeaturesByTileTestHelper(app, nakshaClient);
     searchFeaturesTestHelper = new SearchFeaturesTestHelper(app, nakshaClient);
+    valDryRunTestHelper = new ValDryRunTestHelper(app, nakshaClient);
   }
 
   @Test
@@ -947,6 +949,12 @@ class NakshaAppTest {
   @Order(17)
   void tc0902_testSearchWrongSpace() throws URISyntaxException, IOException, InterruptedException, JSONException {
     searchFeaturesTestHelper.tc0902_testSearchWrongSpace();
+  }
+
+  @Test
+  @Order(18)
+  void tc3000_testValDryRunReturningViolations() throws Exception {
+    valDryRunTestHelper.tc3000_testValDryRunReturningViolations();
   }
 
   @AfterAll

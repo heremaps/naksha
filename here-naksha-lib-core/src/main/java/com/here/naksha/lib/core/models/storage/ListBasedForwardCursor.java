@@ -16,17 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.psql;
-
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+package com.here.naksha.lib.core.models.storage;
 
 import com.here.naksha.lib.core.NakshaVersion;
-import com.here.naksha.lib.core.models.storage.CodecError;
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
-import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.util.json.Json;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.ApiStatus;
@@ -43,17 +35,17 @@ import org.slf4j.LoggerFactory;
  * @param <CODEC>   The codec type.
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-public class InMemoryForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
+public class ListBasedForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
     extends ForwardCursor<FEATURE, CODEC> {
 
-  private static final Logger log = LoggerFactory.getLogger(InMemoryForwardCursor.class);
+  private static final Logger log = LoggerFactory.getLogger(ListBasedForwardCursor.class);
 
   private final @NotNull List<CODEC> featureCodecList;
   private final int totalFeatures;
   private int featureIdx;
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public InMemoryForwardCursor(
+  public ListBasedForwardCursor(
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, @Nullable List<CODEC> featureCodecList) {
     super(codecFactory);
     this.featureCodecList = (featureCodecList == null) ? new ArrayList<>() : featureCodecList;
@@ -68,18 +60,8 @@ public class InMemoryForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, 
       row.clear();
       return false;
     }
-    FeatureCodec<FEATURE, CODEC> codec = this.featureCodecList.get(featureIdx);
-    row.codec.setOp(codec.getOp());
-    row.codec.setId(codec.getId());
-    row.codec.setUuid(codec.getUuid());
-    row.codec.setFeatureType(codec.getFeatureType());
-    row.codec.setPropertiesType(codec.getPropertiesType());
-    row.codec.setJson(codec.getJson()); // TODO : avoid deserialization (until getJson() is called)
-    row.codec.setWkb(codec.getWkb()); // TODO : avoid deserialization (until getWkb() is called)
-    row.codec.setRawError(codecErrorToJson(codec.getError()));
-    row.codec.setErr(codec.getError());
+    row.codec.copy(this.featureCodecList.get(featureIdx));
     row.valid = true;
-
     this.featureIdx++;
     return true;
   }
@@ -87,15 +69,7 @@ public class InMemoryForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, 
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public void close() {
+    featureCodecList.clear();
     featureIdx = totalFeatures;
-  }
-
-  private @Nullable String codecErrorToJson(final @Nullable CodecError codecError) {
-    if (codecError == null) return null;
-    try (final Json jp = Json.get()) {
-      return jp.writer().writeValueAsString(codecError);
-    } catch (IOException e) {
-      throw unchecked(e);
-    }
   }
 }

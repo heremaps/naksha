@@ -1,0 +1,9 @@
+{
+  "id": "local-space-4-val-dry-run",
+  "type": "Space",
+  "title": "Topology Dry Run Space",
+  "description": "Topology Dry Run Space for Testing purpose",
+  "eventHandlerIds": [
+    "local-handler-4-val-dry-run"
+  ]
+}

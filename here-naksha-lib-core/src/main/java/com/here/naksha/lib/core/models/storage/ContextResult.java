@@ -24,50 +24,24 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Abstract class representing WriteFeatures request alongwith list of features as context and list of violations.
- * Implementing class will define actual data type of context and violations.
- */
-@ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-public abstract class ContextWriteFeatures<
-        FEATURE,
-        CTX_TYPE,
-        V_TYPE,
-        CODEC extends FeatureCodec<FEATURE, CODEC>,
-        SELF extends WriteFeatures<FEATURE, CODEC, SELF>>
-    extends WriteFeatures<FEATURE, CODEC, SELF> {
+public class ContextResult<FEATURE, CTX_TYPE, V_TYPE, CODEC extends FeatureCodec<FEATURE, CODEC>>
+    extends SuccessResult {
 
   /**
-   * The list of features passed as context, as part of Write request
+   * The list of features to be returned as context
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   private @Nullable List<@NotNull CTX_TYPE> context;
 
   /**
-   * The list of violations passed as part of Write request
+   * The list of violations to be returned as context
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   private @Nullable List<@NotNull V_TYPE> violations;
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  protected ContextWriteFeatures(
-      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, @NotNull String collectionId) {
-    super(codecFactory, collectionId);
-  }
-
-  /**
-   * Creates a new write request, with list of features already supplied as part of argument
-   *
-   * @param codecFactory The codec factory to use when creating new feature codecs.
-   * @param collectionId The identifier of the collection to write into.
-   * @param features the list of features to be added to the request
-   */
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public ContextWriteFeatures(
-      final @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
-      final @NotNull String collectionId,
-      final @NotNull List<@NotNull CODEC> features) {
-    super(codecFactory, collectionId, features);
+  public ContextResult(final @Nullable ForwardCursor<FEATURE, CODEC> cursor) {
+    this.cursor = cursor;
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)

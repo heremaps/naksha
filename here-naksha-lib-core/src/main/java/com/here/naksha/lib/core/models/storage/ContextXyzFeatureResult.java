@@ -18,30 +18,15 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import static com.here.naksha.lib.core.models.storage.XyzCodecFactory.getFactory;
-
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import java.util.List;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-/**
- * Helper to simplify creation of ContextWriteFeatures request, using standard {@link XyzFeature}
- * type for features, context and violations.
- */
-@ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-public class ContextWriteXyzFeatures
-    extends ContextWriteFeatures<XyzFeature, XyzFeature, XyzFeature, XyzFeatureCodec, ContextWriteXyzFeatures> {
+public class ContextXyzFeatureResult extends ContextResult<XyzFeature, XyzFeature, XyzFeature, XyzFeatureCodec> {
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public ContextWriteXyzFeatures(@NotNull String collectionId) {
-    super(getFactory(XyzFeatureCodecFactory.class), collectionId);
-  }
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public ContextWriteXyzFeatures(
-      @NotNull String collectionId, final @NotNull List<@NotNull XyzFeatureCodec> features) {
-    super(getFactory(XyzFeatureCodecFactory.class), collectionId, features);
+  public ContextXyzFeatureResult(final @Nullable ForwardCursor<XyzFeature, XyzFeatureCodec> cursor) {
+    super(cursor);
   }
 }
