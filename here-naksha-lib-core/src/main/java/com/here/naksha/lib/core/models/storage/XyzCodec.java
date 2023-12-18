@@ -18,9 +18,8 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
@@ -28,7 +27,6 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.json.Json;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * The default codec for XYZ core library, this can simply be specialized.
@@ -45,13 +43,11 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
   @NotNull
   @Override
   public final SELF decodeParts(boolean force) {
-    if (!force && isDecoded) {
+    if (!force && isDecoded || feature == null) {
       return self();
     }
-    if (feature == null) {
-      throw new NullPointerException();
-    }
-    XyzGeometry xyzGeometry = feature.removeGeometry();
+    clearParts();
+    final XyzGeometry xyzGeometry = feature.removeGeometry();
     try (final Json jp = Json.get()) {
       id = feature.getId();
       final XyzProperties properties = feature.getProperties();
@@ -76,13 +72,10 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
       }
       if (xyzGeometry != null) {
         geometry = xyzGeometry.getJTSGeometry();
-      } else {
-        geometry = null;
       }
-      wkb = null;
       json = jp.writer().writeValueAsString(feature);
     } catch (JsonProcessingException e) {
-      throw unchecked(e);
+      err = new CodecError(XyzError.EXCEPTION, e.getMessage());
     } finally {
       feature.setGeometry(xyzGeometry);
       isDecoded = true;
@@ -90,21 +83,18 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     return self();
   }
 
-  @Nullable
+  @NotNull
   @Override
   public final SELF encodeFeature(boolean force) {
-    if (!force && isEncoded) {
+    if (!force && isEncoded || json == null) {
       return self();
     }
-    if (json == null) {
-      return self();
-    }
-    feature = null;
+    clearFeature();
     try (final Json jp = Json.get()) {
       feature = jp.reader().forType(featureClass).readValue(json);
       feature.setGeometry(JTSHelper.fromGeometry(getGeometry()));
     } catch (JsonProcessingException e) {
-      throw unchecked(e);
+      err = new CodecError(XyzError.EXCEPTION, e.getMessage());
     } finally {
       isEncoded = true;
     }

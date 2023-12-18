@@ -21,10 +21,12 @@ package com.here.naksha.lib.core.models.storage;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.util.StringCache.string;
 
+import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.util.json.Json;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 import javax.annotation.concurrent.NotThreadSafe;
+import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,8 +38,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
 @NotThreadSafe
-public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, SELF>>
-    extends FeatureBox<FEATURE, SELF> {
+public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, SELF>> {
 
   /**
    * Tries to decode (disassemble) a feature set via {@link #setFeature(Object)} or {@link #withFeature(Object)} into its parts. Unless
@@ -62,12 +63,35 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   public abstract @NotNull SELF encodeFeature(boolean force);
 
   /**
-   * Load the raw values (feature parts) for the given foreign codec into this code to re-encode.
+   * Change the flag if the codec is decoded.
+   *
+   * @param isDecoded {@code true} if the codec is decoded; {@code false} if not.
+   * @return this.
+   */
+  public @NotNull SELF setDecoded(boolean isDecoded) {
+    this.isDecoded = isDecoded;
+    return self();
+  }
+
+  /**
+   * Change the flag if the codec is encoded.
+   *
+   * @param isEncoded {@code true} if the codec is encoded; {@code false} if not.
+   * @return this.
+   */
+  public @NotNull SELF setEncoded(boolean isEncoded) {
+    this.isEncoded = isEncoded;
+    return self();
+  }
+
+  /**
+   * Load the raw values (feature parts) for the given foreign codec into this code. Flags the codec as being not decoded.
    *
    * @param otherCodec The other codec from which to load the parts.
    * @return this.
    */
   public @NotNull SELF withParts(@NotNull FeatureCodec<?, ?> otherCodec) {
+    isDecoded = false;
     op = otherCodec.op;
     id = otherCodec.id;
     uuid = otherCodec.uuid;
@@ -116,7 +140,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    *
    * @return this.
    */
-  @Override
+  @AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull SELF clear() {
     isDecoded = false;
     isEncoded = false;
@@ -494,16 +518,57 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   /**
    * Sets decoded PSQL error to naksha friendly error.
    *
-   * @param err
+   * @param err The error to set; if any.
    */
   public void setErr(@Nullable CodecError err) {
     this.err = err;
   }
 
-  @Override
+  /**
+   * Returns the feature; if any.
+   *
+   * @return The feature; if any.
+   */
+  public @Nullable FEATURE getFeature() {
+    return feature;
+  }
+
+  /**
+   * Sets the feature and returns the previously stored feature; if any.
+   *
+   * @param feature The feature to set; if being {@code null}, the feature is clear and the codec is flagged as not encoded.
+   * @return The previously stored feature; if any.
+   */
   public @Nullable Object setFeature(@Nullable FEATURE feature) {
-    clearFeature();
-    isEncoded = true;
-    return super.setFeature(feature);
+    final Object old = this.feature;
+    this.feature = feature;
+    this.isEncoded = feature != null;
+    return old;
+  }
+
+  /**
+   * Sets the feature, for streaming usage.
+   *
+   * @param feature The feature to set.
+   * @return this.
+   */
+  public final @NotNull SELF withFeature(@Nullable FEATURE feature) {
+    setFeature(feature);
+    return self();
+  }
+
+  /**
+   * The stored feature.
+   */
+  protected @Nullable FEATURE feature;
+
+  /**
+   * Returns this.
+   *
+   * @return this.
+   */
+  @SuppressWarnings("unchecked")
+  protected final @NotNull SELF self() {
+    return (SELF) this;
   }
 }
