@@ -30,18 +30,16 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
-class EventhHandlerApiTest extends ApiTest {
+class EventHandlerApiTest extends ApiTest {
 
   @Test
-  @Order(2)
   void tc0100_testCreateEventHandler() throws Exception {
     // Test API : POST /hub/handlers
     // 1. Load test data
-    final String bodyJson = loadFileOrFail("TC0100_createEventHandler/create_event_handler.json");
-    final String expectedCreationResponse = loadFileOrFail("TC0100_createEventHandler/response_create_1.json");
+    final String bodyJson = loadFileOrFail("EventHandlerApi/TC0100_createEventHandler/create_event_handler.json");
+    final String expectedCreationResponse = loadFileOrFail("EventHandlerApi/TC0100_createEventHandler/response_create_1.json");
     final String streamId = UUID.randomUUID().toString();
 
     // 2. Perform REST API call creating handler
@@ -55,30 +53,34 @@ class EventhHandlerApiTest extends ApiTest {
   }
 
   @Test
-  @Order(3)
   void tc0101_testDuplicateEventHandler() throws Exception {
     // Test API : POST /hub/handlers
-    // 1. Load test data
-    final String bodyJson = loadFileOrFail("TC0100_createEventHandler/create_event_handler.json");
-    final String expectedDuplicateResponse = loadFileOrFail("TC0101_duplicateEventHandler/response_conflict.json");
+    // Given: Load test data
+    final String bodyJson = loadFileOrFail("EventHandlerApi/TC0101_duplicateEventHandler/create_event_handler.json");
+    final String expectedDuplicateResponse = loadFileOrFail("EventHandlerApi/TC0101_duplicateEventHandler/response_conflict.json");
     final String streamId = UUID.randomUUID().toString();
 
-    // 2. Perform REST API call creating handler
-    final HttpResponse<String> response = getNakshaClient().post("hub/handlers", bodyJson, streamId);
+    // And: Handler registered for the first time
+    HttpResponse<String> response = getNakshaClient().post("hub/handlers", bodyJson, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId);
 
-    // 3. Perform assertions
+    // When: Registering handler for the 2nd time
+    response = getNakshaClient().post("hub/handlers", bodyJson, streamId);
+
+    // Then: 409 Conflict should be returned
     assertThat(response)
         .hasStatus(409)
         .hasJsonBody(expectedDuplicateResponse, "Expecting duplicated handler in response");
   }
 
   @Test
-  @Order(3)
   void tc0102_testCreateHandlerMissingClassName() throws Exception {
     // Test API : POST /hub/handlers
     // 1. Load test data
-    final String bodyJson = loadFileOrFail("TC0102_createHandlerNoClassName/create_event_handler.json");
-    final String expectedBodyPart = loadFileOrFail("TC0102_createHandlerNoClassName/response_part.json");
+    final String bodyJson = loadFileOrFail("EventHandlerApi/TC0102_createHandlerNoClassName/create_event_handler.json");
+    final String expectedBodyPart = loadFileOrFail("EventHandlerApi/TC0102_createHandlerNoClassName/response_part.json");
     final String streamId = UUID.randomUUID().toString();
 
     // 2. Perform REST API call
@@ -92,11 +94,10 @@ class EventhHandlerApiTest extends ApiTest {
   }
 
   @Test
-  @Order(3)
   void tc0120_testGetHandlerById() throws Exception {
     // Test API : GET /hub/handlers/{handlerId}
     // 1. Load test data
-    final String expectedBodyPart = loadFileOrFail("TC0100_createEventHandler/response_create_1.json");
+    final String expectedBodyPart = loadFileOrFail("EventHandlerApi/TC0100_createEventHandler/response_create_1.json");
     final String streamId = UUID.randomUUID().toString();
 
     // 2. Perform REST API call
@@ -110,7 +111,6 @@ class EventhHandlerApiTest extends ApiTest {
   }
 
   @Test
-  @Order(3)
   void tc0121_testGetHandlerByWrongId() throws Exception {
     // Test API : GET /hub/handlers/{handlerId}
     // 1. Load test data
@@ -126,15 +126,14 @@ class EventhHandlerApiTest extends ApiTest {
   }
 
   @Test
-  @Order(3)
   void tc0140_testGetHandlers() throws Exception {
     // Given: created handlers
     List<String> expectedHandlerIds = List.of("tc_140_event_handler_1", "tc_140_event_handler_2");
     final String streamId = UUID.randomUUID().toString();
     getNakshaClient()
-        .post("hub/handlers", loadFileOrFail("TC0140_getHandlers/create_event_handler_1.json"), streamId);
+        .post("hub/handlers", loadFileOrFail("EventHandlerApi/TC0140_getHandlers/create_event_handler_1.json"), streamId);
     getNakshaClient()
-        .post("hub/handlers", loadFileOrFail("TC0140_getHandlers/create_event_handler_2.json"), streamId);
+        .post("hub/handlers", loadFileOrFail("EventHandlerApi/TC0140_getHandlers/create_event_handler_2.json"), streamId);
 
     // When: Fetching all handlers
     final HttpResponse<String> response = getNakshaClient().get("hub/handlers", streamId);
@@ -156,12 +155,11 @@ class EventhHandlerApiTest extends ApiTest {
   }
 
   @Test
-  @Order(3)
   void tc0160_testUpdateEventHandler() throws Exception {
     // Test API : PUT /hub/handlers/{handlerId}
     // Given:
-    final String updateEventHandlerJson = loadFileOrFail("TC0160_updateEventHandler/update_event_handler.json");
-    final String expectedRespBody = loadFileOrFail("TC0160_updateEventHandler/response.json");
+    final String updateEventHandlerJson = loadFileOrFail("EventHandlerApi/TC0160_updateEventHandler/update_event_handler.json");
+    final String expectedRespBody = loadFileOrFail("EventHandlerApi/TC0160_updateEventHandler/response.json");
     final String streamId = UUID.randomUUID().toString();
 
     // When:
@@ -176,13 +174,12 @@ class EventhHandlerApiTest extends ApiTest {
   }
 
   @Test
-  @Order(3)
   void tc0161_testUpdateNonexistentEventHandler() throws Exception {
     // Test API : PUT /hub/handlers/{handlerId}
     // Given:
     final String updateEventHandlerJson =
-        loadFileOrFail("TC0161_updateNonexistentEventHandler/update_event_handler.json");
-    final String expectedRespBody = loadFileOrFail("TC0161_updateNonexistentEventHandler/response.json");
+        loadFileOrFail("EventHandlerApi/TC0161_updateNonexistentEventHandler/update_event_handler.json");
+    final String expectedRespBody = loadFileOrFail("EventHandlerApi/TC0161_updateNonexistentEventHandler/response.json");
     final String streamId = UUID.randomUUID().toString();
 
     // When:
@@ -197,13 +194,12 @@ class EventhHandlerApiTest extends ApiTest {
   }
 
   @Test
-  @Order(3)
   void tc0162_testUpdateEventHandlerWithMismatchingId() throws Exception {
     // Test API : PUT /hub/handlers/{handlerId}
     // Given:
     final String updateOtherHandlerJson =
-        loadFileOrFail("TC0162_updateEventHandlerWithMismatchingId/update_event_handler.json");
-    final String expectedErrorResponse = loadFileOrFail("TC0162_updateEventHandlerWithMismatchingId/response.json");
+        loadFileOrFail("EventHandlerApi/TC0162_updateEventHandlerWithMismatchingId/update_event_handler.json");
+    final String expectedErrorResponse = loadFileOrFail("EventHandlerApi/TC0162_updateEventHandlerWithMismatchingId/response.json");
     final String streamId = UUID.randomUUID().toString();
 
     // When:

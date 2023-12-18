@@ -1,5 +1,5 @@
 {
-  "id": "test-psql-storage-tc300",
+  "id": "delete_features_test_storage",
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose",

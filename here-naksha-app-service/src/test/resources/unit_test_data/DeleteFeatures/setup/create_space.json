@@ -1,10 +1,10 @@
 {
-  "id": "feature-delete-space",
+  "id": "delete_features_test_space",
   "type": "Space",
   "title": "Topology Space for UniMap Moderation Dev Storage",
   "description": "Space for managing Topology Feature collection in UniMap Moderation Dev Storage",
   "eventHandlerIds": [
-    "feature-delete-handler"
+    "delete_features_test_handler"
   ],
   "properties": {
     "collection": {

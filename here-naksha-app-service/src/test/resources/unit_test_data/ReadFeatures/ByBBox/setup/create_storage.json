@@ -1,5 +1,5 @@
 {
-  "id": "write_features_atomicity_test_storage",
+  "id": "read_features_by_bbox_test_storage",
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose",
