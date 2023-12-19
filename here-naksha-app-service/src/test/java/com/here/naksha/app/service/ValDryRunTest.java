@@ -18,47 +18,42 @@
  */
 package com.here.naksha.app.service;
 
+import static com.here.naksha.app.common.CommonApiTestSetup.*;
+import static com.here.naksha.app.common.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzReference;
 import com.here.naksha.lib.core.models.naksha.Space;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
-public class ValDryRunTestHelper {
+public class ValDryRunTest extends ApiTest {
 
-  final @NotNull NakshaApp app;
-  final @NotNull NakshaTestWebClient nakshaClient;
+  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
 
-  public ValDryRunTestHelper(final @NotNull NakshaApp app, final @NotNull NakshaTestWebClient nakshaClient) {
-    this.app = app;
-    this.nakshaClient = nakshaClient;
-  }
+  private static final String SPACE_ID = "local-space-4-val-dry-run";
 
-  private void standardAssertions(
-      final @NotNull HttpResponse<String> actualResponse,
-      final int expectedStatusCode,
-      final @NotNull String expectedBodyPart,
-      final @NotNull String expectedStreamId)
-      throws JSONException {
-    assertEquals(expectedStatusCode, actualResponse.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Create Feature response body doesn't match",
-        expectedBodyPart,
-        actualResponse.body(),
-        JSONCompareMode.LENIENT);
-    assertEquals(expectedStreamId, getHeader(actualResponse, HDR_STREAM_ID), "StreamId mismatch");
+  @BeforeAll
+  static void setup() throws URISyntaxException, IOException, InterruptedException {
+    createHandler(nakshaClient, "ValDryRun/setup");
+    createSpace(nakshaClient, "ValDryRun/setup");
   }
 
   private void additionalCustomAssertions_tc3000(final @NotNull String reqBody, final @NotNull String resBody)
@@ -87,22 +82,11 @@ public class ValDryRunTestHelper {
     }
   }
 
-  void additionalCustomAssertions_tc3001(final @NotNull String resBody) {
-    final XyzFeatureCollection collectionResponse = parseJson(resBody, XyzFeatureCollection.class);
-    assertNull(collectionResponse.getViolations(), "No violations were expected");
-  }
-
+  @Test
   void tc3000_testValDryRunReturningViolations() throws Exception {
     // Test API : POST /hub/spaces/{spaceId}/features
     // Validate features returned with mock violations
     final String streamId = UUID.randomUUID().toString();
-
-    // Given: MockDryRun event handler and related space in place
-    final String handler = loadFileOrFail("ValDryRun/TC3000_WithViolations/create_event_handler.json");
-    nakshaClient.post("hub/handlers", handler, streamId);
-    final String spaceJson = loadFileOrFail("ValDryRun/TC3000_WithViolations/create_space.json");
-    nakshaClient.post("hub/spaces", spaceJson, streamId);
-    final Space space = parseJson(spaceJson, Space.class);
 
     // Given: PUT features request
     final String bodyJson = loadFileOrFail("ValDryRun/TC3000_WithViolations/upsert_features.json");
@@ -110,53 +94,60 @@ public class ValDryRunTestHelper {
 
     // When: Request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
-        nakshaClient.post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
+        nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
 
     // Then: Perform standard assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match");
     // Then: Perform additional custom assertions for matching violation references
     additionalCustomAssertions_tc3000(bodyJson, response.body());
   }
 
+  @Test
   void tc3001_testValDryRunNoViolations() throws Exception {
-    // NOTE : This test depends on setup done as part of tc3000_testValDryRunReturningViolations
-
     // Test API : POST /hub/spaces/{spaceId}/features
     // Validate features returned without any violations
     final String streamId = UUID.randomUUID().toString();
 
     // Given: PUT features request
-    final String spaceId = "local-space-4-val-dry-run";
     final String bodyJson = loadFileOrFail("ValDryRun/TC3001_WithoutViolations/upsert_features.json");
     final String expectedBodyPart = loadFileOrFail("ValDryRun/TC3001_WithoutViolations/feature_response_part.json");
 
     // When: Request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
-        nakshaClient.post("hub/spaces/" + spaceId + "/features", bodyJson, streamId);
+        nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
 
     // Then: Perform standard assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
-    // Then: Perform additional custom assertions for matching violation references
-    additionalCustomAssertions_tc3001(response.body());
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match");
+    // Then: Perform additional custom assertions to ensure no violations returned
+    final XyzFeatureCollection collectionResponse = parseJson(response.body(), XyzFeatureCollection.class);
+    assertNull(collectionResponse.getViolations(), "No violations were expected");
   }
 
+  @Test
   void tc3002_testValDryRunUnsupportedOperation() throws Exception {
-    // NOTE : This test depends on setup done as part of tc3000_testValDryRunReturningViolations
-
     // Test API : DELETE /hub/spaces/{spaceId}/features
     // Validate request gets rejected as validation is not supported for DELETE endpoint
     final String streamId = UUID.randomUUID().toString();
 
     // Given: DELETE features request
-    final String spaceId = "local-space-4-val-dry-run";
     final String expectedBodyPart =
         loadFileOrFail("ValDryRun/TC3002_UnsupportedOperation/feature_response_part.json");
 
     // When: Request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
-        nakshaClient.delete("hub/spaces/" + spaceId + "/features?id=some-feature-id", streamId);
+        nakshaClient.delete("hub/spaces/" + SPACE_ID + "/features?id=some-feature-id", streamId);
 
     // Then: Perform standard assertions
-    standardAssertions(response, 501, expectedBodyPart, streamId);
+    assertThat(response)
+            .hasStatus(501)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match");
   }
+
 }
