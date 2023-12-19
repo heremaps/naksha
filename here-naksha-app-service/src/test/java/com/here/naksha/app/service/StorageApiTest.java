@@ -187,6 +187,30 @@ class StorageApiTest extends ApiTest {
   }
 
   @Test
+  void tc0041_testGetStoragesNoPasswords() throws Exception {
+    // Test API : GET /hub/storages
+    // 1. Load test data, create storage
+    final String bodyJson = loadFileOrFail("StorageApi/TC0041_getStoragesNoPasswords/create_storage.json");
+    final String streamId = UUID.randomUUID().toString();
+    HttpResponse<String> response = getNakshaClient().post("hub/storages", bodyJson, streamId);
+    assertEquals(200, response.statusCode(), "ResCode mismatch");
+
+    // 2. Perform REST API call
+    response = getNakshaClient().get("hub/storages", streamId);
+
+    // 3. Perform assertions
+    assertEquals(200, response.statusCode(), "ResCode mismatch");
+    final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
+    for (JsonNode storage : jsonNode.get("features")) {
+      assertFalse(storage.get("properties").get("master").has("password"));
+      for (JsonNode node : storage.get("properties").get("reader")) {
+        assertFalse(node.has("password"));
+      }
+    }
+    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+  }
+
+  @Test
   void tc0060_testUpdateStorage() throws Exception {
     // Test API : PUT /hub/storages/{storageId}
     // Given: registered storage
