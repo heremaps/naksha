@@ -24,9 +24,11 @@ import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.app.common.ApiTest;
-import com.here.naksha.app.common.ResponseAssertions;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
@@ -135,6 +137,28 @@ class StorageApiTest extends ApiTest {
 
     // 3. Perform assertions
     assertEquals(404, response.statusCode(), "ResCode mismatch");
+    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+  }
+
+  @Test
+  void tc0022_testGetStorageNoPasswords() throws Exception {
+    // Test API : GET /hub/storages/{storageId}
+    // 1. Load test data, create storage
+    final String bodyJson = loadFileOrFail("StorageApi/TC0022_getStorageNoPasswords/create_storage.json");
+    final String streamId = UUID.randomUUID().toString();
+    HttpResponse<String> response = getNakshaClient().post("hub/storages", bodyJson, streamId);
+    assertEquals(200, response.statusCode(), "ResCode mismatch");
+
+    // 2. Perform REST API call
+    response = getNakshaClient().get("hub/storages/storage-for-hiding-password-test", streamId);
+
+    // 3. Perform assertions
+    assertEquals(200, response.statusCode(), "ResCode mismatch");
+    final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
+    assertFalse(jsonNode.get("properties").get("master").has("password"));
+    for (JsonNode node : jsonNode.get("properties").get("reader")) {
+      assertFalse(node.has("password"));
+    }
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
   }
 
