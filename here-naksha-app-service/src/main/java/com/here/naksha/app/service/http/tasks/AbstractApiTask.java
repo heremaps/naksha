@@ -246,8 +246,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       if (Objects.equals(entry.getKey(), "password")) {
         it.remove();
       } else if (entry.getValue() instanceof Map) {
+        // recursive call to the nested json property
         removePasswordFromProps((Map<String, Object>) entry.getValue());
       } else if (entry.getValue() instanceof ArrayList array) {
+        // recursive call to the nested array json
         for (Object arrayEntry : array) {
           removePasswordFromProps((Map<String, Object>) arrayEntry);
         }
