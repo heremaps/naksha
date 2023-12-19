@@ -139,4 +139,24 @@ public class ValDryRunTestHelper {
     // Then: Perform additional custom assertions for matching violation references
     additionalCustomAssertions_tc3001(response.body());
   }
+
+  void tc3002_testValDryRunUnsupportedOperation() throws Exception {
+    // NOTE : This test depends on setup done as part of tc3000_testValDryRunReturningViolations
+
+    // Test API : DELETE /hub/spaces/{spaceId}/features
+    // Validate request gets rejected as validation is not supported for DELETE endpoint
+    final String streamId = UUID.randomUUID().toString();
+
+    // Given: DELETE features request
+    final String spaceId = "local-space-4-val-dry-run";
+    final String expectedBodyPart =
+        loadFileOrFail("ValDryRun/TC3002_UnsupportedOperation/feature_response_part.json");
+
+    // When: Request is submitted to NakshaHub Space Storage instance
+    final HttpResponse<String> response =
+        nakshaClient.delete("hub/spaces/" + spaceId + "/features?id=some-feature-id", streamId);
+
+    // Then: Perform standard assertions
+    standardAssertions(response, 501, expectedBodyPart, streamId);
+  }
 }

@@ -989,6 +989,12 @@ class NakshaAppTest {
     valDryRunTestHelper.tc3001_testValDryRunNoViolations();
   }
 
+  @Test
+  @Order(19)
+  void tc3002_testValDryRunUnsupportedOperation() throws Exception {
+    valDryRunTestHelper.tc3002_testValDryRunUnsupportedOperation();
+  }
+
   @AfterAll
   static void close() {
     if (nakshaAppInitializer != null) {
