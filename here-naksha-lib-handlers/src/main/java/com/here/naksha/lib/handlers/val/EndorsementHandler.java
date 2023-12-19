@@ -24,17 +24,18 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzReference;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EReviewState;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
+import com.here.naksha.lib.core.models.storage.Request;
+import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -81,51 +82,17 @@ public class EndorsementHandler extends AbstractEventHandler {
               + request.getClass().getSimpleName());
 
     // Extract violations
-    final List<?> inputViolations = cwf.getViolations();
-    List<XyzFeature> outputViolations = null;
-    if (inputViolations != null) {
-      for (final Object obj : inputViolations) {
-        if (!(obj instanceof XyzFeature violation))
-          throw new XyzErrorException(
-              XyzError.EXCEPTION,
-              "Unexpected violation type while creating endorsement request - "
-                  + obj.getClass().getSimpleName());
-        if (outputViolations == null) outputViolations = new ArrayList<>();
-        // Add violation to output list
-        outputViolations.add(violation);
-      }
-    }
+    final List<XyzFeature> outputViolations = HandlerUtil.getXyzViolationsFromGenericList(cwf.getViolations());
 
-    // Extract features
-    List<XyzFeature> outputFeatures = new ArrayList<>();
-    for (final Object obj : cwf.features) {
-      if (!(obj instanceof XyzFeatureCodec codec))
-        throw new XyzErrorException(
-            XyzError.NOT_IMPLEMENTED,
-            "Unsupported feature codec during validation - "
-                + obj.getClass().getSimpleName());
-      // Mark each feature as AUTO_REVIEW_DEFERRED or PUBLISHED
-      // (depending on whether there is associated violation or not)
-      final XyzFeature feature = codec.getFeature();
+    // Mark each feature as AUTO_REVIEW_DEFERRED or PUBLISHED
+    // (depending on whether there is associated violation or not)
+    final List<XyzFeature> outputFeatures = HandlerUtil.getXyzFeaturesFromCodecList(cwf.features);
+    for (final XyzFeature feature : outputFeatures) {
       updateFeatureDeltaStateIfMatchesViolations(feature, outputViolations);
-      // Add updated feature to the output list
-      outputFeatures.add(feature);
     }
 
-    // add context to write request
-    final List<?> contextList = cwf.getContext();
-    List<XyzFeature> outputCtxList = null;
-    if (contextList != null) {
-      for (final Object obj : contextList) {
-        if (!(obj instanceof XyzFeature ctx))
-          throw new XyzErrorException(
-              XyzError.EXCEPTION,
-              "Unexpected context type while creating endorsement result - "
-                  + obj.getClass().getSimpleName());
-        if (outputCtxList == null) outputCtxList = new ArrayList<>();
-        outputCtxList.add(ctx);
-      }
-    }
+    // Extract context (list of features)
+    final List<XyzFeature> outputCtxList = HandlerUtil.getXyzContextFromGenericList(cwf.getContext());
 
     // create context result
     return HandlerUtil.createContextResultFromFeatureList(outputFeatures, outputCtxList, outputViolations);
@@ -136,17 +103,12 @@ public class EndorsementHandler extends AbstractEventHandler {
     HandlerUtil.setDeltaReviewState(feature, EReviewState.UNPUBLISHED);
     if (violations == null) return;
     for (final XyzFeature violation : violations) {
-      if (!(violation.getProperties().get("references") instanceof List<?> refList)) {
-        continue;
-      }
-      for (final Object obj : refList) {
-        if (obj instanceof Map<?, ?> refMap) {
-          if (!(refMap.get("id") instanceof String id)) {
-            continue;
-          }
-          if (id.equals(feature.getId())) {
-            HandlerUtil.setDeltaReviewState(feature, EReviewState.AUTO_REVIEW_DEFERRED);
-          }
+      final List<XyzReference> references = violation.getProperties().getReferences();
+      if (references == null) continue;
+      for (final XyzReference reference : references) {
+        if (feature.getId().equals(reference.getId())) {
+          HandlerUtil.setDeltaReviewState(feature, EReviewState.AUTO_REVIEW_DEFERRED);
+          return;
         }
       }
     }

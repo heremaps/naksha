@@ -104,16 +104,11 @@ public class MockValidationHandler extends AbstractEventHandler {
 
     // TODO : Write validation logic.
 
+    // Generate random violations and attach feature references
     violations = new ArrayList<>();
     int featureCnt = 0;
-    // Generate random violations and attach feature references
-    for (final Object obj : cwf.features) {
-      if (!(obj instanceof XyzFeatureCodec codec))
-        throw new XyzErrorException(
-            XyzError.NOT_IMPLEMENTED,
-            "Unsupported feature codec during validation - "
-                + obj.getClass().getSimpleName());
-      final XyzFeature feature = codec.getFeature();
+    final List<XyzFeature> features = HandlerUtil.getXyzFeaturesFromCodecList(cwf.features);
+    for (final XyzFeature feature : features) {
       featureCnt++;
       // Distribution of "count" of violations, depends on feature "number",
       // using min condition (i.e. min (feature, violation count))
@@ -144,7 +139,7 @@ public class MockValidationHandler extends AbstractEventHandler {
       violation.setId("urn:here::here:Topology:violation_" + RandomStringUtils.randomAlphabetic(12));
       // add reference to feature
       final XyzReference reference = new XyzReference(featureId, spaceId, featureType);
-      violation.getProperties().put("references", List.of(reference));
+      violation.getProperties().setReferences(List.of(reference));
       violation.put("violatedObject", reference);
       // add violation to the list
       violations.add(violation);

@@ -31,7 +31,6 @@ import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
-import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -76,33 +75,16 @@ public class EchoHandler extends AbstractEventHandler {
           "Unsupported request type in echoHandler - "
               + request.getClass().getSimpleName());
 
-    // Extract violations (if to be persisted separately)
-    final List<?> inputViolations = cwf.getViolations();
-    List<XyzFeature> outputViolations = null;
-    if (inputViolations != null) {
-      for (final Object obj : inputViolations) {
-        if (!(obj instanceof XyzFeature violation))
-          throw new XyzErrorException(
-              XyzError.EXCEPTION,
-              "Unexpected violation type while creating endorsement request - "
-                  + obj.getClass().getSimpleName());
-        if (outputViolations == null) outputViolations = new ArrayList<>();
-        // Add violation to output list
-        outputViolations.add(violation);
-      }
-    }
+    // Extract Xyz features
+    final List<XyzFeature> features = HandlerUtil.getXyzFeaturesFromCodecList(cwf.features);
 
-    // Prepare list of codecs (with op as UPDATED), as if features were persisted in DB
-    final List<XyzFeature> features = new ArrayList<>();
-    for (final Object obj : cwf.features) {
-      if (!(obj instanceof XyzFeatureCodec codec)) {
-        throw new XyzErrorException(
-            XyzError.NOT_IMPLEMENTED,
-            "Unsupported feature codec type in echo handler - "
-                + obj.getClass().getSimpleName());
-      }
-      features.add(codec.getFeature());
-    }
-    return HandlerUtil.createContextResultFromFeatureList(features, cwf.getContext(), outputViolations);
+    // Extract Xyz context (list of features)
+    final List<XyzFeature> context = HandlerUtil.getXyzContextFromGenericList(cwf.getContext());
+
+    // Extract Xyz violations (if to be persisted separately)
+    final List<XyzFeature> outputViolations = HandlerUtil.getXyzViolationsFromGenericList(cwf.getViolations());
+
+    // prepare result with op as UPDATED, as if features were persisted in DB
+    return HandlerUtil.createContextResultFromFeatureList(features, context, outputViolations);
   }
 }

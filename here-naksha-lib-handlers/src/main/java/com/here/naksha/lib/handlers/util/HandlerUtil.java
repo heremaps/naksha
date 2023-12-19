@@ -37,11 +37,10 @@ public class HandlerUtil {
 
   public static String REVIEW_STATE_PREFIX = "@:review-state:";
 
-  public static @NotNull ContextResult<XyzFeature, XyzFeature, XyzFeature, XyzFeatureCodec>
-      createContextResultFromCodecList(
-          final @NotNull List<?> inputCodecs,
-          final @Nullable List<?> context,
-          final @Nullable List<XyzFeature> violations) {
+  public static @NotNull ContextXyzFeatureResult createContextResultFromCodecList(
+      final @NotNull List<?> inputCodecs,
+      final @Nullable List<?> context,
+      final @Nullable List<XyzFeature> violations) {
     // Create ForwardCursor with input features
     final List<XyzFeatureCodec> codecs = new ArrayList<>();
     final XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
@@ -67,11 +66,10 @@ public class HandlerUtil {
     return ctxResult;
   }
 
-  public static @NotNull ContextResult<XyzFeature, XyzFeature, XyzFeature, XyzFeatureCodec>
-      createContextResultFromFeatureList(
-          final @NotNull List<XyzFeature> features,
-          final @Nullable List<?> context,
-          final @Nullable List<XyzFeature> violations) {
+  public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
+      final @NotNull List<XyzFeature> features,
+      final @Nullable List<XyzFeature> context,
+      final @Nullable List<XyzFeature> violations) {
     // Create ForwardCursor with input features
     final List<XyzFeatureCodec> codecs = new ArrayList<>();
     final XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
@@ -84,17 +82,14 @@ public class HandlerUtil {
     final ListBasedForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
         new ListBasedForwardCursor<>(codecFactory, codecs);
 
-    // TODO : Create list of contextual features based on input context
-    final List<XyzFeature> ctxFeatures = null;
-
     // Create ContextResult with cursor, context and violations
     final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(cursor);
-    ctxResult.setContext(ctxFeatures);
+    ctxResult.setContext(context);
     ctxResult.setViolations(violations);
     return ctxResult;
   }
 
-  public static @NotNull Request<?> createWriteContextRequestFromResult(
+  public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromResult(
       final @NotNull String collectionId, final @NotNull Result result) {
     if (result instanceof ErrorResult er) throw new XyzErrorException(er.reason, er.message);
 
@@ -123,38 +118,56 @@ public class HandlerUtil {
     }
 
     // add context to write request
-    final List<?> contextList = ctxResult.getContext();
-    List<XyzFeature> wrtCtxList = null;
-    if (contextList != null) {
-      for (final Object obj : contextList) {
-        if (!(obj instanceof XyzFeature ctx))
-          throw new XyzErrorException(
-              XyzError.EXCEPTION,
-              "Unexpected context type while creating endorsement request - "
-                  + obj.getClass().getSimpleName());
-        if (wrtCtxList == null) wrtCtxList = new ArrayList<>();
-        wrtCtxList.add(ctx);
-      }
-    }
-    cwf.setContext(wrtCtxList);
+    cwf.setContext(getXyzContextFromGenericList(ctxResult.getContext()));
 
     // add violations to write request
-    final List<?> violationList = ctxResult.getViolations();
-    List<XyzFeature> wrtViolationList = null;
-    if (violationList != null) {
-      for (final Object obj : violationList) {
+    cwf.setViolations(getXyzViolationsFromGenericList(ctxResult.getViolations()));
+
+    return cwf;
+  }
+
+  public static @NotNull List<XyzFeature> getXyzFeaturesFromCodecList(final @NotNull List<?> codecs) {
+    final List<XyzFeature> outputFeatures = new ArrayList<>();
+    for (final Object obj : codecs) {
+      if (!(obj instanceof XyzFeatureCodec codec))
+        throw new XyzErrorException(
+            XyzError.NOT_IMPLEMENTED,
+            "Unsupported feature codec - " + obj.getClass().getSimpleName());
+      outputFeatures.add(codec.getFeature());
+    }
+    return outputFeatures;
+  }
+
+  public static @Nullable List<XyzFeature> getXyzViolationsFromGenericList(final @Nullable List<?> violations) {
+    List<XyzFeature> outputViolations = null;
+    if (violations != null) {
+      for (final Object obj : violations) {
         if (!(obj instanceof XyzFeature violation))
           throw new XyzErrorException(
               XyzError.EXCEPTION,
-              "Unexpected violation type while creating endorsement request - "
-                  + obj.getClass().getSimpleName());
-        if (wrtViolationList == null) wrtViolationList = new ArrayList<>();
-        wrtViolationList.add(violation);
+              "Unexpected violation type - " + obj.getClass().getSimpleName());
+        if (outputViolations == null) outputViolations = new ArrayList<>();
+        // Add violation to output list
+        outputViolations.add(violation);
       }
     }
-    cwf.setViolations(wrtViolationList);
+    return outputViolations;
+  }
 
-    return cwf;
+  public static @Nullable List<XyzFeature> getXyzContextFromGenericList(final @Nullable List<?> contextList) {
+    List<XyzFeature> outputCtx = null;
+    if (contextList != null) {
+      for (final Object obj : contextList) {
+        if (!(obj instanceof XyzFeature context))
+          throw new XyzErrorException(
+              XyzError.EXCEPTION,
+              "Unexpected context type - " + obj.getClass().getSimpleName());
+        if (outputCtx == null) outputCtx = new ArrayList<>();
+        // Add context to output list
+        outputCtx.add(context);
+      }
+    }
+    return outputCtx;
   }
 
   private static @NotNull List<String> tagsWithoutReviewState(@Nullable List<String> tags) {

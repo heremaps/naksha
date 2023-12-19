@@ -88,12 +88,12 @@ public class MockValDryRunHandler extends AbstractEventHandler {
       // 2. Perform mock validation
       handlerResult = validationHandler.validateHandler(handlerRequest);
       handlerRequest =
-          HandlerUtil.createWriteContextRequestFromResult(writeRequest.getCollectionId(), handlerResult);
+          HandlerUtil.createContextWriteRequestFromResult(writeRequest.getCollectionId(), handlerResult);
 
       // 3. Mark features as ENDORSED (if no violations) or AUTO_REVIEW_DEFERRED (in case of violations)
       handlerResult = endorsementHandler.endorsementHandler(handlerRequest);
       handlerRequest =
-          HandlerUtil.createWriteContextRequestFromResult(writeRequest.getCollectionId(), handlerResult);
+          HandlerUtil.createContextWriteRequestFromResult(writeRequest.getCollectionId(), handlerResult);
 
       // 4. Return ContextResultSet with features and violations
       handlerResult = echoHandler.echoHandler(handlerRequest);
