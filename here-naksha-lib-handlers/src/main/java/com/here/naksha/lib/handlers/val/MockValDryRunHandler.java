@@ -90,7 +90,7 @@ public class MockValDryRunHandler extends AbstractEventHandler {
       handlerRequest =
           HandlerUtil.createContextWriteRequestFromResult(writeRequest.getCollectionId(), handlerResult);
 
-      // 3. Mark features as ENDORSED (if no violations) or AUTO_REVIEW_DEFERRED (in case of violations)
+      // 3. Mark features as UNPUBLISHED (if no violations) or AUTO_REVIEW_DEFERRED (in case of violations)
       handlerResult = endorsementHandler.endorsementHandler(handlerRequest);
       handlerRequest =
           HandlerUtil.createContextWriteRequestFromResult(writeRequest.getCollectionId(), handlerResult);
