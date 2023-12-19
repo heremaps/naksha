@@ -114,7 +114,6 @@ class CreateFeatureTest extends ApiTest {
 
   // Disabled - we don't want to verify prefix now
   //  @Test
-  @Order(7)
   void tc0302_testCreateFeaturesWithPrefixId() throws Exception {
     // NOTE : This test depends on setup done as part of tc0300_testCreateFeaturesWithNewIds
 

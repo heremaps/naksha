@@ -1,5 +1,5 @@
 {
-  "id": "test-psql-storage=for-updating-feature",
+  "id": "update_feature_test_storage",
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose",

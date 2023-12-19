@@ -1,5 +1,5 @@
 {
-  "id": "um-mod-dev",
+  "id": "tc_0002_test_storage",
   "type": "Storage",
   "title": "UniMap Moderation Dev Storage",
   "description": "UniMap Moderation storage for Dev environment, holding collections managed by Naksha service",

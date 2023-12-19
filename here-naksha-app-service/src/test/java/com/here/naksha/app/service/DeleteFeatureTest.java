@@ -85,7 +85,7 @@ class DeleteFeatureTest extends ApiTest {
 
     // Test deleting only non existing features
     // When: request is submitted to NakshaHub Space Storage instance
-    HttpResponse<String> deleteNonExistingResponse = nakshaClient
+    response = nakshaClient
         .delete("hub/spaces/" + SPACE_ID + "/features?id=non-existing-phantom-feature", streamId);
 
     // Then: Perform assertions

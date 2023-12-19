@@ -27,7 +27,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * Base class for all API-related tests. Extending this class ensures that NakshaApp & all required storages are running
  */
 @ExtendWith({ApiTestMaintainer.class})
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public abstract class ApiTest {
 
   private final NakshaTestWebClient nakshaClient;

@@ -18,6 +18,7 @@
  */
 package com.here.naksha.app.service;
 
+import static com.here.naksha.app.common.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
@@ -25,6 +26,7 @@ import static com.here.naksha.app.common.TestUtil.parseJson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.ResponseAssertions;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
@@ -32,7 +34,6 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
@@ -40,93 +41,90 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 class StorageApiTest extends ApiTest {
 
   @Test
-  @Order(1)
   void tc0001_testCreateStorages() throws Exception {
     // Test API : POST /hub/storages
     // 1. Load test data
-    final String bodyJson = loadFileOrFail("TC0001_createStorage/create_storage.json");
-    final String expectedBodyPart = loadFileOrFail("TC0001_createStorage/response_part.json");
+    final String bodyJson = loadFileOrFail("StorageApi/TC0001_createStorage/create_storage.json");
+    final String expectedBodyPart = loadFileOrFail("StorageApi/TC0001_createStorage/response_part.json");
     final String streamId = UUID.randomUUID().toString();
 
     // 2. Perform REST API call
     final HttpResponse<String> response = getNakshaClient().post("hub/storages", bodyJson, streamId);
 
     // 3. Perform assertions
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Expecting new storage in response", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Expecting new storage in response");
   }
 
   @Test
-  @Order(2)
   void tc0002_testCreateDuplicateStorage() throws Exception {
     // Test API : POST /hub/storages
-    // 1. Load test data
-    final String bodyJson = loadFileOrFail("TC0002_createDupStorage/create_storage.json");
-    final String expectedBodyPart = loadFileOrFail("TC0002_createDupStorage/response_part.json");
+    // Given: registered storage
+    final String bodyJson = loadFileOrFail("StorageApi/TC0002_createDupStorage/create_storage.json");
+    final String expectedBodyPart = loadFileOrFail("StorageApi/TC0002_createDupStorage/response_part.json");
     final String streamId = UUID.randomUUID().toString();
+    getNakshaClient().post("hub/storages", bodyJson, streamId);
 
-    // 2. Perform REST API call
+    // When: registering storage once again
     final HttpResponse<String> response = getNakshaClient().post("hub/storages", bodyJson, streamId);
 
-    // 3. Perform assertions
-    assertEquals(409, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Expecting conflict error message", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    // Then: response indicates conflict
+    assertThat(response)
+        .hasStatus(409)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Expecting conflict error message");
   }
 
   @Test
-  @Order(3)
   void tc0003_testCreateStorageMissingClassName() throws Exception {
     // Test API : POST /hub/storages
     // 1. Load test data
-    final String bodyJson = loadFileOrFail("TC0003_createStorageMissingClassName/create_storage.json");
-    final String expectedBodyPart = loadFileOrFail("TC0003_createStorageMissingClassName/response_part.json");
+    final String bodyJson = loadFileOrFail("StorageApi/TC0003_createStorageMissingClassName/create_storage.json");
+    final String expectedBodyPart = loadFileOrFail("StorageApi/TC0003_createStorageMissingClassName/response_part.json");
     final String streamId = UUID.randomUUID().toString();
 
     // 2. Perform REST API call
     final HttpResponse<String> response = getNakshaClient().post("hub/storages", bodyJson, streamId);
 
     // 3. Perform assertions
-    assertEquals(400, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Expecting failure response", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Expecting error response");
   }
 
   @Test
-  @Order(2)
   void tc0004_testInvalidUrlPath() throws Exception {
     // Test API : GET /hub/invalid_storages
     final HttpResponse<String> response =
         getNakshaClient().get("hub/invalid_storages", UUID.randomUUID().toString());
 
     // Perform assertions
-    assertEquals(404, response.statusCode(), "ResCode mismatch");
+    assertThat(response).hasStatus(404);
   }
 
   @Test
-  @Order(2)
   void tc0020_testGetStorageById() throws Exception {
     // Test API : GET /hub/storages/{storageId}
-    // 1. Load test data
-    final String expectedBodyPart = loadFileOrFail("TC0001_createStorage/response_part.json");
+    // GivenL registered storage
+    final String expectedResponse = loadFileOrFail("StorageApi/TC0020_getStorageById/response.json");
     final String streamId = UUID.randomUUID().toString();
+    final String createJson = loadFileOrFail("StorageApi/TC0020_getStorageById/create_storage.json");
+    getNakshaClient().post("hub/storages", createJson, streamId);
 
-    // 2. Perform REST API call
-    final HttpResponse<String> response = getNakshaClient().get("hub/storages/um-mod-dev", streamId);
+    // When: fetching registered storage by id
+    final HttpResponse<String> response = getNakshaClient().get("hub/storages/tc_0020_test_storage", streamId);
 
-    // 3. Perform assertions
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Expecting previously created storage", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
+    // Then: registered storage is returned
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedResponse, "Expecting previously created storage");
   }
 
   @Test
-  @Order(2)
   void tc0021_testGetStorageByWrongId() throws Exception {
     // Test API : GET /hub/storages/{storageId}
     // 1. Load test data
@@ -141,13 +139,12 @@ class StorageApiTest extends ApiTest {
   }
 
   @Test
-  @Order(2)
   void tc0040_testGetStorages() throws Exception {
     // Given: created storages
     List<String> expectedStorageIds = List.of("tc_040_storage_1", "tc_040_storage_2");
     final String streamId = UUID.randomUUID().toString();
-    getNakshaClient().post("hub/storages", loadFileOrFail("TC0040_getStorages/create_storage_1.json"), streamId);
-    getNakshaClient().post("hub/storages", loadFileOrFail("TC0040_getStorages/create_storage_2.json"), streamId);
+    getNakshaClient().post("hub/storages", loadFileOrFail("StorageApi/TC0040_getStorages/create_storage_1.json"), streamId);
+    getNakshaClient().post("hub/storages", loadFileOrFail("StorageApi/TC0040_getStorages/create_storage_2.json"), streamId);
 
     // When: Fetching all storages
     final HttpResponse<String> response = getNakshaClient().get("hub/storages", streamId);
@@ -166,31 +163,31 @@ class StorageApiTest extends ApiTest {
   }
 
   @Test
-  @Order(2)
   void tc0060_testUpdateStorage() throws Exception {
     // Test API : PUT /hub/storages/{storageId}
-    // Given:
-    final String updateStorageJson = loadFileOrFail("TC0060_updateStorage/update_storage.json");
-    final String expectedRespBody = loadFileOrFail("TC0060_updateStorage/response.json");
+    // Given: registered storage
+    final String updateStorageJson = loadFileOrFail("StorageApi/TC0060_updateStorage/update_storage.json");
+    final String expectedRespBody = loadFileOrFail("StorageApi/TC0060_updateStorage/response.json");
+    final String createJson = loadFileOrFail("StorageApi/TC0060_updateStorage/create_storage.json");
     final String streamId = UUID.randomUUID().toString();
+    getNakshaClient().post("hub/storages", createJson, streamId);
 
-    // When:
+    // When: updating existing storage
     final HttpResponse<String> response =
-        getNakshaClient().put("hub/storages/um-mod-dev", updateStorageJson, streamId);
+        getNakshaClient().put("hub/storages/tc_0060_test_storage", updateStorageJson, streamId);
 
-    // Then:
+    // Then: storage got updated
     assertEquals(200, response.statusCode());
     JSONAssert.assertEquals(expectedRespBody, response.body(), JSONCompareMode.LENIENT);
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID));
   }
 
   @Test
-  @Order(2)
   void tc0061_testUpdateNonexistentStorage() throws Exception {
     // Test API : PUT /hub/storages/{storageId}
     // Given:
-    final String updateStorageJson = loadFileOrFail("TC0061_updateNonexistentStorage/update_storage.json");
-    final String expectedErrorResponse = loadFileOrFail("TC0061_updateNonexistentStorage/response.json");
+    final String updateStorageJson = loadFileOrFail("StorageApi/TC0061_updateNonexistentStorage/update_storage.json");
+    final String expectedErrorResponse = loadFileOrFail("StorageApi/TC0061_updateNonexistentStorage/response.json");
     final String streamId = UUID.randomUUID().toString();
 
     // When:
@@ -204,12 +201,11 @@ class StorageApiTest extends ApiTest {
   }
 
   @Test
-  @Order(3)
   void tc0062_testUpdateStorageWithoutClassName() throws Exception {
     // Test API : PUT /hub/storages/{storageId}
     // Given:
-    final String updateStorageJson = loadFileOrFail("TC0062_updateStorageWithoutClassName/update_storage.json");
-    final String expectedErrorResponse = loadFileOrFail("TC0062_updateStorageWithoutClassName/response.json");
+    final String updateStorageJson = loadFileOrFail("StorageApi/TC0062_updateStorageWithoutClassName/update_storage.json");
+    final String expectedErrorResponse = loadFileOrFail("StorageApi/TC0062_updateStorageWithoutClassName/response.json");
     final String streamId = UUID.randomUUID().toString();
 
     // When:
@@ -223,13 +219,12 @@ class StorageApiTest extends ApiTest {
   }
 
   @Test
-  @Order(3)
   void tc0063_testUpdateStorageWithWithMismatchingId() throws Exception {
     // Test API : PUT /hub/storages/{storageId}
     // Given:
     final String bodyWithDifferentStorageId =
-        loadFileOrFail("TC0063_updateStorageWithMismatchingId/update_storage.json");
-    final String expectedErrorResponse = loadFileOrFail("TC0063_updateStorageWithMismatchingId/response.json");
+        loadFileOrFail("StorageApi/TC0063_updateStorageWithMismatchingId/update_storage.json");
+    final String expectedErrorResponse = loadFileOrFail("StorageApi/TC0063_updateStorageWithMismatchingId/response.json");
     final String streamId = UUID.randomUUID().toString();
 
     // When:

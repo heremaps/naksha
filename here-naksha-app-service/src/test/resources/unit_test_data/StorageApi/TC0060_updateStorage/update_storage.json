@@ -1,5 +1,5 @@
 {
-  "id": "um-mod-dev",
+  "id": "tc_0060_test_storage",
   "type": "Storage",
   "title": "Modified Title",
   "description": "Modified Description (original values reside in TC0001_createStorage)",
