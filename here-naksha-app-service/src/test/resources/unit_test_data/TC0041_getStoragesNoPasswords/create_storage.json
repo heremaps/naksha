@@ -1,5 +1,5 @@
 {
-  "id": "psql-storage-for-deleting-feature",
+  "id": "storage-for-hiding-password-test",
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose",

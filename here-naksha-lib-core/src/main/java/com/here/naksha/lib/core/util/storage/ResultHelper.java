@@ -20,18 +20,13 @@ package com.here.naksha.lib.core.util.storage;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.util.json.JsonObject;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.util.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -77,31 +72,13 @@ public class ResultHelper {
           throw new RuntimeException("Unexpected invalid result");
         }
         try {
-          final XyzFeature feature = resultCursor.getFeature();
-          if (Objects.equals(featureType, Storage.class)) {
-            Map<String, Object> propertiesAsMap =
-                feature.getProperties().asMap();
-            propertiesAsMap = removePasswordFromProps(propertiesAsMap);
-            feature.setProperties(JsonSerializable.fromMap(propertiesAsMap, XyzProperties.class));
-          }
-          features.add(featureType.cast(feature));
+          features.add(featureType.cast(resultCursor.getFeature()));
         } catch (ClassCastException | NullPointerException e) {
           throw new RuntimeException(e);
         }
       }
       return features;
     }
-  }
-
-  private static Map<String, Object> removePasswordFromProps(Map<String, Object> propertiesAsMap) {
-    for (Entry<String, Object> entry : propertiesAsMap.entrySet()) {
-      if (Objects.equals(entry.getKey(), "password")) {
-        propertiesAsMap.remove("password");
-      } else if (entry.getValue() instanceof JsonObject) { //TODO fix in array also
-        removePasswordFromProps(((JsonObject) entry.getValue()).asMap());
-      }
-    }
-    return propertiesAsMap;
   }
 
   /**

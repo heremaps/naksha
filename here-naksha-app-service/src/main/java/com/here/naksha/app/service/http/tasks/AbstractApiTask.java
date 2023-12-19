@@ -35,6 +35,8 @@ import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
@@ -43,11 +45,9 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
+import com.here.naksha.lib.core.util.json.JsonSerializable;
 import io.vertx.ext.web.RoutingContext;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -129,6 +129,9 @@ public abstract class AbstractApiTask<T extends XyzResponse>
               "No feature found for id "
                   + result.getXyzFeatureCursor().getId());
         }
+        if (Objects.equals(type, Storage.class)) {
+          removePasswordFromFeature(feature);
+        }
         final List<R> featureList = new ArrayList<>();
         featureList.add(feature);
         final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(featureList);
@@ -158,6 +161,11 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     } else {
       try {
         List<R> features = readFeaturesFromResult(rdResult, type, maxLimit);
+        if (Objects.equals(type, Storage.class)) {
+          for (R feature : features) {
+            removePasswordFromFeature(feature);
+          }
+        }
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
@@ -171,7 +179,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzCollectionResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, final @NotNull boolean isDeleteOperation) {
+      final @Nullable Result wrResult, final @NotNull Class<R> type, final boolean isDeleteOperation) {
     if (wrResult == null) {
       // unexpected null response
       logger.error("Received null result!");
@@ -186,6 +194,17 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         final List<R> insertedFeatures = featureMap.get(EExecutedOp.CREATED);
         final List<R> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
         final List<R> deletedFeatures = featureMap.get(EExecutedOp.DELETED);
+        if (Objects.equals(type, Storage.class)) {
+          for (R feature : insertedFeatures) {
+            removePasswordFromFeature(feature);
+          }
+          for (R feature : updatedFeatures) {
+            removePasswordFromFeature(feature);
+          }
+          for (R feature : deletedFeatures) {
+            removePasswordFromFeature(feature);
+          }
+        }
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
@@ -219,5 +238,28 @@ public abstract class AbstractApiTask<T extends XyzResponse>
 
   private XyzFeatureCollection emptyFeatureCollection() {
     return new XyzFeatureCollection().withFeatures(emptyList());
+  }
+
+  private Map<String, Object> removePasswordFromProps(Map<String, Object> propertiesAsMap) {
+    for (Iterator<Map.Entry<String, Object>> it = propertiesAsMap.entrySet().iterator(); it.hasNext(); ) {
+      Map.Entry<String, Object> entry = it.next();
+      if (Objects.equals(entry.getKey(), "password")) {
+        it.remove();
+      } else if (entry.getValue() instanceof Map) {
+        removePasswordFromProps((Map<String, Object>) entry.getValue());
+      } else if (entry.getValue() instanceof ArrayList array) {
+        for (Object arrayEntry : array) {
+          removePasswordFromProps((Map<String, Object>) arrayEntry);
+        }
+        entry.setValue(array);
+      }
+    }
+    return propertiesAsMap;
+  }
+
+  private <R extends XyzFeature> void removePasswordFromFeature(final @NotNull R feature) {
+    Map<String, Object> propertiesAsMap =
+        removePasswordFromProps(feature.getProperties().asMap());
+    feature.setProperties(JsonSerializable.fromMap(propertiesAsMap, XyzProperties.class));
   }
 }

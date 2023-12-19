@@ -22,8 +22,10 @@ import static com.here.naksha.app.common.TestNakshaAppInitializer.localPsqlBased
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestNakshaAppInitializer;
 import com.here.naksha.lib.hub.NakshaHubConfig;
@@ -200,20 +202,26 @@ class NakshaAppTest {
   }
 
   @Test
-  @Order(2)
+  @Order(17)
   void tc0041_testGetStoragesNoPasswords() throws Exception {
-    // Test API : GET /hub/storages
-    // 1. Load test data
-    final String expectedBodyPart = loadFileOrFail("TC0040_getStorages/response_part.json");
+    // Test API : GET /hub/storages/{storageId}
+    // 1. Load test data, create storage
+    final String bodyJson = loadFileOrFail("TC0041_getStoragesNoPasswords/create_storage.json");
     final String streamId = UUID.randomUUID().toString();
+    HttpResponse<String> response = nakshaClient.post("hub/storages", bodyJson, streamId);
+    assertEquals(200, response.statusCode(), "ResCode mismatch");
 
     // 2. Perform REST API call
-    final HttpResponse<String> response = nakshaClient.get("hub/storages", streamId);
+    response = nakshaClient.get("hub/storages/storage-for-hiding-password-test", streamId);
 
     // 3. Perform assertions
     assertEquals(200, response.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-            "Expecting previously created storage", expectedBodyPart, response.body(), JSONCompareMode.LENIENT);
+    final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
+    assertFalse(jsonNode.get("properties").get("master").has("password"));
+    for (JsonNode node : jsonNode.get("properties").get("reader")) {
+      assertFalse(node.has("password"));
+    }
+
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
   }
 
