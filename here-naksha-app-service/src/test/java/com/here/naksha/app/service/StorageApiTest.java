@@ -153,13 +153,12 @@ class StorageApiTest extends ApiTest {
     response = getNakshaClient().get("hub/storages/storage-for-hiding-password-test", streamId);
 
     // 3. Perform assertions
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
+    assertThat(response).hasStatus(200).hasStreamIdHeader(HDR_STREAM_ID);
     final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
     assertFalse(jsonNode.get("properties").get("master").has("password"));
     for (JsonNode node : jsonNode.get("properties").get("reader")) {
       assertFalse(node.has("password"));
     }
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
   }
 
   @Test
@@ -199,7 +198,7 @@ class StorageApiTest extends ApiTest {
     response = getNakshaClient().get("hub/storages", streamId);
 
     // 3. Perform assertions
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
+    assertThat(response).hasStatus(200).hasStreamIdHeader(HDR_STREAM_ID);
     final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
     for (JsonNode storage : jsonNode.get("features")) {
       assertFalse(storage.get("properties").get("master").has("password"));
@@ -207,7 +206,6 @@ class StorageApiTest extends ApiTest {
         assertFalse(node.has("password"));
       }
     }
-    assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
   }
 
   @Test
