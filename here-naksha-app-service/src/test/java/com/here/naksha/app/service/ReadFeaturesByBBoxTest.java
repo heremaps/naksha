@@ -19,28 +19,18 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
-import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
-import static com.here.naksha.app.common.TestUtil.getHeader;
+import static com.here.naksha.app.common.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import com.here.naksha.app.common.TestUtil;
-import com.here.naksha.lib.core.models.naksha.Space;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.util.UUID;
-import org.jetbrains.annotations.NotNull;
-import org.json.JSONException;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 
 class ReadFeaturesByBBoxTest extends ApiTest {
 
@@ -76,7 +66,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -95,7 +88,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -114,7 +110,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -134,7 +133,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -154,7 +156,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -174,7 +179,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -198,7 +206,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -216,7 +227,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -235,7 +249,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -251,7 +268,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/bbox", streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 400, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -269,7 +289,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 400, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -288,7 +311,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 400, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -307,7 +333,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -326,7 +355,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -345,7 +377,10 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
@@ -365,21 +400,9 @@ class ReadFeaturesByBBoxTest extends ApiTest {
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
-  }
-
-  private void standardAssertions(
-      final @NotNull HttpResponse<String> actualResponse,
-      final int expectedStatusCode,
-      final @NotNull String expectedBodyPart,
-      final @NotNull String expectedStreamId)
-      throws JSONException {
-    assertEquals(expectedStatusCode, actualResponse.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Get Feature response body doesn't match",
-        expectedBodyPart,
-        actualResponse.body(),
-        JSONCompareMode.LENIENT);
-    assertEquals(expectedStreamId, getHeader(actualResponse, HDR_STREAM_ID), "StreamId mismatch");
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 }
