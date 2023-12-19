@@ -18,509 +18,412 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
-import static com.here.naksha.app.common.TestUtil.getHeader;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
-import com.here.naksha.app.common.TestUtil;
-import com.here.naksha.lib.core.models.naksha.Space;
+import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.app.common.ResponseAssertions;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
-import org.jetbrains.annotations.NotNull;
-import org.json.JSONException;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 
 class ReadFeaturesByTileTest extends ApiTest {
 
-  private void standardAssertions(
-      final @NotNull HttpResponse<String> actualResponse,
-      final int expectedStatusCode,
-      final @NotNull String expectedBodyPart,
-      final @NotNull String expectedStreamId)
-      throws JSONException {
-    assertEquals(expectedStatusCode, actualResponse.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Get Feature response body doesn't match",
-        expectedBodyPart,
-        actualResponse.body(),
-        JSONCompareMode.LENIENT);
-    assertEquals(expectedStreamId, getHeader(actualResponse, HDR_STREAM_ID), "StreamId mismatch");
-  }
+  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
+
+  private static final String SPACE_ID = "read_features_by_tile_test_space";
 
   /*
   For this test suite, we upfront create various Features using different combination of Tags and Geometry.
   To know what exact features we create, check the create_features.json test file for test tc0800_xx().
   And then in subsequent tests, we validate the various GetByTile APIs using different query parameters.
   */
+  @BeforeAll
+  static void setup() throws URISyntaxException, IOException, InterruptedException {
+    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByTile/setup");
+    String initialFeaturesJson = loadFileOrFail("ReadFeatures/ByTile/setup/create_features.json");
+    nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
+  }
 
   @Test
-  @Order(15)
-  public void tc0800_testGetByTileWithSingleTag() throws Exception {
+  void tc0800_testGetByTileWithSingleTag() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features getting returned for given Tile and given single tag value
-    String streamId;
-    HttpResponse<String> response;
-
-    // Given: Storage (mock implementation) configured in Admin storage
-    final String storageJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_storage.json");
-    streamId = UUID.randomUUID().toString();
-    response = getNakshaClient().post("hub/storages", storageJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
-
-    // Given: EventHandler (uses above Storage) configured in Admin storage
-    final String handlerJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_event_handler.json");
-    streamId = UUID.randomUUID().toString();
-    response = getNakshaClient().post("hub/handlers", handlerJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
-
-    // Given: Space (uses above EventHandler) configured in Admin storage
-    final String spaceJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_space.json");
-    final Space space = TestUtil.parseJson(spaceJson, Space.class);
-    streamId = UUID.randomUUID().toString();
-    response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Space");
-
-    // Given: New Features persisted in above Space
-    String bodyJson = loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/create_features.json");
-    streamId = UUID.randomUUID().toString();
-    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating new Features");
-
     // Given: Features By Tile request (against above space)
     final String tileId = "1";
     final String tagsQueryParam = "tags=one";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0800_SingleTag/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + space.getId() + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0801_testGetByTileWithTagOrCondition() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0801_testGetByTileWithTagOrCondition() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile and Tag OR condition
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=two,three";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0801_TagOrCondition/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0802_testGetByTileWithTagAndCondition() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0802_testGetByTileWithTagAndCondition() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile and Tag AND condition
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=four+five";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0802_TagAndCondition/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0803_testGetByTileWithTagOrOrConditions() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0803_testGetByTileWithTagOrOrConditions() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and Tag OR condition using comma separated value
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=three" + "&tags=four,five";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0803_TagOrOrCondition/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0804_testGetByTileWithTagOrAndConditions() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0804_testGetByTileWithTagOrAndConditions() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and combination of Tag OR and AND conditions
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=one" + "&tags=two+three";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0804_TagOrAndCondition/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0805_testGetByTileWithTagAndOrAndConditions() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0805_testGetByTileWithTagAndOrAndConditions() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and combination of Tag AND, OR, AND conditions
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=three+four" + "&tags=four+five";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0805_TagAndOrAndCondition/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0806_testGetByTileWithLimit() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0806_testGetByTileWithLimit() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and limit
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=one";
     final String limitQueryParam = "limit=2";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0806_WithLimit/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
+    final HttpResponse<String> response = nakshaClient
         .get(
-            "hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam + "&"
+            "hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam + "&"
                 + limitQueryParam,
             streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0807_testGetByTile() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0807_testGetByTile() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "120203302030322200";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0807_TileOnly/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient().get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId, streamId);
+    final HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0808_testGetByTile2AndTagAndCondition() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0808_testGetByTile2AndTagAndCondition() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and Tag AND condition
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "120203302030322200";
     final String tagsQueryParam = "tags=three+four";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0808_Tile2_TagAndCondition/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0809_testGetByTileWithoutTile() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0809_testGetByTileWithoutTile() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate API error when Tile coordinates are not provided
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0809_WithoutTile/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient().get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId, streamId);
+    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 400, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0810_testGetByTileWithInvalidTileId() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0810_testGetByTileWithInvalidTileId() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate API error when Tile Id is invalid
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "A";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0810_InvalidTileId/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient().get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId, streamId);
+    final HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 400, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0811_testGetByTileWithInvalidTagDelimiter() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0811_testGetByTileWithInvalidTagDelimiter() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate API error when Tile condition is valid but invalid Tag delimiter is used
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
     final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=one@two";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0811_InvalidTagDelimiter/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
+    final HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 400, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0812_testGetByTileWithNonNormalizedTag() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0812_testGetByTileWithNonNormalizedTag() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and Tag combination having NonNormalized Tag value
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=non-matching-tag+" + urlEncoded("@ThRee");
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0812_NonNormalizedTag/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0813_testGetByTileWithMixedTagConditions() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0813_testGetByTileWithMixedTagConditions() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features returned match with given Tile condition and Tag combination having mixed AND/OR conditions
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=six,three+four" + "&tags=non-existing-tag";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0813_MixedTagConditions/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0814_testGetByTileWithTagMismatch() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0814_testGetByTileWithTagMismatch() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate NO features returned when features match given Tile, but NOT the given tags
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "1";
     final String tagsQueryParam = "tags=non-existing-tag";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0814_NonMatchingTag/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0815_testGetByTileWithTileMismatch() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0815_testGetByTileWithTileMismatch() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate NO features returned when features match given Tags, but NOT the given Tile id
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String tileId = "0";
     final String tagsQueryParam = "tags=one";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0815_NonMatchingTile/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
-        .get("hub/spaces/" + spaceId + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/quadkey/" + tileId + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(16)
-  public void tc0816_testGetByTileWithUnsupportedTileType() throws Exception {
-    // NOTE : This test depends on setup done as part of tc0800_testGetByTileWithSingleTag
-
+  void tc0816_testGetByTileWithUnsupportedTileType() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate API error is returned when unsupported Tile Type is, even though tileId and Tags are valid
-    String streamId;
-    HttpResponse<String> response;
-
     // Given: Features By Tile request (against configured space)
-    final String spaceId = "local-space-4-features-by-tile";
     final String unsupportedTileType = "here-quadkey";
     final String tileId = "1";
     final String tagsQueryParam = "tags=one";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/ByTile/TC0816_UnsupportedTileType/feature_response_part.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient()
+    final HttpResponse<String> response = nakshaClient
         .get(
-            "hub/spaces/" + spaceId + "/tile/" + unsupportedTileType + "/" + tileId + "?" + tagsQueryParam,
+            "hub/spaces/" + SPACE_ID + "/tile/" + unsupportedTileType + "/" + tileId + "?" + tagsQueryParam,
             streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 400, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 }

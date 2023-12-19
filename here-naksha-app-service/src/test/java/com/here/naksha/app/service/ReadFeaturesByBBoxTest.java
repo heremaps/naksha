@@ -45,6 +45,7 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 class ReadFeaturesByBBoxTest extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
+
   private static final String SPACE_ID = "read_features_by_bbox_test_space";
 
   /*
@@ -71,7 +72,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
@@ -90,7 +91,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
@@ -109,7 +110,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
@@ -129,7 +130,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
@@ -149,7 +150,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
@@ -169,7 +170,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
@@ -190,7 +191,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get(
             "hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam + "&"
                 + limitQueryParam,
@@ -212,7 +213,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
+    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 200, expectedBodyPart, streamId);
@@ -230,7 +231,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
@@ -247,7 +248,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/bbox", streamId);
+    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/bbox", streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
@@ -265,7 +266,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
+    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     standardAssertions(response, 400, expectedBodyPart, streamId);
@@ -283,7 +284,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
@@ -302,7 +303,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
@@ -321,7 +322,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
@@ -340,7 +341,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
@@ -360,7 +361,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = getNakshaClient()
+    HttpResponse<String> response = nakshaClient
         .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam, streamId);
 
     // Then: Perform assertions

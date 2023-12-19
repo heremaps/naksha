@@ -18,118 +18,89 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
-import static com.here.naksha.app.common.TestUtil.getHeader;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
-import com.here.naksha.app.common.TestUtil;
-import com.here.naksha.lib.core.models.naksha.Space;
+import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.app.common.ResponseAssertions;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 
 class SearchFeaturesTest extends ApiTest {
 
-  private void standardAssertions(
-      final @NotNull HttpResponse<String> actualResponse,
-      final int expectedStatusCode,
-      final @NotNull String expectedBodyPart,
-      final @NotNull String expectedStreamId)
-      throws JSONException {
-    assertEquals(expectedStatusCode, actualResponse.statusCode(), "ResCode mismatch");
-    JSONAssert.assertEquals(
-        "Get Feature response body doesn't match",
-        expectedBodyPart,
-        actualResponse.body(),
-        JSONCompareMode.LENIENT);
-    assertEquals(expectedStreamId, getHeader(actualResponse, HDR_STREAM_ID), "StreamId mismatch");
+  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
+
+  private static final String SPACE_ID = "search_features_test_space";
+
+  @BeforeAll
+  static void setup() throws URISyntaxException, IOException, InterruptedException {
+    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/Search/setup");
+    String initialFeaturesJson = loadFileOrFail("ReadFeatures/Search/setup/create_features.json");
+    nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
   }
 
   @Test
-  @Order(16)
   void tc1000_testSearchFeatures() throws URISyntaxException, InterruptedException, JSONException, IOException {
     // Test API : GET /hub/spaces/{spaceId}/tile/{type}/{tileId}
     // Validate features getting returned for given Tile and given single tag value
-    String streamId;
-    HttpResponse<String> response;
-
-    // Given: Storage (mock implementation) configured in Admin storage
-    final String storageJson = loadFileOrFail("ReadFeatures/Search/TC1000_search/create_storage.json");
-    streamId = UUID.randomUUID().toString();
-    response = getNakshaClient().post("hub/storages", storageJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Storage");
-
-    // And: EventHandler (uses above Storage) configured in Admin storage
-    final String handlerJson = loadFileOrFail("ReadFeatures/Search/TC1000_search/create_event_handler.json");
-    streamId = UUID.randomUUID().toString();
-    response = getNakshaClient().post("hub/handlers", handlerJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
-
-    // And: Space (uses above EventHandler) configured in Admin storage
-    final String spaceJson = loadFileOrFail("ReadFeatures/Search/TC1000_search/create_space.json");
-    final Space space = TestUtil.parseJson(spaceJson, Space.class);
-    streamId = UUID.randomUUID().toString();
-    response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Space");
-
-    // And: New Features persisted in above Space
-    String bodyJson = loadFileOrFail("ReadFeatures/Search/TC1000_search/create_features.json");
-    streamId = UUID.randomUUID().toString();
-    response = getNakshaClient().post("hub/spaces/" + space.getId() + "/features", bodyJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating new Features");
-
-    // And: search query
+    // Given: search query
     final String tagsQueryParam = "tags=one+four";
     final String expectedBodyPart = loadFileOrFail("ReadFeatures/Search/TC1000_search/search_response.json");
-    streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    response = getNakshaClient().get("hub/spaces/" + space.getId() + "/search" + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/search" + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(17)
   void tc1001_testSearchNoResults() throws URISyntaxException, IOException, InterruptedException, JSONException {
     // Given: search query not matching saved features
     final String tagsQueryParam = "tags=seven";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/Search/TC1001_searchNoResults/search_response.json");
-    String streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Tile request is submitted to NakshaHub
-    HttpResponse<String> response =
-        getNakshaClient().get("hub/spaces/tc_900_space/search" + "?" + tagsQueryParam, streamId);
+    final HttpResponse<String> response =
+        nakshaClient.get("hub/spaces/" + SPACE_ID + "/search" + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 200, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
   @Test
-  @Order(17)
   void tc1002_testSearchWrongSpace() throws URISyntaxException, IOException, InterruptedException, JSONException {
     // Given: search query not matching saved features
     final String tagsQueryParam = "tags=one";
     final String expectedBodyPart =
         loadFileOrFail("ReadFeatures/Search/TC1002_searchWrongSpace/search_response.json");
-    String streamId = UUID.randomUUID().toString();
+    final String streamId = UUID.randomUUID().toString();
+    final String wrongSpaceId = "wrong_space_id";
 
     // When: Get Features By Tile request is submitted to NakshaHub
     HttpResponse<String> response =
-        getNakshaClient().get("hub/spaces/NOT_tc_900_space/search" + "?" + tagsQueryParam, streamId);
+        nakshaClient.get("hub/spaces/" + wrongSpaceId + "/search" + "?" + tagsQueryParam, streamId);
 
     // Then: Perform assertions
-    standardAssertions(response, 404, expectedBodyPart, streamId);
+    ResponseAssertions.assertThat(response)
+        .hasStatus(404)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 }

@@ -1,5 +1,5 @@
 {
-  "id": "test-psql-storage-4-features-by-tile",
+  "id": "search_features_test_storage",
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose",

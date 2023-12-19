@@ -1,5 +1,5 @@
 {
-  "id": "local-handler-4-features-by-tile",
+  "id": "search_features_test_handler",
   "type": "EventHandler",
   "title": "Storage Handler for UniMap Moderation Dev Storage",
   "description": "Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage",
@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "test-psql-storage-4-features-by-tile"
+    "storageId": "search_features_test_storage"
   }
 }
