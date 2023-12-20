@@ -18,11 +18,13 @@
  */
 package com.here.naksha.lib.view;
 
+import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteRequest;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * It writes same value to all storages, the result must not be combined, to let clients know if operation succeeded in
@@ -31,10 +33,9 @@ import org.jetbrains.annotations.NotNull;
 // FIXME it's abstract only to not implement all IReadSession methods at the moment
 public abstract class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
-  public ViewWriteSession(View viewRef) {
-    super(viewRef);
+  public ViewWriteSession(@NotNull View viewRef, @Nullable NakshaContext context, boolean useMaster) {
+    super(viewRef, context, useMaster);
   }
-
 
   /**
    * Executes write on one (top by default storage).

@@ -18,24 +18,16 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.storage.IStorage;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.storage.HeapCacheCursor;
+import com.here.naksha.lib.core.models.storage.SuccessResult;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
+import java.util.List;
 
-public class ViewLayer {
+public class MockResult<T extends XyzFeature> extends SuccessResult {
 
-  private final IStorage storage;
-
-  private final String collectionId;
-
-  public ViewLayer(IStorage storage, String collectionId) {
-    this.storage = storage;
-    this.collectionId = collectionId;
-  }
-
-  public IStorage getStorage() {
-    return storage;
-  }
-
-  public String getCollectionId() {
-    return collectionId;
+  public MockResult(List<XyzFeatureCodec> results) {
+    cursor = new HeapCacheCursor<>(XyzFeatureCodecFactory.get(), results, null);
   }
 }
