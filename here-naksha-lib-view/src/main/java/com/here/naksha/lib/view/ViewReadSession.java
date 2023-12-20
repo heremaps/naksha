@@ -18,10 +18,35 @@
  */
 package com.here.naksha.lib.view;
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
+
+import com.here.naksha.lib.core.NakshaContext;
+import com.here.naksha.lib.core.exceptions.NoCursor;
+import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.storage.ErrorResult;
+import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
+import com.here.naksha.lib.core.models.storage.HeapCacheCursor;
+import com.here.naksha.lib.core.models.storage.MutableCursor;
+import com.here.naksha.lib.core.models.storage.Notification;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.storage.IReadSession;
-import org.apache.commons.lang3.NotImplementedException;
+import com.here.naksha.lib.core.storage.ISession;
+import com.here.naksha.lib.core.util.storage.RequestHelper;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * {@link  ViewReadSession} operates on {@link View}, it queries simultaneously all the storages.
@@ -42,21 +67,136 @@ import org.jetbrains.annotations.NotNull;
  * It might happen that feature has been moved (it's geometry changed). In such case after getting results for bbox
  * query we have to query again for all features (by id) that was missing in a least one storage  result.
  */
-// FIXME it's abstract only to not implement all IReadSession methods at the moment
-public abstract class ViewReadSession implements IReadSession {
+public class ViewReadSession implements IReadSession {
 
   private final View viewRef;
 
-  protected ViewReadSession(View viewRef) {
+  protected Map<ViewLayer, IReadSession> subSessions;
+
+  protected ViewReadSession(@NotNull View viewRef, @Nullable NakshaContext context, boolean useMaster) {
     this.viewRef = viewRef;
+    this.subSessions = new LinkedHashMap<>();
+    for (ViewLayer layer : viewRef.getViewCollection().getLayers()) {
+      subSessions.put(layer, layer.getStorage().newReadSession(context, useMaster));
+    }
   }
 
-  Result execute(
+  <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result execute(
       @NotNull ViewReadFeaturesRequest request,
-      @NotNull MergeOperation mergeOperation,
-      @NotNull MissingIdResolver missingIdResolver
-  ) {
-    throw new NotImplementedException();
+      FeatureCodecFactory<FEATURE, CODEC> codecFactory,
+      @NotNull MergeOperation<FEATURE, CODEC> mergeOperation,
+      @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver) {
+    // TODO make it parallel
+    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows = subSessions.entrySet().stream()
+        .flatMap(entry -> executeSingle(entry.getKey(), entry.getValue(), codecFactory, request))
+        .collect(groupingBy(viewRow -> viewRow.getRow().getId()));
+
+    if (!missingIdResolver.skip()) {
+      Map<ViewLayer, List<String>> idsToFetch = multiLayerRows.values().stream()
+          .map(featuresFromLayers -> missingIdResolver.idsToSearch(featuresFromLayers))
+          .collect(groupingBy(Pair::getKey, mapping(Pair::getValue, toList())));
+      // TODO make it parallel
+      Map<String, List<ViewLayerRow<FEATURE, CODEC>>> fetchedById = idsToFetch.entrySet().stream()
+          .map(entry -> Pair.of(
+              entry.getKey(),
+              RequestHelper.readFeaturesByIdsRequest(
+                  entry.getKey().getCollectionId(), entry.getValue())))
+          .flatMap(rowReq -> executeSingle(
+              rowReq.getLeft(), subSessions.get(rowReq.getLeft()), codecFactory, rowReq.getRight()))
+          .collect(groupingBy(viewRow -> viewRow.getRow().getId()));
+
+      fetchedById.forEach((key, value) -> multiLayerRows.get(key).addAll(value));
+    }
+
+    List<CODEC> mergedRows =
+        multiLayerRows.values().stream().map(mergeOperation::apply).collect(toList());
+
+    HeapCacheCursor<FEATURE, CODEC> heapCacheCursor = new HeapCacheCursor<>(codecFactory, mergedRows, null);
+
+    return new ViewSuccessResult(heapCacheCursor, null);
   }
 
+  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Stream<ViewLayerRow<FEATURE, CODEC>> executeSingle(
+      @NotNull ViewLayer layer,
+      @NotNull IReadSession session,
+      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
+      @NotNull ReadFeatures request) {
+    int layerPriority = viewRef.getViewCollection().priorityOf(layer);
+
+    // prepare request
+    request.withCollections(new ArrayList<>());
+    request.addCollection(layer.getCollectionId());
+
+    Result result = session.execute(request);
+    try (MutableCursor<FEATURE, CODEC> cursor = result.mutableCursor(codecFactory)) {
+      return cursor.asList().stream().map(row -> new ViewLayerRow<>(row, layerPriority, layer));
+    } catch (NoCursor e) {
+      throw unchecked(e);
+    }
+  }
+
+  @Override
+  public boolean isMasterConnect() {
+    return false;
+  }
+
+  @Override
+  public @NotNull NakshaContext getNakshaContext() {
+    return null;
+  }
+
+  @Override
+  public int getFetchSize() {
+    return subSessions.values().stream()
+        .findAny()
+        .map(IReadSession::getFetchSize)
+        .orElseThrow();
+  }
+
+  @Override
+  public void setFetchSize(int size) {
+    subSessions.values().forEach(session -> session.setFetchSize(size));
+  }
+
+  @Override
+  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
+    return subSessions.values().stream()
+        .findAny()
+        .map(session -> session.getStatementTimeout(timeUnit))
+        .orElseThrow();
+  }
+
+  @Override
+  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {
+    subSessions.values().forEach(session -> session.setStatementTimeout(timeout, timeUnit));
+  }
+
+  @Override
+  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
+    return subSessions.values().stream()
+        .findAny()
+        .map(session -> session.getLockTimeout(timeUnit))
+        .orElseThrow();
+  }
+
+  @Override
+  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {
+    subSessions.values().forEach(session -> session.setLockTimeout(timeout, timeUnit));
+  }
+
+  @Override
+  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
+    // TODO run with default merger and fetcher
+    return null;
+  }
+
+  @Override
+  public @NotNull Result process(@NotNull Notification<?> notification) {
+    return new ErrorResult(XyzError.NOT_IMPLEMENTED, "process");
+  }
+
+  @Override
+  public void close() {
+    subSessions.values().forEach(ISession::close);
+  }
 }

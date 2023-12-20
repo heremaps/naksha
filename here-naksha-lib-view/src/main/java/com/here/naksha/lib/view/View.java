@@ -21,9 +21,6 @@ package com.here.naksha.lib.view;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.storage.IStorage;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.Future;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -37,9 +34,13 @@ public class View implements IStorage {
     this.viewCollection = viewCollection;
   }
 
+  public ViewCollection getViewCollection() {
+    return viewCollection;
+  }
+
   @Override
   public @NotNull ViewReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    throw new NotImplementedException();
+    return new ViewReadSession(this, context, useMaster);
   }
 
   @Override
@@ -49,18 +50,26 @@ public class View implements IStorage {
 
   @Override
   public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    return null;
+    throw new NotImplementedException();
   }
 
   @Override
-  public void initStorage() {}
+  public void initStorage() {
+    throw new UnsupportedOperationException("init all individual storages first");
+  }
 
   @Override
-  public void startMaintainer() {}
+  public void startMaintainer() {
+    throw new NotImplementedException();
+  }
 
   @Override
-  public void maintainNow() {}
+  public void maintainNow() {
+    throw new NotImplementedException();
+  }
 
   @Override
-  public void stopMaintainer() {}
+  public void stopMaintainer() {
+    throw new NotImplementedException();
+  }
 }

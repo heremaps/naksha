@@ -18,56 +18,72 @@
  */
 package com.here.naksha.lib.view;
 
+import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.MutableCursor;
+import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IStorage;
-import org.apache.commons.lang3.tuple.Pair;
-
-import java.util.Arrays;
 import java.util.Comparator;
-
-import static org.mockito.Mockito.mock;
+import java.util.List;
+import org.apache.commons.lang3.tuple.Pair;
+import org.junit.jupiter.api.Test;
 
 public class ViewTest {
 
   private NakshaContext nakshaContext =
       new NakshaContext().withAppId("VIEW_API_TEST").withAuthor("VIEW_API_AUTHOR");
 
-  void testReadApiNotation() {
+  @Test
+  void testReadApiNotation() throws NoCursor {
 
-    ViewLayer topologiesDS = new ViewLayer(mock(IStorage.class), "topologies");
-    ViewLayer buildingsDS = new ViewLayer(mock(IStorage.class), "buildings");
-    ViewLayer topologiesCS = new ViewLayer(mock(IStorage.class), "topologies");
+    // given
+    IStorage storage = mock(IStorage.class);
+    ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
+    ViewLayer buildingsDS = new ViewLayer(storage, "buildings");
+    ViewLayer topologiesCS = new ViewLayer(storage, "topologies");
+
+    // each layer is going to return 3 same records
+    List<XyzFeatureCodec> results = sampleXyzResponse(3);
+    when(storage.newReadSession(nakshaContext, false)).thenReturn(new MockReadSession(results));
 
     ViewCollection viewCollection = new ViewCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
 
     View view = new View(viewCollection);
 
-    // to discuss if same context is valid to use across all storages
-    ViewReadSession readSession = view.newReadSession(nakshaContext, true);
+    MergeOperation<XyzFeature, XyzFeatureCodec> customMergeOperation = new CustomMergeOperation();
+    MissingIdResolver<XyzFeature, XyzFeatureCodec> skipFetchingResolver = new SkipFetchingMissing();
 
+    // when
+    ViewReadSession readSession = view.newReadSession(nakshaContext, false);
     ViewReadFeaturesRequest readFeatures = new ViewReadFeaturesRequest();
+    Result result = readSession.execute(
+        readFeatures, XyzFeatureCodecFactory.get(), customMergeOperation, skipFetchingResolver);
+    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzMutableCursor();
 
-    // custom merge operation
-    MergeOperation customMergeOperation = new CustomMergeOperation();
-
-    // custom fetch ids resolver
-    MissingIdResolver skipFetchingResolver = new SkipFetchingMissing();
-
-    readSession.execute(readFeatures, customMergeOperation, skipFetchingResolver);
+    // then
+    assertTrue(cursor.next());
+    List<XyzFeatureCodec> allFeatures = cursor.asList();
+    assertEquals(3, allFeatures.size());
+    assertTrue(allFeatures.containsAll(results));
   }
 
   void testWriteApiNotation() throws NoCursor {
 
     ViewLayer topologiesDS = new ViewLayer(mock(IStorage.class), "topologies");
     ViewLayer buildingsDS = new ViewLayer(mock(IStorage.class), "buildings");
-    ViewLayer topologiesCS = new ViewLayer(mock(IStorage.class), "topologies");;
+    ViewLayer topologiesCS = new ViewLayer(mock(IStorage.class), "topologies");
+    ;
 
     ViewCollection viewCollection = new ViewCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
 
@@ -80,14 +96,15 @@ public class ViewTest {
     final XyzFeature feature = new XyzFeature("feature_id_1");
     request.add(EWriteOp.CREATE, feature);
 
-    try (MutableCursor<XyzFeature, XyzFeatureCodec> cursor = writeSession.execute(request).getXyzMutableCursor()) {
+    try (MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+        writeSession.execute(request).getXyzMutableCursor()) {
       cursor.next();
     } finally {
       writeSession.commit(true);
     }
   }
 
-  class SkipFetchingMissing implements MissingIdResolver {
+  static class SkipFetchingMissing implements MissingIdResolver<XyzFeature, XyzFeatureCodec> {
 
     @Override
     public boolean skip() {
@@ -95,18 +112,17 @@ public class ViewTest {
     }
 
     @Override
-    public Pair<ViewLayer, String> idsToSearch(ViewLayerRow[] multipleResults) {
+    public Pair<ViewLayer, String> idsToSearch(List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> multipleResults) {
       return null;
     }
   }
 
-  class CustomMergeOperation implements MergeOperation {
+  static class CustomMergeOperation implements MergeOperation<XyzFeature, XyzFeatureCodec> {
 
     @Override
-    public FeatureCodec apply(ViewLayerRow[] sameFeatureFromEachStorage) {
-      return Arrays.stream(sameFeatureFromEachStorage)
-          .sorted(Comparator.comparing(ViewLayerRow::getStoragePriority))
-          .findFirst()
+    public XyzFeatureCodec apply(List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> sameFeatureFromEachStorage) {
+      return sameFeatureFromEachStorage.stream()
+          .min(Comparator.comparing(ViewLayerRow::getStoragePriority))
           .map(ViewLayerRow::getRow)
           .get();
     }

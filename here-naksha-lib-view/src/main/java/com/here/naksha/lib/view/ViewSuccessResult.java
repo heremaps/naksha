@@ -18,24 +18,16 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.storage.IStorage;
+import com.here.naksha.lib.core.models.storage.MutableCursor;
+import com.here.naksha.lib.core.models.storage.SuccessResult;
+import java.util.Map;
+import org.jetbrains.annotations.Nullable;
 
-public class ViewLayer {
+public class ViewSuccessResult extends SuccessResult {
 
-  private final IStorage storage;
-
-  private final String collectionId;
-
-  public ViewLayer(IStorage storage, String collectionId) {
-    this.storage = storage;
-    this.collectionId = collectionId;
-  }
-
-  public IStorage getStorage() {
-    return storage;
-  }
-
-  public String getCollectionId() {
-    return collectionId;
+  public ViewSuccessResult(
+      @Nullable MutableCursor<?, ?> cursor, @Nullable Map<String, Integer> originalFeaturesOrder) {
+    this.cursor = cursor;
+    this.originalFeaturesOrder = originalFeaturesOrder;
   }
 }

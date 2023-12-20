@@ -29,6 +29,12 @@ public class ViewLayerRow<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
 
   private ViewLayer viewLayerRef;
 
+  public ViewLayerRow(CODEC row, int storagePriority, ViewLayer viewLayerRef) {
+    this.row = row;
+    this.storagePriority = storagePriority;
+    this.viewLayerRef = viewLayerRef;
+  }
+
   public int getStoragePriority() {
     return storagePriority;
   }

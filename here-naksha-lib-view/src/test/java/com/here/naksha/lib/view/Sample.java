@@ -18,24 +18,23 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.storage.IStorage;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
+import java.util.ArrayList;
+import java.util.List;
 
-public class ViewLayer {
+public class Sample {
 
-  private final IStorage storage;
-
-  private final String collectionId;
-
-  public ViewLayer(IStorage storage, String collectionId) {
-    this.storage = storage;
-    this.collectionId = collectionId;
-  }
-
-  public IStorage getStorage() {
-    return storage;
-  }
-
-  public String getCollectionId() {
-    return collectionId;
+  public static List<XyzFeatureCodec> sampleXyzResponse(int size) {
+    XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
+    List<XyzFeatureCodec> returnList = new ArrayList<>();
+    for (int i = 0; i < size; i++) {
+      XyzFeatureCodec codec = codecFactory.newInstance();
+      codec.setFeature(new XyzFeature("id" + i));
+      codec.decodeParts(true);
+      returnList.add(codec);
+    }
+    return returnList;
   }
 }
