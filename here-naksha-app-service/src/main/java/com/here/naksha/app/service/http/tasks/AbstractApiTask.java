@@ -38,11 +38,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollecti
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
-import com.here.naksha.lib.core.models.storage.EExecutedOp;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteFeatures;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
@@ -194,6 +190,11 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         final List<R> insertedFeatures = featureMap.get(EExecutedOp.CREATED);
         final List<R> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
         final List<R> deletedFeatures = featureMap.get(EExecutedOp.DELETED);
+        // extract violations if available
+        List<XyzFeature> violations = null;
+        if (wrResult instanceof ContextXyzFeatureResult cr) {
+          violations = cr.getViolations();
+        }
         if (Objects.equals(type, Storage.class)) {
           for (R feature : insertedFeatures) {
             removePasswordFromFeature(feature);
@@ -211,7 +212,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
             new XyzFeatureCollection()
                 .withInsertedFeatures(insertedFeatures)
                 .withUpdatedFeatures(updatedFeatures)
-                .withDeletedFeatures(deletedFeatures));
+                .withDeletedFeatures(deletedFeatures)
+                .withViolations(violations));
       } catch (NoCursor | NoSuchElementException emptyException) {
         if (isDeleteOperation) {
           logger.info("No data found in ResultCursor, returning empty collection");
