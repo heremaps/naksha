@@ -20,9 +20,6 @@ package com.here.naksha.lib.handlers.val;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzReference;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EReviewState;
@@ -66,36 +63,31 @@ public class EndorsementHandler extends AbstractEventHandler {
    */
   @Override
   public @NotNull Result processEvent(@NotNull IEvent event) {
-    final NakshaContext ctx = NakshaContext.currentContext();
     final Request<?> request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
-    return null;
-  }
+    final ContextWriteFeatures<?, ?, ?, ?, ?> cwf = HandlerUtil.checkInstanceOf(
+        request, ContextWriteFeatures.class, "Unsupported request type during endorsement");
 
-  protected @NotNull Result endorsementHandler(final @NotNull Request<?> request) {
-    if (!(request instanceof ContextWriteFeatures<?, ?, ?, ?, ?> cwf))
-      throw new XyzErrorException(
-          XyzError.NOT_IMPLEMENTED,
-          "Unsupported request type during endorsement - "
-              + request.getClass().getSimpleName());
+    // Extract violations from request
+    final List<XyzFeature> violations = HandlerUtil.getXyzViolationsFromGenericList(cwf.getViolations());
 
-    // Extract violations
-    final List<XyzFeature> outputViolations = HandlerUtil.getXyzViolationsFromGenericList(cwf.getViolations());
-
-    // Mark each feature as AUTO_REVIEW_DEFERRED or PUBLISHED
+    // Mark each feature as AUTO_REVIEW_DEFERRED or UNPUBLISHED
     // (depending on whether there is associated violation or not)
-    final List<XyzFeature> outputFeatures = HandlerUtil.getXyzFeaturesFromCodecList(cwf.features);
-    for (final XyzFeature feature : outputFeatures) {
-      updateFeatureDeltaStateIfMatchesViolations(feature, outputViolations);
+    final List<XyzFeature> updatedFeatures = HandlerUtil.getXyzFeaturesFromCodecList(cwf.features);
+    for (final XyzFeature feature : updatedFeatures) {
+      updateFeatureDeltaStateIfMatchesViolations(feature, violations);
     }
 
-    // Extract context (list of features)
-    final List<XyzFeature> outputCtxList = HandlerUtil.getXyzContextFromGenericList(cwf.getContext());
+    // TODO : Extract context (list of features) and make the violated ones part of the updatedFeatures
+    // list, so they also get updated in storage
 
-    // create context result
-    return HandlerUtil.createContextResultFromFeatureList(outputFeatures, outputCtxList, outputViolations);
+    // create and forward request for next handler in the pipeline
+    final ContextWriteFeatures<?, ?, ?, ?, ?> upstreamRequest =
+        HandlerUtil.createContextWriteRequestFromFeatureList(
+            cwf.getCollectionId(), updatedFeatures, cwf.getContext(), violations);
+    return event.sendUpstream(upstreamRequest);
   }
 
   protected void updateFeatureDeltaStateIfMatchesViolations(

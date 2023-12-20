@@ -42,6 +42,11 @@ public class CommonApiTestSetup {
     createAdminEntity(nakshaClient, "hub/handlers", setupDirPath + "/" + CREATE_HANDLER_JSON);
   }
 
+  public static void createHandler(NakshaTestWebClient nakshaClient, String setupDirPath, String fileName)
+          throws URISyntaxException, IOException, InterruptedException {
+    createAdminEntity(nakshaClient, "hub/handlers", setupDirPath + "/" + fileName);
+  }
+
   private static void createAdminEntity(NakshaTestWebClient nakshaClient, String nakshaResourcePath, String jsonFilePath)
       throws URISyntaxException, IOException, InterruptedException {
     HttpResponse<String> response = nakshaClient.post(

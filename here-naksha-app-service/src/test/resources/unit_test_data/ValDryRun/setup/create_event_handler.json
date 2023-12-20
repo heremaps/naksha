@@ -1,9 +1,0 @@
-{
-  "id": "local-handler-4-val-dry-run",
-  "type": "EventHandler",
-  "title": "Val Dry Run Handler for UniMap Moderation Dev Storage",
-  "description": "Mock Validation Dry Run Handler for Test purpose",
-  "className": "com.here.naksha.lib.handlers.val.MockValDryRunHandler",
-  "active": true,
-  "extensionId": null
-}

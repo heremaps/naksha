@@ -23,9 +23,6 @@ import static com.here.naksha.lib.handlers.util.MockUtil.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzReference;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
@@ -73,22 +70,19 @@ public class MockValidationHandler extends AbstractEventHandler {
    */
   @Override
   public @NotNull Result processEvent(@NotNull IEvent event) {
-    final NakshaContext ctx = NakshaContext.currentContext();
     final Request<?> request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
-    return null;
-  }
-
-  protected @NotNull Result validateHandler(final @NotNull Request<?> request) {
-    if (!(request instanceof ContextWriteFeatures<?, ?, ?, ?, ?> cwf))
-      throw new XyzErrorException(
-          XyzError.NOT_IMPLEMENTED,
-          "Unsupported request type " + request.getClass().getSimpleName());
+    final ContextWriteFeatures<?, ?, ?, ?, ?> cwf = HandlerUtil.checkInstanceOf(
+        request, ContextWriteFeatures.class, "Unsupported request type for validation");
 
     final @Nullable List<XyzFeature> violations = validateFeatures(cwf, cwf.getContext());
-    return HandlerUtil.createContextResultFromCodecList(cwf.features, cwf.getContext(), violations);
+
+    // create and forward request for next handler in the pipeline
+    final ContextWriteFeatures<?, ?, ?, ?, ?> upstreamRequest = HandlerUtil.createContextWriteRequestFromCodecList(
+        cwf.getCollectionId(), cwf.features, cwf.getContext(), violations);
+    return event.sendUpstream(upstreamRequest);
   }
 
   protected @Nullable List<XyzFeature> validateFeatures(

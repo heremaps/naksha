@@ -21,8 +21,6 @@ package com.here.naksha.lib.handlers.val;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
@@ -61,19 +59,11 @@ public class EchoHandler extends AbstractEventHandler {
    */
   @Override
   public @NotNull Result processEvent(@NotNull IEvent event) {
-    final NakshaContext ctx = NakshaContext.currentContext();
     final Request<?> request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
-    return null;
-  }
-
-  protected @NotNull Result echoHandler(final @NotNull Request<?> request) {
-    if (!(request instanceof ContextWriteFeatures<?, ?, ?, ?, ?> cwf))
-      throw new XyzErrorException(
-          XyzError.NOT_IMPLEMENTED,
-          "Unsupported request type in echoHandler - "
-              + request.getClass().getSimpleName());
+    final ContextWriteFeatures<?, ?, ?, ?, ?> cwf = HandlerUtil.checkInstanceOf(
+        request, ContextWriteFeatures.class, "Unsupported request type in echoHandler");
 
     // Extract Xyz features
     final List<XyzFeature> features = HandlerUtil.getXyzFeaturesFromCodecList(cwf.features);

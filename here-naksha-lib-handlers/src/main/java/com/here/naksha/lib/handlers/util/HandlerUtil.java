@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.handlers.util;
 
-import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -33,38 +32,11 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class HandlerUtil {
+public final class HandlerUtil {
 
   public static String REVIEW_STATE_PREFIX = "@:review-state:";
 
-  public static @NotNull ContextXyzFeatureResult createContextResultFromCodecList(
-      final @NotNull List<?> inputCodecs,
-      final @Nullable List<?> context,
-      final @Nullable List<XyzFeature> violations) {
-    // Create ForwardCursor with input features
-    final List<XyzFeatureCodec> codecs = new ArrayList<>();
-    final XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
-    for (final Object inputCodec : inputCodecs) {
-      if (!(inputCodec instanceof XyzFeatureCodec xyzCodec)) {
-        throw new XyzErrorException(
-            XyzError.NOT_IMPLEMENTED,
-            "Unsupported feature codec type during validation - "
-                + inputCodec.getClass().getSimpleName());
-      }
-      codecs.add(codecFactory.newInstance().copy(xyzCodec));
-    }
-    final ListBasedForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-        new ListBasedForwardCursor<>(codecFactory, codecs);
-
-    // TODO : Create list of contextual features based on input context
-    final List<XyzFeature> ctxFeatures = null;
-
-    // Create ContextResult with cursor, context and violations
-    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(cursor);
-    ctxResult.setContext(ctxFeatures);
-    ctxResult.setViolations(violations);
-    return ctxResult;
-  }
+  private HandlerUtil() {}
 
   public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
       final @NotNull List<XyzFeature> features,
@@ -89,39 +61,49 @@ public class HandlerUtil {
     return ctxResult;
   }
 
-  public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromResult(
-      final @NotNull String collectionId, final @NotNull Result result) {
-    if (result instanceof ErrorResult er) throw new XyzErrorException(er.reason, er.message);
-
-    if (!(result instanceof ContextResult<?, ?, ?, ?> ctxResult))
-      throw new XyzErrorException(
-          XyzError.NOT_IMPLEMENTED,
-          "Unsupported result type " + result.getClass().getSimpleName());
+  public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromFeatureList(
+      final @NotNull String collectionId,
+      final @NotNull List<?> features,
+      final @Nullable List<?> context,
+      final @Nullable List<?> violations) {
     // generate new ContextWriteFeatures request
     final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures(collectionId);
 
-    // add features to write request
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = ctxResult.cursor(XyzFeatureCodecFactory.get())) {
-      while (cursor.hasNext()) {
-        if (!cursor.next()) {
-          throw new XyzErrorException(
-              XyzError.EXCEPTION, "Unexpected failure while iterating through result");
-        }
-        final XyzFeature feature = cursor.getFeature();
-        if (feature == null)
-          throw new XyzErrorException(
-              XyzError.EXCEPTION, "Unexpected empty feature while creating endorsement request");
-        cwf.add(EWriteOp.PUT, feature);
-      }
-    } catch (NoCursor e) {
-      throw new RuntimeException(e);
+    // Add features in the request
+    for (final Object obj : features) {
+      final XyzFeature feature = checkInstanceOf(obj, XyzFeature.class, "Unsupported feature type");
+      cwf.add(EWriteOp.PUT, feature);
+    }
+    // add context to write request
+    cwf.setContext(getXyzContextFromGenericList(context));
+    // add violations to write request
+    cwf.setViolations(getXyzViolationsFromGenericList(violations));
+    return cwf;
+  }
+
+  public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromCodecList(
+      final @NotNull String collectionId,
+      final @NotNull List<?> inputCodecs,
+      final @Nullable List<?> context,
+      final @Nullable List<?> violations) {
+    // generate new ContextWriteFeatures request
+    final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures(collectionId);
+
+    // Add features in the request
+    if (inputCodecs.isEmpty()) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "No features supplied");
+    for (final Object inputCodec : inputCodecs) {
+      final XyzFeatureCodec xyzCodec =
+          checkInstanceOf(inputCodec, XyzFeatureCodec.class, "Unsupported feature codec type");
+      final XyzFeature feature =
+          HandlerUtil.checkInstanceOf(xyzCodec.getFeature(), XyzFeature.class, "Unsupported feature type");
+      cwf.add(EWriteOp.PUT, feature);
     }
 
     // add context to write request
-    cwf.setContext(getXyzContextFromGenericList(ctxResult.getContext()));
+    cwf.setContext(getXyzContextFromGenericList(context));
 
     // add violations to write request
-    cwf.setViolations(getXyzViolationsFromGenericList(ctxResult.getViolations()));
+    cwf.setViolations(getXyzViolationsFromGenericList(violations));
 
     return cwf;
   }
@@ -129,10 +111,7 @@ public class HandlerUtil {
   public static @NotNull List<XyzFeature> getXyzFeaturesFromCodecList(final @NotNull List<?> codecs) {
     final List<XyzFeature> outputFeatures = new ArrayList<>();
     for (final Object obj : codecs) {
-      if (!(obj instanceof XyzFeatureCodec codec))
-        throw new XyzErrorException(
-            XyzError.NOT_IMPLEMENTED,
-            "Unsupported feature codec - " + obj.getClass().getSimpleName());
+      final XyzFeatureCodec codec = checkInstanceOf(obj, XyzFeatureCodec.class, "Unsupported feature codec");
       outputFeatures.add(codec.getFeature());
     }
     return outputFeatures;
@@ -142,10 +121,8 @@ public class HandlerUtil {
     List<XyzFeature> outputViolations = null;
     if (violations != null) {
       for (final Object obj : violations) {
-        if (!(obj instanceof XyzFeature violation))
-          throw new XyzErrorException(
-              XyzError.EXCEPTION,
-              "Unexpected violation type - " + obj.getClass().getSimpleName());
+        final XyzFeature violation = checkInstanceOf(
+            obj, XyzFeature.class, XyzError.EXCEPTION, "Unsupported violation feature type");
         if (outputViolations == null) outputViolations = new ArrayList<>();
         // Add violation to output list
         outputViolations.add(violation);
@@ -158,10 +135,8 @@ public class HandlerUtil {
     List<XyzFeature> outputCtx = null;
     if (contextList != null) {
       for (final Object obj : contextList) {
-        if (!(obj instanceof XyzFeature context))
-          throw new XyzErrorException(
-              XyzError.EXCEPTION,
-              "Unexpected context type - " + obj.getClass().getSimpleName());
+        final XyzFeature context =
+            checkInstanceOf(obj, XyzFeature.class, XyzError.EXCEPTION, "Unsupported context feature type");
         if (outputCtx == null) outputCtx = new ArrayList<>();
         // Add context to output list
         outputCtx.add(context);
@@ -181,6 +156,26 @@ public class HandlerUtil {
       }
     }
     return tags;
+  }
+
+  public static <T> @NotNull T checkInstanceOf(
+      final @Nullable Object input,
+      final @NotNull Class<T> returnType,
+      final @NotNull XyzError xyzError,
+      final @NotNull String errDescPrefix) {
+    if (input == null) {
+      throw new XyzErrorException(xyzError, errDescPrefix + " - object is null.");
+    }
+    if (returnType.isAssignableFrom(input.getClass())) {
+      return returnType.cast(input);
+    }
+    throw new XyzErrorException(
+        xyzError, errDescPrefix + " - " + input.getClass().getSimpleName());
+  }
+
+  public static <T> @NotNull T checkInstanceOf(
+      final @Nullable Object input, final @NotNull Class<T> returnType, final @NotNull String errDescPrefix) {
+    return checkInstanceOf(input, returnType, XyzError.NOT_IMPLEMENTED, errDescPrefix);
   }
 
   public static void setDeltaReviewState(final @NotNull XyzFeature feature, final @NotNull EReviewState reviewState) {

@@ -20,7 +20,6 @@ package com.here.naksha.lib.handlers.val;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -35,18 +34,14 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MockValDryRunHandler extends AbstractEventHandler {
+public class MockContextLoaderHandler extends AbstractEventHandler {
 
-  private static final Logger logger = LoggerFactory.getLogger(MockValDryRunHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(MockContextLoaderHandler.class);
   protected @NotNull EventHandler eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
   protected @NotNull EventHandlerProperties properties;
 
-  protected @NotNull MockValidationHandler validationHandler;
-  protected @NotNull EndorsementHandler endorsementHandler;
-  protected @NotNull EchoHandler echoHandler;
-
-  public MockValDryRunHandler(
+  public MockContextLoaderHandler(
       final @NotNull EventHandler eventHandler,
       final @NotNull INaksha hub,
       final @NotNull EventTarget<?> eventTarget) {
@@ -54,10 +49,6 @@ public class MockValDryRunHandler extends AbstractEventHandler {
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
     this.properties = JsonSerializable.convert(eventHandler.getProperties(), EventHandlerProperties.class);
-    // TODO : These handlers should be later added as part of full Validation & Endorsement pipeline
-    this.validationHandler = new MockValidationHandler(eventHandler, hub, eventTarget);
-    this.endorsementHandler = new EndorsementHandler(eventHandler, hub, eventTarget);
-    this.echoHandler = new EchoHandler(eventHandler, hub, eventTarget);
   }
 
   /**
@@ -68,43 +59,24 @@ public class MockValDryRunHandler extends AbstractEventHandler {
    */
   @Override
   public @NotNull Result processEvent(@NotNull IEvent event) {
-    final NakshaContext ctx = NakshaContext.currentContext();
-    final Request<?> origRequest = event.getRequest();
-    Request<?> handlerRequest = null;
-    Result handlerResult = null;
+    final Request<?> request = event.getRequest();
 
-    logger.info("Handler received request {}", origRequest.getClass().getSimpleName());
-
-    if (!(origRequest instanceof WriteFeatures<?, ?, ?> writeRequest))
-      throw new XyzErrorException(
-          XyzError.NOT_IMPLEMENTED,
-          "Unsupported request type for validation dry run - "
-              + origRequest.getClass().getSimpleName());
+    logger.info("Handler received request {}", request.getClass().getSimpleName());
 
     try {
-      // 1. Generate Validate request
-      handlerRequest = generateValidateRequest(writeRequest);
+      final WriteFeatures<?, ?, ?> writeRequest = HandlerUtil.checkInstanceOf(
+          request, WriteFeatures.class, "Unsupported request type for validation");
 
-      // 2. Perform mock validation
-      handlerResult = validationHandler.validateHandler(handlerRequest);
-      handlerRequest =
-          HandlerUtil.createContextWriteRequestFromResult(writeRequest.getCollectionId(), handlerResult);
-
-      // 3. Mark features as UNPUBLISHED (if no violations) or AUTO_REVIEW_DEFERRED (in case of violations)
-      handlerResult = endorsementHandler.endorsementHandler(handlerRequest);
-      handlerRequest =
-          HandlerUtil.createContextWriteRequestFromResult(writeRequest.getCollectionId(), handlerResult);
-
-      // 4. Return ContextResultSet with features and violations
-      handlerResult = echoHandler.echoHandler(handlerRequest);
-      return handlerResult;
+      // Generate Validate request
+      final Request<?> forwardRequest = generateContextRequest(writeRequest);
+      return event.sendUpstream(forwardRequest);
     } catch (XyzErrorException erx) {
       logger.warn("Error processing validation request. ", erx);
       return new ErrorResult(erx.xyzError, erx.getMessage());
     }
   }
 
-  protected @NotNull Request<?> generateValidateRequest(final @NotNull WriteFeatures<?, ?, ?> wf) {
+  protected @NotNull Request<?> generateContextRequest(final @NotNull WriteFeatures<?, ?, ?> wf) {
     // prepare ContextWriteFeatures request
     final ContextWriteXyzFeatures contextWriteFeatures = new ContextWriteXyzFeatures(wf.getCollectionId());
     // Add features in the request
@@ -115,15 +87,12 @@ public class MockValDryRunHandler extends AbstractEventHandler {
         throw new XyzErrorException(
             XyzError.NOT_IMPLEMENTED, "Unsupported operation type for validation - " + codec.getOp());
       }
-      if (!(codec.getFeature() instanceof XyzFeature feature)) {
-        throw new XyzErrorException(
-            XyzError.NOT_IMPLEMENTED,
-            "Unsupported feature type for validation - "
-                + codec.getFeature().getClass().getSimpleName());
-      }
+      final XyzFeature feature = HandlerUtil.checkInstanceOf(
+          codec.getFeature(), XyzFeature.class, "Unsupported feature type for validation");
       contextWriteFeatures.add(EWriteOp.get(codec.getOp()), feature);
     }
-    // TODO : Add context (features) in request
+    // TODO : Load and populate context (features) in request
+
     return contextWriteFeatures;
   }
 }

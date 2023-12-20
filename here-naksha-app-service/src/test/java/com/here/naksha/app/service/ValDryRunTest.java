@@ -52,7 +52,10 @@ public class ValDryRunTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    createHandler(nakshaClient, "ValDryRun/setup");
+    createHandler(nakshaClient, "ValDryRun/setup", "create_context_loader_handler.json");
+    createHandler(nakshaClient, "ValDryRun/setup", "create_validation_handler.json");
+    createHandler(nakshaClient, "ValDryRun/setup", "create_endorsement_handler.json");
+    createHandler(nakshaClient, "ValDryRun/setup", "create_echo_handler.json");
     createSpace(nakshaClient, "ValDryRun/setup");
   }
 
@@ -63,10 +66,6 @@ public class ValDryRunTest extends ApiTest {
     final List<String> updatedIds = collectionResponse.getUpdated();
     final List<XyzFeature> features = collectionResponse.getFeatures();
     final List<XyzFeature> violations = collectionResponse.getViolations();
-    JSONAssert.assertEquals(
-        "{updated:[" + collectionRequest.getFeatures().size() + "]}",
-        resBody,
-        new ArraySizeComparator(JSONCompareMode.LENIENT));
     assertEquals(
         updatedIds.size(), features.size(), "Mismatch between updated and features list size in the response");
     final String newFeatureId = features.get(2).getId();
