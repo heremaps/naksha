@@ -150,10 +150,10 @@ class StorageApiTest extends ApiTest {
     assertEquals(200, response.statusCode(), "ResCode mismatch");
 
     // 2. Perform REST API call
-    response = getNakshaClient().get("hub/storages/storage-for-hiding-password-test", streamId);
+    response = getNakshaClient().get("hub/storages/storage-for-hiding-password-test-0022", streamId);
 
     // 3. Perform assertions
-    assertThat(response).hasStatus(200).hasStreamIdHeader(HDR_STREAM_ID);
+    assertThat(response).hasStatus(200).hasStreamIdHeader(streamId);
     final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
     assertFalse(jsonNode.get("properties").get("master").has("password"));
     for (JsonNode node : jsonNode.get("properties").get("reader")) {
@@ -198,7 +198,7 @@ class StorageApiTest extends ApiTest {
     response = getNakshaClient().get("hub/storages", streamId);
 
     // 3. Perform assertions
-    assertThat(response).hasStatus(200).hasStreamIdHeader(HDR_STREAM_ID);
+    assertThat(response).hasStatus(200).hasStreamIdHeader(streamId);
     final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
     for (JsonNode storage : jsonNode.get("features")) {
       assertFalse(storage.get("properties").get("master").has("password"));
