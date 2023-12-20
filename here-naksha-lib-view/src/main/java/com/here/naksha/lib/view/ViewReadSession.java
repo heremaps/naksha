@@ -19,6 +19,7 @@
 package com.here.naksha.lib.view;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
@@ -37,8 +38,8 @@ import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.ISession;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,33 +88,82 @@ public class ViewReadSession implements IReadSession {
       @NotNull MergeOperation<FEATURE, CODEC> mergeOperation,
       @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver) {
     // TODO make it parallel
+    /*
+    Call every layer/storage and get the first result.
+    After that we should have multiLayerRows like that:
+    [
+    <featureId_1, [Layer0_Feature1, Layer1_Feature1, ... LayerN_Feature1]>,
+    <featureId_2, [Layer0_Feature2, Layer1_Feature2, ... LayerN_Feature2]>,
+    ...
+    ]
+     */
     Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows = subSessions.entrySet().stream()
         .flatMap(entry -> executeSingle(entry.getKey(), entry.getValue(), codecFactory, request))
         .collect(groupingBy(viewRow -> viewRow.getRow().getId()));
 
-    if (!missingIdResolver.skip()) {
-      Map<ViewLayer, List<String>> idsToFetch = multiLayerRows.values().stream()
-          .map(featuresFromLayers -> missingIdResolver.idsToSearch(featuresFromLayers))
-          .collect(groupingBy(Pair::getKey, mapping(Pair::getValue, toList())));
-      // TODO make it parallel
-      Map<String, List<ViewLayerRow<FEATURE, CODEC>>> fetchedById = idsToFetch.entrySet().stream()
-          .map(entry -> Pair.of(
-              entry.getKey(),
-              RequestHelper.readFeaturesByIdsRequest(
-                  entry.getKey().getCollectionId(), entry.getValue())))
-          .flatMap(rowReq -> executeSingle(
-              rowReq.getLeft(), subSessions.get(rowReq.getLeft()), codecFactory, rowReq.getRight()))
-          .collect(groupingBy(viewRow -> viewRow.getRow().getId()));
+    /*
+    If one of the features is missing on one or few layers, we use getMissingFeatures and missingIdResolver to try to fetch it again by id.
+    I.e. when we made a request in the first step to Layer0, Layer1 and Layer2, but we got feature only from Layer0 and Layer2:
+    [
+    <featureId_1, [Layer0_Feature1, Layer2_Feature1]>
+    ]
+    then missingIdResolver may decide to create another request to Layer1 querying by featureId_1.
+    So the result of getMissingFeatures(..) would look like this:
+    [
+    <featureId_1, [Layer2_Feature1]>
+    ]
+    or it might be empty if feature is not there
+     */
+    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> fetchedById =
+        getMissingFeatures(multiLayerRows, missingIdResolver, codecFactory);
 
-      fetchedById.forEach((key, value) -> multiLayerRows.get(key).addAll(value));
-    }
+    /*
+    putting all together:
+    [ <featureId_1, [Layer0_Feature1, Layer2_Feature1]> ]
+    and
+    [ <featureId_1, [Layer2_Feature1]> ]
+    to get:
+    [ <featureId_1, [Layer0_Feature1, Layer2_Feature1, Layer2_Feature1]> ]
+     */
+    fetchedById.forEach((key, value) -> multiLayerRows.get(key).addAll(value));
 
+    /*
+    Merging: [ <featureId_1, [Layer0_Feature1, Layer2_Feature1, Layer2_Feature1]> ]
+    into final result:  [ Feature1 ]
+     */
     List<CODEC> mergedRows =
         multiLayerRows.values().stream().map(mergeOperation::apply).collect(toList());
 
     HeapCacheCursor<FEATURE, CODEC> heapCacheCursor = new HeapCacheCursor<>(codecFactory, mergedRows, null);
 
     return new ViewSuccessResult(heapCacheCursor, null);
+  }
+
+  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
+      Map<String, List<ViewLayerRow<FEATURE, CODEC>>> getMissingFeatures(
+          @NotNull Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows,
+          @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver,
+          @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
+    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> result = new HashMap<>();
+    if (!missingIdResolver.skip()) {
+      // Prepare map of <Layer_x, [FeatureId_x, ..., FeatureId_z]> features and layers you want to search by id.
+      // to query only once each layer
+      Map<ViewLayer, List<String>> idsToFetch = multiLayerRows.values().stream()
+          .map(missingIdResolver::idsToSearch)
+          .collect(groupingBy(Pair::getKey, mapping(Pair::getValue, toList())));
+
+      // Prepare request by id an query given layers.
+      // TODO make it parallel
+      result = idsToFetch.entrySet().stream()
+          .flatMap(entry -> {
+            ViewLayer layerToQuery = entry.getKey();
+            ReadFeatures requestByIds =
+                readFeaturesByIdsRequest(layerToQuery.getCollectionId(), entry.getValue());
+            return executeSingle(layerToQuery, subSessions.get(layerToQuery), codecFactory, requestByIds);
+          })
+          .collect(groupingBy(viewRow -> viewRow.getRow().getId()));
+    }
+    return result;
   }
 
   private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Stream<ViewLayerRow<FEATURE, CODEC>> executeSingle(
