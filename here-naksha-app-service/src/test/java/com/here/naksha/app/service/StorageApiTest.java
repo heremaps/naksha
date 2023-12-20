@@ -149,6 +149,11 @@ class StorageApiTest extends ApiTest {
     final String streamId = UUID.randomUUID().toString();
     HttpResponse<String> response = getNakshaClient().post("hub/storages", bodyJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch");
+    final JsonNode postResponse = new ObjectMapper().readTree(response.body());
+    assertFalse(postResponse.get("properties").get("master").has("password"));
+    for (JsonNode node : postResponse.get("properties").get("reader")) {
+      assertFalse(node.has("password"));
+    }
 
     // 2. Perform REST API call
     response = getNakshaClient().get("hub/storages/storage-for-hiding-password-test-0022", streamId);
