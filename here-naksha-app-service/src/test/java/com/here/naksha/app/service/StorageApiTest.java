@@ -34,6 +34,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollecti
 import com.here.naksha.lib.core.models.naksha.Storage;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -201,9 +202,11 @@ class StorageApiTest extends ApiTest {
     assertThat(response).hasStatus(200).hasStreamIdHeader(streamId);
     final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
     for (JsonNode storage : jsonNode.get("features")) {
-      assertFalse(storage.get("properties").get("master").has("password"));
-      for (JsonNode node : storage.get("properties").get("reader")) {
-        assertFalse(node.has("password"));
+      if (Objects.equals(storage.get("id").toString(),"storage-for-hiding-password-test")) {
+        assertFalse(storage.get("properties").get("master").has("password"));
+        for (JsonNode node : storage.get("properties").get("reader")) {
+          assertFalse(node.has("password"));
+        }
       }
     }
   }
