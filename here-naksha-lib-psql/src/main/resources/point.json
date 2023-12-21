@@ -1,0 +1,23 @@
+{
+  "type": "Feature",
+  "properties": {
+    "@ns:com:here:xyz": {
+      "authorTime": 0,
+      "author_ts": 0,
+      "extend": 0,
+      "tags": [
+        "judgementally",
+        "sternly",
+        "@:firstName:Peter",
+        "@:lastName:Quinn",
+        "@:age:48"
+      ],
+      "txn": 0,
+      "txn_next": 0
+    },
+    "firstName": "Peter",
+    "name": "Peter Quinn",
+    "lastName": "Quinn",
+    "age": 48
+  }
+}

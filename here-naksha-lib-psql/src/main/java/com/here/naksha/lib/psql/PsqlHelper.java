@@ -18,15 +18,38 @@
  */
 package com.here.naksha.lib.psql;
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+
+import com.here.naksha.lib.core.NakshaVersion;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
+import org.postgresql.jdbc.PgConnection;
 
 /**
  * A collection of helper functions.
  */
 public class PsqlHelper {
+
+  /**
+   * A method to grab the underlying postgres connection of a session. This method should only be used for debugging purpose, what is the
+   * reason for being deprecated.
+   *
+   * @param session The {@link PsqlSession}.
+   * @return the {@link PgConnection} used by this session.
+   * @throws RuntimeException If any error occurred.
+   */
+  @Deprecated
+  @AvailableSince(NakshaVersion.v2_0_11)
+  public static @NotNull PgConnection getPgConnection(@NotNull PsqlSession session) {
+    try {
+      return session.session().psqlConnection.postgresConnection.get();
+    } catch (Exception e) {
+      throw unchecked(e);
+    }
+  }
 
   private static @NotNull MessageDigest newMd5() {
     try {

@@ -30,12 +30,9 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.Json;
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.zip.GZIPOutputStream;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -396,34 +393,51 @@ public class PsqlFeatureGenerator {
   private static final AtomicReference<String> topologyJsonRef = new AtomicReference<>();
 
   /**
-   * Creates a new random point feature with a couple (0 to 4) of arbitrary random tags from the {@link #adverbs} list, a name with
-   * firstName, lastName and optional middleName as well as an age. To allow searching for names, we add tags with the first, middle and
-   * last names as well as the age.
+   * Returns a pre-defined topology feature without geometry and id.
    *
-   * @return A new random feature.
+   * @return A pre-defined topology feature.
    */
   public @NotNull String topologyTemplate() {
-    String topologyJson = topologyJsonRef.get();
-    if (topologyJson == null) {
-      topologyJson = IoHelp.readResource("topology.json");
-      try (Json jp = Json.get()) {
+    String json = topologyJsonRef.get();
+    if (json == null) {
+      json = IoHelp.readResource("topology.json");
+      try (final Json jp = Json.get()) {
         // We deserialize and re-serialize to get rid of white-spaces (reduce the size).
-        final XyzFeature xyzFeature = jp.reader().forType(XyzFeature.class).readValue(topologyJson);
-        topologyJson = jp.writer().writeValueAsString(xyzFeature);
-//        System.out.println("Original length: " + topologyJson.getBytes(StandardCharsets.UTF_8).length);
-//        final ByteArrayOutputStream baOut = new ByteArrayOutputStream();
-//        try (final GZIPOutputStream gzipOut = new GZIPOutputStream(baOut)) {
-//          gzipOut.write(topologyJson.getBytes(StandardCharsets.UTF_8));
-//        }
-//        byte[] bytes = baOut.toByteArray();
-//        System.out.println("Compressed length: " + bytes.length);
+        final XyzFeature xyzFeature =
+            jp.reader().forType(XyzFeature.class).readValue(json);
+        json = jp.writer().writeValueAsString(xyzFeature);
       } catch (Exception ignore) {
         // Compaction failed, ignore it.
       } finally {
-        topologyJsonRef.set(topologyJson);
+        topologyJsonRef.set(json);
       }
     }
-    return topologyJson;
+    return json;
+  }
+
+  private static final AtomicReference<String> pointJsonRef = new AtomicReference<>();
+
+  /**
+   * Returns a pre-defined point feature without geometry and id.
+   *
+   * @return A pre-defined point feature.
+   */
+  public @NotNull String pointTemplate() {
+    String json = pointJsonRef.get();
+    if (json == null) {
+      json = IoHelp.readResource("point.json");
+      try (final Json jp = Json.get()) {
+        // We deserialize and re-serialize to get rid of white-spaces (reduce the size).
+        final XyzFeature xyzFeature =
+            jp.reader().forType(XyzFeature.class).readValue(json);
+        json = jp.writer().writeValueAsString(xyzFeature);
+      } catch (Exception ignore) {
+        // Compaction failed, ignore it.
+      } finally {
+        pointJsonRef.set(json);
+      }
+    }
+    return json;
   }
 
   public XyzGeometry newRandomPoint() {
@@ -501,7 +515,7 @@ public class PsqlFeatureGenerator {
    * firstName, lastName and optional middleName as well as an age. To allow searching for names, we add tags with the first, middle and
    * last names as well as the age.
    *
-   * @param template          The JSON template.
+   * @param template          The JSON template without id and geometry.
    * @param idPrefix          The prefix for the ID, if any.
    * @param geometryGenerator The function that generates the geometry, for example {@link #newRandomPoint()} or
    *                          {@link #newRandomLineString()}.
@@ -510,10 +524,17 @@ public class PsqlFeatureGenerator {
   public @NotNull XyzFeature newRandomFeature(
       @NotNull String template, @Nullable String idPrefix, @NotNull F0<XyzGeometry> geometryGenerator) {
     try (final Json jp = Json.get()) {
-
+      sb.setLength(0);
+      sb.append(template);
+      sb.setLength(sb.length() - 1);
+      sb.append(",\"id\":\"");
+      if (idPrefix != null) {
+        sb.append(idPrefix);
+      }
+      sb.append(RandomStringUtils.randomAlphanumeric(20));
+      sb.append("\"}");
       final XyzFeature feature = jp.reader().forType(XyzFeature.class).readValue(sb.toString());
       feature.setGeometry(geometryGenerator.call());
-
       final String firstName = firstNames[rand.nextInt(0, firstNames.length)];
       final String lastName = lastNames[rand.nextInt(0, lastNames.length)];
       final String name;

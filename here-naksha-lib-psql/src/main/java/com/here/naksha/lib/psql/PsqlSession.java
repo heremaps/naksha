@@ -21,15 +21,18 @@ package com.here.naksha.lib.psql;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
 import com.here.naksha.lib.core.NakshaContext;
+import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.storage.IReadSession;
 import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
+import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * The base proxy for the internal PostgresQL session.
  */
-abstract class PsqlSession implements IReadSession, AutoCloseable {
+@AvailableSince(NakshaVersion.v2_0_11)
+public abstract class PsqlSession implements IReadSession, AutoCloseable {
 
   PsqlSession(@NotNull PostgresStorage storage, @NotNull NakshaContext context, @NotNull PsqlConnection connection) {
     this.session = new PostgresSession(this, storage, context, connection);
