@@ -1,0 +1,46 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "id": "tc_1101_feature_1",
+      "type": "Feature",
+      "properties": {
+        "speedLimit": "60"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.68872,
+          50.0561,
+          292.94377758
+        ]
+      }
+    },
+    {
+      "id": "tc_1101_feature_2",
+      "type": "Feature",
+      "properties": {
+        "speedLimit": "80"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          9.68872,
+          51.0561,
+          293.94377758
+        ]
+      }
+    },
+    {
+      "id": "tc_1101_feature_with_wrong_geometry",
+      "type": "Feature",
+      "properties": {
+        "speedLimit": "90"
+      },
+      "geometry": {
+        "type": "Triangle",
+        "coordinates": [ "one", "two", "three" ]
+      }
+    }
+  ]
+}
