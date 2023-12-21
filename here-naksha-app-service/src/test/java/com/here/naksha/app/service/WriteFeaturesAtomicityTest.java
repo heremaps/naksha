@@ -23,13 +23,10 @@ import static com.here.naksha.app.common.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 
 import com.here.naksha.app.common.ApiTest;
-import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import com.here.naksha.app.common.ResponseAssertions;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
@@ -60,14 +57,14 @@ class WriteFeaturesAtomicityTest extends ApiTest {
     HttpResponse<String> saveResp = nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeaturesJson, streamId);
 
     // Then: response indicates failure
-    ResponseAssertions.assertThat(saveResp)
+    assertThat(saveResp)
         .hasStatus(500)
         .hasStreamIdHeader(streamId);
 
     // And: none of the features got saved
     String idsQuery = "?id=" + String.join("&id=", validFeatureIds);
     HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + SPACE_ID + "/features" + idsQuery, streamId);
-    ResponseAssertions.assertThat(getResp)
+    assertThat(getResp)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(loadFileOrFail("WriteFeaturesAtomicity/TC1101_partialCreateShouldFail/empty_response.json"));
@@ -79,7 +76,8 @@ class WriteFeaturesAtomicityTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
     List<String> featureIds = List.of("tc_1102_feature_1", "tc_1102_feature_2");
     String createFeatureJson = loadFileOrFail("WriteFeaturesAtomicity/TC1102_partialUpdateShouldFail/create_features.json");
-    nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeatureJson, streamId);
+    HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeatureJson, streamId);
+    assertThat(createResp).hasStatus(200);
 
     // When: updating these features and one of the updates is invalid (missing points coordinates)
     HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + SPACE_ID + "/features",
@@ -87,14 +85,14 @@ class WriteFeaturesAtomicityTest extends ApiTest {
         streamId);
 
     // Then: response indicates failure
-    ResponseAssertions.assertThat(updateResp)
+    assertThat(updateResp)
         .hasStatus(500)
         .hasStreamIdHeader(streamId);
 
     // And: none of the features got updated - they are equal to initial (creation) state
     String idsQuery = "?id=" + String.join("&id=", featureIds);
     HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + SPACE_ID + "/features" + idsQuery, streamId);
-    ResponseAssertions.assertThat(getResp)
+    assertThat(getResp)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(createFeatureJson);
@@ -106,24 +104,27 @@ class WriteFeaturesAtomicityTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
     List<String> createdFeatureIds = List.of("tc_1103_feature_1", "tc_1103_feature_2");
     String createFeatureJson = loadFileOrFail("WriteFeaturesAtomicity/TC1103_partialDeleteShouldSucceed/create_features.json");
-    nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeatureJson, streamId);
+    HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeatureJson, streamId);
+    assertThat(createResp).hasStatus(200);
 
     // When: deleting these features, including non-existing ones
     List<String> idsToDelete = List.of("tc_1103_feature_1", "tc_1103_feature_2", "non-existing-feature");
     String deleteIdsQuery = "?id=" + String.join("&id=", idsToDelete);
     HttpResponse<String> deleteResp = nakshaClient.delete("hub/spaces/" + SPACE_ID + "/features" + deleteIdsQuery, streamId);
+    assertThat(deleteResp).hasStatus(200);
 
     // Then: response indicates success
-    ResponseAssertions.assertThat(deleteResp)
+    assertThat(deleteResp)
         .hasStatus(200)
-        .hasStreamIdHeader(streamId);
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(loadFileOrFail("WriteFeaturesAtomicity/TC1103_partialDeleteShouldSucceed/delete_response.json"));
 
     // And: existing features got deleted
     String getIdsQuery = "?id=" + String.join("&id=", createdFeatureIds);
     HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + SPACE_ID + "/features" + getIdsQuery, streamId);
-    ResponseAssertions.assertThat(getResp)
+    assertThat(getResp)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(loadFileOrFail("WriteFeaturesAtomicity/TC1103_partialDeleteShouldSucceed/empty_response.json"));
+        .hasJsonBody(loadFileOrFail("WriteFeaturesAtomicity/TC1103_partialDeleteShouldSucceed/empty_get_response.json"));
   }
 }
