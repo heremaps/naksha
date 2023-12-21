@@ -21,6 +21,8 @@ package com.here.naksha.lib.view;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Defines the strategy for missing feature in one of the layers. <br>
@@ -59,5 +61,6 @@ public interface MissingIdResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, 
    * @param multipleResults
    * @return
    */
-  Pair<ViewLayer, String> idsToSearch(List<ViewLayerRow<FEATURE, CODEC>> multipleResults);
+  @Nullable
+  Pair<ViewLayer, String> idsToSearch(@NotNull List<ViewLayerRow<FEATURE, CODEC>> multipleResults);
 }

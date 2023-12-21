@@ -52,4 +52,8 @@ public class ViewCollection {
   public int priorityOf(ViewLayer layer) {
     return layers.indexOf(layer);
   }
+
+  public ViewLayer getTopPriorityLayer() {
+    return layers.get(0);
+  }
 }

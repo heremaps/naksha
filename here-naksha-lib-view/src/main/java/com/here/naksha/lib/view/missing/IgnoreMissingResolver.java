@@ -16,34 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.view;
+package com.here.naksha.lib.view.missing;
 
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import com.here.naksha.lib.view.MissingIdResolver;
+import com.here.naksha.lib.view.ViewLayer;
+import com.here.naksha.lib.view.ViewLayerRow;
+import java.util.List;
+import org.apache.commons.lang3.tuple.Pair;
 
-public class ViewLayerRow<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
+public class IgnoreMissingResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
+    implements MissingIdResolver<FEATURE, CODEC> {
 
-  private CODEC row;
-
-  // priority 0 - is highest
-  private int storagePriority;
-
-  private ViewLayer viewLayerRef;
-
-  public ViewLayerRow(CODEC row, int storagePriority, ViewLayer viewLayerRef) {
-    this.row = row;
-    this.storagePriority = storagePriority;
-    this.viewLayerRef = viewLayerRef;
+  @Override
+  public boolean skip() {
+    return true;
   }
 
-  public int getStoragePriority() {
-    return storagePriority;
-  }
-
-  public ViewLayer getViewLayerRef() {
-    return viewLayerRef;
-  }
-
-  public CODEC getRow() {
-    return row;
+  @Override
+  public Pair<ViewLayer, String> idsToSearch(List<ViewLayerRow<FEATURE, CODEC>> multipleResults) {
+    return null;
   }
 }
