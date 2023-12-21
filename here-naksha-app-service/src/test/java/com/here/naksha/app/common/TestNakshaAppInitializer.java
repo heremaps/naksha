@@ -66,6 +66,6 @@ public class TestNakshaAppInitializer {
   }
 
   public static TestNakshaAppInitializer localPsqlBasedNakshaApp() {
-    return new TestNakshaAppInitializer(dataDbConfig.url());
+    return new TestNakshaAppInitializer(adminDbConfig.url());
   }
 }
