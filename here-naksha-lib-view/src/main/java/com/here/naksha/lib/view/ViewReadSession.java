@@ -36,13 +36,17 @@ import com.here.naksha.lib.core.models.storage.Notification;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.ISession;
+import com.here.naksha.lib.view.merge.MergeByStoragePriority;
+import com.here.naksha.lib.view.missing.ObligatoryLayerResolver;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.tuple.Pair;
@@ -53,7 +57,7 @@ import org.jetbrains.annotations.Nullable;
  * {@link  ViewReadSession} operates on {@link View}, it queries simultaneously all the storages.
  * Then it tries to feeth missing features {@link MissingIdResolver} if needed.
  * At the end {@link MergeOperation} is executed and single result returned.
- * You can provide your own merge operation. The default is "take result from storage on the top".
+ * You can provide your own merge operation. The default is "take result from storage on the top". <br>
  *
  * <strong>Important:</strong> {@link ViewReadSession} will always return mutable cursor, this is the only way we can
  * merge results from different storages and fetch missing by ids. Consider this example:
@@ -62,9 +66,8 @@ import org.jetbrains.annotations.Nullable;
  * Result from Storage C: [F_3, F_5]
  * In this situation using Forward cursor would lead to N+1 issue, as after reading 1st row from each result we'd have
  * to fetch missing F_1 from B and C.
- * To be able to create query that fetches multiple missing features we have to know them first (by caching ahead of time)
- * <p>
- * TODO: Implementation when one of the databases is not returning a feature (when querying by bbox).
+ * To be able to create query that fetches multiple missing features we have to know them first (by caching ahead of time) <br>
+ *
  * It might happen that feature has been moved (it's geometry changed). In such case after getting results for bbox
  * query we have to query again for all features (by id) that was missing in a least one storage  result.
  */
@@ -82,7 +85,16 @@ public class ViewReadSession implements IReadSession {
     }
   }
 
-  <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result execute(
+  @Override
+  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
+    return execute(
+        (ViewReadFeaturesRequest) readRequest,
+        XyzFeatureCodecFactory.get(),
+        new MergeByStoragePriority<>(),
+        new ObligatoryLayerResolver<>(viewRef.getViewCollection().getTopPriorityLayer()));
+  }
+
+  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result execute(
       @NotNull ViewReadFeaturesRequest request,
       FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       @NotNull MergeOperation<FEATURE, CODEC> mergeOperation,
@@ -150,6 +162,7 @@ public class ViewReadSession implements IReadSession {
       // to query only once each layer
       Map<ViewLayer, List<String>> idsToFetch = multiLayerRows.values().stream()
           .map(missingIdResolver::idsToSearch)
+          .filter(Objects::nonNull)
           .collect(groupingBy(Pair::getKey, mapping(Pair::getValue, toList())));
 
       // Prepare request by id an query given layers.
@@ -192,7 +205,10 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public @NotNull NakshaContext getNakshaContext() {
-    return null;
+    return subSessions.values().stream()
+        .findAny()
+        .map(IReadSession::getNakshaContext)
+        .orElseThrow();
   }
 
   @Override
@@ -232,12 +248,6 @@ public class ViewReadSession implements IReadSession {
   @Override
   public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {
     subSessions.values().forEach(session -> session.setLockTimeout(timeout, timeUnit));
-  }
-
-  @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
-    // TODO run with default merger and fetcher
-    return null;
   }
 
   @Override

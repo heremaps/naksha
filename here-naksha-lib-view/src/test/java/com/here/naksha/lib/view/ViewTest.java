@@ -36,6 +36,9 @@ import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IStorage;
 import java.util.Comparator;
 import java.util.List;
+
+import com.here.naksha.lib.view.merge.MergeByStoragePriority;
+import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 
@@ -61,8 +64,8 @@ public class ViewTest {
 
     View view = new View(viewCollection);
 
-    MergeOperation<XyzFeature, XyzFeatureCodec> customMergeOperation = new CustomMergeOperation();
-    MissingIdResolver<XyzFeature, XyzFeatureCodec> skipFetchingResolver = new SkipFetchingMissing();
+    MergeOperation<XyzFeature, XyzFeatureCodec> customMergeOperation = new MergeByStoragePriority<>();
+    MissingIdResolver<XyzFeature, XyzFeatureCodec> skipFetchingResolver = new IgnoreMissingResolver<>();
 
     // when
     ViewReadSession readSession = view.newReadSession(nakshaContext, false);
@@ -101,30 +104,6 @@ public class ViewTest {
       cursor.next();
     } finally {
       writeSession.commit(true);
-    }
-  }
-
-  static class SkipFetchingMissing implements MissingIdResolver<XyzFeature, XyzFeatureCodec> {
-
-    @Override
-    public boolean skip() {
-      return true;
-    }
-
-    @Override
-    public Pair<ViewLayer, String> idsToSearch(List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> multipleResults) {
-      return null;
-    }
-  }
-
-  static class CustomMergeOperation implements MergeOperation<XyzFeature, XyzFeatureCodec> {
-
-    @Override
-    public XyzFeatureCodec apply(List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> sameFeatureFromEachStorage) {
-      return sameFeatureFromEachStorage.stream()
-          .min(Comparator.comparing(ViewLayerRow::getStoragePriority))
-          .map(ViewLayerRow::getRow)
-          .get();
     }
   }
 }

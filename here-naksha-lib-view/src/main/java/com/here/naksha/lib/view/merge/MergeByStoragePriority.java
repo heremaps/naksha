@@ -16,34 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.view;
+package com.here.naksha.lib.view.merge;
 
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import com.here.naksha.lib.view.MergeOperation;
+import com.here.naksha.lib.view.ViewLayerRow;
+import java.util.Comparator;
+import java.util.List;
+import org.jetbrains.annotations.NotNull;
 
-public class ViewLayerRow<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
+public class MergeByStoragePriority<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
+    implements MergeOperation<FEATURE, CODEC> {
 
-  private CODEC row;
-
-  // priority 0 - is highest
-  private int storagePriority;
-
-  private ViewLayer viewLayerRef;
-
-  public ViewLayerRow(CODEC row, int storagePriority, ViewLayer viewLayerRef) {
-    this.row = row;
-    this.storagePriority = storagePriority;
-    this.viewLayerRef = viewLayerRef;
-  }
-
-  public int getStoragePriority() {
-    return storagePriority;
-  }
-
-  public ViewLayer getViewLayerRef() {
-    return viewLayerRef;
-  }
-
-  public CODEC getRow() {
-    return row;
+  @Override
+  public CODEC apply(@NotNull List<ViewLayerRow<FEATURE, CODEC>> sameFeatureFromEachStorage) {
+    return sameFeatureFromEachStorage.stream()
+        .min(Comparator.comparing(ViewLayerRow::getStoragePriority))
+        .map(ViewLayerRow::getRow)
+        .get();
   }
 }

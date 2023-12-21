@@ -34,7 +34,7 @@ public interface MergeOperation<FEATURE, CODEC extends FeatureCodec<FEATURE, COD
    * It's up to implementation how feature will be reduced to 1. It might be a feature from one specific layer
    * or merged feature from few.
    *
-   * @param multipleResults
+   * @param multipleResults - has to have at least one element
    * @return
    */
   // TODO should we know from which storage result comes from? If yes then we should return SingleStorageRow instead.

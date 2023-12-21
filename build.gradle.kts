@@ -358,6 +358,8 @@ project(":here-naksha-lib-view") {
 
         implementation(commons_lang3)
         testImplementation(mockito)
+        testImplementation(project(":here-naksha-lib-psql"))
+        testImplementation(vividsolutions_jts_core)
     }
     setOverallCoverage(0.0) // only increasing allowed!
 }
