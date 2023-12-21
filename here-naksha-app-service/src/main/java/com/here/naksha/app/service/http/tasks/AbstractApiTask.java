@@ -35,13 +35,11 @@ import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import io.vertx.ext.web.RoutingContext;
 import java.util.*;
 import org.jetbrains.annotations.NotNull;
@@ -58,6 +56,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   private static final Logger logger = LoggerFactory.getLogger(AbstractApiTask.class);
   protected final @NotNull RoutingContext routingContext;
   protected final @NotNull NakshaHttpVerticle verticle;
+
+  private static final String JSON_KEY_PASSWORD = "password";
 
   /**
    * Creates a new task.
@@ -126,7 +126,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
                   + result.getXyzFeatureCursor().getId());
         }
         if (Objects.equals(type, Storage.class)) {
-          removePasswordFromFeature(feature);
+          removePasswordFromProps(feature.getProperties());
         }
         final List<R> featureList = new ArrayList<>();
         featureList.add(feature);
@@ -159,7 +159,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         List<R> features = readFeaturesFromResult(rdResult, type, maxLimit);
         if (Objects.equals(type, Storage.class)) {
           for (R feature : features) {
-            removePasswordFromFeature(feature);
+            removePasswordFromProps(feature.getProperties());
           }
         }
         return verticle.sendXyzResponse(
@@ -197,13 +197,13 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         }
         if (Objects.equals(type, Storage.class)) {
           for (R feature : insertedFeatures) {
-            removePasswordFromFeature(feature);
+            removePasswordFromProps(feature.getProperties());
           }
           for (R feature : updatedFeatures) {
-            removePasswordFromFeature(feature);
+            removePasswordFromProps(feature.getProperties());
           }
           for (R feature : deletedFeatures) {
-            removePasswordFromFeature(feature);
+            removePasswordFromProps(feature.getProperties());
           }
         }
         return verticle.sendXyzResponse(
@@ -242,10 +242,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     return new XyzFeatureCollection().withFeatures(emptyList());
   }
 
-  private Map<String, Object> removePasswordFromProps(Map<String, Object> propertiesAsMap) {
+  private void removePasswordFromProps(Map<String, Object> propertiesAsMap) {
     for (Iterator<Map.Entry<String, Object>> it = propertiesAsMap.entrySet().iterator(); it.hasNext(); ) {
       Map.Entry<String, Object> entry = it.next();
-      if (Objects.equals(entry.getKey(), "password")) {
+      if (Objects.equals(entry.getKey(), JSON_KEY_PASSWORD)) {
         it.remove();
       } else if (entry.getValue() instanceof Map) {
         // recursive call to the nested json property
@@ -255,15 +255,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         for (Object arrayEntry : array) {
           removePasswordFromProps((Map<String, Object>) arrayEntry);
         }
-        entry.setValue(array);
       }
     }
-    return propertiesAsMap;
-  }
-
-  private <R extends XyzFeature> void removePasswordFromFeature(final @NotNull R feature) {
-    Map<String, Object> propertiesAsMap =
-        removePasswordFromProps(feature.getProperties().asMap());
-    feature.setProperties(JsonSerializable.fromMap(propertiesAsMap, XyzProperties.class));
   }
 }

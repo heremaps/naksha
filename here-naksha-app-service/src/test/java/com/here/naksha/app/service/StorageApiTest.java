@@ -150,10 +150,7 @@ class StorageApiTest extends ApiTest {
     HttpResponse<String> response = getNakshaClient().post("hub/storages", bodyJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch");
     final JsonNode postResponse = new ObjectMapper().readTree(response.body());
-    assertFalse(postResponse.get("properties").get("master").has("password"));
-    for (JsonNode node : postResponse.get("properties").get("reader")) {
-      assertFalse(node.has("password"));
-    }
+    assertNoPasswords(postResponse);
 
     // 2. Perform REST API call
     response = getNakshaClient().get("hub/storages/storage-for-hiding-password-test-0022", streamId);
@@ -161,10 +158,7 @@ class StorageApiTest extends ApiTest {
     // 3. Perform assertions
     assertThat(response).hasStatus(200).hasStreamIdHeader(streamId);
     final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
-    assertFalse(jsonNode.get("properties").get("master").has("password"));
-    for (JsonNode node : jsonNode.get("properties").get("reader")) {
-      assertFalse(node.has("password"));
-    }
+    assertNoPasswords(jsonNode);
   }
 
   @Test
@@ -208,10 +202,7 @@ class StorageApiTest extends ApiTest {
     final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
     for (JsonNode storage : jsonNode.get("features")) {
       if (Objects.equals(storage.get("id").toString(),"storage-for-hiding-password-test")) {
-        assertFalse(storage.get("properties").get("master").has("password"));
-        for (JsonNode node : storage.get("properties").get("reader")) {
-          assertFalse(node.has("password"));
-        }
+        assertNoPasswords(storage);
       }
     }
   }
@@ -289,5 +280,12 @@ class StorageApiTest extends ApiTest {
     assertEquals(400, response.statusCode());
     JSONAssert.assertEquals(expectedErrorResponse, response.body(), JSONCompareMode.LENIENT);
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID));
+  }
+
+  private void assertNoPasswords(JsonNode response) {
+    assertFalse(response.get("properties").get("master").has("password"));
+    for (JsonNode node : response.get("properties").get("reader")) {
+      assertFalse(node.has("password"));
+    }
   }
 }
