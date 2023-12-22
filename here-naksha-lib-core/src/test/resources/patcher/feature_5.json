@@ -1,0 +1,14 @@
+{
+  "foo": "bar",
+  "map": {
+    "willBeUpdated": "not yet",
+    "willBeDeleted": "not yet"
+  },
+  "array": [
+    "willBeDeletedElement",
+    {
+      "id": "element1",
+      "willBeDeletedProperty": "not yet"
+    }
+  ]
+}
