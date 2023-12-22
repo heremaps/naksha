@@ -84,10 +84,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       logger.error("No storageId configured");
       return new ErrorResult(XyzError.NOT_FOUND, "No storageId configured for handler.");
     }
+    logger.info("Against Storage id={}", storageId);
     addStorageIdToStreamInfo(storageId, ctx);
 
     // Obtain IStorage implementation using NakshaHub
     final IStorage storageImpl = nakshaHub().getStorageById(storageId);
+    logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
     // Find collectionId from EventHandler, from Space, whichever is available first
     String customCollectionId = null;
