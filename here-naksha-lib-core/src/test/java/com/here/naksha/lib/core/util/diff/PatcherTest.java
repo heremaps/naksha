@@ -68,23 +68,40 @@ class PatcherTest {
     final Difference diff34 = Patcher.getDifference(f3, f4);
     assertNotNull(diff34);
     assert (diff34 instanceof MapDiff);
+
+    // Assert outermost layer
     final MapDiff mapDiff34 = (MapDiff) diff34;
+    // "foo" is retained, does not appear in diff34/mapDiff34
     assertTrue(mapDiff34.get("isAdded") instanceof InsertOp);
+    assertTrue(mapDiff34.get("willBeUpdated") instanceof UpdateOp);
+    assertTrue(mapDiff34.get("firstToBeDeleted") instanceof RemoveOp);
     assertTrue(mapDiff34.get("map") instanceof MapDiff);
     assertTrue(mapDiff34.get("array") instanceof ListDiff);
+
+    // Assert nested layer
     final MapDiff nestedMapDiff34 = (MapDiff) mapDiff34.get("map");
+    // "mapID" is retained, does not appear in nestedMapDiff34
+    assertTrue(nestedMapDiff34.get("isAdded") instanceof InsertOp);
     assertTrue(nestedMapDiff34.get("willBeUpdated") instanceof UpdateOp);
     assertTrue(nestedMapDiff34.get("willBeDeleted") instanceof RemoveOp);
+
+    // Assert nested array
     final ListDiff nestedArrayDiff34 = (ListDiff) mapDiff34.get("array");
-    assertTrue(nestedArrayDiff34.get(0) instanceof MapDiff);
-    assertTrue(((MapDiff) nestedArrayDiff34.get(0)).get("isAddedProperty") instanceof InsertOp);
-    assertTrue(((MapDiff) nestedArrayDiff34.get(0)).get("willBeDeletedProperty") instanceof RemoveOp);
-    assertTrue(nestedArrayDiff34.get(1) instanceof RemoveOp);
+    assertTrue(nestedArrayDiff34.get(1) instanceof MapDiff);
+    // "retainedElement" is retained, does not appear in nestedMapDiff34
+    // InsertOp case for array (ListDiff) is addressed in the test testCompareSameArrayDifferentOrder()
+    // UpdateOp case for array (ListDiff) is addressed in the test testCompareSameArrayDifferentOrder()
+    assertTrue(nestedArrayDiff34.get(2) instanceof RemoveOp);
+
+    // Some extra nested JSON object in array assertions
+    assertTrue(((MapDiff) nestedArrayDiff34.get(1)).get("isAddedProperty") instanceof InsertOp);
+    assertTrue(((MapDiff) nestedArrayDiff34.get(1)).get("willBeDeletedProperty") instanceof RemoveOp);
 
     // Modify the whole difference to get rid of all RemoveOp
+    mapDiff34.remove("firstToBeDeleted");
     nestedMapDiff34.remove("willBeDeleted");
-    ((MapDiff) nestedArrayDiff34.get(0)).remove("willBeDeletedProperty");
-    nestedArrayDiff34.remove(1);
+    ((MapDiff) nestedArrayDiff34.get(1)).remove("willBeDeletedProperty");
+    nestedArrayDiff34.remove(2);
 
     final JsonObject patchedf3 = Patcher.patch(f3,mapDiff34);
     assertNotNull(patchedf3);
@@ -113,8 +130,9 @@ class PatcherTest {
     // The patcher compares array element by element in order,
     // so the nested JSON in feature 3 is compared against the string in feature 5
     // and the string in feature 3 is against the nested JSON in feature 5
-    assertTrue(nestedArrayDiff35.get(0) instanceof UpdateOp);
     assertTrue(nestedArrayDiff35.get(1) instanceof UpdateOp);
+    assertTrue(nestedArrayDiff35.get(2) instanceof UpdateOp);
+    assertTrue(nestedArrayDiff35.get(3) instanceof InsertOp);
   }
 
   private static boolean ignoreAll(@NotNull Object key, @Nullable Map source, @Nullable Map target) {
