@@ -80,6 +80,19 @@ class PatcherTest {
     assertTrue(((MapDiff) nestedArrayDiff34.get(0)).get("isAddedProperty") instanceof InsertOp);
     assertTrue(((MapDiff) nestedArrayDiff34.get(0)).get("willBeDeletedProperty") instanceof RemoveOp);
     assertTrue(nestedArrayDiff34.get(1) instanceof RemoveOp);
+
+    // Modify the whole difference to get rid of all RemoveOp
+    nestedMapDiff34.remove("willBeDeleted");
+    ((MapDiff) nestedArrayDiff34.get(0)).remove("willBeDeletedProperty");
+    nestedArrayDiff34.remove(1);
+
+    final JsonObject patchedf3 = Patcher.patch(f3,mapDiff34);
+    assertNotNull(patchedf3);
+    final JsonObject expectedPatchedf3 =
+            JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_3_patched_to_4_no_remove.json"), JsonObject.class);
+    assertNotNull(expectedPatchedf3);
+    final Difference newDiff = Patcher.getDifference(patchedf3, expectedPatchedf3);
+    assertNull(newDiff);
   }
 
   @Test
