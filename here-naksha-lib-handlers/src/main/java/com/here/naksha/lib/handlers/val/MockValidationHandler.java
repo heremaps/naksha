@@ -114,10 +114,7 @@ public class MockValidationHandler extends AbstractEventHandler {
       int violationsCount = Math.min(featureCnt, totalViolations);
       final Object momType = feature.get("momType");
       violations.addAll(getNViolationsWithFeatureReference(
-          violationsCount,
-          feature,
-          cwf.getCollectionId(),
-          (momType == null) ? "" : momType.toString()));
+          violationsCount, feature, cwf.getCollectionId(), (momType == null) ? "" : momType.toString()));
     }
     return violations;
   }
