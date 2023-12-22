@@ -57,7 +57,7 @@ class PatcherTest {
   }
 
   @Test
-  void testBasicNestedJson() {
+  void testCompareBasicNestedJson() {
     final JsonObject f3 =
             JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_3.json"), JsonObject.class);
     assertNotNull(f3);
@@ -81,6 +81,28 @@ class PatcherTest {
     assertTrue(((MapDiff) nestedArrayDiff34.get(0)).get("willBeDeletedProperty") instanceof RemoveOp);
     assertTrue(nestedArrayDiff34.get(1) instanceof RemoveOp);
 
+    final JsonObject f5 =
+            JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_5.json"), JsonObject.class);
+    assertNotNull(f5);
+    final Difference diff35 = Patcher.getDifference(f3, f5);
+    assertNotNull(diff35);
+    assert (diff35 instanceof MapDiff);
+    final MapDiff mapDiff35 = (MapDiff) diff35;
+    assertEquals(1,mapDiff35.size());
+    assertTrue(mapDiff35.get("array") instanceof ListDiff);
+    final ListDiff nestedArrayDiff35 = (ListDiff) mapDiff35.get("array");
+    // The patcher compares array element by element in order,
+    // so the nested JSON in feature 3 is compared against the string in feature 5
+    // and the string in feature 3 is against the nested JSON in feature 5
+    assertTrue(nestedArrayDiff35.get(0) instanceof UpdateOp);
+    assertTrue(nestedArrayDiff35.get(1) instanceof UpdateOp);
+  }
+
+  @Test
+  void testCompareSameArrayDifferentOrder() {
+    final JsonObject f3 =
+            JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_3.json"), JsonObject.class);
+    assertNotNull(f3);
     final JsonObject f5 =
             JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_5.json"), JsonObject.class);
     assertNotNull(f5);
