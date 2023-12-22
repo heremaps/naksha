@@ -115,7 +115,7 @@ public class MockValidationHandler extends AbstractEventHandler {
       final Object momType = feature.get("momType");
       violations.addAll(getNViolationsWithFeatureReference(
           violationsCount,
-          feature.getId(),
+          feature,
           cwf.getCollectionId(),
           (momType == null) ? "" : momType.toString()));
     }
@@ -124,7 +124,7 @@ public class MockValidationHandler extends AbstractEventHandler {
 
   private @NotNull List<XyzFeature> getNViolationsWithFeatureReference(
       final int count,
-      final @NotNull String featureId,
+      final @NotNull XyzFeature feature,
       final @NotNull String spaceId,
       final @Nullable String featureType) {
     final List<XyzFeature> violations = new ArrayList<>();
@@ -133,9 +133,10 @@ public class MockValidationHandler extends AbstractEventHandler {
       // randomize violation id
       violation.setId("urn:here::here:Topology:violation_" + RandomStringUtils.randomAlphabetic(12));
       // add reference to feature
-      final XyzReference reference = new XyzReference(featureId, spaceId, featureType);
+      final XyzReference reference = new XyzReference(feature.getId(), spaceId, featureType);
       violation.getProperties().setReferences(List.of(reference));
       violation.put("violatedObject", reference);
+      violation.setGeometry(feature.getGeometry());
       // add violation to the list
       violations.add(violation);
     }
