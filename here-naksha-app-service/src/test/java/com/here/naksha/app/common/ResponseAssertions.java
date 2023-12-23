@@ -18,14 +18,24 @@
  */
 package com.here.naksha.app.common;
 
+import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_ID;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.Optional;
+
+import com.here.naksha.app.service.models.FeatureCollectionRequest;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.junit.jupiter.api.Assertions;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
+import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
 public class ResponseAssertions {
 
@@ -71,4 +81,37 @@ public class ResponseAssertions {
     }
     return this;
   }
+
+  public ResponseAssertions hasInsertedCountMatchingWithFeaturesInRequest(final @NotNull String reqBody) throws JSONException {
+    final FeatureCollectionRequest collectionRequest = parseJson(reqBody, FeatureCollectionRequest.class);
+    return hasMatchingInsertedCount(collectionRequest.getFeatures().size());
+  }
+
+  public ResponseAssertions hasMatchingInsertedCount(int cnt) throws JSONException {
+    JSONAssert.assertEquals("{inserted:[" + cnt + "]}", subject.body(),
+            new ArraySizeComparator(JSONCompareMode.LENIENT));
+    return this;
+  }
+
+  public ResponseAssertions hasInsertedIdsMatchingFeatureIds(final @Nullable String prefixId) {
+    final XyzFeatureCollection collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    final List<String> insertedIds = collectionResponse.getInserted();
+    final List<XyzFeature> features = collectionResponse.getFeatures();
+    for (int i = 0; i < insertedIds.size(); i++) {
+      if (prefixId != null) {
+        assertTrue(
+                insertedIds.get(i).startsWith(prefixId),
+                "Feature Id in the response doesn't start with given prefix Id : " + prefixId);
+      }
+      assertEquals(
+              insertedIds.get(i),
+              features.get(i).getId(),
+              "Mismatch between inserted v/s feature ID in the response at idx : " + i);
+      assertNotNull(
+              features.get(i).getProperties().getXyzNamespace().getUuid(),
+              "UUID found missing in response for feature at idx : " + i);
+    }
+    return this;
+  }
+
 }

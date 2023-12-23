@@ -48,7 +48,6 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
@@ -79,10 +78,10 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
-
-    // Then: also match individual JSON attributes (in addition to whole object comparison above)
-    additionalCustomAssertions(bodyJson, response.body(), null);
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+        .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
+        .hasInsertedIdsMatchingFeatureIds(null)
+    ;
   }
 
   @Test
@@ -106,10 +105,10 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
-
-    // Then: also match individual JSON attributes (in addition to whole object comparison above)
-    additionalCustomAssertions(bodyJson, response.body(), null);
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+        .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
+        .hasInsertedIdsMatchingFeatureIds(null)
+    ;
   }
 
   // Disabled - we don't want to verify prefix now
@@ -138,10 +137,10 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
-
-    // Then: also match individual JSON attributes (in addition to whole object comparison above)
-    additionalCustomAssertions(bodyJson, response.body(), prefixId);
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+        .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
+        .hasInsertedIdsMatchingFeatureIds(prefixId)
+    ;
   }
 
   @Test
@@ -172,10 +171,10 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
-
-    // Then: also match individual JSON attributes (in addition to whole object comparison above)
-    additionalCustomAssertions(bodyJson, response.body(), null);
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+        .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
+        .hasInsertedIdsMatchingFeatureIds(null)
+    ;
   }
 
   @Test
@@ -205,10 +204,10 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
-
-    // Then: also match individual JSON attributes (in addition to whole object comparison above)
-    additionalCustomAssertions(bodyJson, response.body(), null);
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+        .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
+        .hasInsertedIdsMatchingFeatureIds(null)
+    ;
   }
 
   @Test
@@ -374,36 +373,5 @@ class CreateFeatureTest extends ApiTest {
     // Old properties like speedLimit should no longer be available
     // The feature has been completely overwritten by the PUT request with null UUID
     Assertions.assertFalse(overridenFeature.getProperties().containsKey("speedLimit"));
-  }
-
-  private void additionalCustomAssertions(
-      final @NotNull String reqBody, final @NotNull String resBody, final @Nullable String prefixId)
-      throws JSONException {
-    final FeatureCollectionRequest collectionRequest = parseJson(reqBody, FeatureCollectionRequest.class);
-    final XyzFeatureCollection collectionResponse = parseJson(resBody, XyzFeatureCollection.class);
-    final List<String> insertedIds = collectionResponse.getInserted();
-    final List<XyzFeature> features = collectionResponse.getFeatures();
-    JSONAssert.assertEquals(
-        "{inserted:[" + collectionRequest.getFeatures().size() + "]}",
-        resBody,
-        new ArraySizeComparator(JSONCompareMode.LENIENT));
-    assertEquals(
-        insertedIds.size(),
-        features.size(),
-        "Mismatch between inserted and features list size in the response");
-    for (int i = 0; i < insertedIds.size(); i++) {
-      if (prefixId != null) {
-        assertTrue(
-            insertedIds.get(i).startsWith(prefixId),
-            "Feature Id in the response doesn't start with given prefix Id : " + prefixId);
-      }
-      assertEquals(
-          insertedIds.get(i),
-          features.get(i).getId(),
-          "Mismatch between inserted v/s feature ID in the response at idx : " + i);
-      assertNotNull(
-          features.get(i).getProperties().getXyzNamespace().getUuid(),
-          "UUID found missing in response for feature at idx : " + i);
-    }
   }
 }
