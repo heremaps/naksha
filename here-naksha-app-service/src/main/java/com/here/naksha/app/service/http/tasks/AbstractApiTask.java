@@ -125,6 +125,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
               "No feature found for id "
                   + result.getXyzFeatureCursor().getId());
         }
+        result.close();
         if (Objects.equals(type, Storage.class)) {
           removePasswordFromProps(feature.getProperties());
         }
@@ -162,6 +163,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
             removePasswordFromProps(feature.getProperties());
           }
         }
+        rdResult.close();
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
@@ -195,6 +197,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         if (wrResult instanceof ContextXyzFeatureResult cr) {
           violations = cr.getViolations();
         }
+        wrResult.close();
         if (Objects.equals(type, Storage.class)) {
           for (R feature : insertedFeatures) {
             removePasswordFromProps(feature.getProperties());
