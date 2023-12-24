@@ -29,6 +29,7 @@ import java.util.Optional;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -40,6 +41,7 @@ import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 public class ResponseAssertions {
 
   private final HttpResponse<String> subject;
+  private XyzFeatureCollection collectionResponse;
 
   private ResponseAssertions(HttpResponse<String> subject) {
     this.subject = subject;
@@ -94,23 +96,83 @@ public class ResponseAssertions {
   }
 
   public ResponseAssertions hasInsertedIdsMatchingFeatureIds(final @Nullable String prefixId) {
-    final XyzFeatureCollection collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     final List<String> insertedIds = collectionResponse.getInserted();
     final List<XyzFeature> features = collectionResponse.getFeatures();
     for (int i = 0; i < insertedIds.size(); i++) {
       if (prefixId != null) {
         assertTrue(
                 insertedIds.get(i).startsWith(prefixId),
-                "Feature Id in the response doesn't start with given prefix Id : " + prefixId);
+                "Inserted Feature Id in the response doesn't start with given prefix Id : " + prefixId);
       }
       assertEquals(
               insertedIds.get(i),
               features.get(i).getId(),
               "Mismatch between inserted v/s feature ID in the response at idx : " + i);
-      assertNotNull(
-              features.get(i).getProperties().getXyzNamespace().getUuid(),
-              "UUID found missing in response for feature at idx : " + i);
     }
+    return this;
+  }
+
+  public ResponseAssertions hasMatchingUpdatedCount(int cnt) throws JSONException {
+    JSONAssert.assertEquals("{updated:[" + cnt + "]}", subject.body(),
+            new ArraySizeComparator(JSONCompareMode.LENIENT));
+    return this;
+  }
+
+  public ResponseAssertions hasUpdatedIdsMatchingFeatureIds(final @Nullable String prefixId) {
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    final List<String> updatedIds = collectionResponse.getUpdated();
+    final List<XyzFeature> features = collectionResponse.getFeatures();
+    for (int i = 0; i < updatedIds.size(); i++) {
+      if (prefixId != null) {
+        assertTrue(
+                updatedIds.get(i).startsWith(prefixId),
+                "Updated Feature Id in the response doesn't start with given prefix Id : " + prefixId);
+      }
+      assertEquals(
+              updatedIds.get(i),
+              features.get(i).getId(),
+              "Mismatch between updated v/s feature ID in the response at idx : " + i);
+    }
+    return this;
+  }
+
+  public ResponseAssertions hasFeatureReferencedByViolations(int featureIdx, int[] violationIndices) {
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    final List<XyzFeature> features = collectionResponse.getFeatures();
+    final List<XyzFeature> violations = collectionResponse.getViolations();
+    // obtain feature Id
+    final String fId = features.get(featureIdx).getId();
+    assertNotNull(fId, "Feature Id at index "+featureIdx+" found null");
+    // match feature Id with references of Violation object at given index positions
+    assertNotNull(violations, "No violations found in response");
+    for (int i = 0; i < violationIndices.length; i++) {
+      int vIdx = violationIndices[i];
+      final List<XyzReference> references = violations.get(vIdx).getProperties().getReferences();
+      assertNotNull(references, "References missing for violation at idx " + vIdx);
+      for (final XyzReference reference : references) {
+        assertNotNull(reference.getId(), "Id missing in references for violation at idx " + vIdx);
+        assertEquals(fId, reference.getId(), "Referenced featured id doesn't match for Violation at idx " + vIdx);
+      }
+    }
+    return this;
+  }
+
+
+  public ResponseAssertions hasUuids() {
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    final List<XyzFeature> features = collectionResponse.getFeatures();
+    for (final XyzFeature feature : features) {
+      assertNotNull(
+              feature.getProperties().getXyzNamespace().getUuid(),
+              "UUID found missing in response for feature id "+ feature.getId());
+    }
+    return this;
+  }
+
+  public ResponseAssertions hasNoViolations() {
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    assertNull(collectionResponse.getViolations(), "No violations were expected");
     return this;
   }
 

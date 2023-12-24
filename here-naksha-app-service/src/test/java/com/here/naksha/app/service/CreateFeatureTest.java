@@ -81,6 +81,7 @@ class CreateFeatureTest extends ApiTest {
         .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
         .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
         .hasInsertedIdsMatchingFeatureIds(null)
+        .hasUuids()
     ;
   }
 
@@ -108,6 +109,7 @@ class CreateFeatureTest extends ApiTest {
         .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
         .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
         .hasInsertedIdsMatchingFeatureIds(null)
+        .hasUuids()
     ;
   }
 
@@ -140,6 +142,7 @@ class CreateFeatureTest extends ApiTest {
         .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
         .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
         .hasInsertedIdsMatchingFeatureIds(prefixId)
+        .hasUuids()
     ;
   }
 
@@ -174,6 +177,7 @@ class CreateFeatureTest extends ApiTest {
         .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
         .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
         .hasInsertedIdsMatchingFeatureIds(null)
+        .hasUuids()
     ;
   }
 
@@ -207,6 +211,7 @@ class CreateFeatureTest extends ApiTest {
         .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
         .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
         .hasInsertedIdsMatchingFeatureIds(null)
+        .hasUuids()
     ;
   }
 
