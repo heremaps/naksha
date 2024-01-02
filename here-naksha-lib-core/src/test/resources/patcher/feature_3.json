@@ -9,6 +9,7 @@
   },
   "array": [
     "retainedElement",
+    "notYetUpdatedElement",
     {
       "id": "element1",
       "willBeDeletedProperty": "not yet"

@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core.util.diff;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
@@ -26,7 +27,10 @@ import com.here.naksha.lib.core.util.json.JsonObject;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONException;
 import org.junit.jupiter.api.Test;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 
 import java.io.IOException;
 import java.util.Map;
@@ -37,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class PatcherTest {
 
   @Test
-  void basic() throws IOException {
+  void basic() {
     final XyzFeature f1 =
         JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), XyzFeature.class);
     assertNotNull(f1);
@@ -57,7 +61,7 @@ class PatcherTest {
   }
 
   @Test
-  void testCompareBasicNestedJson() {
+  void testCompareBasicNestedJson() throws JSONException {
     final JsonObject f3 =
             JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_3.json"), JsonObject.class);
     assertNotNull(f3);
@@ -71,7 +75,7 @@ class PatcherTest {
 
     // Assert outermost layer
     final MapDiff mapDiff34 = (MapDiff) diff34;
-    // "foo" is retained, does not appear in diff34/mapDiff34
+    // TODO if possible to serialize Difference, simply compare the serialized Difference object with test file content
     assertTrue(mapDiff34.get("isAdded") instanceof InsertOp);
     assertTrue(mapDiff34.get("willBeUpdated") instanceof UpdateOp);
     assertTrue(mapDiff34.get("firstToBeDeleted") instanceof RemoveOp);
@@ -87,27 +91,30 @@ class PatcherTest {
 
     // Assert nested array
     final ListDiff nestedArrayDiff34 = (ListDiff) mapDiff34.get("array");
-    assertTrue(nestedArrayDiff34.get(1) instanceof MapDiff);
+    assertTrue(nestedArrayDiff34.get(1) instanceof UpdateOp);
+    assertTrue(nestedArrayDiff34.get(2) instanceof MapDiff);
     // "retainedElement" is retained, does not appear in nestedMapDiff34
     // InsertOp case for array (ListDiff) is addressed in the test testCompareSameArrayDifferentOrder()
-    // UpdateOp case for array (ListDiff) is addressed in the test testCompareSameArrayDifferentOrder()
-    assertTrue(nestedArrayDiff34.get(2) instanceof RemoveOp);
+    assertTrue(nestedArrayDiff34.get(3) instanceof RemoveOp);
 
     // Some extra nested JSON object in array assertions
-    assertTrue(((MapDiff) nestedArrayDiff34.get(1)).get("isAddedProperty") instanceof InsertOp);
-    assertTrue(((MapDiff) nestedArrayDiff34.get(1)).get("willBeDeletedProperty") instanceof RemoveOp);
+    assertTrue(((MapDiff) nestedArrayDiff34.get(2)).get("isAddedProperty") instanceof InsertOp);
+    assertTrue(((MapDiff) nestedArrayDiff34.get(2)).get("willBeDeletedProperty") instanceof RemoveOp);
 
     // Modify the whole difference to get rid of all RemoveOp
     mapDiff34.remove("firstToBeDeleted");
     nestedMapDiff34.remove("willBeDeleted");
-    ((MapDiff) nestedArrayDiff34.get(1)).remove("willBeDeletedProperty");
-    nestedArrayDiff34.remove(2);
+    ((MapDiff) nestedArrayDiff34.get(2)).remove("willBeDeletedProperty");
+    nestedArrayDiff34.remove(3);
 
     final JsonObject patchedf3 = Patcher.patch(f3,mapDiff34);
     assertNotNull(patchedf3);
     final JsonObject expectedPatchedf3 =
             JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_3_patched_to_4_no_remove.json"), JsonObject.class);
     assertNotNull(expectedPatchedf3);
+
+    // Check that the patched feature 3 has the correct content
+    JSONAssert.assertEquals(patchedf3.serialize(),expectedPatchedf3.serialize(), JSONCompareMode.STRICT);
     final Difference newDiff = Patcher.getDifference(patchedf3, expectedPatchedf3);
     assertNull(newDiff);
   }
@@ -130,9 +137,9 @@ class PatcherTest {
     // The patcher compares array element by element in order,
     // so the nested JSON in feature 3 is compared against the string in feature 5
     // and the string in feature 3 is against the nested JSON in feature 5
-    assertTrue(nestedArrayDiff35.get(1) instanceof UpdateOp);
     assertTrue(nestedArrayDiff35.get(2) instanceof UpdateOp);
-    assertTrue(nestedArrayDiff35.get(3) instanceof InsertOp);
+    assertTrue(nestedArrayDiff35.get(3) instanceof UpdateOp);
+    assertTrue(nestedArrayDiff35.get(4) instanceof InsertOp);
   }
 
   private static boolean ignoreAll(@NotNull Object key, @Nullable Map source, @Nullable Map target) {
@@ -169,7 +176,7 @@ class PatcherTest {
   }
 
   @Test
-  void testXyzNamespace() throws IOException {
+  void testXyzNamespace() {
     final XyzFeature f1 =
         JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), XyzFeature.class);
     assertNotNull(f1);

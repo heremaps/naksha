@@ -301,6 +301,7 @@ project(":here-naksha-lib-core") {
         implementation(vividsolutions_jts_core)
         implementation(google_flatbuffers)
         testImplementation(mockito)
+        testImplementation(json_assert)
     }
     setOverallCoverage(0.0) // only increasing allowed!
 }

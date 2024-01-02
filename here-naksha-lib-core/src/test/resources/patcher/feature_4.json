@@ -9,6 +9,7 @@
   },
   "array": [
     "retainedElement",
+    "wasUpdatedElement",
     {
       "id": "element1",
       "isAddedProperty": "yes"

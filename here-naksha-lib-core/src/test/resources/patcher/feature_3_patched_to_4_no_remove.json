@@ -11,6 +11,7 @@
   },
   "array": [
     "retainedElement",
+    "wasUpdatedElement",
     {
       "id": "element1",
       "willBeDeletedProperty": "not yet",
