@@ -119,7 +119,7 @@ class PatcherTest {
   }
 
   @Test
-  void testCompareSameArrayDifferentOrder() {
+  void testCompareSameArrayDifferentOrder() throws JSONException {
     final JsonObject f3 =
             JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_3.json"), JsonObject.class);
     assertNotNull(f3);
@@ -139,6 +139,9 @@ class PatcherTest {
     assertTrue(nestedArrayDiff35.get(2) instanceof UpdateOp);
     assertTrue(nestedArrayDiff35.get(3) instanceof UpdateOp);
     assertTrue(nestedArrayDiff35.get(4) instanceof InsertOp);
+
+    final JsonObject patchedf3 = Patcher.patch(f3, diff35);
+    JSONAssert.assertEquals(patchedf3.serialize(),f3.serialize(), JSONCompareMode.STRICT);
   }
 
   private static boolean ignoreAll(@NotNull Object key, @Nullable Map source, @Nullable Map target) {
