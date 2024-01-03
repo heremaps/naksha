@@ -18,37 +18,33 @@
  */
 package com.here.naksha.lib.view;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
 import com.here.naksha.lib.core.models.storage.HeapCacheCursor;
-import com.here.naksha.lib.core.models.storage.MutableCursor;
 import com.here.naksha.lib.core.models.storage.Notification;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.ISession;
+import com.here.naksha.lib.view.concurrent.LayerRequest;
+import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.ObligatoryLayerResolver;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -67,13 +63,15 @@ import org.jetbrains.annotations.Nullable;
  * In this situation using Forward cursor would lead to N+1 issue, as after reading 1st row from each result we'd have
  * to fetch missing F_1 from B and C.
  * To be able to create query that fetches multiple missing features we have to know them first (by caching ahead of time) <br>
- *
+ * <p>
  * It might happen that feature has been moved (it's geometry changed). In such case after getting results for bbox
  * query we have to query again for all features (by id) that was missing in a least one storage  result.
  */
 public class ViewReadSession implements IReadSession {
 
   private final View viewRef;
+
+  protected ParallelQueryExecutor parallelQueryExecutor;
 
   protected Map<ViewLayer, IReadSession> subSessions;
 
@@ -83,6 +81,7 @@ public class ViewReadSession implements IReadSession {
     for (ViewLayer layer : viewRef.getViewCollection().getLayers()) {
       subSessions.put(layer, layer.getStorage().newReadSession(context, useMaster));
     }
+    this.parallelQueryExecutor = new ParallelQueryExecutor(viewRef);
   }
 
   @Override
@@ -99,7 +98,6 @@ public class ViewReadSession implements IReadSession {
       FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       @NotNull MergeOperation<FEATURE, CODEC> mergeOperation,
       @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver) {
-    // TODO make it parallel
     /*
     Call every layer/storage and get the first result.
     After that we should have multiLayerRows like that:
@@ -109,9 +107,11 @@ public class ViewReadSession implements IReadSession {
     ...
     ]
      */
-    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows = subSessions.entrySet().stream()
-        .flatMap(entry -> executeSingle(entry.getKey(), entry.getValue(), codecFactory, request))
-        .collect(groupingBy(viewRow -> viewRow.getRow().getId()));
+    List<LayerRequest> layerRequests = subSessions.entrySet().stream()
+        .map(entry -> new LayerRequest(request, entry.getKey(), entry.getValue()))
+        .collect(toList());
+    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows =
+        parallelQueryExecutor.queryInParallel(layerRequests, codecFactory);
 
     /*
     If one of the features is missing on one or few layers, we use getMissingFeatures and missingIdResolver to try to fetch it again by id.
@@ -156,6 +156,7 @@ public class ViewReadSession implements IReadSession {
           @NotNull Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows,
           @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver,
           @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
+
     Map<String, List<ViewLayerRow<FEATURE, CODEC>>> result = new HashMap<>();
     if (!missingIdResolver.skip()) {
       // Prepare map of <Layer_x, [FeatureId_x, ..., FeatureId_z]> features and layers you want to search by id.
@@ -165,37 +166,17 @@ public class ViewReadSession implements IReadSession {
           .filter(Objects::nonNull)
           .collect(groupingBy(Pair::getKey, mapping(Pair::getValue, toList())));
 
-      // Prepare request by id an query given layers.
-      // TODO make it parallel
-      result = idsToFetch.entrySet().stream()
-          .flatMap(entry -> {
-            ViewLayer layerToQuery = entry.getKey();
-            ReadFeatures requestByIds =
-                readFeaturesByIdsRequest(layerToQuery.getCollectionId(), entry.getValue());
-            return executeSingle(layerToQuery, subSessions.get(layerToQuery), codecFactory, requestByIds);
-          })
-          .collect(groupingBy(viewRow -> viewRow.getRow().getId()));
+      // Prepare request by id and query given layers.
+      List<LayerRequest> missingFeaturesRequests = idsToFetch.entrySet().stream()
+          .map(entry -> new LayerRequest(
+              readFeaturesByIdsRequest(entry.getKey().getCollectionId(), entry.getValue()),
+              entry.getKey(),
+              subSessions.get(entry.getKey())))
+          .collect(toList());
+
+      result = parallelQueryExecutor.queryInParallel(missingFeaturesRequests, codecFactory);
     }
     return result;
-  }
-
-  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Stream<ViewLayerRow<FEATURE, CODEC>> executeSingle(
-      @NotNull ViewLayer layer,
-      @NotNull IReadSession session,
-      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
-      @NotNull ReadFeatures request) {
-    int layerPriority = viewRef.getViewCollection().priorityOf(layer);
-
-    // prepare request
-    request.withCollections(new ArrayList<>());
-    request.addCollection(layer.getCollectionId());
-
-    Result result = session.execute(request);
-    try (MutableCursor<FEATURE, CODEC> cursor = result.mutableCursor(codecFactory)) {
-      return cursor.asList().stream().map(row -> new ViewLayerRow<>(row, layerPriority, layer));
-    } catch (NoCursor e) {
-      throw unchecked(e);
-    }
   }
 
   @Override
