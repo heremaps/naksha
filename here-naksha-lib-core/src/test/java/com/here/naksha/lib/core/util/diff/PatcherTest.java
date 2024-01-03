@@ -142,6 +142,8 @@ class PatcherTest {
 
     final JsonObject patchedf3 = Patcher.patch(f3, diff35);
     JSONAssert.assertEquals(patchedf3.serialize(),f3.serialize(), JSONCompareMode.STRICT);
+    final Difference newDiff = Patcher.getDifference(patchedf3, f5);
+    assertNull(newDiff);
   }
 
   private static boolean ignoreAll(@NotNull Object key, @Nullable Map source, @Nullable Map target) {
