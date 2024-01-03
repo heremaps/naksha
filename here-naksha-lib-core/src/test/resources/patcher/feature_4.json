@@ -12,6 +12,7 @@
     "wasUpdatedElement",
     {
       "id": "element1",
+      "nestedShouldBeUpdated": "updated",
       "isAddedProperty": "yes"
     }
   ]

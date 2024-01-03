@@ -98,6 +98,7 @@ class PatcherTest {
 
     // Some extra nested JSON object in array assertions
     assertTrue(((MapDiff) nestedArrayDiff34.get(2)).get("isAddedProperty") instanceof InsertOp);
+    assertTrue(((MapDiff) nestedArrayDiff34.get(2)).get("nestedShouldBeUpdated") instanceof UpdateOp);
     assertTrue(((MapDiff) nestedArrayDiff34.get(2)).get("willBeDeletedProperty") instanceof RemoveOp);
 
     // Modify the whole difference to get rid of all RemoveOp
@@ -108,11 +109,12 @@ class PatcherTest {
 
     final JsonObject patchedf3 = Patcher.patch(f3,mapDiff34);
     assertNotNull(patchedf3);
+
     final JsonObject expectedPatchedf3 =
             JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_3_patched_to_4_no_remove.json"), JsonObject.class);
     assertNotNull(expectedPatchedf3);
 
-    // Check that the patched feature 3 has the correct content
+    // Check that the patched feature 3 has the correct content as 4 but no JSON properties deleted
     JSONAssert.assertEquals(patchedf3.serialize(),expectedPatchedf3.serialize(), JSONCompareMode.STRICT);
     final Difference newDiff = Patcher.getDifference(patchedf3, expectedPatchedf3);
     assertNull(newDiff);
@@ -140,10 +142,44 @@ class PatcherTest {
     assertTrue(nestedArrayDiff35.get(3) instanceof UpdateOp);
     assertTrue(nestedArrayDiff35.get(4) instanceof InsertOp);
 
-    final JsonObject patchedf3 = Patcher.patch(f3, diff35);
-    JSONAssert.assertEquals(patchedf3.serialize(),f3.serialize(), JSONCompareMode.STRICT);
-    final Difference newDiff = Patcher.getDifference(patchedf3, f5);
+    // Check that the patched feature 3 has the same content as 5
+    final JsonObject patchedf3Tof5 = Patcher.patch(f3, diff35);
+    JSONAssert.assertEquals(patchedf3Tof5.serialize(),f3.serialize(), JSONCompareMode.STRICT);
+    final Difference newDiff = Patcher.getDifference(patchedf3Tof5, f5);
     assertNull(newDiff);
+  }
+
+  @Test
+  void testPatchingOnlyShuffledArrayProvided() throws JSONException {
+    final JsonObject f3 =
+            JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_3.json"), JsonObject.class);
+    assertNotNull(f3);
+    // feature 6 only contains the same array in feature 3, but with the order of the elements changed
+    final JsonObject f6 =
+            JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_6.json"), JsonObject.class);
+    assertNotNull(f6);
+
+    final Difference diff36 = Patcher.getDifference(f3, f6);
+    assertNotNull(diff36);
+    // Simulate REST API behaviour, ignore all RemoveOp type of Difference
+    final MapDiff mapDiff36 = (MapDiff) diff36;
+    assertTrue(mapDiff36.get("foo") instanceof RemoveOp);
+    mapDiff36.remove("foo");
+    assertTrue(mapDiff36.get("willBeUpdated") instanceof RemoveOp);
+    mapDiff36.remove("willBeUpdated");
+    assertTrue(mapDiff36.get("firstToBeDeleted") instanceof RemoveOp);
+    mapDiff36.remove("firstToBeDeleted");
+    assertTrue(mapDiff36.get("map") instanceof RemoveOp);
+    mapDiff36.remove("map");
+    final JsonObject patchedf3Tof6 = Patcher.patch(f3, diff36);
+
+    final JsonObject expectedPatchedf3 =
+            JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_3_patched_with_6_no_remove_op.json"), JsonObject.class);
+    assertNotNull(expectedPatchedf3);
+
+    JSONAssert.assertEquals(patchedf3Tof6.serialize(),expectedPatchedf3.serialize(), JSONCompareMode.STRICT);
+    final Difference newDiff36 = Patcher.getDifference(patchedf3Tof6, expectedPatchedf3);
+    assertNull(newDiff36);
   }
 
   private static boolean ignoreAll(@NotNull Object key, @Nullable Map source, @Nullable Map target) {

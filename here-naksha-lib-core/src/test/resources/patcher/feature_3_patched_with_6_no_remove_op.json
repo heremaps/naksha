@@ -15,7 +15,6 @@
       "id": "element1",
       "nestedShouldBeUpdated": "not yet",
       "willBeDeletedProperty": "not yet"
-    },
-    "newlyInsertedElement"
+    }
   ]
 }
