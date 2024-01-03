@@ -29,6 +29,7 @@ import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.MutableCursor;
 import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.SeekableCursor;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
@@ -116,7 +117,7 @@ class PsqlViewTests {
   static final String COLLECTION_0 = "test_view0";
   static final String COLLECTION_1 = "test_view1";
   static final String COLLECTION_2 = "test_view2";
-  
+
   static @Nullable PsqlStorage storage;
   static @Nullable NakshaContext nakshaContext;
   static @Nullable PsqlWriteSession session;
@@ -206,7 +207,7 @@ class PsqlViewTests {
     final WriteXyzFeatures requestTest0 = new WriteXyzFeatures(COLLECTION_0);
     final WriteXyzFeatures requestTest1 = new WriteXyzFeatures(COLLECTION_1);
     final WriteXyzFeatures requestTest2 = new WriteXyzFeatures(COLLECTION_2);
-    for (int i = 0; i <10 ; i++) {
+    for (int i = 0; i < 10; i++) {
       final XyzFeature feature = fg.newRandomFeature();
       feature.setGeometry(new XyzPoint(0d, 0d));
       requestTest0.add(EWriteOp.PUT, feature);
@@ -247,9 +248,11 @@ class PsqlViewTests {
     ViewCollection viewCollectionReversedOrder = new ViewCollection("", layer1, layer0);
     View viewReversed = new View(viewCollectionReversedOrder);
 
+    ViewReadFeaturesRequest requestAll = new ViewReadFeaturesRequest();
+
     // when
-    List<XyzFeatureCodec> features = queryView(view);
-    List<XyzFeatureCodec> features1 = queryView(viewReversed);
+    List<XyzFeatureCodec> features = queryView(view, requestAll);
+    List<XyzFeatureCodec> features1 = queryView(viewReversed, requestAll);
 
     // then
     assertEquals(10, features.size());
@@ -257,6 +260,35 @@ class PsqlViewTests {
 
     assertEquals(10, features1.size());
     assertEquals(1d, features1.get(0).getGeometry().getCoordinate().x);
+    session.commit(true);
+  }
+
+  @Test
+  @Order(41)
+  @EnabledIf("runTest")
+  void viewQueryTest_fetchMissing() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+
+    // given
+    ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
+    ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
+
+    ViewCollection viewCollection = new ViewCollection("", layer0, layer1);
+    View view = new View(viewCollection);
+
+    ViewReadFeaturesRequest getByPoint = new ViewReadFeaturesRequest();
+    getByPoint.setSpatialOp(SOp.intersects(new XyzPoint(1d, 1d)));
+
+    // when
+    List<XyzFeatureCodec> features = queryView(view, getByPoint);
+
+    // then
+    assertEquals(10, features.size());
+    // feature fetched in second query from obligatory storage
+    assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
+
+    session.commit(true);
   }
 
   @Test
@@ -293,12 +325,13 @@ class PsqlViewTests {
     }
   }
 
-  private List<XyzFeatureCodec> queryView(View view) throws NoCursor {
+  private List<XyzFeatureCodec> queryView(View view, ViewReadFeaturesRequest request) throws NoCursor {
     ViewReadSession readSession = view.newReadSession(nakshaContext, false);
-    ViewReadFeaturesRequest readFeatures = new ViewReadFeaturesRequest();
     try (final SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
-             readSession.execute(readFeatures).getXyzSeekableCursor()) {
+             readSession.execute(request).getXyzSeekableCursor()) {
       return cursor.asList();
+    } finally {
+      readSession.close();
     }
   }
 }
