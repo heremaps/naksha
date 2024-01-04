@@ -19,7 +19,7 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.*;
-import static com.here.naksha.app.common.ResponseAssertions.assertThat;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.*;
 
 import com.here.naksha.app.common.ApiTest;
@@ -41,11 +41,11 @@ public class ValDryRunTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    createHandler(nakshaClient, "ValDryRun/setup", "create_context_loader_handler.json");
-    createHandler(nakshaClient, "ValDryRun/setup", "create_validation_handler.json");
-    createHandler(nakshaClient, "ValDryRun/setup", "create_endorsement_handler.json");
-    createHandler(nakshaClient, "ValDryRun/setup", "create_echo_handler.json");
-    createSpace(nakshaClient, "ValDryRun/setup");
+    createHandler(nakshaClient, "ValDryRun/setup/create_context_loader_handler.json");
+    createHandler(nakshaClient, "ValDryRun/setup/create_validation_handler.json");
+    createHandler(nakshaClient, "ValDryRun/setup/create_endorsement_handler.json");
+    createHandler(nakshaClient, "ValDryRun/setup/create_echo_handler.json");
+    createSpace(nakshaClient, "ValDryRun/setup/create_space.json");
   }
 
   @Test
