@@ -22,6 +22,7 @@ import static com.here.naksha.app.common.assertions.POpAssertion.assertThatOpera
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -113,13 +114,29 @@ class ApiUtilTest {
   /**
    * This behavior might be changed in the future - currently when `tags` value starts with delimiter (ie ',') we will treat this as empty list (no matter what comes after the ',').
    * An alternative to this approach would be to omit the first delimiter that does not have former value and start reading value from the next position. To change that, one would have to introduce logic change in {@link QueryParameterDecoder#parse(QueryParameterList, CharSequence, int, int)}
-   * @param queryString
    */
-  @ParameterizedTest
-  @MethodSource("tagsStartingWithDelimiter")
-  void ignoresTagsThatStartWithDelimiter(String queryString){
-    QueryParameterList queryParameters = new QueryParameterList(queryString);
+  @Test
+  void ignoresTagsThatStartWithDelimiter(){
+    // Given
+    String queryStartingWithDelimeter = "tags=,foo+bar";
+
+    // When
+    QueryParameterList queryParameters = new QueryParameterList(queryStartingWithDelimeter);
+
+    // Then
     assertNull(queryParameters.getValue("tags"));
+  }
+
+  /**
+   * See note about {@link #ignoresTagsThatStartWithDelimiter()}
+   */
+  @Test
+  void assertionFailWhenTryingToParseQueryWithSurroundingDelimeters(){
+    // Given
+    String queryWithSurroundingDelimteres = "tags=,foo+bar,";
+
+    // Then
+    assertThrows(AssertionError.class, () -> new QueryParameterList(queryWithSurroundingDelimteres));
   }
 
   private static Stream<Arguments> simpleTagsSample() {
@@ -139,25 +156,6 @@ class ApiUtilTest {
                     child -> child.existsWithTagName("foo"),
                     child -> child.existsWithTagName("bar")),
             "'foo' and 'bar'")
-    );
-  }
-
-  private static Stream<Arguments> tagsStartingWithDelimiter() {
-    return Stream.of(
-        tagQuerySpec(
-            "tags=,foo+bar",
-            op -> op.hasType(OpType.AND)
-                .hasChildrenThat(
-                    child -> child.existsWithTagName("foo"),
-                    child -> child.existsWithTagName("bar")),
-            "'foo' and 'bar' without preceeding empty tag"),
-        tagQuerySpec(
-            "tags=,foo+bar,",
-            op -> op.hasType(OpType.AND)
-                .hasChildrenThat(
-                    child -> child.existsWithTagName("foo"),
-                    child -> child.existsWithTagName("bar")),
-            "'foo' and 'bar' without tailing empty tag")
     );
   }
 

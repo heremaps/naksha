@@ -97,7 +97,6 @@ public class QueryParameterList implements Iterable<QueryParameter> {
     list = new ArrayList<>(16);
     UNDEFINED = new QueryParameter(this, "", -1);
     if (query_string != null) {
-      query_string = sanitize(query_string);
       if (decoder == null) {
         decoder = new QueryParameterDecoder();
       }
@@ -403,22 +402,5 @@ public class QueryParameterList implements Iterable<QueryParameter> {
    */
   public @NotNull Iterator<@NotNull QueryParameter> iterator() {
     return list.iterator();
-  }
-
-  /**
-   * Cleans up query string from potentionally breaking characters without affecting its logical content
-   *
-   * @param queryString
-   * @return sanitized query string
-   */
-  private @NotNull String sanitize(@NotNull CharSequence queryString) {
-    String sanitized = String.valueOf(queryString).trim();
-    if (sanitized.charAt(0) == ',') {
-      sanitized = sanitized.substring(1);
-    }
-    if (sanitized.charAt(sanitized.length() - 1) == ',') {
-      sanitized = sanitized.substring(0, sanitized.length() - 1);
-    }
-    return sanitized;
   }
 }

@@ -65,7 +65,7 @@ class WriteFeaturesAtomicityTest extends ApiTest {
     assertThat(getResp)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(loadFileOrFail("WriteFeaturesAtomicity/TC1101_duplicatedCreateShouldFail/empty_response.json"));
+        .hasJsonBodyFromFile("WriteFeaturesAtomicity/TC1101_duplicatedCreateShouldFail/empty_response.json");
   }
 
   @Test
