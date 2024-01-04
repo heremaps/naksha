@@ -322,6 +322,16 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       parameter.add(path.get(path.size() - 1));
       return;
     }
+    if (op == POpType.NULL) {
+      addJsonPath(sql, path, path.size());
+      sql.add(" is NULL");
+      return;
+    }
+    if (op == POpType.NOT_NULL) {
+      addJsonPath(sql, path, path.size());
+      sql.add(" is NOT NULL");
+      return;
+    }
     final Object value = propertyOp.getValue();
     if (op == POpType.STARTS_WITH) {
       if (value instanceof String) {
@@ -337,6 +347,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     addJsonPath(sql, path, path.size());
     if (op == POpType.EQ) {
       sql.add(" = ");
+    } else if (op == POpType.CONTAINS) {
+      sql.add(" @> ");
     } else if (op == POpType.GT) {
       sql.add(" > ");
     } else if (op == POpType.GTE) {

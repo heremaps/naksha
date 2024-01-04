@@ -21,14 +21,21 @@ package com.here.naksha.lib.core.models.storage;
 import static com.here.naksha.lib.core.models.storage.OpType.AND;
 import static com.here.naksha.lib.core.models.storage.OpType.NOT;
 import static com.here.naksha.lib.core.models.storage.OpType.OR;
+import static com.here.naksha.lib.core.models.storage.POpType.CONTAINS;
 import static com.here.naksha.lib.core.models.storage.POpType.EQ;
 import static com.here.naksha.lib.core.models.storage.POpType.EXISTS;
 import static com.here.naksha.lib.core.models.storage.POpType.GT;
 import static com.here.naksha.lib.core.models.storage.POpType.GTE;
 import static com.here.naksha.lib.core.models.storage.POpType.LT;
 import static com.here.naksha.lib.core.models.storage.POpType.LTE;
+import static com.here.naksha.lib.core.models.storage.POpType.NOT_NULL;
+import static com.here.naksha.lib.core.models.storage.POpType.NULL;
 import static com.here.naksha.lib.core.models.storage.POpType.STARTS_WITH;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,6 +52,12 @@ public class POp extends Op<POp> {
 
   POp(@NotNull OpType op, @NotNull PRef propertyRef, @Nullable Object value) {
     super(op);
+    this.propertyRef = propertyRef;
+    this.value = value;
+  }
+
+  private POp(OpType op, PRef propertyRef, Object value, POp[] children) {
+    super(op, children);
     this.propertyRef = propertyRef;
     this.value = value;
   }
@@ -66,6 +79,21 @@ public class POp extends Op<POp> {
 
   public static @NotNull POp and(@NotNull POp... children) {
     return new POp(AND, children);
+  }
+
+  public static @NotNull POp and(@NotNull POp indexedOp, @NotNull NotIndexedPOp... children) {
+    List<POp> childrenPop = Arrays.stream(children)
+        .map(notIndexedPop -> {
+          PRef pRef = new PRef(
+              notIndexedPop.getPropertyRef().getPropertyPath().toArray(new String[0]));
+          return new POp(notIndexedPop.op, pRef, notIndexedPop.getValue());
+        })
+        .collect(Collectors.toList());
+
+    List<POp> allOperations = new ArrayList<>(childrenPop.size() + 1);
+    allOperations.add(indexedOp);
+    allOperations.addAll(childrenPop);
+    return new POp(AND, allOperations.toArray(new POp[0]));
   }
 
   public static @NotNull POp or(@NotNull POp... children) {
@@ -110,5 +138,21 @@ public class POp extends Op<POp> {
 
   public static @NotNull POp lte(@NotNull PRef propertyRef, @NotNull Number value) {
     return new POp(LTE, propertyRef, value);
+  }
+
+  public static @NotNull POp isNull(@NotNull PRef propertyRef) {
+    return new POp(NULL, propertyRef, null);
+  }
+
+  public static @NotNull POp isNotNull(@NotNull PRef propertyRef) {
+    return new POp(NOT_NULL, propertyRef, null);
+  }
+
+  public static @NotNull POp contains(@NotNull PRef propertyRef, @NotNull Number value) {
+    return new POp(CONTAINS, propertyRef, value);
+  }
+
+  public static @NotNull POp contains(@NotNull PRef propertyRef, @NotNull String value) {
+    return new POp(CONTAINS, propertyRef, value);
   }
 }
