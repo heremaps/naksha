@@ -19,7 +19,7 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.*;
-import static com.here.naksha.app.common.ResponseAssertions.assertThat;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,7 +29,6 @@ import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzReference;
-import com.here.naksha.lib.core.models.naksha.Space;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -40,9 +39,6 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
-import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
 public class ValDryRunTest extends ApiTest {
 

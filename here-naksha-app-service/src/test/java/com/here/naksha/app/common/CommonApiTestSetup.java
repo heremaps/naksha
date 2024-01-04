@@ -1,6 +1,6 @@
 package com.here.naksha.app.common;
 
-import static com.here.naksha.app.common.ResponseAssertions.assertThat;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 
 import java.io.IOException;

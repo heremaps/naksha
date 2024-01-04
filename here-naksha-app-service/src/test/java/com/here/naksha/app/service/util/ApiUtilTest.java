@@ -18,12 +18,17 @@
  */
 package com.here.naksha.app.service.util;
 
+import static com.here.naksha.app.common.assertions.POpAssertion.assertThatOperation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import com.here.naksha.app.common.assertions.POpAssertion;
 import com.here.naksha.app.service.http.apis.ApiUtil;
+import com.here.naksha.lib.core.models.payload.events.QueryParameterDecoder;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.OpType;
 import com.here.naksha.lib.core.models.storage.POp;
@@ -31,6 +36,7 @@ import com.here.naksha.lib.core.models.storage.POpType;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -96,6 +102,26 @@ class ApiUtilTest {
     assertThatOperation(orList.get(innerOpsInd)).existsWithTagName("fourteen");
   }
 
+  @ParameterizedTest
+  @MethodSource("simpleTagsSample")
+  void shouldParseSimpleTags(String queryString, Consumer<POpAssertion> assertion) {
+    QueryParameterList queryParameters = new QueryParameterList(queryString);
+    POp op = ApiUtil.buildOperationForTagsQueryParam(queryParameters);
+    assertion.accept(new POpAssertion(op));
+  }
+
+  /**
+   * This behavior might be changed in the future - currently when `tags` value starts with delimiter (ie ',') we will treat this as empty list (no matter what comes after the ',').
+   * An alternative to this approach would be to omit the first delimiter that does not have former value and start reading value from the next position. To change that, one would have to introduce logic change in {@link QueryParameterDecoder#parse(QueryParameterList, CharSequence, int, int)}
+   * @param queryString
+   */
+  @ParameterizedTest
+  @MethodSource("tagsStartingWithDelimiter")
+  void ignoresTagsThatStartWithDelimiter(String queryString){
+    QueryParameterList queryParameters = new QueryParameterList(queryString);
+    assertNull(queryParameters.getValue("tags"));
+  }
+
   private static Stream<Arguments> simpleTagsSample() {
     return Stream.of(
         tagQuerySpec("tags=x", op -> op.existsWithTagName("x"), "only 'x'"),
@@ -112,7 +138,12 @@ class ApiUtilTest {
                 .hasChildrenThat(
                     child -> child.existsWithTagName("foo"),
                     child -> child.existsWithTagName("bar")),
-            "'foo' and 'bar'"),
+            "'foo' and 'bar'")
+    );
+  }
+
+  private static Stream<Arguments> tagsStartingWithDelimiter() {
+    return Stream.of(
         tagQuerySpec(
             "tags=,foo+bar",
             op -> op.hasType(OpType.AND)
@@ -126,53 +157,11 @@ class ApiUtilTest {
                 .hasChildrenThat(
                     child -> child.existsWithTagName("foo"),
                     child -> child.existsWithTagName("bar")),
-            "'foo' and 'bar' without tailing empty tag"));
-  }
-
-  @ParameterizedTest
-  @MethodSource("simpleTagsSample")
-  void shouldParseSimpleTags(String queryString, Consumer<POpAssertion> assertion) {
-    QueryParameterList queryParameters = new QueryParameterList(queryString);
-    POp op = ApiUtil.buildOperationForTagsQueryParam(queryParameters);
-    assertion.accept(new POpAssertion(op));
+            "'foo' and 'bar' without tailing empty tag")
+    );
   }
 
   private static Arguments tagQuerySpec(String query, Consumer<POpAssertion> assertion, String assertionDesc) {
     return arguments(query, named(assertionDesc, assertion));
-  }
-
-  private static POpAssertion assertThatOperation(POp subject) {
-    assertNotNull(subject);
-    return new POpAssertion(subject);
-  }
-
-  private record POpAssertion(POp subject) {
-
-    POpAssertion existsWithTagName(String tagName) {
-      return hasType(POpType.EXISTS).hasTagName(tagName);
-    }
-
-    POpAssertion hasType(OpType expectedOpType) {
-      assertEquals(expectedOpType, subject.op());
-      return this;
-    }
-
-    POpAssertion hasTagName(String expectedTagName) {
-      assertNotNull(subject.getPropertyRef());
-      assertEquals(expectedTagName, subject.getPropertyRef().getTagName());
-      return this;
-    }
-
-    @SafeVarargs
-    final POpAssertion hasChildrenThat(Consumer<POpAssertion>... childrenAssertions) {
-      List<POp> subjects = subject.children();
-      assertNotNull(subjects, "Expected multiple operations");
-      assertEquals(subjects.size(), childrenAssertions.length, "Expecting single assertion per POp");
-      for (int i = 0; i < subjects.size(); i++) {
-        POpAssertion childAssertion = new POpAssertion(subjects.get(i));
-        childrenAssertions[i].accept(childAssertion);
-      }
-      return this;
-    }
   }
 }
