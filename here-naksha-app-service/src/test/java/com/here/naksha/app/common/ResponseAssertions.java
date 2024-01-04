@@ -61,6 +61,10 @@ public class ResponseAssertions {
     return hasJsonBody(expectedJsonBody, "Actual and expected json body don't match");
   }
 
+  public ResponseAssertions hasJsonBodyFromFile(String testFilePath){
+    return hasJsonBody(TestUtil.loadFileOrFail(testFilePath));
+  }
+
   public ResponseAssertions hasJsonBody(String expectedJsonBody, String failureMessage) {
     String actualBody = subject.body();
     Assertions.assertNotNull(actualBody, "Response body is null");
