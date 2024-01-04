@@ -145,10 +145,12 @@ public class NakshaHub implements INaksha {
               cursor.getOp(),
               cursor.getError());
           admin.rollback(true);
+          throw unchecked(new Exception("Unable to create Admin collections in Admin DB."));
         }
       } catch (NoCursor e) {
         logger.error("Unexpected NoCursor exception while creating Admin collections.", e);
         admin.rollback(true);
+        throw unchecked(new Exception("Unable to create Admin collections in Admin DB."));
       }
       admin.commit(true);
     } // close Admin DB connection
