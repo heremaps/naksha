@@ -81,12 +81,12 @@ public class POp extends Op<POp> {
     return new POp(AND, children);
   }
 
-  public static @NotNull POp and(@NotNull POp indexedOp, @NotNull NotIndexedPOp... children) {
+  public static @NotNull POp and(@NotNull POp indexedOp, @NotNull NonIndexedPOp... children) {
     List<POp> childrenPop = Arrays.stream(children)
-        .map(notIndexedPop -> {
+        .map(nonIndexedPop -> {
           PRef pRef = new PRef(
-              notIndexedPop.getPropertyRef().getPropertyPath().toArray(new String[0]));
-          return new POp(notIndexedPop.op, pRef, notIndexedPop.getValue());
+              nonIndexedPop.getPropertyRef().getPropertyPath().toArray(new String[0]));
+          return new POp(nonIndexedPop.op, pRef, nonIndexedPop.getValue());
         })
         .collect(Collectors.toList());
 

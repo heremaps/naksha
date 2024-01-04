@@ -26,15 +26,15 @@ import org.jetbrains.annotations.NotNull;
  * Always use it as a last "where" condition and always together with indexed conditions that will drastically decrease
  * result set first.
  */
-public class NotIndexedPRef {
+public class NonIndexedPRef {
 
   private final @NotNull List<@NotNull String> propertyPath;
 
-  public NotIndexedPRef(@NotNull String... path) {
+  public NonIndexedPRef(@NotNull String... path) {
     this.propertyPath = List.of(path);
   }
 
-  public List<String> getPropertyPath() {
+  public @NotNull List<@NotNull String> getPropertyPath() {
     return propertyPath;
   }
 }

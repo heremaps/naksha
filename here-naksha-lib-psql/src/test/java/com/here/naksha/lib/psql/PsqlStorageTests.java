@@ -45,7 +45,6 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzLineString;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzMultiPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.NakshaFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
@@ -55,8 +54,8 @@ import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.MutableCursor;
-import com.here.naksha.lib.core.models.storage.NotIndexedPOp;
-import com.here.naksha.lib.core.models.storage.NotIndexedPRef;
+import com.here.naksha.lib.core.models.storage.NonIndexedPOp;
+import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
@@ -67,7 +66,6 @@ import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
@@ -929,19 +927,19 @@ public class PsqlStorageTests extends PsqlTests {
     // when - search for int value
     ReadFeatures readFeatures = new ReadFeatures(collectionId());
     POp appSearch = POp.eq(PRef.app_id(), TEST_APP_ID);
-    NotIndexedPOp ageSearch = NotIndexedPOp.eq(new NotIndexedPRef("properties", "weight"), 60);
+    NonIndexedPOp ageSearch = NonIndexedPOp.eq(new NonIndexedPRef("properties", "weight"), 60);
     readFeatures.setPropertyOp(POp.and(appSearch, ageSearch));
     // then
     expect.accept(readFeatures);
 
     // when - search null value
-    NotIndexedPOp exSearch = NotIndexedPOp.isNotNull(new NotIndexedPRef("properties", "color"));
+    NonIndexedPOp exSearch = NonIndexedPOp.isNotNull(new NonIndexedPRef("properties", "color"));
     readFeatures.setPropertyOp(POp.and(appSearch, exSearch));
     // then
     expect.accept(readFeatures);
 
     // when - search array contains
-    NotIndexedPOp arraySearch = NotIndexedPOp.contains(new NotIndexedPRef("properties", "ids"), 9);
+    NonIndexedPOp arraySearch = NonIndexedPOp.contains(new NonIndexedPRef("properties", "ids"), 9);
     readFeatures.setPropertyOp(POp.and(appSearch, arraySearch));
     // then
     expect.accept(readFeatures);
