@@ -927,8 +927,8 @@ public class PsqlStorageTests extends PsqlTests {
     // when - search for int value
     ReadFeatures readFeatures = new ReadFeatures(collectionId());
     POp appSearch = POp.eq(PRef.app_id(), TEST_APP_ID);
-    NonIndexedPOp ageSearch = NonIndexedPOp.eq(new NonIndexedPRef("properties", "weight"), 60);
-    readFeatures.setPropertyOp(POp.and(appSearch, ageSearch));
+    NonIndexedPOp weightSearch = NonIndexedPOp.eq(new NonIndexedPRef("properties", "weight"), 60);
+    readFeatures.setPropertyOp(POp.and(appSearch, weightSearch));
     // then
     expect.accept(readFeatures);
 
