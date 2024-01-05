@@ -346,12 +346,16 @@ public class QueryParameterDecoder {
 
     // Fetch the operation by delimiter string, for example for "&key>=5" by ">=" or for "&key>5" by
     // ">".
-    final String delimitersString = sb.substring(0, delimiters);
-    final QueryOperation op = QueryOperation.getByDelimiterString(delimitersString);
-    if (op != null) {
-      // Note: The first delimiter skipped already.
-      this.pos += op.delimiters.length - 1;
-      return op;
+    // We run a loop here from longest delimiter length available to smallest possible length,
+    // whichever first matches one of the delimiter set we know of
+    for (int i = delimiters; i > 0; i--) {
+      final String delimitersString = sb.substring(0, i);
+      final QueryOperation op = QueryOperation.getByDelimiterString(delimitersString);
+      if (op != null) {
+        // Note: The first delimiter skipped already.
+        this.pos += op.delimiters.length - 1;
+        return op;
+      }
     }
     return null;
   }
@@ -472,7 +476,7 @@ public class QueryParameterDecoder {
   protected void parseNext() throws NoSuchElementException, ParameterError {
     assert in != null;
     assert sb != null;
-    assert pos < end;
+    // assert pos < end;
     // Copy references to the stack to allow compiler optimization!
     final CharSequence in = this.in;
     final StringBuilder sb = this.sb;
@@ -484,6 +488,12 @@ public class QueryParameterDecoder {
     dot = 0;
     numbers = 0;
     others = parameter == null; // Key are always strings, do not count characters.
+    if (pos >= end) {
+      delimiter = END;
+      delimiter_ext_unicode = 0;
+      sb.setLength(0);
+      return;
+    }
     if (isQuote(in.charAt(pos))) {
       // When explicitly quoted, it must always be a string, for example "&key='5'", so do not
       // detect numbers.
