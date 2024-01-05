@@ -34,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
@@ -54,7 +56,6 @@ import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.MutableCursor;
-import com.here.naksha.lib.core.models.storage.NonIndexedPOp;
 import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.PRef;
@@ -66,6 +67,9 @@ import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.core.util.json.JsonMap;
+import com.here.naksha.lib.core.util.json.JsonObject;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
@@ -898,12 +902,15 @@ public class PsqlStorageTests extends PsqlTests {
     assertNotNull(session);
 
     // given
+    final String jsonReference = "[{\"id\":\"urn:here::here:Topology:106003684\",\"type\":\"Topology\",\"prop\":{\"a\":1}}]";
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
     final XyzFeature feature = new XyzFeature("featureWithExtraProperty_id");
     feature.setGeometry(new XyzPoint(4.0d, 5.0));
     feature.getProperties().put("color", "red");
     feature.getProperties().put("weight", 60);
     feature.getProperties().put("ids", new Integer[] {2,1,9});
+    ObjectReader reader = Json.get().reader();
+    feature.getProperties().put("references", reader.readValue(jsonReference, Object.class));
 
     request.add(EWriteOp.CREATE, feature);
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
@@ -926,21 +933,32 @@ public class PsqlStorageTests extends PsqlTests {
 
     // when - search for int value
     ReadFeatures readFeatures = new ReadFeatures(collectionId());
-    POp appSearch = POp.eq(PRef.app_id(), TEST_APP_ID);
-    NonIndexedPOp weightSearch = NonIndexedPOp.eq(new NonIndexedPRef("properties", "weight"), 60);
-    readFeatures.setPropertyOp(POp.and(appSearch, weightSearch));
+    POp weightSearch = POp.eq(new NonIndexedPRef("properties", "weight"), 60);
+    readFeatures.setPropertyOp(weightSearch);
     // then
     expect.accept(readFeatures);
 
     // when - search null value
-    NonIndexedPOp exSearch = NonIndexedPOp.isNotNull(new NonIndexedPRef("properties", "color"));
-    readFeatures.setPropertyOp(POp.and(appSearch, exSearch));
+    POp exSearch = POp.isNotNull(new NonIndexedPRef("properties", "color"));
+    readFeatures.setPropertyOp(exSearch);
     // then
     expect.accept(readFeatures);
 
     // when - search array contains
-    NonIndexedPOp arraySearch = NonIndexedPOp.contains(new NonIndexedPRef("properties", "ids"), 9);
-    readFeatures.setPropertyOp(POp.and(appSearch, arraySearch));
+    POp arraySearch = POp.contains(new NonIndexedPRef("properties", "ids"), 9);
+    readFeatures.setPropertyOp(arraySearch);
+    // then
+    expect.accept(readFeatures);
+
+    // when - search by json object
+    POp jsonSearch2 = POp.contains(new NonIndexedPRef("properties", "references"), "[{\"id\":\"urn:here::here:Topology:106003684\"}]");
+    readFeatures.setPropertyOp(jsonSearch2);
+    // then
+    expect.accept(readFeatures);
+
+    // when - search by json object
+    POp jsonSearch3 = POp.contains(new NonIndexedPRef("properties", "references"), reader.readValue("[{\"prop\":{\"a\":1}}]", JsonNode.class));
+    readFeatures.setPropertyOp(jsonSearch3);
     // then
     expect.accept(readFeatures);
   }

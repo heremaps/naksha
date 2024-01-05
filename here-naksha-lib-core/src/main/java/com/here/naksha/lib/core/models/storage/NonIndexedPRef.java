@@ -18,23 +18,21 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import java.util.List;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Any property search, be extremely careful as it allows to search through not indexed properties.
  * Always use it as a last "where" condition and always together with indexed conditions that will drastically decrease
  * result set first.
  */
-public class NonIndexedPRef {
+public class NonIndexedPRef extends PRef {
 
-  private final @NotNull List<@NotNull String> propertyPath;
+  private static final Logger log = LoggerFactory.getLogger(NonIndexedPRef.class);
 
   public NonIndexedPRef(@NotNull String... path) {
-    this.propertyPath = List.of(path);
-  }
-
-  public @NotNull List<@NotNull String> getPropertyPath() {
-    return propertyPath;
+    super(path);
+    log.atInfo().setMessage("NonIndexedPRef: {}").addArgument(path).log();
   }
 }

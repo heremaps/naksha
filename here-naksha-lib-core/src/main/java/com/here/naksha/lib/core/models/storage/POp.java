@@ -32,10 +32,6 @@ import static com.here.naksha.lib.core.models.storage.POpType.NOT_NULL;
 import static com.here.naksha.lib.core.models.storage.POpType.NULL;
 import static com.here.naksha.lib.core.models.storage.POpType.STARTS_WITH;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,12 +48,6 @@ public class POp extends Op<POp> {
 
   POp(@NotNull OpType op, @NotNull PRef propertyRef, @Nullable Object value) {
     super(op);
-    this.propertyRef = propertyRef;
-    this.value = value;
-  }
-
-  private POp(OpType op, PRef propertyRef, Object value, POp[] children) {
-    super(op, children);
     this.propertyRef = propertyRef;
     this.value = value;
   }
@@ -79,21 +69,6 @@ public class POp extends Op<POp> {
 
   public static @NotNull POp and(@NotNull POp... children) {
     return new POp(AND, children);
-  }
-
-  public static @NotNull POp and(@NotNull POp indexedOp, @NotNull NonIndexedPOp... children) {
-    List<POp> childrenPop = Arrays.stream(children)
-        .map(nonIndexedPop -> {
-          PRef pRef = new PRef(
-              nonIndexedPop.getPropertyRef().getPropertyPath().toArray(new String[0]));
-          return new POp(nonIndexedPop.op, pRef, nonIndexedPop.getValue());
-        })
-        .collect(Collectors.toList());
-
-    List<POp> allOperations = new ArrayList<>(childrenPop.size() + 1);
-    allOperations.add(indexedOp);
-    allOperations.addAll(childrenPop);
-    return new POp(AND, allOperations.toArray(new POp[0]));
   }
 
   public static @NotNull POp or(@NotNull POp... children) {
@@ -148,11 +123,52 @@ public class POp extends Op<POp> {
     return new POp(NOT_NULL, propertyRef, null);
   }
 
-  public static @NotNull POp contains(@NotNull PRef propertyRef, @NotNull Number value) {
-    return new POp(CONTAINS, propertyRef, value);
-  }
-
-  public static @NotNull POp contains(@NotNull PRef propertyRef, @NotNull String value) {
+  /**
+   * If your property is array then provided value also has to be an array.
+   * <pre>{@code ["value"]}</pre> <br>
+   * If your property is object then provided value also has to be an object.
+   * <pre>{@code {"prop":"value"}}</pre> <br>
+   * If your property is primitive value then provided value also has to be primitive.
+   * <pre>{@code "value"}</pre> <br>
+   * Only top level values search are supported. For json:
+   * <pre>{@code
+   * {
+   *   "type": "Feature",
+   *   "properties": {
+   *     "reference": [
+   *       {
+   *         "id": "106003684",
+   *         "prop":{"a":1},
+   *       }
+   *     ]
+   *   }
+   * }
+   * }</pre>
+   * <br>
+   * You can query by:
+   * <pre>{@code
+   *   [{"id":"106003684"}]
+   *   and
+   *   [{"prop":{"a":1}}]
+   * }</pre>
+   * <br>
+   * But querying by sub properties won't work:
+   * <pre>{@code {"a":1} }</pre>
+   *
+   * Also have in mind that provided {@link PRef} doesn't contain array properties in the middle of path.
+   * Array property is allowed only as last element of path.
+   * This is correct:
+   * <pre>{@code properties -> reference}</pre><br>
+   *
+   * This is not correct:
+   * <pre>{@code properties -> reference -> id}</pre>
+   * beacause `reference` is an array
+   *
+   * @param propertyRef
+   * @param value
+   * @return
+   */
+  public static @NotNull POp contains(@NotNull PRef propertyRef, @NotNull Object value) {
     return new POp(CONTAINS, propertyRef, value);
   }
 }
