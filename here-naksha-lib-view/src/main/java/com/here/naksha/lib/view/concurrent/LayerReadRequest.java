@@ -22,13 +22,13 @@ import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.view.ViewLayer;
 
-public class LayerRequest {
+public class LayerReadRequest {
 
   private final ReadFeatures request;
   private final ViewLayer viewLayer;
   private final IReadSession session;
 
-  public LayerRequest(ReadFeatures request, ViewLayer viewLayer, IReadSession session) {
+  public LayerReadRequest(ReadFeatures request, ViewLayer viewLayer, IReadSession session) {
     this.request = request;
     this.viewLayer = viewLayer;
     this.session = session;

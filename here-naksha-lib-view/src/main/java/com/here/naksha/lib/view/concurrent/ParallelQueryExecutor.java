@@ -29,7 +29,6 @@ import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
 import com.here.naksha.lib.core.models.storage.MutableCursor;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.view.View;
 import com.here.naksha.lib.view.ViewLayer;
@@ -51,18 +50,18 @@ public class ParallelQueryExecutor {
 
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
       Map<String, List<ViewLayerRow<FEATURE, CODEC>>> queryInParallel(
-          @NotNull List<LayerRequest> requests, FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
+          @NotNull List<LayerReadRequest> requests, FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
     ConcurrentLinkedQueue<ViewLayerRow<FEATURE, CODEC>> allLayersResults = new ConcurrentLinkedQueue<>();
     List<SimpleTask<?>> tasks = new ArrayList<>();
-    for (LayerRequest layerRequest : requests) {
+    for (LayerReadRequest layerReadRequest : requests) {
       QueryTask<List<ViewLayerRow<FEATURE, CODEC>>> singleTask = new QueryTask<>();
       singleTask.addListener(allLayersResults::addAll);
 
       singleTask.start(() -> executeSingle(
-              layerRequest.getViewLayer(),
-              layerRequest.getSession(),
+              layerReadRequest.getViewLayer(),
+              layerReadRequest.getSession(),
               codecFactory,
-              layerRequest.getRequest())
+              layerReadRequest.getRequest())
           .collect(toList()));
       tasks.add(singleTask);
     }
@@ -82,11 +81,10 @@ public class ParallelQueryExecutor {
 
     // prepare request
     ReadFeatures clonedRequest = request.shallowClone();
-    clonedRequest.withCollections(new ArrayList<>());
-    clonedRequest.addCollection(layer.getCollectionId());
+    clonedRequest.withCollections(List.of(layer.getCollectionId()));
 
-    Result result = session.execute(clonedRequest);
-    try (MutableCursor<FEATURE, CODEC> cursor = result.mutableCursor(codecFactory)) {
+    try (MutableCursor<FEATURE, CODEC> cursor =
+        session.execute(clonedRequest).mutableCursor(codecFactory)) {
       return cursor.asList().stream().map(row -> new ViewLayerRow<>(row, layerPriority, layer));
     } catch (NoCursor e) {
       throw unchecked(e);

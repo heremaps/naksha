@@ -28,14 +28,14 @@ import org.jetbrains.annotations.Nullable;
 
 public class View implements IStorage {
 
-  private ViewCollection viewCollection;
+  private ViewLayerCollection viewLayerCollection;
 
-  public View(@NotNull ViewCollection viewCollection) {
-    this.viewCollection = viewCollection;
+  public View(@NotNull ViewLayerCollection viewLayerCollection) {
+    this.viewLayerCollection = viewLayerCollection;
   }
 
-  public ViewCollection getViewCollection() {
-    return viewCollection;
+  public ViewLayerCollection getViewCollection() {
+    return viewLayerCollection;
   }
 
   @Override

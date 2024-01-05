@@ -12,13 +12,15 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-public class ObligatoryLayerResolverTest {
+public class ObligatoryLayersResolverTest {
 
   final XyzFeatureCodecFactory factory = XyzFeatureCodecFactory.get();
 
@@ -33,14 +35,14 @@ public class ObligatoryLayerResolverTest {
     List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
     singleRowFeatures.add(new ViewLayerRow<>(feature, 0, otherLayer));
 
-    MissingIdResolver<XyzFeature, XyzFeatureCodec> missingIdsResolver = new ObligatoryLayerResolver<>(obligatoryLayer);
+    MissingIdResolver<XyzFeature, XyzFeatureCodec> missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
 
     // when
-    Pair<ViewLayer, String> resolvedIds = missingIdsResolver.idsToSearch(singleRowFeatures);
+    List<Pair<ViewLayer, String>> resolvedIds = missingIdsResolver.layersToSearch(singleRowFeatures);
 
     // then
-    assertEquals(obligatoryLayer, resolvedIds.getKey());
-    assertEquals(feature.getId(), resolvedIds.getValue());
+    assertEquals(obligatoryLayer, resolvedIds.get(0).getKey());
+    assertEquals(feature.getId(), resolvedIds.get(0).getValue());
   }
 
   @Test
@@ -54,13 +56,13 @@ public class ObligatoryLayerResolverTest {
     List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
     singleRowFeatures.add(new ViewLayerRow<>(feature, 0, obligatoryLayer));
 
-    MissingIdResolver<XyzFeature, XyzFeatureCodec> missingIdsResolver = new ObligatoryLayerResolver<>(obligatoryLayer);
+    MissingIdResolver<XyzFeature, XyzFeatureCodec> missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
 
     // when
-    Pair<ViewLayer, String> resolvedIds = missingIdsResolver.idsToSearch(singleRowFeatures);
+    List<Pair<ViewLayer, String>> resolvedIds = missingIdsResolver.layersToSearch(singleRowFeatures);
 
     // then
-    assertNull(resolvedIds);
+    assertTrue(resolvedIds.isEmpty());
   }
 
   @Test
@@ -68,10 +70,10 @@ public class ObligatoryLayerResolverTest {
     // given
     IStorage storage = mock(IStorage.class);
     ViewLayer obligatoryLayer = new ViewLayer(storage, "collection1");
-    MissingIdResolver<XyzFeature, XyzFeatureCodec> missingIdsResolver = new ObligatoryLayerResolver<>(obligatoryLayer);
+    MissingIdResolver<XyzFeature, XyzFeatureCodec> missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
 
     // expect
-    assertNull(missingIdsResolver.idsToSearch(new ArrayList<>()));
-    assertThrows(NullPointerException.class, () -> missingIdsResolver.idsToSearch(null));
+    assertNull(missingIdsResolver.layersToSearch(new ArrayList<>()));
+    assertThrows(NullPointerException.class, () -> missingIdsResolver.layersToSearch(null));
   }
 }

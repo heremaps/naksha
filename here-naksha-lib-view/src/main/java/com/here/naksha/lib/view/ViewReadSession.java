@@ -35,15 +35,17 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.ISession;
-import com.here.naksha.lib.view.concurrent.LayerRequest;
+import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
-import com.here.naksha.lib.view.missing.ObligatoryLayerResolver;
+import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -90,7 +92,8 @@ public class ViewReadSession implements IReadSession {
         (ViewReadFeaturesRequest) readRequest,
         XyzFeatureCodecFactory.get(),
         new MergeByStoragePriority<>(),
-        new ObligatoryLayerResolver<>(viewRef.getViewCollection().getTopPriorityLayer()));
+        new ObligatoryLayersResolver<>(
+            Set.of(viewRef.getViewCollection().getTopPriorityLayer())));
   }
 
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result execute(
@@ -107,11 +110,11 @@ public class ViewReadSession implements IReadSession {
     ...
     ]
      */
-    List<LayerRequest> layerRequests = subSessions.entrySet().stream()
-        .map(entry -> new LayerRequest(request, entry.getKey(), entry.getValue()))
+    List<LayerReadRequest> layerReadRequests = subSessions.entrySet().stream()
+        .map(entry -> new LayerReadRequest(request, entry.getKey(), entry.getValue()))
         .collect(toList());
     Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows =
-        parallelQueryExecutor.queryInParallel(layerRequests, codecFactory);
+        parallelQueryExecutor.queryInParallel(layerReadRequests, codecFactory);
 
     /*
     If one of the features is missing on one or few layers, we use getMissingFeatures and missingIdResolver to try to fetch it again by id.
@@ -122,7 +125,7 @@ public class ViewReadSession implements IReadSession {
     then missingIdResolver may decide to create another request to Layer1 querying by featureId_1.
     So the result of getMissingFeatures(..) would look like this:
     [
-    <featureId_1, [Layer2_Feature1]>
+    <featureId_1, [Layer1_Feature1]>
     ]
     or it might be empty if feature is not there
      */
@@ -133,14 +136,14 @@ public class ViewReadSession implements IReadSession {
     putting all together:
     [ <featureId_1, [Layer0_Feature1, Layer2_Feature1]> ]
     and
-    [ <featureId_1, [Layer2_Feature1]> ]
+    [ <featureId_1, [Layer1_Feature1]> ]
     to get:
-    [ <featureId_1, [Layer0_Feature1, Layer2_Feature1, Layer2_Feature1]> ]
+    [ <featureId_1, [Layer0_Feature1, Layer1_Feature1, Layer2_Feature1]> ]
      */
     fetchedById.forEach((key, value) -> multiLayerRows.get(key).addAll(value));
 
     /*
-    Merging: [ <featureId_1, [Layer0_Feature1, Layer2_Feature1, Layer2_Feature1]> ]
+    Merging: [ <featureId_1, [Layer0_Feature1, Layer1_Feature1, Layer2_Feature1]> ]
     into final result:  [ Feature1 ]
      */
     List<CODEC> mergedRows =
@@ -162,13 +165,14 @@ public class ViewReadSession implements IReadSession {
       // Prepare map of <Layer_x, [FeatureId_x, ..., FeatureId_z]> features and layers you want to search by id.
       // to query only once each layer
       Map<ViewLayer, List<String>> idsToFetch = multiLayerRows.values().stream()
-          .map(missingIdResolver::idsToSearch)
+          .map(missingIdResolver::layersToSearch)
           .filter(Objects::nonNull)
+          .flatMap(Collection::stream)
           .collect(groupingBy(Pair::getKey, mapping(Pair::getValue, toList())));
 
       // Prepare request by id and query given layers.
-      List<LayerRequest> missingFeaturesRequests = idsToFetch.entrySet().stream()
-          .map(entry -> new LayerRequest(
+      List<LayerReadRequest> missingFeaturesRequests = idsToFetch.entrySet().stream()
+          .map(entry -> new LayerReadRequest(
               readFeaturesByIdsRequest(entry.getKey().getCollectionId(), entry.getValue()),
               entry.getKey(),
               subSessions.get(entry.getKey())))

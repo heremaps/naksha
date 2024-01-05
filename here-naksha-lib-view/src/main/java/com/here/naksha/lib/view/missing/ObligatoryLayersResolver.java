@@ -23,17 +23,19 @@ import com.here.naksha.lib.view.MissingIdResolver;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerRow;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ObligatoryLayerResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
+public class ObligatoryLayersResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
     implements MissingIdResolver<FEATURE, CODEC> {
 
-  private final ViewLayer obligatoryLayer;
+  private final Set<ViewLayer> obligatoryLayers;
 
-  public ObligatoryLayerResolver(@NotNull ViewLayer obligatoryLayer) {
-    this.obligatoryLayer = obligatoryLayer;
+  public ObligatoryLayersResolver(@NotNull Set<@NotNull ViewLayer> obligatoryLayers) {
+    this.obligatoryLayers = obligatoryLayers;
   }
 
   @Override
@@ -42,12 +44,21 @@ public class ObligatoryLayerResolver<FEATURE, CODEC extends FeatureCodec<FEATURE
   }
 
   @Override
-  public @Nullable Pair<ViewLayer, String> idsToSearch(@NotNull List<ViewLayerRow<FEATURE, CODEC>> multiFeature) {
-    boolean featureFromObligatoryLayerExists = multiFeature.stream()
-        .anyMatch(layerRow -> layerRow.getViewLayerRef().equals(obligatoryLayer));
-    if (featureFromObligatoryLayerExists || multiFeature.isEmpty()) {
+  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(
+      @NotNull List<ViewLayerRow<FEATURE, CODEC>> multiFeature) {
+
+    if (multiFeature.isEmpty()) {
       return null;
     }
-    return Pair.of(obligatoryLayer, multiFeature.get(0).getRow().getId());
+
+    List<ViewLayer> layersHavingFeature =
+        multiFeature.stream().map(ViewLayerRow::getViewLayerRef).collect(Collectors.toList());
+
+    List<Pair<ViewLayer, String>> missingObligatoryLayers = obligatoryLayers.stream()
+        .filter(obligatoryLayer -> !layersHavingFeature.contains(obligatoryLayer))
+        .map(layer -> Pair.of(layer, multiFeature.get(0).getRow().getId()))
+        .collect(Collectors.toList());
+
+    return missingObligatoryLayers;
   }
 }

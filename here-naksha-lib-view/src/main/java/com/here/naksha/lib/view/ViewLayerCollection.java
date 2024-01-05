@@ -18,27 +18,22 @@
  */
 package com.here.naksha.lib.view;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class ViewCollection {
+public class ViewLayerCollection {
 
   private final String name;
   private final List<ViewLayer> layers;
 
-  public ViewCollection(String name, List<ViewLayer> layers) {
+  public ViewLayerCollection(String name, List<ViewLayer> layers) {
     this.name = name;
     this.layers = Collections.unmodifiableList(layers);
   }
 
-  public ViewCollection(String name, ViewLayer... orderedLowerLevelStorages) {
+  public ViewLayerCollection(String name, ViewLayer... orderedLowerLevelStorages) {
     this.name = name;
-
-    List<ViewLayer> tempLayers = new ArrayList<>();
-    tempLayers.addAll(Arrays.asList(orderedLowerLevelStorages));
-    this.layers = Collections.unmodifiableList(tempLayers);
+    this.layers = List.of(orderedLowerLevelStorages);
   }
 
   public String getName() {
