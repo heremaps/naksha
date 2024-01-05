@@ -19,25 +19,37 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
+import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
+import com.here.naksha.lib.core.models.storage.ErrorResult;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import com.here.naksha.lib.core.util.diff.Difference;
+import com.here.naksha.lib.core.util.diff.Patcher;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
+
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +64,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     UPSERT_FEATURES,
     UPDATE_BY_ID,
     DELETE_FEATURES,
-    DELETE_BY_ID
+    DELETE_BY_ID,
+    PATCH_BY_ID
   }
 
   public WriteFeatureApiTask(
@@ -220,6 +233,73 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final String featureId = ApiParams.extractMandatoryPathParam(routingContext, FEATURE_ID);
 
     final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(spaceId, featureId);
+
+    // Forward request to NH Space Storage writer instance
+    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
+      // transform WriteResult to Http FeatureCollection response
+      return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+    }
+  }
+
+  private @NotNull XyzResponse executePatchFeatureById() throws JsonProcessingException {
+    // Deserialize input request
+//    final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
+//    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
+//    if (features.isEmpty()) {
+//      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't create empty features");
+//    }
+    List<XyzFeature> featuresFromStorage;
+
+    final XyzFeature featureFromRequest = singleFeatureFromRequestBody();
+
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String featureId = ApiParams.extractMandatoryPathParam(routingContext, FEATURE_ID);
+
+    // Validate parameters
+    if (!featureId.equals(featureFromRequest.getId())) {
+      return verticle.sendErrorResponse(
+              routingContext,
+              XyzError.ILLEGAL_ARGUMENT,
+              "URI path parameter featureId is not the same as id in feature request body.");
+    }
+
+    final List<XyzFeature> featuresFromRequest = new ArrayList<>();
+    featuresFromRequest.add(featureFromRequest);
+    List<String> featureIds = new ArrayList<>();
+    featureIds.add(featureId);
+
+    // TODO Reusable
+    final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds);
+    try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
+      // Extract the version of features in storage
+      if (result == null) {
+        logger.error("Unexpected null result while reading current versions in storage of targeted features for PATCH. The features do not exist.");
+        return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
+      } else if (result instanceof ErrorResult er) {
+        // In case of error, convert result to ErrorResponse
+        logger.error("Received error result while reading features in storage: {}", er);
+        return verticle.sendErrorResponse(routingContext, er.reason, er.message);
+      } else {
+        try {
+          featuresFromStorage = readFeaturesFromResult(result, XyzFeature.class, DEF_FEATURE_LIMIT);
+        } catch (NoCursor | NoSuchElementException emptyException) {
+          logger.error("No data found in ResultCursor while reading current versions in storage of targeted features for PATCH. The features do not exist.");
+          return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
+        }
+      }
+      // Attempt patching
+      for (XyzFeature featureToPatch : featuresFromStorage ) {
+        for (XyzFeature requestedChange : featuresFromRequest) {
+          if (requestedChange.getId().equals(featureToPatch.getId())) {
+            final Difference difference = Patcher.getDifference(featureToPatch, requestedChange);
+            // TODO remove all RemoveOp and in memory patch
+            break;
+          }
+        }
+      }
+    }
+
+    final WriteXyzFeatures wrRequest = RequestHelper.updateFeaturesRequest(spaceId, featuresFromStorage);
 
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
