@@ -476,7 +476,6 @@ public class QueryParameterDecoder {
   protected void parseNext() throws NoSuchElementException, ParameterError {
     assert in != null;
     assert sb != null;
-    // assert pos < end;
     // Copy references to the stack to allow compiler optimization!
     final CharSequence in = this.in;
     final StringBuilder sb = this.sb;
@@ -489,6 +488,7 @@ public class QueryParameterDecoder {
     numbers = 0;
     others = parameter == null; // Key are always strings, do not count characters.
     if (pos >= end) {
+      // handle end-of-input gracefully, instead of raising exception
       delimiter = END;
       delimiter_ext_unicode = 0;
       sb.setLength(0);
