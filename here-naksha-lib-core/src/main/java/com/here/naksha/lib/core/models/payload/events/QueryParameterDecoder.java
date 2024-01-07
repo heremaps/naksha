@@ -346,8 +346,9 @@ public class QueryParameterDecoder {
 
     // Fetch the operation by delimiter string, for example for "&key>=5" by ">=" or for "&key>5" by
     // ">".
-    // We run a loop here from longest delimiter length available to smallest possible length,
-    // whichever first matches one of the delimiter set we know of
+    // We run a loop here to start with greedy match (longest delimiter length) moving to
+    // lazy match (smallest possible length), in search of the delimiter sequence pattern
+    // that first matches with one of the delimiter sets we know of.
     for (int i = delimiters; i > 0; i--) {
       final String delimitersString = sb.substring(0, i);
       final QueryOperation op = QueryOperation.getByDelimiterString(delimitersString);
