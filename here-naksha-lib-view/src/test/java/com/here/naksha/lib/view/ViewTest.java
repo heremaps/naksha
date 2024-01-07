@@ -34,12 +34,11 @@ import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IStorage;
-import java.util.Comparator;
+
 import java.util.List;
 
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
-import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 
 public class ViewTest {
@@ -60,9 +59,9 @@ public class ViewTest {
     List<XyzFeatureCodec> results = sampleXyzResponse(3);
     when(storage.newReadSession(nakshaContext, false)).thenReturn(new MockReadSession(results));
 
-    ViewCollection viewCollection = new ViewCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
 
-    View view = new View(viewCollection);
+    View view = new View(viewLayerCollection);
 
     MergeOperation<XyzFeature, XyzFeatureCodec> customMergeOperation = new MergeByStoragePriority<>();
     MissingIdResolver<XyzFeature, XyzFeatureCodec> skipFetchingResolver = new IgnoreMissingResolver<>();
@@ -88,9 +87,9 @@ public class ViewTest {
     ViewLayer topologiesCS = new ViewLayer(mock(IStorage.class), "topologies");
     ;
 
-    ViewCollection viewCollection = new ViewCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
 
-    View view = new View(viewCollection);
+    View view = new View(viewLayerCollection);
 
     // to discuss if same context is valid to use across all storages
     ViewWriteSession writeSession = view.newWriteSession(nakshaContext, true);

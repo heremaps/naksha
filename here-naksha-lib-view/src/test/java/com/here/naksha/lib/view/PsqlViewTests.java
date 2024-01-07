@@ -20,36 +20,25 @@ package com.here.naksha.lib.view;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.models.storage.MutableCursor;
-import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.SeekableCursor;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
-import com.here.naksha.lib.core.storage.IStorage;
-import com.here.naksha.lib.psql.EPsqlLogLevel;
 import com.here.naksha.lib.psql.PsqlFeatureGenerator;
 import com.here.naksha.lib.psql.PsqlStorage;
 import com.here.naksha.lib.psql.PsqlStorage.Params;
 import com.here.naksha.lib.psql.PsqlStorageConfig;
-import com.here.naksha.lib.psql.PsqlSuccess;
 import com.here.naksha.lib.psql.PsqlWriteSession;
-import com.here.naksha.lib.view.merge.MergeByStoragePriority;
-import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -60,10 +49,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Objects;
 
 import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
-import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -72,7 +59,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Base class for all PostgresQL tests that require some test database.
@@ -242,11 +228,11 @@ class PsqlViewTests {
     ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
     ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
 
-    ViewCollection viewCollection = new ViewCollection("", layer0, layer1);
-    View view = new View(viewCollection);
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("", layer0, layer1);
+    View view = new View(viewLayerCollection);
 
-    ViewCollection viewCollectionReversedOrder = new ViewCollection("", layer1, layer0);
-    View viewReversed = new View(viewCollectionReversedOrder);
+    ViewLayerCollection viewLayerCollectionReversedOrder = new ViewLayerCollection("", layer1, layer0);
+    View viewReversed = new View(viewLayerCollectionReversedOrder);
 
     ViewReadFeaturesRequest requestAll = new ViewReadFeaturesRequest();
 
@@ -274,8 +260,8 @@ class PsqlViewTests {
     ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
     ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
 
-    ViewCollection viewCollection = new ViewCollection("", layer0, layer1);
-    View view = new View(viewCollection);
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("", layer0, layer1);
+    View view = new View(viewLayerCollection);
 
     ViewReadFeaturesRequest getByPoint = new ViewReadFeaturesRequest();
     getByPoint.setSpatialOp(SOp.intersects(new XyzPoint(1d, 1d)));

@@ -62,5 +62,5 @@ public interface MissingIdResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, 
    * @return
    */
   @Nullable
-  Pair<ViewLayer, String> idsToSearch(@NotNull List<ViewLayerRow<FEATURE, CODEC>> multipleResults);
+  List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerRow<FEATURE, CODEC>> multipleResults);
 }

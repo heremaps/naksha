@@ -24,6 +24,8 @@ import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerRow;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class IgnoreMissingResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
     implements MissingIdResolver<FEATURE, CODEC> {
@@ -34,7 +36,8 @@ public class IgnoreMissingResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, 
   }
 
   @Override
-  public Pair<ViewLayer, String> idsToSearch(List<ViewLayerRow<FEATURE, CODEC>> multipleResults) {
+  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(
+      @NotNull List<ViewLayerRow<FEATURE, CODEC>> multipleResults) {
     return null;
   }
 }

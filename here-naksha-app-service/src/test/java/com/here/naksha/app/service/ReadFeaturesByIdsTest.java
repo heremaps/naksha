@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import com.here.naksha.app.common.ResponseAssertions;
+import com.here.naksha.app.common.assertions.ResponseAssertions;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import java.io.IOException;
@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
 class ReadFeaturesByIdsTest extends ApiTest {
@@ -69,10 +68,9 @@ class ReadFeaturesByIdsTest extends ApiTest {
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
-
-    // Then: also match individual JSON attributes (in addition to whole object comparison above)
-    additionalCustomAssertions(response.body());
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match")
+        .hasUuids()
+    ;
   }
 
   @Test
@@ -218,19 +216,9 @@ class ReadFeaturesByIdsTest extends ApiTest {
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
-
-    // Then: also match individual JSON attributes (in addition to whole object comparison above)
-    additionalCustomAssertions(response.body());
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match")
+        .hasUuids()
+    ;
   }
 
-  private void additionalCustomAssertions(final @NotNull String resBody) {
-    final XyzFeatureCollection collectionResponse = parseJson(resBody, XyzFeatureCollection.class);
-    final List<XyzFeature> features = collectionResponse.getFeatures();
-    for (int i = 0; i < features.size(); i++) {
-      assertNotNull(
-          features.get(i).getProperties().getXyzNamespace().getUuid(),
-          "UUID found missing in response for feature at idx : " + i);
-    }
-  }
 }
