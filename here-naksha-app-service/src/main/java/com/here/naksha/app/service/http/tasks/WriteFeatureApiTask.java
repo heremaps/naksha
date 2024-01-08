@@ -263,6 +263,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
     final List<XyzFeature> featuresFromRequest = new ArrayList<>();
     featuresFromRequest.add(featureFromRequest);
+    final List<XyzFeature> patchedFeature = new ArrayList<>();
     List<String> featureIds = new ArrayList<>();
     featureIds.add(featureId);
 
@@ -288,19 +289,21 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
       }
       // Attempt patching
-      for (XyzFeature featureToPatch : featuresFromStorage) {
-        for (XyzFeature requestedChange : featuresFromRequest) {
+      for (XyzFeature requestedChange : featuresFromRequest) {
+        for (XyzFeature featureToPatch : featuresFromStorage) {
           if (requestedChange.getId().equals(featureToPatch.getId())) {
             final Difference difference = Patcher.getDifference(featureToPatch, requestedChange);
-            // TODO remove all RemoveOp and in memory patch
             final Difference diffNoRemoveOp = removeAllRemoveOp(difference);
+            patchedFeature.add(Patcher.patch(featureToPatch,diffNoRemoveOp));
             break;
           }
         }
       }
+
+
     }
 
-    final WriteXyzFeatures wrRequest = RequestHelper.updateFeaturesRequest(spaceId, featuresFromStorage);
+    final WriteXyzFeatures wrRequest = RequestHelper.updateFeaturesRequest(spaceId, patchedFeature);
 
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
