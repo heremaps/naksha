@@ -12,7 +12,7 @@ public class ContainerTestContext extends TestContext {
 
   private static final Logger log = LoggerFactory.getLogger(ContainerTestContext.class);
 
-  private static final String CONFIG_ID = "test-config";
+  private static final String CONFIG_ID = "test-config-with-extensions";
 
   private final PostgresContainer postgresContainer;
 
