@@ -22,7 +22,6 @@ import static com.here.naksha.app.service.http.apis.ApiParams.*;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
@@ -32,24 +31,22 @@ import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.util.diff.Difference;
-import com.here.naksha.lib.core.util.diff.Patcher;
+import com.here.naksha.lib.core.util.diff.*;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
-
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -243,11 +240,12 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executePatchFeatureById() throws JsonProcessingException {
     // Deserialize input request
-//    final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
-//    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
-//    if (features.isEmpty()) {
-//      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't create empty features");
-//    }
+    //    final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
+    //    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
+    //    if (features.isEmpty()) {
+    //      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't create empty
+    // features");
+    //    }
     List<XyzFeature> featuresFromStorage;
 
     final XyzFeature featureFromRequest = singleFeatureFromRequestBody();
@@ -258,9 +256,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Validate parameters
     if (!featureId.equals(featureFromRequest.getId())) {
       return verticle.sendErrorResponse(
-              routingContext,
-              XyzError.ILLEGAL_ARGUMENT,
-              "URI path parameter featureId is not the same as id in feature request body.");
+          routingContext,
+          XyzError.ILLEGAL_ARGUMENT,
+          "URI path parameter featureId is not the same as id in feature request body.");
     }
 
     final List<XyzFeature> featuresFromRequest = new ArrayList<>();
@@ -273,7 +271,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       // Extract the version of features in storage
       if (result == null) {
-        logger.error("Unexpected null result while reading current versions in storage of targeted features for PATCH. The features do not exist.");
+        logger.error(
+            "Unexpected null result while reading current versions in storage of targeted features for PATCH. The features do not exist.");
         return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
       } else if (result instanceof ErrorResult er) {
         // In case of error, convert result to ErrorResponse
@@ -283,16 +282,18 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         try {
           featuresFromStorage = readFeaturesFromResult(result, XyzFeature.class, DEF_FEATURE_LIMIT);
         } catch (NoCursor | NoSuchElementException emptyException) {
-          logger.error("No data found in ResultCursor while reading current versions in storage of targeted features for PATCH. The features do not exist.");
+          logger.error(
+              "No data found in ResultCursor while reading current versions in storage of targeted features for PATCH. The features do not exist.");
           return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
         }
       }
       // Attempt patching
-      for (XyzFeature featureToPatch : featuresFromStorage ) {
+      for (XyzFeature featureToPatch : featuresFromStorage) {
         for (XyzFeature requestedChange : featuresFromRequest) {
           if (requestedChange.getId().equals(featureToPatch.getId())) {
             final Difference difference = Patcher.getDifference(featureToPatch, requestedChange);
             // TODO remove all RemoveOp and in memory patch
+            final Difference diffNoRemoveOp = removeAllRemoveOp(difference);
             break;
           }
         }
@@ -306,6 +307,30 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       // transform WriteResult to Http FeatureCollection response
       return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
     }
+  }
+
+  private Difference removeAllRemoveOp(Difference difference) {
+    if (difference instanceof RemoveOp) {
+      return null;
+    } else if (difference instanceof ListDiff listdiff) {
+      final Iterator<Difference> iterator = listdiff.iterator();
+      while (iterator.hasNext()) {
+        Difference next = iterator.next();
+        if (next == null) continue;
+        next = removeAllRemoveOp(next);
+        if (next == null) iterator.remove();
+      }
+      return listdiff;
+    } else if (difference instanceof MapDiff mapdiff) {
+      final Iterator<Entry<Object, Difference>> iterator = mapdiff.entrySet().iterator();
+      while (iterator.hasNext()) {
+        Entry<Object, Difference> next = iterator.next();
+        next.setValue(removeAllRemoveOp(next.getValue()));
+        if (next.getValue()==null) iterator.remove();
+      }
+      return mapdiff;
+    }
+    return difference;
   }
 
   private @NotNull FeatureCollectionRequest featuresFromRequestBody() throws JsonProcessingException {
