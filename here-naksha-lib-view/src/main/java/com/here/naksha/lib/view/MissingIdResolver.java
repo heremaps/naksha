@@ -36,9 +36,11 @@ import org.jetbrains.annotations.Nullable;
  * what to do with it, you can decide to try to fetch F_1 by id or to ignore it. <br>
  *
  * Here are couple examples of possible implementations:
- * 1. Ignore fetching more - perfect when your basic query is by ID (it doesn't make sense to search it again).
+ * 1. Ignore fetching more.
  * 2. Calculate missing features' IDs and try to fetch them by ID - good when your basic query is i.e. by Bbox
  * 3. Fetch only if feature is missing in specific Storage and query again only that Storage/layer.
+ *
+ * <b>Notice:</b> If your query is by IDs only, "fetch missing" query will be ignored regardless of {@link MissingIdResolver} implementation.
  */
 public interface MissingIdResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
 
