@@ -25,6 +25,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.SeekableCursor;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
@@ -50,6 +51,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import static com.here.naksha.lib.core.models.storage.SOp.intersects;
 import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -234,7 +236,7 @@ class PsqlViewTests {
     ViewLayerCollection viewLayerCollectionReversedOrder = new ViewLayerCollection("", layer1, layer0);
     View viewReversed = new View(viewLayerCollectionReversedOrder);
 
-    ViewReadFeaturesRequest requestAll = new ViewReadFeaturesRequest();
+    ReadFeatures requestAll = new ReadFeatures();
 
     // when
     List<XyzFeatureCodec> features = queryView(view, requestAll);
@@ -263,8 +265,8 @@ class PsqlViewTests {
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("", layer0, layer1);
     View view = new View(viewLayerCollection);
 
-    ViewReadFeaturesRequest getByPoint = new ViewReadFeaturesRequest();
-    getByPoint.setSpatialOp(SOp.intersects(new XyzPoint(1d, 1d)));
+    ReadFeatures getByPoint = new ReadFeatures();
+    getByPoint.setSpatialOp(intersects(new XyzPoint(1d, 1d)));
 
     // when
     List<XyzFeatureCodec> features = queryView(view, getByPoint);
@@ -272,6 +274,34 @@ class PsqlViewTests {
     // then
     assertEquals(10, features.size());
     // feature fetched in second query from obligatory storage
+    assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
+
+    session.commit(true);
+  }
+
+  @Test
+  @Order(41)
+  @EnabledIf("runTest")
+  void viewQueryTest_missingMiddleLayerInSpacialQuery() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+
+    // given
+    ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
+    ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
+    ViewLayer layer2 = new ViewLayer(storage, COLLECTION_2);
+
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("", layer0, layer1, layer2);
+    View view = new View(viewLayerCollection);
+
+    ReadFeatures getByPoint = new ReadFeatures();
+    getByPoint.setSpatialOp(SOp.or(intersects(new XyzPoint(0d, 0d)), intersects(new XyzPoint(2d, 2d))));
+
+    // when
+    List<XyzFeatureCodec> features = queryView(view, getByPoint);
+
+    // then
+    assertEquals(10, features.size());
     assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
 
     session.commit(true);
@@ -311,7 +341,7 @@ class PsqlViewTests {
     }
   }
 
-  private List<XyzFeatureCodec> queryView(View view, ViewReadFeaturesRequest request) throws NoCursor {
+  private List<XyzFeatureCodec> queryView(View view, ReadFeatures request) throws NoCursor {
     ViewReadSession readSession = view.newReadSession(nakshaContext, false);
     try (final SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
              readSession.execute(request).getXyzSeekableCursor()) {

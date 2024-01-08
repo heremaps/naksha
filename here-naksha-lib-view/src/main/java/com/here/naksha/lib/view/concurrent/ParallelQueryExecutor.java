@@ -18,12 +18,10 @@
  */
 package com.here.naksha.lib.view.concurrent;
 
-import static com.here.naksha.lib.core.AbstractTask.State.DONE;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
-import com.here.naksha.lib.core.SimpleTask;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
@@ -34,14 +32,19 @@ import com.here.naksha.lib.view.View;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerRow;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 
 public class ParallelQueryExecutor {
-
+  private final long defaultTimeoutMillis = 1000 * 60 * 10L; // 10 minutes
   private final View viewRef;
 
   public ParallelQueryExecutor(@NotNull View viewRef) {
@@ -51,25 +54,51 @@ public class ParallelQueryExecutor {
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
       Map<String, List<ViewLayerRow<FEATURE, CODEC>>> queryInParallel(
           @NotNull List<LayerReadRequest> requests, FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
-    ConcurrentLinkedQueue<ViewLayerRow<FEATURE, CODEC>> allLayersResults = new ConcurrentLinkedQueue<>();
-    List<SimpleTask<?>> tasks = new ArrayList<>();
+    List<Future<List<ViewLayerRow<FEATURE, CODEC>>>> futures = new ArrayList<>();
+
     for (LayerReadRequest layerReadRequest : requests) {
       QueryTask<List<ViewLayerRow<FEATURE, CODEC>>> singleTask = new QueryTask<>();
-      singleTask.addListener(allLayersResults::addAll);
 
-      singleTask.start(() -> executeSingle(
+      Future<List<ViewLayerRow<FEATURE, CODEC>>> futureResult = singleTask.start(() -> executeSingle(
               layerReadRequest.getViewLayer(),
               layerReadRequest.getSession(),
               codecFactory,
               layerReadRequest.getRequest())
           .collect(toList()));
-      tasks.add(singleTask);
+      futures.add(futureResult);
     }
 
     // wait for all
-    while (!tasks.stream().allMatch(task -> task.state() == DONE)) {}
-    return allLayersResults.stream()
+    Long timeout = getTimeout(requests);
+    return getCollectedResults(futures, timeout);
+  }
+
+  @NotNull
+  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
+      Map<String, List<ViewLayerRow<FEATURE, CODEC>>> getCollectedResults(
+          List<Future<List<ViewLayerRow<FEATURE, CODEC>>>> tasks, Long timeoutMillis) {
+    return tasks.stream()
+        .map(future -> {
+          try {
+            return future.get(timeoutMillis, TimeUnit.MILLISECONDS);
+          } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            throw unchecked(e);
+          }
+        })
+        .flatMap(Collection::stream)
         .collect(groupingBy(viewRow -> viewRow.getRow().getId()));
+  }
+
+  private @NotNull Long getTimeout(@NotNull List<LayerReadRequest> requests) {
+    Optional<Long> maxSessionTimeout = requests.stream()
+        .map(it -> it.getSession().getStatementTimeout(TimeUnit.MILLISECONDS))
+        .max(Long::compareTo);
+
+    if (maxSessionTimeout.isEmpty() || maxSessionTimeout.get() == 0) {
+      return defaultTimeoutMillis;
+    } else {
+      return maxSessionTimeout.get();
+    }
   }
 
   private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Stream<ViewLayerRow<FEATURE, CODEC>> executeSingle(

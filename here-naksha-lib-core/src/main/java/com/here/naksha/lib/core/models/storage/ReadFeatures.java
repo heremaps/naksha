@@ -167,6 +167,7 @@ public class ReadFeatures extends ReadRequest<ReadFeatures> {
     return this;
   }
 
+  @Override
   public ReadFeatures shallowClone() {
     ReadFeatures clone = new ReadFeatures();
     clone.setPropertyOp(this.getPropertyOp());

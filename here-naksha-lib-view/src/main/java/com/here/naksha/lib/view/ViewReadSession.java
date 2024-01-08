@@ -30,6 +30,10 @@ import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
 import com.here.naksha.lib.core.models.storage.HeapCacheCursor;
 import com.here.naksha.lib.core.models.storage.Notification;
+import com.here.naksha.lib.core.models.storage.POp;
+import com.here.naksha.lib.core.models.storage.POpType;
+import com.here.naksha.lib.core.models.storage.PRef;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
@@ -40,6 +44,7 @@ import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,7 +58,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * {@link  ViewReadSession} operates on {@link View}, it queries simultaneously all the storages.
- * Then it tries to feeth missing features {@link MissingIdResolver} if needed.
+ * Then it tries to fetch missing features {@link MissingIdResolver} if needed.
  * At the end {@link MergeOperation} is executed and single result returned.
  * You can provide your own merge operation. The default is "take result from storage on the top". <br>
  *
@@ -89,7 +94,7 @@ public class ViewReadSession implements IReadSession {
   @Override
   public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
     return execute(
-        (ViewReadFeaturesRequest) readRequest,
+        readRequest,
         XyzFeatureCodecFactory.get(),
         new MergeByStoragePriority<>(),
         new ObligatoryLayersResolver<>(
@@ -97,10 +102,15 @@ public class ViewReadSession implements IReadSession {
   }
 
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result execute(
-      @NotNull ViewReadFeaturesRequest request,
+      @NotNull ReadRequest<?> request,
       FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       @NotNull MergeOperation<FEATURE, CODEC> mergeOperation,
       @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver) {
+
+    if (!(request instanceof ReadFeatures)) {
+      throw new UnsupportedOperationException("Only ReadFeatures are supported.");
+    }
+
     /*
     Call every layer/storage and get the first result.
     After that we should have multiLayerRows like that:
@@ -111,7 +121,7 @@ public class ViewReadSession implements IReadSession {
     ]
      */
     List<LayerReadRequest> layerReadRequests = subSessions.entrySet().stream()
-        .map(entry -> new LayerReadRequest(request, entry.getKey(), entry.getValue()))
+        .map(entry -> new LayerReadRequest((ReadFeatures) request, entry.getKey(), entry.getValue()))
         .collect(toList());
     Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows =
         parallelQueryExecutor.queryInParallel(layerReadRequests, codecFactory);
@@ -129,8 +139,9 @@ public class ViewReadSession implements IReadSession {
     ]
     or it might be empty if feature is not there
      */
-    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> fetchedById =
-        getMissingFeatures(multiLayerRows, missingIdResolver, codecFactory);
+    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> fetchedById = isRequestOnlyById(request)
+        ? Collections.emptyMap()
+        : getMissingFeatures(multiLayerRows, missingIdResolver, codecFactory);
 
     /*
     putting all together:
@@ -243,5 +254,26 @@ public class ViewReadSession implements IReadSession {
   @Override
   public void close() {
     subSessions.values().forEach(ISession::close);
+  }
+
+  private boolean isRequestOnlyById(ReadRequest<?> request) {
+    if (request instanceof ReadFeatures) {
+      ReadFeatures readFeatures = (ReadFeatures) request;
+      POp propertyOp = readFeatures.getPropertyOp();
+      return readFeatures.getSpatialOp() == null && isPropertyOpIdOnly(propertyOp);
+    } else {
+      return false;
+    }
+  }
+
+  private boolean isPropertyOpIdOnly(POp pOp) {
+    if (pOp == null) {
+      return false;
+    }
+    if (pOp.children() == null) {
+      return pOp.op() == POpType.EQ && PRef.id().equals(pOp.getPropertyRef());
+    } else {
+      return pOp.children().stream().allMatch(this::isPropertyOpIdOnly);
+    }
   }
 }
