@@ -37,8 +37,7 @@ public class PostgresContainer {
   private final GenericContainer nakshaPostgres;
 
   private PostgresContainer() {
-    DockerImageName img = DockerImageName.parse("docker.io/postgis/postgis:16-3.4-alpine");
-    nakshaPostgres = new GenericContainer(img)
+    nakshaPostgres = new GenericContainer(Config.imageIdFromConfig())
         .withEnv(Map.of(
             "POSTGRES_PASSWORD", "postgres",
             "POSTGRES_INITDB_ARGS", "--auth-host=trust --auth-local=trust",
