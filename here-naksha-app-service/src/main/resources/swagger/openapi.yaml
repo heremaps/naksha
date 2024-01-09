@@ -1318,7 +1318,7 @@ components:
             $ref: '#/components/schemas/FeatureCollectionIterable'
           example:
             type: FeatureCollection
-            handle: 1000==
+            nextPageToken: eyJsaW1pdCI6MSwib2Zmc2V0IjozfQ==
             features:
               - type: Feature
                 id: BfiimUxHjj
@@ -1546,7 +1546,7 @@ components:
         - $ref: '#/components/schemas/FeatureCollection'
         - type: object
           properties:
-            handle:
+            nextPageToken:
               type: string
               description: The handle of the next batch.
     FeatureCollectionModification:
