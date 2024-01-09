@@ -21,4 +21,4 @@ echo "Using $CONTAINER_TOOL as container management tool"
 # build image & push it to the container
 IMAGE_ID=$CONTAINER_REPOSITORY/$IMAGE_NAMESPACE/$IMAGE_NAME:$IMAGE_VERSION
 $CONTAINER_TOOL build --no-cache -t "$IMAGE_ID" .
-$CONTAINER_TOOL push "$IMAGE_ID"
+#$CONTAINER_TOOL push "$IMAGE_ID"
