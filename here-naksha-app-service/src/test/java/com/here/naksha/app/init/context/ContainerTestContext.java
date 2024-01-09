@@ -3,8 +3,6 @@ package com.here.naksha.app.init.context;
 import static com.here.naksha.app.service.NakshaApp.newInstance;
 
 import com.here.naksha.app.init.PostgresContainer;
-import com.here.naksha.app.init.TestPsqlStorageConfigs;
-import com.here.naksha.lib.psql.PsqlStorageConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,8 +10,7 @@ public class ContainerTestContext extends TestContext {
 
   private static final Logger log = LoggerFactory.getLogger(ContainerTestContext.class);
 
-  private static final String CONFIG_ID = "test-config";
-//  private static final String CONFIG_ID = "test-config-with-extensions";
+  private static final String CONFIG_ID = "test-config-with-extensions";
 
   private final PostgresContainer postgresContainer;
 
@@ -21,7 +18,7 @@ public class ContainerTestContext extends TestContext {
     this(PostgresContainer.startedPostgresContainer());
   }
 
-  private ContainerTestContext(final PostgresContainer postgresContainer){
+  private ContainerTestContext(final PostgresContainer postgresContainer) {
     super(() -> newInstance(CONFIG_ID, postgresContainer.getJdbcUrl()));
     this.postgresContainer = postgresContainer;
   }
