@@ -45,7 +45,7 @@ public class WriteFeatureApi extends Api {
     rb.operation("putFeature").handler(this::updateFeature);
     rb.operation("deleteFeatures").handler(this::deleteFeatures);
     rb.operation("deleteFeature").handler(this::deleteFeature);
-    //    rb.operation("patchFeature").handler(this::patchFeature);
+    rb.operation("patchFeature").handler(this::patchFeature);
   }
 
   @Override
