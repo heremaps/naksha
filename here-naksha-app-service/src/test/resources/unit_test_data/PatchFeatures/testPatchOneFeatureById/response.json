@@ -1,0 +1,16 @@
+{
+  "id": "feature-1-to-patch",
+  "type": "Feature",
+  "properties": {
+    "speedLimit": "30",
+    "brandNewProperty": 5
+  },
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      8.68872,
+      50.0561,
+      292.94377758
+    ]
+  }
+}

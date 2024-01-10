@@ -261,14 +261,15 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     featuresFromRequest.add(featureFromRequest);
     List<String> featureIds = new ArrayList<>();
     featureIds.add(featureId);
-    return attemptFeaturesPatching(spaceId, featureIds, featuresFromRequest, 0);
+    return attemptFeaturesPatching(spaceId, featureIds, featuresFromRequest, HttpResponseType.FEATURE, 0);
   }
 
   private XyzResponse attemptFeaturesPatching(
       @NotNull String spaceId,
       @NotNull List<String> featureIds,
       @NotNull List<XyzFeature> featuresFromRequest,
-      @NotNull int retry) {
+      @NotNull HttpResponseType responseType,
+      int retry) {
     // Patched feature list is to ensure the order of input features is retained
     final List<XyzFeature> patchedFeature = new ArrayList<>();
     final List<XyzFeature> featuresFromStorage;
@@ -352,7 +353,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
                         + er.message);
               }
               // Attempt retry
-              return attemptFeaturesPatching(spaceId, featureIds, featuresFromRequest, retry + 1);
+              return attemptFeaturesPatching(
+                  spaceId, featureIds, featuresFromRequest, responseType, retry + 1);
             }
           }
         } else {
@@ -368,7 +370,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           final List<XyzFeature> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
           return verticle.sendXyzResponse(
               routingContext,
-              HttpResponseType.FEATURE_COLLECTION,
+              responseType,
               new XyzFeatureCollection()
                   .withInsertedFeatures(insertedFeatures)
                   .withUpdatedFeatures(updatedFeatures));

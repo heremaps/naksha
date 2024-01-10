@@ -1,0 +1,8 @@
+{
+  "id": "feature-1-to-patch",
+  "type": "Feature",
+  "properties": {
+    "speedLimit": "30",
+    "brandNewProperty": 5
+  }
+}
