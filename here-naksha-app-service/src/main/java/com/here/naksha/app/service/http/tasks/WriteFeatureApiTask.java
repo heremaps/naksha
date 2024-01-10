@@ -18,10 +18,6 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -34,22 +30,27 @@ import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.diff.*;
 import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.core.util.json.JsonObject;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
-
-import java.util.*;
-import java.util.Map.Entry;
-
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
 
 public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
@@ -238,15 +239,10 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
   }
 
+  // TODO this might change if naksha_plpgsql.sql gets updated
+  private static Pattern FEATURE_ID_FROM_ERR = Pattern.compile("The feature '([^']*)' uuid");
+
   private @NotNull XyzResponse executePatchFeatureById() throws JsonProcessingException {
-    // Deserialize input request
-    //    final FeatureCollectionRequest collectionRequest = featuresFromRequestBody();
-    //    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
-    //    if (features.isEmpty()) {
-    //      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't create empty
-    // features");
-    //    }
-    List<XyzFeature> featuresFromStorage;
 
     final XyzFeature featureFromRequest = singleFeatureFromRequestBody();
 
@@ -263,18 +259,21 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
     final List<XyzFeature> featuresFromRequest = new ArrayList<>();
     featuresFromRequest.add(featureFromRequest);
-    // Patched feature list is to ensure the order of input features is retained
-    final List<XyzFeature> patchedFeature = new ArrayList<>();
     List<String> featureIds = new ArrayList<>();
     featureIds.add(featureId);
+    return attemptFeaturesPatching(spaceId,featureIds,featuresFromRequest);
+  }
 
-    // TODO Reusable
+  private XyzResponse attemptFeaturesPatching(@NotNull String spaceId, @NotNull List<String> featureIds, @NotNull List<XyzFeature> featuresFromRequest) {
+    // Patched feature list is to ensure the order of input features is retained
+    final List<XyzFeature> patchedFeature = new ArrayList<>();
+    final List<XyzFeature> featuresFromStorage;
+    // Extract the version of features in storage
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds);
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
-      // Extract the version of features in storage
       if (result == null) {
         logger.error(
-            "Unexpected null result while reading current versions in storage of targeted features for PATCH. The features do not exist.");
+                "Unexpected null result while reading current versions in storage of targeted features for PATCH. The features do not exist.");
         return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
       } else if (result instanceof ErrorResult er) {
         // In case of error, convert result to ErrorResponse
@@ -285,7 +284,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           featuresFromStorage = readFeaturesFromResult(result, XyzFeature.class, DEF_FEATURE_LIMIT);
         } catch (NoCursor | NoSuchElementException emptyException) {
           logger.error(
-              "No data found in ResultCursor while reading current versions in storage of targeted features for PATCH. The features do not exist.");
+                  "No data found in ResultCursor while reading current versions in storage of targeted features for PATCH. The features do not exist.");
           return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
         }
       }
@@ -303,7 +302,6 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     final WriteXyzFeatures wrRequest = RequestHelper.updateFeaturesRequest(spaceId, patchedFeature);
-// TODO error handling regarding UUID and retry here with the update
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       if (wrResult == null) {
@@ -313,31 +311,44 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       } else if (wrResult instanceof ErrorResult er) {
         if (er.message.contains("uuid") && er.message.contains("does not match")) {
           // UUID mismatched
-          for (XyzFeature requestedChange : featuresFromRequest) {
-            if (requestedChange.getId().equals("")) //TODO extract feature id from error message
-              if ()
-
+          // Extract feature ID from error message
+          Matcher matcherFeatureId = FEATURE_ID_FROM_ERR.matcher(er.message);
+          if (!matcherFeatureId.find()) {
+            logger.error("Received error result with feature ID not specified or specified incorrectly {}", er);
+            return verticle.sendErrorResponse(
+                    routingContext, XyzError.EXCEPTION, "Error updating feature in storage, the feature ID from the error was specified incorrectly or not specified.");
           }
+          final String featureIdFromErr = matcherFeatureId.group();
+          // Find the requested change for the corresponding feature with that ID
+          for (XyzFeature requestedChange : featuresFromRequest) {
+            if (requestedChange.getId().equals(featureIdFromErr)) {
+              // If UUID input by user, return conflict
+              if (requestedChange.getProperties().getXyzNamespace().getUuid() != null) {
+                return verticle.sendErrorResponse(
+                        routingContext, XyzError.CONFLICT, "Error updating feature '"+featureIdFromErr+"', wrong UUID.");
+              }
+              // Else the feature was modified concurrently within Naksha, attempt retry
+              // TODO retry
+            }
+            break;
+          }
+        } else {
+          // Other types of error, convert result to ErrorResponse
+          logger.error("Received error result {}", er);
+          return verticle.sendErrorResponse(routingContext, er.reason, er.message);
         }
-        // In case of error, convert result to ErrorResponse
-        logger.error("Received error result {}", er);
-        return verticle.sendErrorResponse(routingContext, er.reason, er.message);
       } else {
         try {
-          final Map<EExecutedOp, List<R>> featureMap = readFeaturesGroupedByOp(wrResult, type);
-          //TODO patched or updated
-          final List<R> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
+          final Map<EExecutedOp, List<XyzFeature>> featureMap = readFeaturesGroupedByOp(wrResult, XyzFeature.class);
+          final List<XyzFeature> insertedFeatures = featureMap.get(EExecutedOp.CREATED);
+          final List<XyzFeature> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
           return verticle.sendXyzResponse(
                   routingContext,
                   HttpResponseType.FEATURE_COLLECTION,
                   new XyzFeatureCollection()
+                          .withInsertedFeatures(insertedFeatures)
                           .withUpdatedFeatures(updatedFeatures));
         } catch (NoCursor | NoSuchElementException emptyException) {
-          if (isDeleteOperation) {
-            logger.info("No data found in ResultCursor, returning empty collection");
-            return verticle.sendXyzResponse(
-                    routingContext, HttpResponseType.FEATURE_COLLECTION, emptyFeatureCollection());
-          }
           return verticle.sendErrorResponse(
                   routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");
         }
