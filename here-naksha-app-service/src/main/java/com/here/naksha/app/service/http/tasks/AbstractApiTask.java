@@ -186,10 +186,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     }
   }
 
-  private static <R extends XyzFeature> String getIterateHandleAsString(
+  private static String getIterateHandleAsString(
       long featuresFound, long crtOffset, long maxLimit, final @Nullable IterateHandle handle) {
-    if (handle == null) return null; // nothing to populate if handle is not provided
-    if (featuresFound < maxLimit) return null; // nothing to populate if we can't iterate more features
+    // nothing to populate if handle is not provided OR if we don't have more features to iterate
+    if (handle == null || featuresFound < maxLimit) return null;
     handle.setOffset(crtOffset + featuresFound); // set offset for next iteration
     handle.setLimit(maxLimit);
     return handle.base64EncodedSerializedJson();
