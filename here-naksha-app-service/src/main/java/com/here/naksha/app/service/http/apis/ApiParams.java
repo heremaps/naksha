@@ -141,11 +141,17 @@ public final class ApiParams {
   }
 
   public static @Nullable IterateHandle extractQueryParamAsIterateHandle(
-      final @Nullable QueryParameterList queryParams, final @NotNull String apiParamType) {
-    final String handleStr = extractParamAsString(queryParams, apiParamType);
+      final @Nullable QueryParameterList queryParams, final @NotNull String apiParamName) {
+    final String handleStr = extractParamAsString(queryParams, apiParamName);
     IterateHandle handle = null;
     if (!StringUtils.isEmpty(handleStr)) {
-      handle = IterateHandle.base64DecodedDeserializedJson(handleStr);
+      try {
+        handle = IterateHandle.base64DecodedDeserializedJson(handleStr);
+      } catch (Exception ex) {
+        throw new XyzErrorException(
+            XyzError.ILLEGAL_ARGUMENT,
+            "Unable to use value " + handleStr + " for parameter " + apiParamName + ". " + ex.getMessage());
+      }
     }
     return handle;
   }
