@@ -108,8 +108,8 @@ class IterateFeaturesTest extends ApiTest {
     // Test API : GET /hub/spaces/{spaceId}/iterate
     // Validate all features getting returned in three iterations, with:
     // - first iteration returning features and nextPageToken
-    // - second iteration returning next set of features and nextPageToken
-    // - third iteration accepting all other features without nextPageToken
+    // - second iteration accepting handle and returning next set of features and nextPageToken
+    // - third iteration accepting handle and returning all other features without nextPageToken
 
     // Given: iterate parameters for first request
     final String limitQueryParam = "limit=2";
@@ -167,7 +167,7 @@ class IterateFeaturesTest extends ApiTest {
     ResponseAssertions.assertThat(response)
             .hasStatus(400)
             .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart, "Iterate Feature response body doesn't match");
+            .hasJsonBody(expectedBodyPart, "Iterate Feature Error response body doesn't match");
   }
 
 }
