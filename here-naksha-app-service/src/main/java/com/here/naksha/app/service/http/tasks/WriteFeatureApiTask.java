@@ -18,6 +18,10 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -35,22 +39,16 @@ import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.diff.*;
 import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.util.json.JsonObject;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
@@ -101,6 +99,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         case UPDATE_BY_ID -> executeUpdateFeature();
         case DELETE_FEATURES -> executeDeleteFeatures();
         case DELETE_BY_ID -> executeDeleteFeature();
+        case PATCH_BY_ID -> executePatchFeatureById();
         default -> executeUnsupported();
       };
     } catch (XyzErrorException ex) {
@@ -239,8 +238,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
   }
 
-  // TODO this might change if naksha_plpgsql.sql gets updated
-  private static Pattern FEATURE_ID_FROM_ERR = Pattern.compile("The feature '([^']*)' uuid");
+  // TODO this might change if naksha_plpgsql.sql gets updated and the message is modified
+  private static final Pattern FEATURE_ID_FROM_ERR = Pattern.compile("The feature '([^']*)' uuid");
+  private static final int MAX_RETRY_ATTEMPT = 5;
 
   private @NotNull XyzResponse executePatchFeatureById() throws JsonProcessingException {
 
@@ -261,10 +261,14 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     featuresFromRequest.add(featureFromRequest);
     List<String> featureIds = new ArrayList<>();
     featureIds.add(featureId);
-    return attemptFeaturesPatching(spaceId,featureIds,featuresFromRequest);
+    return attemptFeaturesPatching(spaceId, featureIds, featuresFromRequest, 0);
   }
 
-  private XyzResponse attemptFeaturesPatching(@NotNull String spaceId, @NotNull List<String> featureIds, @NotNull List<XyzFeature> featuresFromRequest) {
+  private XyzResponse attemptFeaturesPatching(
+      @NotNull String spaceId,
+      @NotNull List<String> featureIds,
+      @NotNull List<XyzFeature> featuresFromRequest,
+      @NotNull int retry) {
     // Patched feature list is to ensure the order of input features is retained
     final List<XyzFeature> patchedFeature = new ArrayList<>();
     final List<XyzFeature> featuresFromStorage;
@@ -273,7 +277,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       if (result == null) {
         logger.error(
-                "Unexpected null result while reading current versions in storage of targeted features for PATCH. The features do not exist.");
+            "Unexpected null result while reading current versions in storage of targeted features for PATCH. The features do not exist.");
         return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
       } else if (result instanceof ErrorResult er) {
         // In case of error, convert result to ErrorResponse
@@ -284,7 +288,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           featuresFromStorage = readFeaturesFromResult(result, XyzFeature.class, DEF_FEATURE_LIMIT);
         } catch (NoCursor | NoSuchElementException emptyException) {
           logger.error(
-                  "No data found in ResultCursor while reading current versions in storage of targeted features for PATCH. The features do not exist.");
+              "No data found in ResultCursor while reading current versions in storage of targeted features for PATCH. The features do not exist.");
           return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
         }
       }
@@ -294,7 +298,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           if (requestedChange.getId().equals(featureToPatch.getId())) {
             final Difference difference = Patcher.getDifference(featureToPatch, requestedChange);
             final Difference diffNoRemoveOp = removeAllRemoveOp(difference);
-            patchedFeature.add(Patcher.patch(featureToPatch,diffNoRemoveOp));
+            patchedFeature.add(Patcher.patch(featureToPatch, diffNoRemoveOp));
             break;
           }
         }
@@ -314,23 +318,42 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           // Extract feature ID from error message
           Matcher matcherFeatureId = FEATURE_ID_FROM_ERR.matcher(er.message);
           if (!matcherFeatureId.find()) {
-            logger.error("Received error result with feature ID not specified or specified incorrectly {}", er);
+            logger.error(
+                "Received error result with feature ID not specified or specified incorrectly {}", er);
             return verticle.sendErrorResponse(
-                    routingContext, XyzError.EXCEPTION, "Error updating feature in storage, the feature ID from the error was specified incorrectly or not specified.");
+                routingContext,
+                XyzError.EXCEPTION,
+                "Error updating feature in storage, the feature ID from the error was specified incorrectly or not specified.");
           }
           final String featureIdFromErr = matcherFeatureId.group();
           // Find the requested change for the corresponding feature with that ID
           for (XyzFeature requestedChange : featuresFromRequest) {
             if (requestedChange.getId().equals(featureIdFromErr)) {
               // If UUID input by user, return conflict
-              if (requestedChange.getProperties().getXyzNamespace().getUuid() != null) {
+              if (requestedChange
+                      .getProperties()
+                      .getXyzNamespace()
+                      .getUuid()
+                  != null) {
                 return verticle.sendErrorResponse(
-                        routingContext, XyzError.CONFLICT, "Error updating feature '"+featureIdFromErr+"', wrong UUID.");
+                    routingContext,
+                    XyzError.CONFLICT,
+                    "Error updating feature '" + featureIdFromErr + "', wrong UUID.");
               }
-              // Else the feature was modified concurrently within Naksha, attempt retry
-              // TODO retry
+              // Else the feature was modified concurrently within Naksha
+              if (retry >= MAX_RETRY_ATTEMPT) {
+                logger.error(
+                    "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: {}",
+                    er.message);
+                return verticle.sendErrorResponse(
+                    routingContext,
+                    XyzError.EXCEPTION,
+                    "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: "
+                        + er.message);
+              }
+              // Attempt retry
+              return attemptFeaturesPatching(spaceId, featureIds, featuresFromRequest, retry + 1);
             }
-            break;
           }
         } else {
           // Other types of error, convert result to ErrorResponse
@@ -339,21 +362,26 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
       } else {
         try {
-          final Map<EExecutedOp, List<XyzFeature>> featureMap = readFeaturesGroupedByOp(wrResult, XyzFeature.class);
+          final Map<EExecutedOp, List<XyzFeature>> featureMap =
+              readFeaturesGroupedByOp(wrResult, XyzFeature.class);
           final List<XyzFeature> insertedFeatures = featureMap.get(EExecutedOp.CREATED);
           final List<XyzFeature> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
           return verticle.sendXyzResponse(
-                  routingContext,
-                  HttpResponseType.FEATURE_COLLECTION,
-                  new XyzFeatureCollection()
-                          .withInsertedFeatures(insertedFeatures)
-                          .withUpdatedFeatures(updatedFeatures));
+              routingContext,
+              HttpResponseType.FEATURE_COLLECTION,
+              new XyzFeatureCollection()
+                  .withInsertedFeatures(insertedFeatures)
+                  .withUpdatedFeatures(updatedFeatures));
         } catch (NoCursor | NoSuchElementException emptyException) {
           return verticle.sendErrorResponse(
-                  routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");
+              routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");
         }
       }
     }
+    return verticle.sendErrorResponse(
+        routingContext,
+        XyzError.EXCEPTION,
+        "Unexpected code point reached while attempting to PATCH features: " + featureIds);
   }
 
   private Difference removeAllRemoveOp(Difference difference) {
@@ -369,11 +397,12 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       }
       return listdiff;
     } else if (difference instanceof MapDiff mapdiff) {
-      final Iterator<Entry<Object, Difference>> iterator = mapdiff.entrySet().iterator();
+      final Iterator<Entry<Object, Difference>> iterator =
+          mapdiff.entrySet().iterator();
       while (iterator.hasNext()) {
         Entry<Object, Difference> next = iterator.next();
         next.setValue(removeAllRemoveOp(next.getValue()));
-        if (next.getValue()==null) iterator.remove();
+        if (next.getValue() == null) iterator.remove();
       }
       return mapdiff;
     }
