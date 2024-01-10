@@ -235,7 +235,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     IterateHandle handle = ApiParams.extractQueryParamAsIterateHandle(queryParams, HANDLE);
     // create new "handle" if not already provided, or overwrite parameters based on "handle"
     if (handle == null) {
-      handle = new IterateHandle().withOffset(offset).withLimit(limit);
+      handle = new IterateHandle().withLimit(limit);
     }
     offset = handle.getOffset();
     limit = handle.getLimit();
