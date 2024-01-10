@@ -145,9 +145,7 @@ To use the containerized Postgres with your locally runnning Naksha:
 
 5) \[optional extension run\] Now you can run naksha jar and include [example config with additional extensions enabled](here-naksha-app-service/src/main/resources/test-config-with-extensions.json) like so:
 ```
-java -jar build/libs/naksha-2.0.6-all.jar \
- here-naksha-app-service/src/main/resources/test-config-with-extensions \
- 'jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha&app=naksha_local&id=naksha_admin_db'
+java -jar build/libs/naksha-2.0.6-all.jar test-config-with-extensions 'jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha&app=naksha_local&id=naksha_admin_db'
 ```
 
 
