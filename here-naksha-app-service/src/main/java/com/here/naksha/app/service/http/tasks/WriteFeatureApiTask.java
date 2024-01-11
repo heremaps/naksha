@@ -248,6 +248,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
     final String featureId = ApiParams.extractMandatoryPathParam(routingContext, FEATURE_ID);
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
+    final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
     if (!featureId.equals(featureFromRequest.getId())) {
@@ -256,6 +259,10 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           XyzError.ILLEGAL_ARGUMENT,
           "URI path parameter featureId is not the same as id in feature request body.");
     }
+
+    // as applicable, modify features based on parameters supplied
+    addTagsToFeature(featureFromRequest, addTags);
+    removeTagsFromFeature(featureFromRequest, removeTags);
 
     final List<XyzFeature> featuresFromRequest = new ArrayList<>();
     featuresFromRequest.add(featureFromRequest);

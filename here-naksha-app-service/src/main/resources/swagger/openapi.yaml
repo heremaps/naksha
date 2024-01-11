@@ -631,6 +631,9 @@ paths:
         If UUID is specified and matches the current UUID stored in Naksha, the feature will be updated.
         If the UUID does not match, HTTP code 409 will be returned.
       operationId: patchFeature
+      parameters:
+        - $ref: '#/components/parameters/AddTags'
+        - $ref: '#/components/parameters/RemoveTags'
       requestBody:
         $ref: '#/components/requestBodies/FeatureRequest'
       responses:
