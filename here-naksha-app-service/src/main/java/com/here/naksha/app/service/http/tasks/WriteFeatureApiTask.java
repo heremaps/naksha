@@ -272,30 +272,34 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       int retry) {
     // Patched feature list is to ensure the order of input features is retained
     final List<XyzFeature> patchedFeature = new ArrayList<>();
-    final List<XyzFeature> featuresFromStorage;
+    final List<XyzFeature> featuresToPatchFromStorage = new ArrayList<>();
     // Extract the version of features in storage
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds);
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       if (result == null) {
-        logger.error(
-            "Unexpected null result while reading current versions in storage of targeted features for PATCH. The features do not exist.");
-        return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
+        if (responseType.equals(HttpResponseType.FEATURE)) {
+          // If this is patching only 1 feature (PATCH by ID), return not found
+          logger.error(
+              "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
+          return verticle.sendErrorResponse(routingContext, XyzError.NOT_FOUND, "Feature does not exist.");
+        } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
+          logger.error("Unsupported HttpResponseType was called: " + responseType);
+          return verticle.sendErrorResponse(routingContext, XyzError.EXCEPTION, "Internal server error.");
+        }
       } else if (result instanceof ErrorResult er) {
         // In case of error, convert result to ErrorResponse
         logger.error("Received error result while reading features in storage: {}", er);
         return verticle.sendErrorResponse(routingContext, er.reason, er.message);
-      } else {
-        try {
-          featuresFromStorage = readFeaturesFromResult(result, XyzFeature.class, DEF_FEATURE_LIMIT);
-        } catch (NoCursor | NoSuchElementException emptyException) {
-          logger.error(
-              "No data found in ResultCursor while reading current versions in storage of targeted features for PATCH. The features do not exist.");
-          return verticle.sendErrorResponse(routingContext, XyzError.CONFLICT, "Features do not exist");
-        }
       }
-      // Attempt patching
+      try {
+        featuresToPatchFromStorage.addAll(readFeaturesFromResult(result, XyzFeature.class, DEF_FEATURE_LIMIT));
+      } catch (NoCursor | NoSuchElementException emptyException) {
+        // None of the features exists in storage, will create them later
+      }
+
+      // Attempt patching, keeping the order of the features from the request
       for (XyzFeature requestedChange : featuresFromRequest) {
-        for (XyzFeature featureToPatch : featuresFromStorage) {
+        for (XyzFeature featureToPatch : featuresToPatchFromStorage) {
           if (requestedChange.getId().equals(featureToPatch.getId())) {
             final Difference difference = Patcher.getDifference(featureToPatch, requestedChange);
             final Difference diffNoRemoveOp = removeAllRemoveOp(difference);
@@ -303,10 +307,12 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             break;
           }
         }
+        // This requested feature does not exist, create it
+        patchedFeature.add(requestedChange);
       }
     }
 
-    final WriteXyzFeatures wrRequest = RequestHelper.updateFeaturesRequest(spaceId, patchedFeature);
+    final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeature);
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       if (wrResult == null) {
