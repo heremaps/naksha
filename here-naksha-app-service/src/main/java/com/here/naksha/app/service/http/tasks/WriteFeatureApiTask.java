@@ -239,7 +239,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
   }
 
   // TODO this might change if naksha_plpgsql.sql gets updated and the message is modified
-  private static final Pattern FEATURE_ID_FROM_ERR = Pattern.compile("The feature '([^']*)' uuid");
+  private static final Pattern FEATURE_ID_FROM_ERR = Pattern.compile("The feature \\s*'([^']*)' uuid");
   private static final int MAX_RETRY_ATTEMPT = 5;
 
   private @NotNull XyzResponse executePatchFeatureById() throws JsonProcessingException {
@@ -299,16 +299,20 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
       // Attempt patching, keeping the order of the features from the request
       for (XyzFeature requestedChange : featuresFromRequest) {
+        boolean willPatch = false;
         for (XyzFeature featureToPatch : featuresToPatchFromStorage) {
           if (requestedChange.getId().equals(featureToPatch.getId())) {
             final Difference difference = Patcher.getDifference(featureToPatch, requestedChange);
             final Difference diffNoRemoveOp = removeAllRemoveOp(difference);
             patchedFeature.add(Patcher.patch(featureToPatch, diffNoRemoveOp));
+            willPatch = true;
             break;
           }
         }
-        // This requested feature does not exist, create it
-        patchedFeature.add(requestedChange);
+        if (!willPatch) {
+          // This requested feature does not exist, create it
+          patchedFeature.add(requestedChange);
+        }
       }
     }
 
@@ -332,7 +336,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
                 XyzError.EXCEPTION,
                 "Error updating feature in storage, the feature ID from the error was specified incorrectly or not specified.");
           }
-          final String featureIdFromErr = matcherFeatureId.group();
+          final String featureIdFromErr = matcherFeatureId.group(1);
           // Find the requested change for the corresponding feature with that ID
           for (XyzFeature requestedChange : featuresFromRequest) {
             if (requestedChange.getId().equals(featureIdFromErr)) {

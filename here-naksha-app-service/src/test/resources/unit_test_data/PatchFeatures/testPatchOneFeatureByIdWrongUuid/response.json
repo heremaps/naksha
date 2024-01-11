@@ -1,0 +1,5 @@
+{
+  "type": "ErrorResponse",
+  "error": "Conflict",
+  "errorMessage": "Error updating feature 'feature-1-to-patch', wrong UUID."
+}

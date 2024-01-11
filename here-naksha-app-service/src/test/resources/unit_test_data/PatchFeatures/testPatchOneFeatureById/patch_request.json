@@ -2,7 +2,16 @@
   "id": "feature-1-to-patch",
   "type": "Feature",
   "properties": {
-    "speedLimit": "30",
-    "brandNewProperty": 5
+    "brandNewProperty": 5,
+    "nestedArray": [
+      "foo",
+      {
+        "nestedJson": "in array"
+      }
+    ]
+  },
+  "geometry": {
+    "type": "Point",
+    "coordinates":[ 3.3, 4.4, 5.5]
   }
 }

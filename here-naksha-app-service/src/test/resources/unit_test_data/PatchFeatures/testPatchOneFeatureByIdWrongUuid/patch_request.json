@@ -1,0 +1,10 @@
+{
+  "id": "feature-1-to-patch",
+  "type": "Feature",
+  "properties": {
+    "new": 123,
+    "@ns:com:here:xyz": {
+      "uuid": "wrong uuid"
+    }
+  }
+}

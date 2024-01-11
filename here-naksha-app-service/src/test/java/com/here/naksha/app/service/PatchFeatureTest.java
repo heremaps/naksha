@@ -52,4 +52,29 @@ public class PatchFeatureTest extends ApiTest {
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Patch Feature response body doesn't match");
     }
+
+    @Test
+    void testPatchOneFeatureByIdWrongUuid() throws Exception {
+        // Test API : PATCH /hub/spaces/{spaceId}/features/{featureId}
+        // Given: initial features
+        final String streamId = UUID.randomUUID().toString();
+        final String createFeaturesJson = loadFileOrFail("PatchFeatures/testPatchOneFeatureById/create_features.json");
+        HttpResponse<String> response = nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeaturesJson, streamId);
+        assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating initial features");
+
+        // When: request is submitted to NakshaHub Space Storage instance
+        final String bodyJson = loadFileOrFail("PatchFeatures/testPatchOneFeatureByIdWrongUuid/patch_request.json");
+        response = nakshaClient
+                .patch(
+                        "hub/spaces/" + SPACE_ID + "/features/feature-1-to-patch",
+                        bodyJson,
+                        streamId);
+
+        // Then: Perform assertions
+        final String expectedBodyPart = loadFileOrFail("PatchFeatures/testPatchOneFeatureByIdWrongUuid/response.json");
+        assertThat(response)
+                .hasStatus(409)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Patch Feature error response body doesn't match");
+    }
 }
