@@ -16,30 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.app.common;
+package com.here.naksha.lib.core.models.storage;
 
-import com.here.naksha.app.service.NakshaApp;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Base class for all API-related tests. Extending this class ensures that NakshaApp & all required storages are running
+ * Any property search, be extremely careful as it allows to search through not indexed properties.
+ * Always use it as a last "where" condition and always together with indexed conditions that will drastically decrease
+ * result set first.
  */
-@ExtendWith({ApiTestMaintainer.class})
-public abstract class ApiTest {
+public class NonIndexedPRef extends PRef {
 
-  private final NakshaTestWebClient nakshaClient;
+  private static final Logger log = LoggerFactory.getLogger(NonIndexedPRef.class);
 
-  public ApiTest() {
-    this(new NakshaTestWebClient());
-  }
-
-  public ApiTest(NakshaTestWebClient nakshaClient) {
-    this.nakshaClient = nakshaClient;
-  }
-
-  public NakshaTestWebClient getNakshaClient() {
-    return nakshaClient;
+  public NonIndexedPRef(@NotNull String... path) {
+    super(path);
+    log.atInfo().setMessage("NonIndexedPRef: {}").addArgument(path).log();
   }
 }
