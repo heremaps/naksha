@@ -284,15 +284,11 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds);
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       if (result == null) {
-        if (responseType.equals(HttpResponseType.FEATURE)) {
-          // If this is patching only 1 feature (PATCH by ID), return not found
-          logger.error(
-              "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
-          return verticle.sendErrorResponse(routingContext, XyzError.NOT_FOUND, "Feature does not exist.");
-        } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
-          logger.error("Unsupported HttpResponseType was called: " + responseType);
-          return verticle.sendErrorResponse(routingContext, XyzError.EXCEPTION, "Internal server error.");
-        }
+        logger.error("Unexpected null result while reading features from storage: " + featureIds);
+        return verticle.sendErrorResponse(
+            routingContext,
+            XyzError.EXCEPTION,
+            "Unexpected null result while reading features from storage");
       } else if (result instanceof ErrorResult er) {
         // In case of error, convert result to ErrorResponse
         logger.error("Received error result while reading features in storage: {}", er);
@@ -301,7 +297,17 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       try {
         featuresToPatchFromStorage.addAll(readFeaturesFromResult(result, XyzFeature.class, DEF_FEATURE_LIMIT));
       } catch (NoCursor | NoSuchElementException emptyException) {
-        // None of the features exists in storage, will create them later
+        if (responseType.equals(HttpResponseType.FEATURE)) {
+          // If this is patching only 1 feature (PATCH by ID), return not found
+          logger.error(
+              "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
+          return verticle.sendErrorResponse(routingContext, XyzError.NOT_FOUND, "Feature does not exist.");
+        } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
+          // This function was then misused somewhere. FIND AND FIX IT!!
+          logger.error("Unsupported HttpResponseType was called: " + responseType);
+          return verticle.sendErrorResponse(routingContext, XyzError.EXCEPTION, "Internal server error.");
+        }
+        // Else none of the features exists in storage, will create them later
       }
 
       // Attempt patching, keeping the order of the features from the request

@@ -54,11 +54,33 @@ public class PatchFeatureTest extends ApiTest {
     }
 
     @Test
+    void testPatchOneFeatureByIdNotExisting() throws Exception {
+        // Test API : PATCH /hub/spaces/{spaceId}/features/{featureId}
+        // Given: initial features
+        final String streamId = UUID.randomUUID().toString();
+
+        // When: request is submitted to NakshaHub Space Storage instance
+        final String bodyJson = loadFileOrFail("PatchFeatures/testPatchOneFeatureByIdNotExisting/patch_request.json");
+        HttpResponse<String> response = nakshaClient
+                .patch(
+                        "hub/spaces/" + SPACE_ID + "/features/feature-2-to-patch",
+                        bodyJson,
+                        streamId);
+
+        // Then: Perform assertions
+        final String expectedBodyPart = loadFileOrFail("PatchFeatures/testPatchOneFeatureByIdNotExisting/response.json");
+        assertThat(response)
+                .hasStatus(404)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Patch Feature error response body doesn't match");
+    }
+
+    @Test
     void testPatchOneFeatureByIdWrongUuid() throws Exception {
         // Test API : PATCH /hub/spaces/{spaceId}/features/{featureId}
         // Given: initial features
         final String streamId = UUID.randomUUID().toString();
-        final String createFeaturesJson = loadFileOrFail("PatchFeatures/testPatchOneFeatureById/create_features.json");
+        final String createFeaturesJson = loadFileOrFail("PatchFeatures/testPatchOneFeatureByIdWrongUuid/create_features.json");
         HttpResponse<String> response = nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeaturesJson, streamId);
         assertEquals(200, response.statusCode(), "ResCode mismatch, failure creating initial features");
 
@@ -66,7 +88,7 @@ public class PatchFeatureTest extends ApiTest {
         final String bodyJson = loadFileOrFail("PatchFeatures/testPatchOneFeatureByIdWrongUuid/patch_request.json");
         response = nakshaClient
                 .patch(
-                        "hub/spaces/" + SPACE_ID + "/features/feature-1-to-patch",
+                        "hub/spaces/" + SPACE_ID + "/features/feature-3-to-patch",
                         bodyJson,
                         streamId);
 
