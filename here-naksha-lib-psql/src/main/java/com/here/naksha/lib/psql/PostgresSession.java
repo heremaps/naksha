@@ -316,12 +316,12 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     }
     if (op == POpType.NULL) {
       addJsonPath(sql, path, path.size());
-      sql.add(" is NULL");
+      sql.add(" = 'null'");
       return;
     }
     if (op == POpType.NOT_NULL) {
       addJsonPath(sql, path, path.size());
-      sql.add(" is NOT NULL");
+      sql.add(" != 'null'");
       return;
     }
     final Object value = propertyOp.getValue();

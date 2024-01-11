@@ -63,6 +63,7 @@ import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.SeekableCursor;
+import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
@@ -901,30 +902,25 @@ public class PsqlStorageTests extends PsqlTests {
     assertNotNull(storage);
     assertNotNull(session);
 
-    // given
-    final String jsonReference = "[{\"id\":\"urn:here::here:Topology:106003684\",\"type\":\"Topology\",\"prop\":{\"a\":1}}]";
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = new XyzFeature("featureWithExtraProperty_id");
-    feature.setGeometry(new XyzPoint(4.0d, 5.0));
-    feature.getProperties().put("color", "red");
-    feature.getProperties().put("weight", 60);
-    feature.getProperties().put("ids", new Integer[] {2,1,9});
-    ObjectReader reader = Json.get().reader();
-    feature.getProperties().put("references", reader.readValue(jsonReference, Object.class));
+    WriteFeatures<String, StringCodec, ?> request = new WriteFeatures<>(new StringCodecFactory(), collectionId());
 
-    request.add(EWriteOp.CREATE, feature);
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
+    // given
+    final String jsonReference = "{\"id\":\"32167\",\"properties\":{\"weight\":60,\"length\":null,\"color\":\"red\",\"ids\":[0,1,9],\"subJson\":{\"b\":1},\"references\":[{\"id\":\"urn:here::here:Topology:106003684\",\"type\":\"Topology\",\"prop\":{\"a\":1}}]}}";
+    ObjectReader reader = Json.get().reader();
+    request.add(EWriteOp.CREATE, jsonReference);
+    try (final MutableCursor<String, StringCodec> cursor =
+        session.execute(request).mutableCursor(new StringCodecFactory())) {
       assertTrue(cursor.next());
     } finally {
       session.commit(true);
     }
 
     Consumer<ReadFeatures> expect = readFeaturesReq -> {
-      try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-               session.execute(readFeaturesReq).getXyzFeatureCursor()) {
+      try (final MutableCursor<String, StringCodec> cursor =
+               session.execute(readFeaturesReq).mutableCursor(new StringCodecFactory())) {
         cursor.next();
-        assertEquals("featureWithExtraProperty_id", cursor.getId());
+        assertEquals("32167", cursor.getId());
+        assertFalse(cursor.hasNext());
       } catch (NoCursor e) {
         throw unchecked(e);
       }
@@ -938,9 +934,15 @@ public class PsqlStorageTests extends PsqlTests {
     // then
     expect.accept(readFeatures);
 
-    // when - search null value
+    // when - search not null value
     POp exSearch = POp.isNotNull(new NonIndexedPRef("properties", "color"));
     readFeatures.setPropertyOp(exSearch);
+    // then
+    expect.accept(readFeatures);
+
+    // when - search null value
+    POp nullSearch = POp.isNull(new NonIndexedPRef("properties", "length"));
+    readFeatures.setPropertyOp(nullSearch);
     // then
     expect.accept(readFeatures);
 
@@ -958,6 +960,12 @@ public class PsqlStorageTests extends PsqlTests {
 
     // when - search by json object
     POp jsonSearch3 = POp.contains(new NonIndexedPRef("properties", "references"), reader.readValue("[{\"prop\":{\"a\":1}}]", JsonNode.class));
+    readFeatures.setPropertyOp(jsonSearch3);
+    // then
+    expect.accept(readFeatures);
+
+    // when - search by json object
+    POp jsonSearch4 = POp.contains(new NonIndexedPRef("properties", "subJson"), reader.readValue("{\"b\":1}", JsonNode.class));
     readFeatures.setPropertyOp(jsonSearch3);
     // then
     expect.accept(readFeatures);
