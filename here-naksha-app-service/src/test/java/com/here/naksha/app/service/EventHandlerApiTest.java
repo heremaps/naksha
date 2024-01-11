@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
 
 class EventHandlerApiTest extends ApiTest {
 
-  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient(60); // TODO: remove 60
+  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
 
   EventHandlerApiTest() {
     super(nakshaClient);
