@@ -18,10 +18,6 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -37,18 +33,27 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollecti
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.util.diff.*;
+import com.here.naksha.lib.core.util.diff.Difference;
+import com.here.naksha.lib.core.util.diff.Patcher;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
+import static com.here.naksha.lib.core.util.diff.PatcherUtils.removeAllRemoveOp;
 
 public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
@@ -266,20 +271,23 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
     final List<XyzFeature> featuresFromRequest = new ArrayList<>();
     featuresFromRequest.add(featureFromRequest);
-    List<String> featureIds = new ArrayList<>();
-    featureIds.add(featureId);
-    return attemptFeaturesPatching(spaceId, featureIds, featuresFromRequest, HttpResponseType.FEATURE, 0);
+    return attemptFeaturesPatching(spaceId, featuresFromRequest, HttpResponseType.FEATURE, 0);
   }
 
   private XyzResponse attemptFeaturesPatching(
       @NotNull String spaceId,
-      @NotNull List<String> featureIds,
       @NotNull List<XyzFeature> featuresFromRequest,
       @NotNull HttpResponseType responseType,
       int retry) {
     // Patched feature list is to ensure the order of input features is retained
     final List<XyzFeature> patchedFeature = new ArrayList<>();
     final List<XyzFeature> featuresToPatchFromStorage = new ArrayList<>();
+    final List<String> featureIds = new ArrayList<>();
+    for (XyzFeature feature : featuresFromRequest) {
+      if (feature.getId() != null) {
+        featureIds.add(feature.getId());
+      }
+    }
     // Extract the version of features in storage
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds);
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
@@ -377,7 +385,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
               }
               // Attempt retry
               return attemptFeaturesPatching(
-                  spaceId, featureIds, featuresFromRequest, responseType, retry + 1);
+                  spaceId, featuresFromRequest, responseType, retry + 1);
             }
           }
         } else {
@@ -407,31 +415,6 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         routingContext,
         XyzError.EXCEPTION,
         "Unexpected code point reached while attempting to PATCH features: " + featureIds);
-  }
-
-  private Difference removeAllRemoveOp(Difference difference) {
-    if (difference instanceof RemoveOp) {
-      return null;
-    } else if (difference instanceof ListDiff listdiff) {
-      final Iterator<Difference> iterator = listdiff.iterator();
-      while (iterator.hasNext()) {
-        Difference next = iterator.next();
-        if (next == null) continue;
-        next = removeAllRemoveOp(next);
-        if (next == null) iterator.remove();
-      }
-      return listdiff;
-    } else if (difference instanceof MapDiff mapdiff) {
-      final Iterator<Entry<Object, Difference>> iterator =
-          mapdiff.entrySet().iterator();
-      while (iterator.hasNext()) {
-        Entry<Object, Difference> next = iterator.next();
-        next.setValue(removeAllRemoveOp(next.getValue()));
-        if (next.getValue() == null) iterator.remove();
-      }
-      return mapdiff;
-    }
-    return difference;
   }
 
   private @NotNull FeatureCollectionRequest featuresFromRequestBody() throws JsonProcessingException {
