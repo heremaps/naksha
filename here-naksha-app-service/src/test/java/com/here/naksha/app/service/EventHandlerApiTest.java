@@ -22,6 +22,7 @@ import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static org.junit.jupiter.api.Named.named;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
@@ -33,9 +34,13 @@ import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class EventHandlerApiTest extends ApiTest {
 
@@ -53,25 +58,27 @@ class EventHandlerApiTest extends ApiTest {
   @Test
   void tc0100_testCreateEventHandler() throws Exception {
     // Test API : POST /hub/handlers
-    // 1. Load test data
-    final String bodyJson = loadFileOrFail("EventHandlerApi/TC0100_createEventHandler/create_event_handler.json");
+    // Given: Create handler request body & expected response
+    final String requestBody = loadFileOrFail("EventHandlerApi/TC0100_createEventHandler/create_event_handler.json");
+    final String expectedResponseBody = loadFileOrFail("EventHandlerApi/TC0100_createEventHandler/response.json");
     final String streamId = UUID.randomUUID().toString();
 
-    // 2. Perform REST API call creating handler
-    final HttpResponse<String> response = getNakshaClient().post("hub/handlers", bodyJson, streamId);
+    // When: creating event handler
+    final HttpResponse<String> response = getNakshaClient().post("hub/handlers", requestBody, streamId);
 
-    // 3. Perform assertions
+    // Then: Operation succeeded and expected response was returned
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBodyFromFile("EventHandlerApi/TC0100_createEventHandler/response.json");
+        .hasJsonBody(expectedResponseBody);
   }
 
   @Test
   void tc0101_testDuplicateEventHandler() throws Exception {
     // Test API : POST /hub/handlers
-    // Given: Load test data
+    // Given: Create handler request body & expected response
     final String bodyJson = loadFileOrFail("EventHandlerApi/TC0101_duplicateEventHandler/create_event_handler.json");
+    final String expectedResponseBody = loadFileOrFail("EventHandlerApi/TC0101_duplicateEventHandler/response_conflict.json");
     final String streamId = UUID.randomUUID().toString();
 
     // And: Handler registered for the first time
@@ -86,22 +93,30 @@ class EventHandlerApiTest extends ApiTest {
     // Then: 409 Conflict should be returned
     assertThat(response)
         .hasStatus(409)
-        .hasJsonBodyFromFile(
-            "EventHandlerApi/TC0101_duplicateEventHandler/response_conflict.json",
-            "Expecting duplicated handler in response"
-        );
+        .hasJsonBody(expectedResponseBody, "Expecting duplicated handler in response");
   }
 
-  @Test
-  void tc0102_testCreateHandlerMissingClassName() throws Exception {
+  static Stream<Named> handlersWithoutRequiredProperty(){
+    String location = "EventHandlerApi/TC0102_createHandlerWithoutProperty/";
+    return Stream.of(
+        named("Missing 'className' property", location + "no_class_name.json"),
+        named("Missing 'description' property", location + "no_desc.json"),
+        named("Missing 'title' property", location + "no_title.json"),
+        named("Default handler - Missing 'storage' property", location + "default_handler_without_storage.json")
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("handlersWithoutRequiredProperty")
+  void tc0102_testCreateHandlerWithoutProperty(String requestBodyFileName) throws Exception {
     // Test API : POST /hub/handlers
-    // 1. Load test data
-    final String bodyJson = loadFileOrFail("EventHandlerApi/TC0102_createHandlerNoClassName/create_event_handler.json");
-    final String expectedBodyPart = loadFileOrFail("EventHandlerApi/TC0102_createHandlerNoClassName/response_part.json");
+    // Given: Creation request without specified property
+    final String requestBody = loadFileOrFail(requestBodyFileName);
+    final String expectedBodyPart = loadFileOrFail("EventHandlerApi/TC0102_createHandlerWithoutProperty/response_part.json");
     final String streamId = UUID.randomUUID().toString();
 
-    // 2. Perform REST API call
-    final HttpResponse<String> response = getNakshaClient().post("hub/handlers", bodyJson, streamId);
+    // When: creating event handler without
+    final HttpResponse<String> response = getNakshaClient().post("hub/handlers", requestBody, streamId);
 
     // 3. Perform assertions
     assertThat(response)
@@ -111,26 +126,12 @@ class EventHandlerApiTest extends ApiTest {
   }
 
   @Test
-  void tc0103_testCreateDefaultHandlerWithoutStorageProperty() throws URISyntaxException, IOException, InterruptedException {
+  void tc0103_testCreateDefaultHandlerWithMissingStorage() throws URISyntaxException, IOException, InterruptedException {
     // Given: a default handler without storageId property defined
     final String streamId = UUID.randomUUID().toString();
-    final String createJson = loadFileOrFail("EventHandlerApi/TC0103_createDefaultHandlerNoStorageProp/create_event_handler.json");
-
-    // When: trying to create such handler
-    final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
-
-    // Then: creating fails due to validation error
-    assertThat(response)
-        .hasStatus(400)
-        .hasJsonBodyFromFile("EventHandlerApi/TC0103_createDefaultHandlerNoStorageProp/error_response.json")
-        .hasStreamIdHeader(streamId);
-  }
-
-  @Test
-  void tc0104_testCreateDefaultHandlerWithMissingStorage() throws URISyntaxException, IOException, InterruptedException {
-    // Given: a default handler without storageId property defined
-    final String streamId = UUID.randomUUID().toString();
-    final String createJson = loadFileOrFail("EventHandlerApi/TC0104_createDefaultHandlerMissingStorage/create_event_handler.json");
+    final String createJson = loadFileOrFail("EventHandlerApi/TC0103_createDefaultHandlerMissingStorage/create_event_handler.json");
+    final String expectedNotFoundResponse = loadFileOrFail(
+        "EventHandlerApi/TC0103_createDefaultHandlerMissingStorage/not_found_response.json");
 
     // When: trying to create such handler
     final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
@@ -138,15 +139,16 @@ class EventHandlerApiTest extends ApiTest {
     // Then: creating fails due to not-found storage
     assertThat(response)
         .hasStatus(404)
-        .hasJsonBodyFromFile("EventHandlerApi/TC0104_createDefaultHandlerMissingStorage/not_found_response.json")
+        .hasJsonBody(expectedNotFoundResponse)
         .hasStreamIdHeader(streamId);
   }
 
   @Test
-  void tc0105_testCreateRandomHandlerWithoutStorageProperty() throws URISyntaxException, IOException, InterruptedException {
+  void tc0104_testCreateRandomHandlerWithoutStorageProperty() throws URISyntaxException, IOException, InterruptedException {
     // Given: a default handler without storageId property defined
     final String streamId = UUID.randomUUID().toString();
-    final String createJson = loadFileOrFail("EventHandlerApi/TC0105_createRandomHandlerNoStorageProp/create_event_handler.json");
+    final String createJson = loadFileOrFail("EventHandlerApi/TC0104_createRandomHandlerNoStorageProp/create_event_handler.json");
+    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0104_createRandomHandlerNoStorageProp/response.json");
 
     // When: trying to create such handler
     final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
@@ -154,7 +156,7 @@ class EventHandlerApiTest extends ApiTest {
     // Then: creating fails due to validation error
     assertThat(response)
         .hasStatus(200)
-        .hasJsonBodyFromFile("EventHandlerApi/TC0105_createRandomHandlerNoStorageProp/response.json")
+        .hasJsonBody(expectedResponse)
         .hasStreamIdHeader(streamId);
   }
 
@@ -163,11 +165,11 @@ class EventHandlerApiTest extends ApiTest {
     // Test API : GET /hub/handlers/{handlerId}
     // Given: created handler
     final String streamId = UUID.randomUUID().toString();
-    nakshaClient.post(
-        "hub/handlers",
-        loadFileOrFail("EventHandlerApi/TC0120_getHandlerById/create_event_handler.json"),
-        streamId
-    );
+    final String createEventRequestBody = loadFileOrFail("EventHandlerApi/TC0120_getHandlerById/create_event_handler.json");
+    final String expectedResponseBody = loadFileOrFail("EventHandlerApi/TC0120_getHandlerById/get_response.json");
+
+    // And: created event handler
+    nakshaClient.post("hub/handlers", createEventRequestBody, streamId);
 
     // When: Fetching created handler by id
     final HttpResponse<String> response = getNakshaClient().get("hub/handlers/test-handler-by-id", streamId);
@@ -176,10 +178,7 @@ class EventHandlerApiTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBodyFromFile(
-            "EventHandlerApi/TC0120_getHandlerById/get_response.json",
-            "Expecting handler response"
-        );
+        .hasJsonBody(expectedResponseBody, "Expecting handler response");
   }
 
   @Test
@@ -200,11 +199,15 @@ class EventHandlerApiTest extends ApiTest {
 
   @Test
   void tc0140_testGetHandlers() throws Exception {
-    // Given: created handlers
+    // Given: handlers definition
     List<String> expectedHandlerIds = List.of("tc_140_event_handler_1", "tc_140_event_handler_2");
     final String streamId = UUID.randomUUID().toString();
-    nakshaClient.post("hub/handlers", loadFileOrFail("EventHandlerApi/TC0140_getHandlers/create_event_handler_1.json"), streamId);
-    nakshaClient.post("hub/handlers", loadFileOrFail("EventHandlerApi/TC0140_getHandlers/create_event_handler_2.json"), streamId);
+    final String createFirstHandlerRequestBody = loadFileOrFail("EventHandlerApi/TC0140_getHandlers/create_event_handler_1.json");
+    final String createSecondHandlerRequestBody = loadFileOrFail("EventHandlerApi/TC0140_getHandlers/create_event_handler_2.json");
+
+    // And: created event handlers
+    nakshaClient.post("hub/handlers", createFirstHandlerRequestBody, streamId);
+    nakshaClient.post("hub/handlers", createSecondHandlerRequestBody, streamId);
 
     // When: Fetching all handlers
     final HttpResponse<String> response = getNakshaClient().get("hub/handlers", streamId);
@@ -228,37 +231,42 @@ class EventHandlerApiTest extends ApiTest {
   @Test
   void tc0160_testUpdateEventHandler() throws Exception {
     // Test API : PUT /hub/handlers/{handlerId}
-    // Given: created event handler
+    // Given: request bodies
     final String streamId = UUID.randomUUID().toString();
-    nakshaClient.post("hub/handlers", loadFileOrFail("EventHandlerApi/TC0160_updateEventHandler/create_event_handler.json"), streamId);
+    final String crateHandlerRequestBody = loadFileOrFail("EventHandlerApi/TC0160_updateEventHandler/create_event_handler.json");
+    final String updateHandlerRequestBody = loadFileOrFail("EventHandlerApi/TC0160_updateEventHandler/update_event_handler.json");
+    final String expectedResponseBody = loadFileOrFail("EventHandlerApi/TC0160_updateEventHandler/response.json");
+
+    // And: created event handler
+    nakshaClient.post("hub/handlers", crateHandlerRequestBody, streamId);
 
     // When: updating event handler
-    final String updateJson = loadFileOrFail("EventHandlerApi/TC0160_updateEventHandler/update_event_handler.json");
-    final HttpResponse<String> response = nakshaClient.put("hub/handlers/test-update-handler", updateJson, streamId);
+    final HttpResponse<String> response = nakshaClient.put("hub/handlers/test-update-handler", updateHandlerRequestBody, streamId);
 
     // Then: updated event handler is returned
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBodyFromFile("EventHandlerApi/TC0160_updateEventHandler/response.json");
+        .hasJsonBody(expectedResponseBody);
   }
 
   @Test
   void tc0161_testUpdateNonexistentEventHandler() throws Exception {
     // Test API : PUT /hub/handlers/{handlerId}
-    // Given: wrong id
+    // Given: requests details and expected response
     final String streamId = UUID.randomUUID().toString();
     final String wrongId = "this-surely-does-not-exists";
+    final String updateRequestBody = loadFileOrFail("EventHandlerApi/TC0161_updateNonexistentEventHandler/update_event_handler.json");
+    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0161_updateNonexistentEventHandler/response.json");
 
-    // When:
-    final String updateJson = loadFileOrFail("EventHandlerApi/TC0161_updateNonexistentEventHandler/update_event_handler.json");
-    final HttpResponse<String> response = getNakshaClient().put("hub/handlers/" + wrongId, updateJson, streamId);
+    // When: updating nonexistent handler
+    final HttpResponse<String> response = getNakshaClient().put("hub/handlers/" + wrongId, updateRequestBody, streamId);
 
     // Then:
     assertThat(response)
         .hasStatus(404)
         .hasStreamIdHeader(streamId)
-        .hasJsonBodyFromFile("EventHandlerApi/TC0161_updateNonexistentEventHandler/response.json");
+        .hasJsonBody(expectedResponse);
   }
 
   @Test

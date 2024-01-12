@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.handlers;
+package com.here.naksha.lib.handlers.internal;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
@@ -26,9 +26,9 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
+import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHandler> {
 
@@ -38,15 +38,20 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
 
   @Override
   protected @NotNull Result validateFeature(EventHandler eventHandler) {
-    ErrorResult classNameError = classNameValidationError(eventHandler);
-    if (classNameError != null) {
-      return classNameError;
+    Result basicValidation = super.validateFeature(eventHandler);
+    if (basicValidation instanceof ErrorResult) {
+      return basicValidation;
     }
+    Result pluginValidation = PluginPropertiesValidator.pluginValidation(eventHandler);
+    if (pluginValidation instanceof ErrorResult) {
+      return pluginValidation;
+    }
+    return defaultStorageValidation(eventHandler);
+  }
+
+  private Result defaultStorageValidation(EventHandler eventHandler) {
     if (isDefaultStorageHandler(eventHandler)) {
-      ErrorResult storageError = storageValidationError(eventHandler);
-      if (storageError != null) {
-        return storageError;
-      }
+      return storageValidationError(eventHandler);
     }
     return new SuccessResult();
   }
@@ -55,26 +60,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     return DefaultStorageHandler.class.getName().equals(eventHandler.getClassName());
   }
 
-  /**
-   * Verifies whether event handler contains required `className` property
-   *
-   * @param eventHandler
-   * @return ErrorResult or null if event handler is valid
-   */
-  private @Nullable ErrorResult classNameValidationError(EventHandler eventHandler) {
-    if (eventHandler.getClassName() == null || eventHandler.getClassName().isEmpty()) {
-      return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "Mandatory parameter className missing!");
-    }
-    return null;
-  }
-
-  /**
-   * Verifies whether storageId defined for this handler is valid
-   *
-   * @param eventHandler
-   * @return ErrorResult or null if event handler is valid
-   */
-  private @Nullable ErrorResult storageValidationError(@NotNull EventHandler eventHandler) {
+  private @NotNull Result storageValidationError(@NotNull EventHandler eventHandler) {
     Object storageIdProp = eventHandler.getProperties().get(EventHandlerProperties.STORAGE_ID);
     if (storageIdProp == null) {
       return new ErrorResult(
@@ -87,7 +73,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
           XyzError.ILLEGAL_ARGUMENT,
           "Mandatory parameter %s can't be empty/blank!".formatted(EventHandlerProperties.STORAGE_ID));
     }
-    return missingStorageError(storageId);
+    return storageExistenceValidation(storageId);
   }
 
   /**
@@ -96,12 +82,12 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
    * @param storageId
    * @return ErrorResult or null if storage exists
    */
-  private @Nullable ErrorResult missingStorageError(@NotNull String storageId) {
+  private @NotNull Result storageExistenceValidation(@NotNull String storageId) {
     try {
       nakshaHub.getStorageById(storageId);
     } catch (StorageNotFoundException snfe) {
       return snfe.toErrorResult();
     }
-    return null;
+    return new SuccessResult();
   }
 }

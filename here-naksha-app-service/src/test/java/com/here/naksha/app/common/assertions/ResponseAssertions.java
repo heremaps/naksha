@@ -76,10 +76,6 @@ public class ResponseAssertions {
     return hasJsonBody(TestUtil.loadFileOrFail(testFilePath));
   }
 
-  public ResponseAssertions hasJsonBodyFromFile(String testFilePath, String failureMessage) {
-    return hasJsonBody(TestUtil.loadFileOrFail(testFilePath), failureMessage);
-  }
-
   public ResponseAssertions hasJsonBody(String expectedJsonBody) {
     return hasJsonBody(expectedJsonBody, "Actual and expected json body don't match");
   }
