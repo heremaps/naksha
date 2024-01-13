@@ -22,6 +22,7 @@ import static com.here.naksha.app.service.http.apis.ApiParams.*;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.ops.PropertyUtil;
 import com.here.naksha.app.service.http.ops.SpatialUtil;
 import com.here.naksha.app.service.http.ops.TagsUtil;
 import com.here.naksha.app.service.models.IterateHandle;
@@ -32,10 +33,7 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SOp;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
@@ -158,8 +156,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Prepare read request based on parameters supplied
     final SOp bboxOp = SpatialUtil.buildOperationForBBox(west, south, east, north);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
+    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(
+        queryParams, List.of(WEST, NORTH, EAST, SOUTH, LIMIT, TAGS));
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
-    if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
+    RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);

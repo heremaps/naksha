@@ -31,10 +31,12 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.*;
 import com.vividsolutions.jts.geom.Geometry;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @AvailableSince(NakshaVersion.v2_0_7)
 public class RequestHelper {
@@ -286,5 +288,29 @@ public class RequestHelper {
     }
     // fallback to non-standard PRef (non-indexed properties)
     return new NonIndexedPRef(propPath);
+  }
+
+  public static void combineOperationsForRequestAs(
+      final @NotNull ReadFeatures request, final OpType opType, @Nullable POp... operations) {
+    if (operations == null) return;
+    List<POp> opList = null;
+    for (final POp crtOp : operations) {
+      if (crtOp == null) continue;
+      if (request.getPropertyOp() == null) {
+        request.setPropertyOp(crtOp); // set operation directly if this was the only one operation
+        continue;
+      } else if (opList == null) {
+        opList = new ArrayList<>(); // we have more than one operation
+        opList.add(request.getPropertyOp()); // save previously added operation
+      }
+      opList.add(crtOp); // keep appending every operation that is to be added to the request
+    }
+    if (opList == null) return;
+    // Added combined operations to request
+    if (opType == OpType.AND) {
+      request.setPropertyOp(POp.and(opList.toArray(POp[]::new)));
+    } else {
+      request.setPropertyOp(POp.or(opList.toArray(POp[]::new)));
+    }
   }
 }
