@@ -20,6 +20,7 @@ package com.here.naksha.lib.core.util.storage;
 
 import static com.here.naksha.lib.core.models.storage.POp.eq;
 import static com.here.naksha.lib.core.models.storage.POp.or;
+import static com.here.naksha.lib.core.models.storage.PRef.PATH_TO_PREF_MAPPING;
 import static com.here.naksha.lib.core.models.storage.PRef.id;
 
 import com.here.naksha.lib.core.NakshaVersion;
@@ -28,14 +29,9 @@ import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates
 import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.IfConflict;
-import com.here.naksha.lib.core.models.storage.IfExists;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import com.here.naksha.lib.core.models.storage.*;
 import com.vividsolutions.jts.geom.Geometry;
+import java.util.Arrays;
 import java.util.List;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -272,5 +268,23 @@ public class RequestHelper {
     multiPoint.add(new PointCoordinates(west, south));
     multiPoint.add(new PointCoordinates(east, north));
     return JTSHelper.toMultiPoint(multiPoint).getEnvelope();
+  }
+
+  /**
+   * Helper function that returns instance of PRef or NonIndexedPRef depending on
+   * whether the propPath provided matches with standard (indexed) property search or not.
+   *
+   * @param propPath the JSON path to be used for property search
+   * @return PRef instance of PRef or NonIndexedPRef
+   */
+  public static @NotNull PRef pRefFromPropPath(final @NotNull String[] propPath) {
+    // check if we can use standard PRef (on indexed properties)
+    for (final String[] path : PATH_TO_PREF_MAPPING.keySet()) {
+      if (Arrays.equals(path, propPath)) {
+        return PATH_TO_PREF_MAPPING.get(path);
+      }
+    }
+    // fallback to non-standard PRef (non-indexed properties)
+    return new NonIndexedPRef(propPath);
   }
 }

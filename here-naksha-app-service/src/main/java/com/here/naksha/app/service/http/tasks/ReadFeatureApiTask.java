@@ -22,7 +22,8 @@ import static com.here.naksha.app.service.http.apis.ApiParams.*;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
-import com.here.naksha.app.service.http.apis.ApiUtil;
+import com.here.naksha.app.service.http.ops.SpatialUtil;
+import com.here.naksha.app.service.http.ops.TagsUtil;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
@@ -155,8 +156,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     ApiParams.validateParamRange(SOUTH, south, -90, 90);
 
     // Prepare read request based on parameters supplied
-    final SOp bboxOp = ApiUtil.buildOperationForBBox(west, south, east, north);
-    final POp tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
+    final SOp bboxOp = SpatialUtil.buildOperationForBBox(west, south, east, north);
+    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
     if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
 
@@ -180,8 +181,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
 
     // Prepare read request based on parameters supplied
-    final SOp geoOp = ApiUtil.buildOperationForTile(tileType, tileId);
-    final POp tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
+    final SOp geoOp = SpatialUtil.buildOperationForTile(tileType, tileId);
+    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(geoOp);
     if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
 
@@ -208,7 +209,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
 
     // Prepare read request based on parameters supplied
-    final POp tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
+    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId);
     if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
 

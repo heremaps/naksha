@@ -51,7 +51,7 @@ public class QueryParameterListTest {
   @Test
   void testPropertySearchParamsExtraction() {
     final QueryParameterList params = new QueryParameterList(
-            urlEncoded("p.@ns:com:here:mom:metadata.prop_1")+"="+urlEncoded("@value:1")+",value_11"
+            urlEncoded("p.@ns:com:here:mom:meta.prop_1")+"="+urlEncoded("@value:1")+",value_11"
             + "&p.prop_2!=value_2,value_22"
             + "&p.prop_3=.null,value_33"
             + "&p.prop_4!=.null,value_44"
@@ -70,9 +70,9 @@ public class QueryParameterListTest {
     assertEquals(14, params.size());
     assertEquals(14, params.keySize());
 
-    // check first param "p.@ns:com:here:mom:metadata.prop_1=@value:1,value_11"
+    // check first param "p.@ns:com:here:mom:meta.prop_1=@value:1,value_11"
     QueryParameterAssertion.assertThat(params.get(0))
-            .hasKey("p.@ns:com:here:mom:metadata.prop_1")
+            .hasKey("p.@ns:com:here:mom:meta.prop_1")
             .hasOperation(EQUALS)
             .hasValueSize(2)
             .hasValues("@value:1","value_11")
