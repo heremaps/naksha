@@ -18,6 +18,7 @@
  */
 package com.here.naksha.app.service.util;
 
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.POpAssertion.assertThatOperation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -35,6 +36,8 @@ import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.OpType;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.POpType;
+
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -45,6 +48,32 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class ApiUtilTest {
+
+  @Test
+  void testBuildOperationForPropertySearchParams() {
+    final QueryParameterList params = new QueryParameterList(
+    urlEncoded("p.@ns:com:here:mom:metadata.prop_1")+"="+urlEncoded("@value:1")+",value_11"
+            + "&p.prop_2!=value_2,value_22"
+            + "&p.prop_3=.null,value_33"
+            + "&p.prop_4!=.null,value_44"
+            + "&p.prop_5>=5,55"
+            + "&p.prop_6<=6,66"
+            + "&p.prop_7>7,77"
+            + "&p.prop_8<8,88"
+            + "&p.array_1@>"+urlEncoded("@element_1")+",element_2"
+            + "&p.prop_10=gte=555,5555"
+            + "&p.prop_11=lte=666,6666"
+            + "&p.prop_12=gt=777,7777"
+            + "&p.prop_13=lt=888,8888"
+            + "&p.array_2=cs=" + urlEncoded("{\"id\":\"123\"}") + ",element_4"
+    );
+
+
+    final POp op = ApiUtil.buildOperationForPropertySearchParams(params, null);
+    assertNotNull(op);
+  }
+
+
 
   @Test
   void testBuildOperationForTagsQueryParam() {

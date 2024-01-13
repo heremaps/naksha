@@ -22,18 +22,17 @@ import static com.here.naksha.app.service.http.apis.ApiParams.TAGS;
 import static com.here.naksha.app.service.http.apis.ApiParams.TILE_TYPE_QUADKEY;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.*;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
+import static com.here.naksha.lib.core.models.payload.events.QueryOperation.*;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
+import com.here.naksha.lib.core.models.payload.events.QueryOperation;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.PRef;
-import com.here.naksha.lib.core.models.storage.ReadRequest;
-import com.here.naksha.lib.core.models.storage.SOp;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.ValueList;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.vividsolutions.jts.geom.Geometry;
@@ -45,6 +44,7 @@ import org.jetbrains.annotations.Nullable;
 public class ApiUtil {
 
   private static final int NONE = 0, OR = 1, AND = 2;
+  private static final String NULL_PROP_VALUE = ".null";
 
   public static @NotNull SOp buildOperationForTile(final @NotNull String tileType, final @NotNull String tileId) {
     try {
@@ -199,6 +199,7 @@ public class ApiUtil {
       tagParams = tagParams.next();
     }
 
+    // return single operation or OR list (in case of multiple operations)
     final POp[] allTagOpArr = globalOpList.toArray(POp[]::new);
     return (allTagOpArr.length > 1) ? POp.or(allTagOpArr) : allTagOpArr[0];
   }
@@ -226,6 +227,174 @@ public class ApiUtil {
       gList.add(POp.or(tagOpArr));
     } else {
       gList.add(POp.and(tagOpArr));
+    }
+  }
+
+  /**
+   * Function builds Property Operation (POp) based on property key:value pairs supplied as API query parameter.
+   * We iterate through all the parameters, exclude the keys that match with provided excludeKeys,
+   * and interpret the others by identifying the desired operation.
+   * <p>
+   * Multiple parameter keys result into AND list.
+   * <br>
+   * So, "p.prop_1=value_1&p.prop_2=value_2" will form AND condition as (p.prop_1=value_1 AND p.prop_2=value_2).
+   * </p>
+   *
+   * <p>
+   * Multiple parameter values concatenated with "," (COMMA) delimiter, will result into OR list.
+   * <br>
+   * So, "p.prop_1=value_1,value_11" will form OR condition as (p.prop_1=value_1 OR p.prop_1=value_11).
+   * </p>
+   *
+   * @param queryParams API query parameter from where property search params need to be extracted
+   * @param excludeKeys List of param keys to be excluded (i.e. not part of property search)
+   * @return POp property operation that can be used as part of {@link ReadRequest}
+   */
+  public static @Nullable POp buildOperationForPropertySearchParams(
+      final @Nullable QueryParameterList queryParams, final @Nullable List<String> excludeKeys) {
+    if (queryParams == null) return null;
+    // global initialization
+    final List<POp> globalOpList = new ArrayList<>();
+    // iterate through each parameter
+    for (final QueryParameter param : queryParams) {
+      // extract param key, operation, values, delimiters
+      final String key = param.key();
+      final QueryOperation operation = param.op();
+      final ValueList values = param.values();
+      final List<QueryDelimiter> delimiters = param.valuesDelimiter();
+
+      // is this key to be excluded?
+      if (excludeKeys != null && excludeKeys.contains(key)) continue;
+      // prepare property search operation
+      final POp crtOp = preparePropertySearchOperation(operation, key, values, delimiters);
+      // add current search operation to global list
+      globalOpList.add(crtOp);
+    }
+
+    if (globalOpList.isEmpty()) return null;
+    // return single operation or AND list (in case of multiple operations)
+    final POp[] allPOpArr = globalOpList.toArray(POp[]::new);
+    return (allPOpArr.length > 1) ? POp.and(allPOpArr) : allPOpArr[0];
+  }
+
+  private static @NotNull String[] expandKeyToRealJsonPath(final @NotNull String key) {
+    return key.split("\\.");
+  }
+
+  private static @NotNull POp preparePropertySearchOperation(
+      final @NotNull QueryOperation operation,
+      final @NotNull String propKey,
+      final @NotNull ValueList propValues,
+      final @NotNull List<QueryDelimiter> delimiters) {
+    // global operation list if multiple values are supplied for this property key
+    final List<POp> gOpList = new ArrayList<>();
+
+    // TODO : expand key if needed (e.g. p.prop_1 should be properties.prop_1)
+    final String[] propPath = expandKeyToRealJsonPath(propKey);
+
+    // iterate through all given values for a key
+    int delimIdx = 0;
+    for (final Object value : propValues) {
+      if (value == null) {
+        throw new XyzErrorException(
+            XyzError.ILLEGAL_ARGUMENT, "Unsupported null value for key %s".formatted(propKey));
+      }
+      // validate delimiter ("," to be taken as OR operation)
+      final QueryDelimiter delimiter = delimiters.get(delimIdx++);
+      if (delimiter != AMPERSAND && delimiter != COMMA && delimiter != END) {
+        throw new XyzErrorException(
+            XyzError.ILLEGAL_ARGUMENT, "Unsupported delimiter %s for key %s".formatted(delimiter, propKey));
+      }
+      // prepare property operation for crt value
+      final POp crtOp;
+      if (value instanceof String str) {
+        crtOp = mapAPIOperationToPropertyOperation(operation, propPath, str);
+      } else if (value instanceof Number num) {
+        crtOp = mapAPIOperationToPropertyOperation(operation, propPath, num);
+      } else if (value instanceof Boolean bool) {
+        crtOp = mapAPIOperationToPropertyOperation(operation, propPath, bool);
+      } else {
+        throw new XyzErrorException(
+            XyzError.ILLEGAL_ARGUMENT,
+            "Unsupported value type %s for key %s"
+                .formatted(value.getClass().getName(), propKey));
+      }
+      // add current operation to global list
+      gOpList.add(crtOp);
+    }
+
+    // return single operation or OR list (in case of multiple operations)
+    final POp[] allPOpArr = gOpList.toArray(POp[]::new);
+    return (allPOpArr.length > 1) ? POp.or(allPOpArr) : allPOpArr[0];
+  }
+
+  private static @NotNull POp mapAPIOperationToPropertyOperation(
+      final @NotNull QueryOperation operation, final @NotNull String[] propPath, final @NotNull String value) {
+    if (operation == EQUALS) {
+      // check if it is NULL operation
+      if (NULL_PROP_VALUE.equals(value)) {
+        return POp.not(POp.exists(new NonIndexedPRef(propPath)));
+      } else {
+        return POp.eq(new NonIndexedPRef(propPath), value);
+      }
+    } else if (operation == NOT_EQUALS) {
+      // check if it is NOT NULL operation
+      if (NULL_PROP_VALUE.equals(value)) {
+        return POp.exists(new NonIndexedPRef(propPath));
+      } else {
+        return POp.not(POp.eq(new NonIndexedPRef(propPath), value));
+      }
+    } else if (operation == CONTAINS) {
+      // if string represents JSON object, then we automatically add JSON array comparison
+      if (value.startsWith("{") && value.endsWith("}")) {
+        return POp.or(
+            POp.contains(new NonIndexedPRef(propPath), value),
+            POp.contains(new NonIndexedPRef(propPath), "[%s]".formatted(value)));
+      } else {
+        return POp.contains(new NonIndexedPRef(propPath), value);
+      }
+    } else {
+      throw new XyzErrorException(
+          XyzError.ILLEGAL_ARGUMENT,
+          "Unsupported operation %s with string value %s".formatted(operation.name, value));
+    }
+  }
+
+  private static @NotNull POp mapAPIOperationToPropertyOperation(
+      final @NotNull QueryOperation operation, final @NotNull String[] propPath, final @NotNull Number value) {
+    if (operation == EQUALS) {
+      return POp.eq(new NonIndexedPRef(propPath), value);
+    } else if (operation == NOT_EQUALS) {
+      return POp.not(POp.eq(new NonIndexedPRef(propPath), value));
+    } else if (operation == GREATER_THAN) {
+      return POp.gt(new NonIndexedPRef(propPath), value);
+    } else if (operation == GREATER_THAN_OR_EQUALS) {
+      return POp.gte(new NonIndexedPRef(propPath), value);
+    } else if (operation == LESS_THAN) {
+      return POp.lt(new NonIndexedPRef(propPath), value);
+    } else if (operation == LESS_THAN_OR_EQUALS) {
+      return POp.lte(new NonIndexedPRef(propPath), value);
+    } else if (operation == CONTAINS) {
+      return POp.contains(new NonIndexedPRef(propPath), value);
+    } else {
+      throw new XyzErrorException(
+          XyzError.ILLEGAL_ARGUMENT,
+          "Unsupported operation %s with numeric value %s".formatted(operation.name, value));
+    }
+  }
+
+  private static @NotNull POp mapAPIOperationToPropertyOperation(
+      final @NotNull QueryOperation operation, final @NotNull String[] propPath, final @NotNull Boolean value) {
+    if (operation == EQUALS) {
+      return POp.eq(new NonIndexedPRef(propPath), value);
+    } else if (operation == NOT_EQUALS) {
+      return POp.not(POp.eq(new NonIndexedPRef(propPath), value));
+    } else if (operation == CONTAINS) {
+      return POp.contains(new NonIndexedPRef(propPath), value);
+    } else {
+      throw new XyzErrorException(
+          XyzError.ILLEGAL_ARGUMENT,
+          "Unsupported operation %s with boolean value %s".formatted(operation.name, value));
     }
   }
 }
