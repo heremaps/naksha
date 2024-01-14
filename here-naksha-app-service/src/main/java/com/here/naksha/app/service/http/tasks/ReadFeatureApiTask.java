@@ -204,7 +204,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         : null;
     if (queryParams == null || queryParams.size() <= 0) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
+          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory query parameters");
     }
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // validate values
@@ -212,8 +212,13 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Prepare read request based on parameters supplied
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
+    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams, List.of(LIMIT, TAGS));
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId);
-    if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
+    if (tagsOp == null && propSearchOp == null) {
+      return verticle.sendErrorResponse(
+          routingContext, XyzError.ILLEGAL_ARGUMENT, "Atleast Tags or Prop search parameters required.");
+    }
+    RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);

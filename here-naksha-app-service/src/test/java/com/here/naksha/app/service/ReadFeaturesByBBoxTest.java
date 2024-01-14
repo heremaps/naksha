@@ -730,11 +730,15 @@ class ReadFeaturesByBBoxTest extends ApiTest {
   @Test
   void tc0729_testBBox2WithPropNoMatch() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
-    // Validate NO features returned when BBox coordinates are matching
+    // Validate NO features returned when BBox coordinates and Tags filters are matching
     // but given property search filter doesn't match any features
 
     // Given: Features By BBox request (against configured space)
     final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
+    final String tagsQueryParam = "tags=%s,%s".formatted(
+            urlEncoded("@ThRee"),
+            urlEncoded("@Four")
+    );
     final String propQueryParam = "p.length=gt=12"; // No features should match this condition
     final String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByBBox/TC0729_BBox2_PropNoMatch/feature_response_part.json");
@@ -742,7 +746,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
 
     // When: Get Features By BBox request is submitted to NakshaHub
     HttpResponse<String> response = nakshaClient
-            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam, streamId);
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + tagsQueryParam + "&" + propQueryParam, streamId);
 
     // Then: Perform assertions
     assertThat(response)
