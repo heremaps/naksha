@@ -70,7 +70,7 @@ jobs:
         uses: madrapps/jacoco-report@v1.6.1
         with:
           paths: |
-            '**/build/reports/jacoco/test/jacocoTestReport.xml'
+            '**/build/reports/jacoco/test/jacocoTestReport.xml',
             'build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml'
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: $MIN_COVERAGE_OVERALL
