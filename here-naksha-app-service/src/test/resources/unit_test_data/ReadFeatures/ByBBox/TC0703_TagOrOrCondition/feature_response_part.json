@@ -49,6 +49,7 @@
       "properties": {
         "speedLimit": "60",
         "length": 10,
+        "isBidirectional": true,
         "@ns:com:here:xyz": {
           "tags": [ "one", "two", "three", "four", "five", "six" ]
         },

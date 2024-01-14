@@ -755,6 +755,29 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
+  @Test
+  void tc0730_testBBox2WithPropBoolEqual() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Validate features returned match with given BBox and Search conditions (Boolean equals)
+
+    // Given: Features By BBox request (against configured space)
+    final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
+    final String propQueryParam = "p.isBidirectional=true";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByBBox/TC0730_BBox2_PropBoolEqual/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
+
 
 
 

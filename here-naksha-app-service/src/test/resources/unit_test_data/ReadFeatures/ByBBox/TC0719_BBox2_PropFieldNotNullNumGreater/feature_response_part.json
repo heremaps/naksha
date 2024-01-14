@@ -8,6 +8,7 @@
         "speedLimit": "80",
         "length": 11,
         "direction": "B to A",
+        "isBidirectional": false,
         "@ns:com:here:xyz": {
           "tags": [ "non-matching-tag", "@ThRee", "@Four" ]
         },

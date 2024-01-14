@@ -7,6 +7,7 @@
       "properties": {
         "speedLimit": "60",
         "length": 10,
+        "isBidirectional": true,
         "@ns:com:here:xyz": {
           "tags": [ "one", "two", "three", "four", "five", "six" ]
         },
@@ -44,6 +45,7 @@
         "speedLimit": "70",
         "length": 10.5,
         "direction": "A to B",
+        "isBidirectional": false,
         "@ns:com:here:xyz": {
           "tags": [ "non-matching-tag", "@ThRee" ]
         },
