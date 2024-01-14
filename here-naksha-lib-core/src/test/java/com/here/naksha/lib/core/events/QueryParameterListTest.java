@@ -51,7 +51,7 @@ public class QueryParameterListTest {
   @Test
   void testPropertySearchParamsExtraction() {
     final QueryParameterList params = new QueryParameterList(
-            urlEncoded("p.@ns:com:here:mom:meta.prop_1")+"="+urlEncoded("@value:1")+",value_11"
+            urlEncoded("p.@ns:com:here:mom:meta.prop_1")+"="+urlEncoded("@value:1")+",'12345'"
             + "&p.prop_2!=value_2,value_22"
             + "&p.prop_3=.null,value_33"
             + "&p.prop_4!=.null,value_44"
@@ -75,7 +75,7 @@ public class QueryParameterListTest {
             .hasKey("p.@ns:com:here:mom:meta.prop_1")
             .hasOperation(EQUALS)
             .hasValueSize(2)
-            .hasValues("@value:1","value_11")
+            .hasValues("@value:1","12345")
             .hasValueDelimiterSize(2)
             .hasValueDelimiters(COMMA, AMPERSAND)
             ;

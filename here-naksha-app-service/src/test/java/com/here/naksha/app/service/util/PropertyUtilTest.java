@@ -29,7 +29,7 @@ public class PropertyUtilTest {
     @Test
     void testBuildOperationForPropertySearchParams() {
         final QueryParameterList params = new QueryParameterList(
-                urlEncoded("f.id")+"="+urlEncoded("@value:1")+",value_11"
+                urlEncoded("f.id")+"="+urlEncoded("@value:1")+",'12345'"
                         + "&p.prop_2!=value_2,value_22"
                         + "&p.prop_3=.null,value_33"
                         + "&p.prop_4!=.null,value_44"
@@ -64,7 +64,7 @@ public class PropertyUtilTest {
                 .hasType(POpType.OR)
                 .hasChildrenThat(
                         first -> first.hasType(EQ).hasPRefWithPath(ID_PROP_PATH).hasValue("@value:1"),
-                        second -> second.hasType(EQ).hasPRefWithPath(ID_PROP_PATH).hasValue("value_11")
+                        second -> second.hasType(EQ).hasPRefWithPath(ID_PROP_PATH).hasValue("12345")
                 )
         ;
         // validate operation 2

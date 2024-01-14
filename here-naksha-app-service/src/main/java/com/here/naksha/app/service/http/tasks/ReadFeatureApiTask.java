@@ -78,7 +78,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
    */
   @Override
   protected @NotNull XyzResponse execute() {
-    // TODO : Add custom execute logic to process input API request based on reqType
     try {
       return switch (this.reqType) {
         case GET_BY_ID -> executeFeatureById();
@@ -89,12 +88,15 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         case ITERATE -> executeIterate();
         default -> executeUnsupported();
       };
-    } catch (XyzErrorException ex) {
-      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
     } catch (Exception ex) {
-      // unexpected exception
-      return verticle.sendErrorResponse(
-          routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
+      if (ex instanceof XyzErrorException xyz) {
+        logger.warn("Known exception while processing request. ", ex);
+        return verticle.sendErrorResponse(routingContext, xyz.xyzError, xyz.getMessage());
+      } else {
+        logger.error("Unexpected error while processing request. ", ex);
+        return verticle.sendErrorResponse(
+            routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
+      }
     }
   }
 
