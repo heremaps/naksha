@@ -16,27 +16,28 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.handlers;
+package com.here.naksha.lib.handlers.internal;
 
-import com.here.naksha.lib.core.IEvent;
+import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
+
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.Storage;
+import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Result;
 import org.jetbrains.annotations.NotNull;
 
-public class IntHandlerForConfigs extends AbstractEventHandler {
+public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
 
-  public IntHandlerForConfigs(final @NotNull INaksha hub) {
-    super(hub);
+  public IntHandlerForStorages(final @NotNull INaksha hub) {
+    super(hub, Storage.class);
   }
 
-  /**
-   * The method invoked by the event-pipeline to process Config specific read/write operations
-   *
-   * @param event the event to process.
-   * @return the result.
-   */
   @Override
-  public @NotNull Result processEvent(@NotNull IEvent event) {
-    return notImplemented(event);
+  protected @NotNull Result validateFeature(Storage storage) {
+    Result basicValidation = super.validateFeature(storage);
+    if (basicValidation instanceof ErrorResult) {
+      return basicValidation;
+    }
+    return pluginValidation(storage);
   }
 }

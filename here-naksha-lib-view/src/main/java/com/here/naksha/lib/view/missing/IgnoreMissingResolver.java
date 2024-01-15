@@ -16,27 +16,28 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.handlers;
+package com.here.naksha.lib.view.missing;
 
-import com.here.naksha.lib.core.IEvent;
-import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import com.here.naksha.lib.view.MissingIdResolver;
+import com.here.naksha.lib.view.ViewLayer;
+import com.here.naksha.lib.view.ViewLayerRow;
+import java.util.List;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class IntHandlerForSubscriptions extends AbstractEventHandler {
+public class IgnoreMissingResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
+    implements MissingIdResolver<FEATURE, CODEC> {
 
-  public IntHandlerForSubscriptions(final @NotNull INaksha hub) {
-    super(hub);
+  @Override
+  public boolean skip() {
+    return true;
   }
 
-  /**
-   * The method invoked by the event-pipeline to process Subscription specific read/write operations
-   *
-   * @param event the event to process.
-   * @return the result.
-   */
   @Override
-  public @NotNull Result processEvent(@NotNull IEvent event) {
-    return notImplemented(event);
+  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(
+      @NotNull List<ViewLayerRow<FEATURE, CODEC>> multipleResults) {
+    return null;
   }
 }
