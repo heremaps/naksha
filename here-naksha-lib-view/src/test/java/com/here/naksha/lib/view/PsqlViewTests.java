@@ -321,11 +321,11 @@ class PsqlViewTests {
     final WriteXyzFeatures requestTest1 = new WriteXyzFeatures(COLLECTION_1);
     final WriteXyzFeatures requestTest2 = new WriteXyzFeatures(COLLECTION_2);
     final XyzFeature feature = fg.newRandomFeature();
-    feature.setGeometry(new XyzPoint(1d, 1d));
+    feature.setGeometry(new XyzPoint(11d, 11d));
     requestTest1.add(EWriteOp.CREATE, feature);
 
     XyzFeature featureEdited2 = feature.deepClone();
-    featureEdited2.setGeometry(new XyzPoint(2d, 2d));
+    featureEdited2.setGeometry(new XyzPoint(22d, 22d));
     requestTest2.add(EWriteOp.CREATE, featureEdited2);
     try {
       session.execute(requestTest1);
@@ -343,13 +343,13 @@ class PsqlViewTests {
     View view = new View(viewLayerCollection);
 
     // when requesting for feature from COLLECTION 0, 1 and 2
-    ReadFeatures requestById = new ReadFeatures();
-    requestById.setPropertyOp(POp.eq(PRef.id(), feature.getId()));
-    List<XyzFeatureCodec> features = queryView(view, requestById);
+    ReadFeatures getByPoint = new ReadFeatures();
+    getByPoint.setSpatialOp(SOp.or(intersects(new XyzPoint(11d, 11d)), intersects(new XyzPoint(22d, 22d))));;
+    List<XyzFeatureCodec> features = queryView(view, getByPoint);
 
     // then should get result from COLLECTION_1 as it's next in priority and feature doesn't exist in COLLECTION_0 which is top priority layer.
     assertEquals(1, features.size());
-    assertEquals(1d, features.get(0).getGeometry().getCoordinate().x);
+    assertEquals(11d, features.get(0).getGeometry().getCoordinate().x);
     session.commit(true);
   }
 
