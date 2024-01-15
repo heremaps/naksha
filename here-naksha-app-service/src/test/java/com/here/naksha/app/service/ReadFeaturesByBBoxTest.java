@@ -429,8 +429,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
-  // TODO : This test doesn't work. Need to check with Pawel about psql operation.
-  //@Test
+  @Test
   void tc0717_testBBox2WithSearchOnStringNotEqualNumberNotEqual() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox and Search conditions (String Not equals, Number Not equals)
@@ -453,7 +452,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
-  //@Test
+  @Test
   void tc0718_testBBox2WithSearchOnFieldNullNumberEqual() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate features returned match with given BBox and Search conditions (Field Missing, Number Equals)
