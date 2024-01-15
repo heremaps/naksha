@@ -26,7 +26,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class View implements IStorage {
+public class View implements IView {
 
   private ViewLayerCollection viewLayerCollection;
 
