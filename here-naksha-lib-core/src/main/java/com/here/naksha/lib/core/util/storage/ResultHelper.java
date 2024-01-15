@@ -45,7 +45,7 @@ public class ResultHelper {
    * @return list of features extracted from ReadResult
    */
   public static <R extends XyzFeature> List<R> readFeaturesFromResult(Result result, Class<R> featureType)
-      throws NoCursor, NoSuchElementException {
+      throws NoCursor {
     return readFeaturesFromResult(result, featureType, Long.MAX_VALUE);
   }
 
@@ -60,7 +60,7 @@ public class ResultHelper {
    * @return list of features extracted from ReadResult
    */
   public static <R extends XyzFeature> List<R> readFeaturesFromResult(Result result, Class<R> featureType, long limit)
-      throws NoCursor, NoSuchElementException {
+      throws NoCursor {
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
       if (!resultCursor.hasNext()) {
         throw new NoSuchElementException("Result Cursor is empty");
@@ -111,7 +111,7 @@ public class ResultHelper {
    * @return a map grouping the lists of features extracted from ReadResult
    */
   public static <R extends XyzFeature> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
-      Result result, Class<R> featureType, long limit) throws NoCursor, NoSuchElementException {
+      Result result, Class<R> featureType, long limit) throws NoCursor {
     try (ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
       if (!resultCursor.hasNext()) {
         throw new NoSuchElementException("Result Cursor is empty");

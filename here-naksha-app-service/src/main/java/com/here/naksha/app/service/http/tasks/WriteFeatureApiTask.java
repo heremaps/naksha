@@ -18,6 +18,10 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
+import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.lib.core.util.diff.PatcherUtils.removeAllRemoveOp;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -31,29 +35,22 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.diff.Difference;
 import com.here.naksha.lib.core.util.diff.Patcher;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Objects;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
-import static com.here.naksha.lib.core.util.diff.PatcherUtils.removeAllRemoveOp;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
@@ -187,7 +184,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
-    validateFeatureId(routingContext,feature.getId());
+    validateFeatureId(routingContext, feature.getId());
 
     // as applicable, modify features based on parameters supplied
     addTagsToFeature(feature, addTags);
@@ -237,8 +234,6 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
   }
 
-  // TODO this might change if naksha_plpgsql.sql gets updated and the message is modified
-  private static final Pattern FEATURE_ID_FROM_ERR = Pattern.compile("The feature \\s*'([^']*)' uuid");
   private static final int MAX_RETRY_ATTEMPT = 5;
 
   private @NotNull XyzResponse executePatchFeatureById() throws JsonProcessingException {
@@ -246,17 +241,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final XyzFeature featureFromRequest = singleFeatureFromRequestBody();
 
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
-    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
-    //TODO move tags into attemptFeaturesPatching()
-    final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
-    final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
-    validateFeatureId(routingContext,featureFromRequest.getId());
-
-    // as applicable, modify features based on parameters supplied
-    addTagsToFeature(featureFromRequest, addTags);
-    removeTagsFromFeature(featureFromRequest, removeTags);
+    validateFeatureId(routingContext, featureFromRequest.getId());
 
     final List<XyzFeature> featuresFromRequest = new ArrayList<>();
     featuresFromRequest.add(featureFromRequest);
@@ -269,7 +256,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       @NotNull HttpResponseType responseType,
       int retry) {
     // Patched feature list is to ensure the order of input features is retained
-    List<XyzFeature> patchedFeature = new ArrayList<>();
+    final List<XyzFeature> patchedFeature;
     List<XyzFeature> featuresToPatchFromStorage = new ArrayList<>();
     final List<String> featureIds = new ArrayList<>();
     for (XyzFeature feature : featuresFromRequest) {
@@ -283,9 +270,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       if (result == null) {
         logger.error("Unexpected null result while reading features from storage: " + featureIds);
         return verticle.sendErrorResponse(
-                routingContext,
-                XyzError.EXCEPTION,
-                "Unexpected null result while reading features from storage");
+            routingContext,
+            XyzError.EXCEPTION,
+            "Unexpected null result while reading features from storage");
       } else if (result instanceof ErrorResult er) {
         // In case of error, convert result to ErrorResponse
         logger.error("Received error result while reading features in storage: {}", er);
@@ -298,7 +285,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           // TODO strategy pattern?
           // If this is patching only 1 feature (PATCH by ID), return not found
           logger.error(
-                  "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
+              "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
           return verticle.sendErrorResponse(routingContext, XyzError.NOT_FOUND, "Feature does not exist.");
         } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
           // This function was then misused somewhere. FIND AND FIX IT!!
@@ -307,86 +294,102 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
         // Else none of the features exists in storage, will create them later
       }
-
+      // As applicable, modify features based on parameters supplied
+      final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+      final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
+      final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
+      for (XyzFeature featureFromRequest : featuresFromRequest) {
+        addTagsToFeature(featureFromRequest, addTags);
+        removeTagsFromFeature(featureFromRequest, removeTags);
+      }
       // Attempt patching, keeping the order of the features from the request
-      patchedFeature = performInMemoryPatching(featuresFromRequest,featuresToPatchFromStorage);
+      patchedFeature = performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage);
     }
     final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeature);
     // Forward request to NH Space Storage writer instance
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
+    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(context(), true)) {
+      final Result wrResult = writer.execute(wrRequest);
       if (wrResult == null) {
         // unexpected null response
         logger.error("Received null result!");
+        writer.rollback(true);
+        writer.close();
         return verticle.sendErrorResponse(routingContext, XyzError.EXCEPTION, "Unexpected null result!");
       } else if (wrResult instanceof ErrorResult er) {
-        // TODO IWriteSession.rollback(true)
-        // TODO iterate er using Cursor for all the error, rely on XyzError.CONFLICT instead of pattern uuid
-        if (er.message.contains("uuid") && er.message.contains("does not match")) {
-          // UUID mismatched
-          // Extract feature ID from error message
-          Matcher matcherFeatureId = FEATURE_ID_FROM_ERR.matcher(er.message);
-          if (!matcherFeatureId.find()) {
+        writer.rollback(true);
+        writer.close();
+        try (ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = er.getXyzFeatureCursor()) {
+          if (!resultCursor.hasNext()) {
+            throw new NoSuchElementException("Error Result Cursor is empty");
+          }
+          while (resultCursor.hasNext()) {
+            if (!resultCursor.next()) {
+              throw new RuntimeException("Unexpected invalid error result");
+            }
+            if (!er.reason.equals(XyzError.CONFLICT)) {
+              // Other types of error, will not retry
+              logger.error("Received error result {}", resultCursor.getError());
+              return verticle.sendErrorResponse(
+                  routingContext, Objects.requireNonNull(resultCursor.getError()).err, resultCursor.getError().msg);
+            }
+            // Else it was because of UUID mismatched
+            final String featureIdFromErr = resultCursor.getId();
+            // Find the requested change for the corresponding feature with that ID
+            for (XyzFeature requestedChange : featuresFromRequest) {
+              if (requestedChange.getId().equals(featureIdFromErr)) {
+                // If UUID input by user, will not retry, return conflict
+                if (requestedChange
+                        .getProperties()
+                        .getXyzNamespace()
+                        .getUuid()
+                    != null) {
+                  return verticle.sendErrorResponse(
+                      routingContext,
+                      XyzError.CONFLICT,
+                      "Error updating feature '" + featureIdFromErr + "', wrong UUID.");
+                }
+              }
+            }
+          }
+          // Else the feature was modified concurrently within Naksha
+          if (retry >= MAX_RETRY_ATTEMPT) {
             logger.error(
-                "Received error result with feature ID not specified or specified incorrectly {}", er);
+                "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: {}",
+                er.message);
             return verticle.sendErrorResponse(
                 routingContext,
                 XyzError.EXCEPTION,
-                "Error updating feature in storage, the feature ID from the error was specified incorrectly or not specified.");
+                "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: "
+                    + er.message);
           }
-          final String featureIdFromErr = matcherFeatureId.group(1);
-          // Find the requested change for the corresponding feature with that ID
-          for (XyzFeature requestedChange : featuresFromRequest) {
-            if (requestedChange.getId().equals(featureIdFromErr)) {
-              // If UUID input by user, return conflict
-              if (requestedChange
-                      .getProperties()
-                      .getXyzNamespace()
-                      .getUuid()
-                  != null) {
-                return verticle.sendErrorResponse(
-                    routingContext,
-                    XyzError.CONFLICT,
-                    "Error updating feature '" + featureIdFromErr + "', wrong UUID.");
-              }
-              // Else the feature was modified concurrently within Naksha
-              if (retry >= MAX_RETRY_ATTEMPT) {
-                logger.error(
-                    "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: {}",
-                    er.message);
-                return verticle.sendErrorResponse(
-                    routingContext,
-                    XyzError.EXCEPTION,
-                    "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: "
-                        + er.message);
-              }
-              // Attempt retry
-              return attemptFeaturesPatching(spaceId, featuresFromRequest, responseType, retry + 1);
-            }
-          }
-        } else {
-          // Other types of error, convert result to ErrorResponse
-          // TODO IWriteSession.rollback(true)
-          logger.error("Received error result {}", er);
-          return verticle.sendErrorResponse(routingContext, er.reason, er.message);
+          // Attempt retry
+          return attemptFeaturesPatching(spaceId, featuresFromRequest, responseType, retry + 1);
+        } catch (NoCursor e) {
+          logger.error(
+              "No cursor when analyzing error result, while attempting to write patched features into storage.");
+          return verticle.sendErrorResponse(
+              routingContext,
+              XyzError.EXCEPTION,
+              "Unexpected response when trying to persist patched features.");
         }
       } else {
-        return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class,false);
+        if (responseType.equals(HttpResponseType.FEATURE)) {
+          return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+        }
+        return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, false);
       }
     }
-    return verticle.sendErrorResponse(
-        routingContext,
-        XyzError.EXCEPTION,
-        "Unexpected code point reached while attempting to PATCH features: " + featureIds);
   }
 
   /**
    * Return a list of patched XyzFeature, including the ones not yet existing, ready for upsert
    */
-  private List<XyzFeature> performInMemoryPatching(@NotNull List<XyzFeature> featuresFromRequest, List<XyzFeature> featuresToPatchFromStorage) {
+  private List<XyzFeature> performInMemoryPatching(
+      @NotNull List<XyzFeature> featuresFromRequest, List<XyzFeature> featuresToPatchFromStorage) {
     final List<XyzFeature> patchedFeature = new ArrayList<>();
     for (XyzFeature requestedChange : featuresFromRequest) {
-      if (requestedChange.getId() ==  null) {
-        // This requested feature does not exist, create it
+      if (requestedChange.getId() == null) {
+        // This requested feature has no ID, hence does not exist, create it
         patchedFeature.add(requestedChange);
         continue;
       }
@@ -401,7 +404,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
       }
       if (!willPatch) {
-        // This requested feature does not exist, create it
+        // This requested feature with specified ID does not exist, create it
         patchedFeature.add(requestedChange);
       }
     }
