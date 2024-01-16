@@ -1,0 +1,14 @@
+{
+  "id": "no-name-handler",
+  "type": "EventHandler",
+  "description": "For unit testing",
+  "title": "some-title",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "active": true,
+  "extensionId": null,
+  "properties": {
+    "collection": {
+      "maxAge": 2
+    }
+  }
+}

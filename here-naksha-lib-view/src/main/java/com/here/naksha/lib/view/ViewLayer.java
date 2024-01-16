@@ -16,15 +16,26 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.handlers;
+package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.Space;
-import org.jetbrains.annotations.NotNull;
+import com.here.naksha.lib.core.storage.IStorage;
 
-public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
+public class ViewLayer {
 
-  public IntHandlerForSpaces(final @NotNull INaksha hub) {
-    super(hub, Space.class);
+  private final IStorage storage;
+
+  private final String collectionId;
+
+  public ViewLayer(IStorage storage, String collectionId) {
+    this.storage = storage;
+    this.collectionId = collectionId;
+  }
+
+  public IStorage getStorage() {
+    return storage;
+  }
+
+  public String getCollectionId() {
+    return collectionId;
   }
 }
