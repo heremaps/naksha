@@ -335,9 +335,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             }
             // Check if there is an error that is not about mismatching UUID
             if (EExecutedOp.ERROR.equals(resultCursor.getOp())) {
-              if (!Objects.requireNonNull(resultCursor.getError())
-                  .err
-                  .equals(XyzError.CONFLICT)) {
+              if (XyzError.CONFLICT
+                  .equals(Objects.requireNonNull(resultCursor.getError())
+                          .err)) {
                 // Other types of error, will not retry
                 return returnError(
                     resultCursor.getError().err,
