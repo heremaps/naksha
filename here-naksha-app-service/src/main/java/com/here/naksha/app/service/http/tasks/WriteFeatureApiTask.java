@@ -47,7 +47,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -268,29 +267,32 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds);
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       if (result == null) {
-        logger.error("Unexpected null result while reading features from storage: " + featureIds);
-        return verticle.sendErrorResponse(
-            routingContext,
-            XyzError.EXCEPTION,
-            "Unexpected null result while reading features from storage");
+        return returnError(
+            "Unexpected null result while reading features from storage: {}",
+            featureIds,
+            "Unexpected null result while reading features from storage",
+            XyzError.EXCEPTION);
       } else if (result instanceof ErrorResult er) {
         // In case of error, convert result to ErrorResponse
-        logger.error("Received error result while reading features in storage: {}", er);
-        return verticle.sendErrorResponse(routingContext, er.reason, er.message);
+        return returnError(
+            "Received error result while reading features in storage: {}", er, er.message, er.reason);
       }
       try {
         featuresToPatchFromStorage = readFeaturesFromResult(result, XyzFeature.class, DEF_FEATURE_LIMIT);
       } catch (NoCursor | NoSuchElementException emptyException) {
         if (responseType.equals(HttpResponseType.FEATURE)) {
-          // TODO strategy pattern?
           // If this is patching only 1 feature (PATCH by ID), return not found
-          logger.error(
-              "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
-          return verticle.sendErrorResponse(routingContext, XyzError.NOT_FOUND, "Feature does not exist.");
+          return returnError(
+              "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.",
+              "Feature does not exist.",
+              XyzError.NOT_FOUND);
         } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
           // This function was then misused somewhere. FIND AND FIX IT!!
-          logger.error("Unsupported HttpResponseType was called: " + responseType);
-          return verticle.sendErrorResponse(routingContext, XyzError.EXCEPTION, "Internal server error.");
+          return returnError(
+              "Unsupported HttpResponseType was called: {}",
+              responseType,
+              "Internal server error.",
+              XyzError.EXCEPTION);
         }
         // Else none of the features exists in storage, will create them later
       }
@@ -311,10 +313,12 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       final Result wrResult = writer.execute(wrRequest);
       if (wrResult == null) {
         // unexpected null response
-        logger.error("Received null result!");
         writer.rollback(true);
         writer.close();
-        return verticle.sendErrorResponse(routingContext, XyzError.EXCEPTION, "Unexpected null result!");
+        return returnError(
+            "Received null result after writing patched features, rolled back.",
+            "Unexpected null result.",
+            XyzError.EXCEPTION);
       } else if (wrResult instanceof ErrorResult er) {
         writer.rollback(true);
         writer.close();
@@ -328,9 +332,11 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             }
             if (!er.reason.equals(XyzError.CONFLICT)) {
               // Other types of error, will not retry
-              logger.error("Received error result {}", resultCursor.getError());
-              return verticle.sendErrorResponse(
-                  routingContext, Objects.requireNonNull(resultCursor.getError()).err, resultCursor.getError().msg);
+              return returnError(
+                  "Received error result {}",
+                  resultCursor.getError(),
+                  Objects.requireNonNull(resultCursor.getError()).msg,
+                  resultCursor.getError().err);
             }
             // Else it was because of UUID mismatched
             final String featureIdFromErr = resultCursor.getId();
@@ -353,24 +359,20 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           }
           // Else the feature was modified concurrently within Naksha
           if (retry >= MAX_RETRY_ATTEMPT) {
-            logger.error(
+            return returnError(
                 "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: {}",
-                er.message);
-            return verticle.sendErrorResponse(
-                routingContext,
-                XyzError.EXCEPTION,
+                er.message,
                 "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: "
-                    + er.message);
+                    + er.message,
+                XyzError.EXCEPTION);
           }
           // Attempt retry
           return attemptFeaturesPatching(spaceId, featuresFromRequest, responseType, retry + 1);
         } catch (NoCursor e) {
-          logger.error(
-              "No cursor when analyzing error result, while attempting to write patched features into storage.");
-          return verticle.sendErrorResponse(
-              routingContext,
-              XyzError.EXCEPTION,
-              "Unexpected response when trying to persist patched features.");
+          return returnError(
+              "No cursor when analyzing error result, while attempting to write patched features into storage.",
+              "Unexpected response when trying to persist patched features.",
+              XyzError.EXCEPTION);
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
@@ -409,6 +411,18 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       }
     }
     return patchedFeature;
+  }
+
+  private XyzResponse returnError(
+      final String internalLogMsg, final String httpResponseMsg, final XyzError xyzError) {
+    logger.error(internalLogMsg);
+    return verticle.sendErrorResponse(routingContext, xyzError, httpResponseMsg);
+  }
+
+  private XyzResponse returnError(
+      final String internalLogMsg, final Object logArg, final String httpResponseMsg, final XyzError xyzError) {
+    logger.error(internalLogMsg, logArg);
+    return verticle.sendErrorResponse(routingContext, xyzError, httpResponseMsg);
   }
 
   private @NotNull FeatureCollectionRequest featuresFromRequestBody() throws JsonProcessingException {
