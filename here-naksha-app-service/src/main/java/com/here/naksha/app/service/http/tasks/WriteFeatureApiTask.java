@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -240,22 +241,27 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final XyzFeature featureFromRequest = singleFeatureFromRequestBody();
 
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
+    final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
     // Validate parameters
     validateFeatureId(routingContext, featureFromRequest.getId());
 
     final List<XyzFeature> featuresFromRequest = new ArrayList<>();
     featuresFromRequest.add(featureFromRequest);
-    return attemptFeaturesPatching(spaceId, featuresFromRequest, HttpResponseType.FEATURE, 0);
+    return attemptFeaturesPatching(spaceId, featuresFromRequest, HttpResponseType.FEATURE, addTags, removeTags, 0);
   }
 
   private XyzResponse attemptFeaturesPatching(
       @NotNull String spaceId,
       @NotNull List<XyzFeature> featuresFromRequest,
       @NotNull HttpResponseType responseType,
+      @Nullable List<String> addTags,
+      @Nullable List<String> removeTags,
       int retry) {
     // Patched feature list is to ensure the order of input features is retained
-    final List<XyzFeature> patchedFeature;
+    final List<XyzFeature> patchedFeatures;
     List<XyzFeature> featuresToPatchFromStorage = new ArrayList<>();
     final List<String> featureIds = new ArrayList<>();
     for (XyzFeature feature : featuresFromRequest) {
@@ -296,18 +302,15 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
         // Else none of the features exists in storage, will create them later
       }
+      // Attempt patching, keeping the order of the features from the request
+      patchedFeatures = performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage);
       // As applicable, modify features based on parameters supplied
-      final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
-      final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
-      final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
-      for (XyzFeature featureFromRequest : featuresFromRequest) {
+      for (XyzFeature featureFromRequest : patchedFeatures) {
         addTagsToFeature(featureFromRequest, addTags);
         removeTagsFromFeature(featureFromRequest, removeTags);
       }
-      // Attempt patching, keeping the order of the features from the request
-      patchedFeature = performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage);
     }
-    final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeature);
+    final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeatures);
     // Forward request to NH Space Storage writer instance
     try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(context(), true)) {
       final Result wrResult = writer.execute(wrRequest);
@@ -367,7 +370,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
                 er.message);
           }
           // Attempt retry
-          return attemptFeaturesPatching(spaceId, featuresFromRequest, responseType, retry + 1);
+          return attemptFeaturesPatching(spaceId, featuresFromRequest, responseType, addTags, removeTags,retry + 1);
         } catch (NoCursor e) {
           return returnError(
               XyzError.EXCEPTION,
