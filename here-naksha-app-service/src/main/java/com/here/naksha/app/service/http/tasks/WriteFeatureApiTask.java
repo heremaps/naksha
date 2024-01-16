@@ -333,29 +333,34 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             if (!resultCursor.next()) {
               throw new RuntimeException("Unexpected invalid error result");
             }
-            if (!Objects.requireNonNull(resultCursor.getError()).err.equals(XyzError.CONFLICT)) {
-              // Other types of error, will not retry
-              return returnError(
-                  resultCursor.getError().err,
-                  resultCursor.getError().msg,
-                  "Received error result {}",
-                  resultCursor.getError());
-            }
-            // Else it was because of UUID mismatched
-            final String featureIdFromErr = resultCursor.getId();
-            // Find the requested change for the corresponding feature with that ID
-            for (XyzFeature requestedChange : featuresFromRequest) {
-              if (requestedChange.getId().equals(featureIdFromErr)) {
-                // If UUID input by user, will not retry, return conflict
-                if (requestedChange
-                        .getProperties()
-                        .getXyzNamespace()
-                        .getUuid()
-                    != null) {
-                  return verticle.sendErrorResponse(
-                      routingContext,
-                      XyzError.CONFLICT,
-                      "Error updating feature '" + featureIdFromErr + "', wrong UUID.");
+            // Check if there is an error that is not about mismatching UUID
+            if (EExecutedOp.ERROR.equals(resultCursor.getOp())) {
+              if (!Objects.requireNonNull(resultCursor.getError())
+                  .err
+                  .equals(XyzError.CONFLICT)) {
+                // Other types of error, will not retry
+                return returnError(
+                    resultCursor.getError().err,
+                    resultCursor.getError().msg,
+                    "Received error result {}",
+                    resultCursor.getError());
+              }
+              // Else it was because of UUID mismatched
+              final String featureIdFromErr = resultCursor.getId();
+              // Find the requested change for the corresponding feature with that ID
+              for (XyzFeature requestedChange : featuresFromRequest) {
+                if (requestedChange.getId().equals(featureIdFromErr)) {
+                  // If UUID input by user, will not retry, return conflict
+                  if (requestedChange
+                          .getProperties()
+                          .getXyzNamespace()
+                          .getUuid()
+                      != null) {
+                    return verticle.sendErrorResponse(
+                        routingContext,
+                        XyzError.CONFLICT,
+                        "Error updating feature '" + featureIdFromErr + "', wrong UUID.");
+                  }
                 }
               }
             }
