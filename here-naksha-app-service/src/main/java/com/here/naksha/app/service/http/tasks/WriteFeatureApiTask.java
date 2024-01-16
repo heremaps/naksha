@@ -336,7 +336,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             if (!Objects.requireNonNull(resultCursor.getError()).err.equals(XyzError.CONFLICT)) {
               // Other types of error, will not retry
               return returnError(
-                  Objects.requireNonNull(resultCursor.getError()).err,
+                  resultCursor.getError().err,
                   resultCursor.getError().msg,
                   "Received error result {}",
                   resultCursor.getError());
