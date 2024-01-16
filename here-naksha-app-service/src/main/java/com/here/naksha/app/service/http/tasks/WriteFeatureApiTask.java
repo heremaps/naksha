@@ -268,14 +268,14 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       if (result == null) {
         return returnError(
-            "Unexpected null result while reading features from storage: {}",
-            featureIds,
+            XyzError.EXCEPTION,
             "Unexpected null result while reading features from storage",
-            XyzError.EXCEPTION);
+            "Unexpected null result while reading features from storage: {}",
+            featureIds);
       } else if (result instanceof ErrorResult er) {
         // In case of error, convert result to ErrorResponse
         return returnError(
-            "Received error result while reading features in storage: {}", er, er.message, er.reason);
+            er.reason, er.message, "Received error result while reading features in storage: {}", er);
       }
       try {
         featuresToPatchFromStorage = readFeaturesFromResult(result, XyzFeature.class, 0, DEF_FEATURE_LIMIT);
@@ -283,16 +283,16 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         if (responseType.equals(HttpResponseType.FEATURE)) {
           // If this is patching only 1 feature (PATCH by ID), return not found
           return returnError(
-              "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.",
+              XyzError.NOT_FOUND,
               "Feature does not exist.",
-              XyzError.NOT_FOUND);
+              "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
         } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
           // This function was then misused somewhere. FIND AND FIX IT!!
           return returnError(
-              "Unsupported HttpResponseType was called: {}",
-              responseType,
+              XyzError.EXCEPTION,
               "Internal server error.",
-              XyzError.EXCEPTION);
+              "Unsupported HttpResponseType was called: {}",
+              responseType);
         }
         // Else none of the features exists in storage, will create them later
       }
@@ -316,9 +316,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         writer.rollback(true);
         writer.close();
         return returnError(
-            "Received null result after writing patched features, rolled back.",
+            XyzError.EXCEPTION,
             "Unexpected null result.",
-            XyzError.EXCEPTION);
+            "Received null result after writing patched features, rolled back.");
       } else if (wrResult instanceof ErrorResult er) {
         writer.rollback(true);
         writer.close();
@@ -333,10 +333,10 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             if (!er.reason.equals(XyzError.CONFLICT)) {
               // Other types of error, will not retry
               return returnError(
+                  Objects.requireNonNull(resultCursor.getError()).err,
+                  resultCursor.getError().msg,
                   "Received error result {}",
-                  resultCursor.getError(),
-                  Objects.requireNonNull(resultCursor.getError()).msg,
-                  resultCursor.getError().err);
+                  resultCursor.getError());
             }
             // Else it was because of UUID mismatched
             final String featureIdFromErr = resultCursor.getId();
@@ -360,19 +360,19 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           // Else the feature was modified concurrently within Naksha
           if (retry >= MAX_RETRY_ATTEMPT) {
             return returnError(
-                "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: {}",
-                er.message,
+                XyzError.EXCEPTION,
                 "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: "
                     + er.message,
-                XyzError.EXCEPTION);
+                "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: {}",
+                er.message);
           }
           // Attempt retry
           return attemptFeaturesPatching(spaceId, featuresFromRequest, responseType, retry + 1);
         } catch (NoCursor e) {
           return returnError(
-              "No cursor when analyzing error result, while attempting to write patched features into storage.",
+              XyzError.EXCEPTION,
               "Unexpected response when trying to persist patched features.",
-              XyzError.EXCEPTION);
+              "No cursor when analyzing error result, while attempting to write patched features into storage.");
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
@@ -414,14 +414,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
   }
 
   private XyzResponse returnError(
-      final String internalLogMsg, final String httpResponseMsg, final XyzError xyzError) {
-    logger.error(internalLogMsg);
-    return verticle.sendErrorResponse(routingContext, xyzError, httpResponseMsg);
-  }
-
-  private XyzResponse returnError(
-      final String internalLogMsg, final Object logArg, final String httpResponseMsg, final XyzError xyzError) {
-    logger.error(internalLogMsg, logArg);
+      XyzError xyzError, String httpResponseMsg, String internalLogMsg, Object... logArgs) {
+    logger.error(internalLogMsg, logArgs);
     return verticle.sendErrorResponse(routingContext, xyzError, httpResponseMsg);
   }
 
