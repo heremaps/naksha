@@ -333,7 +333,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             if (!resultCursor.next()) {
               throw new RuntimeException("Unexpected invalid error result");
             }
-            if (!er.reason.equals(XyzError.CONFLICT)) {
+            if (!Objects.requireNonNull(resultCursor.getError()).err.equals(XyzError.CONFLICT)) {
               // Other types of error, will not retry
               return returnError(
                   Objects.requireNonNull(resultCursor.getError()).err,
@@ -370,7 +370,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
                 er.message);
           }
           // Attempt retry
-          return attemptFeaturesPatching(spaceId, featuresFromRequest, responseType, addTags, removeTags,retry + 1);
+          return attemptFeaturesPatching(
+              spaceId, featuresFromRequest, responseType, addTags, removeTags, retry + 1);
         } catch (NoCursor e) {
           return returnError(
               XyzError.EXCEPTION,
