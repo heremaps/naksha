@@ -303,12 +303,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         // Else none of the features exists in storage, will create them later
       }
       // Attempt patching, keeping the order of the features from the request
-      patchedFeatures = performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage);
-      // As applicable, modify features based on parameters supplied
-      for (XyzFeature featureFromRequest : patchedFeatures) {
-        addTagsToFeature(featureFromRequest, addTags);
-        removeTagsFromFeature(featureFromRequest, removeTags);
-      }
+      patchedFeatures =
+          performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage, addTags, removeTags);
     }
     final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeatures);
     // Forward request to NH Space Storage writer instance
@@ -335,9 +331,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             }
             // Check if there is an error that is not about mismatching UUID
             if (EExecutedOp.ERROR.equals(resultCursor.getOp())) {
-              if (XyzError.CONFLICT
-                  .equals(Objects.requireNonNull(resultCursor.getError())
-                          .err)) {
+              if (!XyzError.CONFLICT.equals(Objects.requireNonNull(resultCursor.getError()).err)) {
                 // Other types of error, will not retry
                 return returnError(
                     resultCursor.getError().err,
@@ -349,7 +343,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
               final String featureIdFromErr = resultCursor.getId();
               // Find the requested change for the corresponding feature with that ID
               for (XyzFeature requestedChange : featuresFromRequest) {
-                if (requestedChange.getId().equals(featureIdFromErr)) {
+                if (featureIdFromErr.equals(requestedChange.getId())) {
                   // If UUID input by user, will not retry, return conflict
                   if (requestedChange
                           .getProperties()
@@ -375,6 +369,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
                 er.message);
           }
           // Attempt retry
+          resultCursor.close();
           return attemptFeaturesPatching(
               spaceId, featuresFromRequest, responseType, addTags, removeTags, retry + 1);
         } catch (NoCursor e) {
@@ -396,11 +391,17 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
    * Return a list of patched XyzFeature, including the ones not yet existing, ready for upsert
    */
   private List<XyzFeature> performInMemoryPatching(
-      @NotNull List<XyzFeature> featuresFromRequest, List<XyzFeature> featuresToPatchFromStorage) {
+      @NotNull List<XyzFeature> featuresFromRequest,
+      List<XyzFeature> featuresToPatchFromStorage,
+      @Nullable List<String> addTags,
+      @Nullable List<String> removeTags) {
     final List<XyzFeature> patchedFeature = new ArrayList<>();
     for (XyzFeature requestedChange : featuresFromRequest) {
       if (requestedChange.getId() == null) {
         // This requested feature has no ID, hence does not exist, create it
+        // As applicable, modify features based on parameters supplied
+        addTagsToFeature(requestedChange, addTags);
+        removeTagsFromFeature(requestedChange, removeTags);
         patchedFeature.add(requestedChange);
         continue;
       }
@@ -418,6 +419,10 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         // This requested feature with specified ID does not exist, create it
         patchedFeature.add(requestedChange);
       }
+      // As applicable, modify features based on parameters supplied
+      XyzFeature lastAddedFeature = patchedFeature.get(patchedFeature.size() - 1);
+      addTagsToFeature(lastAddedFeature, addTags);
+      removeTagsFromFeature(lastAddedFeature, removeTags);
     }
     return patchedFeature;
   }
