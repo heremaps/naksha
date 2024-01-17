@@ -31,27 +31,33 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public final class ApiParams {
-  public static String ACCESS_TOKEN = "access_token";
-  public static String STORAGE_ID = "storageId";
-  public static String SPACE_ID = "spaceId";
-  public static String PREFIX_ID = "prefixId";
-  public static String FEATURE_ID = "featureId";
-  public static String ADD_TAGS = "addTags";
-  public static String REMOVE_TAGS = "removeTags";
-  public static String TAGS = "tags";
-  public static String FEATURE_IDS = "id";
-  public static String WEST = "west";
-  public static String NORTH = "north";
-  public static String EAST = "east";
-  public static String SOUTH = "south";
-  public static String LIMIT = "limit";
-  public static String TILE_TYPE = "type";
-  public static String TILE_ID = "tileId";
-  public static String HANDLE = "handle";
-  public static String MARGIN = "margin";
+  public static final String ACCESS_TOKEN = "access_token";
+  public static final String STORAGE_ID = "storageId";
+  public static final String SPACE_ID = "spaceId";
+  public static final String PREFIX_ID = "prefixId";
+  public static final String FEATURE_ID = "featureId";
+  public static final String ADD_TAGS = "addTags";
+  public static final String REMOVE_TAGS = "removeTags";
+  public static final String TAGS = "tags";
+  public static final String FEATURE_IDS = "id";
+  public static final String WEST = "west";
+  public static final String NORTH = "north";
+  public static final String EAST = "east";
+  public static final String SOUTH = "south";
+  public static final String LIMIT = "limit";
+  public static final String TILE_TYPE = "type";
+  public static final String TILE_ID = "tileId";
+  public static final String HANDLE = "handle";
+  public static final String MARGIN = "margin";
+  public static final String LAT = "lat";
+  public static final String LON = "lon";
+  public static final String RADIUS = "radius";
+  public static final String REF_SPACE_ID = "refSpaceId";
+  public static final String REF_FEATURE_ID = "refFeatureId";
 
-  public static long DEF_FEATURE_LIMIT = 30_000;
-  public static long DEF_ADMIN_FEATURE_LIMIT = 1_000;
+  public static final long DEF_FEATURE_LIMIT = 30_000;
+  public static final long DEF_ADMIN_FEATURE_LIMIT = 1_000;
+  public static final double NULL_COORDINATE = 9999;
 
   public static String TILE_TYPE_QUADKEY = "quadkey";
 

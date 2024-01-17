@@ -31,6 +31,7 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
@@ -39,6 +40,7 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.List;
 import java.util.Set;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +53,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   private static final Set<String> BBOX_NON_PROP_PARAMS = Set.of(WEST, NORTH, EAST, SOUTH, LIMIT, TAGS);
   private static final Set<String> SEARCH_NON_PROP_PARAMS = Set.of(LIMIT, TAGS);
   private static final Set<String> TILE_NON_PROP_PARAMS = Set.of(LIMIT, MARGIN, TAGS);
+  private static final Set<String> GET_BY_RADIUS_NON_PROP_PARAMS =
+      Set.of(LAT, LON, REF_SPACE_ID, REF_FEATURE_ID, RADIUS, LIMIT, TAGS);
 
   public enum ReadFeatureApiReqType {
     GET_BY_ID,
@@ -58,7 +62,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     GET_BY_BBOX,
     GET_BY_TILE,
     SEARCH,
-    ITERATE
+    ITERATE,
+    GET_BY_RADIUS
   }
 
   public ReadFeatureApiTask(
@@ -92,6 +97,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         case GET_BY_TILE -> executeFeaturesByTile();
         case SEARCH -> executeSearch();
         case ITERATE -> executeIterate();
+        case GET_BY_RADIUS -> executeFeaturesByRadius();
         default -> executeUnsupported();
       };
     } catch (Exception ex) {
@@ -266,5 +272,59 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // transform Result to Http FeatureCollection response,
     // restricted by given feature limit and by adding "handle" attribute to support subsequent iteration
     return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, offset, limit, handle);
+  }
+
+  private @NotNull XyzResponse executeFeaturesByRadius() {
+    // Parse and validate Path parameters
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+
+    // Parse and validate Query parameters
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    if (queryParams == null || queryParams.size() <= 0) {
+      return verticle.sendErrorResponse(
+          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
+    }
+    final double lat = ApiParams.extractQueryParamAsDouble(queryParams, LAT, false, NULL_COORDINATE);
+    final double lon = ApiParams.extractQueryParamAsDouble(queryParams, LON, false, NULL_COORDINATE);
+    final String refSpaceId = ApiParams.extractParamAsString(queryParams, REF_SPACE_ID);
+    final String refFeatureId = ApiParams.extractParamAsString(queryParams, REF_FEATURE_ID);
+    final double radius = ApiParams.extractQueryParamAsDouble(queryParams, RADIUS, false, 0);
+    long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    // validate values
+    limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
+    ApiParams.validateParamRange(LAT, lat, -90, 90);
+    ApiParams.validateParamRange(LON, lon, -180, 180);
+    ApiParams.validateParamRange(RADIUS, radius, 0, Double.MAX_VALUE);
+
+    // Obtain reference geometry based on given coordinates or feature reference
+    final XyzGeometry refGeometry = obtainReferenceGeometry(lat, lon, refSpaceId, refFeatureId);
+
+    // Prepare read request based on parameters supplied
+    final SOp radiusOp = SOp.intersectsWithBuffer(refGeometry, radius);
+    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
+    final POp propSearchOp =
+        PropertyUtil.buildOperationForPropertySearchParams(queryParams, GET_BY_RADIUS_NON_PROP_PARAMS);
+    final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(radiusOp);
+    RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
+
+    // Forward request to NH Space Storage reader instance
+    final Result result = executeReadRequestFromSpaceStorage(rdRequest);
+    // transform Result to Http FeatureCollection response, restricted by given feature limit
+    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, limit);
+  }
+
+  private @NotNull XyzGeometry obtainReferenceGeometry(
+      final double lat,
+      final double lon,
+      final @Nullable String refSpaceId,
+      final @Nullable String refFeatureId) {
+    // TODO : Validate that both lat and lon provided and not just one
+    // TODO : If lat/lon provided, find geometry based on the point
+
+    // TODO : Validate that both refSpaceId and refFeatureId provided and not just one
+    // TODO : find geometry by querying NHSpaceStorage for referenced feature
+    // TODO : Raise error if geometry not available in existing feature as well
+
+    return null;
   }
 }
