@@ -29,10 +29,13 @@ import com.vividsolutions.jts.geom.Geometry;
 import org.jetbrains.annotations.NotNull;
 
 public class SpatialUtil {
+
+  private SpatialUtil() {}
+
   public static @NotNull SOp buildOperationForTile(
       final @NotNull String tileType, final @NotNull String tileId, final int margin) {
     try {
-      if (!tileType.equals(TILE_TYPE_QUADKEY)) {
+      if (!TILE_TYPE_QUADKEY.equals(tileType)) {
         throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Tile type " + tileType + " not supported");
       }
       final Geometry geo = WebMercatorTile.forQuadkey(tileId)

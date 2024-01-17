@@ -11,6 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.POpAssertion.assertThatOperation;
@@ -46,7 +47,7 @@ public class PropertyUtilTest {
                         + "&p.prop_13=lt=888,8888"
                         + "&"+ urlEncoded("properties.@ns:com:here:xyz.tags") + "=cs=" + urlEncoded("{\"id\":\"123\"}") + ",element_4"
         );
-        final List<String> excludedKeys = List.of("west","tags");
+        final Set<String> excludedKeys = Set.of("west","tags");
 
 
         final POp op = PropertyUtil.buildOperationForPropertySearchParams(params, excludedKeys);

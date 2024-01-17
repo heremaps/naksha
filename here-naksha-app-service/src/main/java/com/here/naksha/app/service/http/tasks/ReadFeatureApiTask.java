@@ -37,6 +37,7 @@ import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
   private static final Logger logger = LoggerFactory.getLogger(ReadFeatureApiTask.class);
   private final @NotNull ReadFeatureApiReqType reqType;
+
+  // predefined set of query param keys other than property-search params
+  private Set<String> BBOX_NON_PROP_PARAMS = Set.of(WEST, NORTH, EAST, SOUTH, LIMIT, TAGS);
+  private Set<String> SEARCH_NON_PROP_PARAMS = Set.of(LIMIT, TAGS);
 
   public enum ReadFeatureApiReqType {
     GET_BY_ID,
@@ -158,8 +163,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Prepare read request based on parameters supplied
     final SOp bboxOp = SpatialUtil.buildOperationForBBox(west, south, east, north);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
-    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(
-        queryParams, List.of(WEST, NORTH, EAST, SOUTH, LIMIT, TAGS));
+    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams, BBOX_NON_PROP_PARAMS);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
     RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
@@ -213,7 +217,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Prepare read request based on parameters supplied
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
-    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams, List.of(LIMIT, TAGS));
+    final POp propSearchOp =
+        PropertyUtil.buildOperationForPropertySearchParams(queryParams, SEARCH_NON_PROP_PARAMS);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId);
     if (tagsOp == null && propSearchOp == null) {
       return verticle.sendErrorResponse(

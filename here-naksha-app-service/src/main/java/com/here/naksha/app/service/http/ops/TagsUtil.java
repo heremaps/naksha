@@ -41,6 +41,8 @@ public class TagsUtil {
   private static final int OR = 1;
   private static final int AND = 2;
 
+  private TagsUtil() {}
+
   /**
    * Function builds Property Operation (POp) based on "tags" supplied as API query parameter.
    * We iterate through all the tag combination values provided in the query param.
@@ -177,8 +179,10 @@ public class TagsUtil {
     }
 
     // return single operation or OR list (in case of multiple operations)
-    final POp[] allTagOpArr = globalOpList.toArray(POp[]::new);
-    return (allTagOpArr.length > 1) ? POp.or(allTagOpArr) : allTagOpArr[0];
+    if (globalOpList.size() > 1) {
+      return POp.or(globalOpList.toArray(POp[]::new));
+    }
+    return globalOpList.get(0);
   }
 
   private static @NotNull List<String> addTagToList(final @Nullable List<String> tagList, final @NotNull String tag) {
