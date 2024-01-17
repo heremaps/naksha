@@ -48,8 +48,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   private final @NotNull ReadFeatureApiReqType reqType;
 
   // predefined set of query param keys other than property-search params
-  private Set<String> BBOX_NON_PROP_PARAMS = Set.of(WEST, NORTH, EAST, SOUTH, LIMIT, TAGS);
-  private Set<String> SEARCH_NON_PROP_PARAMS = Set.of(LIMIT, TAGS);
+  private static final Set<String> BBOX_NON_PROP_PARAMS = Set.of(WEST, NORTH, EAST, SOUTH, LIMIT, TAGS);
+  private static final Set<String> SEARCH_NON_PROP_PARAMS = Set.of(LIMIT, TAGS);
 
   public enum ReadFeatureApiReqType {
     GET_BY_ID,
