@@ -25,20 +25,29 @@ import static com.here.naksha.lib.core.util.storage.RequestHelper.pRefFromPropPa
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryOperation;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.ValueList;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class PropertyUtil {
 
   private static final String NULL_PROP_VALUE = ".null";
+
+  private static final String SHORT_PROP_PREFIX = "p.";
+  private static final String FULL_PROP_PREFIX = XyzFeature.PROPERTIES + ".";
+  private static final String SHORT_XYZ_PROP_PREFIX = "f.";
+  private static final String FULL_XYZ_PROP_PREFIX = XyzFeature.PROPERTIES + "." + XyzProperties.XYZ_NAMESPACE;
+  private static final String XYZ_PROP_ID = "f.id";
+
+  private PropertyUtil() {}
 
   /**
    * Function builds Property Operation (POp) based on property key:value pairs supplied as API query parameter.
@@ -57,55 +66,53 @@ public class PropertyUtil {
    * </p>
    *
    * @param queryParams API query parameter from where property search params need to be extracted
-   * @param excludeKeys List of param keys to be excluded (i.e. not part of property search)
+   * @param excludeKeys Set of param keys to be excluded (i.e. not part of property search)
    * @return POp property operation that can be used as part of {@link ReadRequest}
    */
   public static @Nullable POp buildOperationForPropertySearchParams(
-      final @Nullable QueryParameterList queryParams, final @Nullable List<String> excludeKeys) {
+      final @Nullable QueryParameterList queryParams, final @Nullable Set<String> excludeKeys) {
     if (queryParams == null) return null;
     // global initialization
     final List<POp> globalOpList = new ArrayList<>();
     // iterate through each parameter
     for (final QueryParameter param : queryParams) {
-      // extract param key, operation, values, delimiters
-      final String key = param.key();
-      final QueryOperation operation = param.op();
-      final ValueList values = param.values();
-      final List<QueryDelimiter> delimiters = param.valuesDelimiter();
-
       // is this key to be excluded?
-      if (excludeKeys != null && excludeKeys.contains(key)) continue;
+      if (excludeKeys != null && excludeKeys.contains(param.key())) continue;
       // prepare property search operation
-      final POp crtOp = preparePropertySearchOperation(operation, key, values, delimiters);
+      final POp crtOp = preparePropertySearchOperation(param);
       // add current search operation to global list
       globalOpList.add(crtOp);
     }
 
     if (globalOpList.isEmpty()) return null;
     // return single operation or AND list (in case of multiple operations)
-    final POp[] allPOpArr = globalOpList.toArray(POp[]::new);
-    return (allPOpArr.length > 1) ? POp.and(allPOpArr) : allPOpArr[0];
+    if (globalOpList.size() > 1) {
+      return POp.and(globalOpList.toArray(POp[]::new));
+    }
+    return globalOpList.get(0);
   }
 
   private static @NotNull String[] expandKeyToRealJsonPath(final @NotNull String key) {
     final StringBuilder str = new StringBuilder();
-    if (key.startsWith("p.")) {
-      str.append("properties.").append(key.substring("p.".length()));
-    } else if (key.equals("f.id")) {
+    if (key.startsWith(SHORT_PROP_PREFIX)) {
+      str.append(FULL_PROP_PREFIX).append(key.substring(SHORT_PROP_PREFIX.length()));
+    } else if (key.equals(XYZ_PROP_ID)) {
       str.append("id");
-    } else if (key.startsWith("f.")) {
-      str.append("properties.@ns:com:here:xyz").append(key.substring("f.".length()));
+    } else if (key.startsWith(SHORT_XYZ_PROP_PREFIX)) {
+      str.append(FULL_XYZ_PROP_PREFIX).append(key.substring(SHORT_XYZ_PROP_PREFIX.length()));
     } else {
       str.append(key);
     }
     return str.toString().split("\\.");
   }
 
-  private static @NotNull POp preparePropertySearchOperation(
-      final @NotNull QueryOperation operation,
-      final @NotNull String propKey,
-      final @NotNull ValueList propValues,
-      final @NotNull List<QueryDelimiter> delimiters) {
+  private static @NotNull POp preparePropertySearchOperation(final @NotNull QueryParameter param) {
+    // extract param key, operation, values, delimiters
+    final String propKey = param.key();
+    final QueryOperation operation = param.op();
+    final ValueList propValues = param.values();
+    final List<QueryDelimiter> delimiters = param.valuesDelimiter();
+
     // global operation list if multiple values are supplied for this property key
     final List<POp> gOpList = new ArrayList<>();
 
@@ -144,8 +151,10 @@ public class PropertyUtil {
     }
 
     // return single operation or OR list (in case of multiple operations)
-    final POp[] allPOpArr = gOpList.toArray(POp[]::new);
-    return (allPOpArr.length > 1) ? POp.or(allPOpArr) : allPOpArr[0];
+    if (gOpList.size() > 1) {
+      return POp.or(gOpList.toArray(POp[]::new));
+    }
+    return gOpList.get(0);
   }
 
   private static @NotNull POp mapAPIOperationToPropertyOperation(

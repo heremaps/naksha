@@ -306,7 +306,7 @@ public class RequestHelper {
       opList.add(crtOp); // keep appending every operation that is to be added to the request
     }
     if (opList == null) return;
-    // Added combined operations to request
+    // Add combined operations to request
     if (opType == OpType.AND) {
       request.setPropertyOp(POp.and(opList.toArray(POp[]::new)));
     } else {
