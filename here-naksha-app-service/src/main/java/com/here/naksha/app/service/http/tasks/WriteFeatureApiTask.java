@@ -397,36 +397,28 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       List<XyzFeature> featuresToPatchFromStorage,
       @Nullable List<String> addTags,
       @Nullable List<String> removeTags) {
-    final List<XyzFeature> patchedFeature = new ArrayList<>();
-    for (XyzFeature requestedChange : featuresFromRequest) {
-      if (requestedChange.getId() == null) {
-        // This requested feature has no ID, hence does not exist, create it
-        // As applicable, modify features based on parameters supplied
-        addTagsToFeature(requestedChange, addTags);
-        removeTagsFromFeature(requestedChange, removeTags);
-        patchedFeature.add(requestedChange);
-        continue;
-      }
-      boolean willPatch = false;
-      for (XyzFeature featureToPatch : featuresToPatchFromStorage) {
-        if (requestedChange.getId().equals(featureToPatch.getId())) {
-          final Difference difference = Patcher.getDifference(featureToPatch, requestedChange);
-          final Difference diffNoRemoveOp = removeAllRemoveOp(difference);
-          patchedFeature.add(Patcher.patch(featureToPatch, diffNoRemoveOp));
-          willPatch = true;
-          break;
+    final List<XyzFeature> patchedFeatureList = new ArrayList<>();
+    for (final XyzFeature inputFeature : featuresFromRequest) {
+      // we take input feature as default
+      XyzFeature featureToPatch = inputFeature;
+      // check if input feature matches with any of the existing features in storage
+      if (inputFeature.getId() != null) {
+        for (XyzFeature storageFeature : featuresToPatchFromStorage) {
+          if (inputFeature.getId().equals(storageFeature.getId())) {
+            // we found matching feature in storage, so we take patched version of the feature
+            final Difference difference = Patcher.getDifference(storageFeature, inputFeature);
+            final Difference diffNoRemoveOp = removeAllRemoveOp(difference);
+            featureToPatch = Patcher.patch(storageFeature, diffNoRemoveOp);
+            break;
+          }
         }
       }
-      if (!willPatch) {
-        // This requested feature with specified ID does not exist, create it
-        patchedFeature.add(requestedChange);
-      }
-      // As applicable, modify features based on parameters supplied
-      XyzFeature lastAddedFeature = patchedFeature.get(patchedFeature.size() - 1);
-      addTagsToFeature(lastAddedFeature, addTags);
-      removeTagsFromFeature(lastAddedFeature, removeTags);
+      // We now have featureToPatch which needs to be modified (if needed) and to be added to the list
+      addTagsToFeature(featureToPatch, addTags);
+      removeTagsFromFeature(featureToPatch, removeTags);
+      patchedFeatureList.add(featureToPatch);
     }
-    return patchedFeature;
+    return patchedFeatureList;
   }
 
   private XyzResponse returnError(
