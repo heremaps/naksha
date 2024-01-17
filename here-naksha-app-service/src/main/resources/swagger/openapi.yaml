@@ -702,6 +702,7 @@ paths:
         - $ref: '#/components/parameters/TileType'
         - $ref: '#/components/parameters/TileId'
         - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/Margin'
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
@@ -854,6 +855,15 @@ components:
         Default is _30000_. Hard limit is _100000_.
       schema:
         type: integer
+    Margin:
+      name: margin
+      in: query
+      description: >-
+        Margin in pixels on the respective projected level around the tile.
+        Default is 0.
+      schema:
+        type: integer
+        minimum: 0
     North:
       name: north
       in: query

@@ -29,13 +29,15 @@ import com.vividsolutions.jts.geom.Geometry;
 import org.jetbrains.annotations.NotNull;
 
 public class SpatialUtil {
-  public static @NotNull SOp buildOperationForTile(final @NotNull String tileType, final @NotNull String tileId) {
+  public static @NotNull SOp buildOperationForTile(
+      final @NotNull String tileType, final @NotNull String tileId, final int margin) {
     try {
       if (!tileType.equals(TILE_TYPE_QUADKEY)) {
         throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Tile type " + tileType + " not supported");
       }
-      final Geometry geo =
-          WebMercatorTile.forQuadkey(tileId).getAsPolygon().getGeometry();
+      final Geometry geo = WebMercatorTile.forQuadkey(tileId)
+          .getExtendedBBoxAsPolygon(margin)
+          .getGeometry();
       return SOp.intersects(geo);
     } catch (IllegalArgumentException ex) {
       throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, ex.getMessage());

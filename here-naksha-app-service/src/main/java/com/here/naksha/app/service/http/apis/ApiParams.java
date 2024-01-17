@@ -48,6 +48,7 @@ public final class ApiParams {
   public static String TILE_TYPE = "type";
   public static String TILE_ID = "tileId";
   public static String HANDLE = "handle";
+  public static String MARGIN = "margin";
 
   public static long DEF_FEATURE_LIMIT = 30_000;
   public static long DEF_ADMIN_FEATURE_LIMIT = 1_000;

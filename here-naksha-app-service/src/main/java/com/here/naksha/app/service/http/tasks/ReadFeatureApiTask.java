@@ -178,12 +178,13 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Parse and validate Query parameters
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     // NOTE : queryParams can be null, but that is acceptable. We will move on with default values.
+    final long margin = ApiParams.extractQueryParamAsLong(queryParams, MARGIN, false, 0);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
 
     // Prepare read request based on parameters supplied
-    final SOp geoOp = SpatialUtil.buildOperationForTile(tileType, tileId);
+    final SOp geoOp = SpatialUtil.buildOperationForTile(tileType, tileId, (int)margin);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(geoOp);
     if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
