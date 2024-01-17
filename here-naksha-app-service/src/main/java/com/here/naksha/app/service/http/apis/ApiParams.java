@@ -91,7 +91,7 @@ public final class ApiParams {
   }
 
   public static long extractQueryParamAsLong(
-      final @NotNull QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
+      final @Nullable QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
     return extractQueryParamAsLong(queryParams, key, isMandatory, 0);
   }
 
