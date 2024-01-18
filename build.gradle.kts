@@ -1,7 +1,6 @@
 @file:Suppress("PropertyName")
 
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
 
 repositories {
@@ -19,7 +18,7 @@ plugins {
     id("com.diffplug.spotless").version("6.22.0")
     // https://github.com/johnrengelman/shadow
     id("com.github.johnrengelman.shadow") version "8.1.1"
-    kotlin("multiplatform") version "1.9.21"
+    //kotlin("multiplatform") version "1.9.21"
     // overall code coverage
     jacoco
 }
@@ -27,52 +26,6 @@ plugins {
 group = "com.here.naksha"
 version = rootProject.properties["version"] as String
 
-kotlin {
-//    sourceSets {
-//        commonMain {
-//            dependencies {
-//                api(project(":here-naksha-lib-jbon"))
-//            }
-//        }
-//        jvmMain {
-//            dependencies {
-//                api(project(":here-naksha-lib-jbon"))
-//            }
-//        }
-//        jsMain {
-//            dependencies {
-//                api(project(":here-naksha-lib-jbon"))
-//            }
-//        }
-//    }
-    jvm {
-        withJava()
-        compilations.all {
-            compilerOptions.configure {
-                jvmTarget.set(JvmTarget.JVM_11)
-            }
-        }
-        compilations["main"].dependencies {
-            implementation(kotlin("stdlib"))
-            api(project(":here-naksha-lib-jbon"))
-        }
-    }
-    js(IR) {
-        compilations["main"].dependencies {
-            implementation(kotlin("stdlib-js"))
-            api(project(":here-naksha-lib-jbon"))
-        }
-        compilations["main"].kotlinOptions {
-            moduleKind = "commonjs"
-        }
-        nodejs {
-            binaries.executable()
-        }
-//        browser {
-//            binaries.executable()
-//        }
-    }
-}
 
 val jetbrains_annotations = "org.jetbrains:annotations:24.0.1"
 
@@ -334,9 +287,6 @@ subprojects {
 //       but if we do that, the shared section at the end (about publishing and shadow-jar) are
 //       not that easy AND, worse: We can't share the constants for the dependencies.
 
-project(":here-naksha-lib-jbon") {
-    description = "Naksha JBON Library"
-}
 
 project(":here-naksha-lib-core") {
     description = "Naksha Core Library"
