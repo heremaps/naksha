@@ -1,9 +1,8 @@
 @file:Suppress("PropertyName")
 
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 repositories {
     maven {
@@ -20,14 +19,60 @@ plugins {
     id("com.diffplug.spotless").version("6.22.0")
     // https://github.com/johnrengelman/shadow
     id("com.github.johnrengelman.shadow") version "8.1.1"
-    // Don't apply for all projects, we individually only apply where Kotlin is used.
-    kotlin("jvm") version "1.8.21" apply false
+    kotlin("multiplatform") version "1.9.21"
     // overall code coverage
     jacoco
 }
 
 group = "com.here.naksha"
 version = rootProject.properties["version"] as String
+
+kotlin {
+//    sourceSets {
+//        commonMain {
+//            dependencies {
+//                api(project(":here-naksha-lib-jbon"))
+//            }
+//        }
+//        jvmMain {
+//            dependencies {
+//                api(project(":here-naksha-lib-jbon"))
+//            }
+//        }
+//        jsMain {
+//            dependencies {
+//                api(project(":here-naksha-lib-jbon"))
+//            }
+//        }
+//    }
+    jvm {
+        withJava()
+        compilations.all {
+            compilerOptions.configure {
+                jvmTarget.set(JvmTarget.JVM_11)
+            }
+        }
+        compilations["main"].dependencies {
+            implementation(kotlin("stdlib"))
+            api(project(":here-naksha-lib-jbon"))
+        }
+    }
+    js(IR) {
+        compilations["main"].dependencies {
+            implementation(kotlin("stdlib-js"))
+            api(project(":here-naksha-lib-jbon"))
+        }
+        compilations["main"].kotlinOptions {
+            moduleKind = "commonjs"
+        }
+        nodejs {
+            binaries.executable()
+        }
+//        browser {
+//            binaries.executable()
+//        }
+    }
+}
 
 val jetbrains_annotations = "org.jetbrains:annotations:24.0.1"
 
@@ -141,15 +186,15 @@ subprojects {
     group = rootProject.group
     version = rootProject.version
 
-    apply(plugin = "java")
-    apply(plugin = "com.diffplug.spotless")
-    apply(plugin = "java-library")
-    apply(plugin = "jacoco")
-
     repositories {
         maven(uri("https://repo.osgeo.org/repository/release/"))
         mavenCentral()
     }
+
+    apply(plugin = "java")
+    apply(plugin = "com.diffplug.spotless")
+    apply(plugin = "java-library")
+    apply(plugin = "jacoco")
 
     // https://github.com/diffplug/spotless/tree/main/plugin-gradle
     spotless {
@@ -288,6 +333,10 @@ subprojects {
 // Note: We normally would want to move these settings into dedicated files in the subprojects,
 //       but if we do that, the shared section at the end (about publishing and shadow-jar) are
 //       not that easy AND, worse: We can't share the constants for the dependencies.
+
+project(":here-naksha-lib-jbon") {
+    description = "Naksha JBON Library"
+}
 
 project(":here-naksha-lib-core") {
     description = "Naksha Core Library"

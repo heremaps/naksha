@@ -1,5 +1,9 @@
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.5.0"
+}
 rootProject.name = "naksha"
 
+include(":here-naksha-lib-jbon")
 include(":here-naksha-lib-core")
 include(":here-naksha-lib-heapcache")
 include(":here-naksha-lib-psql")
