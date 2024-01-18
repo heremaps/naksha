@@ -42,8 +42,8 @@ public class SpatialUtil {
           .getExtendedBBoxAsPolygon(margin)
           .getGeometry();
       return SOp.intersects(geo);
-    } catch (IllegalArgumentException ex) {
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, ex.getMessage());
+    } catch (Exception ex) {
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Error interpreting tile input: " + ex.getMessage());
     }
   }
 
