@@ -3,4 +3,6 @@ import JBON;
 
 fun main() {
     val test = JBON()
+
+    fun getT() = test
 }
