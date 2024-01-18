@@ -60,7 +60,7 @@ public class ValDryRunTest extends ApiTest {
 
     // When: Request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
-        nakshaClient.put("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
+        nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
 
     // Then: Perform standard assertions
     assertThat(response)
@@ -87,14 +87,15 @@ public class ValDryRunTest extends ApiTest {
 
     // When: Request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response =
-        nakshaClient.put("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
+        nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
 
     // Then: Perform standard assertions
     assertThat(response)
             .hasStatus(200)
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match")
-            .hasNoViolations();
+            .hasNoViolations()
+    ;
   }
 
   @Test
@@ -117,4 +118,5 @@ public class ValDryRunTest extends ApiTest {
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match");
   }
+
 }
