@@ -23,13 +23,20 @@ import static com.here.naksha.app.common.assertions.ResponseAssertions.assertTha
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Named.named;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class DeleteFeatureTest extends ApiTest {
 
@@ -144,5 +151,71 @@ class DeleteFeatureTest extends ApiTest {
         .hasStatus(404)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(expectedBodyPart, "Delete Feature response body doesn't match");
+  }
+
+  @Test
+  void tc0904_shouldFailOnUnknownDeletionStrategy() throws URISyntaxException, IOException, InterruptedException {
+    // Test API : DELETE /hub/spaces/{spaceId}/features/{featureId}?deletionStrategy=${something_unknown}
+    // Given: loaded test files
+    final String createFeaturesJson = loadFileOrFail("DeleteFeatures/TC0904_unknownDeletionStrategy/create_features.json");
+    final String expectedErrorResponse = loadFileOrFail("DeleteFeatures/TC0904_unknownDeletionStrategy/delete_response.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // And: created feature
+    final HttpResponse<String> createResponse = nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeaturesJson, streamId);
+    assertThat(createResponse)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId);
+
+
+    // When: deleting feature with unsupported 'deletionStrategy'
+    final String invalidStrategyQuery = "?deletionStrategy=unknown_strategy";
+    final HttpResponse<String> deleteResponse = nakshaClient.delete("hub/spaces/" + SPACE_ID + "/features/feature-tc0904" + invalidStrategyQuery, streamId);
+
+    // Then: Perform assertions
+    assertThat(deleteResponse)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedErrorResponse);
+  }
+
+  static Stream<Named> validDeleteStrategiesParams(){
+    return Stream.of(
+        named("undefined 'deletionStrategy'", ""),
+        named("specified 'hard' delete", "?deletionStrategy=hard"),
+        named("specified 'soft' delete", "?deletionStrategy=soft")
+    );
+  }
+
+  /**
+   * TODO: Once we've implemented RESTORE functionality, we should add tests for different `deletionStrategy` outcomes
+   * - 'hard' delete - verify that restore is not possible and the there's no way to retrieve deleted feature
+   * - default behavior (when `deletionStrategy` is not defined): same as above ('hard' should be set as default)
+   * - 'soft' delete" - verify that feature is restorable: delete it 'softly', restore, retrieve, compare with original
+   */
+  @ParameterizedTest
+  @MethodSource("validDeleteStrategiesParams")
+  void tc0905_shouldDeleteFeatureForAnyValidStrategy(String queryParam) throws URISyntaxException, IOException, InterruptedException {
+    // Test API : DELETE /hub/spaces/{spaceId}/features/{featureId}?deletionStrategy=${something_unknown}
+    // Given: loaded test files
+    final String createFeaturesJson = loadFileOrFail("DeleteFeatures/TC0905_validDeletionStrategy/create_features.json");
+    final String expectedDeleteResponse = loadFileOrFail("DeleteFeatures/TC0905_validDeletionStrategy/delete_response.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // And: created feature
+    final HttpResponse<String> createResponse = nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeaturesJson, streamId);
+    assertThat(createResponse)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId);
+
+
+    // When: deleting feature with unsupported 'deletionStrategy'
+   final HttpResponse<String> deleteResponse = nakshaClient.delete("hub/spaces/" + SPACE_ID + "/features/feature-tc0905" + queryParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(deleteResponse)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedDeleteResponse);
   }
 }

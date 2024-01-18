@@ -1,0 +1,5 @@
+{
+  "type": "ErrorResponse",
+  "error": "IllegalArgument",
+  "errorMessage": "Invalid request input parameter value for QUERY-parameter 'deletionStrategy'. Reason: VALIDATION_ERROR"
+}

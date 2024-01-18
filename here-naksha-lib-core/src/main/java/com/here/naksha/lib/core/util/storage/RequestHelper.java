@@ -155,6 +155,7 @@ public class RequestHelper {
 
   /**
    * Helper method to create WriteFeatures request for deleting multiple features.
+   * Executing returned request end up with features being softly deleted (not purged).
    *
    * @param collectionName name of the storage collection
    * @param ids       feature object array to be deleted
@@ -170,7 +171,25 @@ public class RequestHelper {
   }
 
   /**
+   * Helper method to create WriteFeatures request for deleting multiple features.
+   * Executing returned request end up with features being utterly purged from the system.
+   *
+   * @param collectionName name of the storage collection
+   * @param ids       feature object array to be deleted
+   * @return WriteFeatures request that can be used against IStorage methods
+   */
+  public static @NotNull WriteXyzFeatures purgeFeaturesByIdsRequest(
+      final @NotNull String collectionName, final @NotNull List<String> ids) {
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
+    for (String id : ids) {
+      request.purge(new XyzFeature(id));
+    }
+    return request;
+  }
+
+  /**
    * Helper method to create WriteFeatures request for deleting given feature.
+   * Executing returned request end up with feature being softly deleted (not purged).
    *
    * @param collectionName name of the storage collection
    * @param id        feature object to be deleted
@@ -180,6 +199,20 @@ public class RequestHelper {
       final @NotNull String collectionName, final @NotNull String id) {
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
     return request.delete(new XyzFeature(id));
+  }
+
+  /**
+   * Helper method to create WriteFeatures request for deleting given feature.
+   * Executing returned request end up with feature being utterly purged from the system.
+   *
+   * @param collectionName name of the storage collection
+   * @param id        feature object to be deleted
+   * @return WriteFeatures request that can be used against IStorage methods
+   */
+  public static @NotNull WriteXyzFeatures purgeFeatureByIdRequest(
+      final @NotNull String collectionName, final @NotNull String id) {
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
+    return request.purge(new XyzFeature(id));
   }
 
   /**

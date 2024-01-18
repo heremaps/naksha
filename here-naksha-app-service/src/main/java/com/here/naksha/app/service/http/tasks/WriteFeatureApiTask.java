@@ -18,14 +18,27 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.app.service.http.apis.ApiParams.ADD_TAGS;
+import static com.here.naksha.app.service.http.apis.ApiParams.DEF_FEATURE_LIMIT;
+import static com.here.naksha.app.service.http.apis.ApiParams.DELETION_STRATEGY;
+import static com.here.naksha.app.service.http.apis.ApiParams.FEATURE_ID;
+import static com.here.naksha.app.service.http.apis.ApiParams.FEATURE_IDS;
+import static com.here.naksha.app.service.http.apis.ApiParams.PREFIX_ID;
+import static com.here.naksha.app.service.http.apis.ApiParams.REMOVE_TAGS;
+import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
+import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPathParam;
+import static com.here.naksha.app.service.http.apis.ApiParams.extractParamAsString;
+import static com.here.naksha.app.service.http.apis.ApiParams.extractParamAsStringList;
+import static com.here.naksha.app.service.http.apis.ApiParams.queryParamsFromRequest;
+import static com.here.naksha.app.service.http.apis.ApiParams.validateFeatureId;
+import static com.here.naksha.app.service.http.tasks.DeletionStrategy.HARD_DELETE;
+import static com.here.naksha.app.service.http.tasks.DeletionStrategy.bySlugOrElseDefault;
 import static com.here.naksha.lib.core.util.diff.PatcherUtils.removeAllRemoveOp;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
-import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
@@ -35,7 +48,13 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.models.storage.EExecutedOp;
+import com.here.naksha.lib.core.models.storage.ErrorResult;
+import com.here.naksha.lib.core.models.storage.ForwardCursor;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.diff.Difference;
 import com.here.naksha.lib.core.util.diff.Patcher;
@@ -125,7 +144,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // Parse API parameters
-    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     final String prefixId = extractParamAsString(queryParams, PREFIX_ID);
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
@@ -156,7 +175,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // Parse API parameters
-    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
@@ -178,9 +197,11 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
   private @NotNull XyzResponse executeUpdateFeature() throws Exception {
     // Deserialize input request
     final XyzFeature feature = singleFeatureFromRequestBody();
+    ;
+    ;
 
     // Parse API parameters
-    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
@@ -211,9 +232,15 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
 
     // Parse API parameters
-    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    final DeletionStrategy deletionStrategy = deletionStrategyFromQuery(queryParams);
 
-    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeaturesByIdsRequest(spaceId, features);
+    final WriteXyzFeatures wrRequest =
+        switch (deletionStrategy) {
+          case HARD_DELETE -> RequestHelper.purgeFeaturesByIdsRequest(spaceId, features);
+          case SOFT_DELETE -> RequestHelper.deleteFeaturesByIdsRequest(spaceId, features);
+        };
 
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
@@ -224,10 +251,16 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeDeleteFeature() {
     // Parse API parameters
-    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
-    final String featureId = ApiParams.extractMandatoryPathParam(routingContext, FEATURE_ID);
+    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String featureId = extractMandatoryPathParam(routingContext, FEATURE_ID);
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    final DeletionStrategy deletionStrategy = deletionStrategyFromQuery(queryParams);
 
-    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(spaceId, featureId);
+    final WriteXyzFeatures wrRequest =
+        switch (deletionStrategy) {
+          case HARD_DELETE -> RequestHelper.purgeFeatureByIdRequest(spaceId, featureId);
+          case SOFT_DELETE -> RequestHelper.deleteFeatureByIdRequest(spaceId, featureId);
+        };
 
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
@@ -242,7 +275,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
     final XyzFeature featureFromRequest = singleFeatureFromRequestBody();
 
-    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
@@ -455,5 +488,13 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     if (removeTags != null) {
       feature.getProperties().getXyzNamespace().removeTags(removeTags, true);
     }
+  }
+
+  private DeletionStrategy deletionStrategyFromQuery(@Nullable QueryParameterList queryParameters) {
+    DeletionStrategy defaultStrategy = HARD_DELETE;
+    if (queryParameters == null) {
+      return defaultStrategy;
+    }
+    return bySlugOrElseDefault(queryParameters.getValueAsString(DELETION_STRATEGY), defaultStrategy);
   }
 }

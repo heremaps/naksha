@@ -539,6 +539,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/SpaceId'
         - $ref: '#/components/parameters/RequiredIds'
+        - $ref: '#/components/parameters/DeletionStrategy'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionModificationResponse'
@@ -666,6 +667,8 @@ paths:
       description: >
         This method allows to delete one feature in the storage associated (directly or via event handler) with the space.
       operationId: deleteFeature
+      parameters:
+        - $ref: '#/components/parameters/DeletionStrategy'
       responses:
         '200':
           $ref: '#/components/responses/FeatureResponse'
@@ -1037,7 +1040,7 @@ components:
         
             * will result into logical AND condition between the tags i.e. "first" AND "two"
 
-        - **tags**=first,two,three+four
+        - **tags**=first,two,th+four
         
             * will result into mixed logical conditions, with AND having higher preference i.e. "first" OR "two" OR ("three" AND "four")
 
@@ -1084,6 +1087,21 @@ components:
         format: double
         minimum: -180
         maximum: 180
+    DeletionStrategy:
+      name: deletionStrategy
+      in: query
+      description: >-
+        Strategy describing what type of deletion should be executed - 'soft' or 'hard'.
+        The 'soft' deletion does not purge the resource, so it is possible to restore it afterwards
+        The 'hard' deletion purges the resource from system forever
+        
+        By default, the 'hard' (purging) strategy is used.
+      required: false
+      schema:
+        type: string
+        enum:
+          - hard
+          - soft
   requestBodies:
     FeatureRequest:
       description: A request detailing one specific feature
