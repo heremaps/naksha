@@ -39,6 +39,8 @@ import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
+import java.util.*;
+import java.util.Map.Entry;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +104,8 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
   private @NotNull XyzResponse executeGetStorages() {
     final ReadFeatures request = new ReadFeatures(STORAGES);
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(rdResult, Storage.class);
+      return transformReadResultToXyzCollectionResponse(
+          rdResult, Storage.class, f -> removePasswordFromProps(f.getProperties()));
     }
   }
 
@@ -110,7 +113,8 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final ReadFeatures request = new ReadFeatures(STORAGES).withPropertyOp(POp.eq(PRef.id(), storageId));
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzFeatureResponse(rdResult, Storage.class);
+      return transformReadResultToXyzFeatureResponse(
+          rdResult, Storage.class, f -> removePasswordFromProps(f.getProperties()));
     }
   }
 
@@ -118,7 +122,8 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
     final Storage newStorage = storageFromRequestBody();
     final WriteXyzFeatures wrRequest = RequestHelper.createFeatureRequest(STORAGES, newStorage, false);
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class);
+      return transformWriteResultToXyzFeatureResponse(
+          wrResult, Storage.class, f -> removePasswordFromProps(f.getProperties()));
     }
   }
 
@@ -131,7 +136,8 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
     } else {
       final WriteXyzFeatures updateStorageReq = RequestHelper.updateFeatureRequest(STORAGES, storageFromBody);
       try (Result updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq)) {
-        return transformWriteResultToXyzFeatureResponse(updateStorageResult, Storage.class);
+        return transformWriteResultToXyzFeatureResponse(
+            updateStorageResult, Storage.class, f -> removePasswordFromProps(f.getProperties()));
       }
     }
   }
@@ -148,5 +154,23 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
   private static String mismatchMsg(String storageIdFromPath, Storage storageFromBody) {
     return "Mismatch between storage ids. Path storage id: %s, body storage id: %s"
         .formatted(storageIdFromPath, storageFromBody.getId());
+  }
+
+  private static final String JSON_KEY_PASSWORD = "password";
+
+  private void removePasswordFromProps(Map<String, Object> propertiesAsMap) {
+    for (Entry<String, Object> entry : propertiesAsMap.entrySet()) {
+      if (Objects.equals(entry.getKey(), JSON_KEY_PASSWORD)) {
+        entry.setValue("xxxxxx");
+      } else if (entry.getValue() instanceof Map) {
+        // recursive call to the nested json property
+        removePasswordFromProps((Map<String, Object>) entry.getValue());
+      } else if (entry.getValue() instanceof ArrayList array) {
+        // recursive call to the nested array json
+        for (Object arrayEntry : array) {
+          removePasswordFromProps((Map<String, Object>) arrayEntry);
+        }
+      }
+    }
   }
 }
