@@ -232,7 +232,9 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+            .hasMatchingInsertedCount(2)
+            .hasInsertedIdsMatchingFeatureIds(null);
   }
 
   @Test
