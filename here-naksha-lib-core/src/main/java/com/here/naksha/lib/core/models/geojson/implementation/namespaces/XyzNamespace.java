@@ -716,6 +716,28 @@ public class XyzNamespace extends JsonObject {
     return this;
   }
 
+    /**
+     * Removes tags starting with prefix
+     *
+     * @param prefix string prefix.
+     * @return this.
+     */
+    @AvailableSince(NakshaVersion.v2_0_11)
+    public @NotNull XyzNamespace removeTagsWithPrefix(String prefix) {
+        final List<@NotNull String> thisTags = getTags();
+        if (tags == null || tags.isEmpty() || prefix == null || thisTags == null || thisTags.isEmpty()) {
+            return this;
+        }
+
+        for (@NotNull String tag : tags) {
+            if (tag.startsWith(prefix)) {
+                thisTags.remove(tag);
+            }
+        }
+
+        return this;
+    }
+
   /**
    * Tests whether this state refers to a deleted feature.
    *
