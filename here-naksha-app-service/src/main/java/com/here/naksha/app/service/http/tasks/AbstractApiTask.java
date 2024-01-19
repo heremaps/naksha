@@ -131,7 +131,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
               "No feature found for id "
                   + result.getXyzFeatureCursor().getId());
         }
-        postProcessing.call(feature);
+        if (postProcessing != null) postProcessing.call(feature);
         final List<R> featureList = new ArrayList<>();
         featureList.add(feature);
         final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(featureList);
@@ -182,8 +182,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     } else {
       try {
         final List<R> features = readFeaturesFromResult(rdResult, type, offset, maxLimit);
-        for (XyzFeature feature : features) {
-          postProcessing.call(feature);
+        if (postProcessing != null) {
+          for (XyzFeature feature : features) {
+            postProcessing.call(feature);
+          }
         }
         // Populate handle (if provided), with the values ready for next iteration
         final String handleStr = getIterateHandleAsString(features.size(), offset, maxLimit, handle);
