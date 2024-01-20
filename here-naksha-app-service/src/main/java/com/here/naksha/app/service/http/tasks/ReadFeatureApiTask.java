@@ -40,7 +40,6 @@ import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
-import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -50,13 +49,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
   private static final Logger logger = LoggerFactory.getLogger(ReadFeatureApiTask.class);
   private final @NotNull ReadFeatureApiReqType reqType;
-
-  // predefined set of query param keys other than property-search params
-  private static final Set<String> BBOX_NON_PROP_PARAMS = Set.of(WEST, NORTH, EAST, SOUTH, LIMIT, TAGS);
-  private static final Set<String> SEARCH_NON_PROP_PARAMS = Set.of(LIMIT, TAGS);
-  private static final Set<String> TILE_NON_PROP_PARAMS = Set.of(LIMIT, MARGIN, TAGS);
-  private static final Set<String> GET_BY_RADIUS_NON_PROP_PARAMS =
-      Set.of(LAT, LON, REF_SPACE_ID, REF_FEATURE_ID, RADIUS, LIMIT, TAGS);
 
   public enum ReadFeatureApiReqType {
     GET_BY_ID,
@@ -304,7 +296,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final SOp radiusOp = SOp.intersectsWithBuffer(refGeometry, radius);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final POp propSearchOp =
-        PropertyUtil.buildOperationForPropertySearchParams(queryParams, GET_BY_RADIUS_NON_PROP_PARAMS);
+        PropertyUtil.buildOperationForPropertySearchParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(radiusOp);
     RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
