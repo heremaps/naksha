@@ -30,8 +30,10 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
@@ -292,8 +294,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
-    ApiParams.validateParamRange(LAT, lat, -90, 90);
-    ApiParams.validateParamRange(LON, lon, -180, 180);
+    if (lat != NULL_COORDINATE) ApiParams.validateParamRange(LAT, lat, -90, 90);
+    if (lon != NULL_COORDINATE) ApiParams.validateParamRange(LON, lon, -180, 180);
     ApiParams.validateParamRange(RADIUS, radius, 0, Double.MAX_VALUE);
 
     // Obtain reference geometry based on given coordinates or feature reference
@@ -318,8 +320,18 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       final double lon,
       final @Nullable String refSpaceId,
       final @Nullable String refFeatureId) {
-    // TODO : Validate that both lat and lon provided and not just one
-    // TODO : If lat/lon provided, find geometry based on the point
+    // Validate that both lat and lon provided and not just one
+    if (lat == NULL_COORDINATE && lon != NULL_COORDINATE) {
+      // only lon provided, lan is not
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing latitude co-ordinate");
+    } else if (lat != NULL_COORDINATE && lon == NULL_COORDINATE) {
+      // only lan provided, lon is not
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing longitude co-ordinate");
+    }
+    if (lat != NULL_COORDINATE && lon != NULL_COORDINATE) {
+      // both lan and lon provided, find geometry based on the point
+      return new XyzPoint().withCoordinates(new PointCoordinates(lon, lat));
+    }
 
     // TODO : Validate that both refSpaceId and refFeatureId provided and not just one
     // TODO : find geometry by querying NHSpaceStorage for referenced feature
