@@ -37,7 +37,6 @@ import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
-import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,11 +45,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
   private static final Logger logger = LoggerFactory.getLogger(ReadFeatureApiTask.class);
   private final @NotNull ReadFeatureApiReqType reqType;
-
-  // predefined set of query param keys other than property-search params
-  private static final Set<String> BBOX_NON_PROP_PARAMS = Set.of(WEST, NORTH, EAST, SOUTH, LIMIT, TAGS);
-  private static final Set<String> SEARCH_NON_PROP_PARAMS = Set.of(LIMIT, TAGS);
-  private static final Set<String> TILE_NON_PROP_PARAMS = Set.of(LIMIT, MARGIN, TAGS);
 
   public enum ReadFeatureApiReqType {
     GET_BY_ID,
