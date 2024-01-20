@@ -172,7 +172,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Prepare read request based on parameters supplied
     final SOp bboxOp = SpatialUtil.buildOperationForBBox(west, south, east, north);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
-    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams, BBOX_NON_PROP_PARAMS);
+    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
     RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
@@ -200,7 +200,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Prepare read request based on parameters supplied
     final SOp geoOp = SpatialUtil.buildOperationForTile(tileType, tileId, (int) margin);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
-    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams, TILE_NON_PROP_PARAMS);
+    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(geoOp);
     RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
@@ -228,8 +228,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Prepare read request based on parameters supplied
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
-    final POp propSearchOp =
-        PropertyUtil.buildOperationForPropertySearchParams(queryParams, SEARCH_NON_PROP_PARAMS);
+    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId);
     if (tagsOp == null && propSearchOp == null) {
       return verticle.sendErrorResponse(
