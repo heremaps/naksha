@@ -38,6 +38,7 @@ import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.here.naksha.lib.core.util.storage.ResultHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -118,7 +119,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     }
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds);
 
-    // Forward request to NH Space Storage writer instance
+    // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       // transform Result to Http FeatureCollection response
       return transformReadResultToXyzCollectionResponse(result, XyzFeature.class);
@@ -132,7 +133,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdRequest(spaceId, featureId);
 
-    // Forward request to NH Space Storage writer instance
+    // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       // transform Result to Http XyzFeature response
       return transformReadResultToXyzFeatureResponse(result, XyzFeature.class);
@@ -281,22 +282,21 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final double lon = ApiParams.extractQueryParamAsDouble(queryParams, LON, false, NULL_COORDINATE);
     final String refSpaceId = ApiParams.extractParamAsString(queryParams, REF_SPACE_ID);
     final String refFeatureId = ApiParams.extractParamAsString(queryParams, REF_FEATURE_ID);
-    final double radius = ApiParams.extractQueryParamAsDouble(queryParams, RADIUS, false, 0);
+    final long radius = ApiParams.extractQueryParamAsLong(queryParams, RADIUS, false, 0);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
-    if (lat != NULL_COORDINATE) ApiParams.validateParamRange(LAT, lat, -90, 90);
-    if (lon != NULL_COORDINATE) ApiParams.validateParamRange(LON, lon, -180, 180);
-    ApiParams.validateParamRange(RADIUS, radius, 0, Double.MAX_VALUE);
+    ApiParams.validateLatLon(lat, lon);
+    ApiParams.validateParamRange(RADIUS, radius, 0, Long.MAX_VALUE);
 
     // Obtain reference geometry based on given coordinates or feature reference
     final XyzGeometry refGeometry = obtainReferenceGeometry(lat, lon, refSpaceId, refFeatureId);
 
     // Prepare read request based on parameters supplied
-    final SOp radiusOp = SOp.intersectsWithBuffer(refGeometry, radius);
+    final SOp radiusOp =
+        (radius > 0) ? SOp.intersectsWithBuffer(refGeometry, radius / 100000.00) : SOp.intersects(refGeometry);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
-    final POp propSearchOp =
-        PropertyUtil.buildOperationForPropertySearchParams(queryParams);
+    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(radiusOp);
     RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
@@ -311,23 +311,38 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       final double lon,
       final @Nullable String refSpaceId,
       final @Nullable String refFeatureId) {
-    // Validate that both lat and lon provided and not just one
-    if (lat == NULL_COORDINATE && lon != NULL_COORDINATE) {
-      // only lon provided, lan is not
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing latitude co-ordinate");
-    } else if (lat != NULL_COORDINATE && lon == NULL_COORDINATE) {
-      // only lan provided, lon is not
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing longitude co-ordinate");
-    }
+    // if both lan and lon provided, then prepare Point geometry
     if (lat != NULL_COORDINATE && lon != NULL_COORDINATE) {
-      // both lan and lon provided, find geometry based on the point
       return new XyzPoint().withCoordinates(new PointCoordinates(lon, lat));
     }
 
-    // TODO : Validate that both refSpaceId and refFeatureId provided and not just one
-    // TODO : find geometry by querying NHSpaceStorage for referenced feature
-    // TODO : Raise error if geometry not available in existing feature as well
+    // Validate that both refSpaceId and refFeatureId provided and not just one
+    if (refSpaceId == null || refSpaceId.isEmpty()) {
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing %s param".formatted(REF_SPACE_ID));
+    } else if (refFeatureId == null || refFeatureId.isEmpty()) {
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing %s param".formatted(REF_FEATURE_ID));
+    }
 
-    return null;
+    // Find geometry by querying referenced feature
+    XyzFeature feature = null;
+    // Forward Read request to NHSpaceStorage instance
+    final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdRequest(refSpaceId, refFeatureId);
+    try (final Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
+      if (result instanceof SuccessResult) {
+        feature = ResultHelper.readFeatureFromResult(result, XyzFeature.class);
+      } else {
+        throw new XyzErrorException(
+            XyzError.EXCEPTION, "Unexpected result while retrieving referenced feature");
+      }
+    }
+    if (feature == null) {
+      throw new XyzErrorException(
+          XyzError.NOT_FOUND,
+          "No feature found for given spaceId %s and featureId %s".formatted(refSpaceId, refFeatureId));
+    } else if (feature.getGeometry() == null) {
+      throw new XyzErrorException(XyzError.NOT_FOUND, "Missing geometry for referenced feature");
+    }
+
+    return feature.getGeometry();
   }
 }

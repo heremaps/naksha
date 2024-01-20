@@ -124,6 +124,14 @@ public final class ApiParams {
   }
 
   public static void validateParamRange(
+      final @NotNull String param, final long value, final long min, final long max) {
+    if (value < min || value > max) {
+      throw new XyzErrorException(
+          XyzError.ILLEGAL_ARGUMENT, "Invalid value " + value + " for parameter " + param);
+    }
+  }
+
+  public static void validateParamRange(
       final @NotNull String param, final double value, final double min, final double max) {
     if (value < min || value > max) {
       throw new XyzErrorException(
@@ -171,5 +179,18 @@ public final class ApiParams {
       }
     }
     return handle;
+  }
+
+  public static void validateLatLon(final double lat, final double lon) {
+    if (lat != NULL_COORDINATE) validateParamRange(LAT, lat, -90, 90);
+    if (lon != NULL_COORDINATE) validateParamRange(LON, lon, -180, 180);
+    // Validate that both lat and lon provided or none of them
+    if (lat == NULL_COORDINATE && lon != NULL_COORDINATE) {
+      // only lon provided, lan is not
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing latitude co-ordinate");
+    } else if (lat != NULL_COORDINATE && lon == NULL_COORDINATE) {
+      // only lan provided, lon is not
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing longitude co-ordinate");
+    }
   }
 }
