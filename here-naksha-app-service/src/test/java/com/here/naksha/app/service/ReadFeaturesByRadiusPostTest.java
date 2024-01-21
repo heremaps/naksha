@@ -96,22 +96,21 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
   private static Stream<Arguments> standardTestParams() {
     return Stream.of(
             standardTestSpec(
-                    "tc01_testGetByRadiusWithPoint",
+                    "tc01_testGetByRadiusPostWithPoint",
                     "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
                     null,
                     "ReadFeatures/ByRadiusPost/TC01_withPoint/feature_response_part.json",
                     200
-            )/*,
+            ),
             standardTestSpec(
-                    "tc02_testGetByRadiusWithLatLonRadius",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
+                    "tc02_testGetByRadiusPostWithPointRadius",
+                    "ReadFeatures/ByRadiusPost/TC02_withPointRadius/request_body.json",
                     List.of(
-                            "lon=8.6123&lat=50.1234",
                             "radius=5"
                     ),
-                    "ReadFeatures/ByRadiusPost/TC02_withLatLonRadius/feature_response_part.json",
+                    "ReadFeatures/ByRadiusPost/TC02_withPointRadius/feature_response_part.json",
                     200
-            ),
+            )/*,
             standardTestSpec(
                     "tc03_testGetByRadiusWithLatLonRadiusProp",
                     "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
