@@ -330,6 +330,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     try (final Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       if (result instanceof SuccessResult) {
         feature = ResultHelper.readFeatureFromResult(result, XyzFeature.class);
+      } else if (result instanceof ErrorResult er) {
+        throw new XyzErrorException(er.reason, er.message);
       } else {
         throw new XyzErrorException(
             XyzError.EXCEPTION, "Unexpected result while retrieving referenced feature");
