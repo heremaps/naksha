@@ -27,15 +27,12 @@ import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
-
-import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
@@ -63,18 +60,10 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
     TC  4 - Point1, radius=5m, Tag-1 (should return feature 1 only)
     TC  5 - Point1, radius=5m, Prop-1, Tag-3 (should return feature 3 only)
     TC  6 - Point1, radius=5m, Limit-2 (should return features 1,2)
-    #####TC  7 - RefSpace, RefFeature1, radius=5m, Tag-2 (should return feature 2 only)
-    #####TC  8 - RefSpace, RefFeature1, radius=5m, Tag-3, Prop-1 (should return only feature 3)
-    #####TC  9 - RefSpace, RefFeature3, radius=5m (should return no features)
-    TC 10 - Point4-outside-100m-of-Point1, radius=5m (should return no features)
-    #####TC 11 - Invalid RefSpace (should return 404)
-    #####TC 12 - RefSpace, Invalid RefFeature4 (should return 404)
-    TC 13 - Missing Lat/Lon (should return 400)
-    TC 14 - Point1, radius=-1m (should return 400)
-    TC 15 - Invalid Lat (should return 400)
-    TC 16 - Invalid Lon (should return 400)
-    #####TC 17 - RefSpace, RefFeature4 (missing geometry) (should return 404)
-    TC 18 - LineString, radius=5 (should return features 1,2,3)
+    TC  7 - Point4-outside-100m-of-Point1, radius=5m (should return no features)
+    TC  8 - No Geometry (should return 400)
+    TC  9 - Point1, radius=-1m (should return 400)
+    TC 10 - LineString, radius=5 (should return features 1,2,3)
   */
 
   @BeforeAll
@@ -110,99 +99,82 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
                     ),
                     "ReadFeatures/ByRadiusPost/TC02_withPointRadius/feature_response_part.json",
                     200
-            )/*,
+            ),
             standardTestSpec(
-                    "tc03_testGetByRadiusWithLatLonRadiusProp",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
+                    "tc03_testGetByRadiusPostWithPointRadiusProp",
+                    "ReadFeatures/ByRadiusPost/TC03_withPointRadiusProp/request_body.json",
                     List.of(
-                            "lon=8.6123&lat=50.1234",
                             "radius=5",
                             "p.length=10"
                     ),
-                    "ReadFeatures/ByRadiusPost/TC03_withLatLonRadiusProp/feature_response_part.json",
+                    "ReadFeatures/ByRadiusPost/TC03_withPointRadiusProp/feature_response_part.json",
                     200
             ),
             standardTestSpec(
-                    "tc04_testGetByRadiusWithLatLonRadiusTag",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
+                    "tc04_testGetByRadiusPostWithPointRadiusTag",
+                    "ReadFeatures/ByRadiusPost/TC04_withPointRadiusTag/request_body.json",
                     List.of(
-                            "lon=8.6123&lat=50.1234",
                             "radius=5",
                             "tags=tag-1"
                     ),
-                    "ReadFeatures/ByRadiusPost/TC04_withLatLonRadiusTag/feature_response_part.json",
+                    "ReadFeatures/ByRadiusPost/TC04_withPointRadiusTag/feature_response_part.json",
                     200
             ),
             standardTestSpec(
-                    "tc05_testGetByRadiusWithLatLonRadiusTagProp",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
+                    "tc05_testGetByRadiusPostWithPointRadiusTagProp",
+                    "ReadFeatures/ByRadiusPost/TC05_withPointRadiusTagProp/request_body.json",
                     List.of(
-                            "lon=8.6123&lat=50.1234",
                             "radius=5",
                             "tags=tag-3",
                             "p.speedLimit='60'"
                     ),
-                    "ReadFeatures/ByRadiusPost/TC05_withLatLonRadiusTagProp/feature_response_part.json",
+                    "ReadFeatures/ByRadiusPost/TC05_withPointRadiusTagProp/feature_response_part.json",
                     200
             ),
             standardTestSpec(
-                    "tc06_testGetByRadiusWithLatLonRadiusLimit",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
+                    "tc06_testGetByRadiusPostWithPointRadiusLimit",
+                    "ReadFeatures/ByRadiusPost/TC06_withPointRadiusLimit/request_body.json",
                     List.of(
-                            "lon=8.6123&lat=50.1234",
                             "radius=5",
                             "limit=2"
                     ),
-                    "ReadFeatures/ByRadiusPost/TC06_withLatLonRadiusLimit/feature_response_part.json",
+                    "ReadFeatures/ByRadiusPost/TC06_withPointRadiusLimit/feature_response_part.json",
                     200
             ),
             standardTestSpec(
-                    "tc10_testGetByRadiusWithLatLonOutOfRadius",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
+                    "tc07_testGetByRadiusPostWithPointOutOfRadius",
+                    "ReadFeatures/ByRadiusPost/TC07_withPointOutOfRadius/request_body.json",
                     List.of(
-                            "lon=8.6133&lat=50.1234",
                             "radius=5"
                     ),
-                    "ReadFeatures/ByRadiusPost/TC10_withLatLonOutOfRadius/feature_response_part.json",
+                    "ReadFeatures/ByRadiusPost/TC07_withPointOutOfRadius/feature_response_part.json",
                     200
             ),
             standardTestSpec(
-                    "tc13_testGetByRadiusWithoutLatLon",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
+                    "tc08_testGetByRadiusPostWithoutGeometry",
                     null,
-                    "ReadFeatures/ByRadiusPost/TC13_withoutLatLon/feature_response_part.json",
+                    null,
+                    "ReadFeatures/ByRadiusPost/TC08_withoutGeometry/feature_response_part.json",
                     400
             ),
             standardTestSpec(
-                    "tc14_testGetByRadiusWithInvalidRadius",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
+                    "tc09_testGetByRadiusPostWithInvalidRadius",
+                    "ReadFeatures/ByRadiusPost/TC09_withInvalidRadius/request_body.json",
                     List.of(
-                            "lon=8.6123&lat=50.1234",
                             "radius=-1"
                     ),
-                    "ReadFeatures/ByRadiusPost/TC14_withInvalidRadius/feature_response_part.json",
+                    "ReadFeatures/ByRadiusPost/TC09_withInvalidRadius/feature_response_part.json",
                     400
             ),
             standardTestSpec(
-                    "tc15_testGetByRadiusWithInvalidLat",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
+                    "tc10_testGetByRadiusPostWithLineString",
+                    "ReadFeatures/ByRadiusPost/TC10_withLineString/request_body.json",
                     List.of(
-                            "lon=8.6123&lat=-91",
                             "radius=5"
                     ),
-                    "ReadFeatures/ByRadiusPost/TC15_withInvalidLat/feature_response_part.json",
-                    400
-            ),
-            standardTestSpec(
-                    "tc16_testGetByRadiusWithInvalidLon",
-                    "ReadFeatures/ByRadiusPost/TC01_withPoint/request_body.json",
-                    List.of(
-                            "lon=-181&lat=50.1234",
-                            "radius=5"
-                    ),
-                    "ReadFeatures/ByRadiusPost/TC16_withInvalidLon/feature_response_part.json",
-                    400
-            )*/
+                    "ReadFeatures/ByRadiusPost/TC10_withLineString/feature_response_part.json",
+                    200
+            )
     );
 
   }
