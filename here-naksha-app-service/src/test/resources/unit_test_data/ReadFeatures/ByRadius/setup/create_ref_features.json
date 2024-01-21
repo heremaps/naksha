@@ -43,6 +43,18 @@
         "type":"Point",
         "coordinates":[ 8.6133, 50.1234, 0.0 ]
       }
+    },
+    {
+      "id": "my-custom-ref-id-4",
+      "type": "Feature",
+      "properties": {
+        "speedLimit": "80",
+        "length": 20,
+        "@ns:com:here:xyz": {
+          "tags": [ "tag-ref" ]
+        }
+      },
+      "geometry": null
     }
   ]
 }

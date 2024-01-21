@@ -59,6 +59,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     - feature 1 - Point4-same-as-point1, Tag-Ref, Property-5
     - feature 2 - Point5-outside-5m-of-Point1, Tag-Ref, Property-5
     - feature 3 - Point6-outside-100m-of-Point1
+    - feature 4 - NoGeometry
 
   Test Cases:
     TC  1 - Point1, radius=0 (should return feature 1 only)
@@ -77,6 +78,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     TC 14 - Point1, radius=-1m (should return 400)
     TC 15 - Invalid Lat (should return 400)
     TC 16 - Invalid Lon (should return 400)
+    TC 17 - RefSpace, RefFeature4 (missing geometry) (should return 404)
   */
 
   @BeforeAll
@@ -251,6 +253,15 @@ class ReadFeaturesByRadiusTest extends ApiTest {
                     ),
                     "ReadFeatures/ByRadius/TC16_withInvalidLon/feature_response_part.json",
                     400
+            ),
+            standardTestSpec(
+                    "tc17_testGetByRadiusWithRefFeatureMissingGeometry",
+                    List.of(
+                            "refSpaceId="+REF_SPACE_ID,
+                            "refFeatureId=my-custom-ref-id-4"
+                    ),
+                    "ReadFeatures/ByRadius/TC17_withRefFeatureMissingGeometry/feature_response_part.json",
+                    404
             )
     );
 
