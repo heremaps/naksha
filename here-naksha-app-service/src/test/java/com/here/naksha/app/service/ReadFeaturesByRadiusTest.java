@@ -20,13 +20,22 @@ package com.here.naksha.app.service;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
@@ -59,7 +68,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
   Test Cases:
     TC  1 - Point1, radius=0 (should return feature 1 only)
     TC  2 - Point1, radius=5m (should return features 1,2,3)
-    TC  3 - Point1, radius=5m, Prop-2 (should return feature 2 only)
+    TC  3 - Point1, radius=5m, Prop-2 (should return features 2,3)
     TC  4 - Point1, radius=5m, Tag-1 (should return feature 1 only)
     TC  5 - Point1, radius=5m, Prop-1, Tag-3 (should return feature 3 only)
     TC  6 - Point1, radius=5m, Limit-2 (should return features 1,2)
@@ -88,15 +97,73 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     nakshaClient.post("hub/spaces/" + REF_SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
   }
 
-  @Test
-  void testGetByRadiusWithLatLon() throws Exception {
+  private static Arguments standardTestSpec(final String testDesc,
+                                            final @Nullable List<String> queryParamList,
+                                            final @NotNull String fPathOfExpectedResBody,
+                                            final int expectedResCode) {
+    return Arguments.arguments(queryParamList, fPathOfExpectedResBody, Named.named(testDesc, expectedResCode));
+  }
+
+  private static Stream<Arguments> standardTestParams() {
+    return Stream.of(
+            standardTestSpec(
+                    "tc01_testGetByRadiusWithLatLon",
+                    List.of(
+                            "lon=8.6123&lat=50.1234"
+                    ),
+                    "ReadFeatures/ByRadius/TC01_withLatLon/feature_response_part.json",
+                    200
+            ),
+            standardTestSpec(
+                    "tc02_testGetByRadiusWithLatLonRadius",
+                    List.of(
+                            "lon=8.6123&lat=50.1234",
+                            "radius=5"
+                    ),
+                    "ReadFeatures/ByRadius/TC01_withLatLon/feature_response_part.json",
+                    200
+            )
+    );
+
+  }
+
+  @ParameterizedTest
+  @MethodSource("standardTestParams")
+  void commonTestExecution(
+          final @Nullable List<String> queryParamList,
+          final @NotNull String fPathOfExpectedResBody,
+          final int expectedResCode) throws Exception {
+    // Given: Request parameters
+    String urlQueryParams = "";
+    if (queryParamList!=null && !queryParamList.isEmpty()) {
+      urlQueryParams += String.join("&", queryParamList);
+    }
+    final String streamId = UUID.randomUUID().toString();
+
+    // Given: Expected response body
+    final String expectedBodyPart = loadFileOrFail(fPathOfExpectedResBody);
+
+    // When: Get Features By Radius request is submitted to NakshaHub
+    final HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/spatial?" + urlQueryParams, streamId);
+
+    // Then: Perform standard assertions
+    assertThat(response)
+            .hasStatus(expectedResCode)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Response body doesn't match");
+  }
+
+
+  //@Test
+  void tc01_testGetByRadiusWithLatLon() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/spatial
     // Validate features getting returned for given Lat,Lon coordinates
 
     // Given: Request parameters
     final String latLonParam = "lon=8.6123&lat=50.1234";
     final String expectedBodyPart =
-        loadFileOrFail("ReadFeatures/ByRadius/testGetByRadiusWithLatLon/feature_response_part.json");
+        loadFileOrFail("ReadFeatures/ByRadius/TC01_withLatLon/feature_response_part.json");
     final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
@@ -110,9 +177,8 @@ class ReadFeaturesByRadiusTest extends ApiTest {
         .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
-
-  @Test
-  void testGetByRadiusWithLatLonRadius() throws Exception {
+  //@Test
+  void tc02_testGetByRadiusWithLatLonRadius() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/spatial
     // Validate features getting returned for given Lat,Lon coordinates and Radius parameter
 
@@ -120,12 +186,60 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     final String latLonParam = "lon=8.6123&lat=50.1234";
     final String radiusParam = "radius=5";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByRadius/testGetByRadiusWithLatLonRadius/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByRadius/TC02_withLatLonRadius/feature_response_part.json");
     final String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
     final HttpResponse<String> response = nakshaClient
             .get("hub/spaces/" + SPACE_ID + "/spatial?" + latLonParam + "&" + radiusParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
+
+  //@Test
+  void tc03_testGetByRadiusWithLatLonRadiusProp() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/spatial
+    // Validate features getting returned for given Lat,Lon coordinates, Radius and Property search parameter
+
+    // Given: Request parameters
+    final String latLonParam = "lon=8.6123&lat=50.1234";
+    final String radiusParam = "radius=5";
+    final String propParam = "p.length=10";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByRadius/TC03_withLatLonRadiusProp/feature_response_part.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    final HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/spatial?" + latLonParam + "&" + radiusParam + "&" + propParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
+
+  //@Test
+  void tc04_testGetByRadiusWithLatLonRadiusTag() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/spatial
+    // Validate features getting returned for given Lat,Lon coordinates, Radius and Tag search parameter
+
+    // Given: Request parameters
+    final String latLonParam = "lon=8.6123&lat=50.1234";
+    final String radiusParam = "radius=5";
+    final String tagsParam = "tags=tag-1";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByRadius/TC04_withLatLonRadiusTag/feature_response_part.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    final HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/spatial?" + latLonParam + "&" + radiusParam + "&" + tagsParam, streamId);
 
     // Then: Perform assertions
     assertThat(response)
