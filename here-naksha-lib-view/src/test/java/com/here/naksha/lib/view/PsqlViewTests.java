@@ -25,6 +25,8 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
+import com.here.naksha.lib.core.models.storage.POp;
+import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.SeekableCursor;
@@ -304,6 +306,50 @@ class PsqlViewTests {
     assertEquals(10, features.size());
     assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
 
+    session.commit(true);
+  }
+
+  @Test
+  @Order(41)
+  @EnabledIf("runTest")
+  void viewQueryTest_returnFromMiddleLayerIfFeatureIsMissingInTopLayer() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+
+    // given feature in COLLECTION 1 and 2 (but not in 0)
+    PsqlFeatureGenerator fg = new PsqlFeatureGenerator();
+    final WriteXyzFeatures requestTest1 = new WriteXyzFeatures(COLLECTION_1);
+    final WriteXyzFeatures requestTest2 = new WriteXyzFeatures(COLLECTION_2);
+    final XyzFeature feature = fg.newRandomFeature();
+    feature.setGeometry(new XyzPoint(11d, 11d));
+    requestTest1.add(EWriteOp.CREATE, feature);
+
+    XyzFeature featureEdited2 = feature.deepClone();
+    featureEdited2.setGeometry(new XyzPoint(22d, 22d));
+    requestTest2.add(EWriteOp.CREATE, featureEdited2);
+    try {
+      session.execute(requestTest1);
+      session.execute(requestTest2);
+    } finally {
+      session.commit(true);
+    }
+
+    // given view
+    ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
+    ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
+    ViewLayer layer2 = new ViewLayer(storage, COLLECTION_2);
+
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("", layer0, layer1, layer2);
+    View view = new View(viewLayerCollection);
+
+    // when requesting for feature from COLLECTION 0, 1 and 2
+    ReadFeatures getByPoint = new ReadFeatures();
+    getByPoint.setSpatialOp(SOp.or(intersects(new XyzPoint(11d, 11d)), intersects(new XyzPoint(22d, 22d))));;
+    List<XyzFeatureCodec> features = queryView(view, getByPoint);
+
+    // then should get result from COLLECTION_1 as it's next in priority and feature doesn't exist in COLLECTION_0 which is top priority layer.
+    assertEquals(1, features.size());
+    assertEquals(11d, features.get(0).getGeometry().getCoordinate().x);
     session.commit(true);
   }
 

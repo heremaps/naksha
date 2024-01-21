@@ -18,47 +18,29 @@
  */
 package com.here.naksha.lib.view;
 
+import com.here.naksha.lib.core.NakshaContext;
+import com.here.naksha.lib.core.exceptions.NoCursor;
+import com.here.naksha.lib.core.exceptions.UncheckedException;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.storage.IReadSession;
+import com.here.naksha.lib.core.storage.IStorage;
+import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.here.naksha.lib.view.merge.MergeByStoragePriority;
+import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
 import static com.here.naksha.lib.core.models.storage.POp.eq;
 import static com.here.naksha.lib.core.models.storage.POp.or;
 import static com.here.naksha.lib.core.models.storage.PRef.app_id;
 import static com.here.naksha.lib.core.models.storage.PRef.id;
 import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
 import static java.util.Collections.emptyList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.exceptions.UncheckedException;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.models.storage.MutableCursor;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.PRef;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
-import com.here.naksha.lib.core.storage.IReadSession;
-import com.here.naksha.lib.core.storage.IStorage;
-
-import java.util.List;
-
-import com.here.naksha.lib.core.util.storage.RequestHelper;
-import com.here.naksha.lib.view.merge.MergeByStoragePriority;
-import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
-import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.*;
 
 public class ViewTest {
 

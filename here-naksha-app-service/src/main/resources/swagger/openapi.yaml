@@ -445,15 +445,15 @@ paths:
     post:
       tags:
         - Write Features
-      summary: Create new features or modify existing features in the space
+      summary: Create new features or patch existing features in the space
       description: >
-        This method allows to upsert features in the storage associated (directly or via event handler) with the space.
-        If a feature does not exist yet, it is created, if it is already available, it will be updated.
-        For each existing feature, if UUID is not provided OR if provided UUID matches with what is stored in Naksha, the feature will be updated. 
+        This method allows to create or patch features in the storage associated (directly or via event handler) with the space.
+        If a feature does not exist yet, it is created, if it is already available, it will be patched.
+        For each existing feature, if UUID is not provided OR if provided UUID matches with what is stored in Naksha, the feature will be patched. 
         Recommendation is to always provide correct UUID to avoid inconsistency due to concurrency.     
         In the JSON feature content, UUID is a string located at "properties -> @ns:com:here:xyz -> uuid".
         If the UUID does not match, HTTP code 409 will be returned.
-        It ensures an atomic operation, so either all features will be updated or none (in case of failure).
+        It ensures an atomic operation, so either all features will be created and/or patched, or nothing will be persisted (in case of failure).
       operationId: postFeatures
       parameters:
         - $ref: '#/components/parameters/SpaceId'
@@ -621,6 +621,44 @@ paths:
           $ref: '#/components/responses/ErrorResponse504'
         '513':
           $ref: '#/components/responses/ErrorResponse513'
+    patch:
+      tags:
+        - Write Features
+      summary: Patch feature with specified ID in the space
+      description: >
+        This method allows to patch one feature in the storage associated (directly or via event handler) with the space.
+        If the feature with that ID does not exist, HTTP code 404 is returned.
+        If UUID is specified and matches the current UUID stored in Naksha, the feature will be updated.
+        If the UUID does not match, HTTP code 409 will be returned.
+      operationId: patchFeature
+      parameters:
+        - $ref: '#/components/parameters/AddTags'
+        - $ref: '#/components/parameters/RemoveTags'
+      requestBody:
+        $ref: '#/components/requestBodies/FeatureRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/FeatureResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '409':
+          $ref: '#/components/responses/ErrorResponse409'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
     delete:
       tags:
         - Write Features
@@ -666,6 +704,7 @@ paths:
         - $ref: '#/components/parameters/South'
         - $ref: '#/components/parameters/TagList'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PropertiesQuery'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionResponse'
@@ -701,6 +740,8 @@ paths:
         - $ref: '#/components/parameters/TileType'
         - $ref: '#/components/parameters/TileId'
         - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/PropertiesQuery'
+        - $ref: '#/components/parameters/Margin'
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
@@ -736,6 +777,7 @@ paths:
         - $ref: '#/components/parameters/SpaceId'
         - $ref: '#/components/parameters/TagList'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PropertiesQuery'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionResponse'
@@ -747,6 +789,48 @@ paths:
           $ref: '#/components/responses/ErrorResponse403'
         '404':
           $ref: '#/components/responses/ErrorResponse404'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
+  '/hub/spaces/{spaceId}/iterate':
+    get:
+      tags:
+        - Read Features
+      summary: Iterate features in the space
+      description: >-
+        Iterates all of the features in the space. If there are more
+        features which could be loaded, the response FeatureCollection contains
+        the root attribute _handle_. The value of this attribute can
+        be passed as a query parameter for the following request in order to
+        continue the iteration from the marked position.
+        
+
+        Note - The features in the response are not ordered (due to perf overhead),
+        and so features may repeat across pages.
+        If this limitation affects you, please discuss with Naksha team.
+      operationId: iterateFeatures
+      parameters:
+        - $ref: '#/components/parameters/SpaceId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Handle'
+      responses:
+        '200':
+          $ref: '#/components/responses/IterateResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
         '513':
           $ref: '#/components/responses/ErrorResponse513'
 components:
@@ -796,6 +880,12 @@ components:
       required: true
       schema:
         type: string
+    Handle:
+      name: handle
+      in: query
+      description: The handle to continue the iteration.
+      schema:
+        type: string
     Limit:
       name: limit
       in: query
@@ -804,6 +894,15 @@ components:
         Default is _30000_. Hard limit is _100000_.
       schema:
         type: integer
+    Margin:
+      name: margin
+      in: query
+      description: >-
+        Margin in pixels on the respective projected level around the tile.
+        Default is 0.
+      schema:
+        type: integer
+        minimum: 0
     North:
       name: north
       in: query
@@ -816,6 +915,73 @@ components:
         format: double
         minimum: -90
         maximum: 90
+    PrefixId:
+      name: prefixId
+      in: query
+      description: If set all feature IDs are prefixed with the provided string.
+      required: false
+      schema:
+        type: string
+    PropertiesQuery:
+      name: params
+      in: query
+      description: >
+        Additional feature filters which compare the feature's property value with the one
+        specified in the query, resulting in a subset of features.
+
+
+        The usage of multiple property names represents an AND operation.
+        The usage of a comma (,) separating the properties values, represents
+        an OR operation.
+
+
+        Properties initiated with 'f.' are used to access values which are added by default in the
+        stored feature. The possible values are: 'f.id', 'f.createdAt' and 'f.updatedAt'.
+
+
+        Properties initiated with 'p.' are used to access values in the stored feature which are
+        under the 'properties' property. Use it as a shorthand accessor for 'properties' values.
+
+
+        The format should follow the specification below
+          * ?p.property_name_1=property_value_1&f.special_property_name_1=special_property_value_1
+
+
+        For example, the above query, the Features are filtered by
+        'property' AND 'special property' equals to their respective values.
+
+
+        While in the following example
+          * ?p.property_name_1=value_1,value_2
+
+
+        The resulting Features list contains all elements having value_1 OR value_2.
+
+
+        Additionally, to the operators used in the examples above, the query can be written,
+        with the same semantic, by using the long operators: "=gte=", "=lte=", "=gt=", "=lt=" and "=cs=".
+        The following queries yield the same result:
+          * ?p.property_name_1>=10
+          * ?p.property_name_1=gte=10
+
+
+        The available operators are:
+          - "=" - equals
+          - "!=" - not equals
+          - "=.null" - is null
+          - "!=.null" - is not null
+          - ">=" or "=gte=" - greater than or equals
+          - "<=" or "=lte=" - less than or equals
+          - ">" or "=gt=" - greater than
+          - "<" or "=lt=" - less than
+          - "@>" or "=cs=" - Array contains
+      explode: true
+      schema:
+        type: object
+        example:
+          p.some_property: '.null'
+        additionalProperties:
+          type: string
     RemoveTags:
       name: removeTags
       in: query
@@ -839,13 +1005,6 @@ components:
         type: array
         items:
           type: string
-    PrefixId:
-      name: prefixId
-      in: query
-      description: If set all feature IDs are prefixed with the provided string.
-      required: false
-      schema:
-        type: string
     South:
       name: south
       in: query
@@ -1262,6 +1421,35 @@ components:
                   id: BfiimUxHjj
                   spaceId: roadtopology
                   featureType: Topology
+    IterateResponse:
+      description: A FeatureCollection with handle response.
+      content:
+        application/geo+json:
+          schema:
+            $ref: '#/components/schemas/FeatureCollectionIterable'
+          example:
+            type: FeatureCollection
+            nextPageToken: eyJsaW1pdCI6MSwib2Zmc2V0IjozfQ==
+            features:
+              - type: Feature
+                id: BfiimUxHjj
+                geometry:
+                  type: Point
+                  coordinates:
+                    - 8.68872
+                    - 50.0561
+                    - 292.94377758
+                properties:
+                  name: Anfield
+                  '@ns:com:here:xyz':
+                    createdAt: 1517504700726
+                    updatedAt: 1517504700726
+                    tags:
+                      - football
+                      - stadium
+                  amenity: Football Stadium
+                  capacity: 54074
+                  description: Home of Liverpool Football Club
     StorageResponse:
       description: The space.
       content:
@@ -1463,6 +1651,15 @@ components:
               description: Features included in the collection.
               items:
                 $ref: '#/components/schemas/Feature'
+    FeatureCollectionIterable:
+      description: A FeatureCollection GeoJSON object, with handle to support iterate operation.
+      allOf:
+        - $ref: '#/components/schemas/FeatureCollection'
+        - type: object
+          properties:
+            nextPageToken:
+              type: string
+              description: The handle of the next batch.
     FeatureCollectionModification:
       allOf:
         - $ref: '#/components/schemas/FeatureCollection'
@@ -1744,7 +1941,6 @@ components:
           description: A value greater than zero implies that the collection shall be treated as deleted and represents the UTC Epoch timestamp in
             milliseconds when the deletion has been done.
           type: number
-
     XyzNamespace:
       type: object
       description: The XYZ namespace object managed by Naksha service

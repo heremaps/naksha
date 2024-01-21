@@ -1,0 +1,14 @@
+{
+  "id": "test-handler-by-id",
+  "type": "EventHandler",
+  "title": "Test Handler",
+  "description": "For unit testing",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "active": true,
+  "properties": {
+    "storageId": "event_handler_api_test_storage",
+    "collection": {
+      "maxAge": 2
+    }
+  }
+}

@@ -22,7 +22,10 @@ import static com.here.naksha.app.service.http.apis.ApiParams.*;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
-import com.here.naksha.app.service.http.apis.ApiUtil;
+import com.here.naksha.app.service.http.ops.PropertyUtil;
+import com.here.naksha.app.service.http.ops.SpatialUtil;
+import com.here.naksha.app.service.http.ops.TagsUtil;
+import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
@@ -30,13 +33,11 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SOp;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,12 +47,18 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
   private static final Logger logger = LoggerFactory.getLogger(ReadFeatureApiTask.class);
   private final @NotNull ReadFeatureApiReqType reqType;
 
+  // predefined set of query param keys other than property-search params
+  private static final Set<String> BBOX_NON_PROP_PARAMS = Set.of(WEST, NORTH, EAST, SOUTH, LIMIT, TAGS);
+  private static final Set<String> SEARCH_NON_PROP_PARAMS = Set.of(LIMIT, TAGS);
+  private static final Set<String> TILE_NON_PROP_PARAMS = Set.of(LIMIT, MARGIN, TAGS);
+
   public enum ReadFeatureApiReqType {
     GET_BY_ID,
     GET_BY_IDS,
     GET_BY_BBOX,
     GET_BY_TILE,
-    SEARCH
+    SEARCH,
+    ITERATE
   }
 
   public ReadFeatureApiTask(
@@ -77,7 +84,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
    */
   @Override
   protected @NotNull XyzResponse execute() {
-    // TODO : Add custom execute logic to process input API request based on reqType
     try {
       return switch (this.reqType) {
         case GET_BY_ID -> executeFeatureById();
@@ -85,14 +91,18 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         case GET_BY_BBOX -> executeFeaturesByBBox();
         case GET_BY_TILE -> executeFeaturesByTile();
         case SEARCH -> executeSearch();
+        case ITERATE -> executeIterate();
         default -> executeUnsupported();
       };
-    } catch (XyzErrorException ex) {
-      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
     } catch (Exception ex) {
-      // unexpected exception
-      return verticle.sendErrorResponse(
-          routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
+      if (ex instanceof XyzErrorException xyz) {
+        logger.warn("Known exception while processing request. ", ex);
+        return verticle.sendErrorResponse(routingContext, xyz.xyzError, xyz.getMessage());
+      } else {
+        logger.error("Unexpected error while processing request. ", ex);
+        return verticle.sendErrorResponse(
+            routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
+      }
     }
   }
 
@@ -152,10 +162,11 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     ApiParams.validateParamRange(SOUTH, south, -90, 90);
 
     // Prepare read request based on parameters supplied
-    final SOp bboxOp = ApiUtil.buildOperationForBBox(west, south, east, north);
-    final POp tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
+    final SOp bboxOp = SpatialUtil.buildOperationForBBox(west, south, east, north);
+    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
+    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams, BBOX_NON_PROP_PARAMS);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(bboxOp);
-    if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
+    RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
@@ -172,15 +183,18 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Parse and validate Query parameters
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     // NOTE : queryParams can be null, but that is acceptable. We will move on with default values.
+    final long margin = ApiParams.extractQueryParamAsLong(queryParams, MARGIN, false);
+    ApiParams.validateParamRange(MARGIN, margin, 0, Integer.MAX_VALUE);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
 
     // Prepare read request based on parameters supplied
-    final SOp geoOp = ApiUtil.buildOperationForTile(tileType, tileId);
-    final POp tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
+    final SOp geoOp = SpatialUtil.buildOperationForTile(tileType, tileId, (int) margin);
+    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
+    final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams, TILE_NON_PROP_PARAMS);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(geoOp);
-    if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
+    RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
@@ -198,20 +212,59 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         : null;
     if (queryParams == null || queryParams.size() <= 0) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
+          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory query parameters");
     }
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
 
     // Prepare read request based on parameters supplied
-    final POp tagsOp = ApiUtil.buildOperationForTagsQueryParam(queryParams);
+    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
+    final POp propSearchOp =
+        PropertyUtil.buildOperationForPropertySearchParams(queryParams, SEARCH_NON_PROP_PARAMS);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId);
-    if (tagsOp != null) rdRequest.setPropertyOp(tagsOp);
+    if (tagsOp == null && propSearchOp == null) {
+      return verticle.sendErrorResponse(
+          routingContext, XyzError.ILLEGAL_ARGUMENT, "Atleast Tags or Prop search parameters required.");
+    }
+    RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, limit);
+  }
+
+  private @NotNull XyzResponse executeIterate() {
+    // Parse and validate Path parameters
+    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+
+    // Parse and validate Query parameters
+    final QueryParameterList queryParams = (routingContext.request().query() != null)
+        ? new QueryParameterList(routingContext.request().query())
+        : null;
+    // Note : subsequent steps need to support queryParams being null
+
+    // extract limit parameter
+    long offset = 0;
+    long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    // extract handle parameter
+    IterateHandle handle = ApiParams.extractQueryParamAsIterateHandle(queryParams, HANDLE);
+    // create new "handle" if not already provided, or overwrite parameters based on "handle"
+    if (handle == null) {
+      handle = new IterateHandle().withLimit(limit);
+    }
+    offset = handle.getOffset();
+    limit = handle.getLimit();
+    limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
+
+    // Prepare read request based on parameters supplied
+    final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId);
+
+    // Forward request to NH Space Storage reader instance
+    final Result result = executeReadRequestFromSpaceStorage(rdRequest);
+    // transform Result to Http FeatureCollection response,
+    // restricted by given feature limit and by adding "handle" attribute to support subsequent iteration
+    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, offset, limit, handle);
   }
 }

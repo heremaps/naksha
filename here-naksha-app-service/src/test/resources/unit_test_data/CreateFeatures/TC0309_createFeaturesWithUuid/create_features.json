@@ -5,7 +5,8 @@
       "id": "my-custom-id-309-1",
       "type": "Feature",
       "properties": {
-        "speedLimit": "60"
+        "speedLimit": "60",
+        "existingProperty": true
       },
       "geometry": {
         "type":"Point",

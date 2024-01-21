@@ -1,12 +1,12 @@
 {
-  "id": "non-existent-test-handler",
+  "id": "this-surely-does-not-exists",
   "type": "EventHandler",
   "title": "test Handler that does not exist",
   "description": "Description",
   "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
   "active": true,
   "properties": {
-    "storageId": "um-mod-dev",
+    "storageId": "event_handler_api_test_storage",
     "collection": {
       "maxAge": 3
     }

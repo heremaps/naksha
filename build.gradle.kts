@@ -23,7 +23,8 @@ plugins {
     // Don't apply for all projects, we individually only apply where Kotlin is used.
     kotlin("jvm") version "1.8.21" apply false
     // overall code coverage
-    jacoco
+    //jacoco
+    id("jacoco-report-aggregation")
 }
 
 group = "com.here.naksha"
@@ -104,6 +105,7 @@ val awaitility = "org.awaitility:awaitility:4.2.0"
 val junit_jupiter = "org.junit.jupiter:junit-jupiter:5.9.2"
 val junit_params = "org.junit.jupiter:junit-jupiter-params:5.9.2"
 val mockito = "org.mockito:mockito-core:5.8.0"
+val test_containers = "org.testcontainers:testcontainers:1.19.3"
 
 val flipkart_zjsonpatch = "com.flipkart.zjsonpatch:zjsonpatch:0.4.13"
 val json_assert = "org.skyscreamer:jsonassert:1.5.1"
@@ -502,6 +504,7 @@ project(":here-naksha-app-service") {
 
         testImplementation(json_assert)
         testImplementation(resillience4j_retry)
+        testImplementation(test_containers)
     }
     setOverallCoverage(0.25) // only increasing allowed!
 }
