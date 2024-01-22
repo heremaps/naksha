@@ -78,7 +78,7 @@ public class DefaultStorageHandlerProperties extends XyzProperties {
    * By default: 'true'
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(AUTO_CREATE_COLLECTION)
+  @JsonProperty(AUTO_DELETE_COLLECTION)
   private @NotNull Boolean autoDeleteCollection;
 
   /**

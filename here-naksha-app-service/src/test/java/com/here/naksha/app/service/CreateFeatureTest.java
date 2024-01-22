@@ -55,7 +55,7 @@ import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 
 class CreateFeatureTest extends ApiTest {
 
-  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
+  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient(300);
   private static final String SPACE_ID = "create_features_test_space";
 
   @BeforeAll
