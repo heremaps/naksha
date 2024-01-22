@@ -85,6 +85,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
         case UPDATE_SPACE -> executeUpdateSpace();
         case GET_ALL_SPACES -> executeGetSpaces();
         case GET_SPACE_BY_ID -> executeGetSpaceById();
+        case DELETE_SPACE -> executeDeleteSpace();
         default -> executeUnsupported();
       };
     } catch (Exception ex) {
@@ -97,6 +98,11 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
             routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
       }
     }
+  }
+
+  private XyzResponse executeDeleteSpace() {
+    // TODO
+    return null;
   }
 
   private @NotNull XyzResponse executeCreateSpace() throws JsonProcessingException {

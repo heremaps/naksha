@@ -16,12 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.naksha;
+package com.here.naksha.lib.handlers;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import com.here.naksha.lib.core.models.naksha.Storage;
+import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
  * Default variant of EventHandler properties supported by Naksha - default storage handler
  */
 @AvailableSince(NakshaVersion.v2_0_7)
-public class EventHandlerProperties extends XyzProperties {
+public class DefaultStorageHandlerProperties extends XyzProperties {
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String STORAGE_ID = "storageId";
@@ -59,7 +62,7 @@ public class EventHandlerProperties extends XyzProperties {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @JsonCreator
-  public EventHandlerProperties(
+  public DefaultStorageHandlerProperties(
       final @JsonProperty(STORAGE_ID) @Nullable String storageId,
       final @JsonProperty(COLLECTION) @Nullable XyzCollection xyzCollection) {
     this.storageId = storageId;
