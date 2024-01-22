@@ -117,7 +117,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final @Nullable Result result,
       final @NotNull Class<R> type,
       final @NotNull NoElementsStrategy noElementsStrategy,
-      final P1<XyzFeature> postProcessing) {
+      final @Nullable P1<XyzFeature> postProcessing) {
     final XyzResponse validatedErrorResponse = validateErrorResult(result);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
@@ -175,7 +175,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final long offset,
       final long maxLimit,
       final @Nullable IterateHandle handle,
-      final P1<XyzFeature> postProcessing) {
+      final @Nullable P1<XyzFeature> postProcessing) {
     final XyzResponse validatedErrorResponse = validateErrorResultEmptyCollection(rdResult);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
