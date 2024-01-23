@@ -27,9 +27,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +36,8 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
   private static final String TAG_PREFIX = "xyz_source_id_";
+  private static final String NS_COM_HERE_MOM_META = "@ns:com:here:mom:meta";
+  private static final String SOURCE_ID = "sourceId";
 
   protected @NotNull EventHandler eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
@@ -58,9 +58,9 @@ public class SourceIdHandler extends AbstractEventHandler {
 
     final Request<?> request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
-    if (request instanceof ReadFeatures f) {
-      //                f.pr
-      //      //scan all property operation recursively as
+    if (request instanceof ReadFeatures readRequest) {
+      Optional.ofNullable(readRequest.getPropertyOp())
+          .ifPresent(t -> this.replaceSourceIdPropertyWithTagSearch(t, Collections.emptyList(), -1));
     } else if (request instanceof WriteXyzFeatures writeRequest) {
       writeRequest.features.stream()
           .map(XyzFeatureCodec::getFeature)
@@ -84,11 +84,62 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private Optional<String> getSourceIdFromFeature(XyzProperties properties) {
     try {
-      Map<String, Object> momMetaNs = (Map<String, Object>) properties.get("@ns:com:here:mom:meta");
-      Object sourceId = momMetaNs.get("sourceId");
+      Map<String, Object> momMetaNs = (Map<String, Object>) properties.get(NS_COM_HERE_MOM_META);
+      Object sourceId = momMetaNs.get(SOURCE_ID);
       return Optional.ofNullable(sourceId).map(Object::toString);
     } catch (ClassCastException exception) {
       return Optional.empty();
     }
+  }
+
+  private void replaceSourceIdPropertyWithTagSearch(POp propertyOperation, List<POp> parentCollection, int index) {
+
+    if (propertyOperation.getPropertyRef() == null
+        && propertyOperation.children() != null
+        && !propertyOperation.children().isEmpty()
+        && !OpType.NOT.equals(propertyOperation.op())) {
+
+      List<@NotNull POp> children = propertyOperation.children();
+
+      for (int i = 0; i < children.size(); i++) {
+        replaceSourceIdPropertyWithTagSearch(children.get(i), children, i);
+      }
+
+    } else {
+      handlePropertyOperationLeaf(propertyOperation).ifPresent(pOp -> parentCollection.set(index, pOp));
+    }
+  }
+
+  private Optional<POp> handlePropertyOperationLeaf(POp propertyOperation) {
+    if (OpType.NOT.equals(propertyOperation.op())
+        && propertyOperation.children() != null
+        && !propertyOperation.children().isEmpty()) {
+
+      POp nestedPropertyOperation = propertyOperation.children().get(0);
+      POp negatedPropertyOperation = transformOperationIntoTagOperation(nestedPropertyOperation);
+
+      return Optional.of(POp.not(negatedPropertyOperation));
+
+    } else if (propertyReferenceEqualsSourceId(propertyOperation.getPropertyRef())
+        && propertyOperation.getValue() != null) {
+
+      return Optional.of(transformOperationIntoTagOperation(propertyOperation));
+    }
+    return Optional.empty();
+  }
+
+  private boolean propertyReferenceEqualsSourceId(PRef pRef) {
+    List<@NotNull String> path = pRef.getPath();
+    return path.size() == 3 && path.containsAll(List.of("properties", NS_COM_HERE_MOM_META, SOURCE_ID));
+  }
+
+  private POp transformOperationIntoTagOperation(POp propertyOperation) {
+
+    if (propertyOperation.op().equals(POpType.EQ) || propertyOperation.op().equals(POpType.CONTAINS)) {
+
+      return POp.exists(PRef.tag(TAG_PREFIX + propertyOperation.getValue()));
+    }
+
+    return propertyOperation;
   }
 }
