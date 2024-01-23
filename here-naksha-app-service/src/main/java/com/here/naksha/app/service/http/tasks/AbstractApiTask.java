@@ -288,4 +288,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     }
     return null;
   }
+
+  protected XyzResponse returnError(
+      XyzError xyzError, String httpResponseMsg, String internalLogMsg, Object... logArgs) {
+    logger.error(internalLogMsg, logArgs);
+    return verticle.sendErrorResponse(routingContext, xyzError, httpResponseMsg);
+  }
 }
