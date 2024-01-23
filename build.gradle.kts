@@ -332,6 +332,8 @@ project(":here-naksha-lib-psql") {
     }
     dependencies {
         api(project(":here-naksha-lib-core"))
+        api(project(":here-naksha-lib-jbon"))
+        api(project(":here-naksha-lib-plv8"))
 
         implementation(commons_lang3)
         implementation(postgres)
