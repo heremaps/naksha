@@ -3,6 +3,7 @@ package com.here.naksha.lib.jbon
 const val TYPE_INT4 = 0b1000_0000
 const val TYPE_FLOAT4 = 0b1001_0000
 const val TYPE_SIZE32 = 0b1010_0000
+const val TYPE_STRING = 0b1100_0000
 const val TYPE_NULL = 0
 const val TYPE_UNDEFINED = 1
 const val TYPE_BOOL_TRUE = 2

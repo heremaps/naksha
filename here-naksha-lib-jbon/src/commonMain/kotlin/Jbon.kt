@@ -88,6 +88,17 @@ class Jbon(val view: IDataView, val dictionary: JbonDict? = null) {
                 }
             }
 
+            TYPE_STRING -> {
+                when (val size = raw and 0xf) {
+                    in 0..10 -> 1 + size
+                    11 -> 2 + view.getInt8(pos + 1).toInt() and 0xff
+                    12 -> 3 + view.getInt16(pos + 1).toInt() and 0xffff
+                    // TODO: 13 -> Support 24-bit encoding
+                    14 -> 5 + view.getInt32(pos + 1).toInt()
+                    else -> 0
+                }
+            }
+
             else -> 0
         }
     }
@@ -147,7 +158,7 @@ class Jbon(val view: IDataView, val dictionary: JbonDict? = null) {
                 else -> alternative
             }
         }
-        return when(type) {
+        return when (type) {
             TYPE_INT4, TYPE_INT8, TYPE_INT16, TYPE_INT32 -> getInt(alternative)
             else -> alternative
         }
@@ -225,6 +236,7 @@ class Jbon(val view: IDataView, val dictionary: JbonDict? = null) {
      * @param alternative The value to return, when the value can't be read as a double.
      * @param readStrict If set to true, the method does not lose precision, rather returns the alternative.
      */
+    @Suppress("UNUSED_PARAMETER")
     fun getDouble(alternative: Double = Double.NaN, readStrict: Boolean = false): Double {
         return when (type()) {
             TYPE_INT4, TYPE_INT8, TYPE_INT16, TYPE_INT32 -> {
@@ -252,4 +264,7 @@ class Jbon(val view: IDataView, val dictionary: JbonDict? = null) {
         }
     }
 
+    fun isString() : Boolean {
+        return type() == TYPE_STRING
+    }
 }

@@ -245,4 +245,102 @@ class JvmJbonTest {
         assertEquals(Integer.MAX_VALUE, view.getInt32(1))
         assertEquals(5, builder.clear())
     }
+
+    @Test
+    fun testEncodingTwoInts() {
+        val view = JvmPlatform.dataViewOf(ByteArray(256))
+        val builder = JbonBuilder(view)
+        val reader = Jbon(view)
+
+        val firstPos = builder.writeInt(100_000)
+        assertEquals(0, firstPos)
+        val secondPos = builder.writeInt(1)
+        assertEquals(5, secondPos)
+        assertEquals(6, builder.end)
+
+        // read values
+        assertTrue(reader.isValid())
+        assertTrue(reader.isInt())
+        assertEquals(100_000, reader.getInt())
+        reader.seekBy(reader.size())
+
+        assertTrue(reader.isValid())
+        assertTrue(reader.isInt())
+        assertEquals(1, reader.getInt())
+        reader.seekBy(reader.size())
+
+        // We're now behind the last valid byte, everything else now should be simply null
+        assertTrue(reader.isNull())
+        assertEquals(1, reader.size())
+    }
+
+    @Test
+    fun testStringEncoding() {
+        val view = JvmPlatform.dataViewOf(ByteArray(256))
+        val builder = JbonBuilder(view)
+        val reader = Jbon(view)
+
+        // should encode in 1 byte lead-in plus 1 byte character
+        builder.writeString("a")
+        assertEquals(1 + 1, reader.size())
+        assertEquals(1 + 1, builder.clear())
+
+        // a string with up to 10 characters will have a lead-in of only one byte
+        builder.writeString("0123456789")
+        assertEquals(1 + 10, reader.size())
+        assertEquals(1 + 10, builder.clear())
+
+        // a string with 11 characters, will have a two byte lead-in
+        builder.writeString("01234567891")
+        assertEquals(2 + 11, reader.size())
+        assertEquals(2 + 11, builder.clear())
+
+        // This encodes the sigma character, which is unicode 931 and should therefore be encoded in two byte
+        // The lead-in for this short string should be only one byte
+        builder.writeString("Σ")
+        assertEquals(1 + 2, reader.size())
+        // We should read the value 931, minus the bias of 128, plus the two high bits being 0b10
+        assertEquals((931 - 128) xor 0b1000_0000_0000_0000, view.getInt16(1).toInt() and 0xffff)
+        assertEquals(1 + 2, builder.clear())
+
+        // This encodes the grinning face emojii, which is unicode 128512 and should therefore be encoded in three byte
+        // The lead-in for this short string should still be only one byte
+        builder.writeString("\uD83D\uDE00")
+        assertEquals(1 + 3, reader.size())
+        var unicode = (view.getInt8(1).toInt() and 0b0011_1111) shl 16
+        unicode += view.getInt16(2).toInt() and 0xffff
+        assertEquals(128512, unicode)
+        assertEquals(1 + 3, builder.clear())
+    }
+
+    @Test
+    fun testStringReader() {
+        val view = JvmPlatform.dataViewOf(ByteArray(256))
+        val builder = JbonBuilder(view)
+        val reader = Jbon(view)
+        val testString = "Hello World!"
+        // We need to ensure that the test-string is long enough, otherwise the lead-in does not match
+        check(testString.length in 11..255)
+        builder.writeString(testString)
+        assertTrue(reader.isString())
+        // 12 characters, therefore 2 byte lead-in
+        assertEquals(2 + testString.length, reader.size())
+
+        // Map the string
+        val jbonString = JbonString(reader)
+        assertEquals(2 + testString.length, jbonString.size())
+        assertEquals(testString.length, jbonString.length())
+        // Ensure that all characters are the same as in the original
+        // Note: This test only works for BMP codes!
+        var i = 0
+        while (i < testString.length) {
+            val unicode = testString[i++].code
+            assertEquals(unicode, jbonString.next())
+        }
+
+        // Test toString
+        val string = jbonString.toString()
+        assertEquals(testString, string)
+        assertSame(string, jbonString.toString())
+    }
 }

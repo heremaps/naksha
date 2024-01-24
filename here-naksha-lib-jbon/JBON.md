@@ -57,7 +57,7 @@ Note that a dictionary does have a leading index table, which encodes the 32-bit
 ### (4) string
 A UNICODE string using a special encoding that is smaller than UTF-8 and additionally allows to reuse sub-strings or include them from dictionaries. Generally the encoder will always break down all strings by the space character and encode them in chunks. The lower 4-bit are the size indicator. A value between 0 and 10 represent the size of the (so between 0 and 10). The values 11 to 15 signal:
 
-- 11: The next byte stores the biased size, so size - 11 (11 to 266).
+- 11: The next byte stores the unsigned size, (0 to 255).
 - 12: The next two byte store the unsigned size, big-endian (0 to 65535).
 - 13: The next three byte store the unsigned size, big-endian (0 to 16777215).
 - 14: The next four byte store the unsigned size, big-endian (0 to 2^32-1).
@@ -65,10 +65,10 @@ A UNICODE string using a special encoding that is smaller than UTF-8 and additio
 
 The encoding of the string is not UTF-8, but with a special encoding that is not only smaller, but especially allows dictionary lookups. The leading bytes of every byte signal the following:
 
-- `0vvv_vvvv`: The value encodes the code point value. Allows values between 0 and 255 (ASCII).
-- `10vv_vvvv`: The value should be AND masks `0011_1111`, then shift-left by 8, the value of the next byte should be added using OR, and finally 256 should be added. Allows values between 256 and 16640 (2^14+256).
-- `110v_vvvv`: The value should be AND masks `0001_1111`, then shift-left by 16, and eventually the value of the next two byte (read big-endian) should be added using OR. Allows values between 0 and 2097152.
-- `111s_vvvv`: The value should be AND masks `0000_1111`, it represents a **string-reference**. The lower four bit have the same meaning as for a **reference**, but must not refer to anything but a string, not even to a text. The `s`-bit (bit number 4) signals if a space should be added behind the string. This allows to encode a space (which mostly always follows, because text is split by spaces) into one otherwise not used bit.
+- `0vvv_vvvv`: The value encodes the code point value. Allows values between 0 and 127 (ASCII).
+- `10_vvvvvv`: The value should be AND masks `0011_1111`, then shift-left by 8, the value of the next byte should be added using OR, and finally 128 should be added. Allows values between 128 and 16511 (2^14+128-1).
+- `110_vvvvv`: The value should be AND masks `0001_1111`, then shift-left by 16, and eventually the value of the next two byte (read big-endian) should be added using OR. Allows values between 0 and 2097152.
+- `111_svvvv`: The value should be AND masks `0000_1111`, it represents a **string-reference**. The lower four bit have the same meaning as for a **reference**, but must not refer to anything but a string, not even to a text. The `s`-bit (bit number 4) signals if a space should be added behind the string. This allows to encode a space (which mostly always follows, because text is split by spaces) into one otherwise not used bit.
 
 ### (5) map, array, map-entry or array-entry
 A map, array, map-entry or array-entry. The two high bits of the value parameter are used to select the type, the lower 2-bit are always the size indicator of the byte-size of the collection or entry. This indicates the amount of byte to skip, to jump over the map or entry.
