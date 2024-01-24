@@ -114,7 +114,8 @@ public class SourceIdHandler extends AbstractEventHandler {
   private static Optional<POp> mapIntoTagOperation(POp propertyOperation) {
 
     if (propertyReferenceEqualsSourceId(propertyOperation.getPropertyRef())
-        && propertyOperation.getValue() != null) {
+        && propertyOperation.getValue() != null
+        && propertyOperation.children() == null) {
 
       if (propertyOperation.op().equals(POpType.EQ)
           || propertyOperation.op().equals(POpType.CONTAINS)) {
