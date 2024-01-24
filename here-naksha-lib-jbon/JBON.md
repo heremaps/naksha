@@ -15,10 +15,10 @@ In this document the term `size` refers to an amount of bytes, so a byte-size, w
 ## Value-Types (3-bit)
 
 ### (0) int4
-The lower 4-bit hold the biased (signed) value. The value is stored minus 8, so `-8..7`.
+The lower 4-bit hold the biased (signed) value. The value is stored minus 8, so `0..15` represents `-8..7`.
 
 ### (1) float4
-The lower 4-bit hold the biased (signed) value. The value is stored minus 8, so `-8..7` (must be cast to a float or double).
+The lower 4-bit hold the biased (signed) value. The value is stored minus 8, so `0..15` represents `-8..7`.
 
 ### (2) size32
 A flexible unsigned 32-bit integer. The parameter value means the following:
@@ -35,7 +35,7 @@ A flexible unsigned 32-bit integer. The parameter value means the following:
 - `1001b`: 9
 - `1010b`: 10
 - `1011b`: 11
-- `1100b`: (12) The value is encoded biased (-12) in the next byte (means 12 to 267).
+- `1100b`: (12) The value is encoded in the next byte (means 0 to 255).
 - `1101b`: (13) The value is encoded big-endian in the next two byte (0 to 65535).
 - `1110b`: (14) The value is encoded big-endian in the next three byte (0 to 16777215).
 - `1111b`: (15) The value is encoded big-endian in the next four byte (0 to 2^32-1).
@@ -147,7 +147,7 @@ After this header the first value encoded in the dictionary is a **string** with
 ### (7) document
 A JBON document is a container for JBON objects. It holds a reference to a single dictionary and itself is a buffer encoding objects. It is not allowed to create references from one document into another document. To share information only dictionaries may be used.
 
-After the lead-in byte of the document two values are following. First the **size32** with the size of document and then the **reference** to the root object that represents the document.
+After the lead-in byte of the document two values are following. First the **size32** of the document in bytes, not considering the lead-in byte. Then the **reference** to the root object that represents the document.
 
 The encoder may add arbitrary data after this header or directly store the root object. This leaves room to add additional header information later, without breaking the downward compatibility.
 ### (8-15) int{8,16,24,32,40,48,56,64}

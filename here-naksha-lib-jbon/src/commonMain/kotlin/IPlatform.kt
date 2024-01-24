@@ -18,4 +18,14 @@ interface IPlatform {
      * @return The view to the byte-array.
      */
     fun dataViewOf(bytes: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): IDataView
+
+    /**
+     * Create a default JBON builder that normally suites the most JSONs we encounter.
+     * @param dict The global dictionary to use, if any.
+     * @return A default JBON builder that normally is good enough for most JSON objects.
+     */
+    fun jbonBuilder(dict : JbonDict? = null) : JbonBuilder {
+        val buffer = ByteArray(32768) // we expect that 32kb are enough for all binary JSONs!
+        return JbonBuilder(dataViewOf(buffer), dict)
+    }
 }
