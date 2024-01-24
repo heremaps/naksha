@@ -27,6 +27,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -60,7 +61,8 @@ public class SourceIdHandler extends AbstractEventHandler {
     logger.info("Handler received request {}", request.getClass().getSimpleName());
     if (request instanceof ReadFeatures readRequest) {
       Optional.ofNullable(readRequest.getPropertyOp())
-          .ifPresent(t -> this.replaceSourceIdPropertyWithTagSearch(t, Collections.emptyList(), -1));
+          .ifPresent(t -> PropertyOperationUtil.replacePropertyInPropertyOperationTree(
+              t, SourceIdHandler::transformPopWithSourceId));
     } else if (request instanceof WriteXyzFeatures writeRequest) {
       writeRequest.features.stream()
           .map(XyzFeatureCodec::getFeature)
@@ -92,54 +94,35 @@ public class SourceIdHandler extends AbstractEventHandler {
     }
   }
 
-  private void replaceSourceIdPropertyWithTagSearch(POp propertyOperation, List<POp> parentCollection, int index) {
+  public static Optional<POp> transformPopWithSourceId(POp sourcePop) {
+    if (OpType.NOT.equals(sourcePop.op())
+        && sourcePop.children() != null
+        && !sourcePop.children().isEmpty()) {
 
-    if (propertyOperation.getPropertyRef() == null
-        && propertyOperation.children() != null
-        && !propertyOperation.children().isEmpty()
-        && !OpType.NOT.equals(propertyOperation.op())) {
-
-      List<@NotNull POp> children = propertyOperation.children();
-
-      for (int i = 0; i < children.size(); i++) {
-        replaceSourceIdPropertyWithTagSearch(children.get(i), children, i);
-      }
-
-    } else {
-      handlePropertyOperationLeaf(propertyOperation).ifPresent(pOp -> parentCollection.set(index, pOp));
+      POp nestedPropertyOperation = sourcePop.children().get(0);
+      return mapIntoTagOperation(nestedPropertyOperation).map(POp::not);
     }
+
+    return mapIntoTagOperation(sourcePop);
   }
 
-  private Optional<POp> handlePropertyOperationLeaf(POp propertyOperation) {
-    if (OpType.NOT.equals(propertyOperation.op())
-        && propertyOperation.children() != null
-        && !propertyOperation.children().isEmpty()) {
-
-      POp nestedPropertyOperation = propertyOperation.children().get(0);
-      POp negatedPropertyOperation = transformOperationIntoTagOperation(nestedPropertyOperation);
-
-      return Optional.of(POp.not(negatedPropertyOperation));
-
-    } else if (propertyReferenceEqualsSourceId(propertyOperation.getPropertyRef())
-        && propertyOperation.getValue() != null) {
-
-      return Optional.of(transformOperationIntoTagOperation(propertyOperation));
-    }
-    return Optional.empty();
-  }
-
-  private boolean propertyReferenceEqualsSourceId(PRef pRef) {
+  private static boolean propertyReferenceEqualsSourceId(PRef pRef) {
     List<@NotNull String> path = pRef.getPath();
     return path.size() == 3 && path.containsAll(List.of("properties", NS_COM_HERE_MOM_META, SOURCE_ID));
   }
 
-  private POp transformOperationIntoTagOperation(POp propertyOperation) {
+  private static Optional<POp> mapIntoTagOperation(POp propertyOperation) {
 
-    if (propertyOperation.op().equals(POpType.EQ) || propertyOperation.op().equals(POpType.CONTAINS)) {
+    if (propertyReferenceEqualsSourceId(propertyOperation.getPropertyRef())
+        && propertyOperation.getValue() != null) {
 
-      return POp.exists(PRef.tag(TAG_PREFIX + propertyOperation.getValue()));
+      if (propertyOperation.op().equals(POpType.EQ)
+          || propertyOperation.op().equals(POpType.CONTAINS)) {
+
+        return Optional.of(POp.exists(PRef.tag(TAG_PREFIX + propertyOperation.getValue())));
+      }
     }
 
-    return propertyOperation;
+    return Optional.empty();
   }
 }
