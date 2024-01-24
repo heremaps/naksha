@@ -67,7 +67,9 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
     if (!(writeRequest instanceof WriteFeatures)) {
       throw new UnsupportedOperationException("Only WriteFeatures are supported.");
     }
-    return getSession().execute(writeRequest);
+    getSession();
+    ((WriteFeatures) writeRequest).setCollectionId(writeLayer.getCollectionId());
+    return this.session.execute(writeRequest);
   }
 
   @Override

@@ -98,7 +98,7 @@ public class ViewTest {
     View view = new View(viewLayerCollection);
     when(storage.newWriteSession(nc, true)).thenReturn(session);
 
-    final WriteXyzFeatures request = new WriteXyzFeatures("topologies");
+    final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
     final XyzFeature feature = new XyzFeature("id0");
     request.add(EWriteOp.CREATE, feature);
 

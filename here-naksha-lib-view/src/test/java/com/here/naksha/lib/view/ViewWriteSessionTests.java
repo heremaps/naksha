@@ -102,7 +102,7 @@ public class ViewWriteSessionTests extends PsqlTests {
             assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
 
             //Update fetched feature using viewwritesession
-            final WriteXyzFeatures writeRequest = new WriteXyzFeatures(COLLECTION_0);
+            final LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
             features.stream().forEach(feature -> {
                 XyzFeature editedFeature=feature.encodeFeature(true).getFeature();
                 editedFeature.setGeometry(new XyzPoint(1d, 1d));
@@ -121,6 +121,18 @@ public class ViewWriteSessionTests extends PsqlTests {
 
                 writeSession.commit(true);
             }
+
+            //Check if the feature updated in expected storage collection
+            ViewLayerCollection readViewCollection = new ViewLayerCollection("ReadLayer", layer0);
+            view = new View(readViewCollection);
+
+            List<XyzFeatureCodec> list=queryView(view,readRequest);
+            assertTrue(list.size()==1);
+            XyzFeature updatedFeature=list.get(0).encodeFeature(true).getFeature();
+            assertEquals(1d, updatedFeature.getGeometry().getJTSGeometry().getCoordinate().x);
+            assertTrue(updatedFeature.getProperties().containsKey("testProperty"));
+            assertEquals("test",updatedFeature.getProperties().get("testProperty").toString());
+
             session.commit(true);
         }
     }
@@ -155,8 +167,7 @@ public class ViewWriteSessionTests extends PsqlTests {
         View view = new View(viewLayerCollection);
 
         try (ViewWriteSession writeSession = view.newWriteSession(nakshaContext,true).withWriteLayer(layer1).init()) {
-            WriteXyzFeatures writeRequest = new WriteXyzFeatures(COLLECTION_1);
-
+            LayerWriteFeatureRequest writeRequest=new LayerWriteFeatureRequest();
             final XyzFeature feature = fg.newRandomFeature();
             feature.setGeometry(new XyzPoint(0d, 0d));
             feature.setId("feature_id_view1");
