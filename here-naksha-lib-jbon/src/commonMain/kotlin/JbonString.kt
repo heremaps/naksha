@@ -1,5 +1,11 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package com.here.naksha.lib.jbon
 
+import kotlin.js.ExperimentalJsExport
+import kotlin.js.JsExport
+
+@JsExport
 class JbonString(val jbon: Jbon) {
     internal var string: String? = null
     internal var view: IDataView = jbon.view
