@@ -18,7 +18,7 @@ class JvmJbonTest {
     @Test
     fun pureTest() {
         val expected: Byte = -1
-        val intValue: Int = 255
+        val intValue = 255
         assertEquals(expected, (intValue and 0xff).toByte())
     }
 
