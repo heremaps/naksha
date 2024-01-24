@@ -46,8 +46,7 @@ public class SourceIdHandlerTest extends ApiTest {
                 .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
                 .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
                 .hasInsertedIdsMatchingFeatureIds(null)
-                .hasUuids()
-        ;
+                .hasUuids();
 
     }
     @Test
@@ -68,8 +67,7 @@ public class SourceIdHandlerTest extends ApiTest {
                 .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
                 .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
                 .hasInsertedIdsMatchingFeatureIds(null)
-                .hasUuids()
-        ;
+                .hasUuids();
 
     }
 
