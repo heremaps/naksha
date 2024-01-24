@@ -45,6 +45,7 @@ import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
@@ -212,7 +213,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     if (re instanceof StorageNotInitialized) {
       return retryDueToUninitializedStorage(ctx, storageImpl, collectionIds, request);
     } else if (indicatesMissingCollection(re)) {
-      return retryDueToMissingCollection(ctx, storageImpl, collectionIds, request);
+      try {
+        return retryDueToMissingCollection(ctx, storageImpl, collectionIds, request);
+      } catch (MissingCollectionsException mce) {
+        logger.warn("Retrying due to missing collection failed", mce);
+        return mce.toErrorResult();
+      }
     } else {
       throw re;
     }
@@ -225,7 +231,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull Request request,
       final @NotNull RuntimeException re) {
     if (indicatesMissingCollection(re)) {
-      return retryDueToMissingCollection(ctx, storageImpl, collectionIds, request);
+      try {
+        return retryDueToMissingCollection(ctx, storageImpl, collectionIds, request);
+      } catch (MissingCollectionsException mce) {
+        logger.warn("Retrying due to missing collection failed", mce);
+        return mce.toErrorResult();
+      }
     } else {
       throw re;
     }
@@ -254,11 +265,20 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull IStorage storageImpl,
       final @NotNull List<String> collectionIds,
       final @NotNull Request request) {
-    logger.warn(
-        "Collection not found for {}, so we will attempt collection creation and then reattempt write request.",
-        collectionIds);
-    createXyzCollections(ctx, storageImpl, collectionIds);
-    return forwardRequestToStorage(ctx, request, storageImpl, collectionIds, ATTEMPT_AFTER_COLLECTION_CREATION);
+    logger.warn("Collection not found for {}", collectionIds);
+    if (properties.getAutoCreateCollection()) {
+      logger.warn(
+          "Collection auto creation is enabled, attempting to create collection specified in request: {}",
+          collectionIds);
+      createXyzCollections(ctx, storageImpl, collectionIds);
+      logger.warn("Created collection {}, forwarding the request once again", collectionIds);
+      return forwardRequestToStorage(ctx, request, storageImpl, collectionIds, ATTEMPT_AFTER_COLLECTION_CREATION);
+    } else {
+      logger.warn(
+          "Collection auto creation is disabled, failing due to missing collection specified in request: {}",
+          collectionIds);
+      throw new MissingCollectionsException(collectionIds);
+    }
   }
 
   private void createXyzCollections(
