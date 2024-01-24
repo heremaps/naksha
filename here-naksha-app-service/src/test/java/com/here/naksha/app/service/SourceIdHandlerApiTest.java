@@ -12,7 +12,6 @@ import java.util.UUID;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.*;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 public class SourceIdHandlerApiTest extends ApiTest {
