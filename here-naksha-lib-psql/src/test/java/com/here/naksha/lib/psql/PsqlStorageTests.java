@@ -568,7 +568,9 @@ public class PsqlStorageTests extends PsqlTests {
     assertNotNull(storage);
     assertNotNull(session);
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    request.delete(SINGLE_FEATURE_ID, null);
+    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
+    feature.setGeometry(new XyzPoint(5.0d, 6.0d, 2.0d));
+    request.add(EWriteOp.DELETE, feature);
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
         session.execute(request).getXyzFeatureCursor()) {
       assertTrue(cursor.next());
