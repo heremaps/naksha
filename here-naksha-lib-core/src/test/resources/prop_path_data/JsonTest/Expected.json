@@ -1,0 +1,42 @@
+{
+    "id": "000YofljPAC0bLYg",
+    "type": "Feature",
+    "properties": {
+        "status": "SUSPENDED",
+        "isoCountryCode": "VNM",
+        "@ns:com:here:utm": {
+            "priorityParams": {
+                "backup": {
+                    "dueBy": 2681207060668,
+                    "priority": 53
+                }
+            }
+        },
+        "options": [
+            {
+                "key": "INVALID",
+                "value": [
+                    {
+                        "lang": "en",
+                        "text": "Discard"
+                    }
+                ]
+            }
+        ],
+        "references": [
+            {
+                "ids": [
+                    "G72uGWl17uZJH0KU"
+                ],
+                "spaceId": "xY30cz1x"
+            }
+        ],
+        "@ns:com:here:xyz": {
+            "tags": [
+                "operation_add",
+                "source_openstreetmap"
+            ],
+            "uuid": "00000000-005d-4ddb-817a-210000000000"
+        }
+    }
+}
