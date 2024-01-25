@@ -520,6 +520,29 @@ public final class PsqlStorage implements IStorage, DataSource {
       }
       return true;
     }
+
+    /**
+     * Enable or disable plv8 module and script initialization. This will enable JBON usage and will change the way data are kept in tables.
+     * @param enable
+     * @return
+     */
+    public @NotNull Params pg_plv8(boolean enable) {
+      put("pg_plv8", enable);
+      return this;
+    }
+
+    /**
+     * Tests whether the {@code pg_plv8} is enabled or not, by default it's disabled.
+     *
+     * @return
+     */
+    public boolean pg_plv8() {
+      Object raw = get("pg_plv8");
+      if (raw instanceof Boolean) {
+        return (Boolean) raw;
+      }
+      return false;
+    }
   }
 
   @Override

@@ -200,12 +200,16 @@ abstract class PsqlTests {
     });
   }
 
+  protected Params getParams() {
+    return new Params().pg_hint_plan(false).pg_stat_statements(false);
+  }
+
   @Test
   @Order(13)
   @EnabledIf("runTest")
   void initStorage() {
     assertNotNull(storage);
-    storage.initStorage(new Params().pg_hint_plan(false).pg_stat_statements(false));
+    storage.initStorage(getParams());
   }
 
   @Test
