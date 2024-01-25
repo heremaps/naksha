@@ -56,7 +56,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -523,13 +522,11 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       try (final Json json = Json.get()) {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
-        Map<String, Integer> originalFeaturesOrder = new HashMap<>();
-        if (!writeRequest.minResults) {
-          features.forEach(codec -> codec.decodeParts(false));
-          originalFeaturesOrder = IndexHelper.createKeyIndexMap(features, CODEC::getId);
-          // sort to avoid deadlock
-          features.sort(comparing(FeatureCodec::getId));
-        }
+        features.forEach(codec -> codec.decodeParts(false));
+        final Map<String, Integer> originalFeaturesOrder =
+            IndexHelper.createKeyIndexMap(features, CODEC::getId);
+        // sort to avoid deadlock
+        features.sort(comparing(FeatureCodec::getId));
 
         final int SIZE = writeRequest.features.size();
         final String collection_id = writeFeatures.getCollectionId();
