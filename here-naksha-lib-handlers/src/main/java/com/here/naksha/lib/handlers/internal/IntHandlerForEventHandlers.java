@@ -23,6 +23,7 @@ import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
+import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
@@ -37,8 +38,8 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
   }
 
   @Override
-  protected @NotNull Result validateFeature(EventHandler eventHandler) {
-    Result basicValidation = super.validateFeature(eventHandler);
+  protected @NotNull Result validateFeature(EventHandler eventHandler, EWriteOp operation) {
+    Result basicValidation = super.validateFeature(eventHandler, operation);
     if (basicValidation instanceof ErrorResult) {
       return basicValidation;
     }

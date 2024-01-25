@@ -24,13 +24,7 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.naksha.NakshaFeature;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.ReadRequest;
-import com.here.naksha.lib.core.models.storage.Request;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
@@ -102,14 +96,15 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
    * @param feature feature to be validated before being written
    * @return validation result, success by default
    */
-  protected @NotNull Result validateFeature(FEATURE feature) {
-    return nakshaFeatureValidation(feature);
+  protected @NotNull Result validateFeature(FEATURE feature, EWriteOp operation) {
+    return nakshaFeatureValidation(feature, operation);
   }
 
   private @NotNull Result validateWriteRequest(final @NotNull WriteXyzFeatures wr) {
     for (final XyzFeatureCodec featureCodec : wr.features) {
+      final EWriteOp operation = EWriteOp.get(featureCodec.getOp());
       final FEATURE feature = featureClass.cast(featureCodec.getFeature());
-      Result featureValidation = validateFeature(feature);
+      Result featureValidation = validateFeature(feature, operation);
       if (featureValidation instanceof ErrorResult) {
         return featureValidation;
       }
