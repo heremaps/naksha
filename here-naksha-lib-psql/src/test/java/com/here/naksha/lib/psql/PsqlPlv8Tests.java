@@ -42,8 +42,8 @@ public class PsqlPlv8Tests extends PsqlTests {
     final SQL sql = pgSession.sql()
         .add("select ")
         .add("naksha_init_v8(), ")
-        .add("evalToText('new plv8[\"here-naksha-lib-plv8\"].com.here.naksha.lib.plv8.DummyHello().sayHello()'), ")
-        .add("evalToText('new plv8[\"here-naksha-lib-plv8\"].com.here.naksha.lib.plv8.DummyHello().add(100,2)')");
+        .add("evalToText('new plv8.__lib.DummyHello().sayHello()'), ")
+        .add("evalToText('new plv8.__lib.DummyHello().add(100,2)')");
     try (PreparedStatement stmt = pgSession.prepareStatement(sql)) {
       try (ResultSet resultSet = stmt.executeQuery()) {
         // then

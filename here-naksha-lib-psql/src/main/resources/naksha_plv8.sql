@@ -5,6 +5,7 @@ CREATE or replace FUNCTION naksha_init_v8() returns void AS $BODY$
     ${here-naksha-lib-plv8.js}
   }
   plv8.__init();
+  plv8.__lib = plv8["here-naksha-lib-plv8"].com.here.naksha.lib.plv8;
 $BODY$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE or replace FUNCTION evalToText(command text) returns text AS $BODY$
