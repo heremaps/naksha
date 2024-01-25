@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -425,6 +426,13 @@ final class PostgresStorage extends ClosableRootResource {
                     ? "0"
                     : Long.toString(latest.toLong(), 10));
             SQL = SQL.replaceAll("\\$\\{storage_id}", storageId);
+            if (params.pg_plv8()) {
+              SQL += ioHelp.readResource(ioHelp.findResource("/naksha_plv8.sql", PostgresStorage.class));
+              String nakshaLibPlv8Js = ioHelp.readResource(
+                  ioHelp.findResource("/here-naksha-lib-plv8.js", PostgresStorage.class));
+              SQL = SQL.replaceFirst(
+                  "\\$\\{here-naksha-lib-plv8\\.js}", Matcher.quoteReplacement(nakshaLibPlv8Js));
+            }
             //noinspection SqlSourceToSinkFlow
             stmt.execute(SQL);
             conn.commit();

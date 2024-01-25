@@ -20,6 +20,10 @@ kotlin {
         //binaries.library()
         binaries.executable()
     }
+
+    jvmJar.dependsOn(jsBrowserProductionWebpack)
+    jvmProcessResources.dependsOn(jsBrowserProductionWebpack)
+
     sourceSets {
         commonMain {
             dependencies {
@@ -30,6 +34,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
             }
+            resources.srcDirs += "$buildDir/dist/js/productionExecutable/"
         }
         jsMain {
             dependencies {
