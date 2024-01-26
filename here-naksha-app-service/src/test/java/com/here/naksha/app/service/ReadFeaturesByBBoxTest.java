@@ -806,7 +806,35 @@ class ReadFeaturesByBBoxTest extends ApiTest {
   }
 
   @Test
-  void tc0732_testBBox2WithPropSelectionInvalidDelimiter() throws Exception {
+  void tc0732_testBBox2WithPropSelectionMismatch() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Validate features returned match with given BBox and Search conditions (Array "contains")
+    // and property selection param not matching with any existing property
+
+    // Given: Features By BBox request (against configured space)
+    final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
+    final String propQueryParam = "p.references=cs=%s,%s".formatted(
+            urlEncoded("{\"id\":\"urn:here::here:Topology:1\"}"),
+            urlEncoded("{\"id\":\"urn:here::here:Topology:2\"}")
+    );
+    final String selectQueryParam = "selection=p.unknown_prop";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByBBox/TC0732_BBox2_PropSelectionMismatch/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam + "&" + selectQueryParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", true);
+  }
+
+  @Test
+  void tc0733_testBBox2WithPropSelectionInvalidDelimiter() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate graceful error is returned when property selection parameter has use of invalid delimiter
 
@@ -818,7 +846,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     );
     final String selectQueryParam = "selection=p.speedLimit+f.tags";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByBBox/TC0732_BBox2_PropSelectionInvalidDelimiter/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByBBox/TC0733_BBox2_PropSelectionInvalidDelimiter/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub

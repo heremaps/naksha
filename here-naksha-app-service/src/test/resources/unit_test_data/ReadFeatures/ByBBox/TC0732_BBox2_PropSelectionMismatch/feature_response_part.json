@@ -4,12 +4,7 @@
     {
       "id": "my-custom-id-700-6",
       "type": "Feature",
-      "properties": {
-        "@ns:com:here:xyz": {
-          "tags": [ "one", "two", "three", "four", "five", "six" ]
-        },
-        "speedLimit": "60"
-      },
+      "properties": {},
       "geometry": {
         "type": "Point",
         "coordinates":[ 8.6578, 50.1234, 0.0 ]
@@ -18,12 +13,7 @@
     {
       "id": "my-custom-id-700-7",
       "type": "Feature",
-      "properties": {
-        "@ns:com:here:xyz": {
-          "tags": [ "non-matching-tag", "@ThRee" ]
-        },
-        "speedLimit": "70"
-      },
+      "properties": {},
       "geometry": {
         "type": "Point",
         "coordinates":[ 8.6578, 50.1234, 0.0 ]
