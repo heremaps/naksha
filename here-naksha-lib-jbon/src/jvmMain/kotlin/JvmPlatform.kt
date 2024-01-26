@@ -1,3 +1,5 @@
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.here.naksha.lib.core.util.json.Json
 import com.here.naksha.lib.jbon.IDataView
 import com.here.naksha.lib.jbon.JbPlatform
 import sun.misc.Unsafe
@@ -13,6 +15,21 @@ object JvmPlatform : JbPlatform() {
         unsafe = unsafeConstructor.newInstance()
         val someByteArray = ByteArray(8)
         baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
+    }
+
+    override fun stringify(any: Any, pretty: Boolean): String {
+        Json.get().use {
+            if (pretty) {
+                return it.writer().withDefaultPrettyPrinter().writeValueAsString(any)
+            }
+            return it.writer().writeValueAsString(any)
+        }
+    }
+
+    override fun parse(json: String): Any {
+        Json.get().use {
+            return it.reader().forType(Object::class.java).readValue(json)
+        }
     }
 
     override fun longToBigInt(value: Long): Any {

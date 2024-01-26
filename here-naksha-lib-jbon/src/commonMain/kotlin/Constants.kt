@@ -26,10 +26,15 @@ const val TYPE_INT8 = 8
 const val TYPE_INT16 = 9
 const val TYPE_INT32 = 10
 const val TYPE_INT64 = 11
-const val TYPE_DICTIONARY = 16
-const val TYPE_FEATURE = 17
+const val TYPE_GLOBAL_DICTIONARY = 16
+const val TYPE_LOCAL_DICTIONARY = 17
+const val TYPE_FEATURE = 18
 // 18 - 31 = Reserved
 const val EOF = -1
+const val ADD_NOTHING = 0b00
+const val ADD_SPACE = 0b01
+const val ADD_UNDERSCORE = 0b10
+const val ADD_COLON = 0b11
 
 // Internally used to encode float4
 val TINY_FLOATS = floatArrayOf(-8f, -7f, -6f, -5f, -4f, -3f, -2f, -1f, 0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)

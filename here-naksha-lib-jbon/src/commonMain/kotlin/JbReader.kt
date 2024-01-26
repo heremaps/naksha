@@ -45,7 +45,7 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
         return pos >= 0 && pos < view.getSize()
     }
 
-    private fun eof() : Boolean {
+    private fun eof(): Boolean {
         return pos < 0 || pos >= view.getSize()
     }
 
@@ -57,7 +57,7 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
      * Skip to the next entity.
      * @return true if there is more; false otherwise.
      */
-    fun next() : Boolean {
+    fun next(): Boolean {
         if (eof()) return false
         pos += size()
         return !eof()
@@ -126,10 +126,18 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
             }
 
             TYPE_CONTAINER -> {
-                0
+                when (raw and 3) {
+                    0 -> { // Empty container
+                        1
+                    }
+                    1 -> view.getInt8(pos+1).toInt() and 0xff
+                    2 -> view.getInt16(pos+1).toInt() and 0xffff
+                    3 -> view.getInt32(pos+1)
+                    else -> throw IllegalStateException()
+                }
             }
 
-            TYPE_DICTIONARY -> {
+            TYPE_GLOBAL_DICTIONARY, TYPE_FEATURE -> {
                 val old = pos
                 pos++
                 val size = getInt32(0)
@@ -313,6 +321,21 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
         return type() == TYPE_STRING
     }
 
+    fun isText() : Boolean {
+        if (eof()) return false
+        val raw = view.getInt8(pos).toInt() and 0xff
+        var type = raw
+        if (type and 128 == 128) {
+            type = type and 0xf0
+        }
+        if (type == TYPE_STRING) return true
+        if (type == TYPE_CONTAINER) {
+            val value = raw and 0xf
+            return value and 0b1100 == 0b1100
+        }
+        return false
+    }
+
     private var stringReader: JbString? = null
 
     /**
@@ -322,14 +345,13 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
      */
     fun getString(reader: JbString? = null): JbString {
         if (reader != null) {
-            reader.map(this)
+            reader.mapReader(this)
             return reader
         }
         if (stringReader == null) {
-            stringReader = JbString(this)
-        } else {
-            stringReader!!.map(this)
+            stringReader = JbString()
         }
+        stringReader!!.mapReader(this)
         return stringReader!!
     }
 
@@ -373,6 +395,7 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
                     else -> throw IllegalStateException()
                 }
             }
+
             else -> -1
         }
     }

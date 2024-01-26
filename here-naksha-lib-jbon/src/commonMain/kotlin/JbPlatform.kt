@@ -35,12 +35,27 @@ abstract class JbPlatform {
     }
 
     /**
+     * Stringify the given object into a JSON string.
+     * @param any The object to serialize.
+     * @param pretty If the result should be pretty-printed.
+     * @return The JSON text.
+     */
+    abstract fun stringify(any: Any, pretty: Boolean = false): String
+
+    /**
+     * Parse the given JSON into an object.
+     * @param json The JSON string.
+     * @return The parsed object.
+     */
+    abstract fun parse(json: String): Any
+
+    /**
      * Converts an internal 64-bit integer into a platform specific.
      * @param value The internal 64-bit.
      * @return The platform specific 64-bit.
      */
     @Suppress("NON_EXPORTABLE_TYPE")
-    abstract fun longToBigInt(value : Long) : Any
+    abstract fun longToBigInt(value: Long): Any
 
     /**
      * Converts a platform specific 64-bit integer into an internal one to be used for example with the [IDataView].
@@ -48,7 +63,7 @@ abstract class JbPlatform {
      * @return The internal 64-bit integer.
      */
     @Suppress("NON_EXPORTABLE_TYPE")
-    abstract fun bigIntToLong(value : Any) : Long
+    abstract fun bigIntToLong(value: Any): Long
 
     /**
      * This is more for platform code, to create new byte-arrays the same way as Kotlin does it. For JAVA this means to create a

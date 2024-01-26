@@ -10,7 +10,13 @@ import kotlin.js.JsExport
  */
 @Suppress("DuplicatedCode")
 @JsExport
-class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
+class JbBuilder(val view: IDataView, val global: JbDict? = null) {
+    companion object {
+        val wordUnicode = BooleanArray(128) {
+            (it >= 'a'.code && it <= 'z'.code) || (it >= 'A'.code && it <= 'Z'.code)
+        }
+    }
+
     /**
      * When encoding a string that is not in the global dictionary, then we add it into this collection, so that it can
      * be encoded later into the local dictionary. The key is the string that has is needed, the value is the index that
@@ -23,7 +29,7 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
      */
     private var localStringById: ArrayList<String>? = null
 
-    private fun getLocalDictionary(): HashMap<String, Int> {
+    internal fun getLocalDictionary(): HashMap<String, Int> {
         if (localDictionary == null) {
             localDictionary = HashMap()
         }
@@ -260,7 +266,8 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     }
 
     /**
-     * Encodes the given string into this binary.
+     * Encodes the given string into this binary. This method does not take references into account, it really only
+     * encodes a string.
      * @param string The string to encode.
      * @return The offset of the value written.
      */
@@ -299,16 +306,54 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     }
 
     /**
-     * Encodes the given string as text, that means using the local dictionary and the global dictionary.
+     * Writes a string reference, normally only used inside a text.
+     * @param offset The offset at which write into the view.
+     * @param index The index to write.
+     * @param isGlobal If the index is into the global dictionary (true) or into the local (false).
+     * @param add If nothing, a space, an underscore or a colon should be added (must be 0 to 3).
+     * @return The end offset.
+     */
+    private fun writeStringRef(offset: Int, index: Int, isGlobal: Boolean, add: Int): Int {
+        require(add in 0..3)
+        require(index >= 0)
+        var pos = offset
+        var leadIn = 0b111_00_000 or (add shl 3)
+        if (isGlobal) {
+            leadIn = leadIn or 0b00000_100
+        }
+        when (index) {
+            in 0..255 -> {
+                view.setInt8(pos++, (leadIn or 1).toByte())
+                view.setInt8(pos++, index.toByte())
+            }
+
+            in 256..65535 -> {
+                view.setInt8(pos, (leadIn or 2).toByte())
+                view.setInt16(pos + 1, index.toShort())
+                pos += 3
+            }
+
+            else -> {
+                view.setInt8(pos, (leadIn or 3).toByte())
+                view.setInt32(pos + 1, index)
+                pos += 5
+            }
+        }
+        return pos
+    }
+
+    /**
+     * Encodes the given string as text, that means using the local and global dictionary, if the latter is available.
      * @param string The string to encode.
      * @return The offset of the value written.
      */
     fun writeText(string: String): Int {
-        // TODO: Add dictionary usage!
         val start = end
         // We reserve 5 byte for the header.
         var pos = end + 5
         var i = 0
+        var wordStart = -1
+        val stringReader: JbString = JbString()
         while (i < string.length) {
             val hi = string[i++]
             var unicode: Int
@@ -320,6 +365,56 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
                 unicode = hi.code
             }
             check(unicode in 0..2_097_151)
+            // Test if we found a code that is a word-code.
+            val isWordCode = unicode < 128 && wordUnicode[unicode]
+            if (isWordCode && wordStart < 0) {
+                // Start word detection.
+                wordStart = pos
+            }
+            if (wordStart >= 0 && (!isWordCode || i == string.length)) {
+                // We only compress words being 3 or more byte
+                var size = pos - wordStart
+                if (isWordCode && size >= 2) {
+                    // We only enter this when
+                    // - We are at the end of the string
+                    // - The current unicode (last character) is a valid word-code
+                    // - We have at least two more bytes in the current word.
+                    pos = writeUnicode(pos, unicode)
+                    // We know that the unicode is only one byte (is < 128)
+                    size++
+                }
+                if (size >= 3) {
+                    // Map without header.
+                    stringReader.mapRaw(view, wordStart, wordStart, pos)
+                    val subString = stringReader.toString()
+                    val isGlobal: Boolean
+                    var index = -1
+                    if (global != null) {
+                        index = global.indexOf(string)
+                    }
+                    if (index < 0) {
+                        index = writeToLocalDictionary(subString)
+                        isGlobal = false
+                    } else {
+                        isGlobal = true
+                    }
+                    check(index >= 0)
+                    val add = when (unicode) {
+                        ' '.code -> ADD_SPACE
+                        '_'.code -> ADD_UNDERSCORE
+                        ':'.code -> ADD_COLON
+                        else -> ADD_NOTHING
+                    }
+                    // Moved back to where the word started and encode the reference instead
+                    pos = writeStringRef(wordStart, index, isGlobal, add)
+                    wordStart = -1
+                    // If we're currently on a space or underscore, we do not need to encode it, it is embedded.
+                    // If we hit the end of the string, we have added the code already.
+                    if (add > 0 || i == string.length) continue
+                }
+                // Word ends now.
+                wordStart = -1
+            }
             pos = writeUnicode(pos, unicode)
         }
         // Calculate the size of the string.
@@ -428,7 +523,7 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     }
 
     /**
-     * Creates a dictionary out of this builder. Checks that nothing was yet written into the binary.
+     * Creates a global dictionary out of this builder. Checks that nothing was yet written into the binary.
      * @param id The unique identifier of the dictionary.
      * @return The dictionary.
      */
@@ -450,7 +545,7 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
         val targetArray = ByteArray(end + 1)
         val targetView = JbPlatform.get().newDataView(targetArray)
         var target = 0
-        targetView.setInt8(target++, TYPE_DICTIONARY.toByte())
+        targetView.setInt8(target++, TYPE_GLOBAL_DICTIONARY.toByte())
         // Copy size
         var source = size
         val end = this.end
@@ -465,4 +560,55 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
         return targetArray
     }
 
+    /**
+     * Creates a feature out of this builder and the current local dictionary.
+     * @param id The unique identifier of the feature, may be null.
+     * @return The feature.
+     */
+    fun buildFeature(id: String?): ByteArray {
+        check(end > 0)
+        // We need to add the lead-in, size and id in-front of what is now encoded.
+        // After this, the content that is now encoded should follow.
+        // Then the local dictionary, so let's write this now and then copy, so that we know the size.
+        val localStringById = this.localStringById
+        if (localStringById != null) {
+            for (string in localStringById) {
+                writeString(string)
+            }
+        }
+        // Now end is the size of the root object and dictionary.
+        val endOfContent = end
+        // Write the id, we copy that into the target soon.
+        if (id != null) {
+            writeString(id)
+        } else {
+            writeNull()
+        }
+        val endOfId = end
+        // Write the size of the feature.
+        writeInt32(endOfId)
+
+        // Now, end + 1 (lead-in) byte is what we need.
+        val targetArray = ByteArray(end + 1)
+        val targetView = JbPlatform.get().newDataView(targetArray)
+        var target = 0
+        targetView.setInt8(target++, TYPE_FEATURE.toByte())
+        // Copy size
+        var source = endOfId
+        val end = this.end
+        while (source < end) {
+            targetView.setInt8(target++, view.getInt8(source++))
+        }
+        // Copy the id
+        source = endOfContent
+        while (source < endOfId) {
+            targetView.setInt8(target++, view.getInt8(source++))
+        }
+        // Copy the object and local dictionary
+        source = 0
+        while (source < endOfContent) {
+            targetView.setInt8(target++, view.getInt8(source++))
+        }
+        return targetArray
+    }
 }

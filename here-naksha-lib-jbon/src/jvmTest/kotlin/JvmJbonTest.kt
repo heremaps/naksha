@@ -1,6 +1,7 @@
 import com.here.naksha.lib.jbon.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -311,7 +312,7 @@ class JvmJbonTest {
         assertEquals(2 + testString.length, reader.size())
 
         // Map the string
-        val jbString = JbString(reader)
+        val jbString = JbString().mapReader(reader)
         assertEquals(2 + testString.length, jbString.size())
         assertEquals(testString.length, jbString.length())
         // Ensure that all characters are the same as in the original
@@ -394,7 +395,7 @@ class JvmJbonTest {
         val dictArray = builder.buildDictionary(dictId)
         val dictView = JvmPlatform.newDataView(dictArray)
         val dictReader = JbReader(dictView)
-        assertEquals(TYPE_DICTIONARY,  dictReader.type())
+        assertEquals(TYPE_GLOBAL_DICTIONARY,  dictReader.type())
         // size
         dictReader.pos++
         assertTrue(dictReader.isInt())
@@ -403,19 +404,19 @@ class JvmJbonTest {
         // id
         assertTrue(dictReader.next())
         assertTrue(dictReader.isString())
-        val stringReader = JbString(dictReader)
+        val stringReader = JbString().mapReader(dictReader)
         assertEquals(dictId, stringReader.toString())
 
         // foo
         assertTrue(dictReader.next())
         assertTrue(dictReader.isString())
-        stringReader.map(dictReader)
+        stringReader.mapReader(dictReader)
         assertEquals("foo", stringReader.toString())
 
         // bar
         assertTrue(dictReader.next())
         assertTrue(dictReader.isString())
-        stringReader.map(dictReader)
+        stringReader.mapReader(dictReader)
         assertEquals("bar", stringReader.toString())
 
         // eof
@@ -431,5 +432,47 @@ class JvmJbonTest {
         assertEquals(1, dict.indexOf("bar"))
         assertEquals(-1, dict.indexOf(dictId))
         assertEquals(-1, dict.indexOf("notFound"))
+    }
+
+    @Test
+    fun testText() {
+        val view = JvmPlatform.newDataView(ByteArray(8192))
+        val builder = JbBuilder(view)
+        val reader = JbReader(view)
+
+        // We assume that this stores three words in the local dictionary:
+        // 0 = Hello
+        // 1 = World
+        // 2 = Again
+        builder.writeText("Hello World Hello Again")
+        assertTrue(reader.isText())
+        val localDictionary = builder.getLocalDictionary()
+        assertEquals(3, localDictionary.size)
+        assertEquals(0, localDictionary["Hello"])
+        assertEquals(1, localDictionary["World"])
+        assertEquals(2, localDictionary["Again"])
+        // We expect that the text is encoded with:
+        // Lead-in (1 byte), then two byte per word (2 * 4 = 8)
+        assertEquals(9, builder.end)
+    }
+
+    @Test
+    fun testFeature() {
+        // Read the topology, then parse and serialize to remove white spaces.
+        var topologyBytes = JvmJbonTest::class.java.getResource("/topology.json")!!.readBytes()
+        assertEquals(29659, topologyBytes.size)
+        var topology = String(topologyBytes, StandardCharsets.UTF_8)
+        topology = JvmPlatform.stringify(JvmPlatform.parse(topology))
+        topologyBytes = topology.toByteArray(StandardCharsets.UTF_8)
+        // After this only 16kb should be left
+        assertEquals(16073, topologyBytes.size)
+        // Convert this as string into a binary.
+        val view = JvmPlatform.newDataView(ByteArray(65535))
+        val builder = JbBuilder(view)
+        builder.writeText(topology)
+        val featureArray = builder.buildFeature(null)
+        val reader = JbReader(JvmPlatform.newDataView(featureArray))
+        assertEquals(TYPE_FEATURE, reader.type())
+        assertEquals(11771, reader.size())
     }
 }

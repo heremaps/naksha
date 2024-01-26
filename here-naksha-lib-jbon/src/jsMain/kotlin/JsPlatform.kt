@@ -27,6 +27,15 @@ DataView.prototype.getSize = function() {
 """);
     }
 
+    override fun stringify(any: Any, pretty: Boolean): String {
+        return js("JSON.stringify(any, pretty)") as String
+    }
+
+    override fun parse(json: String): Any {
+        return js("JSON.parse(json)") as Any
+    }
+
+    @Suppress("NON_EXPORTABLE_TYPE")
     override fun longToBigInt(value: Long): Any {
         // Read the four words unsigned
         val hi = (value shr 32).toInt()
@@ -35,7 +44,9 @@ DataView.prototype.getSize = function() {
         return js("new BitInt(hi)<<32 | new BigInt(mid)<<16 | new BigInt(lo)") as Any;
     }
 
+    @Suppress("NON_EXPORTABLE_TYPE")
     override fun bigIntToLong(value: Any): Long {
+        // TODO: Fix me
         var hi : Int = 0
         var mid : Int = 0
         var lo : Int = 0
@@ -44,6 +55,6 @@ DataView.prototype.getSize = function() {
     }
 
     override fun newDataView(bytes: ByteArray, offset: Int, size: Int): IDataView {
-        return js("new DataView(bytes.buffer, offset, size)");
+        return js("new DataView(bytes.buffer, offset, size)") as IDataView;
     }
 }

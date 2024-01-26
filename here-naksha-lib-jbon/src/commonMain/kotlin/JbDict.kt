@@ -6,7 +6,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * Offers a dictionary wrapper.
+ * Uses the given view as dictionary wrapper.
  */
 @JsExport
 class JbDict(val view: IDataView) {
@@ -20,19 +20,26 @@ class JbDict(val view: IDataView) {
 
     // Reuse our own reader.
     init {
-        require(TYPE_DICTIONARY == reader.type())
-        reader.pos++
-        // Ignore the size of the dictionary, not important for us.
-        check(reader.isInt())
-        check(reader.next())
-        // Read the id
-        check(reader.isString())
-        val stringReader = JbString(reader)
-        id = stringReader.toString()
+        val stringReader = JbString()
+        if (TYPE_GLOBAL_DICTIONARY == reader.type()) {
+            reader.pos++
+            // Ignore the size of the dictionary, not important for us.
+            check(reader.isInt())
+            check(reader.next())
+            // Read the id
+            check(reader.isString())
+            stringReader.mapReader(reader)
+            id = stringReader.toString()
+        } else if (TYPE_LOCAL_DICTIONARY == reader.type()) {
+            reader.pos++
+            id = ""
+        } else {
+            throw IllegalStateException("Invalid type, no dictionary")
+        }
         // Read content
         while (reader.next()) {
             check(reader.isString())
-            stringReader.map(reader)
+            stringReader.mapReader(reader)
             content.add(stringReader.toString())
         }
     }

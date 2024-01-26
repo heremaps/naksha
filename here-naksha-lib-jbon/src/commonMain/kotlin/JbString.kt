@@ -5,22 +5,42 @@ package com.here.naksha.lib.jbon
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
+/**
+ * A helper class to read strings.
+ */
 @JsExport
-class JbString(val jbon: JbReader) {
+class JbString() {
     internal var string: String? = null
-    internal var view: IDataView = jbon.view
+    internal var view: IDataView? = null
     internal var start: Int = 0
-    internal var encodingStart: Int = 0
-    internal var encodingEnd: Int = 0
+    private var encodingStart: Int = 0
+    private var encodingEnd: Int = 0
     internal var pos: Int = 0
 
-    init {
-        map(jbon)
+    /**
+     * Map a specific region of a view as string. If the start and content-state are equal, the only effect will be that
+     * the wrong size is reported, decoding will still work fine.
+     *
+     * @param view The view to map.
+     * @param leadInOffset The offset where the string starts (header).
+     * @param contentOffset The offset where the string encoding starts (behind the header).
+     * @param end The end of the string (the offset of the first byte that does not belong to the string).
+     * @return this
+     */
+    fun mapRaw(view : IDataView, leadInOffset : Int, contentOffset: Int, end : Int) : JbString {
+        require(leadInOffset in 0..contentOffset && contentOffset <= end && end <= view.getSize())
+        this.view = view
+        start = leadInOffset
+        encodingStart = contentOffset
+        encodingEnd = end
+        pos = encodingStart
+        string = null
+        return this
     }
 
-    fun map(jbon: JbReader): JbString {
+    fun mapReader(jbon: JbReader): JbString {
         require(jbon.isString())
-        view = jbon.view
+        val view = jbon.view
         start = jbon.pos
         when (val raw = view.getInt8(start).toInt() and 0xf) {
             in 0..12 -> {
@@ -45,6 +65,7 @@ class JbString(val jbon: JbReader) {
 
             else -> throw IllegalStateException()
         }
+        this.view = view
         pos = encodingStart
         string = null
         return this
@@ -70,6 +91,8 @@ class JbString(val jbon: JbReader) {
     }
 
     fun next(doNotMoveForward: Boolean = false): Int {
+        check(this.view != null)
+        val view = this.view!!
         if (pos >= encodingEnd) return -1
         var unicode = view.getInt8(pos).toInt() and 0xff
         if (unicode < 128) {
