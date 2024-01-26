@@ -5,8 +5,11 @@ package com.here.naksha.lib.jbon;
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
+/**
+ * Creates a new JBON builder using the given view and optional dictionary.
+ */
 @JsExport
-class JbonBuilder(val view: IDataView, val dictionary: JbonDict? = null) {
+class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     private var localStrings: HashMap<String, Int>? = null
 
     /**
@@ -14,25 +17,42 @@ class JbonBuilder(val view: IDataView, val dictionary: JbonDict? = null) {
      */
     var end: Int = 0
 
-    fun clear(): Int {
+    /**
+     * Reset the builder to the start and return the end position that was overridden.
+     * @return The overridden end position.
+     */
+    fun reset(): Int {
         val old = end
         end = 0
         localStrings?.clear()
         return old
     }
 
+    /**
+     * Write a NULL value.
+     * @return The offset of the value written.
+     */
     fun writeNull(): Int {
         val pos = end;
         view.setInt8(end++, TYPE_NULL.toByte())
         return pos;
     }
 
+    /**
+     * Write an undefined value.
+     * @return The offset of the value written.
+     */
     fun writeUndefined(): Int {
         val pos = end;
         view.setInt8(end++, TYPE_UNDEFINED.toByte())
         return pos;
     }
 
+    /**
+     * Write an boolean value.
+     * @param value The boolean to write.
+     * @return The offset of the value written.
+     */
     fun writeBool(value: Boolean): Int {
         val pos = end;
         if (value) {
@@ -43,29 +63,71 @@ class JbonBuilder(val view: IDataView, val dictionary: JbonDict? = null) {
         return pos;
     }
 
-    fun writeInt(value: Int): Int {
-        val pos = end;
-        if (value >= -8 && value <= 7) {
-            // encode int4
-            view.setInt8(pos, (TYPE_INT4 or (value + 8)).toByte())
-            end += 1
-        } else if (value >= -128 && value <= 127) {
-            view.setInt8(pos, TYPE_INT8.toByte())
-            view.setInt8(pos + 1, value.toByte())
-            end += 2
-        } else if (value >= -32768 && value <= 32767) {
-            view.setInt8(pos, TYPE_INT16.toByte())
-            view.setInt16(pos + 1, value.toShort())
-            end += 3
-        } else {
-            view.setInt8(pos, TYPE_INT32.toByte())
-            view.setInt32(pos + 1, value)
-            end += 5
+    /**
+     * Write an 32-bit integer.
+     * @param value The integer to write.
+     * @return The offset of the value written.
+     */
+    fun writeInt32(value: Int): Int {
+        val offset = end;
+        when (value) {
+            in 0..15 -> {
+                // encode uint4
+                view.setInt8(offset, (TYPE_UINT4 or value).toByte())
+                end += 1
+            }
+
+            in -16..-1 -> {
+                // encode sint4
+                view.setInt8(offset, (TYPE_SINT4 or (value + 16)).toByte())
+                end += 1
+            }
+
+            in -128..127 -> {
+                view.setInt8(offset, TYPE_INT8.toByte())
+                view.setInt8(offset + 1, value.toByte())
+                end += 2
+            }
+
+            in -32768..32767 -> {
+                view.setInt8(offset, TYPE_INT16.toByte())
+                view.setInt16(offset + 1, value.toShort())
+                end += 3
+            }
+
+            else -> {
+                view.setInt8(offset, TYPE_INT32.toByte())
+                view.setInt32(offset + 1, value)
+                end += 5
+            }
         }
-        return pos
+        return offset
     }
 
-    fun writeFloat(value: Float): Int {
+    /**
+     * Write an 64-bit integer.
+     * @param value The integer to write.
+     * @return The offset of the value written.
+     */
+    @Suppress("NON_EXPORTABLE_TYPE")
+    fun writeInt64(value: Long): Int {
+        if (value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) {
+            return writeInt32(value.toInt())
+        }
+        val offset = end;
+        view.setInt8(offset, TYPE_INT64.toByte())
+        view.setInt32(offset+1, (value ushr 32).toInt())
+        view.setInt32(offset+5, value.toInt())
+        end += 9
+        return offset
+    }
+
+    /**
+     * Write a 32-bit floating point number.
+     * @param value The value to write.
+     * @return The offset of the value written.
+     */
+    fun writeFloat32(value: Float): Int {
         val pos = end
         for (i in 0..15) {
             val tiny = TINY_FLOATS[i]
@@ -80,7 +142,12 @@ class JbonBuilder(val view: IDataView, val dictionary: JbonDict? = null) {
         return pos
     }
 
-    fun writeDouble(value: Double): Int {
+    /**
+     * Write a 64-bit floating point number.
+     * @param value The value to write.
+     * @return The offset of the value written.
+     */
+    fun writeFloat64(value: Double): Int {
         val pos = end
         for (i in 0..15) {
             val tiny = TINY_DOUBLES[i]
@@ -96,71 +163,45 @@ class JbonBuilder(val view: IDataView, val dictionary: JbonDict? = null) {
     }
 
     /**
-     * Writes an 8-bit encoded size.
-     * @param value The size to write, between 0 and 11 (inclusive).
-     * @return The index where the value was written.
+     * Write a reference. Note that a negative value represents null.
+     * @param index The index into the dictionary.
+     * @param global If the reference is into global-dictionary (true) or local (false).
+     * @return The offset of the value written.
      */
-    fun writeSize32_8(value: Int): Int {
-        require(value in 0..11)
-        val pos = end
-        view.setInt8(end++, (TYPE_SIZE32 or value).toByte())
-        return pos
-    }
-
-    /**
-     * Writes a 16-bit encoded size.
-     * @param value The value to write, between 12 and 267 (inclusive)
-     * @return The index where the value was written.
-     */
-    fun writeSize32_16(value: Int): Int {
-        require(value in 0..255)
-        val pos = end
-        view.setInt8(end++, (TYPE_SIZE32 or 12).toByte())
-        view.setInt8(end++, (value and 0xff).toByte())
-        return pos
-    }
-
-    /**
-     * Writes a 24-bit encoded size.
-     * @param value The value to write, between 0 and 65535 (inclusive)
-     * @return The index where the value was written.
-     */
-    fun writeSize32_24(value: Int): Int {
-        require(value in 0..65535)
-        val pos = end
-        view.setInt8(end, (TYPE_SIZE32 or 13).toByte())
-        view.setInt16(end + 1, (value and 0xffff).toShort())
-        end += 3
-        return pos
-    }
-
-    /**
-     * Writes a 40-bit encoded size.
-     * @param value The value to write, between 0 and [Int.MAX_VALUE] (inclusive)
-     * @return The index where the value was written.
-     */
-    fun writeSize32_40(value: Int): Int {
-        require(value >= 0)
-        val pos = end
-        view.setInt8(end, (TYPE_SIZE32 or 15).toByte())
-        view.setInt32(end + 1, value)
-        end += 5
-        return pos
-    }
-
-    /**
-     * Writes a compacted size. This method does use the smallest possible encoding.
-     * @param value The size to write, must be a value between 0 and [Int.MAX_VALUE].
-     * @return The index where the value was written.
-     */
-    fun writeSize32(value: Int): Int {
-        require(value >= 0)
-        return when (value) {
-            in 0..11 -> writeSize32_8(value)
-            in 12..255 -> writeSize32_16(value)
-            in 256..65535 -> writeSize32_24(value)
-            else -> writeSize32_40(value)
+    fun writeRef(index: Int, global: Boolean): Int {
+        val offset = end
+        val indexBit = if (global) 0b0000_0100 else 0
+        if (index < 0) {
+            // null
+            view.setInt8(end++, (TYPE_REFERENCE or indexBit).toByte())
+            return offset
         }
+        if (index < 16) {
+            // tiny reference
+            view.setInt8(end++, ((if (global) TYPE_TINY_GLOBAL_REF else TYPE_TINY_LOCAL_REF) or index).toByte())
+            return offset
+        }
+        when (val value = index - 16) {
+            in 0..255 -> {
+                view.setInt8(end++, (TYPE_REFERENCE or indexBit or 1).toByte())
+                view.setInt8(end++, value.toByte())
+            }
+
+            in 256..65535 -> {
+                view.setInt8(end, (TYPE_REFERENCE or indexBit or 2).toByte())
+                view.setInt16(end + 1, value.toShort())
+                end += 3
+            }
+
+            in 65536..2147483647 -> {
+                view.setInt8(end, (TYPE_REFERENCE or indexBit or 3).toByte())
+                view.setInt32(end + 1, value)
+                end += 5
+            }
+
+            else -> throw IllegalStateException()
+        }
+        return offset
     }
 
     /**
@@ -176,8 +217,8 @@ class JbonBuilder(val view: IDataView, val dictionary: JbonDict? = null) {
         var pos = end + 5
         var i = 0
         // We use a mark to match substrings for compression
-        var mark = pos
-        var markIndex = i
+        //var mark = pos
+        //var markIndex = i
         while (i < string.length) {
             var unicode: Int
             val hi = string[i++]
@@ -190,10 +231,10 @@ class JbonBuilder(val view: IDataView, val dictionary: JbonDict? = null) {
             }
             check(unicode in 0..2_097_151)
             // When we hit a space, compression kicks in
-            if (unicode == ' '.code) {
+            //if (unicode == ' '.code) {
                 // TODO: Implement local dictionary lookup
                 // TODO: Implement global dictionary lookup
-            }
+            //}
             when (unicode) {
                 in 0..127 -> view.setInt8(pos++, unicode.toByte())
                 in 128..16511 -> { // 0 -> 2^14-1 biased by 128
@@ -224,28 +265,26 @@ class JbonBuilder(val view: IDataView, val dictionary: JbonDict? = null) {
         var source = start + 5
         var target = start
         when (size) {
-            in 0..10 -> {
+            in 0..12 -> {
                 view.setInt8(target++, (TYPE_STRING or size).toByte())
                 check(target + 4 == source)
             }
 
-            in 11..255 -> {
-                view.setInt8(target++, (TYPE_STRING or 11).toByte())
+            in 13..255 -> {
+                view.setInt8(target++, (TYPE_STRING or 13).toByte())
                 view.setInt8(target++, size.toByte())
                 check(target + 3 == source)
             }
 
             in 256..65535 -> {
-                view.setInt8(target++, (TYPE_STRING or 12).toByte())
+                view.setInt8(target++, (TYPE_STRING or 14).toByte())
                 view.setInt16(target, size.toShort())
                 target += 2
                 check(target + 2 == source)
             }
 
-            // TODO: Implement 13, which encodes size as 24-bit value, so 32-bit total
-
             else -> {
-                view.setInt8(target++, (TYPE_STRING or 14).toByte())
+                view.setInt8(target++, (TYPE_STRING or 15).toByte())
                 view.setInt32(target, size)
                 target += 5
                 check(target == source)
@@ -262,18 +301,17 @@ class JbonBuilder(val view: IDataView, val dictionary: JbonDict? = null) {
     }
 
     /**
-     * Starts a document, can only be called for a blank builder, so when [end] is null.
+     * Starts a document, can only be called for a blank builder, so when [end] is zero.
      */
-    fun startDocument() {
-        // TODO: Finish this
+    fun startDocument(): Int {
         check(end == 0)
         // Lead-In
-        // size of document in bytes
-        // reference to root
         view.setInt8(end++, TYPE_DOCUMENT.toByte())
-        // We write the maximal value and then, when closing the document, fix the value
-        // This may waste a few bytes, if the document is smaller than expected.
-        writeSize32(view.getSize() - 1)
+        // We reserve 5 byte for document size and 5 byte for the reference.
+        // If less is needed, we compact later, but we do not compact when this document big.
+        end += 10
+
+        return 0
     }
 
 }

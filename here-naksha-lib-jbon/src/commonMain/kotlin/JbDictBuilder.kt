@@ -6,5 +6,8 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
-class JbonDict(val view : IDataView) {
+class JbDictBuilder(var view : IDataView) {
+
+    // fun add(jbon: Jbon) : Int
+    // fun build() : JbonDict
 }

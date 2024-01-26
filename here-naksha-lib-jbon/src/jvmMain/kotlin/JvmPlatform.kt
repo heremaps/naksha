@@ -1,12 +1,13 @@
 import com.here.naksha.lib.jbon.IDataView
-import com.here.naksha.lib.jbon.IPlatform
+import com.here.naksha.lib.jbon.JbPlatform
 import sun.misc.Unsafe
 
-object JvmPlatform : IPlatform {
+object JvmPlatform : JbPlatform() {
     val unsafe: Unsafe
     val baseOffset: Int
 
     init {
+        instance = this
         val unsafeConstructor = Unsafe::class.java.getDeclaredConstructor()
         unsafeConstructor.isAccessible = true
         unsafe = unsafeConstructor.newInstance()
@@ -14,7 +15,16 @@ object JvmPlatform : IPlatform {
         baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
     }
 
-    override fun dataViewOf(bytes: ByteArray, offset: Int, size: Int): IDataView {
+    override fun longToBigInt(value: Long): Any {
+        return value
+    }
+
+    override fun bigIntToLong(value: Any): Long {
+        require(value is Long)
+        return value
+    }
+
+    override fun newDataView(bytes: ByteArray, offset: Int, size: Int): IDataView {
         if (offset < 0) throw Exception("offset must be greater or equal zero")
         var end = offset + size
         if (end < offset) { // means, size is less than zero!

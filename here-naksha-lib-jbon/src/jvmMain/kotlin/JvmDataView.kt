@@ -1,9 +1,9 @@
 import com.here.naksha.lib.jbon.IDataView
-import com.here.naksha.lib.jbon.IPlatform
+import com.here.naksha.lib.jbon.JbPlatform
 import java.nio.ByteOrder
 
 class JvmDataView(val buffer: ByteArray, val startOffset: Int, val endOffset: Int) : IDataView {
-    override fun getPlatform(): IPlatform {
+    override fun getPlatform(): JbPlatform {
         return JvmPlatform
     }
 

@@ -6,7 +6,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
-class JbonString(val jbon: Jbon) {
+class JbString(val jbon: JbReader) {
     internal var string: String? = null
     internal var view: IDataView = jbon.view
     internal var start: Int = 0
@@ -18,29 +18,27 @@ class JbonString(val jbon: Jbon) {
         map(jbon)
     }
 
-    fun map(jbon: Jbon): JbonString {
+    fun map(jbon: JbReader): JbString {
         require(jbon.isString())
         view = jbon.view
         start = jbon.pos
         when (val raw = view.getInt8(start).toInt() and 0xf) {
-            in 0..10 -> {
+            in 0..12 -> {
                 encodingStart = start + 1
                 encodingEnd = encodingStart + raw
             }
 
-            11 -> {
+            13 -> {
                 encodingStart = start + 2
                 encodingEnd = encodingStart + view.getInt8(start + 1).toInt() and 0xff
             }
 
-            12 -> {
+            14 -> {
                 encodingStart = start + 3
                 encodingEnd = encodingStart + view.getInt16(start + 1).toInt() and 0xffff
             }
 
-            // TODO: 13 -> Add support for 24-bit size encoding
-
-            14 -> {
+            15 -> {
                 encodingStart = start + 5
                 encodingEnd = encodingStart + view.getInt32(start + 1)
             }
@@ -66,7 +64,7 @@ class JbonString(val jbon: Jbon) {
         return encodingEnd - start
     }
 
-    fun reset(): JbonString {
+    fun reset(): JbString {
         pos = encodingStart
         return this
     }
