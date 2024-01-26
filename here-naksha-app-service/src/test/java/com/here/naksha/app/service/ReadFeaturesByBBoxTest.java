@@ -777,6 +777,33 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
+  @Test
+  void tc0731_testBBox2WithSearchOnArrayContainsAndPropSelection() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Validate features returned match with given BBox and Search conditions (Array "contains")
+    // and property selection params
+
+    // Given: Features By BBox request (against configured space)
+    final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
+    final String propQueryParam = "p.references=cs=%s,%s".formatted(
+            urlEncoded("{\"id\":\"urn:here::here:Topology:1\"}"),
+            urlEncoded("{\"id\":\"urn:here::here:Topology:2\"}")
+    );
+    final String selectQueryParam = "selection=p.speedLimit,f.tags";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByBBox/TC0731_BBox2_PropArrayContainsAndPropSelection/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam + "&" + selectQueryParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", true);
+  }
 
 
 

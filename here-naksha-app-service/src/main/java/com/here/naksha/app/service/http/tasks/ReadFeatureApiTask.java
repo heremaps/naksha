@@ -177,7 +177,13 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, limit);
+    return transformReadResultToXyzCollectionResponse(
+        result,
+        XyzFeature.class,
+        0,
+        limit,
+        null,
+        (propPaths == null) ? null : f -> propSelectionPostProcessing(f, propPaths));
   }
 
   private @NotNull XyzResponse executeFeaturesByTile() {
