@@ -306,4 +306,20 @@ class StorageApiTest extends ApiTest {
             .hasStatus(200)
             .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
+
+  @Test
+  void tc0082_testDeleteNonExistingStorage() throws Exception {
+    // Test API : DELETE /hub/storages/{storageId}
+    // Given:
+    final String streamId = UUID.randomUUID().toString();
+
+    // When:
+    final HttpResponse<String> response =
+            getNakshaClient().delete("hub/storages/unreal-storage-cannot-delete", streamId);
+
+    // Then:
+    assertThat(response)
+            .hasStatus(404)
+            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+  }
 }

@@ -142,7 +142,7 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformWriteResultToXyzFeatureResponse(
+      return transformDeleteResultToXyzFeatureResponse(
           wrResult, Storage.class, f -> removePasswordFromProps(f.getProperties()));
     }
   }
