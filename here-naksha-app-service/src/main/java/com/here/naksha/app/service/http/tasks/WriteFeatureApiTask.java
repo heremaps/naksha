@@ -404,6 +404,12 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     return patchedFeatureList;
   }
 
+  private XyzResponse returnError(
+      XyzError xyzError, String httpResponseMsg, String internalLogMsg, Object... logArgs) {
+    logger.error(internalLogMsg, logArgs);
+    return verticle.sendErrorResponse(routingContext, xyzError, httpResponseMsg);
+  }
+
   private @NotNull FeatureCollectionRequest featuresFromRequestBody() throws JsonProcessingException {
     try (final Json json = Json.get()) {
       final String bodyJson = routingContext.body().asString();
