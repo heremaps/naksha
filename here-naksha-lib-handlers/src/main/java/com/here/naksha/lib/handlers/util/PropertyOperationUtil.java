@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.handlers.util;
 
-import com.here.naksha.lib.core.models.storage.OpType;
 import com.here.naksha.lib.core.models.storage.POp;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class PropertyOperationUtil {
 
-  public static void replacePropertyInPropertyOperationTree(
+  public static void transformPropertyInPropertyOperationTree(
       POp rootPropertyOperation, Function<POp, Optional<POp>> transformingFunction) {
     replacePropertyInPropertyOperationTree(
         rootPropertyOperation, Collections.emptyList(), -1, transformingFunction);
@@ -42,8 +41,7 @@ public class PropertyOperationUtil {
 
     if (propertyOperation.getPropertyRef() == null
         && propertyOperation.children() != null
-        && !propertyOperation.children().isEmpty()
-        && !OpType.NOT.equals(propertyOperation.op())) {
+        && !propertyOperation.children().isEmpty()) {
 
       List<@NotNull POp> children = propertyOperation.children();
 

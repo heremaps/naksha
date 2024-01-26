@@ -1,8 +1,8 @@
 package com.here.naksha.lib.handlers;
 
-import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.POpType;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -16,11 +16,11 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2002_testMapEqToContainsTag() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef("properties", NS_COM_HERE_MOM_META, "sourceId");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
         POp given = POp.eq(pRef, "task_1");
         //when
 
-        Optional<POp> result = SourceIdHandler.transformPopWithSourceId(given);
+        Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
         //then
 
         assertTrue(result.isPresent());
@@ -31,17 +31,16 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2003_testMapNotEqToNotContainsTag() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef("properties", NS_COM_HERE_MOM_META, "sourceId");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
         POp given = POp.not(POp.eq(pRef, "task_1"));
         //when
 
-        Optional<POp> result = SourceIdHandler.transformPopWithSourceId(given);
+        PropertyOperationUtil.transformPropertyInPropertyOperationTree(given, SourceIdHandler::mapIntoTagOperation);
         //then
 
-        assertTrue(result.isPresent());
-        assertFalse(result.get().children().isEmpty());
-        POp nestedPop = result.get().children().get(0);
+        assertFalse(given.children().isEmpty());
 
+        POp nestedPop = given.children().get(0);
         assertEquals(nestedPop.getPropertyRef().getTagName(), "xyz_source_id_task_1");
         assertEquals(nestedPop.op(), POpType.EXISTS);
     }
@@ -49,11 +48,11 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2004_testMapContainsToContainsTag() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef("properties", NS_COM_HERE_MOM_META, "sourceId");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
         POp given = POp.contains(pRef, "task_1");
         //when
 
-        Optional<POp> result = SourceIdHandler.transformPopWithSourceId(given);
+        Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
         //then
 
         assertTrue(result.isPresent());
@@ -62,15 +61,53 @@ class SourceIdHandlerUnitTest {
     }
 
     @Test
-    void tc2004_testMapOnlyCorrectPref() {
+    void tc2005_testMapOnlyCorrectPref() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef("properties", NS_COM_HERE_MOM_META, "WrongPRef");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "WrongPRef");
         POp given = POp.eq(pRef, "task_1");
         //when
 
-        Optional<POp> result = SourceIdHandler.transformPopWithSourceId(given);
+        Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
         //then
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void tc2006_testMapsCorrectlyCombinedOperation () {
+        //given
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
+        POp given = POp.and(POp.not(POp.eq(pRef, "task_1")), POp.contains(PRef.tag("funnyTag"), "4"));
+        //when
+
+        PropertyOperationUtil.transformPropertyInPropertyOperationTree(given, SourceIdHandler::mapIntoTagOperation);
+        //then
+
+
+        assertEquals(given.op(), OpType.AND);
+        assertFalse(given.children().isEmpty());
+        assertEquals(given.children().size(), 2);
+        assertEquals(given.children().get(0).op(), OpType.NOT);
+
+        POp nestedPop = given.children().get(0).children().get(0);
+        assertEquals(nestedPop.getPropertyRef().getTagName(), "xyz_source_id_task_1");
+        assertEquals(nestedPop.op(), POpType.EXISTS);
+
+        assertEquals(given.children().get(1).op(), POpType.CONTAINS);
+
+    }
+    @Test
+    void tc2007_testMapEqToContainsTagWithoutNormalization() {
+        //given
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
+        POp given = POp.eq(pRef, "tAskK_1");
+        //when
+
+        Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
+        //then
+
+        assertTrue(result.isPresent());
+        assertEquals(result.get().getPropertyRef().getTagName(), "xyz_source_id_tAskK_1");
+        assertEquals(result.get().op(), POpType.EXISTS);
     }
 }

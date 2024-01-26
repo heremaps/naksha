@@ -40,9 +40,9 @@ public class SourceIdHandler extends AbstractEventHandler {
   private static final String NS_COM_HERE_MOM_META = "@ns:com:here:mom:meta";
   private static final String SOURCE_ID = "sourceId";
 
-  protected @NotNull EventHandler eventHandler;
-  protected @NotNull EventTarget<?> eventTarget;
-  protected @NotNull EventHandlerProperties properties;
+  private @NotNull EventHandler eventHandler;
+  private @NotNull EventTarget<?> eventTarget;
+  private @NotNull EventHandlerProperties properties;
 
   public SourceIdHandler(
       final @NotNull EventHandler eventHandler,
@@ -60,9 +60,12 @@ public class SourceIdHandler extends AbstractEventHandler {
     final Request<?> request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
     if (request instanceof ReadFeatures readRequest) {
-      Optional.ofNullable(readRequest.getPropertyOp())
-          .ifPresent(t -> PropertyOperationUtil.replacePropertyInPropertyOperationTree(
-              t, SourceIdHandler::transformPopWithSourceId));
+
+      if (readRequest.getPropertyOp() != null) {
+        PropertyOperationUtil.transformPropertyInPropertyOperationTree(
+            readRequest.getPropertyOp(), SourceIdHandler::mapIntoTagOperation);
+      }
+
     } else if (request instanceof WriteXyzFeatures writeRequest) {
       writeRequest.features.stream()
           .map(XyzFeatureCodec::getFeature)
@@ -94,24 +97,12 @@ public class SourceIdHandler extends AbstractEventHandler {
     }
   }
 
-  public static Optional<POp> transformPopWithSourceId(POp sourcePop) {
-    if (OpType.NOT.equals(sourcePop.op())
-        && sourcePop.children() != null
-        && !sourcePop.children().isEmpty()) {
-
-      POp nestedPropertyOperation = sourcePop.children().get(0);
-      return mapIntoTagOperation(nestedPropertyOperation).map(POp::not);
-    }
-
-    return mapIntoTagOperation(sourcePop);
-  }
-
   private static boolean propertyReferenceEqualsSourceId(PRef pRef) {
     List<@NotNull String> path = pRef.getPath();
-    return path.size() == 3 && path.containsAll(List.of("properties", NS_COM_HERE_MOM_META, SOURCE_ID));
+    return path.size() == 3 && path.containsAll(List.of(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, SOURCE_ID));
   }
 
-  private static Optional<POp> mapIntoTagOperation(POp propertyOperation) {
+  public static Optional<POp> mapIntoTagOperation(POp propertyOperation) {
 
     if (propertyReferenceEqualsSourceId(propertyOperation.getPropertyRef())
         && propertyOperation.getValue() != null
