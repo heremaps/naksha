@@ -29,8 +29,9 @@ import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.util.ValueList;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,11 +42,13 @@ public class PropertySelectionUtil {
   private static final String SHORT_XYZ_PROP_PREFIX = "f.";
   private static final String FULL_XYZ_PROP_PREFIX = FULL_PROP_PREFIX + XyzProperties.XYZ_NAMESPACE + ".";
   private static final String XYZ_PROP_ID = "f.id";
+  private static final String PROP_ID = "id";
+  private static final String PROP_FEATURE_TYPE = "type";
 
   private PropertySelectionUtil() {}
 
   /**
-   * Function builds List of property paths based on key:value pairs supplied as API query parameter "selection".
+   * Function builds unique Set of property paths based on key:value pairs supplied as API query parameter "selection".
    * We iterate through all the values, split them based on delimiter "," and expand them into its full form,
    * that can be used as Json path while extracting fields from the GeoJson feature.
    *
@@ -53,33 +56,42 @@ public class PropertySelectionUtil {
    * So query params :
    * "selection=p.name,p.capacity&selection=p.color,rootPropertyName&selection=f.tags"
    *
-   * will result into list of:
+   * will result into set of:
    *    properties.name
    *    properties.capacity
    *    properties.color
    *    rootPropertyName
    *    properties.@ns:com:here:xyz.tags
+   * and will also add standard properties:
+   *    id
+   *    type
+   *    geometry
    * </pre>
    *
    * @param queryParams API query parameter from where property selection params need to be extracted
-   * @return List of expanded property paths
+   * @return Set of expanded property paths
    */
-  public static @Nullable List<String> buildPropPathListFromQueryParams(
+  public static @Nullable Set<String> buildPropPathSetFromQueryParams(
       final @Nullable QueryParameterList queryParams) {
     if (queryParams == null) return null;
     QueryParameter propParams = queryParams.get(PROP_SELECTION);
     if (propParams == null) return null;
 
-    // global initialization
-    final List<String> gPropPathList = new ArrayList<>();
+    // prop path set to be returned
+    Set<String> gPropPathSet = null;
     while (propParams != null && propParams.hasValues()) {
       // get list of all value tokens and respective delimiters
       final ValueList valueTokenList = propParams.values();
       final List<QueryDelimiter> delimList = propParams.valuesDelimiter();
-      // iterate through propPath tokens and add them to Global list depending on delimiter value
+      // iterate through propPath tokens and add them to Global paths depending on delimiter value
       int delimIdx = 0;
       for (final Object value : valueTokenList) {
         if (value == null) {
+          delimIdx++;
+          continue;
+        }
+        final String path = String.valueOf(value);
+        if (path.isEmpty()) {
           delimIdx++;
           continue;
         }
@@ -89,12 +101,19 @@ public class PropertySelectionUtil {
               XyzError.ILLEGAL_ARGUMENT,
               "Invalid delimiter " + delimiter + " for parameter " + PROP_SELECTION);
         }
-        gPropPathList.add(expandPropSelectionPath((String) value));
+        if (gPropPathSet == null) {
+          gPropPathSet = new HashSet<>();
+          // add standard properties
+          gPropPathSet.add(PROP_ID);
+          gPropPathSet.add(PROP_FEATURE_TYPE);
+          gPropPathSet.add(XyzFeature.GEOMETRY);
+        }
+        gPropPathSet.add(expandPropSelectionPath(path));
       }
       propParams = propParams.next();
     }
 
-    return gPropPathList;
+    return gPropPathSet;
   }
 
   private static @NotNull String expandPropSelectionPath(final @NotNull String propPath) {
@@ -102,7 +121,7 @@ public class PropertySelectionUtil {
     if (propPath.startsWith(SHORT_PROP_PREFIX)) {
       str.append(FULL_PROP_PREFIX).append(propPath.substring(SHORT_PROP_PREFIX.length()));
     } else if (propPath.equals(XYZ_PROP_ID)) {
-      str.append("id");
+      str.append(PROP_ID);
     } else if (propPath.startsWith(SHORT_XYZ_PROP_PREFIX)) {
       str.append(FULL_XYZ_PROP_PREFIX).append(propPath.substring(SHORT_XYZ_PROP_PREFIX.length()));
     } else {

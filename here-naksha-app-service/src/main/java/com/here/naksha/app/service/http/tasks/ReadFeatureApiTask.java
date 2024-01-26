@@ -42,6 +42,7 @@ import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.util.storage.ResultHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -158,7 +159,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final double east = ApiParams.extractQueryParamAsDouble(queryParams, EAST, true);
     final double south = ApiParams.extractQueryParamAsDouble(queryParams, SOUTH, true);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
-    final List<String> propPathList = PropertySelectionUtil.buildPropPathListFromQueryParams(queryParams);
+    final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
     ApiParams.validateParamRange(WEST, west, -180, 180);

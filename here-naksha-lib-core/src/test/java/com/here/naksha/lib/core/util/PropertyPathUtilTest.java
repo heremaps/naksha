@@ -29,16 +29,14 @@ public class PropertyPathUtilTest {
                         "Merge of multiple property paths",
                         COMMON_INPUT_FILE,
                         "MergeMultiplePaths/Expected.json",
-                        List.of(
+                        Set.of(
                                 "id",
                                 "type",
                                 "geometry",
                                 "addProp", // additional property
                                 "properties.status", // just a normal property
                                 "properties.references.0", // entire array element
-                                "properties.references.0", // repeating entire array element
                                 "properties.isoCountryCode",
-                                "properties.isoCountryCode", // repeating element
                                 "properties.@ns:com:here:utm.priorityParams.backup.dueBy",
                                 "properties.@ns:com:here:utm.priorityParams.backup.priority", // integer
                                 "properties.@ns:com:here:utm.priorityParams.derived.boost", // float
@@ -50,7 +48,6 @@ public class PropertyPathUtilTest {
                                 "properties.@ns:com:here:xyz.uuid",
                                 "properties.@ns:com:here:xyz.deleted", // boolean
                                 "properties.@ns:com:here:xyz.tags.0", // string inside array
-                                "properties.@ns:com:here:xyz.tags.0", // repeating array element
                                 "properties.@ns:com:here:xyz.tags.2"
                         )
                 ),
@@ -58,7 +55,7 @@ public class PropertyPathUtilTest {
                         "Unknown properties at various levels",
                         COMMON_INPUT_FILE,
                         "UnknownPaths/Expected.json",
-                        List.of(
+                        Set.of(
                                 "id",
                                 "type",
                                 "geometry",
@@ -78,7 +75,7 @@ public class PropertyPathUtilTest {
                         "Empty map",
                         COMMON_INPUT_FILE,
                         "EmptyMap/Expected.json",
-                        List.of()
+                        Set.of()
                 ),
                 propPathTestSpec(
                         "Empty map",
@@ -95,7 +92,7 @@ public class PropertyPathUtilTest {
     void parameterizedPropPathTest(
             final @NotNull String inputFilePath,
             final @NotNull String expectedFilePath,
-            final @Nullable List<String> propPaths
+            final @Nullable Set<String> propPaths
     ) throws JSONException {
         // Given: Input Feature content
         final String featureJson = TestUtil.loadFileOrFail(TEST_DATA_FOLDER, inputFilePath); // "JsonTest/Input.json");
@@ -117,7 +114,7 @@ public class PropertyPathUtilTest {
             final @NotNull String testDesc,
             final @NotNull String inputFilePath,
             final @NotNull String expectedFilePath,
-            final @Nullable List<String> propPaths
+            final @Nullable Set<String> propPaths
     ) {
         return Arguments.arguments(inputFilePath, expectedFilePath, Named.named(testDesc, propPaths));
     }

@@ -28,7 +28,7 @@ public class PropertyPathUtil {
   private PropertyPathUtil() {}
 
   public static @NotNull Map<String, Object> extractPropertyMapFromFeature(
-      final @NotNull XyzFeature feature, final @Nullable List<@Nullable String> paths) {
+      final @NotNull XyzFeature feature, final @Nullable Set<@Nullable String> paths) {
     final Map<String, Object> tgtMap = new HashMap<>();
     PropertyPathUtil.populatePropertyMapFromMap(feature.asMap(), tgtMap, paths);
     return tgtMap;
@@ -37,7 +37,7 @@ public class PropertyPathUtil {
   public static void populatePropertyMapFromMap(
       final @NotNull Map<String, Object> srcMap,
       final @NotNull Map<String, Object> tgtMap,
-      final @Nullable List<@Nullable String> paths) {
+      final @Nullable Set<@Nullable String> paths) {
     if (paths == null || paths.size() == 0) return;
     // iterate through all property paths and merge the extracted fields into tgtMap
     for (final String path : paths) {
