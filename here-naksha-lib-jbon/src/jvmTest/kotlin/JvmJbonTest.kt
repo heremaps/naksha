@@ -136,6 +136,32 @@ class JvmJbonTest {
         assertEquals(32768, reader.getInt32(0))
         assertEquals(5, reader.size())
         assertEquals(5, builder.reset())
+
+        // Test 64-bit integers
+        builder.writeInt64(Long.MIN_VALUE)
+        assertTrue(reader.isInt())
+        assertFalse(reader.isInt32())
+        assertEquals(TYPE_INT64, reader.type())
+        assertEquals(Long.MIN_VALUE, reader.getInt64(0))
+        assertEquals(9, reader.size())
+        assertEquals(9, builder.reset())
+
+        builder.writeInt64(Long.MAX_VALUE)
+        assertTrue(reader.isInt())
+        assertFalse(reader.isInt32())
+        assertEquals(TYPE_INT64, reader.type())
+        assertEquals(Long.MAX_VALUE, reader.getInt64(0))
+        assertEquals(9, reader.size())
+        assertEquals(9, builder.reset())
+
+        // This ensures that high and low bits are encoded and decoded correctly in order
+        builder.writeInt64(Long.MIN_VALUE + 65535)
+        assertTrue(reader.isInt())
+        assertFalse(reader.isInt32())
+        assertEquals(TYPE_INT64, reader.type())
+        assertEquals(Long.MIN_VALUE + 65535, reader.getInt64(0))
+        assertEquals(9, reader.size())
+        assertEquals(9, builder.reset())
     }
 
     @Test

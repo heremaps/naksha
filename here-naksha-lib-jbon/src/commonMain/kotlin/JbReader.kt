@@ -141,6 +141,10 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
         }
     }
 
+    /**
+     * Tests whether the value is any integer value.
+     * @return true if the value is an integer; false otherwise.
+     */
     fun isInt(): Boolean {
         val type = type()
         return type == TYPE_UINT4
@@ -151,6 +155,18 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
                 || type == TYPE_INT64
     }
 
+    /**
+     * Tests whether the value is a 32-bit integer value, this excludes 64-bit integers.
+     * @return true if the value is an integer; false otherwise.
+     */
+    fun isInt32(): Boolean {
+        val type = type()
+        return type == TYPE_UINT4
+                || type == TYPE_SINT4
+                || type == TYPE_INT8
+                || type == TYPE_INT16
+                || type == TYPE_INT32
+    }
 
     fun getInt32(alternative: Int = -1): Int {
         val type = type()
