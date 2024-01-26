@@ -45,8 +45,22 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
         return pos >= 0 && pos < view.getSize()
     }
 
+    private fun eof() : Boolean {
+        return pos < 0 || pos >= view.getSize()
+    }
+
     private fun checkPos() {
-        check(pos >= 0 && pos < view.getSize())
+        check(!eof())
+    }
+
+    /**
+     * Skip to the next entity.
+     * @return true if there is more; false otherwise.
+     */
+    fun next() : Boolean {
+        if (eof()) return false
+        pos += size()
+        return !eof()
     }
 
     /**
@@ -54,7 +68,7 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
      * @return The type stored at the current position.
      */
     fun type(): Int {
-        checkPos()
+        if (eof()) return EOF
         var type = view.getInt8(pos).toInt() and 0xff
         if (type and 128 == 128) {
             type = type and 0xf0
@@ -68,7 +82,7 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
      * @return The size of the value in bytes including the lead-in (so between 1 and n).
      */
     fun size(): Int {
-        if (pos < 0 || pos >= view.getSize()) return 0
+        if (eof()) return 0
         val raw = view.getInt8(pos).toInt() and 0xff
         val type = if (raw and 128 == 128) raw and 0xf0 else raw
         return when (type) {
@@ -113,6 +127,14 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
 
             TYPE_CONTAINER -> {
                 0
+            }
+
+            TYPE_DICTIONARY -> {
+                val old = pos
+                pos++
+                val size = getInt32(0)
+                pos = old
+                return size
             }
 
             else -> 0

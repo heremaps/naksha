@@ -8,6 +8,7 @@ import kotlin.js.JsExport
 /**
  * Creates a new JBON builder using the given view and optional dictionary.
  */
+@Suppress("DuplicatedCode")
 @JsExport
 class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     /**
@@ -17,11 +18,23 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
      */
     private var localDictionary: HashMap<String, Int>? = null
 
-    private fun getLocalDictionary() : HashMap<String, Int> {
+    /**
+     * Needed to resolve the strings being in the local dictionary by id.
+     */
+    private var localStringById: ArrayList<String>? = null
+
+    private fun getLocalDictionary(): HashMap<String, Int> {
         if (localDictionary == null) {
             localDictionary = HashMap()
         }
         return localDictionary!!
+    }
+
+    private fun getLocalStringById(): ArrayList<String> {
+        if (localStringById == null) {
+            localStringById = ArrayList()
+        }
+        return localStringById!!
     }
 
     /**
@@ -47,7 +60,8 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     fun reset(): Int {
         val old = end
         end = 0
-        localDictionary?.clear()
+        localDictionary = null
+        localStringById = null
         localNextIndex = 0
         return old
     }
@@ -233,7 +247,7 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
      * @param string The string to add.
      * @return The index of the string.
      */
-    fun addToLocalDictionary(string: String): Int {
+    fun writeToLocalDictionary(string: String): Int {
         val localDict = getLocalDictionary()
         var index = localDict[string]
         if (index != null) {
@@ -241,6 +255,7 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
         }
         index = localNextIndex++
         localDict[string] = index
+        getLocalStringById().add(string)
         return index
     }
 
@@ -413,17 +428,41 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     }
 
     /**
-     * Starts a document, can only be called for a blank builder, so when [end] is zero.
+     * Creates a dictionary out of this builder. Checks that nothing was yet written into the binary.
+     * @param id The unique identifier of the dictionary.
+     * @return The dictionary.
      */
-    fun createDictionary(): Int {
+    fun buildDictionary(id: String): ByteArray {
         check(end == 0)
-        // Lead-In
-        view.setInt8(end++, TYPE_DOCUMENT.toByte())
-        // We reserve 5 byte for document size and 5 byte for the reference.
-        // If less is needed, we compact later, but we do not compact when this document big.
-        end += 10
+        check(localStringById != null)
+        val localStringById = this.localStringById!!
 
-        return 0
+        // We add the lead-in with the size later, we anyway need to make a copy.
+        // First, encode the unique identifier.
+        writeString(id)
+        for (string in localStringById) {
+            writeString(string)
+        }
+        // Now end is the size, lets encode the size behind.
+        val size = this.end
+        writeInt32(size)
+        // Now, end + 1 (lead-in) byte is what we need.
+        val targetArray = ByteArray(end + 1)
+        val targetView = JbPlatform.get().newDataView(targetArray)
+        var target = 0
+        targetView.setInt8(target++, TYPE_DICTIONARY.toByte())
+        // Copy size
+        var source = size
+        val end = this.end
+        while (source < end) {
+            targetView.setInt8(target++, view.getInt8(source++))
+        }
+        // Copy the rest (id and entities)
+        source = 0
+        while (source < size) {
+            targetView.setInt8(target++, view.getInt8(source++))
+        }
+        return targetArray
     }
 
 }

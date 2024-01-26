@@ -27,8 +27,9 @@ const val TYPE_INT16 = 9
 const val TYPE_INT32 = 10
 const val TYPE_INT64 = 11
 const val TYPE_DICTIONARY = 16
-const val TYPE_DOCUMENT = 17
+const val TYPE_FEATURE = 17
 // 18 - 31 = Reserved
+const val EOF = -1
 
 // Internally used to encode float4
 val TINY_FLOATS = floatArrayOf(-8f, -7f, -6f, -5f, -4f, -3f, -2f, -1f, 0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)

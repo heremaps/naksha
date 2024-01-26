@@ -6,6 +6,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 
 class JvmJbonTest {
+
     @Test
     fun basicTest() {
         val view = JvmPlatform.newDataView(ByteArray(256))
@@ -372,5 +373,63 @@ class JvmJbonTest {
         assertEquals(65536 + 16, reader.getRef())
         assertEquals(5, reader.size())
         assertEquals(5, builder.reset())
+    }
+
+    @Test
+    fun testDictionaryCreation() {
+        val buildView = JvmPlatform.newDataView(ByteArray(8192))
+        val builder = JbBuilder(buildView)
+
+        val foo = builder.writeToLocalDictionary("foo")
+        assertEquals(0, foo)
+        val bar = builder.writeToLocalDictionary("bar")
+        assertEquals(1, bar)
+        val foo2 = builder.writeToLocalDictionary("foo")
+        assertEquals(0, foo2)
+        val bar2 = builder.writeToLocalDictionary("bar")
+        assertEquals(1, bar2)
+
+        // Encode a dictionary.
+        val dictId = "test"
+        val dictArray = builder.buildDictionary(dictId)
+        val dictView = JvmPlatform.newDataView(dictArray)
+        val dictReader = JbReader(dictView)
+        assertEquals(TYPE_DICTIONARY,  dictReader.type())
+        // size
+        dictReader.pos++
+        assertTrue(dictReader.isInt())
+        assertEquals(13, dictReader.getInt32())
+
+        // id
+        assertTrue(dictReader.next())
+        assertTrue(dictReader.isString())
+        val stringReader = JbString(dictReader)
+        assertEquals(dictId, stringReader.toString())
+
+        // foo
+        assertTrue(dictReader.next())
+        assertTrue(dictReader.isString())
+        stringReader.map(dictReader)
+        assertEquals("foo", stringReader.toString())
+
+        // bar
+        assertTrue(dictReader.next())
+        assertTrue(dictReader.isString())
+        stringReader.map(dictReader)
+        assertEquals("bar", stringReader.toString())
+
+        // eof
+        assertFalse(dictReader.next())
+
+        // Test the dictionary class.
+        val dict = JbDict(dictView)
+        assertEquals(2, dict.length())
+        assertEquals(dictId, dict.id)
+        assertEquals("foo", dict.get(0))
+        assertEquals("bar", dict.get(1))
+        assertEquals(0, dict.indexOf("foo"))
+        assertEquals(1, dict.indexOf("bar"))
+        assertEquals(-1, dict.indexOf(dictId))
+        assertEquals(-1, dict.indexOf("notFound"))
     }
 }
