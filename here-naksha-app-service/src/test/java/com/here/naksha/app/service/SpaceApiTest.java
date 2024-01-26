@@ -18,11 +18,15 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
+import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
+import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
@@ -32,8 +36,12 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class SpaceApiTest extends ApiTest {
 
@@ -189,5 +197,52 @@ class SpaceApiTest extends ApiTest {
         .hasStatus(400)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(expectedErrorResponse);
+  }
+
+  @ParameterizedTest
+  @MethodSource("autoDeleteSpaceVariants")
+  void tc0280_testDeleteSpace(AutoDeleteSpaceVariant spaceVariant) throws Exception {
+    // Test API : DELETE /hub/spaces/{spaceId}
+    // Given: expected response
+    final String expectedDeleteResponse = loadFileOrFail(spaceVariant.variantDir + "/delete_response.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // And: created space, handler and space
+    setupSpaceAndRelatedResources(getNakshaClient(), spaceVariant.variantDir);
+
+    // When: deleting space
+    final HttpResponse<String> deleteResponse = getNakshaClient().delete("hub/spaces/" + spaceVariant.spaceId, streamId);
+
+    // Then: space was successfully deleted
+    assertThat(deleteResponse)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedDeleteResponse);
+
+    // And: space is not available anymore
+    final HttpResponse<String> getResponse = getNakshaClient().get("hub/spaces/" + spaceVariant.spaceId, streamId);
+    assertThat(getResponse)
+        .hasStatus(404);
+  }
+
+  private static Stream<Named<AutoDeleteSpaceVariant>> autoDeleteSpaceVariants() {
+    return Stream.of(
+        Named.named("Space with enable 'autoDelete'", new AutoDeleteSpaceVariant(
+            "tc_280_space_auto_delete_on",
+            "SpaceApi/TC0280_deleteSpace/autoDeleteEnabled"
+        )),
+        Named.named("Space with disabled 'autoDelete'", new AutoDeleteSpaceVariant(
+            "tc_280_space_auto_delete_off",
+            "SpaceApi/TC0280_deleteSpace/autoDeleteDisabled"
+        )),
+        Named.named("Space with undefined 'autoDelete'", new AutoDeleteSpaceVariant(
+            "tc_280_space_undefined_auto_delete",
+            "SpaceApi/TC0280_deleteSpace/autoDeleteUndefined"
+        ))
+    );
+  }
+
+  record AutoDeleteSpaceVariant(String spaceId, String variantDir) {
+
   }
 }

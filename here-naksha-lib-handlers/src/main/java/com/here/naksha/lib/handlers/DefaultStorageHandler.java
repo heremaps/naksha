@@ -30,7 +30,6 @@ import static java.lang.String.join;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.exceptions.StorageException;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
 import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.XyzError;
@@ -40,6 +39,7 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
+import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.FeatureBox;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
@@ -149,9 +149,11 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull WriteFeatures<?, ?, ?> wf,
       final OperationAttempt operationAttempt) {
     logger.info("Processing WriteFeatures against {}", collectionIds);
-    return forwardWriteRequest(ctx, storageImpl, wf,
-        re -> reattemptFeatureRequest(ctx, storageImpl, collectionIds, wf, operationAttempt, re)
-    );
+    return forwardWriteRequest(
+        ctx,
+        storageImpl,
+        wf,
+        re -> reattemptFeatureRequest(ctx, storageImpl, collectionIds, wf, operationAttempt, re));
   }
 
   private @NotNull Result forwardWriteCollections(
@@ -161,17 +163,35 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull WriteCollections<?, ?, ?> wc,
       final OperationAttempt operationAttempt) {
     logger.info("Processing WriteCollections against {}", collectionIds);
-    return forwardWriteRequest(ctx, storageImpl, wc,
-        re -> reattemptCollectionRequest(ctx, storageImpl, collectionIds, wc, operationAttempt, re)
-    );
+    if (isDeleteCollectionRequest(wc)) {
+      if (properties.getAutoDeleteCollection()) {
+        return forwardWriteRequest(
+            ctx,
+            storageImpl,
+            wc,
+            re -> reattemptCollectionRequest(ctx, storageImpl, collectionIds, wc, operationAttempt, re));
+      } else {
+        logger.info(
+            "Received delete collection request but autoDelete is not enabled, returning success without any action");
+        return new SuccessResult();
+      }
+    } else {
+      logger.info(
+          "Handling WriteCollections only with single collection deletion, returning success without any action");
+      return new SuccessResult();
+    }
+  }
+
+  private boolean isDeleteCollectionRequest(@NotNull WriteCollections<?, ?, ?> wc) {
+    return wc.features.size() == 1
+        && EWriteOp.DELETE.toString().equals(wc.features.get(0).getOp());
   }
 
   private @NotNull Result forwardWriteRequest(
       @NotNull NakshaContext ctx,
       @NotNull IStorage storageImpl,
       @NotNull WriteRequest<?, ?, ?> wr,
-      @NotNull F1<Result, RuntimeException> reattempt
-  ) {
+      @NotNull F1<Result, RuntimeException> reattempt) {
     try (final IWriteSession writer = storageImpl.newWriteSession(ctx, true)) {
       final Result result = writer.execute(wr);
       if (result instanceof SuccessResult) {

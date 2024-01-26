@@ -21,15 +21,20 @@ package com.here.naksha.lib.hub.storages;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.naksha.NakshaFeature;
+import com.here.naksha.lib.core.models.naksha.Space;
+import com.here.naksha.lib.core.models.naksha.XyzCollection;
+import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.WriteCollections;
 import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.models.storage.WriteRequest;
+import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.hub.EventPipelineFactory;
@@ -92,7 +97,9 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     final String spaceId = wf.getCollectionId();
     logger.info("WriteFeatures Request against spaceId={}", spaceId);
     addSpaceIdToStreamInfo(spaceId);
-    if (virtualSpaces.containsKey(spaceId)) {
+    if (isDeleteSpaceRequest(wf, spaceId)) {
+      return executeDeleteSpace(wf);
+    } else if (virtualSpaces.containsKey(spaceId)) {
       // Request is to write to Naksha Admin space
       return executeWriteFeaturesToAdminSpaces(wf);
     } else {
@@ -116,6 +123,26 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     final Result result = setupEventPipelineForSpaceId(spaceId, eventPipeline);
     if (!(result instanceof SuccessResult)) return result;
     return eventPipeline.sendEvent(wf);
+  }
+
+  private boolean isDeleteSpaceRequest(@NotNull WriteFeatures<?, ?, ?> wf, @NotNull String spaceId) {
+    return NakshaAdminCollection.SPACES.equals(spaceId)
+        && wf.features.size() == 1
+        && EWriteOp.DELETE.toString().equals(wf.features.get(0).getOp());
+  }
+
+  private @NotNull Result executeDeleteSpace(@NotNull WriteFeatures<?, ?, ?> deleteSpaceEntryReq) {
+    if (deleteSpaceEntryReq.features.get(0).getFeature() instanceof Space space) {
+      WriteXyzCollections deleteSpaceReq = new WriteXyzCollections().delete(new XyzCollection(space.getId()));
+      Result deleteSpaceRes = executeWriteCollections(deleteSpaceReq);
+      if (deleteSpaceRes instanceof SuccessResult) {
+        return executeWriteFeaturesToAdminSpaces(deleteSpaceEntryReq);
+      } else {
+        return deleteSpaceRes;
+      }
+    } else {
+      throw new IllegalArgumentException("Expected single Space feature");
+    }
   }
 
   /**

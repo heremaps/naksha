@@ -19,15 +19,16 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
+import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPathParam;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
-import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.POp;
@@ -101,8 +102,11 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   }
 
   private XyzResponse executeDeleteSpace() {
-    // TODO
-    return null;
+    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
+    final WriteXyzFeatures wr = RequestHelper.deleteFeatureByIdRequest(SPACES, spaceId);
+    try (Result wrResult = executeWriteRequestFromSpaceStorage(wr)) {
+      return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+    }
   }
 
   private @NotNull XyzResponse executeCreateSpace() throws JsonProcessingException {
@@ -114,7 +118,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   }
 
   private @NotNull XyzResponse executeUpdateSpace() throws JsonProcessingException {
-    final String spaceIdFromPath = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String spaceIdFromPath = extractMandatoryPathParam(routingContext, SPACE_ID);
     final Space spaceFromBody = spaceFromRequestBody();
     if (!spaceFromBody.getId().equals(spaceIdFromPath)) {
       return verticle.sendErrorResponse(
@@ -135,7 +139,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   }
 
   private @NotNull XyzResponse executeGetSpaceById() {
-    final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
+    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final ReadFeatures request = new ReadFeatures(SPACES).withPropertyOp(POp.eq(PRef.id(), spaceId));
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
       return transformReadResultToXyzFeatureResponse(rdResult, Space.class);

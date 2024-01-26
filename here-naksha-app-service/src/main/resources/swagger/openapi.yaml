@@ -446,6 +446,25 @@ paths:
           $ref: '#/components/responses/ErrorResponse504'
         '513':
           $ref: '#/components/responses/ErrorResponse513'
+    delete:
+      tags:
+        - Manage Spaces
+      summary: Delete the space with the specific ID.
+      operationId: deleteSpace
+      parameters:
+        - name: spaceId
+          in: path
+          description: ID of space to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/FeatureResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
   '/hub/spaces/{spaceId}/features':
     get:
       tags:

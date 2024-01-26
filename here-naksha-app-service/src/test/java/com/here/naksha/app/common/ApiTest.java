@@ -32,8 +32,8 @@ public abstract class ApiTest {
   private final NakshaTestWebClient nakshaClient;
 
   public ApiTest() {
-    this(new NakshaTestWebClient());
-  }
+    this(new NakshaTestWebClient(300));
+  } // TODO: undo
 
   public ApiTest(NakshaTestWebClient nakshaClient) {
     this.nakshaClient = nakshaClient;
