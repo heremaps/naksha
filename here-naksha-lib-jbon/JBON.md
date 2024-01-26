@@ -45,7 +45,7 @@ JBON strings and texts are not encoded using UTF-8, but a special encoding that 
   - `00`: Do not encode any additional character.
   - `01`: Add a space behind the string.
   - `10`: Add an underscore (_) behind the string.
-  - `11`: Reserved.
+  - `11`: Add a colon (:) behind the string.
 
 **Note**: The `ss`-bits improve the compression greatly, because the encoder will split strings by default at a space or underscore. Exactly where these splits happen, we do not need to encode the separator characters. The reason to cut at these two characters is that most often street-names or other human text uses the space as separator, while for constants in programming most often the underscore is used as separator (TYPE_A, TYPE_B, ...). Additionally, we have room for one more split characters to be defined by experience in the future.
 
@@ -73,7 +73,7 @@ The normal reference encoding. All indices being bigger than 15 are encoded with
 **Note**: References must not refer to references!
 
 ### (4) JbString
-A string that must not contain any references. The lower 4-bit are the size indicator. A value between 0 and 10 represent the size of the string (so between 0 and 12, inclusive). The values 13 to 15 signal:
+A string that must not contain any references. The lower 4-bit are the size indicator. A value between 0 and 12 represent the size of the string. The values 13 to 15 signal:
 
 - `13`: The next byte stores the unsigned size, (0 to 255).
 - `14`: The next two byte store the unsigned size, big-endian (0 to 65535).
@@ -165,14 +165,16 @@ Maybe _int128_.
 The next 1 to 8 byte store the signed integer value.
 ### (12-15) reserved
 Reserved to support other variants, maybe int128 or uint8 to uint64.
-### (16) JbDict
-A dictionary is a special container used to compress JBON features. A dictionary must not store any references.
+### (16) Global Dictionary - JbDict
+A global dictionary is a special container used to compress JBON features. A dictionary must not store any references.
 
 After the lead-in byte the optional size is encoded, so either **integer** or **null**. After the size the **id** follows, which is a **string**. After the **id**, the content follows. The content is simply encoded sequentially, no further overhead. So, with a small **id** of for example 10 characters, the header may only be 13 byte (lead-in, null, id), directly followed by the content.
 
 From an encoder perspective this is all. However, the decoder will have to load all the objects into memory, index them by their position and calculate the FNV1b hash and index them by this hash too.
-### (17) JbFeature
-A JBON feature is a container for JBON objects. The header is the same as for the dictionary, but the first JBON object in the content is the root object. All following JBON objects form the local dictionary (an inlined dictionary without identifier). A feature can't create references to other features, only into global dictionaries with unique identifiers. 
+### (17) Local Dictionary - JbDict
+A local dictionary, which can only be found embedded into a feature. This dictionary does only have the lead-in byte and the the content follows, no size or **id** are encoded. The **id** is always set to an empty string.
+### (18) JbFeature
+A JBON feature is a container for JBON objects. The header is the same as for the dictionary, but the first JBON object in the content is the root object. All following JBON objects form the local dictionary (an inlined dictionary without identifier). A feature can't create references to other features, only into global dictionaries with unique identifiers.
 
 From an encoder perspective this is all. However, the decoder will have to load the first object a root object and all other objects as part of the local dictionary into memory, index them by their position and calculate the FNV1b hash and index them by this hash too.
 ### (18) Point (draft-only)
@@ -184,8 +186,10 @@ A GeoJSON LineString, followed by an array of positions (position[]).
 ### (21) MultiLineString (draft-only)
 A GeoJSON MultiLineString, followed by an array of position arrays (position[][]).
 ### (22) Polygon (draft-only)
-A GeoJSON Polygon, following by an array of position array arrays (position[][][]).
-### (23-31) Reserved
+A GeoJSON Polygon, following by an array of position arrays (position[][]).
+### (23) MultiPolygon (draft-only)
+A GeoJSON Multi-Polygon, following by an array of position array arrays (position[][][]).
+### (24-31) Reserved
 Reserved for further objects.
 
 ## PLV8 Exports
