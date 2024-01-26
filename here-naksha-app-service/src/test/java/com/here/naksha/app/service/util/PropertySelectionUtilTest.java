@@ -15,15 +15,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class PropertySelectionUtilTest {
 
-
-    /*
-    Test cases:
-        multiple params -> normal, special param, encoded tag param, integer value, nested array element, nested object element
-        selection param with invalid delimiter
-        mixed query params
-        no selection param
-    */
-
     private static Stream<Arguments> propSelectionPathTestData() {
         return Stream.of(
                 selectionTestSpec(
