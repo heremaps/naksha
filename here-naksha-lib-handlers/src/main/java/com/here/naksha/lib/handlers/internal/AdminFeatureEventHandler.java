@@ -93,18 +93,17 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
   /**
    * Direct validation of XyzFeature to be written. It's optional to implement this, by default it always succeeds.
    *
-   * @param feature feature to be validated before being written
+   * @param codec containing the feature to be validated before being written
    * @return validation result, success by default
    */
-  protected @NotNull Result validateFeature(FEATURE feature, EWriteOp operation) {
-    return nakshaFeatureValidation(feature, operation);
+  protected @NotNull Result validateFeature(XyzFeatureCodec codec) {
+    final FEATURE feature = featureClass.cast(codec.getFeature());
+    return nakshaFeatureValidation(feature);
   }
 
   private @NotNull Result validateWriteRequest(final @NotNull WriteXyzFeatures wr) {
     for (final XyzFeatureCodec featureCodec : wr.features) {
-      final EWriteOp operation = EWriteOp.get(featureCodec.getOp());
-      final FEATURE feature = featureClass.cast(featureCodec.getFeature());
-      Result featureValidation = validateFeature(feature, operation);
+      Result featureValidation = validateFeature(featureCodec);
       if (featureValidation instanceof ErrorResult) {
         return featureValidation;
       }

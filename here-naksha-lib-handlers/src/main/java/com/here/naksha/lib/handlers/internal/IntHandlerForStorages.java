@@ -33,6 +33,7 @@ import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
@@ -43,40 +44,56 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     super(hub, Storage.class);
   }
 
-  // TODO inject active handlers validation here, make it reusable for example also for update...
-
   @Override
-  protected @NotNull Result validateFeature(Storage storage, EWriteOp operation) {
-    Result basicValidation = super.validateFeature(storage, operation);
+  protected @NotNull Result validateFeature(XyzFeatureCodec codec) {
+    final EWriteOp operation = EWriteOp.get(codec.getOp());
+    if (operation.equals(EWriteOp.DELETE)) {
+      // For DELETE, only the feature ID is needed, other JSON properties are irrelevant
+      return noActiveHandlerValidation(codec);
+    }
+    // For non-DELETE write request
+    Result basicValidation = super.validateFeature(codec);
     if (basicValidation instanceof ErrorResult) {
       return basicValidation;
     }
-    if (operation.equals(EWriteOp.DELETE)) {
-      // Search for active event handlers still using this storage
-      // "properties.storageId" = <storage-id-to-be-deleted>
-      final PRef pRef = RequestHelper.pRefFromPropPath(
-          new String[] {XyzFeature.PROPERTIES, EventHandlerProperties.STORAGE_ID});
-      //TODO storage is null
-      final POp activeHandlersPOp = POp.eq(pRef, storage.getId());
-      final ReadFeatures readActiveHandlersRequest =
-          new ReadFeatures(EVENT_HANDLERS).withPropertyOp(activeHandlersPOp);
-      try (final IReadSession readSession =
-          nakshaHub().getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
-        final Result readResult = readSession.execute(readActiveHandlersRequest);
-        if (!(readResult instanceof SuccessResult)) {
-          return readResult;
-        }
-        final List<EventHandler> eventHandlers;
-        try {
-          eventHandlers = readFeaturesFromResult(readResult, EventHandler.class);
-        } catch (NoCursor | NoSuchElementException emptyException) {
-          // No active handler using the storage, proceed with deleting the storage
-          return new SuccessResult();
-        }
-        return new ErrorResult(
-            XyzError.CONFLICT, "The storage is still in use by these event handlers: " + eventHandlers);
-      }
-    }
+    final Storage storage = (Storage) codec.getFeature();
     return pluginValidation(storage);
+  }
+
+  private Result noActiveHandlerValidation(XyzFeatureCodec codec) {
+    // Search for active event handlers still using this storage
+    String storageId = codec.getId();
+    if (storageId == null) {
+      if (codec.getFeature() == null) {
+        return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "No storage ID supplied.");
+      }
+      storageId = codec.getFeature().getId();
+    }
+    // "properties.storageId" = <storage-id-to-be-deleted>
+    final PRef pRef =
+        RequestHelper.pRefFromPropPath(new String[] {XyzFeature.PROPERTIES, EventHandlerProperties.STORAGE_ID});
+    final POp activeHandlersPOp = POp.eq(pRef, storageId);
+    final ReadFeatures readActiveHandlersRequest =
+        new ReadFeatures(EVENT_HANDLERS).withPropertyOp(activeHandlersPOp);
+    try (final IReadSession readSession =
+        nakshaHub().getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
+      final Result readResult = readSession.execute(readActiveHandlersRequest);
+      if (!(readResult instanceof SuccessResult)) {
+        return readResult;
+      }
+      final List<EventHandler> eventHandlers;
+      try {
+        eventHandlers = readFeaturesFromResult(readResult, EventHandler.class);
+      } catch (NoCursor | NoSuchElementException emptyException) {
+        // No active handler using the storage, proceed with deleting the storage
+        return new SuccessResult();
+      }
+      final List<String> handlerIds = new ArrayList<>();
+      for (EventHandler handler : eventHandlers) {
+        handlerIds.add(handler.getId());
+      }
+      return new ErrorResult(
+          XyzError.CONFLICT, "The storage is still in use by these event handlers: " + handlerIds);
+    }
   }
 }

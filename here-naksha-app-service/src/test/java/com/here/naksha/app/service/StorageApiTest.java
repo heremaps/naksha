@@ -275,4 +275,35 @@ class StorageApiTest extends ApiTest {
             .hasStatus(404)
             .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
+
+  @Test
+  void tc0081_testDeleteStorageInUse() throws Exception {
+    // Test API : DELETE /hub/storages/{storageId}
+    // Given:
+    final String streamId = UUID.randomUUID().toString();
+    final String createStorageJson = loadFileOrFail("StorageApi/TC0081_deleteStorageInUse/create_storage.json");
+    final HttpResponse<String> createResponse =
+            getNakshaClient().post("hub/storages", createStorageJson, streamId);
+    assertThat(createResponse).hasStatus(200);
+    final String createHandlerJson = loadFileOrFail("StorageApi/TC0081_deleteStorageInUse/create_handler.json");
+    final HttpResponse<String> createHandlerResponse =
+            getNakshaClient().post("hub/handlers", createHandlerJson, streamId);
+    assertThat(createHandlerResponse).hasStatus(200);
+    // When:
+    final HttpResponse<String> response =
+            getNakshaClient().delete("hub/storages/storage-still-with-handlers", streamId);
+
+    // Then:
+    final String expectedResponse = loadFileOrFail("StorageApi/TC0081_deleteStorageInUse/response.json");
+    assertThat(response)
+            .hasStatus(409)
+            .hasJsonBody(expectedResponse)
+            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+
+    final HttpResponse<String> getResponse =
+            getNakshaClient().get("hub/storages/storage-still-with-handlers", streamId);
+    assertThat(getResponse)
+            .hasStatus(200)
+            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+  }
 }

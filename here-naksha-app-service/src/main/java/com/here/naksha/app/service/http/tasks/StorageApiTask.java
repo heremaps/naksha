@@ -20,21 +20,15 @@ package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.*;
 import static com.here.naksha.app.service.http.ops.PasswordMaskingUtil.removePasswordFromProps;
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.*;
@@ -42,8 +36,6 @@ import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
-import java.util.List;
-import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,42 +140,10 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
 
   private @NotNull XyzResponse executeDeleteStorage() {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
-    final PRef pRef =
-        RequestHelper.pRefFromPropPath(new String[] {XyzFeature.PROPERTIES, EventHandlerProperties.STORAGE_ID});
-    // "properties.storageId" = <storage-id-to-be-deleted>
-    final POp activeHandlersPOp = POp.eq(pRef, storageId);
-    final ReadFeatures readActiveHandlersRequest =
-        new ReadFeatures(EVENT_HANDLERS).withPropertyOp(activeHandlersPOp);
-    // Search for active event handlers still using this storage
-    try (Result rdResult = executeReadRequestFromSpaceStorage(readActiveHandlersRequest)) {
-      if (rdResult == null) {
-        return returnError(
-            XyzError.EXCEPTION,
-            "Unexpected null result while searching for event handlers still using this storage.",
-            "Unexpected null result while searching for event handlers still using this storage {}",
-            storageId);
-      } else if (rdResult instanceof ErrorResult er) {
-        return returnError(
-            er.reason,
-            er.message,
-            "Received error result while searching for event handlers still using this storage: {}",
-            er);
-      }
-      final List<EventHandler> eventHandlers;
-      try {
-        eventHandlers = readFeaturesFromResult(rdResult, EventHandler.class);
-      } catch (NoCursor | NoSuchElementException emptyException) {
-        // No active handler using the storage, proceed with deleting the storage
-        final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
-        try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-          return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class);
-        }
-      }
-      // Storage is still being used, will not delete
-      return verticle.sendErrorResponse(
-          routingContext,
-          XyzError.CONFLICT,
-          "The storage is still in use by these event handlers: " + eventHandlers);
+    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
+    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
+      return transformWriteResultToXyzFeatureResponse(
+          wrResult, Storage.class, f -> removePasswordFromProps(f.getProperties()));
     }
   }
 
