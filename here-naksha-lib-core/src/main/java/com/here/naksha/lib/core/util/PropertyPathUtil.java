@@ -18,11 +18,37 @@
  */
 package com.here.naksha.lib.core.util;
 
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class PropertyPathUtil {
+
+  private PropertyPathUtil() {}
+
+  public static @NotNull Map<String, Object> extractPropertyPathsFromFeature(
+      final @NotNull XyzFeature feature, final @Nullable List<@Nullable String> paths) {
+    final Map<String, Object> tgtMap = new HashMap<>();
+    tgtMap.put("id", feature.getId());
+    tgtMap.put("type", "Feature");
+    // TODO : Add geometry object as well
+
+    if (paths == null || paths.size() == 0) {
+      return tgtMap;
+    }
+    // tokenize paths using "." delimiter
+    // e.g. convert "properties.xyz.tags" to ["properties","xyz","tags"]
+    final List<String[]> tokenizedPaths = new ArrayList<>();
+    for (final String path : paths) {
+      if (path != null) {
+        tokenizedPaths.add(path.split("\\."));
+      }
+    }
+    // extract property path based on tokenized paths
+    PropertyPathUtil.extractPropertyPathsFromMap(feature, tgtMap, tokenizedPaths);
+    return tgtMap;
+  }
 
   public static void extractPropertyPathsFromMap(
       final @NotNull Map<String, Object> srcMap,
@@ -109,7 +135,7 @@ public class PropertyPathUtil {
     } catch (NumberFormatException ne) {
       return null;
     }
-    if (arrIdx >= srcList.size()) return null; // avoid ArrayIndexOutOfBounds
+    if (arrIdx < 0 || arrIdx >= srcList.size()) return null; // avoid ArrayIndexOutOfBounds
     final Object value = srcList.get(arrIdx); // property value from srcList
     if (value instanceof Map) {
       // property is a map, so we need to go further down the map
