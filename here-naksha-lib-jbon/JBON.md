@@ -91,7 +91,7 @@ The types are:
 
 The size meanings is:
 
-- `00b`: Empty map/array (size and length are implicit zero).
+- `00b`: Empty map/array/text (size and length are implicit zero).
 - `01b`: The size is stored in one byte (0 to 255).
 - `10b`: The size is stored in two byte, big-endian (0 to 65535).
 - `11b`: The size is stored in four byte, big-endian (0 to 2^32-1).

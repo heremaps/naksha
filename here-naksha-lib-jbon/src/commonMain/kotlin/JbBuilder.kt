@@ -10,7 +10,30 @@ import kotlin.js.JsExport
  */
 @JsExport
 class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
-    private var localStrings: HashMap<String, Int>? = null
+    /**
+     * When encoding a string that is not in the global dictionary, then we add it into this collection, so that it can
+     * be encoded later into the local dictionary. The key is the string that has is needed, the value is the index that
+     * is being used to encode it.
+     */
+    private var localDictionary: HashMap<String, Int>? = null
+
+    private fun getLocalDictionary() : HashMap<String, Int> {
+        if (localDictionary == null) {
+            localDictionary = HashMap()
+        }
+        return localDictionary!!
+    }
+
+    /**
+     * The next index to use, when adding a string into the local dictionary.
+     */
+    private var localNextIndex: Int = 0
+
+    /**
+     * Stores text, maps and arrays encoded in this binary. The key is the FNV1b hash, the value is a map, with the
+     * key being the offset of the object in the binary, and the value being always null.
+     */
+    private val indices: HashMap<Int, Map<Int, Any?>>? = null
 
     /**
      * The current end in the view.
@@ -24,7 +47,8 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     fun reset(): Int {
         val old = end
         end = 0
-        localStrings?.clear()
+        localDictionary?.clear()
+        localNextIndex = 0
         return old
     }
 
@@ -116,8 +140,8 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
         }
         val offset = end;
         view.setInt8(offset, TYPE_INT64.toByte())
-        view.setInt32(offset+1, (value ushr 32).toInt())
-        view.setInt32(offset+5, value.toInt())
+        view.setInt32(offset + 1, (value ushr 32).toInt())
+        view.setInt32(offset + 5, value.toInt())
         end += 9
         return offset
     }
@@ -205,23 +229,34 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     }
 
     /**
-     * Encodes the given string into the JBON.
+     * Add the given string to the local dictionary, if the same string is already in the dictionary, the existing will be returned.
+     * @param string The string to add.
+     * @return The index of the string.
+     */
+    fun addToLocalDictionary(string: String): Int {
+        val localDict = getLocalDictionary()
+        var index = localDict[string]
+        if (index != null) {
+            return index
+        }
+        index = localNextIndex++
+        localDict[string] = index
+        return index
+    }
+
+    /**
+     * Encodes the given string into this binary.
+     * @param string The string to encode.
+     * @return The offset of the value written.
      */
     fun writeString(string: String): Int {
-        if (localStrings == null) {
-            localStrings = HashMap()
-        }
         val start = end
-        // We reserve 5 byte for the lead-in, so we encode a string at max length.
-        // Later we will copy around smaller strings, so compacting them, but we do not want to copy big strings!
+        // We reserve 5 byte for the header.
         var pos = end + 5
         var i = 0
-        // We use a mark to match substrings for compression
-        //var mark = pos
-        //var markIndex = i
         while (i < string.length) {
-            var unicode: Int
             val hi = string[i++]
+            var unicode: Int
             if (i < string.length && hi.isHighSurrogate()) {
                 val lo = string[i++]
                 require(lo.isLowSurrogate())
@@ -230,68 +265,16 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
                 unicode = hi.code
             }
             check(unicode in 0..2_097_151)
-            // When we hit a space, compression kicks in
-            //if (unicode == ' '.code) {
-                // TODO: Implement local dictionary lookup
-                // TODO: Implement global dictionary lookup
-            //}
-            when (unicode) {
-                in 0..127 -> view.setInt8(pos++, unicode.toByte())
-                in 128..16511 -> { // 0 -> 2^14-1 biased by 128
-                    // BIAS the unicode value
-                    unicode -= 128
-                    // Encode the higher 6 bit
-                    view.setInt8(pos++, ((unicode ushr 8) or 0b10_000000).toByte())
-                    // Encode the lower 8 bit
-                    view.setInt8(pos++, (unicode and 0xff).toByte())
-                }
-
-                else -> {
-                    // Full code point encoding
-                    // Encode the top 5 bit
-                    view.setInt8(pos++, ((unicode ushr 16) or 0b110_00000).toByte())
-                    // Encode the lower 16 bit (big endian)
-                    view.setInt16(pos, (unicode and 0xffff).toShort())
-                    pos += 2
-                }
-            }
+            pos = writeUnicode(pos, unicode)
         }
-        // Calculate the bytes we encoded (5 bytes where reserved for the lead-in)
+        // Calculate the size of the string.
         val size = pos - start - 5
-        // Truncate the lead-in and copy the data backwards.
-        // TODO: Optimize by using words (32-bit) instead of copy bytes, add support to IDataView for this copy op,
-        //       because in the JVM we can use the low level array-copy method of System, maybe there is something
-        //       like this as well in NodeJS and/or the Browser?
         var source = start + 5
-        var target = start
-        when (size) {
-            in 0..12 -> {
-                view.setInt8(target++, (TYPE_STRING or size).toByte())
-                check(target + 4 == source)
-            }
-
-            in 13..255 -> {
-                view.setInt8(target++, (TYPE_STRING or 13).toByte())
-                view.setInt8(target++, size.toByte())
-                check(target + 3 == source)
-            }
-
-            in 256..65535 -> {
-                view.setInt8(target++, (TYPE_STRING or 14).toByte())
-                view.setInt16(target, size.toShort())
-                target += 2
-                check(target + 2 == source)
-            }
-
-            else -> {
-                view.setInt8(target++, (TYPE_STRING or 15).toByte())
-                view.setInt32(target, size)
-                target += 5
-                check(target == source)
-            }
-        }
+        // If the header is smaller than 5 byte, we need copy the data backwards.
+        var target = writeStringHeader(start, size)
         if (target < source) {
             while (source < pos) {
+                // TODO: Optimized this by adding support for a native copy function into IDataView
                 view.setInt8(target++, view.getInt8(source++))
             }
             pos = target
@@ -301,9 +284,138 @@ class JbBuilder(val view: IDataView, val dictionary: JbDict? = null) {
     }
 
     /**
+     * Encodes the given string as text, that means using the local dictionary and the global dictionary.
+     * @param string The string to encode.
+     * @return The offset of the value written.
+     */
+    fun writeText(string: String): Int {
+        // TODO: Add dictionary usage!
+        val start = end
+        // We reserve 5 byte for the header.
+        var pos = end + 5
+        var i = 0
+        while (i < string.length) {
+            val hi = string[i++]
+            var unicode: Int
+            if (i < string.length && hi.isHighSurrogate()) {
+                val lo = string[i++]
+                require(lo.isLowSurrogate())
+                unicode = CodePoints.toCodePoint(hi, lo)
+            } else {
+                unicode = hi.code
+            }
+            check(unicode in 0..2_097_151)
+            pos = writeUnicode(pos, unicode)
+        }
+        // Calculate the size of the string.
+        val size = pos - start - 5
+        var source = start + 5
+        // If the header is smaller than 5 byte, we need copy the data backwards.
+        var target = writeStringHeader(start, size)
+        if (target < source) {
+            while (source < pos) {
+                // TODO: Optimized this by adding support for a native copy function into IDataView
+                view.setInt8(target++, view.getInt8(source++))
+            }
+            pos = target
+        }
+        end = pos
+        return start
+    }
+
+    private fun sizeOfUnicode(unicode: Int): Int {
+        return when (unicode) {
+            in 0..127 -> 1
+            in 128..16511 -> 2
+            else -> 3
+        }
+    }
+
+    private fun writeUnicode(offset: Int, unicode: Int): Int {
+        require(unicode in 0..2_097_151)
+        require(offset >= 0 && offset <= (view.getSize() - sizeOfUnicode(unicode)))
+        var pos = offset
+        when (unicode) {
+            in 0..127 -> view.setInt8(pos++, unicode.toByte())
+            in 128..16511 -> { // 0 -> 2^14-1 biased by 128
+                // BIAS the unicode value
+                val biased = unicode - 128
+                // Encode the higher 6 bit
+                view.setInt8(pos++, ((biased ushr 8) or 0b10_000000).toByte())
+                // Encode the lower 8 bit
+                view.setInt8(pos++, (biased and 0xff).toByte())
+            }
+
+            else -> {
+                // Full code point encoding
+                // Encode the top 5 bit
+                view.setInt8(pos++, ((unicode ushr 16) or 0b110_00000).toByte())
+                // Encode the lower 16 bit (big endian)
+                view.setInt16(pos, (unicode and 0xffff).toShort())
+                pos += 2
+            }
+        }
+        return pos
+    }
+
+    private fun writeStringHeader(offset: Int, size: Int): Int {
+        var pos = offset
+        when (size) {
+            in 0..12 -> {
+                view.setInt8(pos++, (TYPE_STRING or size).toByte())
+            }
+
+            in 13..255 -> {
+                view.setInt8(pos++, (TYPE_STRING or 13).toByte())
+                view.setInt8(pos++, size.toByte())
+            }
+
+            in 256..65535 -> {
+                view.setInt8(pos++, (TYPE_STRING or 14).toByte())
+                view.setInt16(pos, size.toShort())
+                pos += 2
+            }
+
+            else -> {
+                view.setInt8(pos++, (TYPE_STRING or 15).toByte())
+                view.setInt32(pos, size)
+                pos += 5
+            }
+        }
+        return pos
+    }
+
+    private fun writeTextHeader(offset: Int, size: Int): Int {
+        var pos = offset
+        when (size) {
+            0 -> {
+                view.setInt8(pos++, (TYPE_CONTAINER or 0b1100).toByte())
+            }
+
+            in 1..255 -> {
+                view.setInt8(pos++, (TYPE_CONTAINER or 0b1101).toByte())
+                view.setInt8(pos++, size.toByte())
+            }
+
+            in 256..65535 -> {
+                view.setInt8(pos++, (TYPE_CONTAINER or 0b1110).toByte())
+                view.setInt16(pos, size.toShort())
+                pos += 2
+            }
+
+            else -> {
+                view.setInt8(pos++, (TYPE_CONTAINER or 0b1111).toByte())
+                view.setInt32(pos, size)
+                pos += 5
+            }
+        }
+        return pos
+    }
+
+    /**
      * Starts a document, can only be called for a blank builder, so when [end] is zero.
      */
-    fun startDocument(): Int {
+    fun createDictionary(): Int {
         check(end == 0)
         // Lead-In
         view.setInt8(end++, TYPE_DOCUMENT.toByte())

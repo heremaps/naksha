@@ -111,6 +111,10 @@ class JbReader(val view: IDataView, val dictionary: JbDict? = null) {
                 }
             }
 
+            TYPE_CONTAINER -> {
+                0
+            }
+
             else -> 0
         }
     }

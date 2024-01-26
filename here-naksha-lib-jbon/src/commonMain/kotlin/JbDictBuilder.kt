@@ -5,9 +5,18 @@ package com.here.naksha.lib.jbon
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
+/**
+ * A dictionary builder, with support to use a global dictionary. In that case, only local dictionaries are creatable.
+ */
 @JsExport
-class JbDictBuilder(var view : IDataView) {
+class JbDictBuilder(val view : IDataView, val global : JbDict? = null) {
 
-    // fun add(jbon: Jbon) : Int
-    // fun build() : JbonDict
+
+
+    /**
+     * Copies all data from this buffer into a new read-only byte-array that represents the final dictionary.
+     */
+    fun buildLocal() : ByteArray {
+        throw NotImplementedError()
+    }
 }
