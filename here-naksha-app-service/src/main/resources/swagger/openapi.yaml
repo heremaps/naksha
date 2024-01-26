@@ -707,6 +707,7 @@ paths:
         - $ref: '#/components/parameters/TagList'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/PropertiesQuery'
+        - $ref: '#/components/parameters/PropertiesSelection'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionResponse'
@@ -1078,6 +1079,19 @@ components:
         example:
           p.some_property: '.null'
         additionalProperties:
+          type: string
+    PropertiesSelection:
+      name: selection
+      in: query
+      description: |
+        A list of properties to be returned in the features result list. Multiple attributes can be
+        specified by using comma(,).
+
+        Example: ?selection=p.name,p.capacity,p.color,rootPropertyName
+      explode: false
+      schema:
+        type: array
+        items:
           type: string
     Radius:
       name: radius

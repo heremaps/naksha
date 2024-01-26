@@ -62,6 +62,7 @@ public class PropertyPathUtilTest {
                                 "id",
                                 "type",
                                 "geometry",
+                                "", // empty path
                                 "unknown",
                                 "properties.unknown",
                                 "properties.priority.unknown",
