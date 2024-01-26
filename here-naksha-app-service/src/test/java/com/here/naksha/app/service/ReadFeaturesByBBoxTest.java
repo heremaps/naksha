@@ -860,8 +860,4 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
-
-
-
-
 }

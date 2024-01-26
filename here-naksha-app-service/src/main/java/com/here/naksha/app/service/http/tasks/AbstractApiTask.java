@@ -95,8 +95,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzFeatureResponse(
-      final @NotNull Result rdResult, final @NotNull Class<R> type, @Nullable F1<R, R> postProcessing) {
-    return transformResultToXyzFeatureResponse(rdResult, type, NOT_FOUND_ON_NO_ELEMENTS, postProcessing);
+      final @NotNull Result rdResult, final @NotNull Class<R> type, @Nullable F1<R, R> preResponseProcessing) {
+    return transformResultToXyzFeatureResponse(rdResult, type, NOT_FOUND_ON_NO_ELEMENTS, preResponseProcessing);
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzFeatureResponse(
@@ -105,8 +105,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzFeatureResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable F1<R, R> postProcessing) {
-    return transformResultToXyzFeatureResponse(wrResult, type, FAIL_ON_NO_ELEMENTS, postProcessing);
+      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable F1<R, R> preResponseProcessing) {
+    return transformResultToXyzFeatureResponse(wrResult, type, FAIL_ON_NO_ELEMENTS, preResponseProcessing);
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformDeleteResultToXyzFeatureResponse(
@@ -122,18 +122,18 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final @Nullable Result result,
       final @NotNull Class<R> type,
       final @NotNull NoElementsStrategy noElementsStrategy,
-      final @Nullable F1<R, R> postProcessing) {
+      final @Nullable F1<R, R> preResponseProcessing) {
     final XyzResponse validatedErrorResponse = validateErrorResult(result);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
     } else {
       try {
         final R feature = readFeatureFromResult(result, type);
-        R postProcessedFeature = feature;
-        if (feature != null && postProcessing != null) {
-          postProcessedFeature = postProcessing.call(feature);
+        R processedFeature = feature;
+        if (feature != null && preResponseProcessing != null) {
+          processedFeature = preResponseProcessing.call(feature);
         }
-        if (postProcessedFeature == null) {
+        if (processedFeature == null) {
           return verticle.sendErrorResponse(
               routingContext,
               XyzError.NOT_FOUND,
@@ -141,7 +141,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
                   + result.getXyzFeatureCursor().getId());
         }
         final List<R> featureList = new ArrayList<>();
-        featureList.add(postProcessedFeature);
+        featureList.add(processedFeature);
         final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(featureList);
         return verticle.sendXyzResponse(routingContext, HttpResponseType.FEATURE, featureResponse);
       } catch (NoCursor | NoSuchElementException emptyException) {
@@ -151,9 +151,11 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
-      final @Nullable Result rdResult, final @NotNull Class<R> type, final @Nullable F1<R, R> postProcessing) {
+      final @Nullable Result rdResult,
+      final @NotNull Class<R> type,
+      final @Nullable F1<R, R> preResponseProcessing) {
     return transformReadResultToXyzCollectionResponse(
-        rdResult, type, 0, DEF_ADMIN_FEATURE_LIMIT, null, postProcessing);
+        rdResult, type, 0, DEF_ADMIN_FEATURE_LIMIT, null, preResponseProcessing);
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
@@ -181,31 +183,30 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final long offset,
       final long maxLimit,
       final @Nullable IterateHandle handle,
-      final @Nullable F1<R, R> postProcessing) {
+      final @Nullable F1<R, R> preResponseProcessing) {
     final XyzResponse validatedErrorResponse = validateErrorResultEmptyCollection(rdResult);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
     } else {
       try {
         final List<R> features = readFeaturesFromResult(rdResult, type, offset, maxLimit);
-        List<R> postProcessedFeatures = features;
-        if (postProcessing != null) {
-          postProcessedFeatures = new ArrayList<>();
+        List<R> processedFeatures = features;
+        if (preResponseProcessing != null) {
+          processedFeatures = new ArrayList<>();
           for (R feature : features) {
-            final R postProcessedFeature = postProcessing.call(feature);
-            if (postProcessedFeature != null) {
-              postProcessedFeatures.add(postProcessedFeature);
+            final R processedFeature = preResponseProcessing.call(feature);
+            if (processedFeature != null) {
+              processedFeatures.add(processedFeature);
             }
           }
         }
         // Populate handle (if provided), with the values ready for next iteration
-        final String handleStr =
-            getIterateHandleAsString(postProcessedFeatures.size(), offset, maxLimit, handle);
+        final String handleStr = getIterateHandleAsString(processedFeatures.size(), offset, maxLimit, handle);
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
             new XyzFeatureCollection()
-                .withFeatures(postProcessedFeatures)
+                .withFeatures(processedFeatures)
                 .withNextPageToken(handleStr));
       } catch (NoCursor | NoSuchElementException emptyException) {
         logger.info("No data found in ResultCursor, returning empty collection");
@@ -311,7 +312,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   @SuppressWarnings("unchecked")
-  protected <F extends XyzFeature> @NotNull F propSelectionPostProcessing(
+  protected <F extends XyzFeature> @NotNull F standardReadFeaturesPreResponseProcessing(
       final @NotNull F f, final @NotNull Set<String> propPaths) {
     final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(f, propPaths);
     return (F) JsonSerializable.fromMap(tgtMap, f.getClass());

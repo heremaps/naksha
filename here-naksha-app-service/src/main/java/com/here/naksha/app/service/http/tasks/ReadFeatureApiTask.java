@@ -183,7 +183,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         0,
         limit,
         null,
-        (propPaths == null) ? null : f -> propSelectionPostProcessing(f, propPaths));
+        (propPaths == null) ? null : f -> standardReadFeaturesPreResponseProcessing(f, propPaths));
   }
 
   private @NotNull XyzResponse executeFeaturesByTile() {
