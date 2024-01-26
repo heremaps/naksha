@@ -30,17 +30,26 @@ public class PropertyPathUtilTest {
                         COMMON_INPUT_FILE,
                         "MergeMultiplePaths/Expected.json",
                         List.of(
-                                "properties.status",
-                                "properties.references.0",
+                                "id",
+                                "type",
+                                "geometry",
+                                "addProp", // additional property
+                                "properties.status", // just a normal property
+                                "properties.references.0", // entire array element
+                                "properties.references.0", // repeating entire array element
                                 "properties.isoCountryCode",
                                 "properties.isoCountryCode", // repeating element
                                 "properties.@ns:com:here:utm.priorityParams.backup.dueBy",
-                                "properties.@ns:com:here:utm.priorityParams.backup.priority",
-                                "properties.options.1.key",
+                                "properties.@ns:com:here:utm.priorityParams.backup.priority", // integer
+                                "properties.@ns:com:here:utm.priorityParams.derived.boost", // float
+                                "properties.options.0.key", // nested field inside array
+                                "properties.options.1.key", // another element from same "options" array
                                 "properties.options.1.value",
                                 "properties.options.1.value.lang", // repeating nested element
+                                "properties.options.0.value", // going back to previous array element
                                 "properties.@ns:com:here:xyz.uuid",
-                                "properties.@ns:com:here:xyz.tags.0",
+                                "properties.@ns:com:here:xyz.deleted", // boolean
+                                "properties.@ns:com:here:xyz.tags.0", // string inside array
                                 "properties.@ns:com:here:xyz.tags.0", // repeating array element
                                 "properties.@ns:com:here:xyz.tags.2"
                         )
@@ -50,17 +59,31 @@ public class PropertyPathUtilTest {
                         COMMON_INPUT_FILE,
                         "UnknownPaths/Expected.json",
                         List.of(
-                                "properties.status", // only known path
+                                "id",
+                                "type",
+                                "geometry",
                                 "unknown",
                                 "properties.unknown",
                                 "properties.priority.unknown",
                                 "properties.references.0.unknown",
                                 "properties.@ns:com:here:utm.tags.0.unknown",
                                 "properties.options.1.value.unknown",
-                                "properties.@ns:com:here:xyz.tags.unknown",
-                                "properties.@ns:com:here:xyz.tags.50", // array index out of bounds
+                                "properties.@ns:com:here:xyz.tags.unknown", // invalid array index
+                                "properties.@ns:com:here:xyz.tags.50", // array index out-of-bounds
                                 "properties.@ns:com:here:xyz.tags.-1"
                         )
+                ),
+                propPathTestSpec(
+                        "Empty map",
+                        COMMON_INPUT_FILE,
+                        "EmptyMap/Expected.json",
+                        List.of()
+                ),
+                propPathTestSpec(
+                        "Empty map",
+                        COMMON_INPUT_FILE,
+                        "EmptyMap/Expected.json",
+                        null
                 )
         );
     }
@@ -81,12 +104,12 @@ public class PropertyPathUtilTest {
         final String expectedJsonData = TestUtil.loadFileOrFail(TEST_DATA_FOLDER, expectedFilePath); // "JsonTest/Expected.json");
 
         // When: target function is invoked to extract property paths
-        final Map<String, Object> newF = PropertyPathUtil.extractPropertyPathsFromFeature(feature, propPaths);
+        final Map<String, Object> newF = PropertyPathUtil.extractPropertyMapFromFeature(feature, propPaths);
 
         // Then: validate output Json content matches the expectations
         assertNotNull(newF);
         final String actualJsonData = TestUtil.toJson(newF);
-        JSONAssert.assertEquals("Selection object doesn't match", expectedJsonData, actualJsonData, JSONCompareMode.STRICT);
+        JSONAssert.assertEquals("Extracted property map doesn't match", expectedJsonData, actualJsonData, JSONCompareMode.STRICT);
     }
 
     private static Arguments propPathTestSpec(

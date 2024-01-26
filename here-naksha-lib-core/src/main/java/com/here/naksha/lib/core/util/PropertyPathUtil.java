@@ -27,52 +27,27 @@ public class PropertyPathUtil {
 
   private PropertyPathUtil() {}
 
-  public static @NotNull Map<String, Object> extractPropertyPathsFromFeature(
+  public static @NotNull Map<String, Object> extractPropertyMapFromFeature(
       final @NotNull XyzFeature feature, final @Nullable List<@Nullable String> paths) {
     final Map<String, Object> tgtMap = new HashMap<>();
-    tgtMap.put("id", feature.getId());
-    tgtMap.put("type", "Feature");
-    // TODO : Add geometry object as well
-
-    if (paths == null || paths.size() == 0) {
-      return tgtMap;
-    }
-    // tokenize paths using "." delimiter
-    // e.g. convert "properties.xyz.tags" to ["properties","xyz","tags"]
-    final List<String[]> tokenizedPaths = new ArrayList<>();
-    for (final String path : paths) {
-      if (path != null) {
-        tokenizedPaths.add(path.split("\\."));
-      }
-    }
-    // extract property path based on tokenized paths
-    PropertyPathUtil.extractPropertyPathsFromMap(feature, tgtMap, tokenizedPaths);
+    PropertyPathUtil.populatePropertyMapFromMap(feature.asMap(), tgtMap, paths);
     return tgtMap;
   }
 
-  public static void extractPropertyPathsFromMap(
+  public static void populatePropertyMapFromMap(
       final @NotNull Map<String, Object> srcMap,
       final @NotNull Map<String, Object> tgtMap,
-      final @Nullable List<@Nullable String[]> paths) {
-    if (paths == null) return;
+      final @Nullable List<@Nullable String> paths) {
+    if (paths == null || paths.size() == 0) return;
     // iterate through all property paths and merge the extracted fields into tgtMap
-    for (final String[] path : paths) {
-      if (path == null || path.length == 0) continue;
-      extractPropertyPathFromMap(srcMap, tgtMap, path, 0);
+    for (final String path : paths) {
+      if (path == null || path.isEmpty()) continue;
+      // we pass tokenized paths using "." delimiter
+      // e.g. convert "properties.xyz.tags" to ["properties","xyz","tags"]
+      extractPropertyPathFromMap(srcMap, tgtMap, path.split("\\."), 0);
     }
     // Remove unwanted (null) list nodes from the tgtMap
     deepRemoveUnusedListNodes(tgtMap);
-  }
-
-  @SuppressWarnings({"unchecked"})
-  private static void deepRemoveUnusedListNodes(final @NotNull Map<String, Object> tgtMap) {
-    for (final Object obj : tgtMap.values()) {
-      if (obj instanceof Map) {
-        deepRemoveUnusedListNodes((Map<String, Object>) obj);
-      } else if (obj instanceof List) {
-        ((List<Object>) obj).removeIf(Objects::isNull);
-      }
-    }
   }
 
   @SuppressWarnings({"unchecked"})
@@ -80,7 +55,7 @@ public class PropertyPathUtil {
       final @NotNull Map<String, Object> srcMap,
       final @NotNull Map<String, Object> tgtMap,
       final @NotNull String[] path,
-      int pathIdx) {
+      final int pathIdx) {
     if (pathIdx >= path.length) {
       return srcMap; // we reached to end of json path, so we return entire source object itself
     }
@@ -93,9 +68,9 @@ public class PropertyPathUtil {
       final Object tObj = tgtMap.get(key);
       final Map<String, Object> newMap = (tObj == null) ? new HashMap<>() : (Map<String, Object>) tObj;
       // recursively look into crtMap to search for next property in json path
-      final Object retVal = extractPropertyPathFromMap(crtMap, newMap, path, ++pathIdx);
+      final Object retVal = extractPropertyPathFromMap(crtMap, newMap, path, pathIdx + 1);
       if (retVal != null) {
-        // Add obtained value to a tgtMap and then return.
+        // Add extracted map to a tgtMap and then return.
         tgtMap.put(key, retVal);
         return tgtMap;
       }
@@ -106,9 +81,9 @@ public class PropertyPathUtil {
       final Object tObj = tgtMap.get(key);
       final List<Object> newList = (tObj == null) ? new ArrayList<>(crtList.size()) : (List<Object>) tObj;
       // recursively look into crtList to search for next property in json path
-      final Object retVal = extractPropertyPathFromList(crtList, newList, path, ++pathIdx);
+      final Object retVal = extractPropertyPathFromList(crtList, newList, path, pathIdx + 1);
       if (retVal != null) {
-        // Add obtained value to a tgtMap and then return.
+        // Add extracted list to a tgtMap and then return.
         tgtMap.put(key, retVal);
         return tgtMap;
       }
@@ -125,7 +100,7 @@ public class PropertyPathUtil {
       final @NotNull List<Object> srcList,
       final @NotNull List<Object> tgtList,
       final @NotNull String[] path,
-      int pathIdx) {
+      final int pathIdx) {
     if (pathIdx >= path.length) {
       return srcList; // we reached to end of json path, so we return entire source list itself
     }
@@ -144,9 +119,9 @@ public class PropertyPathUtil {
       final Object tObj = (arrIdx >= tgtList.size()) ? null : tgtList.get(arrIdx);
       final Map<String, Object> newMap = (tObj == null) ? new HashMap<>() : (Map<String, Object>) tObj;
       // recursively look into crtMap to search for next property in json path
-      final Object retVal = extractPropertyPathFromMap(crtMap, newMap, path, ++pathIdx);
+      final Object retVal = extractPropertyPathFromMap(crtMap, newMap, path, pathIdx + 1);
       if (retVal != null) {
-        // Add obtained value to a tgtList and then return.
+        // Add extracted map to a tgtList and then return.
         return addToTargetListAtPosition(tgtList, arrIdx, retVal);
       }
     } else if (value instanceof List) {
@@ -156,9 +131,9 @@ public class PropertyPathUtil {
       final Object tObj = (arrIdx >= tgtList.size()) ? null : tgtList.get(arrIdx);
       final List<Object> newList = (tObj == null) ? new ArrayList<>(crtList.size()) : (List<Object>) tObj;
       // recursively look into crtList to search for next property in json path
-      Object retVal = extractPropertyPathFromList(crtList, newList, path, ++pathIdx);
+      Object retVal = extractPropertyPathFromList(crtList, newList, path, pathIdx + 1);
       if (retVal != null) {
-        // Add obtained value to a tgtList and then return.
+        // Add extracted list to a tgtList and then return.
         return addToTargetListAtPosition(tgtList, arrIdx, retVal);
       }
     } else if (value != null && pathIdx == path.length - 1) {
@@ -169,12 +144,26 @@ public class PropertyPathUtil {
   }
 
   private static @NotNull List<Object> addToTargetListAtPosition(
-      final @NotNull List<Object> tgtList, int arrIdx, final @NotNull Object retVal) {
-    for (int i = tgtList.size(); i < arrIdx; i++) {
-      tgtList.add(i, null); // we purposely add holes (null) to retain order of tgtList same as srcList
+      final @NotNull List<Object> tgtList, final int arrIdx, final @NotNull Object retVal) {
+    final int crtSize = tgtList.size();
+    for (int i = crtSize; i < arrIdx; i++) {
+      // we intentionally add temporary holes (null),
+      // to retain element order within tgtList same as original srcList
+      tgtList.add(i, null);
     }
-    if (arrIdx < tgtList.size()) tgtList.set(arrIdx, retVal);
+    if (arrIdx < crtSize) tgtList.set(arrIdx, retVal);
     else tgtList.add(arrIdx, retVal);
     return tgtList;
+  }
+
+  @SuppressWarnings({"unchecked"})
+  private static void deepRemoveUnusedListNodes(final @NotNull Map<String, Object> tgtMap) {
+    for (final Object obj : tgtMap.values()) {
+      if (obj instanceof Map) {
+        deepRemoveUnusedListNodes((Map<String, Object>) obj);
+      } else if (obj instanceof List) {
+        ((List<Object>) obj).removeIf(Objects::isNull);
+      }
+    }
   }
 }

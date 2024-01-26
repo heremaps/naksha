@@ -1,8 +1,8 @@
 {
     "id": "000YofljPAC0bLYg",
     "type": "Feature",
+    "addProp": "Root level additional property",
     "properties": {
-        "id": "7c2bd2fc-299b-4842-b565-ce7f33b0d7d6",
         "status": "SUSPENDED",
         "options": [
             {
@@ -62,7 +62,8 @@
                 "derived": {
                     "dueBy": 2681207060668,
                     "category": 3,
-                    "slaNormFactor": 432000001
+                    "slaNormFactor": 432000001,
+                    "boost": 1.5
                 }
             }
         },
