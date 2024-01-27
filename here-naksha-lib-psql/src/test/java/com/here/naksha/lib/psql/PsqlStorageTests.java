@@ -77,10 +77,10 @@ import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.json.JsonMap;
 import com.here.naksha.lib.core.util.json.JsonObject;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.operation.buffer.BufferOp;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.operation.buffer.BufferOp;
 
 import java.io.IOException;
 import java.sql.PreparedStatement;
@@ -532,6 +532,33 @@ public class PsqlStorageTests extends PsqlTests {
         errorResult.message.startsWith("The feature 'TheFeature' uuid 'invalid_UUID' does not match"),
         errorResult.message);
     session.commit(true);
+  }
+
+  @Test
+  @Order(64)
+  @EnabledIf("runTest")
+  void singleFeatureDeleteById() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    final XyzFeature feature = new XyzFeature("TO_DEL_BY_ID");
+    request.add(EWriteOp.CREATE, feature);
+
+    // when
+    try(final Result result = session.execute(request)) {
+      final WriteXyzFeatures delRequest = new WriteXyzFeatures(collectionId());
+      delRequest.delete("TO_DEL_BY_ID", null);
+      try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+               session.execute(delRequest).getXyzFeatureCursor()) {
+        assertTrue(cursor.next());
+        assertSame(EExecutedOp.DELETED, cursor.getOp());
+        assertEquals("TO_DEL_BY_ID", cursor.getId());
+        assertFalse(cursor.hasNext());
+      } finally {
+        session.commit(true);
+      }
+    }
   }
 
   @Test
