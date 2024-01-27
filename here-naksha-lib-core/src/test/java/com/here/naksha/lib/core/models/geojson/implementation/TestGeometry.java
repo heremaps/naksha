@@ -19,11 +19,9 @@
 package com.here.naksha.lib.core.models.geojson.implementation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.util.GeometryCombiner;
 import org.locationtech.jts.geom.util.GeometryFixer;
 
 import static org.junit.jupiter.api.Assertions.*;
