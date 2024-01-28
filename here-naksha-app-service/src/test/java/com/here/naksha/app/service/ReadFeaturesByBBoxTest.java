@@ -790,13 +790,14 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             urlEncoded("{\"id\":\"urn:here::here:Topology:2\"}")
     );
     final String selectQueryParam = "selection=p.speedLimit,f.tags";
+    final String clipQueryParam = "clip=false";
     final String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByBBox/TC0731_BBox2_PropSelection/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
     HttpResponse<String> response = nakshaClient
-            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam + "&" + selectQueryParam, streamId);
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam + "&" + selectQueryParam + "&" + clipQueryParam, streamId);
 
     // Then: Perform assertions
     assertThat(response)
@@ -856,6 +857,52 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     // Then: Perform assertions
     assertThat(response)
             .hasStatus(400)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
+
+  @Test
+  void tc0734_testBBox3WithClipFalse() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Validate feature geometry is not clipped when clip flag is false
+
+    // Given: Features By BBox request (against configured space)
+    final String bboxQueryParam = "west=5.6&south=6.25&east=5.7&north=6.3";
+    final String clipQueryParam = "clip=false";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByBBox/TC0734_BBox3_ClipFalse/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + clipQueryParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
+
+  @Test
+  void tc0735_testBBox3WithClipTrue() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Validate feature geometry is clipped when clip flag is true
+
+    // Given: Features By BBox request (against configured space)
+    final String bboxQueryParam = "west=5.6&south=6.25&east=5.7&north=6.3";
+    final String clipQueryParam = "clip=true";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByBBox/TC0735_BBox3_ClipTrue/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + clipQueryParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }

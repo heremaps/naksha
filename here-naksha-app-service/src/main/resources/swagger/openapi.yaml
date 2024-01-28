@@ -705,6 +705,7 @@ paths:
         - $ref: '#/components/parameters/East'
         - $ref: '#/components/parameters/South'
         - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/Clip'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/PropertiesQuery'
         - $ref: '#/components/parameters/PropertiesSelection'
@@ -941,6 +942,15 @@ components:
         type: array
         items:
           type: string
+    Clip:
+      name: clip
+      in: query
+      description: >-
+        If set to _true_ the features' geometries are clipped to the geometry of
+        the tile, bounding box or input geometry. Default is _false_.
+      required: false
+      schema:
+        type: boolean
     East:
       name: east
       in: query

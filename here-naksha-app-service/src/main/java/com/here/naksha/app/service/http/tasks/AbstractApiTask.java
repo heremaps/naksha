@@ -38,6 +38,7 @@ import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
@@ -50,6 +51,8 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.util.GeometryFixer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -313,8 +316,27 @@ public abstract class AbstractApiTask<T extends XyzResponse>
 
   @SuppressWarnings("unchecked")
   protected <F extends XyzFeature> @NotNull F standardReadFeaturesPreResponseProcessing(
-      final @NotNull F f, final @NotNull Set<String> propPaths) {
-    final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(f, propPaths);
-    return (F) JsonSerializable.fromMap(tgtMap, f.getClass());
+      final @NotNull F f, final @Nullable Set<String> propPaths, final boolean clip, final Geometry clipGeo) {
+    F newF = f;
+    // Apply prop selection if enabled
+    if (propPaths != null) {
+      final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(f, propPaths);
+      newF = (F) JsonSerializable.fromMap(tgtMap, f.getClass());
+    }
+    // Apply geometry clipping if enabled
+    if (clip) {
+      // clip Feature geometry (if present) to a given clipGeo geometry
+      final XyzGeometry xyzGeo = newF.getGeometry();
+      if (xyzGeo != null) {
+        // NOTE - in JTS when we say:
+        //    GeometryFixer.fix(geom).intersection(bbox)
+        // it is the best available way of clipping geometry, equivalent to PostGIS approach of:
+        //    ST_Intersection(ST_MakeValid(geo, 'method=structure'), bbox)
+        final Geometry clippedGeo =
+            GeometryFixer.fix(xyzGeo.getJTSGeometry()).intersection(clipGeo);
+        newF.setGeometry(XyzGeometry.convertJTSGeometry(clippedGeo));
+      }
+    }
+    return newF;
   }
 }
