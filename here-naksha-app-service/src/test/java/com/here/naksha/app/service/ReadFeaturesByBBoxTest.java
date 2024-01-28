@@ -861,6 +861,23 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
+
+  /*
+  tc0734 and tc0735 uses following sample geometry to test clipping functionality.
+    select
+        t.geom AS geom, -- used as feature geometry
+        t.bbox AS bbox, -- used as bbox
+        st_intersection(st_makevalid(t.geom, 'method=structure'), t.bbox) AS clipped_geo, -- expected resultant clipped geometry
+        st_asgeojson(st_intersection(st_makevalid(t.geom), t.bbox)) AS clipped_geo_json,
+        st_asgeojson(t.geom) AS geom_json
+    FROM
+        (SELECT
+        st_geomfromgeojson('{"type":"LineString","coordinates":[[5.630866303,6.303472939,0],[5.63092979,6.301495703,0],[5.631035602,6.299623631,0],[5.631480011,6.296447405,0]]}') AS geom,
+        st_geogfromtext('POLYGON ((5.6 6.25, 5.6 6.3, 5.7 6.3, 5.7 6.25, 5.6 6.25))') AS bbox
+        ) AS t
+    ;
+   */
+
   @Test
   void tc0734_testBBox3WithClipFalse() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
