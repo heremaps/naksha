@@ -789,7 +789,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             urlEncoded("{\"id\":\"urn:here::here:Topology:1\"}"),
             urlEncoded("{\"id\":\"urn:here::here:Topology:2\"}")
     );
-    final String selectQueryParam = "selection=p.speedLimit,f.tags";
+    final String selectQueryParam = "selection=p.speedLimit,%s".formatted(urlEncoded("p.@ns:com:here:xyz.tags"));
     final String clipQueryParam = "clip=false";
     final String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByBBox/TC0731_BBox2_PropSelection/feature_response_part.json");
