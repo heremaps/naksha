@@ -1,25 +1,22 @@
 package com.here.naksha.lib.hub.storages;
 
+import static com.here.naksha.lib.common.assertions.WriteXyzCollectionsAssertions.assertThatWriteXyzCollections;
+import static com.here.naksha.lib.common.assertions.WriteXyzFeaturesAssertions.assertThatWriteXyzFeatures;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.here.naksha.lib.common.TestNakshaContext;
 import com.here.naksha.lib.core.EventPipeline;
-import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.payload.Event;
-import com.here.naksha.lib.core.models.storage.Request;
-import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.WriteCollections;
 import com.here.naksha.lib.core.models.storage.WriteRequest;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
@@ -33,7 +30,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 class NHSpaceStorageWriterTest {
@@ -46,12 +42,6 @@ class NHSpaceStorageWriterTest {
   @Mock
   EventPipelineFactory eventPipelineFactory;
 
-  @Mock
-  IEventHandler spacesHandler;
-
-  @Mock
-  IEventHandler customSpaceHandler;
-
   private NHSpaceStorageWriter writer;
   private NakshaContext nakshaContext;
 
@@ -62,8 +52,8 @@ class NHSpaceStorageWriterTest {
     writer = new NHSpaceStorageWriter(
         naksha,
         Map.of(
-            NakshaAdminCollection.SPACES, List.of(spacesHandler),
-            CUSTOM_SPACE, List.of(customSpaceHandler)
+            NakshaAdminCollection.SPACES, List.of(mock(IEventHandler.class)),
+            CUSTOM_SPACE, List.of(mock(IEventHandler.class))
         ),
         eventPipelineFactory,
         nakshaContext,
@@ -73,40 +63,52 @@ class NHSpaceStorageWriterTest {
 
   @Test
   void shouldInvokeTwoPipelinesOnDeleteSpaceRequest() {
-    // Given: Write admin session that succeeds on writes
-    IWriteSession writeAdminSession = mock(IWriteSession.class);
-    when(writeAdminSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResult());
+    // Given: Alwyas succeeding Admin Write session - used for verifying that space (content) deletion was invoked
+    IWriteSession adminWriteSession = alwaysSucceedingAdminWriteSession();
 
-    when(spacesHandler.processEvent(any())).thenReturn(new SuccessResult());
-
-    // And: Admin storage that delegates write requests to conifgured write session
-    IStorage adminStorage = mock(IStorage.class);
-    when(adminStorage.newWriteSession(nakshaContext, false)).thenReturn(writeAdminSession);
-    when(naksha.getAdminStorage()).thenReturn(adminStorage);
-
-    // And:
-    EventPipeline eventPipeline = spy(new EventPipeline(naksha));
-    when(eventPipelineFactory.eventPipeline()).thenReturn(eventPipeline);
+    // And: Configured event pipeline spy - used for verifying that space entry deletion was invoked
+    EventPipeline eventPipeline = configuredPipelineSpy();
 
     // And: delete space request
     WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(new Space(CUSTOM_SPACE));
 
-    // When:
+    // When: executing delete space request
     writer.execute(deleteSpaceRequest);
 
-    // Then: Admin session executed WriteCollection request with space deletion
-    ArgumentCaptor<WriteXyzCollections> writeCollectionsCaptor = ArgumentCaptor.forClass(WriteXyzCollections.class);
-    Mockito.verify(writeAdminSession).execute(writeCollectionsCaptor.capture());
-    WriteXyzCollections writeXyzCollections = writeCollectionsCaptor.getValue();
-    Assertions.assertNotNull(writeXyzCollections);
-    Assertions.assertEquals(1, writeXyzCollections.features.size());
-    Assertions.assertEquals(CUSTOM_SPACE, writeXyzCollections.features.get(0).getFeature().getId());
+    // Then: The space itself (contents) got deleted: Admin session executed WriteCollection request with space deletion
+    ArgumentCaptor<WriteXyzCollections> writeCollectionsPassedToWriter = ArgumentCaptor.forClass(WriteXyzCollections.class);
+    verify(adminWriteSession).execute(writeCollectionsPassedToWriter.capture());
+    assertThatWriteXyzCollections(writeCollectionsPassedToWriter.getValue())
+        .hasSingleCodecThat(collectionCodec -> collectionCodec
+            .hasWriteOp(EWriteOp.DELETE)
+            .hasCollectionWithId(CUSTOM_SPACE)
+        );
 
-    // And:
-    ArgumentCaptor<WriteRequest> requestCaptor = ArgumentCaptor.forClass(WriteRequest.class);
-    verify(eventPipeline).sendEvent(requestCaptor.capture());
-    Object x = requestCaptor.getValue().features.get(0);
-    Assertions.assertNotNull(x);
+    // And: Space entry in admin collection got deleted: Event Pipeline handled WriteFeature request for space entry deletion
+    ArgumentCaptor<WriteRequest> writeRequestPassedToPipeline = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(eventPipeline).sendEvent(writeRequestPassedToPipeline.capture());
+    assertThatWriteXyzFeatures(writeRequestPassedToPipeline.getValue())
+        .hasSingleCodecThat(featureCodec -> featureCodec
+            .hasWriteOp(EWriteOp.DELETE)
+            .hasFeatureWithId(CUSTOM_SPACE)
+        );
   }
 
+  private IWriteSession alwaysSucceedingAdminWriteSession() {
+    // Given: Write Session that always succeeds
+    IWriteSession writeAdminSession = mock(IWriteSession.class);
+    when(writeAdminSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResult());
+
+    // And: Admin storage that delegates to configured Write Session
+    IStorage adminStorage = mock(IStorage.class);
+    when(naksha.getAdminStorage()).thenReturn(adminStorage);
+    when(adminStorage.newWriteSession(nakshaContext, false)).thenReturn(writeAdminSession);
+    return writeAdminSession;
+  }
+
+  private EventPipeline configuredPipelineSpy() {
+    EventPipeline eventPipeline = spy(new EventPipeline(naksha));
+    when(eventPipelineFactory.eventPipeline()).thenReturn(eventPipeline);
+    return eventPipeline;
+  }
 }

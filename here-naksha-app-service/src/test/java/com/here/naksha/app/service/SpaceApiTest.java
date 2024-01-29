@@ -30,6 +30,7 @@ import static com.here.naksha.app.common.assertions.ResponseAssertions.assertTha
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -223,6 +224,55 @@ class SpaceApiTest extends ApiTest {
     final HttpResponse<String> getResponse = getNakshaClient().get("hub/spaces/" + spaceVariant.spaceId, streamId);
     assertThat(getResponse)
         .hasStatus(404);
+  }
+
+//  @Test
+  // TODO: investigate why this fails - the collection persists on DB after delete request returns Success
+  void tc0281_testDeleteSpaceRemovesCollection() throws Exception {
+    // Given: test files
+    final String createFeatures = loadFileOrFail("SpaceApi/TC0281_deleteSpaceAndCollection/create_features.json");
+    final String expectedGetFromBSuccess = loadFileOrFail("SpaceApi/TC0281_deleteSpaceAndCollection/get_from_b_success.json");
+    final String expectedDeleteAResponse = loadFileOrFail("SpaceApi/TC0281_deleteSpaceAndCollection/delete_a_response.json");
+    final String getFromBFailure = loadFileOrFail("SpaceApi/TC0281_deleteSpaceAndCollection/get_from_b_failure.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // And: Created common storage
+    createStorage(getNakshaClient(), "SpaceApi/TC0281_deleteSpaceAndCollection/create_storage.json");
+
+    // And: Created space A & handler - that auto-creates and auto-deletes collection
+    createHandler(getNakshaClient(), "SpaceApi/TC0281_deleteSpaceAndCollection/create_handler_a.json");
+    createSpace(getNakshaClient(), "SpaceApi/TC0281_deleteSpaceAndCollection/create_space_a.json");
+
+    // And: Created space B & handler - that does not auto-create collection
+    createHandler(getNakshaClient(), "SpaceApi/TC0281_deleteSpaceAndCollection/create_handler_b.json");
+    createSpace(getNakshaClient(), "SpaceApi/TC0281_deleteSpaceAndCollection/create_space_b.json");
+
+    // And: Added sample feature to space A so the collection would be created
+    HttpResponse<String> createFeaturesResp = getNakshaClient().post("hub/spaces/tc_281_space_a/features", createFeatures, streamId);
+    assertThat(createFeaturesResp).hasStatus(200);
+
+    // When: Successfully fetching feature via space B (to demonstrate this should work when collection exists)
+    HttpResponse<String> getFeaturesBeforeDeletion = getNakshaClient().get("hub/spaces/tc_281_space_b/features/tc_281_feature", streamId);
+    assertThat(getFeaturesBeforeDeletion)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedGetFromBSuccess);
+
+    // And: Removing space A (to also remove the collection via auto-delete)
+    HttpResponse<String> deleteSpaceAResp = getNakshaClient().delete("hub/spaces/tc_281_space_a", streamId);
+    assertThat(deleteSpaceAResp)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedDeleteAResponse);
+
+    // And: fetching feature via space B again
+    HttpResponse<String> getFeaturesAfterDeletion = getNakshaClient().get("hub/spaces/tc_281_space_b/features/tc_281_feature", streamId);
+
+    // Then: we get 404 - the collection does not exist, hence it was removed by deleting space A
+    assertThat(getFeaturesAfterDeletion)
+        .hasStatus(404)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedGetFromBSuccess);
   }
 
   private static Stream<Named<AutoDeleteSpaceVariant>> autoDeleteSpaceVariants() {
