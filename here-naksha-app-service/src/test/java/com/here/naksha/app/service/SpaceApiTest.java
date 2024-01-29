@@ -226,7 +226,7 @@ class SpaceApiTest extends ApiTest {
         .hasStatus(404);
   }
 
-//  @Test
+  @Test
   // TODO: investigate why this fails - the collection persists on DB after delete request returns Success
   void tc0281_testDeleteSpaceRemovesCollection() throws Exception {
     // Given: test files
@@ -272,7 +272,7 @@ class SpaceApiTest extends ApiTest {
     assertThat(getFeaturesAfterDeletion)
         .hasStatus(404)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedGetFromBSuccess);
+        .hasJsonBody(getFromBFailure);
   }
 
   private static Stream<Named<AutoDeleteSpaceVariant>> autoDeleteSpaceVariants() {
