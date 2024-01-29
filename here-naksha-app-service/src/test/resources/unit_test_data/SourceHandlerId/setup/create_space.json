@@ -9,7 +9,7 @@
   ],
   "properties": {
     "collection": {
-      "id": "um-mod-dev:topology",
+      "id": "source_id_handler_collection",
       "type": "NakshaCollection"
     }
   }
