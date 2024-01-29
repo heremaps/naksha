@@ -26,6 +26,7 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.naksha.Space;
+import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.Result;
@@ -36,6 +37,7 @@ import com.here.naksha.lib.core.models.storage.WriteRequest;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.storage.IWriteSession;
+import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
@@ -80,15 +82,19 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   private @NotNull Result executeWriteCollections(final @NotNull WriteCollections wc) {
-    String collectionId = singleCollectionIdFrom(wc);
-    if (virtualSpaces.containsKey(collectionId)) {
-      logger.info("WriteCollections Request for {}, against Admin storage.", collectionId);
+    String spaceId = singleCollectionIdFrom(wc);
+    return executeWriteCollections(wc, spaceId);
+  }
+
+  private @NotNull Result executeWriteCollections(final @NotNull WriteCollections wc, final @NotNull String spaceId) {
+    if (virtualSpaces.containsKey(spaceId)) {
+      logger.info("WriteCollections Request for {}, against Admin storage.", spaceId);
       try (final IWriteSession admin = nakshaHub.getAdminStorage().newWriteSession(context, useMaster)) {
         return admin.execute(wc);
       }
     } else {
-      logger.info("WriteCollections Request for {}, against Custom storage.", collectionId);
-      return executeWriteToCustomSpaces(wc, collectionId);
+      logger.info("WriteCollections Request for {}, against Custom storage.", spaceId);
+      return executeWriteToCustomSpaces(wc, spaceId);
     }
   }
 
@@ -136,8 +142,9 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   private @NotNull Result executeDeleteSpace(@NotNull WriteFeatures<?, ?, ?> deleteSpaceEntryReq) {
     if (deleteSpaceEntryReq.features.get(0).getFeature() instanceof Space space) {
-      WriteXyzCollections deleteSpaceReq = new WriteXyzCollections().delete(new XyzCollection(space.getId()));
-      Result deleteSpaceRes = executeWriteCollections(deleteSpaceReq);
+      WriteXyzCollections deleteCollectionReq =
+          new WriteXyzCollections().delete(new XyzCollection(getCollectionIdFrom(space)));
+      Result deleteSpaceRes = executeWriteCollections(deleteCollectionReq, space.getId());
       if (deleteSpaceRes instanceof SuccessResult) {
         return executeWriteToAdminSpaces(deleteSpaceEntryReq, NakshaAdminCollection.SPACES);
       } else {
@@ -146,6 +153,14 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     } else {
       throw new IllegalArgumentException("Expected single Space feature");
     }
+  }
+
+  private String getCollectionIdFrom(Space space) {
+    if (space.getProperties() != null) {
+      SpaceProperties spaceProperties = JsonSerializable.convert(space.getProperties(), SpaceProperties.class);
+      return spaceProperties.getXyzCollection().getId();
+    }
+    return space.getCollectionId();
   }
 
   private String singleCollectionIdFrom(WriteCollections<?, ?, ?> wc) {

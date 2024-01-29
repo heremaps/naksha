@@ -38,9 +38,12 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
+import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,7 +106,9 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
 
   private XyzResponse executeDeleteSpace() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final WriteXyzFeatures wr = new WriteXyzFeatures(SPACES).delete(new Space(spaceId));
+    final Space persistedSpace = maybePersistedSpace(spaceId);
+    final Space spaceToDelete = persistedSpace == null ? new Space(spaceId) : persistedSpace;
+    final WriteXyzFeatures wr = new WriteXyzFeatures(SPACES).delete(spaceToDelete);
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wr)) {
       return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
     }
@@ -143,6 +148,15 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
     final ReadFeatures request = new ReadFeatures(SPACES).withPropertyOp(POp.eq(PRef.id(), spaceId));
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
       return transformReadResultToXyzFeatureResponse(rdResult, Space.class);
+    }
+  }
+
+  private @Nullable Space maybePersistedSpace(String spaceId) {
+    final ReadFeatures getSpace = new ReadFeatures(SPACES).withPropertyOp(POp.eq(PRef.id(), spaceId));
+    try (Result rr = executeReadRequestFromSpaceStorage(getSpace)) {
+      return ResultHelper.readFeatureFromResult(rr, Space.class);
+    } catch (NoSuchElementException e) {
+      return null;
     }
   }
 

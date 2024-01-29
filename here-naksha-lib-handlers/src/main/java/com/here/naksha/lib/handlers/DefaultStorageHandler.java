@@ -33,7 +33,6 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
 import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -41,7 +40,6 @@ import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.FeatureBox;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Request;
 import com.here.naksha.lib.core.models.storage.Result;
@@ -49,6 +47,7 @@ import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.WriteCollections;
 import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.models.storage.WriteRequest;
+import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
@@ -56,6 +55,7 @@ import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -350,9 +350,11 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       return rf.getCollections();
     } else if (request instanceof WriteCollections<?, ?, ?> wc) {
       return wc.features.stream()
-          .map(FeatureBox::getFeature)
-          .filter(XyzCollection.class::isInstance)
-          .map(XyzFeature::getId)
+          .filter(XyzCollectionCodec.class::isInstance)
+          .map(XyzCollectionCodec.class::cast)
+          .map(XyzCollectionCodec::getFeature)
+          .filter(Objects::nonNull)
+          .map(XyzCollection::getId)
           .toList();
     } else {
       throw new IllegalArgumentException("Unsupported request type: " + request.getClass());
