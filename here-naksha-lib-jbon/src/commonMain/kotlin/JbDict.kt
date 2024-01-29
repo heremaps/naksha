@@ -40,18 +40,20 @@ class JbDict : JbObjectMapper<JbDict>() {
     }
 
     override fun parseHeader(mandatory: Boolean) {
-        val type = type()
-        check(type == TYPE_GLOBAL_DICTIONARY || type == TYPE_LOCAL_DICTIONARY)
-        addOffset(1)
-        check(isInt())
-        val size = readInt32()
-        check(next())
-        if (type == TYPE_GLOBAL_DICTIONARY) {
-            check(isString())
-            id = readString().toString()
-            check(next())
+        if (mandatory) {
+            val type = reader.unitType()
+            check(type == TYPE_GLOBAL_DICTIONARY || type == TYPE_LOCAL_DICTIONARY)
+            reader.addOffset(1)
+            check(reader.isInt())
+            val size = reader.readInt32()
+            check(reader.nextUnit())
+            if (type == TYPE_GLOBAL_DICTIONARY) {
+                check(reader.isString())
+                id = reader.readString()
+                check(reader.nextUnit())
+            }
+            setContentSize(size)
         }
-        setContentSize(size)
     }
 
     override fun clear(): JbDict {
@@ -84,17 +86,23 @@ class JbDict : JbObjectMapper<JbDict>() {
      * @param index The index to ensure, if possible.
      */
     private fun ensure(index: Int) {
-        if (length < 0) {
+        if (this.length < 0) {
+            // We have not yet loaded all strings.
             val content = this.content
             val indexToOffset = this.indexToOffset
-            var len = content.size
-            while (len++ < index && isString()) {
-                val string = readString().toString()
+            var length = content.size
+            while (length <= index && reader.isString()) {
+                val string = reader.readString()
                 content.add(string)
-                indexToOffset.add(offset())
-                next()
+                indexToOffset.add(reader.offset())
+                length++
+                reader.nextUnit()
             }
-            length = content.size
+            check(length == content.size)
+            // If nothing left
+            if (!reader.isString()) {
+                this.length = length
+            }
         }
     }
 
@@ -110,7 +118,7 @@ class JbDict : JbObjectMapper<JbDict>() {
 
     /**
      * Returns the strings in the dictionary. The method is only precise after [loadAll] was invoked.
-     * @return The current amount of strings cached.
+     * @return The current amount of strings cached; -1 if the length is yet unknown an [loadAll] need to invoked first.
      */
     fun length(): Int {
         return length

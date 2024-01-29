@@ -3,16 +3,16 @@
 ## Introduction
 JBON is a shortcut for Java Binary Object Notation. In this binary format all values are stored as objects in a tree like structure that can be navigated quickly, but is at the same time very small.
 
-As the format name indicates already, this format is object-oriented. All JBON elements are derived from the virtual **JBON object**. This base-type (and therefore all others too) always starts with a type-byte. It identifies the type of the object and therefore allows to identify the binary size and other attributes.
+As the format name indicates, this format is object-oriented. All JBON elements are encoded using **units**. All **units** always starts with a type-byte. It identifies the type of the unit and therefore allows to identify the binary size and other attributes. Each unit can contain subunits, for example, a string contains unicode code-points, a map contains map-entries aso..
 
 The top most two bit of the type-byte selects the type-encoding itself:
 
-- `1ttt_vvvv`: One of the eight primary value types with a 4-bit value parameter.
-- `01tt_vvvv`: One of the four extended value types with a 4-bit value parameter.
+- `1ttt_vvvv`: One of the eight primary parameter types with a 4-bit value parameter.
+- `01tt_vvvv`: One of the four extended parameter types with a 4-bit value parameter.
 - `001?_????`: Reserved (32 types).
 - `0001_tttt`: One of the 32 standard types without value-parameter. The first 16 are scalars, the last 16 are complex objects.
 
-Therefore, the type-byte allows 12 **value-types** with a 4-bit parameter, 32 **standard-types**, and reserves up to 32 types for future extension.
+Therefore, the type-byte allows 12 **parameter-types** with a 4-bit parameter, 32 **standard-types**, and reserves up to 32 types for future extension.
 
 JBON values are always copy-on-write, that means, every modification requires to copy the object. Therefore, all JBONs are immutable. Reading in a JBON requires a cursor that can be used to move through JBON tree.
 
@@ -20,36 +20,38 @@ JBON values are always copy-on-write, that means, every modification requires to
 When this document mentions an **index**, it refers to the position in a dictionary. When this document refers to an **offset**, then it refers to the byte-offset in a JBON binary (basically a relative pointer in the JBON).
 
 ## Size vs Length
-In this document the term `size` refers to an amount of bytes, so a byte-size, while the term `length` refers to an entity count, for example the map-length is the amount of map-entries while the map-size is the amount of byte it requires (including the lead-in and size field).
+In this document the term `size` refers to an amount of bytes, so a byte-size, while the term `length` refers to a number of units. For example the map-length is the amount of map-entries while the map-size is the amount of byte it requires.
 
-The size is normally used to skip over elements, while the length is used logically.
+The size is normally used to skip over units, while the length is used logically. For this purpose, the size does not store the size of itself nor the size of the previously located lead-in byte, therefore to skip over the unit the size plus lead-in, plus the size of the size field itself has to be used.
+
+In a nutshell, the size stores the amount of bytes needed to skip a unit, after reading its size and when the offset is located behind the size field.
 
 ## Dictionaries (JbDict)
-To compress the data, JBON uses dictionaries. A dictionary is simply a list of objects. The first 16 entries in the dictionary are referred via tiny-references, the rest of the entries are normal (full) references. The difference between tiny and normal is only that the objects in the tiny list can be encoded using one byte, while all other references use between two and five byte. Therefore, it is recommended to use the tiny list for those values that are often used and small, to compress often used, but small objects, further.
+To compress the data, JBON uses dictionaries. A dictionary is simply a list of units. The first 16 entries in the dictionary can be referred using tiny-references (1 byte encoding), the rest of the entries require full references (2 to 5 byte encoding). Therefore, it is recommended to use the first 16 units for those values that are most often used and maybe are only small, to compress often used, but small objects.
 
 When a dictionary is mapped, it will lazy load entries into an internal cache, as long as only accessed using index. The dictionary can be queried as well by FNV1b hash, in that case it will load all values into the internal cache. Note that the hash causes collisions, therefore a search can find possible multiple entries and in all cases a binary compare must be performed.
 
 ## Maps (JbMap)
-In JBON the keys of a map must be strings, note that text is not allowed for keys, so only strings without references. All key-value pairs are sorted by the binary representation of the key. The reason for this is to guarantee, that two equal maps generate the same hash-code, when their binary representation is hashed.
+In JBON the keys of a map must be strings, note that text is not allowed for keys. All key-value pairs are sorted by the binary representation of the key. The reason for this is to guarantee, that two equal maps generate the same hash-code, when their binary representation is hashed.
 
 ## Features (JbDocument)
-A JBON feature is basically a JBON map, but with a local dictionary and an optional identifier of a global dictionary needed to decode it. A feature must not contain other features.
+A JBON feature is basically any unit, but with a local dictionary and an optional identifier of a global dictionary needed to decode it.
 
 ## Strings (JbString, JbText)
-JBON strings and texts are not encoded using UTF-8, but a special encoding that is smaller, and allows dictionary lookups. The leading bytes of every byte in a JBON string/text signal the following:
+JBON strings (and texts) are not encoded using UTF-8, but a special encoding that is smaller, and allows dictionary lookups. The leading bytes of every byte in a JBON string/text signal the following:
 
 - `0vvv_vvvv`: The value encodes the code point value. Allows values between 0 and 127 (ASCII).
 - `10_vvvvvv`: The value should be AND masks `0011_1111`, then shift-left by 8, the value of the next byte should be added using OR, and finally 128 should be added. Allows values between 128 and 16511 (2^14+128-1).
 - `110_vvvvv`: The value should be AND masks `0001_1111`, then shift-left by 16, and eventually the value of the next two byte (read big-endian) should be added using OR. Allows values between 0 and 2097151 (2^21-1).
-- `111_ssgvv`: The value is a **string-reference**. The three lower bits have the same meaning as for a **reference**, but must not refer to anything but a string, not even to a text. The `ss`-bits (bit number 4 and 5) signal if a special character should be added behind the referred string. The following values are defined:
+- `111_ssgvv`: The value is a **string-reference**. The three lower bits (`gvv`) have the same meaning as for a **reference**, but must not refer to anything but a string, not even to a text. The `ss`-bits (bit number 4 and 5) signal if a special character should be added behind the referred string. The following values are defined:
   - `00`: Do not encode any additional character.
   - `01`: Add a space behind the string.
-  - `10`: Add an underscore (_) behind the string.
-  - `11`: Add a colon (:) behind the string.
+  - `10`: Add an underscore (`_`) behind the string.
+  - `11`: Add a colon (`:`) behind the string.
 
 **Note**: The `ss`-bits improve the compression greatly, because the encoder will split strings by default at a space or underscore. Exactly where these splits happen, we do not need to encode the separator characters. The reason to cut at these two characters is that most often street-names or other human text uses the space as separator, while for constants in programming most often the underscore is used as separator (TYPE_A, TYPE_B, ...). Additionally, we have room for one more split characters to be defined by experience in the future.
 
-## Primary Value-Types (3-bit)
+## Primary Parameter-Types (3-bit)
 
 ### (0) uint4
 The lower 4-bit hold the positive (unsigned) value between `0..15`.
@@ -61,7 +63,7 @@ The lower 4-bit hold the negative (signed) value between `-1..-16`.
 The lower 4-bit hold the biased (signed) value. The value is stored minus 8, so `0..15` represents `-8..7`.
 
 ### (3) reference
-The normal reference encoding. All indices being bigger than 15 are encoded with a bias of 16, so that a value of 0 means index 16. Note that null-references are an exception, as they do not have any value. The value is used as a bit-field with the syntax `0gvv`:
+The full reference encoding. All indices being bigger than 15 are encoded as full references with a bias of 16, so that a value of 0 means index 16. Note that null-references are an exception, as they do not have any value. The value is used as a bit-field with the syntax `0gvv`:
 
 - `g`: If this bit is set, refers to the global dictionary, otherwise to the local dictionary.
 - `vv`: Signals the size of the reference:
@@ -104,7 +106,7 @@ After the lead-in the size is encoded, except being empty. Eventually the conten
 ### (7) tiny-global-reference
 A local or global reference with embedded index. The lower 4-bit encode the index. This allows to encode the first 16 entries in the dictionary with the strings used most often and therefore compress them the most (they are only referred by a single byte).
 
-## Extended Value-Types (2-bit)
+## Extended Parameter-Types (2-bit)
 
 ### (0) JbPosition (draft-only)
 A GeoJSON position. This is a complex value that persists out of longitude, latitude and an optional altitude.

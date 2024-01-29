@@ -603,7 +603,8 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         val endOfGlobalDictId = end
         val startOfTotalSize = end
         // Write the size of the feature.
-        writeInt32(end)
+        val totalSize = end
+        writeInt32(totalSize)
         val endOfTotalSize = end
 
         // Now, end + 1 byte lead-in feature, + 1 byte lead-in of local dict.

@@ -6,7 +6,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * A mapper that allows reading a feature.
+ * A mapper that allows reading a feature. After mapping the [reader] can be used to access the content of the feature.
  */
 @JsExport
 open class JbFeature : JbObjectMapper<JbFeature>() {
@@ -17,39 +17,38 @@ open class JbFeature : JbObjectMapper<JbFeature>() {
         super.clear()
         id = null
         featureType = -1
-        localDict = null
-        globalDict = null
         return this
     }
 
     override fun parseHeader(mandatory: Boolean) {
-        check(type() == TYPE_FEATURE)
+        // Header parsing is always mandatory for features!
+        check(reader.unitType() == TYPE_FEATURE)
         // Total size of feature.
-        addOffset(1)
-        check(isInt())
-        val size = readInt32()
-        check(next())
+        reader.addOffset(1)
+        check(reader.isInt())
+        val size = reader.readInt32()
+        check(reader.nextUnit())
         // The feature-id (optional).
-        if (isString()) {
-            id = readString().toString()
+        if (reader.isString()) {
+            id = reader.readString().toString()
         } else {
-            check(isNull())
+            check(reader.isNull())
         }
-        check(next())
+        check(reader.nextUnit())
         // The id of global dictionary (optional).
-        if (isString()) {
-            val globalDictId = readString()
-            globalDict = JbPlatform.get().getGlobalDictionary(globalDictId)
-            check(globalDict != null)
+        if (reader.isString()) {
+            val globalDictId = reader.readString()
+            reader.globalDict = JbPlatform.get().getGlobalDictionary(globalDictId)
+            check(reader.globalDict != null)
         } else {
-            check(isNull())
+            check(reader.isNull())
         }
-        check(next())
+        check(reader.nextUnit())
         // The embedded local dictionary.
-        check(isLocalDict())
-        localDict = JbDict().mapView(view, offset())
-        check(next())
-        featureType = type()
+        check(reader.isLocalDict())
+        reader.localDict = JbDict().mapReader(reader)
+        check(reader.nextUnit())
+        featureType = reader.unitType()
         // Content.
         setContentSize(size)
     }

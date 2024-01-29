@@ -17,19 +17,19 @@ open class JbReader {
     internal var view: IDataView? = null
 
     /**
-     * The current offset in the view, starts with zero.
-     */
-    internal var offset = 0
-
-    /**
      * The local dictionary to be used when decoding text or references.
      */
-    var localDict: JbDict? = null
+    internal var localDict: JbDict? = null
 
     /**
      * The global dictionary to be used when decoding text or references.
      */
-    var globalDict: JbDict? = null
+    internal var globalDict: JbDict? = null
+
+    /**
+     * The current offset in the view, starts with zero.
+     */
+    internal var offset = 0
 
     /**
      * Maps the given view.
@@ -117,44 +117,24 @@ open class JbReader {
     }
 
     /**
-     * Skip to the next entity.
-     * @return true if there is more; false otherwise.
+     * Skip to the next unit.
+     * @return true if a new unit reached; false otherwise.
      */
-    fun next(): Boolean {
+    fun nextUnit(): Boolean {
         val view = this.view ?: return false
-        val offset = this.offset + size()
+        val unitSize = unitSize()
+        if (unitSize <= 0) return false
+        val offset = this.offset + unitSize
         if (offset < 0 || offset > view.getSize()) return false
         this.offset = offset
         return offset < view.getSize()
     }
 
     /**
-     * Skip the lead-in byte and move into an object. Works only for objects for which an [object-mapper](JbObjectMapper)
-     * exist.
-     *
-     * @return true if moved; false otherwise.
-     */
-    internal fun enter(): Boolean {
-        val type = type()
-        return when (type) {
-            TYPE_CONTAINER,
-            TYPE_LOCAL_DICTIONARY,
-            TYPE_GLOBAL_DICTIONARY,
-            TYPE_STRING,
-            TYPE_FEATURE -> {
-                addOffset(1)
-                true
-            }
-
-            else -> false
-        }
-    }
-
-    /**
      * Reads the type from the current position.
      * @return The type stored at the current position.
      */
-    fun type(): Int {
+    open fun unitType(): Int {
         val view = this.view ?: return EOF
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return EOF
@@ -166,11 +146,27 @@ open class JbReader {
     }
 
     /**
+     * Returns the 4-bit parameter of a parameter-type.
+     * @param alternative The value to return, when this is no value type.
+     * @return The parameter value or the alternative.
+     */
+    fun unitTypeParam(alternative:Int=-1) : Int {
+        val view = this.view ?: return alternative
+        val offset = this.offset
+        if (offset < 0 || offset >= view.getSize()) return alternative
+        val type = view.getInt8(offset).toInt() and 0xff
+        if (type and 128 == 128) {
+            return type and 0x0f
+        }
+        return alternative
+    }
+
+    /**
      * Returns the size of the current value in byte including the lead-in byte, therefore the amount of byte to [addOffset], if
      * wanting to skip the value to the next one. The method return 0, when the position is invalid.
      * @return The size of the value in bytes including the lead-in (so between 1 and n), 0 when EOF.
      */
-    fun size(): Int {
+    open fun unitSize(): Int {
         val view = view()
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return 0
@@ -218,13 +214,10 @@ open class JbReader {
 
             TYPE_CONTAINER -> {
                 when (raw and 3) {
-                    0 -> { // Empty container
-                        1
-                    }
-
-                    1 -> view.getInt8(offset + 1).toInt() and 0xff
-                    2 -> view.getInt16(offset + 1).toInt() and 0xffff
-                    3 -> view.getInt32(offset + 1)
+                    0 -> 1 // Empty container
+                    1 -> 2 + view.getInt8(offset + 1).toInt() and 0xff
+                    2 -> 3 + view.getInt16(offset + 1).toInt() and 0xffff
+                    3 -> 5 + view.getInt32(offset + 1)
                     else -> throw IllegalStateException()
                 }
             }
@@ -232,7 +225,11 @@ open class JbReader {
             TYPE_GLOBAL_DICTIONARY, TYPE_LOCAL_DICTIONARY, TYPE_FEATURE -> {
                 this.offset++
                 try {
-                    return readInt32(0)
+                    // We seeked to the size, which it-self is a unit.
+                    // The unit-size of the dictionary or feature is actually:
+                    // lead-in byte (1 byte) + the size of the rest + size of the size unit
+                    check(isInt())
+                    return 1 + readInt32(0) + unitSize()
                 } finally {
                     this.offset = offset
                 }
@@ -247,20 +244,20 @@ open class JbReader {
      * @return true if the type at the current position is a boolean; false otherwise.
      */
     fun isBool(): Boolean {
-        val type = type()
+        val type = unitType()
         return type == TYPE_BOOL_TRUE || type == TYPE_BOOL_FALSE
     }
 
     fun isNull(): Boolean {
-        return type() == TYPE_NULL
+        return unitType() == TYPE_NULL
     }
 
     fun isUndefined(): Boolean {
-        return type() == TYPE_UNDEFINED
+        return unitType() == TYPE_UNDEFINED
     }
 
     fun readBoolean(): Boolean? {
-        val type = type()
+        val type = unitType()
         return when (type) {
             TYPE_BOOL_TRUE -> true
             TYPE_BOOL_FALSE -> false
@@ -273,7 +270,7 @@ open class JbReader {
      * @return true if the value is an integer; false otherwise.
      */
     fun isInt(): Boolean {
-        val type = type()
+        val type = unitType()
         return type == TYPE_UINT4
                 || type == TYPE_SINT4
                 || type == TYPE_INT8
@@ -287,7 +284,7 @@ open class JbReader {
      * @return true if the value is an integer; false otherwise.
      */
     fun isInt32(): Boolean {
-        val type = type()
+        val type = unitType()
         return type == TYPE_UINT4
                 || type == TYPE_SINT4
                 || type == TYPE_INT8
@@ -298,7 +295,7 @@ open class JbReader {
     fun readInt32(alternative: Int = -1): Int {
         val view = view()
         val offset = this.offset
-        val type = type()
+        val type = unitType()
         return when (type) {
             TYPE_UINT4 -> (view.getInt8(offset).toInt() and 0x0f)
             TYPE_SINT4 -> (view.getInt8(offset).toInt() and 0x0f) - 16
@@ -312,7 +309,7 @@ open class JbReader {
     @Suppress("NON_EXPORTABLE_TYPE")
     fun readInt64(alternative: Long = -1): Long {
         val view = view()
-        val type = type()
+        val type = unitType()
         return when (type) {
             TYPE_UINT4, TYPE_SINT4, TYPE_INT8, TYPE_INT16, TYPE_INT32 -> readInt32().toLong()
             TYPE_INT64 -> {
@@ -326,12 +323,12 @@ open class JbReader {
     }
 
     fun isFloat32(): Boolean {
-        val type = type()
+        val type = unitType()
         return type == TYPE_FLOAT32 || type == TYPE_FLOAT4
     }
 
     fun isFloat64(): Boolean {
-        val type = type()
+        val type = unitType()
         return type == TYPE_FLOAT64 || type == TYPE_FLOAT4
     }
 
@@ -348,7 +345,7 @@ open class JbReader {
     fun readFloat32(alternative: Float = Float.NaN, readStrict: Boolean = false): Float {
         val view = view()
         val offset = this.offset
-        return when (type()) {
+        return when (unitType()) {
             TYPE_UINT4, TYPE_SINT4, TYPE_INT8, TYPE_INT16 -> {
                 readInt32().toFloat()
             }
@@ -390,7 +387,7 @@ open class JbReader {
     fun readDouble(alternative: Double = Double.NaN, readStrict: Boolean = false): Double {
         val view = view()
         val offset = this.offset
-        return when (type()) {
+        return when (unitType()) {
             TYPE_UINT4, TYPE_SINT4, TYPE_INT8, TYPE_INT16, TYPE_INT32 -> {
                 readInt32().toDouble()
             }
@@ -422,7 +419,7 @@ open class JbReader {
      * @return true if the current type is a string; false otherwise.
      */
     fun isString(): Boolean {
-        return type() == TYPE_STRING
+        return unitType() == TYPE_STRING
     }
 
     /**
@@ -448,32 +445,56 @@ open class JbReader {
     private var stringReader: JbString? = null
 
     private fun stringReader(): JbString {
-        var reader = this.stringReader
-        if (reader == null) {
-            reader = JbString()
-            stringReader = reader
+        var sr = stringReader
+        if (sr == null) {
+            sr = JbString()
+            stringReader = sr
         }
-        reader.mapReader(this)
-        return reader
+        return sr
     }
 
     /**
      * Uses an internal string reader to parse the string at the current [offset] and return it.
-     * @param reader The reader to use, if null, an internal cached reader is used and returned.
-     * @return The given reader mapped to this string or the internal cached reader mapped to this string.
+     * @return The parsed string.
      */
     fun readString(): String {
         val stringReader = stringReader()
-        if (stringReader.view == view && stringReader.offset == offset && stringReader.string != null) {
-            return stringReader.string!!
+        // If the exact same string is read multiple times, avoid multiple parses.
+        if (stringReader.reader.view == view && stringReader.start == offset) {
+            val string = stringReader.string
+            if (string != null) return string
         }
         return stringReader.mapReader(this).toString()
     }
 
-    // readText() : String
+    private var textReader : JbText? = null
+
+    private fun textReader(): JbText {
+        var tr = textReader
+        if (tr == null) {
+            tr = JbText()
+            textReader = tr
+        }
+        return tr
+    }
+
+
+    /**
+     * Uses an internal text reader to parse the text at the current [offset] and return it.
+     * @return The parsed text as string.
+     */
+    fun readText(): String {
+        val textReader = textReader()
+        // If the exact same string is read multiple times, avoid multiple parses.
+        if (textReader.reader.view == view && textReader.start == offset) {
+            val string = textReader.string
+            if (string != null) return string
+        }
+        return textReader.mapReader(this).toString()
+    }
 
     fun isRef(): Boolean {
-        val type = type()
+        val type = unitType()
         return type == TYPE_REFERENCE || type == TYPE_TINY_GLOBAL_REF || type == TYPE_TINY_LOCAL_REF
     }
 
@@ -529,7 +550,7 @@ open class JbReader {
      * @return true if the current type is a local dictionary; false otherwise.
      */
     fun isLocalDict(): Boolean {
-        return type() == TYPE_LOCAL_DICTIONARY
+        return unitType() == TYPE_LOCAL_DICTIONARY
     }
 
     /**
@@ -537,7 +558,7 @@ open class JbReader {
      * @return true if the current type is a global dictionary; false otherwise.
      */
     fun isGlobalDict(): Boolean {
-        return type() == TYPE_GLOBAL_DICTIONARY
+        return unitType() == TYPE_GLOBAL_DICTIONARY
     }
 
 }

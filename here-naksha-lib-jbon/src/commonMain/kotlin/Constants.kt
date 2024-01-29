@@ -5,7 +5,12 @@ const val TYPE_SINT4 = 0b1001_0000
 const val TYPE_FLOAT4 = 0b1010_0000
 const val TYPE_REFERENCE = 0b1011_0000
 const val TYPE_STRING = 0b1100_0000
+const val TYPE_STRING_CODE_POINT = 0b0001_0000_0000 // 256
+const val TYPE_TEXT_REF = 0b0001_0000_0001 // 257
 const val TYPE_CONTAINER = 0b1101_0000
+const val TYPE_CONTAINER_MAP = 0b0000_0000
+const val TYPE_CONTAINER_ARRAY = 0b0000_0100
+const val TYPE_CONTAINER_TEXT = 0b0000_1100
 const val TYPE_TINY_LOCAL_REF = 0b1110_0000
 const val TYPE_TINY_GLOBAL_REF = 0b1111_0000
 // 0b0100_0000 = Reserved
@@ -31,7 +36,7 @@ const val TYPE_LOCAL_DICTIONARY = 17
 const val TYPE_FEATURE = 18
 // 18 - 31 = Reserved
 /**
- * A special type returned when the offset in a reader is invalid.
+ * A special type returned when the offset in a reader is invalid or for any other error.
  */
 const val EOF = -1
 internal const val ADD_NOTHING = 0b00
