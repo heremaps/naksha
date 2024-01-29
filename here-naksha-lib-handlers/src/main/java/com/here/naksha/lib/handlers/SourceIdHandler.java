@@ -37,7 +37,6 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
   private static final String TAG_PREFIX = "xyz_source_id_";
-  private static final String NS_COM_HERE_MOM_META = "@ns:com:here:mom:meta";
   private static final String SOURCE_ID = "sourceId";
 
   private @NotNull EventHandler eventHandler;
@@ -89,7 +88,7 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private Optional<String> getSourceIdFromFeature(XyzProperties properties) {
     try {
-      Map<String, Object> momMetaNs = (Map<String, Object>) properties.get(NS_COM_HERE_MOM_META);
+      Map<String, Object> momMetaNs = (Map<String, Object>) properties.get(XyzProperties.HERE_META_NS);
       Object sourceId = momMetaNs.get(SOURCE_ID);
       return Optional.ofNullable(sourceId).map(Object::toString);
     } catch (ClassCastException exception) {
@@ -99,7 +98,8 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private static boolean propertyReferenceEqualsSourceId(PRef pRef) {
     List<@NotNull String> path = pRef.getPath();
-    return path.size() == 3 && path.containsAll(List.of(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, SOURCE_ID));
+    return path.size() == 3
+        && path.containsAll(List.of(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, SOURCE_ID));
   }
 
   public static Optional<POp> mapIntoTagOperation(POp propertyOperation) {

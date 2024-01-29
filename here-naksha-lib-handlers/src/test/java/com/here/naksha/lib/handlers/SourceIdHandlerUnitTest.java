@@ -1,6 +1,7 @@
 package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import org.junit.jupiter.api.Test;
@@ -11,12 +12,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SourceIdHandlerUnitTest {
 
-    private static final String NS_COM_HERE_MOM_META = "@ns:com:here:mom:meta";
-
     @Test
     void tc2002_testMapEqToContainsTag() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
         POp given = POp.eq(pRef, "task_1");
         //when
 
@@ -31,7 +30,7 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2003_testMapNotEqToNotContainsTag() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
         POp given = POp.not(POp.eq(pRef, "task_1"));
         //when
 
@@ -48,7 +47,7 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2004_testMapContainsToContainsTag() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
         POp given = POp.contains(pRef, "task_1");
         //when
 
@@ -63,7 +62,7 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2005_testMapOnlyCorrectPref() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "WrongPRef");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "WrongPRef");
         POp given = POp.eq(pRef, "task_1");
         //when
 
@@ -76,7 +75,7 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2006_testMapsCorrectlyCombinedOperation () {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
         POp given = POp.and(POp.not(POp.eq(pRef, "task_1")), POp.contains(PRef.tag("funnyTag"), "4"));
         //when
 
@@ -99,7 +98,7 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2007_testMapEqToContainsTagWithoutNormalization() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, NS_COM_HERE_MOM_META, "sourceId");
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
         POp given = POp.eq(pRef, "tAskK_1");
         //when
 
