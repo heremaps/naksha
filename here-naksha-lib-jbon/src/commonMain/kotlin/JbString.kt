@@ -21,8 +21,8 @@ class JbString : JbUnicodeMapper<JbString>() {
             check(type == TYPE_STRING);
             when (val raw = view.getInt8(start).toInt() and 0xf) {
                 in 0..12 -> setContent(start + 1, start + 1 + raw)
-                13 -> setContent(start + 2, start + 2 + view.getInt8(start + 1).toInt() and 0xff)
-                14 -> setContent(start + 3, start + 3 + view.getInt16(start + 1).toInt() and 0xffff)
+                13 -> setContent(start + 2, start + 2 + (view.getInt8(start + 1).toInt() and 0xff))
+                14 -> setContent(start + 3, start + 3 + (view.getInt16(start + 1).toInt() and 0xffff))
                 15 -> setContent(start + 5, start + 5 + view.getInt32(start + 1))
                 else -> throw IllegalStateException()
             }

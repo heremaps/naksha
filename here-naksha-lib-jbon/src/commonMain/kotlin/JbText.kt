@@ -69,11 +69,11 @@ class JbText : JbUnicodeMapper<JbText>() {
                             reader.offset += 2
                         }
                         2 -> {
-                            index = view.getInt16(reader.offset + 1).toInt() and 0xff
+                            index = view.getInt16(reader.offset + 1).toInt() and 0xffff
                             reader.offset += 3
                         }
                         3 -> {
-                            index = view.getInt32(reader.offset + 1).toInt() and 0xff
+                            index = view.getInt32(reader.offset + 1)
                             reader.offset += 5
                         }
                         else -> {

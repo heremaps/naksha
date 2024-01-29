@@ -504,11 +504,19 @@ class JvmJbonTest {
         builder.writeText(topology)
         val featureArray = builder.buildFeature(null)
         val featureView = JvmPlatform.newDataView(featureArray)
+
+        // Simple test using low level reader.
         val reader = JbReader().mapView(featureView, 0)
         assertEquals(TYPE_FEATURE, reader.unitType())
         assertEquals(11779, reader.unitSize())
 
+        // Use the feature reader.
         val feature = JbFeature().mapView(featureView, 0)
-        //assertEquals(TYPE_CONTAINER, feature.type())
+        assertEquals(TYPE_CONTAINER, feature.reader.unitType())
+        assertTrue(feature.reader.isText())
+        val text = JbText().mapReader(feature.reader)
+        val topologyRestored = text.toString()
+        assertEquals(topology, topologyRestored)
+        assertSame(topologyRestored, text.toString())
     }
 }
