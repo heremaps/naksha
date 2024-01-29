@@ -70,6 +70,26 @@ public class SourceIdHandlerApiTest extends ApiTest {
                 .hasUuids();
 
     }
+    @Test
+    void tc2002_testCreateFeaturesWithoutSourceIdButWithSourceIdTag() throws Exception {
+
+        // Given:
+        final String bodyJson = loadFileOrFail("SourceHandlerId/TC2002_createFeatureWithoutSourceId/create_feature.json");
+        final String expectedBodyPart = loadFileOrFail("SourceHandlerId/TC2002_createFeatureWithoutSourceId/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When
+        HttpResponse<String> response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
+        // Then
+        assertThat(response)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+                .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
+                .hasInsertedIdsMatchingFeatureIds(null)
+                .hasUuids();
+
+    }
 
 
 }

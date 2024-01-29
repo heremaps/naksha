@@ -69,7 +69,6 @@ public class SourceIdHandler extends AbstractEventHandler {
       writeRequest.features.stream()
           .map(XyzFeatureCodec::getFeature)
           .filter(Objects::nonNull)
-          .peek(this::removeSourceIdTagsIfAny)
           .forEachOrdered(this::setSourceIdTags);
     }
 
@@ -78,12 +77,12 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private void setSourceIdTags(XyzFeature feature) {
     XyzProperties properties = feature.getProperties();
-    getSourceIdFromFeature(properties)
-        .ifPresent(sourceId -> properties.getXyzNamespace().addTag(TAG_PREFIX + sourceId, false));
+    getSourceIdFromFeature(properties).ifPresent(sourceId -> updateTagsWithSourceIdProperty(properties, sourceId));
   }
 
-  private void removeSourceIdTagsIfAny(XyzFeature feature) {
-    feature.getProperties().getXyzNamespace().removeTagsWithPrefix(TAG_PREFIX);
+  private void updateTagsWithSourceIdProperty(XyzProperties properties, String sourceId) {
+    properties.getXyzNamespace().removeTagsWithPrefix(TAG_PREFIX);
+    properties.getXyzNamespace().addTag(TAG_PREFIX + sourceId, false);
   }
 
   private Optional<String> getSourceIdFromFeature(XyzProperties properties) {
