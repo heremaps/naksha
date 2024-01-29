@@ -63,14 +63,25 @@ The lower 4-bit hold the negative (signed) value between `-1..-16`.
 The lower 4-bit hold the biased (signed) value. The value is stored minus 8, so `0..15` represents `-8..7`.
 
 ### (3) reference
-The full reference encoding. All indices being bigger than 15 are encoded as full references with a bias of 16, so that a value of 0 means index 16. Note that null-references are an exception, as they do not have any value. The value is used as a bit-field with the syntax `0gvv`:
+The full reference encoding. All indices being bigger than 15 are encoded as full references with a bias of 16, so that a value of 0 means index 16. Note that null-references are an exception, as they do not have any value. The value is used as a bit-field with the syntax `bgvv`:
+
+If the `b`-bit is zero, then this is a reference into a global or local dictionary. The lower 3-bits are: `0gvv`
 
 - `g`: If this bit is set, refers to the global dictionary, otherwise to the local dictionary.
 - `vv`: Signals the size of the reference:
   - `00b`: null-reference
-  - `01b`: 8-bit index (+1 byte)
-  - `10b`: 16-bit index (+2 byte)
-  - `11b`: 32-bit index (+4 byte)
+  - `01b`: 8-bit unsigned index (+1 byte)
+  - `10b`: 16-bit unsigned index (+2 byte)
+  - `11b`: 32-bit unsigned index (+4 byte)
+ 
+If the `b`-bit is set, then this is a **back-reference**. The index is turned into a relative or absolute offset: `1avv`
+
+- `a`: If this bit is set, the offset is unsigned and absolute. Otherwise, the offset is relative and signed.
+- `vv`: Signals the size of the reference:
+  - `00b`: null-reference
+  - `01b`: 8-bit unsigned/signed offset (+1 byte)
+  - `10b`: 16-bit unsigned/signed offset (+2 byte)
+  - `11b`: 32-bit signed offset (+4 byte)
 
 **Note**: References must not refer to references!
 
