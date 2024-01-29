@@ -38,6 +38,7 @@ public class SourceIdHandler extends AbstractEventHandler {
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
   private static final String TAG_PREFIX = "xyz_source_id_";
   private static final String SOURCE_ID = "sourceId";
+  public static final int PREF_PATHS_SIZE = 3;
 
   private @NotNull EventHandler eventHandler;
   private @NotNull EventTarget<?> eventTarget;
@@ -79,11 +80,11 @@ public class SourceIdHandler extends AbstractEventHandler {
     POp propertyOp = readRequest.getPropertyOp();
 
     if (propertyOp.children() != null) {
-      PropertyOperationUtil.transformPropertyInPropertyOperationTree(propertyOp, SourceIdHandler::mapIntoTagOperation);
+      PropertyOperationUtil.transformPropertyInPropertyOperationTree(
+              propertyOp, SourceIdHandler::mapIntoTagOperation);
     } else {
       mapIntoTagOperation(propertyOp).ifPresent(readRequest::setPropertyOp);
     }
-
   }
 
   private void setSourceIdTags(XyzFeature feature) {
@@ -106,25 +107,31 @@ public class SourceIdHandler extends AbstractEventHandler {
     }
   }
 
-  private static boolean propertyReferenceEqualsSourceId(PRef pRef) {
-    List<@NotNull String> path = pRef.getPath();
-    return path.size() == 3
-        && path.containsAll(List.of(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, SOURCE_ID));
-  }
 
   public static Optional<POp> mapIntoTagOperation(POp propertyOperation) {
 
-    if (propertyReferenceEqualsSourceId(propertyOperation.getPropertyRef())
-        && propertyOperation.getValue() != null
-        && propertyOperation.children() == null) {
-
-      if (propertyOperation.op().equals(POpType.EQ)
-          || propertyOperation.op().equals(POpType.CONTAINS)) {
+    if (sourceIdTransformationCapable(propertyOperation) && operationTypeAllowed(propertyOperation)) {
 
         return Optional.of(POp.exists(PRef.tag(TAG_PREFIX + propertyOperation.getValue())));
-      }
+
     }
 
     return Optional.empty();
+  }
+
+  private static boolean propertyReferenceEqualsSourceId(PRef pRef) {
+    List<@NotNull String> path = pRef.getPath();
+    return path.size() == PREF_PATHS_SIZE
+            && path.containsAll(List.of(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, SOURCE_ID));
+  }
+
+  private static boolean sourceIdTransformationCapable(POp propertyOperation) {
+    return propertyReferenceEqualsSourceId(propertyOperation.getPropertyRef())
+            && propertyOperation.getValue() != null
+            && propertyOperation.children() == null;
+  }
+
+  private static boolean operationTypeAllowed(POp propertyOperation) {
+    return propertyOperation.op().equals(POpType.EQ) || propertyOperation.op().equals(POpType.CONTAINS);
   }
 }
