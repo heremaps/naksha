@@ -6,70 +6,138 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * Uses the given view as dictionary wrapper.
+ * A dictionary reader.
  */
+@Suppress("DuplicatedCode")
 @JsExport
-class JbDict(val view: IDataView) {
-    private val reader = JbReader(view)
+class JbDict : JbObjectMapper<JbDict>() {
+    /**
+     * Cached ID of the dictionary, if any.
+     */
+    private var id: String? = null
 
-    // id of the dictionary
-    val id: String
+    /**
+     * The cached length of the dictionary, set only after all entries have been read.
+     */
+    private var length: Int = -1
 
-    // All strings being part of the dictionary by index
+    /**
+     * All strings being part of the dictionary by index.
+     */
     private val content = ArrayList<String>()
 
-    // Reuse our own reader.
-    init {
-        val stringReader = JbString()
-        if (TYPE_GLOBAL_DICTIONARY == reader.type()) {
-            reader.pos++
-            // Ignore the size of the dictionary, not important for us.
-            check(reader.isInt())
-            check(reader.next())
-            // Read the id
-            check(reader.isString())
-            stringReader.mapReader(reader)
-            id = stringReader.toString()
-        } else if (TYPE_LOCAL_DICTIONARY == reader.type()) {
-            reader.pos++
-            id = ""
-        } else {
-            throw IllegalStateException("Invalid type, no dictionary")
+    /**
+     * The offset of the strings by index.
+     */
+    private val indexToOffset = ArrayList<Int>()
+
+    /**
+     * Returns the identifier of the dictionary.
+     * @return The identifier of the dictionary, if any.
+     */
+    fun id(): String? {
+        return id
+    }
+
+    override fun parseHeader(mandatory: Boolean) {
+        val type = type()
+        check(type == TYPE_GLOBAL_DICTIONARY || type == TYPE_LOCAL_DICTIONARY)
+        addOffset(1)
+        check(isInt())
+        val size = readInt32()
+        check(next())
+        if (type == TYPE_GLOBAL_DICTIONARY) {
+            check(isString())
+            id = readString().toString()
+            check(next())
         }
-        // Read content
-        while (reader.next()) {
-            check(reader.isString())
-            stringReader.mapReader(reader)
-            content.add(stringReader.toString())
+        setContentSize(size)
+    }
+
+    override fun clear(): JbDict {
+        super.clear()
+        id = null
+        length = -1
+        if (content.size > 0) {
+            content.clear()
+        }
+        if (indexToOffset.size > 0) {
+            indexToOffset.clear()
+        }
+        return this
+    }
+
+    override fun reset(): JbDict {
+        super.reset()
+        length = -1
+        if (content.size > 0) {
+            content.clear()
+        }
+        if (indexToOffset.size > 0) {
+            indexToOffset.clear()
+        }
+        return this
+    }
+
+    /**
+     * Internally called to ensure that the string at the given index is loaded, if such an index exists.
+     * @param index The index to ensure, if possible.
+     */
+    private fun ensure(index: Int) {
+        if (length < 0) {
+            val content = this.content
+            val indexToOffset = this.indexToOffset
+            var len = content.size
+            while (len++ < index && isString()) {
+                val string = readString().toString()
+                content.add(string)
+                indexToOffset.add(offset())
+                next()
+            }
+            length = content.size
         }
     }
 
     /**
-     * Returns the strings in the dictionary.
-     * @return The amount of string being in the dictionary.
+     * Loads all strings of the dictionary and index them.
+     * @return this.
+     * @throws IllegalStateException If the view is invalid.
+     */
+    fun loadAll(): JbDict {
+        ensure(Int.MAX_VALUE)
+        return this
+    }
+
+    /**
+     * Returns the strings in the dictionary. The method is only precise after [loadAll] was invoked.
+     * @return The current amount of strings cached.
      */
     fun length(): Int {
-        return content.size
+        return length
     }
 
     /**
      * Returns the string from the given index.
      * @return The string.
      */
-    fun get(index : Int) : String {
+    fun get(index: Int): String {
+        ensure(index)
+        val content = this.content
         require(index >= 0 && index < content.size)
         return content[index]
     }
 
     /**
-     * Returns the index of the given string or -1, if the string is not part of the dictionary.
+     * Returns the index of the given string or -1, if the string is not part of the dictionary. This method will
+     * as a side effect invoke [loadAll].
      * @return The index of the given string or -1.
      */
-    fun indexOf(string : String) : Int {
+    fun indexOf(string: String): Int {
+        loadAll()
         val content = this.content
-        val size = content.size
+        val length = content.size
         var i = 0
-        while (i < size) {
+        while (i < length) {
             if (content[i] == string) {
                 return i
             }

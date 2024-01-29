@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalJsExport::class)
 
 import com.here.naksha.lib.jbon.IDataView
+import com.here.naksha.lib.jbon.JbDict
 import com.here.naksha.lib.jbon.JbPlatform
 
 @JsExport
@@ -46,15 +47,19 @@ DataView.prototype.getSize = function() {
 
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun bigIntToLong(value: Any): Long {
-        // TODO: Fix me
         var hi : Int = 0
         var mid : Int = 0
         var lo : Int = 0
         js("hi = value");
-        return (hi.toLong() shl 32) or (mid.toLong() shl 16) or (lo.toLong())
+        TODO("Fix me")
+        //return (hi.toLong() shl 32) or (mid.toLong() shl 16) or (lo.toLong())
     }
 
     override fun newDataView(bytes: ByteArray, offset: Int, size: Int): IDataView {
         return js("new DataView(bytes.buffer, offset, size)") as IDataView;
+    }
+
+    override fun getGlobalDictionary(id: String): JbDict {
+        TODO("We need an implementation that works in the browser in PLV8 engine, so implemented externally")
     }
 }

@@ -30,12 +30,15 @@ const val TYPE_GLOBAL_DICTIONARY = 16
 const val TYPE_LOCAL_DICTIONARY = 17
 const val TYPE_FEATURE = 18
 // 18 - 31 = Reserved
+/**
+ * A special type returned when the offset in a reader is invalid.
+ */
 const val EOF = -1
-const val ADD_NOTHING = 0b00
-const val ADD_SPACE = 0b01
-const val ADD_UNDERSCORE = 0b10
-const val ADD_COLON = 0b11
+internal const val ADD_NOTHING = 0b00
+internal const val ADD_SPACE = 0b01
+internal const val ADD_UNDERSCORE = 0b10
+internal const val ADD_COLON = 0b11
 
 // Internally used to encode float4
-val TINY_FLOATS = floatArrayOf(-8f, -7f, -6f, -5f, -4f, -3f, -2f, -1f, 0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)
-val TINY_DOUBLES = doubleArrayOf(-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
+internal val TINY_FLOATS = floatArrayOf(-8f, -7f, -6f, -5f, -4f, -3f, -2f, -1f, 0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)
+internal val TINY_DOUBLES = doubleArrayOf(-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)

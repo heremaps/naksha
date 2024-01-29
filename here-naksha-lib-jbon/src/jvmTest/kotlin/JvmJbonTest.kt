@@ -28,12 +28,12 @@ class JvmJbonTest {
     fun testNull() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
         builder.writeNull()
         assertEquals(TYPE_NULL, view.getInt8(0).toInt())
         assertEquals(TYPE_NULL, reader.type())
         assertTrue(reader.isNull())
-        assertNull(reader.getBoolean())
+        assertNull(reader.readBoolean())
         assertEquals(1, reader.size())
         assertEquals(1, builder.reset())
     }
@@ -42,12 +42,12 @@ class JvmJbonTest {
     fun testUndefined() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
         builder.writeUndefined()
         assertEquals(TYPE_UNDEFINED, view.getInt8(0).toInt())
         assertEquals(TYPE_UNDEFINED, reader.type())
         assertTrue(reader.isUndefined())
-        assertNull(reader.getBoolean())
+        assertNull(reader.readBoolean())
         assertEquals(1, reader.size())
         assertEquals(1, builder.reset())
     }
@@ -56,12 +56,12 @@ class JvmJbonTest {
     fun testBoolean() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
         builder.writeBool(true)
         assertEquals(TYPE_BOOL_TRUE, view.getInt8(0).toInt())
         assertEquals(TYPE_BOOL_TRUE, reader.type())
         assertTrue(reader.isBool())
-        assertEquals(true, reader.getBoolean())
+        assertEquals(true, reader.readBoolean())
         assertEquals(1, reader.size())
         assertEquals(1, builder.reset())
 
@@ -69,7 +69,7 @@ class JvmJbonTest {
         assertEquals(TYPE_BOOL_FALSE, view.getInt8(0).toInt())
         assertEquals(TYPE_BOOL_FALSE, reader.type())
         assertTrue(reader.isBool())
-        assertEquals(false, reader.getBoolean())
+        assertEquals(false, reader.readBoolean())
         assertEquals(1, reader.size())
         assertEquals(1, builder.reset())
     }
@@ -78,17 +78,17 @@ class JvmJbonTest {
     fun testIntEncoding() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
         // the values -16 to 15 should be encoded in one byte
         builder.writeInt32(-16);
         assertTrue(reader.isInt())
-        assertEquals(-16, reader.getInt32(0))
+        assertEquals(-16, reader.readInt32(0))
         assertEquals(1, reader.size())
         assertEquals(1, builder.reset())
 
         builder.writeInt32(15);
         assertTrue(reader.isInt())
-        assertEquals(15, reader.getInt32(0))
+        assertEquals(15, reader.readInt32(0))
         assertEquals(1, reader.size())
         assertEquals(1, builder.reset())
 
@@ -96,14 +96,14 @@ class JvmJbonTest {
         builder.writeInt32(-17);
         assertEquals(-17, view.getInt8(1))
         assertTrue(reader.isInt())
-        assertEquals(-17, reader.getInt32(0))
+        assertEquals(-17, reader.readInt32(0))
         assertEquals(2, reader.size())
         assertEquals(2, builder.reset())
 
         builder.writeInt32(16);
         assertEquals(16, view.getInt8(1))
         assertTrue(reader.isInt())
-        assertEquals(16, reader.getInt32(0))
+        assertEquals(16, reader.readInt32(0))
         assertEquals(2, reader.size())
         assertEquals(2, builder.reset())
 
@@ -111,7 +111,7 @@ class JvmJbonTest {
         builder.writeInt32(-129)
         assertEquals(-129, view.getInt16(1))
         assertTrue(reader.isInt())
-        assertEquals(-129, reader.getInt32(0))
+        assertEquals(-129, reader.readInt32(0))
         assertEquals(3, reader.size())
         assertEquals(3, builder.reset())
 
@@ -119,7 +119,7 @@ class JvmJbonTest {
         builder.writeInt32(128)
         assertEquals(128, view.getInt16(1))
         assertTrue(reader.isInt())
-        assertEquals(128, reader.getInt32(0))
+        assertEquals(128, reader.readInt32(0))
         assertEquals(3, reader.size())
         assertEquals(3, builder.reset())
 
@@ -127,7 +127,7 @@ class JvmJbonTest {
         builder.writeInt32(-32769)
         assertEquals(-32769, view.getInt32(1))
         assertTrue(reader.isInt())
-        assertEquals(-32769, reader.getInt32(0))
+        assertEquals(-32769, reader.readInt32(0))
         assertEquals(5, reader.size())
         assertEquals(5, builder.reset())
 
@@ -135,7 +135,7 @@ class JvmJbonTest {
         builder.writeInt32(32768)
         assertEquals(32768, view.getInt32(1))
         assertTrue(reader.isInt())
-        assertEquals(32768, reader.getInt32(0))
+        assertEquals(32768, reader.readInt32(0))
         assertEquals(5, reader.size())
         assertEquals(5, builder.reset())
 
@@ -144,7 +144,7 @@ class JvmJbonTest {
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT64, reader.type())
-        assertEquals(Long.MIN_VALUE, reader.getInt64(0))
+        assertEquals(Long.MIN_VALUE, reader.readInt64(0))
         assertEquals(9, reader.size())
         assertEquals(9, builder.reset())
 
@@ -152,7 +152,7 @@ class JvmJbonTest {
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT64, reader.type())
-        assertEquals(Long.MAX_VALUE, reader.getInt64(0))
+        assertEquals(Long.MAX_VALUE, reader.readInt64(0))
         assertEquals(9, reader.size())
         assertEquals(9, builder.reset())
 
@@ -161,7 +161,7 @@ class JvmJbonTest {
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT64, reader.type())
-        assertEquals(Long.MIN_VALUE + 65535, reader.getInt64(0))
+        assertEquals(Long.MIN_VALUE + 65535, reader.readInt64(0))
         assertEquals(9, reader.size())
         assertEquals(9, builder.reset())
     }
@@ -170,7 +170,7 @@ class JvmJbonTest {
     fun testFloat32Encoding() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
         // values -8 to 7 should be encoded in one byte
         for (i in 0..15) {
             val value = TINY_FLOATS[i]
@@ -179,8 +179,8 @@ class JvmJbonTest {
             assertTrue(reader.isFloat32())
             assertTrue(reader.isFloat64())
             assertTrue(reader.isNumber())
-            assertEquals(value, reader.getFloat32(-100f))
-            assertEquals(value.toDouble(), reader.getDouble(-100.0))
+            assertEquals(value, reader.readFloat32(-100f))
+            assertEquals(value.toDouble(), reader.readDouble(-100.0))
             assertEquals(1, reader.size())
             assertEquals(1, builder.reset())
         }
@@ -191,9 +191,9 @@ class JvmJbonTest {
         assertTrue(reader.isFloat32())
         assertFalse(reader.isFloat64())
         assertTrue(reader.isNumber())
-        assertEquals(1.25f, reader.getFloat32(0f))
-        assertEquals(1.25, reader.getDouble(0.0))
-        assertEquals(1.25, reader.getDouble(0.0, true))
+        assertEquals(1.25f, reader.readFloat32(0f))
+        assertEquals(1.25, reader.readDouble(0.0))
+        assertEquals(1.25, reader.readDouble(0.0, true))
         assertEquals(5, reader.size())
         assertEquals(5, builder.reset())
     }
@@ -202,7 +202,7 @@ class JvmJbonTest {
     fun testFloat64Encoding() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
         // values -8 to 7 should be encoded in one byte
         for (i in 0..15) {
             val value = TINY_DOUBLES[i]
@@ -211,8 +211,8 @@ class JvmJbonTest {
             assertTrue(reader.isFloat32())
             assertTrue(reader.isFloat64())
             assertTrue(reader.isNumber())
-            assertEquals(value.toFloat(), reader.getFloat32(-100f))
-            assertEquals(value, reader.getDouble(-100.0))
+            assertEquals(value.toFloat(), reader.readFloat32(-100f))
+            assertEquals(value, reader.readDouble(-100.0))
             assertEquals(1, reader.size())
             assertEquals(1, builder.reset())
         }
@@ -223,9 +223,9 @@ class JvmJbonTest {
         assertFalse(reader.isFloat32())
         assertTrue(reader.isFloat64())
         assertTrue(reader.isNumber())
-        assertEquals(1.25, reader.getDouble(0.0))
-        assertEquals(1.25f, reader.getFloat32(0f))
-        assertEquals(0.0f, reader.getFloat32(0.0f, true))
+        assertEquals(1.25, reader.readDouble(0.0))
+        assertEquals(1.25f, reader.readFloat32(0f))
+        assertEquals(0.0f, reader.readFloat32(0.0f, true))
         assertEquals(9, reader.size())
         assertEquals(9, builder.reset())
     }
@@ -234,7 +234,7 @@ class JvmJbonTest {
     fun testEncodingTwoInts() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
 
         val firstPos = builder.writeInt32(100_000)
         assertEquals(0, firstPos)
@@ -243,15 +243,15 @@ class JvmJbonTest {
         assertEquals(6, builder.end)
 
         // read values
-        assertTrue(reader.isValid())
+        assertTrue(reader.ok())
         assertTrue(reader.isInt())
-        assertEquals(100_000, reader.getInt32())
-        reader.seekBy(reader.size())
+        assertEquals(100_000, reader.readInt32())
+        reader.addOffset(reader.size())
 
-        assertTrue(reader.isValid())
+        assertTrue(reader.ok())
         assertTrue(reader.isInt())
-        assertEquals(1, reader.getInt32())
-        reader.seekBy(reader.size())
+        assertEquals(1, reader.readInt32())
+        reader.addOffset(reader.size())
 
         // We're now behind the last valid byte, everything else now should be simply null
         assertTrue(reader.isNull())
@@ -262,7 +262,7 @@ class JvmJbonTest {
     fun testStringEncoding() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
 
         // should encode in 1 byte lead-in plus 1 byte character
         builder.writeString("a")
@@ -301,7 +301,7 @@ class JvmJbonTest {
     fun testStringReader() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
         //                123456789012345
         val testString = "Hello my World!"
         // We need to ensure that the test-string is long enough, otherwise the lead-in does not match
@@ -313,14 +313,14 @@ class JvmJbonTest {
 
         // Map the string
         val jbString = JbString().mapReader(reader)
-        assertEquals(2 + testString.length, jbString.size())
+        assertEquals(2 + testString.length, jbString.mapSize())
         assertEquals(testString.length, jbString.length())
         // Ensure that all characters are the same as in the original
         // Note: This test only works for BMP codes!
         var i = 0
         while (i < testString.length) {
             val unicode = testString[i++].code
-            assertEquals(unicode, jbString.next())
+            assertEquals(unicode, jbString.readCodePoint(true))
         }
 
         // Test toString
@@ -329,22 +329,22 @@ class JvmJbonTest {
         assertSame(string, jbString.toString())
 
         // Test the getString method
-        val testInternal = reader.getString()
-        assertEquals(testString, testInternal.toString())
+        val testInternal = reader.readString()
+        assertEquals(testString, testInternal)
     }
 
     @Test
     fun testReference() {
         val view = JvmPlatform.newDataView(ByteArray(256))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
 
         // Write null reference (encoded in one byte).
         builder.writeRef(-1, true)
         assertTrue(reader.isRef())
         assertTrue(reader.isGlobalRef())
         assertFalse(reader.isLocalRef())
-        assertEquals(-1, reader.getRef())
+        assertEquals(-1, reader.readRef())
         assertEquals(1, reader.size())
         assertEquals(1, builder.reset())
 
@@ -353,7 +353,7 @@ class JvmJbonTest {
         assertTrue(reader.isRef())
         assertTrue(reader.isGlobalRef())
         assertFalse(reader.isLocalRef())
-        assertEquals(0, reader.getRef())
+        assertEquals(0, reader.readRef())
         assertEquals(1, reader.size())
         assertEquals(1, builder.reset())
 
@@ -362,7 +362,7 @@ class JvmJbonTest {
         assertTrue(reader.isRef())
         assertFalse(reader.isGlobalRef())
         assertTrue(reader.isLocalRef())
-        assertEquals(65535 + 16, reader.getRef())
+        assertEquals(65535 + 16, reader.readRef())
         assertEquals(3, reader.size())
         assertEquals(3, builder.reset())
 
@@ -371,7 +371,7 @@ class JvmJbonTest {
         assertTrue(reader.isRef())
         assertFalse(reader.isGlobalRef())
         assertTrue(reader.isLocalRef())
-        assertEquals(65536 + 16, reader.getRef())
+        assertEquals(65536 + 16, reader.readRef())
         assertEquals(5, reader.size())
         assertEquals(5, builder.reset())
     }
@@ -394,12 +394,12 @@ class JvmJbonTest {
         val dictId = "test"
         val dictArray = builder.buildDictionary(dictId)
         val dictView = JvmPlatform.newDataView(dictArray)
-        val dictReader = JbReader(dictView)
-        assertEquals(TYPE_GLOBAL_DICTIONARY,  dictReader.type())
+        val dictReader = JbReader().mapView(dictView,0)
+        assertEquals(TYPE_GLOBAL_DICTIONARY, dictReader.type())
         // size
-        dictReader.pos++
+        dictReader.addOffset(1)
         assertTrue(dictReader.isInt())
-        assertEquals(13, dictReader.getInt32())
+        assertEquals(13, dictReader.readInt32())
 
         // id
         assertTrue(dictReader.next())
@@ -423,9 +423,11 @@ class JvmJbonTest {
         assertFalse(dictReader.next())
 
         // Test the dictionary class.
-        val dict = JbDict(dictView)
+        val dict = JbDict().mapView(dictView, 0)
+        assertEquals(-1, dict.length())
+        dict.loadAll()
         assertEquals(2, dict.length())
-        assertEquals(dictId, dict.id)
+        assertEquals(dictId, dict.id())
         assertEquals("foo", dict.get(0))
         assertEquals("bar", dict.get(1))
         assertEquals(0, dict.indexOf("foo"))
@@ -438,7 +440,7 @@ class JvmJbonTest {
     fun testText() {
         val view = JvmPlatform.newDataView(ByteArray(8192))
         val builder = JbBuilder(view)
-        val reader = JbReader(view)
+        val reader = JbReader().mapView(view,0)
 
         // We assume that this stores three words in the local dictionary:
         // 0 = Hello
@@ -446,14 +448,14 @@ class JvmJbonTest {
         // 2 = Again
         builder.writeText("Hello World Hello Again")
         assertTrue(reader.isText())
-        val localDictionary = builder.getLocalDictionary()
+        val localDictionary = builder.getLocalDictByString()
         assertEquals(3, localDictionary.size)
         assertEquals(0, localDictionary["Hello"])
         assertEquals(1, localDictionary["World"])
         assertEquals(2, localDictionary["Again"])
         // We expect that the text is encoded with:
-        // Lead-in (1 byte), then two byte per word (2 * 4 = 8)
-        assertEquals(9, builder.end)
+        // Lead-in (1 byte), size (1 byte), then two byte per word (2 * 4 = 8)
+        assertEquals(10, builder.end)
     }
 
     @Test
@@ -471,8 +473,8 @@ class JvmJbonTest {
         val builder = JbBuilder(view)
         builder.writeText(topology)
         val featureArray = builder.buildFeature(null)
-        val reader = JbReader(JvmPlatform.newDataView(featureArray))
+        val reader = JbReader().mapView(JvmPlatform.newDataView(featureArray),0)
         assertEquals(TYPE_FEATURE, reader.type())
-        assertEquals(11771, reader.size())
+        assertEquals(11775, reader.size())
     }
 }

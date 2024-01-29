@@ -86,12 +86,7 @@ abstract class JbPlatform {
     abstract fun newDataView(bytes: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): IDataView
 
     /**
-     * Create a new empty JBON builder of default size, which normally suites the most JSONs.
-     * @param dict The global dictionary to use, if any.
-     * @return A new JBON builder, normally good enough for most JSON objects.
+     * Ask the platform for the given global dictionary.
      */
-    fun newBuilder(dict: JbDict? = null): JbBuilder {
-        val buffer = ByteArray(32768) // we expect that 32kb are enough for all binary JSONs!
-        return JbBuilder(newDataView(buffer), dict)
-    }
+    abstract fun getGlobalDictionary(id: String): JbDict;
 }

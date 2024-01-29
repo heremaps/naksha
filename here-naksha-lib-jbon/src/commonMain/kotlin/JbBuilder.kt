@@ -22,25 +22,29 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      * be encoded later into the local dictionary. The key is the string that has is needed, the value is the index that
      * is being used to encode it.
      */
-    private var localDictionary: HashMap<String, Int>? = null
+    private var localDictByName: HashMap<String, Int>? = null
 
     /**
-     * Needed to resolve the strings being in the local dictionary by id.
+     * Needed to resolve the strings being in the local dictionary by index.
      */
-    private var localStringById: ArrayList<String>? = null
+    private var localDictByIndex: ArrayList<String>? = null
 
-    internal fun getLocalDictionary(): HashMap<String, Int> {
-        if (localDictionary == null) {
-            localDictionary = HashMap()
+    internal fun getLocalDictByString(): HashMap<String, Int> {
+        var localDictByName = this.localDictByName
+        if (localDictByName == null) {
+            localDictByName = HashMap()
+            this.localDictByName = localDictByName
         }
-        return localDictionary!!
+        return localDictByName
     }
 
-    private fun getLocalStringById(): ArrayList<String> {
-        if (localStringById == null) {
-            localStringById = ArrayList()
+    private fun getLocalDictByIndex(): ArrayList<String> {
+        var localDictByIndex = this.localDictByIndex
+        if (localDictByIndex == null) {
+            localDictByIndex = ArrayList()
+            this.localDictByIndex = localDictByIndex
         }
-        return localStringById!!
+        return localDictByIndex
     }
 
     /**
@@ -66,8 +70,8 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
     fun reset(): Int {
         val old = end
         end = 0
-        localDictionary = null
-        localStringById = null
+        localDictByName = null
+        localDictByIndex = null
         localNextIndex = 0
         return old
     }
@@ -222,7 +226,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         }
         if (index < 16) {
             // tiny reference
-            view.setInt8(end++, ((if (global) TYPE_TINY_GLOBAL_REF else TYPE_TINY_LOCAL_REF) or index).toByte())
+            view.setInt8(end++, ((if (global) TYPE_TINY_GLOBAL_REF else TYPE_TINY_LOCAL_REF).toInt() or index).toByte())
             return offset
         }
         when (val value = index - 16) {
@@ -254,14 +258,14 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      * @return The index of the string.
      */
     fun writeToLocalDictionary(string: String): Int {
-        val localDict = getLocalDictionary()
+        val localDict = getLocalDictByString()
         var index = localDict[string]
         if (index != null) {
             return index
         }
         index = localNextIndex++
         localDict[string] = index
-        getLocalStringById().add(string)
+        getLocalDictByIndex().add(string)
         return index
     }
 
@@ -349,6 +353,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      */
     fun writeText(string: String): Int {
         val start = end
+        val global = this.global
         // We reserve 5 byte for the header.
         var pos = end + 5
         var i = 0
@@ -385,7 +390,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
                 }
                 if (size >= 3) {
                     // Map without header.
-                    stringReader.mapRaw(view, wordStart, wordStart, pos)
+                    stringReader.map(view, wordStart, wordStart, pos, null, null)
                     val subString = stringReader.toString()
                     val isGlobal: Boolean
                     var index = -1
@@ -421,7 +426,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         val size = pos - start - 5
         var source = start + 5
         // If the header is smaller than 5 byte, we need copy the data backwards.
-        var target = writeStringHeader(start, size)
+        var target = writeTextHeader(start, size)
         if (target < source) {
             while (source < pos) {
                 // TODO: Optimized this by adding support for a native copy function into IDataView
@@ -529,8 +534,8 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      */
     fun buildDictionary(id: String): ByteArray {
         check(end == 0)
-        check(localStringById != null)
-        val localStringById = this.localStringById!!
+        check(localDictByIndex != null)
+        val localStringById = this.localDictByIndex!!
 
         // We add the lead-in with the size later, we anyway need to make a copy.
         // First, encode the unique identifier.
@@ -567,46 +572,76 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      */
     fun buildFeature(id: String?): ByteArray {
         check(end > 0)
-        // We need to add the lead-in, size and id in-front of what is now encoded.
-        // After this, the content that is now encoded should follow.
-        // Then the local dictionary, so let's write this now and then copy, so that we know the size.
-        val localStringById = this.localStringById
-        if (localStringById != null) {
-            for (string in localStringById) {
+        val contentEnd = end
+        val startOfLocalDictContent = end
+        val localDictByIndex = this.localDictByIndex
+        if (localDictByIndex != null) {
+            for (string in localDictByIndex) {
                 writeString(string)
             }
         }
-        // Now end is the size of the root object and dictionary.
-        val endOfContent = end
+        val endOfLocalDictContent = end
+        val startOfLocalDictSize = end
+        writeInt32(endOfLocalDictContent - startOfLocalDictContent)
+        val endOfLocalDictSize = end
+        val startOfFeatureId = end
         // Write the id, we copy that into the target soon.
         if (id != null) {
             writeString(id)
         } else {
             writeNull()
         }
-        val endOfId = end
+        val endOfFeatureId = end
+        val startOfGlobalDictId = end
+        // Write the id of the global dictionary.
+        val featureId : String? = global?.id()
+        if (featureId != null) {
+            writeString(featureId)
+        } else {
+            writeNull()
+        }
+        val endOfGlobalDictId = end
+        val startOfTotalSize = end
         // Write the size of the feature.
-        writeInt32(endOfId)
+        writeInt32(end)
+        val endOfTotalSize = end
 
-        // Now, end + 1 (lead-in) byte is what we need.
-        val targetArray = ByteArray(end + 1)
+        // Now, end + 1 byte lead-in feature, + 1 byte lead-in of local dict.
+        val targetArray = ByteArray(end + 2)
         val targetView = JbPlatform.get().newDataView(targetArray)
         var target = 0
+        // Write lead-in.
         targetView.setInt8(target++, TYPE_FEATURE.toByte())
-        // Copy size
-        var source = endOfId
-        val end = this.end
-        while (source < end) {
+        // Copy size.
+        var source = startOfTotalSize
+        while (source < endOfTotalSize) {
             targetView.setInt8(target++, view.getInt8(source++))
         }
-        // Copy the id
-        source = endOfContent
-        while (source < endOfId) {
+        // Copy the feature id.
+        source = startOfFeatureId
+        while (source < endOfFeatureId) {
             targetView.setInt8(target++, view.getInt8(source++))
         }
-        // Copy the object and local dictionary
+        // Copy the global dictionary id.
+        source = startOfGlobalDictId
+        while (source < endOfGlobalDictId) {
+            targetView.setInt8(target++, view.getInt8(source++))
+        }
+        // Write lead-in local dict.
+        targetView.setInt8(target++, TYPE_LOCAL_DICTIONARY.toByte())
+        // Copy local dict size.
+        source = startOfLocalDictSize
+        while (source < endOfLocalDictSize) {
+            targetView.setInt8(target++, view.getInt8(source++))
+        }
+        // Copy the local dict content.
+        source = startOfLocalDictContent
+        while (source < endOfLocalDictContent) {
+            targetView.setInt8(target++, view.getInt8(source++))
+        }
+        // Copy the feature content.
         source = 0
-        while (source < endOfContent) {
+        while (source < contentEnd) {
             targetView.setInt8(target++, view.getInt8(source++))
         }
         return targetArray

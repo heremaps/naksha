@@ -72,14 +72,14 @@ The normal reference encoding. All indices being bigger than 15 are encoded with
 
 **Note**: References must not refer to references!
 
-### (4) JbString
+### (4) string - JbString
 A string that must not contain any references. The lower 4-bit are the size indicator. A value between 0 and 12 represent the size of the string. The values 13 to 15 signal:
 
 - `13`: The next byte stores the unsigned size, (0 to 255).
 - `14`: The next two byte store the unsigned size, big-endian (0 to 65535).
 - `15`: The next four byte store the unsigned size, big-endian (0 to 2^32-1).
 
-### (5) Container - JbMap, JbArray or JbText
+### (5) container - JbMap, JbArray or JbText
 A map, array, map-entry or array-entry. The two high bits of the value parameter are used to select the type, the lower 2-bit are always the size indicator of the byte-size of the collection or entry. This indicates the amount of byte to skip, to jump over the map or entry.
 
 The types are:
@@ -165,18 +165,33 @@ Maybe _int128_.
 The next 1 to 8 byte store the signed integer value.
 ### (12-15) reserved
 Reserved to support other variants, maybe int128 or uint8 to uint64.
-### (16) Global Dictionary - JbDict
-A global dictionary is a special container used to compress JBON features. A dictionary must not store any references.
+### (16) global dictionary - JbDict
+A global dictionary is a special container used to compress JBON features. A dictionary must not store any references. The encoding of the dictionary is:
 
-After the lead-in byte the optional size is encoded, so either **integer** or **null**. After the size the **id** follows, which is a **string**. After the **id**, the content follows. The content is simply encoded sequentially, no further overhead. So, with a small **id** of for example 10 characters, the header may only be 13 byte (lead-in, null, id), directly followed by the content.
+- Lead-In byte.
+- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
+- The **id** of the document as **string**.
+- The content, a sequence of **string**s.
 
-From an encoder perspective this is all. However, the decoder will have to load all the objects into memory, index them by their position and calculate the FNV1b hash and index them by this hash too.
-### (17) Local Dictionary - JbDict
-A local dictionary, which can only be found embedded into a feature. This dictionary does only have the lead-in byte and the the content follows, no size or **id** are encoded. The **id** is always set to an empty string.
+After the header, the content follows. The content is simply a sequence of **string**s. From an encoder perspective this is all. However, the decoder will have to load all the objects into memory to index the content for faster access.
+### (17) local dictionary - JbDict
+A local dictionary is exactly the same as the global dictionary, except that it does not come with an **id**, so:
+ 
+- Lead-In byte.
+- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
+- The content, a sequence of **string**s.
+
 ### (18) JbFeature
-A JBON feature is a container for JBON objects. The header is the same as for the dictionary, but the first JBON object in the content is the root object. All following JBON objects form the local dictionary (an inlined dictionary without identifier). A feature can't create references to other features, only into global dictionaries with unique identifiers.
+A JBON feature is a container for a JBON object of any type. The format looks like:
 
-From an encoder perspective this is all. However, the decoder will have to load the first object a root object and all other objects as part of the local dictionary into memory, index them by their position and calculate the FNV1b hash and index them by this hash too.
+- Lead-In byte.
+- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
+- The **id** of the feature as **string**, can be **null**.
+- The **id** of the global dictionary to be used, can be **null**.
+- The embedded local dictionary.
+- The embedded JBON object (the root object).
+
+A feature can't create references to other features, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
 ### (18) Point (draft-only)
 A GeoJSON Point, followed by a single position.
 ### (19) MultiPoint (draft-only)

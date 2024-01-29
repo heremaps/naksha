@@ -6,69 +6,26 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * A helper class to read strings.
+ * A string reader.
  */
 @JsExport
-class JbString() {
+class JbString : JbObjectMapper<JbString>() {
     internal var string: String? = null
-    internal var view: IDataView? = null
-    internal var start: Int = 0
-    private var encodingStart: Int = 0
-    private var encodingEnd: Int = 0
-    internal var pos: Int = 0
 
-    /**
-     * Map a specific region of a view as string. If the start and content-state are equal, the only effect will be that
-     * the wrong size is reported, decoding will still work fine.
-     *
-     * @param view The view to map.
-     * @param leadInOffset The offset where the string starts (header).
-     * @param contentOffset The offset where the string encoding starts (behind the header).
-     * @param end The end of the string (the offset of the first byte that does not belong to the string).
-     * @return this
-     */
-    fun mapRaw(view : IDataView, leadInOffset : Int, contentOffset: Int, end : Int) : JbString {
-        require(leadInOffset in 0..contentOffset && contentOffset <= end && end <= view.getSize())
-        this.view = view
-        start = leadInOffset
-        encodingStart = contentOffset
-        encodingEnd = end
-        pos = encodingStart
-        string = null
-        return this
-    }
-
-    fun mapReader(jbon: JbReader): JbString {
-        require(jbon.isString())
-        val view = jbon.view
-        start = jbon.pos
-        when (val raw = view.getInt8(start).toInt() and 0xf) {
-            in 0..12 -> {
-                encodingStart = start + 1
-                encodingEnd = encodingStart + raw
+    override fun parseHeader(mandatory: Boolean) {
+        if (mandatory) {
+            require(isString())
+            val view = view()
+            val start = offset()
+            when (val raw = view.getInt8(start).toInt() and 0xf) {
+                in 0..12 -> setContent(start + 1, start + 1 + raw)
+                13 -> setContent(start + 2, start + 2 + view.getInt8(start + 1).toInt() and 0xff)
+                14 -> setContent(start + 3, start + 3 + view.getInt16(start + 1).toInt() and 0xffff)
+                15 -> setContent(start + 5, start + 5 + view.getInt32(start + 1))
+                else -> throw IllegalStateException()
             }
-
-            13 -> {
-                encodingStart = start + 2
-                encodingEnd = encodingStart + view.getInt8(start + 1).toInt() and 0xff
-            }
-
-            14 -> {
-                encodingStart = start + 3
-                encodingEnd = encodingStart + view.getInt16(start + 1).toInt() and 0xffff
-            }
-
-            15 -> {
-                encodingStart = start + 5
-                encodingEnd = encodingStart + view.getInt32(start + 1)
-            }
-
-            else -> throw IllegalStateException()
         }
-        this.view = view
-        pos = encodingStart
         string = null
-        return this
     }
 
     /**
@@ -79,43 +36,35 @@ class JbString() {
     }
 
     /**
-     * Returns the total size in byte including the lead-in.
+     * Read the code-point at the current offset.
+     * @param moveForward If true, the offset will be adjusted after reading the code point; false otherwise.
+     * @return The unicode of the code-point at the current offset.
      */
-    fun size(): Int {
-        return encodingEnd - start
-    }
-
-    fun reset(): JbString {
-        pos = encodingStart
-        return this
-    }
-
-    fun next(doNotMoveForward: Boolean = false): Int {
-        check(this.view != null)
-        val view = this.view!!
-        if (pos >= encodingEnd) return -1
-        var unicode = view.getInt8(pos).toInt() and 0xff
+    fun readCodePoint(moveForward:Boolean) : Int {
+        val view = view()
+        if (offset >= encodingEnd) return -1
+        var unicode = view.getInt8(offset).toInt() and 0xff
         if (unicode < 128) {
-            if (!doNotMoveForward) {
-                pos += 1
+            if (moveForward) {
+                offset += 1
             }
             return unicode
         }
         // Multibyte encoding
         if (unicode ushr 6 == 0b10) {
             // Two byte encoding
-            check(pos + 1 < encodingEnd)
-            unicode = ((unicode and 0b111111) shl 8) or view.getInt8(pos + 1).toInt() and 0xff
-            if (!doNotMoveForward) {
-                pos += 2
+            check(offset + 1 < encodingEnd)
+            unicode = ((unicode and 0b111111) shl 8) or view.getInt8(offset + 1).toInt() and 0xff
+            if (moveForward) {
+                offset += 2
             }
             return unicode
         }
         // Three byte encoding
-        check(pos + 2 < encodingEnd)
-        unicode = ((unicode and 0b111111) shl 16) or view.getInt16(pos + 1).toInt() and 0xffff
-        if (!doNotMoveForward) {
-            pos += 3
+        check(offset + 2 < encodingEnd)
+        unicode = ((unicode and 0b111111) shl 16) or view.getInt16(offset + 1).toInt() and 0xffff
+        if (moveForward) {
+            offset += 3
         }
         return unicode
     }
@@ -123,10 +72,10 @@ class JbString() {
     override fun toString(): String {
         if (string == null) {
             val sb = StringBuilder(length())
-            val backup = pos
-            pos = encodingStart
-            while (pos < encodingEnd) {
-                val unicode = next()
+            val backup = offset
+            offset = encodingStart
+            while (offset < encodingEnd) {
+                val unicode = readCodePoint(true)
                 if (CodePoints.isBmpCodePoint(unicode)) {
                     sb.append(unicode.toChar())
                 } else {
@@ -134,7 +83,7 @@ class JbString() {
                     sb.append(CodePoints.lowSurrogate(unicode))
                 }
             }
-            pos = backup
+            offset = backup
             string = sb.toString()
         }
         return string as String

@@ -17,5 +17,8 @@ release.properties
 /xyz-handler-http/src/test/resources/endpoint
 *.log
 *.jfr
+.kotlintest
+# To be added later
+/here-naksha-lib-log
 /vault/
 !/vault/README.md

@@ -1,6 +1,7 @@
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.here.naksha.lib.core.util.json.Json
 import com.here.naksha.lib.jbon.IDataView
+import com.here.naksha.lib.jbon.JbDict
 import com.here.naksha.lib.jbon.JbPlatform
 import sun.misc.Unsafe
 
@@ -52,5 +53,9 @@ object JvmPlatform : JbPlatform() {
         if (end > bytes.size) end = bytes.size
         if (end < offset) throw Exception("end is before start")
         return JvmDataView(bytes, offset + baseOffset, end + baseOffset)
+    }
+
+    override fun getGlobalDictionary(id: String): JbDict {
+        TODO("We need a way so that our lib-psql can override this")
     }
 }
