@@ -358,7 +358,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         var pos = end + 5
         var i = 0
         var wordStart = -1
-        val stringReader: JbString = JbString()
+        val stringReader = JbString()
         while (i < string.length) {
             val hi = string[i++]
             var unicode: Int
@@ -526,6 +526,18 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         }
         return pos
     }
+
+    // TODO: startArray() : Int
+    //       ... write values
+    //       closeArray(start:Int): Int
+    //       -> goes back, adds correct header in-front, nothing more
+    // TODO: startMap() : Int
+    //       ... write key as string-reference
+    //       ... offer writeKey(key:String), will check global dict and then writeToLocalDictionary
+    //       ... eventually it simply writes a string-ref (writeRef())
+    //       ... write value
+    //       closeMap(start:Int) : Int
+    //       -> goes back, adds correct header in-front, nothing more
 
     /**
      * Creates a global dictionary out of this builder. Checks that nothing was yet written into the binary.
