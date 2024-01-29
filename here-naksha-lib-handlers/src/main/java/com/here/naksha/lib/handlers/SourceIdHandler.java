@@ -59,12 +59,7 @@ public class SourceIdHandler extends AbstractEventHandler {
     final Request<?> request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
     if (request instanceof ReadFeatures readRequest) {
-
-      if (readRequest.getPropertyOp() != null) {
-        PropertyOperationUtil.transformPropertyInPropertyOperationTree(
-            readRequest.getPropertyOp(), SourceIdHandler::mapIntoTagOperation);
-      }
-
+      transformPropertyOperation(readRequest);
     } else if (request instanceof WriteXyzFeatures writeRequest) {
       writeRequest.features.stream()
           .map(XyzFeatureCodec::getFeature)
@@ -73,6 +68,22 @@ public class SourceIdHandler extends AbstractEventHandler {
     }
 
     return event.sendUpstream(request);
+  }
+
+  private void transformPropertyOperation(ReadFeatures readRequest) {
+
+    if (readRequest.getPropertyOp() == null) {
+      return;
+    }
+
+    POp propertyOp = readRequest.getPropertyOp();
+
+    if (propertyOp.children() != null) {
+      PropertyOperationUtil.transformPropertyInPropertyOperationTree(propertyOp, SourceIdHandler::mapIntoTagOperation);
+    } else {
+      mapIntoTagOperation(propertyOp).ifPresent(readRequest::setPropertyOp);
+    }
+
   }
 
   private void setSourceIdTags(XyzFeature feature) {
