@@ -79,7 +79,7 @@ public class SourceIdHandler extends AbstractEventHandler {
 
     POp propertyOp = readRequest.getPropertyOp();
 
-    if (propertyOp.children() != null & !propertyOp.children().isEmpty()) {
+    if (propertyOp.children() != null && !propertyOp.children().isEmpty()) {
       PropertyOperationUtil.transformPropertyInPropertyOperationTree(
           propertyOp, SourceIdHandler::mapIntoTagOperation);
     } else {
