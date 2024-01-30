@@ -1,13 +1,46 @@
 import com.here.naksha.lib.jbon.*
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.utility.DockerImageName
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 
 class JvmJbonTest {
+
+    companion object {
+        private lateinit var postgreSQLContainer: PostgreSQLContainer<*>
+
+        @JvmStatic
+        @BeforeAll
+        fun beforeAll() {
+            val image = DockerImageName.parse("sibedge/postgres-plv8:16.1-3.2.0").asCompatibleSubstituteFor("postgres")
+            postgreSQLContainer = PostgreSQLContainer(image)
+                    .withDatabaseName("plv8-db")
+                    .withUsername("user")
+                    .withPassword("password")
+
+            postgreSQLContainer.start()
+
+            val url = String.format(
+                    "%s?&user=%s&password=%s",
+                   postgreSQLContainer.getJdbcUrl(),
+                   postgreSQLContainer.username,
+                   postgreSQLContainer.password)
+            println(url)
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun afterAll() {
+            postgreSQLContainer.stop()
+        }
+    }
 
     @Test
     fun basicTest() {
@@ -50,7 +83,7 @@ class JvmJbonTest {
         assertEquals(99, properties["age"])
 
         // Test stringify.
-        val json = JvmNative.stringify(map, false) as String
+        val json = JvmNative.stringify(map, false)
         assertEquals(49, json.length)
         assertTrue( json.contains("properties"))
     }
@@ -111,27 +144,27 @@ class JvmJbonTest {
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         // the values -16 to 15 should be encoded in one byte
-        builder.writeInt32(-16);
+        builder.writeInt32(-16)
         assertTrue(reader.isInt())
         assertEquals(-16, reader.readInt32(0))
         assertEquals(1, reader.unitSize())
         assertEquals(1, builder.reset())
 
-        builder.writeInt32(15);
+        builder.writeInt32(15)
         assertTrue(reader.isInt())
         assertEquals(15, reader.readInt32(0))
         assertEquals(1, reader.unitSize())
         assertEquals(1, builder.reset())
 
         // the values below -16 and above 15 should be encoded in two byte
-        builder.writeInt32(-17);
+        builder.writeInt32(-17)
         assertEquals(-17, view.getInt8(1))
         assertTrue(reader.isInt())
         assertEquals(-17, reader.readInt32(0))
         assertEquals(2, reader.unitSize())
         assertEquals(2, builder.reset())
 
-        builder.writeInt32(16);
+        builder.writeInt32(16)
         assertEquals(16, view.getInt8(1))
         assertTrue(reader.isInt())
         assertEquals(16, reader.readInt32(0))
