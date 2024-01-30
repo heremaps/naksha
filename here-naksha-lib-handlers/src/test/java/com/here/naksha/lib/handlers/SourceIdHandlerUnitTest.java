@@ -82,7 +82,6 @@ class SourceIdHandlerUnitTest {
         PropertyOperationUtil.transformPropertyInPropertyOperationTree(given, SourceIdHandler::mapIntoTagOperation);
         //then
 
-
         assertEquals(given.op(), OpType.AND);
         assertFalse(given.children().isEmpty());
         assertEquals(given.children().size(), 2);
@@ -93,18 +92,17 @@ class SourceIdHandlerUnitTest {
         assertEquals(nestedPop.op(), POpType.EXISTS);
 
         assertEquals(given.children().get(1).op(), POpType.CONTAINS);
-
     }
     @Test
     void tc2007_testMapEqToContainsTagWithoutNormalization() {
         //given
         NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
         POp given = POp.eq(pRef, "tAskK_1");
+
         //when
-
         Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
-        //then
 
+        //then
         assertTrue(result.isPresent());
         assertEquals(result.get().getPropertyRef().getTagName(), "xyz_source_id_tAskK_1");
         assertEquals(result.get().op(), POpType.EXISTS);

@@ -33,7 +33,6 @@ public class SourceIdHandlerApiTest extends ApiTest {
 
     @Test
     void tc2000_testCreateFeaturesWithSourceIdInMeta() throws Exception {
-
         // Given:
         final String bodyJson = loadFileOrFail("SourceHandlerId/TC2000_createFeatureWithoutTag/create_feature_without_tag.json");
         final String expectedBodyPart = loadFileOrFail("SourceHandlerId/TC2000_createFeatureWithoutTag/feature_response_part.json");
@@ -50,11 +49,9 @@ public class SourceIdHandlerApiTest extends ApiTest {
                 .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
                 .hasInsertedIdsMatchingFeatureIds(null)
                 .hasUuids();
-
     }
     @Test
     void tc2001_testCreateFeaturesWithSourceIdInMetaWithTags() throws Exception {
-
         // Given:
         final String bodyJson = loadFileOrFail("SourceHandlerId/TC2001_createFeatureWithTag/create_feature_with_tag.json");
         final String expectedBodyPart = loadFileOrFail("SourceHandlerId/TC2001_createFeatureWithTag/feature_response_part.json");
@@ -71,11 +68,9 @@ public class SourceIdHandlerApiTest extends ApiTest {
                 .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
                 .hasInsertedIdsMatchingFeatureIds(null)
                 .hasUuids();
-
     }
     @Test
     void tc2002_testCreateFeaturesWithoutSourceIdButWithSourceIdTag() throws Exception {
-
         // Given:
         final String bodyJson = loadFileOrFail("SourceHandlerId/TC2002_createFeatureWithoutSourceId/create_feature.json");
         final String expectedBodyPart = loadFileOrFail("SourceHandlerId/TC2002_createFeatureWithoutSourceId/feature_response_part.json");
@@ -91,12 +86,10 @@ public class SourceIdHandlerApiTest extends ApiTest {
                 .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
                 .hasInsertedIdsMatchingFeatureIds(null)
                 .hasUuids();
-
     }
 
    @Test
     void tc2003_searchBySourceId() throws Exception {
-
         //given
         final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
         final String propQueryParam = "%s=eq=%s".formatted(
@@ -121,7 +114,6 @@ public class SourceIdHandlerApiTest extends ApiTest {
 
     @Test
     void tc2004_searchWithoutSourceId() throws Exception {
-
         //given
         final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
         final String propQueryParam = "p.speedLimit='60'";
@@ -134,7 +126,6 @@ public class SourceIdHandlerApiTest extends ApiTest {
         HttpResponse<String> response = nakshaClient
                 .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam , streamId);
 
-        System.out.println(response.body());
         // Then
         assertThat(response)
                 .hasStatus(200)
@@ -144,7 +135,6 @@ public class SourceIdHandlerApiTest extends ApiTest {
 
     @Test
     void tc2005_searchBySourceIdAndTags() throws Exception {
-
         //given
         final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
 
@@ -167,5 +157,4 @@ public class SourceIdHandlerApiTest extends ApiTest {
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
     }
-
 }
