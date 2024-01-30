@@ -60,7 +60,7 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbObjectMapper<SELF>() 
      * @return true if the current position is valid; false otherwise.
      */
     fun ok() : Boolean {
-        return reader.view != null && reader.offset < encodingEnd
+        return index >= 0 && reader.view != null && reader.offset < encodingEnd
     }
 
     /**
@@ -68,12 +68,14 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbObjectMapper<SELF>() 
      * @return true if there is at least one entry; false if empty.
      */
     fun first() : Boolean {
-        reset()
-        if (ok()) {
-            dropEntry()
-            index = 0
+        if (index == 0) {
             return true
         }
+        dropEntry()
+        index = 0
+        reader.offset = encodingStart
+        if (ok()) return true
+        index = -1
         return false
     }
 
@@ -82,6 +84,9 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbObjectMapper<SELF>() 
      * @return true if the position is valid after being moved; false if the position is now invalid.
      */
     fun next(): Boolean {
+        if (index < 0) {
+            return first()
+        }
         if (index in 0..< length) {
             dropEntry()
             if (nextEntry()) {
@@ -89,8 +94,8 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbObjectMapper<SELF>() 
                 return true
             }
             // We found the end.
-            length = index
-            index = -1
+            length = index + 1
+            reset()
         }
         return false
     }
@@ -138,13 +143,18 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbObjectMapper<SELF>() 
         if (index == pos) {
             return this as SELF
         }
-        // Reset position.
-        reset()
         // If we are requested to set the index to an invalid index.
         if (pos < 0 || pos >= length) {
+            reset()
             return this as SELF
         }
-        var i = 0
+        var i : Int
+        if (index < 0 || index > pos) {
+            reset()
+            i = 0
+        } else {
+            i = index
+        }
         while (i < pos && nextEntry()) i++
         // If we did not reach the requested index, index becomes invalid.
         if (i < pos) {

@@ -20,6 +20,10 @@ kotlin {
         //binaries.library()
         binaries.executable()
     }
+
+    jvmJar.dependsOn(jsBrowserProductionWebpack)
+    jvmProcessResources.dependsOn(jsBrowserProductionWebpack)
+
     sourceSets {
         commonMain {
             dependencies {
@@ -37,6 +41,7 @@ kotlin {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-core"))
             }
+            resources.srcDirs += "$buildDir/dist/js/productionExecutable/"
         }
         jvmTest {
             dependencies {

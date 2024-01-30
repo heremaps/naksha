@@ -50,7 +50,7 @@ class JvmJbonTest {
         assertEquals(99, properties["age"])
 
         // Test stringify.
-        val json = JvmNative.stringify(map, false) as String
+        val json = JvmNative.stringify(map, false)
         assertEquals(49, json.length)
         assertTrue( json.contains("properties"))
     }
@@ -696,6 +696,16 @@ class JvmJbonTest {
         assertTrue(map.selectKey("bar"))
         assertEquals(1, map.pos())
         assertEquals(true, map.value().readBoolean())
+
+        // Test key access by index.
+        map.seek(0)
+        assertTrue(map.ok())
+        assertEquals("foo", map.key())
+        map.seek(1)
+        assertTrue(map.ok())
+        assertEquals("bar", map.key())
+        map.seek(2)
+        assertFalse(map.ok())
     }
 
     @Disabled
