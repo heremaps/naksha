@@ -99,9 +99,10 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private Optional<String> getSourceIdFromFeature(XyzProperties properties) {
     try {
-      Map<String, Object> momMetaNs = (Map<String, Object>) properties.get(XyzProperties.HERE_META_NS);
-      Object sourceId = momMetaNs.get(SOURCE_ID);
-      return Optional.ofNullable(sourceId).map(Object::toString);
+      return Optional.ofNullable(properties.get(XyzProperties.HERE_META_NS))
+          .map(Map.class::cast)
+          .map(metaProperties -> metaProperties.get(SOURCE_ID))
+          .map(Object::toString);
     } catch (ClassCastException exception) {
       return Optional.empty();
     }

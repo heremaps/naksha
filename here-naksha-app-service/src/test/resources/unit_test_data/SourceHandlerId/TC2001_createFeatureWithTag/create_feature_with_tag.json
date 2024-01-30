@@ -20,7 +20,7 @@
           "lastUpdatedBy": "topology_adapter_service",
           "updatedByUser": "topology_adapter_service"
         },
-        "speedLimit": "60"
+        "speedLimit": "50"
       },
       "geometry": {
         "type":"Point",

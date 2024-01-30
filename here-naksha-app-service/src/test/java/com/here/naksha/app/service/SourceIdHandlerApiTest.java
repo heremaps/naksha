@@ -12,11 +12,12 @@ import java.util.UUID;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.*;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 public class SourceIdHandlerApiTest extends ApiTest {
 
-    private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
+    private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient(1250);
     private static final String SPACE_ID = "source_id_handler_test_space";
 
     @BeforeAll
@@ -25,6 +26,8 @@ public class SourceIdHandlerApiTest extends ApiTest {
         createHandler(nakshaClient, "SourceHandlerId/setup/create_event_handler.json");
         createHandler(nakshaClient, "SourceHandlerId/setup/create_default_event_handler.json");
         createSpace(nakshaClient, "SourceHandlerId/setup/create_space.json");
+        String initialFeaturesJson = loadFileOrFail("SourceHandlerId/setup/create_features.json");
+        nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
     }
 
 
@@ -91,5 +94,78 @@ public class SourceIdHandlerApiTest extends ApiTest {
 
     }
 
+   @Test
+    void tc2003_searchBySourceId() throws Exception {
+
+        //given
+        final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+        final String propQueryParam = "%s=eq=%s".formatted(
+                urlEncoded("p.@ns:com:here:mom:meta.sourceId"),
+                urlEncoded("task_2")
+        );
+
+        final String expectedBodyPart =
+                loadFileOrFail("SourceHandlerId/TC2003_searchBySourceId/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When
+        HttpResponse<String> response = nakshaClient
+                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam , streamId);
+
+        // Then
+        assertThat(response)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+    }
+
+    @Test
+    void tc2004_searchWithoutSourceId() throws Exception {
+
+        //given
+        final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+        final String propQueryParam = "p.speedLimit='60'";
+
+        final String expectedBodyPart =
+                loadFileOrFail("SourceHandlerId/TC2004_searchWithoutSourceId/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When
+        HttpResponse<String> response = nakshaClient
+                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam , streamId);
+
+        System.out.println(response.body());
+        // Then
+        assertThat(response)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+    }
+
+    @Test
+    void tc2005_searchBySourceIdAndTags() throws Exception {
+
+        //given
+        final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+
+        final String propQueryParam = "%s=eq=%s&tags=three".formatted(
+                urlEncoded("p.@ns:com:here:mom:meta.sourceId"),
+                urlEncoded("task_4")
+        );
+
+        final String expectedBodyPart =
+                loadFileOrFail("SourceHandlerId/TC2005_searchBySourceIdAndTags/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When
+        HttpResponse<String> response = nakshaClient
+                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam , streamId);
+
+        // Then
+        assertThat(response)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+    }
 
 }

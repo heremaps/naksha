@@ -18,7 +18,7 @@
             "xyz_source_id_Task_1"
           ]
         },
-        "speedLimit": "60",
+        "speedLimit": "50",
         "@ns:com:here:mom:meta": {
           "tid": "urn:here::here:Topology-Transaction:1866780",
           "owner": "topology_adapter_service",
