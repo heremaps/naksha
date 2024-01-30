@@ -121,6 +121,32 @@ public class ViewTest {
             writeSession.commit(true);
         }
     }
+    @Test
+    void testDeleteApiNotation() throws NoCursor {
+        IStorage storage = mock(IStorage.class);
+        IWriteSession session = mock(IWriteSession.class);
+
+        ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
+        ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS);
+        View view = new View(viewLayerCollection);
+        when(storage.newWriteSession(nc, true)).thenReturn(session);
+
+        final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
+        final XyzFeature feature = new XyzFeature("id0");
+        request.add(EWriteOp.DELETE, feature);
+
+        when(session.execute(request)).thenReturn(new MockResult<>(sampleXyzWriteResponse(1, EExecutedOp.DELETED)));
+        ViewWriteSession writeSession = view.newWriteSession(nc, true);
+
+        try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+                     writeSession.execute(request).getXyzFeatureCursor()) {
+            assertTrue(cursor.next());
+            assertEquals(feature.getId(), cursor.getId());
+            assertEquals(cursor.getOp(), EExecutedOp.DELETED);
+        } finally {
+            writeSession.commit(true);
+        }
+    }
 
     @Test
     void testExceptionInOneOfTheThreads() {

@@ -159,6 +159,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     @EnabledIf("runTest")
     void writeFeatureOnSelectedLayer() throws NoCursor {
         assertNotNull(storage);
+        final String FEATURE_ID="feature_id_view1";
 
         ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
         ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
@@ -168,9 +169,8 @@ public class ViewWriteSessionTests extends PsqlTests {
 
         try (ViewWriteSession writeSession = view.newWriteSession(nakshaContext,true).withWriteLayer(layer1).init()) {
             LayerWriteFeatureRequest writeRequest=new LayerWriteFeatureRequest();
-            final XyzFeature feature = fg.newRandomFeature();
+            final XyzFeature feature = new XyzFeature(FEATURE_ID);
             feature.setGeometry(new XyzPoint(0d, 0d));
-            feature.setId("feature_id_view1");
             writeRequest.add(EWriteOp.PUT, feature);
 
             try (ForwardCursor<XyzFeature, XyzFeatureCodec> writeCursor =
@@ -183,10 +183,44 @@ public class ViewWriteSessionTests extends PsqlTests {
 
             //check if the newly added feature found on layer
             ReadFeatures readRequest = new ReadFeatures();
-            readRequest.setPropertyOp(POp.eq(PRef.id(),"feature_id_view1"));
+            readRequest.setPropertyOp(POp.eq(PRef.id(),FEATURE_ID));
 
             List<XyzFeatureCodec> list=queryView(view,readRequest);
             assertTrue(list.size()==1);
+        }
+        session.commit(true);
+    }
+    @Test
+    @Order(19)
+    @EnabledIf("runTest")
+    void deleteFeatureFromSelectedLayer() throws NoCursor {
+        assertNotNull(storage);
+        final String FEATURE_ID="feature_id_view1";
+        ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
+        ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
+
+        ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers",layer1, layer0);
+        View view = new View(viewLayerCollection);
+
+        try (ViewWriteSession writeSession = view.newWriteSession(nakshaContext,true)) {
+            LayerWriteFeatureRequest writeRequest=new LayerWriteFeatureRequest();
+            final XyzFeature feature = new XyzFeature(FEATURE_ID);
+            writeRequest.add(EWriteOp.DELETE, feature);
+
+            try (ForwardCursor<XyzFeature, XyzFeatureCodec> writeCursor =
+                         writeSession.execute(writeRequest).getXyzFeatureCursor()) {
+                assertTrue(writeCursor.next());
+                assertSame(EExecutedOp.DELETED, writeCursor.getOp());
+                assertEquals(FEATURE_ID,writeCursor.getId());
+            }
+            writeSession.commit(true);
+
+            //check if the newly added feature found on layer
+            ReadFeatures readRequest = new ReadFeatures();
+            readRequest.setPropertyOp(POp.eq(PRef.id(),FEATURE_ID));
+
+            List<XyzFeatureCodec> list=queryView(view,readRequest);
+            assertTrue(list.size()==0);
         }
         session.commit(true);
     }
