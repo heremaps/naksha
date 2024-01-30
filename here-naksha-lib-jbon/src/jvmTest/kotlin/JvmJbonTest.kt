@@ -562,7 +562,7 @@ class JvmJbonTest {
         assertTrue(reader.isString())
         assertEquals("foo", reader.readString())
         // Read string "bar"
-        reader.setOffset(2+4)
+        reader.setOffset(2 + 4)
         assertTrue(reader.isString())
         assertEquals("bar", reader.readString())
 
@@ -606,5 +606,55 @@ class JvmJbonTest {
         }
         assertEquals(-1, array.pos())
         assertEquals(2, i)
+    }
+
+    @Test
+    fun testMap() {
+        val view = JvmPlatform.newDataView(ByteArray(8192))
+        val builder = JbBuilder(view)
+        val reader = JbReader()
+
+        val start = builder.startMap()
+        builder.writeKey("foo")
+        builder.writeInt32(1)
+        builder.writeKey("bar")
+        builder.writeBool(true)
+        builder.endMap(start)
+
+        // Manual encoding checks.
+        reader.mapView(view, 0)
+        assertTrue(reader.isMap())
+        reader.addOffset(1)
+        // We expect the size being:
+        // 1 byte lead-in
+        // 1 byte size
+        // 1 byte foo reference
+        // 1 byte int
+        // 1 byte bar reference
+        // 1 byte int
+        // = 6 byte total size, 4 byte content size
+        assertEquals(4, view.getInt8(reader.offset).toInt() and 0xff)
+
+        val mapData = builder.buildFeature(null)
+        val mapView = JvmPlatform.newDataView(mapData, 0)
+        val feature = JbFeature()
+        feature.mapView(mapView, 0)
+        assertEquals(null, feature.id())
+        assertTrue(feature.reader.isMap())
+        val map = JbMap()
+        map.mapReader(feature.reader)
+
+        map.first()
+        assertTrue(map.ok())
+        assertEquals("foo", map.key())
+        assertEquals(1, map.value().readInt32())
+
+        assertTrue(map.next())
+        assertTrue(map.ok())
+        assertEquals("bar", map.key())
+        assertEquals(true, map.value().readBoolean())
+
+        assertFalse(map.next())
+        assertFalse(map.ok())
     }
 }

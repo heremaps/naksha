@@ -49,7 +49,7 @@ class JbArray : JbEntryArray<JbArray>() {
         length = if (contentSize() == 0) 0 else Int.MAX_VALUE
     }
 
-    override fun moveReaderToNextValue(): Boolean {
+    override fun nextEntry(): Boolean {
         if (reader.offset < encodingEnd) {
             reader.nextUnit()
             return reader.offset < encodingEnd
@@ -57,5 +57,20 @@ class JbArray : JbEntryArray<JbArray>() {
         return false
     }
 
+    override fun loadEntry() {
+    }
+
+    override fun dropEntry() {
+    }
+
+    /**
+     * Returns the reader, being positioned at the value of the entry.
+     * @return The reader, positioned at the value of the entry.
+     * @throws IllegalStateException If the position is invalid.
+     */
+    fun value(): JbReader {
+        check(index >= 0)
+        return reader
+    }
 
 }

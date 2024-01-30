@@ -596,17 +596,86 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         return start
     }
 
-    // TODO: startArray() : Int
-    //       ... write values
-    //       closeArray(start:Int): Int
-    //       -> goes back, adds correct header in-front, nothing more
-    // TODO: startMap() : Int
-    //       ... write key as string-reference
-    //       ... offer writeKey(key:String), will check global dict and then writeToLocalDictionary
-    //       ... eventually it simply writes a string-ref (writeRef())
-    //       ... write value
-    //       closeMap(start:Int) : Int
-    //       -> goes back, adds correct header in-front, nothing more
+    /**
+     * Starts a map and returns the offset where the map was started, needed to close the map.
+     * The content of the map can be written simply after having started the map.
+     * @return The offset where the map was started.
+     */
+    fun startMap(): Int {
+        val start = end
+        // We need 1-byte lead-in and a maximum of 4 byte for the size of the array.
+        // We now write the lead-in for an empty array.
+        view.setInt8(end++, (TYPE_CONTAINER or TYPE_CONTAINER_MAP).toByte())
+        end += 4
+        return start
+    }
+
+    /**
+     * Writes the given key into a map, requires that [startMap] has been called before.
+     *
+     * @param key The key to write.
+     * @return The previously written key.
+     */
+    fun writeKey(key : String) : Int {
+        val start = end
+        val global = this.global
+        var index : Int
+        if (global != null) {
+            index = global.indexOf(key)
+            if (index >= 0) {
+                writeRef(index, true)
+                return start
+            }
+        }
+        index = writeToLocalDictionary(key)
+        writeRef(index, false)
+        return start
+    }
+
+    /**
+     * Ends a map.
+     * @param start The start of the map as returned by [startMap].
+     * @return The start of the map again.
+     */
+    fun endMap(start: Int): Int {
+        val size = end - start - 5
+        require(size >= 0)
+        if (size == 0) {
+            // Empty map, we already created the header, just fix end and we're done.
+            end -= 4
+            return start
+        }
+        val contentStart = start + 5
+        val contentEnd = end
+        var end = start
+        when (size) {
+            in 0..255 -> {
+                view.setInt8(end++, (TYPE_CONTAINER or TYPE_CONTAINER_MAP or 1).toByte())
+                view.setInt8(end++, size.toByte())
+            }
+
+            in 256..65536 -> {
+                view.setInt8(end, (TYPE_CONTAINER or TYPE_CONTAINER_MAP or 2).toByte())
+                view.setInt16(end + 1, size.toShort())
+                end += 3
+            }
+
+            else -> {
+                view.setInt8(end, (TYPE_CONTAINER or TYPE_CONTAINER_MAP or 3).toByte())
+                view.setInt32(end + 1, size)
+                end += 5
+            }
+        }
+        // Copy from where the content backwards
+        var source = contentStart
+        if (end < source) {
+            while (source < contentEnd) {
+                view.setInt8(end++, view.getInt8(source++))
+            }
+        }
+        this.end = end
+        return start
+    }
 
     /**
      * Creates a global dictionary out of this builder. Checks that nothing was yet written into the binary.
