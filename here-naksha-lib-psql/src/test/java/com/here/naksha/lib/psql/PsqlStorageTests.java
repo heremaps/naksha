@@ -451,6 +451,7 @@ public class PsqlStorageTests extends PsqlTests {
              session.execute(requestForTxn).getXyzMutableCursor()) {
       cursor.next();
       cursor.next();
+      cursor.next();
       txnOfMiddleVersion = cursor.getFeature().getProperties().getXyzNamespace().getTxn();
     }
 
@@ -459,11 +460,29 @@ public class PsqlStorageTests extends PsqlTests {
     request.withReturnAllVersions(true);
     request.setPropertyOp(POp.eq(PRef.txn(), txnOfMiddleVersion));
 
+    String puuid;
     // when
     try (final MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
              session.execute(request).getXyzMutableCursor()) {
       cursor.next();
-      assertEquals(txnOfMiddleVersion, cursor.getFeature().getProperties().getXyzNamespace().getTxn());
+      XyzNamespace xyzNamespace = cursor.getFeature().getProperties().getXyzNamespace();
+      puuid = xyzNamespace.getPuuid();
+
+      assertEquals(txnOfMiddleVersion, xyzNamespace.getTxn());
+      assertFalse(cursor.hasNext());
+
+    }
+
+    // get previous version by uuid = puuid
+    final ReadFeatures requestForPreviousVersion = RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
+    requestForPreviousVersion.withReturnAllVersions(true);
+    requestForPreviousVersion.setPropertyOp(POp.eq(PRef.uuid(), puuid));
+    try (final MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+             session.execute(requestForPreviousVersion).getXyzMutableCursor()) {
+      cursor.next();
+      XyzNamespace xyzNamespace = cursor.getFeature().getProperties().getXyzNamespace();
+      assertEquals(puuid,  xyzNamespace.getUuid());
+      assertTrue( txnOfMiddleVersion >  xyzNamespace.getTxn());
       assertFalse(cursor.hasNext());
     }
   }

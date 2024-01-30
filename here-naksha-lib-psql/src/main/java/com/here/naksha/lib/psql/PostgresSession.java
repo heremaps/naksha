@@ -521,14 +521,18 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     return new ErrorResult(XyzError.NOT_IMPLEMENTED, "executeRead");
   }
 
-  private SQL prepareHstSql(String collection, POp propertyOp, ArrayList<Object> parametersHst, String spatial_where, ReadFeatures readFeatures) {
+  private SQL prepareHstSql(
+      String collection,
+      POp propertyOp,
+      ArrayList<Object> parametersHst,
+      String spatial_where,
+      ReadFeatures readFeatures) {
     String historyCollection = collection + "_hst";
     SQL hst_props_where = new SQL();
     if (propertyOp != null) {
       addPropertyQuery(hst_props_where, propertyOp, parametersHst, true);
     }
-    return prepareQuery(
-        historyCollection, spatial_where, hst_props_where.toString(), readFeatures.limit);
+    return prepareQuery(historyCollection, spatial_where, hst_props_where.toString(), readFeatures.limit);
   }
 
   @NotNull
