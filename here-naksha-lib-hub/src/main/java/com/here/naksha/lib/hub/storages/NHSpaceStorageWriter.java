@@ -161,7 +161,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     }
     return Objects.requireNonNull(
             wc.features.get(0).getFeature(),
-            "Got empty (null) feature inside codec when porcessing WriteCollections")
+            "Got empty (null) feature inside codec when processing WriteCollections")
         .getId();
   }
 
