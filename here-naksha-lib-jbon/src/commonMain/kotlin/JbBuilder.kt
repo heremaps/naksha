@@ -77,6 +77,16 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
     }
 
     /**
+     * Reset the builder to the start and return the end position that was overridden. Leave the local dictionary alone.
+     * @return The overridden end position.
+     */
+    fun resetView(): Int {
+        val old = end
+        end = 0
+        return old
+    }
+
+    /**
      * Write a NULL value.
      * @return The offset of the value written.
      */
@@ -395,7 +405,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
                     val isGlobal: Boolean
                     var index = -1
                     if (global != null) {
-                        index = global.indexOf(string)
+                        index = global.indexOf(subString)
                     }
                     if (index < 0) {
                         index = writeToLocalDictionary(subString)

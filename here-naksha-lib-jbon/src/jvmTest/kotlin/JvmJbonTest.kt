@@ -505,10 +505,31 @@ class JvmJbonTest {
         val featureArray = builder.buildFeature(null)
         val featureView = JvmPlatform.newDataView(featureArray)
 
+        // Encode a dictionary.
+        builder.resetView()
+        val dictId = "test"
+        val dictArray = builder.buildDictionary(dictId)
+        val dictView = JvmPlatform.newDataView(dictArray)
+
+        // Test the dictionary class.
+        val dict = JbDict().mapView(dictView, 0)
+        dict.loadAll()
+
+        val view2 = JvmPlatform.newDataView(ByteArray(65535))
+        val builder2 = JbBuilder(view2, dict)
+        builder2.writeText(topology)
+        val featureArray2 = builder2.buildFeature(null)
+        val featureView2 = JvmPlatform.newDataView(featureArray2)
+
         // Simple test using low level reader.
         val reader = JbReader().mapView(featureView, 0)
         assertEquals(TYPE_FEATURE, reader.unitType())
         assertEquals(11779, reader.unitSize())
+
+        // Simple test using low level reader.
+        val reader2 = JbReader().mapView(featureView2, 0)
+        assertEquals(TYPE_FEATURE, reader2.unitType())
+        assertEquals(8497, reader2.unitSize())
 
         // Use the feature reader.
         val feature = JbFeature().mapView(featureView, 0)
