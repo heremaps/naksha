@@ -87,14 +87,14 @@ class JbMap : JbEntryArray<JbMap>() {
     /**
      * The [reader] offset that currently is cached.
      */
-    private var cachedOffset : Int = -1
+    private var cachedOffset: Int = -1
 
     /**
      * The cached key at the current index, if index is valid.
      */
-    private var key : String? = null
+    private var key: String? = null
 
-    fun key() : String {
+    fun key(): String {
         check(index >= 0)
         loadEntry()
         val key = this.key
@@ -108,4 +108,19 @@ class JbMap : JbEntryArray<JbMap>() {
         return valueReader
     }
 
+    /**
+     * Searches the map for the given key and if found, select the entry with this key as current position.
+     * @param key The key to search for.
+     */
+    fun selectKey(key: String): Boolean {
+        val backup = reader.offset
+        if (first()) {
+            if (key == key()) return true
+            while (next()) {
+                if (key == key()) return true
+            }
+        }
+        reader.offset = backup
+        return false
+    }
 }

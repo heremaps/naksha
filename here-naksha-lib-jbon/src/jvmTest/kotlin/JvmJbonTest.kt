@@ -656,5 +656,14 @@ class JvmJbonTest {
 
         assertFalse(map.next())
         assertFalse(map.ok())
+
+        // Test key selection.
+        assertTrue(map.selectKey("foo"))
+        assertEquals(0, map.pos())
+        assertEquals(1, map.value().readInt32())
+
+        assertTrue(map.selectKey("bar"))
+        assertEquals(1, map.pos())
+        assertEquals(true, map.value().readBoolean())
     }
 }
