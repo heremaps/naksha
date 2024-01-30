@@ -60,7 +60,7 @@ public class XyzProperties extends JsonObject {
    * Properties used for the delta layer (only within the moderation sub-process).
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static final String HERE_DELTA_NS = "@ns:com:here:delta";
+  public static final String HERE_DELTA_NS = "@ns:com:here:mom:delta";
 
   public XyzProperties() {}
 
