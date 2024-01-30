@@ -34,16 +34,15 @@ import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 import static com.here.naksha.lib.core.models.storage.POp.eq;
@@ -57,7 +56,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ViewTest {
     private NakshaContext nc =
             new NakshaContext().withAppId("VIEW_API_TEST").withAuthor("VIEW_API_AUTHOR");
@@ -65,7 +63,6 @@ public class ViewTest {
     private final static String TOPO = "topologies";
 
     @Test
-    @Order(1)
     void testReadApiNotation() throws NoCursor {
 
         // given
@@ -100,7 +97,6 @@ public class ViewTest {
     }
 
     @Test
-    @Order(2)
     void testWriteApiNotation() throws NoCursor {
         IStorage storage = mock(IStorage.class);
         IWriteSession session = mock(IWriteSession.class);
@@ -128,7 +124,6 @@ public class ViewTest {
         }
     }
     @Test
-    @Order(3)
     void testDeleteApiNotation() throws NoCursor {
         IStorage storage = mock(IStorage.class);
         IWriteSession session = mock(IWriteSession.class);
@@ -156,7 +151,6 @@ public class ViewTest {
     }
 
     @Test
-    @Order(4)
     void testExceptionInOneOfTheThreads() {
         // given
         IReadSession readSession = mock(IReadSession.class);
@@ -179,7 +173,6 @@ public class ViewTest {
     }
 
     @Test
-    @Order(5)
     void shouldNotQueryForMissingIfOriginalRequestWasOnlyById() throws NoCursor {
         // given
         IStorage topologiesStorage_1 = mock(IStorage.class);
@@ -216,7 +209,6 @@ public class ViewTest {
     }
 
     @Test
-    @Order(6)
     void testTimeoutExceptionInOneOfTheThreads() {
         IStorage topologiesStorage = mock(IStorage.class);
         IStorage buildingsStorage = mock(IStorage.class);
@@ -243,7 +235,6 @@ public class ViewTest {
     }
 
     @Test
-    @Order(999)
     void shouldThrowTooManyTasksException() {
         IStorage mockStorage = mock(IStorage.class);
         int limit= AbstractTask.limit.intValue();
@@ -255,6 +246,7 @@ public class ViewTest {
         ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", layerDS);
         View view = new View(viewLayerCollection);
 
+        List<SimpleTask> tasks=new ArrayList<>();
         try(MockedConstruction<ParallelQueryExecutor> queryExecutor=mockConstruction(ParallelQueryExecutor.class,(mock, context)->{
             when(mock.queryInParallel(any(),any())).thenAnswer(new Answer<Object>() {
                 @Override
@@ -262,7 +254,9 @@ public class ViewTest {
                     List<LayerReadRequest> requests=invocation.getArgument(0);
                     for (LayerReadRequest layerReadRequest : requests) {
                         SimpleTask singleTask = new SimpleTask<>();
-                        singleTask.start(()->{
+                        tasks.add(singleTask);
+                        singleTask.start(() -> {
+//                                if(tasks.size()<limit/2)
                             Thread.sleep(1000);
                             return null;
                         });
@@ -276,5 +270,11 @@ public class ViewTest {
             Throwable ex=assertThrows(TooManyTasks.class,()->viewReadSession.execute(new ReadFeatures()));
             assertTrue(ex.getMessage().contains("Maximum number of concurrent tasks"));
         }
+        //Interrupt sleeping threads in this group to end.
+        Optional<SimpleTask> activeTask=tasks.stream().filter(thread->thread.getThread()!=null).findFirst();
+            if(activeTask.isPresent()){
+                activeTask.get().getThread().getThreadGroup().interrupt();
+            }
+
     }
 }
