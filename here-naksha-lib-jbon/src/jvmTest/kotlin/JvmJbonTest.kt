@@ -540,4 +540,71 @@ class JvmJbonTest {
         assertEquals(topology, topologyRestored)
         assertSame(topologyRestored, text.toString())
     }
+
+    @Test
+    fun testArray() {
+        val view = JvmPlatform.newDataView(ByteArray(8192))
+        val builder = JbBuilder(view)
+        val arrayStart = builder.startArray()
+        builder.writeString("foo")
+        builder.writeString("bar")
+        builder.endArray(arrayStart)
+
+        val reader = JbReader()
+        reader.mapView(view, 0)
+        assertTrue(reader.isArray())
+        // 1-byte lead-in, 1-byte size, 4 byte for string "foo" and 4 byte for string "bar"
+        assertEquals(2 + 4 + 4, reader.unitSize())
+        // Therefore, the size should be encoded in a byte with the value being 8.
+        assertEquals(8, view.getInt8(1))
+        // Read string "foo"
+        reader.setOffset(2)
+        assertTrue(reader.isString())
+        assertEquals("foo", reader.readString())
+        // Read string "bar"
+        reader.setOffset(2+4)
+        assertTrue(reader.isString())
+        assertEquals("bar", reader.readString())
+
+        // Test the array class, should basically allow the same.
+        val array = JbArray()
+        array.mapView(view, 0)
+        assertEquals(2, array.length())
+        // We should be able to read "foo"
+        array.seek(0)
+        assertEquals(0, array.pos())
+        assertTrue(array.value().isString())
+        assertEquals("foo", array.value().readString())
+
+        // We should be able to read "bar"
+        array.seek(1)
+        assertEquals(1, array.pos())
+        assertTrue(array.value().isString())
+        assertEquals("bar", array.value().readString())
+
+        // We should fail to move to 2
+        array.seek(2)
+        assertEquals(-1, array.pos())
+
+        // Loop through the array
+        array.reset()
+        var i = 0
+        while (i < array.length()) {
+            array.seek(i)
+            assertEquals(i, array.pos())
+            assertTrue(array.value().isString())
+            i++
+        }
+        assertEquals(2, i)
+
+        // Iterate the array.
+        array.seek(0)
+        i = 0
+        while (array.ok()) {
+            array.next()
+            i++
+        }
+        assertEquals(-1, array.pos())
+        assertEquals(2, i)
+    }
 }

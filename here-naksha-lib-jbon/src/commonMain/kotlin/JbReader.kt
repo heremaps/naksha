@@ -150,7 +150,7 @@ open class JbReader {
      * @param alternative The value to return, when this is no value type.
      * @return The parameter value or the alternative.
      */
-    fun unitTypeParam(alternative:Int=-1) : Int {
+    fun unitTypeParam(alternative: Int = -1): Int {
         val view = this.view ?: return alternative
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return alternative
@@ -422,26 +422,6 @@ open class JbReader {
         return unitType() == TYPE_STRING
     }
 
-    /**
-     * Test if the current offset is at the lead-in of a text.
-     * @return true if the current offset is at the lead-in of a text; false otherwise.
-     */
-    fun isText(): Boolean {
-        val view = view()
-        val offset = this.offset
-        if (offset < 0 || offset >= view.getSize()) return false
-        val raw = view.getInt8(offset).toInt() and 0xff
-        var type = raw
-        if (type and 128 == 128) {
-            type = type and 0xf0
-        }
-        if (type == TYPE_CONTAINER) {
-            val value = raw and 0xf
-            return value and 0b1100 == 0b1100
-        }
-        return false
-    }
-
     private var stringReader: JbString? = null
 
     private fun stringReader(): JbString {
@@ -467,7 +447,7 @@ open class JbReader {
         return stringReader.mapReader(this).toString()
     }
 
-    private var textReader : JbText? = null
+    private var textReader: JbText? = null
 
     private fun textReader(): JbText {
         var tr = textReader
@@ -559,6 +539,38 @@ open class JbReader {
      */
     fun isGlobalDict(): Boolean {
         return unitType() == TYPE_GLOBAL_DICTIONARY
+    }
+
+    fun isMap(): Boolean {
+        val view = view()
+        val offset = this.offset
+        if (offset < 0 || offset >= view.getSize()) return false
+        val raw = view.getInt8(offset).toInt() and 0xff
+        val type = if (raw and 128 == 128) raw and 0xf0 else raw
+        return (type == TYPE_CONTAINER) && (raw and 0b0000_1100 == TYPE_CONTAINER_MAP)
+    }
+
+
+    fun isArray(): Boolean {
+        val view = view()
+        val offset = this.offset
+        if (offset < 0 || offset >= view.getSize()) return false
+        val raw = view.getInt8(offset).toInt() and 0xff
+        val type = if (raw and 128 == 128) raw and 0xf0 else raw
+        return (type == TYPE_CONTAINER) && (raw and 0b0000_1100 == TYPE_CONTAINER_ARRAY)
+    }
+
+    /**
+     * Test if the current offset is at the lead-in of a text.
+     * @return true if the current offset is at the lead-in of a text; false otherwise.
+     */
+    fun isText(): Boolean {
+        val view = view()
+        val offset = this.offset
+        if (offset < 0 || offset >= view.getSize()) return false
+        val raw = view.getInt8(offset).toInt() and 0xff
+        val type = if (raw and 128 == 128) raw and 0xf0 else raw
+        return (type == TYPE_CONTAINER) && (raw and 0b0000_1100 == TYPE_CONTAINER_TEXT)
     }
 
 }

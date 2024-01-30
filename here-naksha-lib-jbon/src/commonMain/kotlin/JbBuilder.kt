@@ -537,6 +537,65 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         return pos
     }
 
+    /**
+     * Starts an array and returns the offset where the array was started, needed to close the array.
+     * The content of the array can be written simply after having started the array.
+     * @return The offset where the array was started.
+     */
+    fun startArray(): Int {
+        val start = end
+        // We need 1-byte lead-in and a maximum of 4 byte for the size of the array.
+        // We now write the lead-in for an empty array.
+        view.setInt8(end++, (TYPE_CONTAINER or TYPE_CONTAINER_ARRAY).toByte())
+        end += 4
+        return start
+    }
+
+    /**
+     * Ends an array.
+     * @param start The start of the array as returned by [startArray].
+     * @return The start of the array again.
+     */
+    fun endArray(start: Int): Int {
+        val size = end - start - 5
+        require(size >= 0)
+        if (size == 0) {
+            // Empty array, we already created the header, just fix end and we're done.
+            end -= 4
+            return start
+        }
+        val contentStart = start + 5
+        val contentEnd = end
+        var end = start
+        when (size) {
+            in 0..255 -> {
+                view.setInt8(end++, (TYPE_CONTAINER or TYPE_CONTAINER_ARRAY or 1).toByte())
+                view.setInt8(end++, size.toByte())
+            }
+
+            in 256..65536 -> {
+                view.setInt8(end, (TYPE_CONTAINER or TYPE_CONTAINER_ARRAY or 2).toByte())
+                view.setInt16(end + 1, size.toShort())
+                end += 3
+            }
+
+            else -> {
+                view.setInt8(end, (TYPE_CONTAINER or TYPE_CONTAINER_ARRAY or 3).toByte())
+                view.setInt32(end + 1, size)
+                end += 5
+            }
+        }
+        // Copy from where the content backwards
+        var source = contentStart
+        if (end < source) {
+            while (source < contentEnd) {
+                view.setInt8(end++, view.getInt8(source++))
+            }
+        }
+        this.end = end
+        return start
+    }
+
     // TODO: startArray() : Int
     //       ... write values
     //       closeArray(start:Int): Int
@@ -616,7 +675,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         val endOfFeatureId = end
         val startOfGlobalDictId = end
         // Write the id of the global dictionary.
-        val featureId : String? = global?.id()
+        val featureId: String? = global?.id()
         if (featureId != null) {
             writeString(featureId)
         } else {

@@ -191,6 +191,13 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
     }
 
     /**
+     * Returns the size of the content (amount of byte).
+     */
+    fun contentSize() : Int {
+        return encodingEnd - encodingStart
+    }
+
+    /**
      * Returns the size (amount of byte) being mapped totally (including the lead-in, header and optional local dictionary).
      */
     fun mapSize(): Int {
