@@ -244,3 +244,17 @@ Reserved for further objects.
 - `jb_to_jsonb(bytea) : jsonb`
 - `jb_from_jsonb(jsonb) : bytea`
 
+- Global dictionary support
+  - Prepare SQL connection support for JUnit
+  - JbPlatform
+    - prepare()
+    - execute()
+    - ...
+- Session init (user, author, ...)
+- Code to create new transaction numbers
+  - GUID decoder and encoder
+- WriteFeatures
+- WriteCollections (CREATE, UPDATE, DELETE, ...)
+- Before and After Triggers (fiddle-out)
+- Support access to last error (errNo, errMsg)
+- Need the storage-id somewhere (in Platform)

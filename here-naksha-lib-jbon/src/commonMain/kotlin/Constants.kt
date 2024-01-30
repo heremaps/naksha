@@ -47,3 +47,14 @@ internal const val ADD_COLON = 0b11
 // Internally used to encode float4
 internal val TINY_FLOATS = floatArrayOf(-8f, -7f, -6f, -5f, -4f, -3f, -2f, -1f, 0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)
 internal val TINY_DOUBLES = doubleArrayOf(-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
+
+// The type names to be used in SQL queries.
+const val SQL_BOOLEAN = "boolean"
+const val SQL_INT32 = "int4"
+const val SQL_INT64 = "int8"
+const val SQL_FLOAT32 = "real"
+const val SQL_FLOAT64 = "double precision"
+const val SQL_BYTE_ARRAY = "bytea"
+const val SQL_STRING = "text"
+const val SQL_JSON_TEXT = "json"
+const val SQL_OBJECT = "jsonb"

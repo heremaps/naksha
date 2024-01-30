@@ -1,11 +1,8 @@
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.here.naksha.lib.core.util.json.Json
-import com.here.naksha.lib.jbon.IDataView
-import com.here.naksha.lib.jbon.JbDict
-import com.here.naksha.lib.jbon.JbPlatform
+import com.here.naksha.lib.jbon.*
 import sun.misc.Unsafe
 
-object JvmPlatform : JbPlatform() {
+object JvmNative : JbNative() {
     val unsafe: Unsafe
     val baseOffset: Int
 
@@ -16,6 +13,18 @@ object JvmPlatform : JbPlatform() {
         unsafe = unsafeConstructor.newInstance()
         val someByteArray = ByteArray(8)
         baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
+    }
+
+    override fun newMap(): Any {
+        return HashMap<String, Any>()
+    }
+
+    override fun map(): INativeMap {
+        TODO("Not yet implemented")
+    }
+
+    override fun sql(): ISql {
+        TODO("Not yet implemented")
     }
 
     override fun stringify(any: Any, pretty: Boolean): String {

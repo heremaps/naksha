@@ -95,17 +95,16 @@ For the PostgresQL implementation the **uid** is either the row number (`i`) for
 
 ## Table layout
 
-The table layout for all the tables of a collection is the same and 100% downward compatible with what previously used in XYZ-Hub:
+The table layout for all tables:
 
-| Column    | Type                      | Modifiers            | Description                                                     |
-|-----------|---------------------------|----------------------|-----------------------------------------------------------------|
-| i         | int8                      | PRIMARY KEY NOT NULL | Primary row identifier (`uid`).                                 |
-| geo       | geometry(GeometryZ, 4326) |                      | The geometry of the features, extracted from `feature->>'geo'`. |
-| jsondata  | jsonb                     |                      | The Geo-JSON feature.                                           |
+| Column  | Type                      | Modifiers            | Description                                                     |
+|---------|---------------------------|----------------------|-----------------------------------------------------------------|
+| i       | int8                      | PRIMARY KEY NOT NULL | Primary row identifier (`uid`).                                 |
+| geo     | geometry(GeometryZ, 4326) |                      | The geometry of the features, extracted from `feature->>'geo'`. |
+| feature | bytea                     |                      | The Geo-JSON feature.                                           |
+| naksha  | bytea                     |                      | The Naksha namespace (`@ns:naksha`)                             |
 
-The XYZ-Hub later added a new column `deleted` as `BOOLEAN DEFAULT FALSE`, this is no longer supported and simply ignored by Naksha-Hub.
-
-The only minor change is that `i` becomes a primary key and is no `BIGSERIAL` any longer, because the triggers we add now increment `i` by them self. It will not harm, if it is till an auto-sequence, just this will consume one additional number here and there, not needed otherwise. Another changes implied is how `i` is used, it will be incremented with any change done to a row, so it no longer uniquely identifies a row, but a state identifier. This is a major semantic difference that implies, you can move existing tables into Naksha and back to XYZ-Hub, but you can't possibly use Naksha and XYZ-Hub in parallel with the same table, because they have different semantics for `i`.
+The **naksha** namespace column is stored separate from the feature and should be merged into the feature under `feature->properties->@ns:naksha` or, when XYZ-Hub compatibility is needed, into `feature->properties->@ns:com:here:xyz`.
 
 ## Collection-Info
 

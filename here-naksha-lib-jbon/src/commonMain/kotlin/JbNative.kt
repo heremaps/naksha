@@ -16,23 +16,41 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * The API to be provided by the platform.
+ * The API to be provided by the platform to grant access to native capabilities.
  */
 @JsExport
-abstract class JbPlatform {
+abstract class JbNative {
     companion object {
         /**
          * The reference to the platform instance set by the platform and read via [get].
          */
-        internal var instance: JbPlatform? = null
+        internal var instance: JbNative? = null
 
         /**
          * Returns the platform instance.
          */
-        fun get(): JbPlatform {
-            return instance as JbPlatform
+        fun get(): JbNative {
+            return instance as JbNative
         }
     }
+
+    /**
+     * Creates a new empty native map. Returns [HashMap] in the JVM and **object** in JavaScript.
+     * @return A new native map.
+     */
+    abstract fun newMap(): Any
+
+    /**
+     * Returns the API that grants access to native maps.
+     * @return The API that grants access to native maps.
+     */
+    abstract fun map() : INativeMap
+
+    /**
+     * Returns the API that grants access to native SQL queries.
+     * @return The API that grants access to native SQL queries.
+     */
+    abstract fun sql() : ISql
 
     /**
      * Stringify the given object into a JSON string.
@@ -74,6 +92,16 @@ abstract class JbPlatform {
      */
     fun newByteArray(size: Int): ByteArray {
         return ByteArray(size)
+    }
+
+    /**
+     * Creates a new builder.
+     * @param globalDict The global dictionary to use for this builder.
+     * @param size The size of the builder buffer.
+     * @return a new builder.
+     */
+    fun newBuilder(globalDict: JbDict? = null, size:Int = 65536) : JbBuilder {
+        return JbBuilder(newDataView(ByteArray(size)), globalDict)
     }
 
     /**

@@ -13,7 +13,7 @@ interface IDataView {
     /**
      * Returns the platform API.
      */
-    fun getPlatform() : JbPlatform
+    fun getPlatform() : JbNative
 
     /**
      * Returns the byte-array below the view.

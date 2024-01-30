@@ -1,11 +1,9 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-import com.here.naksha.lib.jbon.IDataView
-import com.here.naksha.lib.jbon.JbDict
-import com.here.naksha.lib.jbon.JbPlatform
+import com.here.naksha.lib.jbon.*
 
 @JsExport
-object JsPlatform : JbPlatform() {
+object JsNative : JbNative() {
     init {
         instance = this
         js("""
@@ -25,7 +23,19 @@ DataView.prototype.getEnd = function() {
 DataView.prototype.getSize = function() {
     return this.byteLength;
 }
-""");
+""")
+    }
+
+    override fun newMap(): Any {
+        return js("{}") as Any
+    }
+
+    override fun map(): INativeMap {
+        TODO("Not yet implemented")
+    }
+
+    override fun sql(): ISql {
+        TODO("Not yet implemented")
     }
 
     override fun stringify(any: Any, pretty: Boolean): String {

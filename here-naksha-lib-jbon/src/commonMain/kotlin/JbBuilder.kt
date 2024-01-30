@@ -698,7 +698,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         writeInt32(size)
         // Now, end + 1 (lead-in) byte is what we need.
         val targetArray = ByteArray(end + 1)
-        val targetView = JbPlatform.get().newDataView(targetArray)
+        val targetView = JbNative.get().newDataView(targetArray)
         var target = 0
         targetView.setInt8(target++, TYPE_GLOBAL_DICTIONARY.toByte())
         // Copy size
@@ -759,7 +759,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
 
         // Now, end + 1 byte lead-in feature, + 1 byte lead-in of local dict.
         val targetArray = ByteArray(end + 2)
-        val targetView = JbPlatform.get().newDataView(targetArray)
+        val targetView = JbNative.get().newDataView(targetArray)
         var target = 0
         // Write lead-in.
         targetView.setInt8(target++, TYPE_FEATURE.toByte())
