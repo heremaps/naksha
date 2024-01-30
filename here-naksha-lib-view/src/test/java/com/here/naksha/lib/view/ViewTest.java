@@ -256,7 +256,6 @@ public class ViewTest {
                         SimpleTask singleTask = new SimpleTask<>();
                         tasks.add(singleTask);
                         singleTask.start(() -> {
-//                                if(tasks.size()<limit/2)
                             Thread.sleep(1000);
                             return null;
                         });
@@ -272,9 +271,10 @@ public class ViewTest {
         }
         //Interrupt sleeping threads in this group to end.
         Optional<SimpleTask> activeTask=tasks.stream().filter(thread->thread.getThread()!=null).findFirst();
-            if(activeTask.isPresent()){
-                activeTask.get().getThread().getThreadGroup().interrupt();
-            }
-
+        if(activeTask.isPresent()){
+            ThreadGroup threadGroup=activeTask.get().getThread().getThreadGroup();
+            threadGroup.interrupt();
+            assertEquals(limit,threadGroup.activeCount());
+        }
     }
 }
