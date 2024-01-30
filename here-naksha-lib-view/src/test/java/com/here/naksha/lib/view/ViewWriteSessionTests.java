@@ -193,7 +193,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     @Test
     @Order(19)
     @EnabledIf("runTest")
-    void deleteFeatureFromSelectedLayer() throws NoCursor {
+    void deleteFeatureFromTopLayer() throws NoCursor {
         assertNotNull(storage);
         final String FEATURE_ID="feature_id_view1";
         ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
