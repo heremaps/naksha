@@ -1,5 +1,6 @@
 import com.here.naksha.lib.jbon.*
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
@@ -695,5 +696,26 @@ class JvmJbonTest {
         assertTrue(map.selectKey("bar"))
         assertEquals(1, map.pos())
         assertEquals(true, map.value().readBoolean())
+    }
+
+    @Disabled
+    @Test
+    fun testSQL() {
+        val native = JbNative.get()
+        val plan = native.sql().prepare("SELECT * FROM TABLE WHERE foo = $1", arrayOf(SQL_STRING))
+        try {
+            val cursor = plan.cursor(arrayOf("test"))
+            try {
+                var row = cursor.next()
+                while (row != null) {
+                    native.log().info("row: ", row)
+                    row = cursor.next()
+                }
+            } finally {
+                cursor.close()
+            }
+        } finally {
+            plan.close()
+        }
     }
 }

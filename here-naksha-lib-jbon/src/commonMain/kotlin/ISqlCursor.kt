@@ -8,9 +8,8 @@ import kotlin.js.JsExport
 /**
  * A cursor.
  */
-@OptIn(ExperimentalStdlibApi::class)
 @JsExport
-interface ISqlCursor : AutoCloseable {
+interface ISqlCursor {
 
     /**
      * Returns the position of the currently selected row.
@@ -22,7 +21,7 @@ interface ISqlCursor : AutoCloseable {
      * Fetches the current row and moves the cursor forward.
      * @return The current row (as native map) or null, if there is no.
      */
-    fun next() : Any
+    fun next() : Any?
 
     /**
      * Fetches the current row plus the given amount of rows (positive forward, negative backward) and returns them.
@@ -43,4 +42,9 @@ interface ISqlCursor : AutoCloseable {
      * @param pos The position to move the cursor to.
      */
     fun moveTo(pos:Int)
+
+    /**
+     * Closes the cursor.
+     */
+    fun close()
 }

@@ -38,6 +38,10 @@ DataView.prototype.getSize = function() {
         TODO("Not yet implemented")
     }
 
+    override fun log(): INativeLog {
+        TODO("Not yet implemented")
+    }
+
     override fun stringify(any: Any, pretty: Boolean): String {
         return js("JSON.stringify(any, pretty)") as String
     }

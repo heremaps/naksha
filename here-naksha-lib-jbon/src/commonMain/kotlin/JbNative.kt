@@ -53,6 +53,12 @@ abstract class JbNative {
     abstract fun sql() : ISql
 
     /**
+     * Returns the native logging API.
+     * @return The native logging API.
+     */
+    abstract fun log() : INativeLog
+
+    /**
      * Stringify the given object into a JSON string.
      * @param any The object to serialize.
      * @param pretty If the result should be pretty-printed.

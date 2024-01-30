@@ -8,9 +8,8 @@ import kotlin.js.JsExport
 /**
  * The prepared plan.
  */
-@OptIn(ExperimentalStdlibApi::class)
 @JsExport
-interface ISqlPlan : AutoCloseable {
+interface ISqlPlan {
     /**
      * Execute the prepared plan with the given arguments. The types must match to the prepared statement.
      * @param args The arguments to be set at $n position, where $1 is the first array element.
@@ -24,4 +23,9 @@ interface ISqlPlan : AutoCloseable {
      * @return A cursor into the result-set.
      */
     fun cursor(args: Array<Any>): ISqlCursor
+
+    /**
+     * Closes (free) the plan.
+     */
+    fun close()
 }

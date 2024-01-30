@@ -27,6 +27,10 @@ object JvmNative : JbNative() {
         TODO("Not yet implemented")
     }
 
+    override fun log(): INativeLog {
+        TODO("Not yet implemented")
+    }
+
     override fun stringify(any: Any, pretty: Boolean): String {
         Json.get().use {
             if (pretty) {
