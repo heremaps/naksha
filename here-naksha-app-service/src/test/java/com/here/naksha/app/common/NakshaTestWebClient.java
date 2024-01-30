@@ -55,8 +55,8 @@ public class NakshaTestWebClient {
   }
 
   public NakshaTestWebClient() {
-    this(5);
-  }
+    this(300);
+  } // TODO: undo
 
   public HttpResponse<String> get(String subPath, String streamId)
       throws URISyntaxException, IOException, InterruptedException {
