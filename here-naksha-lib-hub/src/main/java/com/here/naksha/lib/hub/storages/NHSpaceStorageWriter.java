@@ -145,7 +145,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
           new WriteXyzCollections().purge(new XyzCollection(space.getCollectionId()));
       Result deleteSpaceRes = executeWriteCollections(deleteCollectionReq, space.getId());
       if (deleteSpaceRes instanceof SuccessResult) {
-        return executeWriteToAdminSpaces(deleteSpaceEntryReq, NakshaAdminCollection.SPACES);
+        return executeWriteToAdminSpaces(deleteSpaceEntryReq, deleteSpaceEntryReq.getCollectionId());
       } else {
         return deleteSpaceRes;
       }

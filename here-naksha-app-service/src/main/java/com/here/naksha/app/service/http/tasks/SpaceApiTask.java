@@ -20,6 +20,7 @@ package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.SPACE_ID;
 import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPathParam;
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -107,10 +108,14 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   private XyzResponse executeDeleteSpace() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final Space persistedSpace = maybePersistedSpace(spaceId);
-    final Space spaceToDelete = persistedSpace == null ? new Space(spaceId) : persistedSpace;
-    final WriteXyzFeatures wr = new WriteXyzFeatures(SPACES).delete(spaceToDelete);
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wr)) {
-      return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+    if (persistedSpace == null) {
+      return verticle.sendErrorResponse(
+          routingContext, NOT_FOUND_ON_NO_ELEMENTS.xyzError, NOT_FOUND_ON_NO_ELEMENTS.message);
+    } else {
+      final WriteXyzFeatures wr = new WriteXyzFeatures(SPACES).delete(persistedSpace);
+      try (Result wrResult = executeWriteRequestFromSpaceStorage(wr)) {
+        return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+      }
     }
   }
 

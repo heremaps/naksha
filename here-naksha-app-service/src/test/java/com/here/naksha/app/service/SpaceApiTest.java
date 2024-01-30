@@ -227,7 +227,6 @@ class SpaceApiTest extends ApiTest {
   }
 
   @Test
-  // TODO: investigate why this fails - the collection persists on DB after delete request returns Success
   void tc0281_testDeleteSpaceRemovesCollection() throws Exception {
     // Given: test files
     final String createFeatures = loadFileOrFail("SpaceApi/TC0281_deleteSpaceAndCollection/create_features.json");

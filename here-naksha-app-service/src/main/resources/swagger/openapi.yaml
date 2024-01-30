@@ -450,6 +450,11 @@ paths:
       tags:
         - Manage Spaces
       summary: Delete the space with the specific ID.
+      description: >
+        This operation deletes Space as logical entity. 
+        It can also delete physical collection that is associated with this space if these conditions are met:
+        - this space is handled by `DefaultStorageHandler`
+        - 'autoDeleteCollection` property of the handler was set to `true`.
       operationId: deleteSpace
       parameters:
         - name: spaceId
@@ -460,11 +465,27 @@ paths:
             type: string
       responses:
         '200':
-          $ref: '#/components/responses/FeatureResponse'
+          $ref: '#/components/responses/StorageResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
         '404':
           $ref: '#/components/responses/ErrorResponse404'
+        '409':
+          $ref: '#/components/responses/ErrorResponse409'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
         '500':
           $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
   '/hub/spaces/{spaceId}/features':
     get:
       tags:
@@ -1909,8 +1930,8 @@ components:
           type: string
           nullable: true
         properties:
-          $ref: '#/components/schemas/HandlerProperties'
-    HandlerProperties:
+          $ref: '#/components/schemas/DefaultStorageHandlerProperties'
+    DefaultStorageHandlerProperties:
       type: object
       description: >-
         This object represents properties, as supported by default Naksha Handler implementation, but it can be customized as per custom handler implementation.
@@ -1920,6 +1941,16 @@ components:
           type: string
         collection:
           $ref: '#/components/schemas/NakshaCollection'
+        autoCreateCollection:
+          description: > 
+            If set to true, it will automatically create collection
+            Set to 'true' by default.
+          type: boolean
+        autoDeleteCollection:
+          description: > 
+            If set to true, it will purge the collection upon Delete Space request.
+            Set to 'true' by default.
+          type: boolean
     Space:
       type: object
       description: >-

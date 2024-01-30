@@ -250,7 +250,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       try {
         return retryDueToMissingCollection(ctx, storageImpl, collectionIds, request);
       } catch (MissingCollectionsException mce) {
-        logger.warn("Retrying due to missing collection failed", mce);
+        logger.info("Retrying due to missing collection failed", mce);
         return mce.toErrorResult();
       }
     } else {
@@ -268,7 +268,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       try {
         return retryDueToMissingCollection(ctx, storageImpl, collectionIds, request);
       } catch (MissingCollectionsException mce) {
-        logger.warn("Retrying due to missing collection failed", mce);
+        logger.info("Retrying due to missing collection failed", mce);
         return mce.toErrorResult();
       }
     } else {
@@ -302,11 +302,11 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull Request<?> request) {
     logger.warn("Collection not found for {}", collectionIds);
     if (properties.getAutoCreateCollection()) {
-      logger.warn(
+      logger.info(
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           collectionIds);
       createXyzCollections(ctx, storageImpl, collectionIds);
-      logger.warn("Created collection {}, forwarding the request once again", collectionIds);
+      logger.info("Created collection {}, forwarding the request once again", collectionIds);
       return forwardRequestToStorage(ctx, request, storageImpl, collectionIds, ATTEMPT_AFTER_COLLECTION_CREATION);
     } else {
       logger.warn(
