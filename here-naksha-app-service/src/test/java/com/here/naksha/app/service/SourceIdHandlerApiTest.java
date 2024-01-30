@@ -17,7 +17,7 @@ import static com.here.naksha.app.common.assertions.ResponseAssertions.assertTha
 
 public class SourceIdHandlerApiTest extends ApiTest {
 
-    private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient(1250);
+    private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
     private static final String SPACE_ID = "source_id_handler_test_space";
 
     @BeforeAll
