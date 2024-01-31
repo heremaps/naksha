@@ -57,6 +57,8 @@ public final class ApiParams {
 
   public static final long DEF_FEATURE_LIMIT = 30_000;
   public static final long DEF_ADMIN_FEATURE_LIMIT = 1_000;
+  // Note - using specific NULL value is not ideal, but practically it makes code less messy at few places
+  // and use of it doesn't cause any side effect
   public static final double NULL_COORDINATE = 9999;
 
   public static String TILE_TYPE_QUADKEY = "quadkey";

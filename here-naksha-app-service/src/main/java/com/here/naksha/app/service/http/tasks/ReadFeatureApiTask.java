@@ -19,6 +19,7 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInMeters;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
@@ -290,10 +291,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final XyzGeometry refGeometry = obtainReferenceGeometry(lat, lon, refSpaceId, refFeatureId);
 
     // Prepare read request based on parameters supplied
-    // TODO : Radius is divided by 100000 to get as closest to metre as possible, but this is incorrect and needs to
-    // be changed once lib-psql starts supporting intersect operation using metres
     final SOp radiusOp =
-        (radius > 0) ? SOp.intersectsWithBuffer(refGeometry, radius / 100000.00) : SOp.intersects(refGeometry);
+        (radius > 0) ? SOp.intersects(refGeometry, bufferInMeters(radius)) : SOp.intersects(refGeometry);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(radiusOp);
