@@ -73,6 +73,14 @@ DataView.prototype.getSize = function() {
         return js("new DataView(bytes.buffer, offset, size)") as IDataView;
     }
 
+    override fun lz4Deflate(bytes: ByteArray, offset: Int, size: Int): ByteArray {
+        TODO("Not yet implemented")
+    }
+
+    override fun lz4Inflate(bytes: ByteArray, offset: Int, size: Int): ByteArray {
+        TODO("Not yet implemented")
+    }
+
     override fun getGlobalDictionary(id: String): JbDict {
         TODO("We need an implementation that works in the browser in PLV8 engine, so implemented externally")
     }

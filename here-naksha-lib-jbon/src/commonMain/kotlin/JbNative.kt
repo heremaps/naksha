@@ -1,15 +1,5 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-// TODO: Extend JbPlatform with some native methods exposure:
-// Arrays and Maps:
-// newArray : Any
-// newMap : Any
-// getInt(map:Any, key:String)
-// getInt(array:Any, index:int)
-// ...
-// We do this, to use native JSON parser and serializer
-// This allows to directly access JSONB in plv8, JSON object in the browser and Jackson tree building
-
 package com.here.naksha.lib.jbon
 
 import kotlin.js.ExperimentalJsExport
@@ -18,6 +8,7 @@ import kotlin.js.JsExport
 /**
  * The API to be provided by the platform to grant access to native capabilities.
  */
+@Suppress("unused")
 @JsExport
 abstract class JbNative {
     companion object {
@@ -118,6 +109,24 @@ abstract class JbNative {
      * @return The view to the byte-array.
      */
     abstract fun newDataView(bytes: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): IDataView
+
+    /**
+     * Compress bytes.
+     * @param bytes The bytes to compress.
+     * @param offset The offset of the first byte to compress.
+     * @param size The amount of bytes to compress.
+     * @return The deflated (compressed) bytes.
+     */
+    abstract fun lz4Deflate(bytes: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE) : ByteArray
+
+    /**
+     * Decompress bytes.
+     * @param bytes The bytes to decompress.
+     * @param offset The offset of the first byte to decompress.
+     * @param size The amount of bytes to decompress.
+     * @return The inflated (decompress) bytes.
+     */
+    abstract fun lz4Inflate(bytes: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE) : ByteArray
 
     /**
      * Ask the platform for the given global dictionary.

@@ -68,6 +68,14 @@ object JvmNative : JbNative() {
         return JvmDataView(bytes, offset + baseOffset, end + baseOffset)
     }
 
+    override fun lz4Deflate(bytes: ByteArray, offset: Int, size: Int): ByteArray {
+        TODO("Not yet implemented")
+    }
+
+    override fun lz4Inflate(bytes: ByteArray, offset: Int, size: Int): ByteArray {
+        TODO("Not yet implemented")
+    }
+
     override fun getGlobalDictionary(id: String): JbDict {
         TODO("We need a way so that our lib-psql can override this")
     }

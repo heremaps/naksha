@@ -205,9 +205,14 @@ A JBON feature is a container for a JBON object of any type. The format looks li
 - The embedded JBON object (the root object).
 
 A feature can't create references to other features, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
-### (19) JbLz4Feature
-Same as feature, just that the content is LZ4 compressed, requires decompression.
-...
+### (19) JbLz4
+Some LZ4 compressed payload, requires decompression. The format is:
+
+- Lead-In byte.
+- Compressed size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
+- Decompressed size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
+- The compressed bytes. The **compressed-size** amount of bytes, should inflate to **compressed-size**.
+
 ### (20) Point (draft-only)
 A GeoJSON Point, followed by a single position.
 ### (21) MultiPoint (draft-only)
