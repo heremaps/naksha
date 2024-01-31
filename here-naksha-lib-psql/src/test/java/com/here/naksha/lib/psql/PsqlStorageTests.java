@@ -289,16 +289,6 @@ public class PsqlStorageTests extends PsqlTests {
       double distanceInMeters = distanceInRadius * DistanceUtils.DEG_TO_KM * 1000;
       assertTrue(150000.0 < distanceInMeters && distanceInMeters < 160000.0, "Real: " + distanceInMeters);
     }
-
-
-    XyzPoint x = new XyzPoint(8.6133, 50.1234);
-    ReadFeatures rf = new ReadFeatures(collectionId());
-    rf.setSpatialOp(SOp.intersects(x, bufferInMeters(5.0)));
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-                 session.execute(readFeatures).getXyzFeatureCursor()) {
-      assertTrue(cursor.hasNext());
-    }
-
   }
 
   @Test
