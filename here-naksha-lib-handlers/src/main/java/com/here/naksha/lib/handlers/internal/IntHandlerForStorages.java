@@ -33,7 +33,6 @@ import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
@@ -69,7 +68,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       }
       storageId = codec.getFeature().getId();
     }
-    // "properties.storageId" = <storage-id-to-be-deleted>
+    // Scan through all handlers with JSON property "properties.storageId" = <storage-id-to-be-deleted>
     final PRef pRef =
         RequestHelper.pRefFromPropPath(new String[] {XyzFeature.PROPERTIES, EventHandlerProperties.STORAGE_ID});
     final POp activeHandlersPOp = POp.eq(pRef, storageId);
@@ -87,11 +86,11 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       } catch (NoCursor | NoSuchElementException emptyException) {
         // No active handler using the storage, proceed with deleting the storage
         return new SuccessResult();
+      } finally {
+        readResult.close();
       }
-      final List<String> handlerIds = new ArrayList<>();
-      for (EventHandler handler : eventHandlers) {
-        handlerIds.add(handler.getId());
-      }
+      final List<String> handlerIds =
+          eventHandlers.stream().map(XyzFeature::getId).toList();
       return new ErrorResult(
           XyzError.CONFLICT, "The storage is still in use by these event handlers: " + handlerIds);
     }
