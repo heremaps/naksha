@@ -123,6 +123,7 @@ public class ViewTest {
             writeSession.commit(true);
         }
     }
+
     @Test
     void testDeleteApiNotation() throws NoCursor {
         IStorage storage = mock(IStorage.class);
@@ -228,7 +229,7 @@ public class ViewTest {
         ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS);
         View view = new View(viewLayerCollection);
 
-        Throwable exception=assertThrows(UncheckedException.class,()->view.newReadSession(nc, false).execute(new ReadFeatures()));
+        Throwable exception = assertThrows(UncheckedException.class, () -> view.newReadSession(nc, false).execute(new ReadFeatures()));
         assertTrue(exception.getMessage().contains("TimeoutException"));
         verify(topoReadSession, times(1)).execute(any());
         verify(buildReadSession, times(1)).execute(any());
@@ -237,8 +238,8 @@ public class ViewTest {
     @Test
     void shouldThrowTooManyTasksException() {
         IStorage mockStorage = mock(IStorage.class);
-        int limit= AbstractTask.limit.intValue();
-        ViewLayer[] layerDS = new ViewLayer[limit+10];
+        int limit = AbstractTask.limit.intValue();
+        ViewLayer[] layerDS = new ViewLayer[limit + 10];
         //Create ThreadFactory Limit + 10 layers
         for (int ind = 0; ind < layerDS.length; ind++) {
             layerDS[ind] = new ViewLayer(mockStorage, "collection" + ind);
@@ -246,12 +247,12 @@ public class ViewTest {
         ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", layerDS);
         View view = new View(viewLayerCollection);
 
-        List<SimpleTask> tasks=new ArrayList<>();
-        try(MockedConstruction<ParallelQueryExecutor> queryExecutor=mockConstruction(ParallelQueryExecutor.class,(mock, context)->{
-            when(mock.queryInParallel(any(),any())).thenAnswer(new Answer<Object>() {
+        List<SimpleTask> tasks = new ArrayList<>();
+        try (MockedConstruction<ParallelQueryExecutor> queryExecutor = mockConstruction(ParallelQueryExecutor.class, (mock, context) -> {
+            when(mock.queryInParallel(any(), any())).thenAnswer(new Answer<Object>() {
                 @Override
                 public Object answer(InvocationOnMock invocation) throws Throwable {
-                    List<LayerReadRequest> requests=invocation.getArgument(0);
+                    List<LayerReadRequest> requests = invocation.getArgument(0);
                     for (LayerReadRequest layerReadRequest : requests) {
                         SimpleTask singleTask = new SimpleTask<>();
                         tasks.add(singleTask);
@@ -263,18 +264,19 @@ public class ViewTest {
                     return Collections.emptyMap();
                 }
             });
-        }) ) {
+        })) {
 
             ViewReadSession viewReadSession = view.newReadSession(nc, false);
-            Throwable ex=assertThrows(TooManyTasks.class,()->viewReadSession.execute(new ReadFeatures()));
+            Throwable ex = assertThrows(TooManyTasks.class, () -> viewReadSession.execute(new ReadFeatures()));
             assertTrue(ex.getMessage().contains("Maximum number of concurrent tasks"));
         }
         //Interrupt sleeping threads in this group to end.
-        Optional<SimpleTask> activeTask=tasks.stream().filter(thread->thread.getThread()!=null).findFirst();
-        if(activeTask.isPresent()){
-            ThreadGroup threadGroup=activeTask.get().getThread().getThreadGroup();
+        Optional<SimpleTask> activeTask = tasks.stream().filter(thread -> thread.getThread() != null).findFirst();
+        if (activeTask.isPresent()) {
+            ThreadGroup threadGroup = activeTask.get().getThread().getThreadGroup();
             threadGroup.interrupt();
-            assertEquals(limit,threadGroup.activeCount());
+            assertEquals(limit, threadGroup.activeCount());
         }
     }
+
 }
