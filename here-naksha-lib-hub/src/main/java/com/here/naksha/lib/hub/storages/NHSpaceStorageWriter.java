@@ -122,9 +122,6 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Result executeWriteToCustomSpaces(
       final @NotNull WriteRequest<?, ?, ?> wr, @NotNull String spaceId) {
     final EventPipeline eventPipeline = pipelineFactory.eventPipeline();
-    // fetch space
-    // modify request (optionally)
-    // result =  setupEventPipelinForSpace()
     final Result result = setupEventPipelineForSpaceId(spaceId, eventPipeline);
     if (!(result instanceof SuccessResult)) {
       return result;

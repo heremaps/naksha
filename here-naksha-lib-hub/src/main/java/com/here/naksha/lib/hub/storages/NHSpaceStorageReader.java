@@ -18,8 +18,6 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.models.PluginCache.getEventHandlerConstructor;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
@@ -32,7 +30,6 @@ import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.lambdas.Fe3;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -47,7 +44,11 @@ import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.util.StreamInfo;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
 import com.here.naksha.lib.hub.EventPipelineFactory;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -316,7 +317,7 @@ public class NHSpaceStorageReader implements IReadSession {
         logger.warn("Skipping inactive event handler {}", eventHandler.getId());
         continue;
       }
-      handlerImpls.add(handlerInstance(eventHandler, space));
+      handlerImpls.add(eventHandler.newInstance(nakshaHub, space));
     }
     if (handlerImpls.isEmpty()) {
       return new ErrorResult(XyzError.EXCEPTION, "No active EventHandlers found for space : " + spaceId);
@@ -336,18 +337,6 @@ public class NHSpaceStorageReader implements IReadSession {
     }
     logger.info("Handler types identified [{}]", handlerTypes);
     return new SuccessResult();
-  }
-
-  private IEventHandler handlerInstance(EventHandler eventHandler, Space space) {
-    Fe3<IEventHandler, INaksha, EventHandler, Space> handlerInstantiation =
-        (Fe3<IEventHandler, INaksha, EventHandler, Space>)
-            getEventHandlerConstructor(eventHandler.getClassName(), EventHandler.class, space.getClass());
-    try {
-      return handlerInstantiation.call(nakshaHub, eventHandler, space);
-    } catch (Exception e) {
-      logger.warn("Instantiation of event handler {} failed", eventHandler, e);
-      throw unchecked(e);
-    }
   }
 
   /**

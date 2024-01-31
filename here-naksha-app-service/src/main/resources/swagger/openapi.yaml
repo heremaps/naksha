@@ -1951,6 +1951,18 @@ components:
             If set to true, Naksha will automatically delete collection when when Delete Space API call is processed by handler associated with a space.
             Set to 'true' by default.
           type: boolean
+      example:
+        id: sample_handler
+        type: EventHandler
+        title: Sample Hanlder
+        description: Well written handler description
+        className: com.here.naksha.lib.handlers.DefaultStorageHandler
+        active: true
+        extensionId:
+        properties:
+          storageId: missing_collection_test_storage
+          autoCreateCollection: true
+          autoDeleteCollection: true
     Space:
       type: object
       description: >-
