@@ -72,7 +72,7 @@ class NHSpaceStorageWriterTest {
     EventPipeline eventPipeline = alwaysSucceedingPipeline();
 
     // And: delete space request
-    WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(new Space(CUSTOM_SPACE));
+    WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(CUSTOM_SPACE, null);
 
     // When: executing delete space request
     Result result = writer.execute(deleteSpaceRequest);
@@ -88,7 +88,7 @@ class NHSpaceStorageWriterTest {
     assertThatWriteXyzFeatures(requestPassedToPipeline(eventPipeline, WriteXyzFeatures.class))
         .hasSingleCodecThat(featureCodec -> featureCodec
             .hasWriteOp(EWriteOp.DELETE)
-            .hasFeatureWithId(CUSTOM_SPACE)
+            .hasId(CUSTOM_SPACE)
         );
 
     // And: Result of the whole operation is positive
@@ -101,7 +101,7 @@ class NHSpaceStorageWriterTest {
     EventPipeline eventPipeline = eventPipelineFailingOn(WriteXyzCollections.class);
 
     // And: delete space request
-    WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(new Space(CUSTOM_SPACE));
+    WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(CUSTOM_SPACE, null);
 
     // When: executing delete space request
     Result result = writer.execute(deleteSpaceRequest);
@@ -126,7 +126,7 @@ class NHSpaceStorageWriterTest {
     EventPipeline eventPipeline = eventPipelineFailingOn(WriteXyzFeatures.class);
 
     // And: delete space request
-    WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(new Space(CUSTOM_SPACE));
+    WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(CUSTOM_SPACE, null);
 
     // When: executing delete space request
     Result result = writer.execute(deleteSpaceRequest);
@@ -142,7 +142,7 @@ class NHSpaceStorageWriterTest {
     assertThatWriteXyzFeatures(requestPassedToPipeline(eventPipeline, WriteXyzFeatures.class))
         .hasSingleCodecThat(featureCodec -> featureCodec
             .hasWriteOp(EWriteOp.DELETE)
-            .hasFeatureWithId(CUSTOM_SPACE)
+            .hasId(CUSTOM_SPACE)
         );
 
     // And: Result of the whole operation is negative (space entry deletion failed)

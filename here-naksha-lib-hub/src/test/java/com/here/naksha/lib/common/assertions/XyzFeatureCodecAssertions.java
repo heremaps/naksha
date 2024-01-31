@@ -24,14 +24,8 @@ public class XyzFeatureCodecAssertions {
     return this;
   }
 
-  public XyzFeatureCodecAssertions hasFeatureWithId(String expectedId) {
-    assertEquals(expectedId, getRequiredFeature().getId());
+  public XyzFeatureCodecAssertions hasId(String expectedId) {
+    assertEquals(expectedId, subject.getId());
     return this;
-  }
-
-  private XyzFeature getRequiredFeature() {
-    XyzFeature feature = subject.getFeature();
-    assertNotNull(feature, "Codec's feature cant be null");
-    return feature;
   }
 }
