@@ -1,9 +1,10 @@
+// noinspection BadExpressionStatementJS,DuplicatedCode,JSVoidFunctionReturnValueUsed
 //
 // A wrapped version of
 // https://github.com/Benzinga/lz4js
-// to be used with our PostgresQL code.
+// to be used with our PostgresQL code. Exports into "lz4" module.
 //
-(function(exports) {
+(() => {
 // Simple hash function, from: http://burtleburtle.net/bob/hash/integer.html.
 // Chosen because it doesnt use multiply and achieves full avalanche.
   exports.hashU32 = function hashU32(a) {
@@ -729,4 +730,4 @@
 
     return dst;
   };
-})(plv8.lz4={});
+})();

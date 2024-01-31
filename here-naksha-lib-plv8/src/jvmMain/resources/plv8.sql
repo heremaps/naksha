@@ -1,10 +1,13 @@
 CREATE EXTENSION IF NOT EXISTS plv8;
 
 -- Initialize JBON for the current session.
-CREATE OR REPLACE FUNCTION naksha_init() RETURNS void
-AS $$
+CREATE OR REPLACE FUNCTION naksha_start_session() RETURNS void AS $$
+  // Create modules table.
+  plv8.execute("CREATE TABLE naksha_modules (module text primary key, autoload)")
   plv8.naksha_init = function () {
-    ${here-naksha-lib-plv8.js}
+    // TODO: We need to inject module system here
+    ${lz4.js}
+    ${plv8.js}
     // TODO: Initialize jbon native, create initial tables: "naksha_tx", "naksha_collections"
   }
   plv8.naksha_init();

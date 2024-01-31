@@ -1,19 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS plv8;
 
--- Initialize JBON for the current session.
-CREATE OR REPLACE FUNCTION jb_init() RETURNS void
-AS $$
-  plv8.jb_init = function () {
-    ${here-naksha-lib-jbon.js}
-    // Provides:
-    //   plv8.lz4.compress(bytea)->bytea
-    //   plv8.lz4.decompress(bytea)->bytea
-    ${lz4.js}
-  }
-  plv8.jb_init();
-  plv8.jb = plv8["here-naksha-lib-jbon"].com.here.naksha.lib.jbon;
-$$ LANGUAGE 'plv8' IMMUTABLE;
-
 -- Access into object using a path like "properties.@ns:com:here:xyz.tags"
 -- This allows navigating arrays and maps
 -- The dot must be escaped using a double dot, for example "properties.na..me" means properties->name

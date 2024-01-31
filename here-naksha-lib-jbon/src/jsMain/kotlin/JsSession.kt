@@ -2,15 +2,23 @@
 
 import com.here.naksha.lib.jbon.*
 
+@Suppress("unused")
 @JsExport
-object JsNative : JbNative() {
-    init {
-        instance = this
-        js("""
+class JsSession : JbSession() {
+    class JsGetterSession : IJbThreadLocalSession {
+        private val theNative = JsSession()
+
+        override fun get() : JbSession {
+            return theNative
+        }
+    }
+
+    companion object {
+        fun register() {
+            if (instance == null) {
+                instance = JsGetterSession()
+                js("""
 var platform = this;
-DataView.prototype.getPlatform = function() {
-    return platform;
-}
 DataView.prototype.getByteArray = function() {
     return new Int8Array(this.buffer);
 }
@@ -24,6 +32,8 @@ DataView.prototype.getSize = function() {
     return this.byteLength;
 }
 """)
+            }
+        }
     }
 
     override fun newMap(): Any {
@@ -73,12 +83,20 @@ DataView.prototype.getSize = function() {
         return js("new DataView(bytes.buffer, offset, size)") as IDataView;
     }
 
-    override fun lz4Deflate(bytes: ByteArray, offset: Int, size: Int): ByteArray {
-        TODO("Not yet implemented")
+    override fun lz4Deflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
+        val end = endOf(raw, offset, size)
+        val bytes : ByteArray
+        if (offset == 0 && end == raw.size) {
+            bytes = raw
+        } else {
+            bytes = ByteArray(end-offset)
+            raw.copyInto(bytes, 0, offset, end)
+        }
+        return js("lz4.compress(bytes)") as ByteArray
     }
 
-    override fun lz4Inflate(bytes: ByteArray, offset: Int, size: Int): ByteArray {
-        TODO("Not yet implemented")
+    override fun lz4Inflate(compressed: ByteArray, bufferSize: Int, offset: Int, size: Int): ByteArray {
+        return js("lz4.decompress(compressed)") as ByteArray
     }
 
     override fun getGlobalDictionary(id: String): JbDict {

@@ -6,24 +6,45 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * The API to be provided by the platform to grant access to native capabilities.
+ * The native API to be provided by the platform to grant access to native capabilities for this session.
  */
 @Suppress("unused")
 @JsExport
-abstract class JbNative {
+abstract class JbSession {
     companion object {
         /**
-         * The reference to the platform instance set by the platform and read via [get].
+         * The reference to the thread local session getter.
          */
-        internal var instance: JbNative? = null
+        internal var instance: IJbThreadLocalSession? = null
 
         /**
-         * Returns the platform instance.
+         * Returns the thread-local session.
+         * @return Returns the thread-local session.
          */
-        fun get(): JbNative {
-            return instance as JbNative
+        fun get(): JbSession {
+            return instance!!.get()
         }
     }
+
+    /**
+     * The name of the application using this session.
+     */
+    var appName : String? = null
+
+    /**
+     * The application identifier of the application using this session.
+     */
+    var appId : String? = null
+
+    /**
+     * The author using this session.
+     */
+    var author : String? = null
+
+    /**
+     * The stream-id (used for logging and debugging) of session.
+     */
+    var streamId : String? = null
 
     /**
      * Creates a new empty native map. Returns [HashMap] in the JVM and **object** in JavaScript.
@@ -110,23 +131,35 @@ abstract class JbNative {
      */
     abstract fun newDataView(bytes: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): IDataView
 
+    internal fun endOf(bytes: ByteArray, offset: Int, size: Int) : Int {
+        if (size <= 0 || size >= bytes.size) {
+            return bytes.size
+        }
+        val end = offset + size
+        if (end > bytes.size) {
+            return bytes.size
+        }
+        return end
+    }
+
     /**
      * Compress bytes.
-     * @param bytes The bytes to compress.
+     * @param raw The bytes to compress.
      * @param offset The offset of the first byte to compress.
      * @param size The amount of bytes to compress.
      * @return The deflated (compressed) bytes.
      */
-    abstract fun lz4Deflate(bytes: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE) : ByteArray
+    abstract fun lz4Deflate(raw: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE) : ByteArray
 
     /**
      * Decompress bytes.
-     * @param bytes The bytes to decompress.
+     * @param compressed The bytes to decompress.
+     * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
      * @param offset The offset of the first byte to decompress.
      * @param size The amount of bytes to decompress.
      * @return The inflated (decompress) bytes.
      */
-    abstract fun lz4Inflate(bytes: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE) : ByteArray
+    abstract fun lz4Inflate(compressed: ByteArray, bufferSize:Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE) : ByteArray
 
     /**
      * Ask the platform for the given global dictionary.

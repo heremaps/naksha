@@ -1,5 +1,6 @@
 import com.here.naksha.lib.jbon.*
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
@@ -8,10 +9,29 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 
 class JvmJbonTest {
+    companion object {
+        @JvmStatic
+        @BeforeAll
+        fun initJvm(): Unit {
+            JvmSession.register()
+        }
+    }
+
+    @Test
+    fun testCompression() {
+        val native = JbSession.get()
+        val originalString = "Hello World LZ4!"
+        val originalBytes = originalString.toByteArray(StandardCharsets.UTF_8)
+        val compressed = native.lz4Deflate(originalBytes)
+        val decompressed = native.lz4Inflate(compressed, originalBytes.size)
+        assertArrayEquals(decompressed, originalBytes)
+        val decompressedString = String(decompressed, StandardCharsets.UTF_8)
+        assertEquals(decompressedString, originalString)
+    }
 
     @Test
     fun basicTest() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         assertNotNull(view)
         view.setInt32(0, 12345678)
         assertEquals(12345678, view.getInt32(0))
@@ -29,7 +49,7 @@ class JvmJbonTest {
     @Test
     fun testJson() {
         // Test parse.
-        val raw = JvmNative.parse("""
+        val raw = JbSession.get().parse("""
 {
     "id": "foo",
     "properties": {
@@ -50,14 +70,14 @@ class JvmJbonTest {
         assertEquals(99, properties["age"])
 
         // Test stringify.
-        val json = JvmNative.stringify(map, false)
+        val json = JbSession.get().stringify(map, false)
         assertEquals(49, json.length)
         assertTrue( json.contains("properties"))
     }
 
     @Test
     fun testNull() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         builder.writeNull()
@@ -71,7 +91,7 @@ class JvmJbonTest {
 
     @Test
     fun testUndefined() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         builder.writeUndefined()
@@ -85,7 +105,7 @@ class JvmJbonTest {
 
     @Test
     fun testBoolean() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         builder.writeBool(true)
@@ -107,7 +127,7 @@ class JvmJbonTest {
 
     @Test
     fun testIntEncoding() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         // the values -16 to 15 should be encoded in one byte
@@ -199,7 +219,7 @@ class JvmJbonTest {
 
     @Test
     fun testFloat32Encoding() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         // values -8 to 7 should be encoded in one byte
@@ -231,7 +251,7 @@ class JvmJbonTest {
 
     @Test
     fun testFloat64Encoding() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         // values -8 to 7 should be encoded in one byte
@@ -263,7 +283,7 @@ class JvmJbonTest {
 
     @Test
     fun testEncodingTwoInts() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
 
@@ -291,7 +311,7 @@ class JvmJbonTest {
 
     @Test
     fun testStringEncoding() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
 
@@ -330,7 +350,7 @@ class JvmJbonTest {
 
     @Test
     fun testStringReader() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         //                123456789012345
@@ -366,7 +386,7 @@ class JvmJbonTest {
 
     @Test
     fun testReference() {
-        val view = JvmNative.newDataView(ByteArray(256))
+        val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
 
@@ -409,7 +429,7 @@ class JvmJbonTest {
 
     @Test
     fun testDictionaryCreation() {
-        val buildView = JvmNative.newDataView(ByteArray(8192))
+        val buildView = JbSession.get().newDataView(ByteArray(8192))
         val builder = JbBuilder(buildView)
 
         val foo = builder.writeToLocalDictionary("foo")
@@ -424,7 +444,7 @@ class JvmJbonTest {
         // Encode a dictionary.
         val dictId = "test"
         val dictArray = builder.buildDictionary(dictId)
-        val dictView = JvmNative.newDataView(dictArray)
+        val dictView = JbSession.get().newDataView(dictArray)
         val dictReader = JbReader().mapView(dictView, 0)
         assertEquals(TYPE_GLOBAL_DICTIONARY, dictReader.unitType())
         // size
@@ -469,7 +489,7 @@ class JvmJbonTest {
 
     @Test
     fun testText() {
-        val view = JvmNative.newDataView(ByteArray(8192))
+        val view = JbSession.get().newDataView(ByteArray(8192))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
 
@@ -491,11 +511,11 @@ class JvmJbonTest {
 
     @Test
     fun testSmallTextFeature() {
-        val view = JvmNative.newDataView(ByteArray(8192))
+        val view = JbSession.get().newDataView(ByteArray(8192))
         val builder = JbBuilder(view)
         builder.writeText("Hello World Hello Test")
         val featureArray = builder.buildFeature(null)
-        val featureView = JvmNative.newDataView(featureArray)
+        val featureView = JbSession.get().newDataView(featureArray)
         val feature = JbFeature().mapView(featureView, 0)
         assertTrue(feature.reader.isText())
         val text = JbText().mapReader(feature.reader)
@@ -525,32 +545,32 @@ class JvmJbonTest {
         var topologyBytes = JvmJbonTest::class.java.getResource("/topology.json")!!.readBytes()
         assertEquals(29659, topologyBytes.size)
         var topology = String(topologyBytes, StandardCharsets.UTF_8)
-        topology = JvmNative.stringify(JvmNative.parse(topology))
+        topology = JbSession.get().stringify(JbSession.get().parse(topology))
         topologyBytes = topology.toByteArray(StandardCharsets.UTF_8)
         // After this only 16kb should be left
         assertEquals(16073, topologyBytes.size)
         // Convert this as string into a binary.
-        val view = JvmNative.newDataView(ByteArray(65535))
+        val view = JbSession.get().newDataView(ByteArray(65535))
         val builder = JbBuilder(view)
         builder.writeText(topology)
         val featureArray = builder.buildFeature(null)
-        val featureView = JvmNative.newDataView(featureArray)
+        val featureView = JbSession.get().newDataView(featureArray)
 
         // Encode a dictionary.
         builder.resetView()
         val dictId = "test"
         val dictArray = builder.buildDictionary(dictId)
-        val dictView = JvmNative.newDataView(dictArray)
+        val dictView = JbSession.get().newDataView(dictArray)
 
         // Test the dictionary class.
         val dict = JbDict().mapView(dictView, 0)
         dict.loadAll()
 
-        val view2 = JvmNative.newDataView(ByteArray(65535))
+        val view2 = JbSession.get().newDataView(ByteArray(65535))
         val builder2 = JbBuilder(view2, dict)
         builder2.writeText(topology)
         val featureArray2 = builder2.buildFeature(null)
-        val featureView2 = JvmNative.newDataView(featureArray2)
+        val featureView2 = JbSession.get().newDataView(featureArray2)
 
         // Simple test using low level reader.
         val reader = JbReader().mapView(featureView, 0)
@@ -574,7 +594,7 @@ class JvmJbonTest {
 
     @Test
     fun testArray() {
-        val view = JvmNative.newDataView(ByteArray(8192))
+        val view = JbSession.get().newDataView(ByteArray(8192))
         val builder = JbBuilder(view)
         val arrayStart = builder.startArray()
         builder.writeString("foo")
@@ -641,7 +661,7 @@ class JvmJbonTest {
 
     @Test
     fun testMap() {
-        val builder = JbNative.get().newBuilder()
+        val builder = JbSession.get().newBuilder()
         val view = builder.view
         val reader = JbReader()
 
@@ -667,7 +687,7 @@ class JvmJbonTest {
         assertEquals(4, view.getInt8(reader.offset).toInt() and 0xff)
 
         val mapData = builder.buildFeature(null)
-        val mapView = JvmNative.newDataView(mapData, 0)
+        val mapView = JbSession.get().newDataView(mapData, 0)
         val feature = JbFeature()
         feature.mapView(mapView, 0)
         assertEquals(null, feature.id())
@@ -711,7 +731,7 @@ class JvmJbonTest {
     @Disabled
     @Test
     fun testSQL() {
-        val native = JbNative.get()
+        val native = JbSession.get()
         val plan = native.sql().prepare("SELECT * FROM TABLE WHERE foo = $1", arrayOf(SQL_STRING))
         try {
             val cursor = plan.cursor(arrayOf("test"))

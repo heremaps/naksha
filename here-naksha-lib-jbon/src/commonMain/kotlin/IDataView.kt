@@ -11,11 +11,6 @@ import kotlin.js.JsExport
 @JsExport
 interface IDataView {
     /**
-     * Returns the platform API.
-     */
-    fun getPlatform() : JbNative
-
-    /**
      * Returns the byte-array below the view.
      */
     fun getByteArray(): ByteArray
