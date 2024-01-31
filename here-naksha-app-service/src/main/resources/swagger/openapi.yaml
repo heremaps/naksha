@@ -1942,13 +1942,13 @@ components:
         collection:
           $ref: '#/components/schemas/NakshaCollection'
         autoCreateCollection:
-          description: > 
-            If set to true, it will automatically create collection
+          description: >
+            If set to true, Naksha will automatically create collection when read/write feature operations are processed by the handler associated with a space.
             Set to 'true' by default.
           type: boolean
         autoDeleteCollection:
-          description: > 
-            If set to true, it will purge the collection upon Delete Space request.
+          description: >
+            If set to true, Naksha will automatically delete collection when when Delete Space API call is processed by handler associated with a space.
             Set to 'true' by default.
           type: boolean
     Space:

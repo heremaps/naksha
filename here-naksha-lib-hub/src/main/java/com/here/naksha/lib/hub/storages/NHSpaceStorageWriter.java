@@ -25,7 +25,6 @@ import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
-import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.Result;
@@ -88,9 +87,6 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     if (virtualSpaces.containsKey(spaceId)) {
       logger.info("WriteCollections Request for {}, against Admin storage.", spaceId);
       return executeWriteToAdminSpaces(wc, spaceId);
-      //      try (final IWriteSession admin = nakshaHub.getAdminStorage().newWriteSession(context, useMaster)) {
-      //        return admin.execute(wc);
-      //      }
     } else {
       logger.info("WriteCollections Request for {}, against Custom storage.", spaceId);
       return executeWriteToCustomSpaces(wc, spaceId);
@@ -126,6 +122,9 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Result executeWriteToCustomSpaces(
       final @NotNull WriteRequest<?, ?, ?> wr, @NotNull String spaceId) {
     final EventPipeline eventPipeline = pipelineFactory.eventPipeline();
+    // fetch space
+    // modify request (optionally)
+    // result =  setupEventPipelinForSpace()
     final Result result = setupEventPipelineForSpaceId(spaceId, eventPipeline);
     if (!(result instanceof SuccessResult)) {
       return result;
@@ -140,17 +139,13 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   private @NotNull Result executeDeleteSpace(@NotNull WriteFeatures<?, ?, ?> deleteSpaceEntryReq) {
-    if (deleteSpaceEntryReq.features.get(0).getFeature() instanceof Space space) {
-      WriteXyzCollections deleteCollectionReq =
-          new WriteXyzCollections().purge(new XyzCollection(space.getCollectionId()));
-      Result deleteSpaceRes = executeWriteCollections(deleteCollectionReq, space.getId());
-      if (deleteSpaceRes instanceof SuccessResult) {
-        return executeWriteToAdminSpaces(deleteSpaceEntryReq, deleteSpaceEntryReq.getCollectionId());
-      } else {
-        return deleteSpaceRes;
-      }
+    String spaceId = deleteSpaceEntryReq.features.get(0).getId();
+    WriteXyzCollections deleteCollectionReq = new WriteXyzCollections().purge(new XyzCollection(spaceId));
+    Result deleteSpaceRes = executeWriteCollections(deleteCollectionReq, spaceId);
+    if (deleteSpaceRes instanceof SuccessResult) {
+      return executeWriteToAdminSpaces(deleteSpaceEntryReq, deleteSpaceEntryReq.getCollectionId());
     } else {
-      throw new IllegalArgumentException("Expected single Space feature");
+      return deleteSpaceRes;
     }
   }
 

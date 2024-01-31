@@ -57,6 +57,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -324,6 +325,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       rf.setCollections(List.of(customCollectionId));
     } else if (request instanceof WriteFeatures<?, ?, ?> wf) {
       wf.setCollectionId(customCollectionId);
+    } else if (request instanceof WriteCollections<?, ?, ?> wc) {
+      collectionsFrom(wc).forEach(collection -> collection.setId(customCollectionId));
     }
   }
 
@@ -349,16 +352,18 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     } else if (request instanceof ReadFeatures rf) {
       return rf.getCollections();
     } else if (request instanceof WriteCollections<?, ?, ?> wc) {
-      return wc.features.stream()
-          .filter(XyzCollectionCodec.class::isInstance)
-          .map(XyzCollectionCodec.class::cast)
-          .map(XyzCollectionCodec::getFeature)
-          .filter(Objects::nonNull)
-          .map(XyzCollection::getId)
-          .toList();
+      return collectionsFrom(wc).map(XyzCollection::getId).toList();
     } else {
       throw new IllegalArgumentException("Unsupported request type: " + request.getClass());
     }
+  }
+
+  private @NotNull Stream<@NotNull XyzCollection> collectionsFrom(@NotNull WriteCollections<?, ?, ?> wc) {
+    return wc.features.stream()
+        .filter(XyzCollectionCodec.class::isInstance)
+        .map(XyzCollectionCodec.class::cast)
+        .map(XyzCollectionCodec::getFeature)
+        .filter(Objects::nonNull);
   }
 
   private void createXyzCollections(

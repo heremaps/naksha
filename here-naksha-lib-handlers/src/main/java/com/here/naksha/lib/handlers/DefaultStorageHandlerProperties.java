@@ -58,8 +58,8 @@ public class DefaultStorageHandlerProperties extends XyzProperties {
   private @Nullable String storageId;
 
   /**
-   * By default, the backend xyz collection details specified at EventHandler level is used,
-   * ONLY if it is not available at {@link SpaceProperties} level.
+   * Details of the backend xyz collection to use.
+   * If undefined, the collection defined at the {@link SpaceProperties} level will be used.
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @JsonProperty(COLLECTION)
