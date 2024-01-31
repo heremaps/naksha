@@ -31,7 +31,6 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
@@ -311,7 +310,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       final @Nullable String refFeatureId) {
     // if both lan and lon provided, then prepare Point geometry
     if (lat != NULL_COORDINATE && lon != NULL_COORDINATE) {
-      return new XyzPoint().withCoordinates(new PointCoordinates(lon, lat));
+      return new XyzPoint(lon, lat);
     }
 
     // Validate that both refSpaceId and refFeatureId provided and not just one
