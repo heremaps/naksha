@@ -364,10 +364,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final XyzGeometry refGeometry = parseRequestBodyAs(XyzGeometry.class);
 
     // Prepare read request based on parameters supplied
-    // TODO : Radius is divided by 100000 to get as closest to metre as possible, but this is incorrect and needs to
-    // be changed once lib-psql starts supporting intersect operation using metres
     final SOp radiusOp =
-        (radius > 0) ? SOp.intersectsWithBuffer(refGeometry, radius / 100000.00) : SOp.intersects(refGeometry);
+        (radius > 0) ? SOp.intersects(refGeometry, bufferInMeters(radius)) : SOp.intersects(refGeometry);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final POp propSearchOp = PropertyUtil.buildOperationForPropertySearchParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(radiusOp);
