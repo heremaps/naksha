@@ -100,11 +100,12 @@ The table layout for all tables:
 | Column  | Type                      | Modifiers            | Description                                                     |
 |---------|---------------------------|----------------------|-----------------------------------------------------------------|
 | i       | int8                      | PRIMARY KEY NOT NULL | Primary row identifier (`uid`).                                 |
+| id      | text                      |                      | The feature-id (`id`)                                           |
 | geo     | geometry(GeometryZ, 4326) |                      | The geometry of the features, extracted from `feature->>'geo'`. |
 | feature | bytea                     |                      | The Geo-JSON feature.                                           |
-| ext     | bytea                     |                      | The Naksha extension namespace (`@ns:naksha`)                   |
+| xyz     | bytea                     |                      | The extension namespace (`@ns:com:here:xyz`)                    |
 
-The **naksha** extension namespace (`ext` column) contains separate information, managed by Naksha. It should be merged into the feature under `feature->properties->@ns:naksha` or, when XYZ-Hub compatibility is needed, into `feature->properties->@ns:com:here:xyz`.
+The **xyz** extension namespace contains separate information, managed by Naksha. It should be merged into the feature under `feature->properties->@ns:com:here:xyz`.
 
 ## Collection-Info
 

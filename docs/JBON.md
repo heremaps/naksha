@@ -205,19 +205,22 @@ A JBON feature is a container for a JBON object of any type. The format looks li
 - The embedded JBON object (the root object).
 
 A feature can't create references to other features, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
-### (18) Point (draft-only)
+### (19) JbLz4Feature
+Same as feature, just that the content is LZ4 compressed, requires decompression.
+...
+### (20) Point (draft-only)
 A GeoJSON Point, followed by a single position.
-### (19) MultiPoint (draft-only)
+### (21) MultiPoint (draft-only)
 A GeoJSON MultiPoint, followed by an array of positions (position[]).
-### (20) LineString (draft-only)
+### (22) LineString (draft-only)
 A GeoJSON LineString, followed by an array of positions (position[]).
-### (21) MultiLineString (draft-only)
+### (23) MultiLineString (draft-only)
 A GeoJSON MultiLineString, followed by an array of position arrays (position[][]).
-### (22) Polygon (draft-only)
+### (24) Polygon (draft-only)
 A GeoJSON Polygon, following by an array of position arrays (position[][]).
-### (23) MultiPolygon (draft-only)
+### (25) MultiPolygon (draft-only)
 A GeoJSON Multi-Polygon, following by an array of position array arrays (position[][][]).
-### (24-31) Reserved
+### (26-31) Reserved
 Reserved for further objects.
 
 ## PLV8 Exports

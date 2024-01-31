@@ -5,6 +5,10 @@ CREATE OR REPLACE FUNCTION jb_init() RETURNS void
 AS $$
   plv8.jb_init = function () {
     ${here-naksha-lib-jbon.js}
+    // Provides:
+    //   plv8.lz4.compress(bytea)->bytea
+    //   plv8.lz4.decompress(bytea)->bytea
+    ${lz4.js}
   }
   plv8.jb_init();
   plv8.jb = plv8["here-naksha-lib-jbon"].com.here.naksha.lib.jbon;
