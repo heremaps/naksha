@@ -48,6 +48,7 @@ import com.here.naksha.lib.core.models.storage.WriteCollections;
 import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.models.storage.WriteRequest;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
+import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
@@ -383,6 +384,16 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         throw unchecked(new Exception("Failed creating collection " + collectionIds));
       }
     }
+  }
+
+  // TODO: trzeba przepchnąć wszystkie propki kolekcji, na razie robimy samo id
+  // najlepiej to zrobić jak już delet space by id przejdzie
+  private WriteXyzCollections createCustomCollection(List<String> collectionIds){
+
+  }
+
+  private WriteXyzCollections createBareCollections(List<String> collectionIds){
+    return createWriteCollectionsRequest(collectionIds);
   }
 
   enum OperationAttempt {

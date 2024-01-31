@@ -2193,6 +2193,12 @@ components:
           description: A value greater than zero implies that the collection shall be treated as deleted and represents the UTC Epoch timestamp in
             milliseconds when the deletion has been done.
           type: number
+        autoPurge:
+          description: >
+            If set to false, all features that will be deleted from the collection will get their "shadow copy" stored in separate `_del` collection. 
+            If set to true, all features that will be deleted from this collection won't have their "shadowy copy" created at stored anywhere.
+            By default, it is set to `false`.
+          type: boolean
     XyzNamespace:
       type: object
       description: The XYZ namespace object managed by Naksha service
