@@ -198,19 +198,5 @@ open class JvmSession() : JbSession() {
                    module.exports = Object.create(protoClone, Object.getOwnPropertyDescriptors(input));
                 """.trimIndent());
         executeSqlFromResource("/jbon.sql")
-        // Execute the commonjs2 sql:
-        // commonjs2.sql
-        //
-        // Then, install extensions
-        // INSERT INTO commonjs2_modules (module, source) values ('lz4', quoteLiteral(file(lz4.js)))
-        // INSERT INTO commonjs2_modules (module, source) values ('jbon', quoteLiteral(file(here-naksha-lib-jbon.js)))
-        // INSERT INTO commonjs2_modules (module, source) values ('naksha', quoteLiteral(file(here-naksha-lib-plv8.js)))
-        //
-        // Finally, execute the extension SQL code:
-        //
-        // jbon.sql
-        // plv8.sql
-        //
-        // Eventually all jbon_ and naksha_ methods are exposed to PostgresQL!
     }
 }

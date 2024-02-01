@@ -28,6 +28,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
+                implementation(project(":here-naksha-lib-jbon"))
             }
         }
         jvmMain {
@@ -46,11 +47,13 @@ kotlin {
                 implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
                 implementation("org.testcontainers:postgresql:1.19.4")
                 implementation("org.postgresql:postgresql:42.5.4")
+                implementation(project(":here-naksha-lib-jbon"))
             }
         }
         jsMain {
             dependencies {
                 implementation(kotlin("stdlib-js"))
+                implementation(project(":here-naksha-lib-jbon"))
             }
         }
     }

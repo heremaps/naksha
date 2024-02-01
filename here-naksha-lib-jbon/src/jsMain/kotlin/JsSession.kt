@@ -4,7 +4,7 @@ package com.here.naksha.lib.jbon;
 
 @Suppress("unused")
 @JsExport
-class JsSession : JbSession() {
+open class JsSession : JbSession() {
     class JsGetterSession : IJbThreadLocalSession {
         private val theNative = JsSession()
 
@@ -33,6 +33,31 @@ DataView.prototype.getSize = function() {
 }
 """)
             }
+        }
+    }
+
+    /**
+     * Convert an internal type identifier into a name.
+     * @param type As returned by [JbReader.unitType].
+     * @param typeParam As returned by [JbReader.unitTypeParam].
+     * @return A human-readable type value.
+     */
+    fun typeToName(type:Int, typeParam:Int = -1):String {
+        return when (type) {
+            TYPE_NULL -> "null"
+            else -> "eof"
+        }
+    }
+
+    /**
+     * Convert a human-readable type name into the internal type identifier, including optional type-parameter being set.
+     * @param typeName The human-readable name as returned by [typeToName].
+     * @return The internal type identifier with optional subtype set.
+     */
+    fun typeFromName(typeName: String): Int {
+        return when(typeName) {
+            "null" -> TYPE_NULL
+            else -> EOF
         }
     }
 
@@ -79,8 +104,12 @@ DataView.prototype.getSize = function() {
         //return (hi.toLong() shl 32) or (mid.toLong() shl 16) or (lo.toLong())
     }
 
+    @Suppress("UnsafeCastFromDynamic", "UNUSED_VARIABLE")
     override fun newDataView(bytes: ByteArray, offset: Int, size: Int): IDataView {
-        return js("new DataView(bytes.buffer, offset, size)") as IDataView;
+        require(offset in bytes.indices)
+        require(size >= 0)
+        var length = if (offset + size <= bytes.size) size else bytes.size - offset
+        return js("new DataView(bytes.buffer, offset, length)")
     }
 
     override fun lz4Deflate(raw: ByteArray, offset: Int, size: Int): ByteArray {

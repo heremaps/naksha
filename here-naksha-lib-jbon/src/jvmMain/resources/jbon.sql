@@ -3,17 +3,25 @@ CREATE EXTENSION IF NOT EXISTS plv8;
 -- Access into object using a path like "properties.@ns:com:here:xyz.tags"
 -- This allows navigating arrays and maps
 -- The dot must be escaped using a double dot, for example "properties.na..me" means properties->name
+--
+-- TODO: Add some special code that is executed whenever a module is loaded somehow
+--       One Time init:
+--
 
 CREATE OR REPLACE FUNCTION jb_get_type(bin bytea, path text) RETURNS int4 AS $$
-  return null;
+  var jb = require("jbon");
+  var session = jb.JbSession.Companion.get();
+  var view = session.newDataView(bin);
+  var reader = new jb.JbReader().mapView(view, 0);
+  return reader.unitType();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION jb_get_bool(bin bytea, path text) RETURNS boolean AS $$
-  return null;
+CREATE OR REPLACE FUNCTION jb_get_bool(bin bytea, path text, alternative boolean) RETURNS boolean AS $$
+  return require("jbon").JbPath.Companion.getBool(bin, path, alternative);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION jb_get_text(bin bytea, path text) RETURNS text AS $$
-  return null;
+CREATE OR REPLACE FUNCTION jb_get_text(bin bytea, path text, alternative text) RETURNS text AS $$
+  return require("jbon").JbPath.Companion.getString(bin, path, alternative);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION jb_get_int4(bin bytea, path text) RETURNS int4 AS $$
