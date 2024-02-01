@@ -57,9 +57,8 @@ class ReadFeaturesByRadiusTest extends ApiTest {
 
   Ref Space:
     - feature 1 - Point4-same-as-point1, Tag-Ref, Property-5
-    - feature 2 - Point5-outside-5m-of-Point1, Tag-Ref, Property-5
-    - feature 3 - Point6-outside-100m-of-Point1
-    - feature 4 - NoGeometry
+    - feature 2 - Point5-outside-100m-of-Point1
+    - feature 3 - NoGeometry
 
   Test Cases:
     TC  1 - Point1, radius=0 (should return feature 1 only)
@@ -70,15 +69,15 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     TC  6 - Point1, radius=5m, Limit-2 (should return features 1,2)
     TC  7 - RefSpace, RefFeature1, radius=5m, Tag-2 (should return feature 2 only)
     TC  8 - RefSpace, RefFeature1, radius=5m, Tag-3, Prop-1 (should return only feature 3)
-    TC  9 - RefSpace, RefFeature3, radius=5m (should return no features)
-    TC 10 - Point4-outside-100m-of-Point1, radius=5m (should return no features)
+    TC  9 - RefSpace, RefFeature2, radius=5m (should return no features)
+    TC 10 - Point5-outside-100m-of-Point1, radius=5m (should return no features)
     TC 11 - Invalid RefSpace (should return 404)
     TC 12 - RefSpace, Invalid RefFeature4 (should return 404)
     TC 13 - Missing Lat/Lon (should return 400)
     TC 14 - Point1, radius=-1m (should return 400)
     TC 15 - Invalid Lat (should return 400)
     TC 16 - Invalid Lon (should return 400)
-    TC 17 - RefSpace, RefFeature4 (missing geometry) (should return 404)
+    TC 17 - RefSpace, RefFeature3 (missing geometry) (should return 404)
   */
 
   @BeforeAll
@@ -188,7 +187,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
                     "tc09_testGetByRadiusWithRef3OutOfRadius",
                     List.of(
                             "refSpaceId="+REF_SPACE_ID,
-                            "refFeatureId=my-custom-ref-id-3",
+                            "refFeatureId=my-custom-ref-id-2",
                             "radius=5"
                     ),
                     "ReadFeatures/ByRadius/TC09_withRef3OutOfRadius/feature_response_part.json",
@@ -258,7 +257,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
                     "tc17_testGetByRadiusWithRefFeatureMissingGeometry",
                     List.of(
                             "refSpaceId="+REF_SPACE_ID,
-                            "refFeatureId=my-custom-ref-id-4"
+                            "refFeatureId=my-custom-ref-id-3"
                     ),
                     "ReadFeatures/ByRadius/TC17_withRefFeatureMissingGeometry/feature_response_part.json",
                     404

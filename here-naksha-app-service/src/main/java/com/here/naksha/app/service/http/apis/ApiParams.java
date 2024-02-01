@@ -61,7 +61,7 @@ public final class ApiParams {
   // and use of it doesn't cause any side effect
   public static final double NULL_COORDINATE = 9999;
 
-  public static String TILE_TYPE_QUADKEY = "quadkey";
+  public static final String TILE_TYPE_QUADKEY = "quadkey";
 
   public static @NotNull String extractMandatoryPathParam(
       final @NotNull RoutingContext routingContext, final @NotNull String param) {

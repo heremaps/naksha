@@ -848,8 +848,11 @@ paths:
       summary: Get features with radius search
       description: |
         List the features which are inside the specified radius.
-        The origin radius point is calculated based either on latitude & longitude or by
-        geometry of an existing feature referenced by given spaceId & featureId.
+        The radius is formed around a given point coordinates latitude & longitude.
+        If lat/lon are not given then radius is formed around the entire geometry of an existing
+        feature referenced by given refSpaceId and refFeatureId.
+        
+        Either a combination of lat,lon (higher preference) or refSpaceId,refFeatureId is mandatory.
       operationId: getFeaturesBySpatial
       parameters:
         - $ref: '#/components/parameters/SpaceId'
