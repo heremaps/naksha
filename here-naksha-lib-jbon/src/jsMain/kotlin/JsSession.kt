@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-import com.here.naksha.lib.jbon.*
+package com.here.naksha.lib.jbon;
 
 @Suppress("unused")
 @JsExport

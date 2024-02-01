@@ -24,8 +24,9 @@ kotlin {
         binaries.executable()
     }
 
-    jvmJar.dependsOn(jsBrowserProductionWebpack)
     jvmProcessResources.dependsOn(jsBrowserProductionWebpack)
+    jvmTestProcessResources.dependsOn(jsBrowserProductionWebpack)
+    jvmJar.dependsOn(jsBrowserProductionWebpack)
 
     sourceSets {
         commonMain {
@@ -55,7 +56,9 @@ kotlin {
                 runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
+                implementation("org.postgresql:postgresql:42.5.4")
             }
+            resources.srcDirs += "$buildDir/dist/js/productionExecutable/"
         }
         jsMain {
             dependencies {

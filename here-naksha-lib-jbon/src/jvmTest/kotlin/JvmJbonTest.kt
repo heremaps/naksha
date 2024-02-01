@@ -1,9 +1,9 @@
 import com.here.naksha.lib.jbon.*
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIf
 import java.nio.charset.StandardCharsets
+import java.sql.DriverManager
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -14,6 +14,24 @@ class JvmJbonTest {
         @BeforeAll
         fun initJvm(): Unit {
             JvmSession.register()
+            // Install into database.
+            // Only run SQL tests when
+            val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+            if (dbUrl != null) {
+                // Load PostgresQL driver.
+                Class.forName("org.postgresql.Driver");
+                val connection = DriverManager.getConnection(dbUrl)
+                connection.autoCommit = false
+                JvmSession.jvmGetter.get().sqlSet(JvmSql(connection))
+                enableSqlTests = true
+            }
+        }
+
+        private var enableSqlTests: Boolean = false
+
+        @JvmStatic
+        fun runSqlTests(): Boolean {
+            return enableSqlTests
         }
     }
 
@@ -57,13 +75,13 @@ class JvmJbonTest {
         "age": 99
     }
 }""".trimIndent())
-        assertTrue(raw is HashMap<*,*>)
+        assertTrue(raw is HashMap<*, *>)
         val map = raw as HashMap<String, *>
         assertEquals(2, map.size)
         assertTrue(map.containsKey("id"))
         assertEquals("foo", map["id"])
         assertTrue(map.containsKey("properties"))
-        assertTrue(map["properties"] is HashMap<*,*>)
+        assertTrue(map["properties"] is HashMap<*, *>)
         val properties = map["properties"] as HashMap<String, *>
         assertEquals(2, properties.size)
         assertEquals("Tim", properties["name"])
@@ -72,7 +90,7 @@ class JvmJbonTest {
         // Test stringify.
         val json = JbSession.get().stringify(map, false)
         assertEquals(49, json.length)
-        assertTrue( json.contains("properties"))
+        assertTrue(json.contains("properties"))
     }
 
     @Test
@@ -728,17 +746,26 @@ class JvmJbonTest {
         assertFalse(map.ok())
     }
 
+    @EnabledIf("runSqlTests")
+    @Test
+    fun testSql_001() {
+        val session = JvmSession.jvmGetter.get()
+        session.installModules()
+        session.sqlCommit()
+    }
+
+    //@EnabledIf("runSqlTests")
     @Disabled
     @Test
-    fun testSQL() {
-        val native = JbSession.get()
-        val plan = native.sql().prepare("SELECT * FROM TABLE WHERE foo = $1", arrayOf(SQL_STRING))
+    fun testSql_002() {
+        val session = JbSession.get()
+        val plan = session.sql().prepare("SELECT * FROM TABLE WHERE foo = $1", arrayOf(SQL_STRING))
         try {
             val cursor = plan.cursor(arrayOf("test"))
             try {
                 var row = cursor.next()
                 while (row != null) {
-                    native.log().info("row: ", row)
+                    session.log().info("row: ", row)
                     row = cursor.next()
                 }
             } finally {

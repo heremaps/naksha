@@ -7,24 +7,28 @@ CREATE EXTENSION IF NOT EXISTS plv8;
 -- Extension can be installed like:
 -- INSERT INTO commonjs2_modules (module, autoload, source) values ('name', true|false, '(() => { modules.exports["id"]=... })()')
 
-CREATE TABLE IF NOT EXISTS commonjs2_modules (module text primary key, autoload bool default false, source text);
+CREATE TABLE IF NOT EXISTS commonjs2_modules (module text primary key, source text, autoload bool default false);
 
 -- Initializes the commonjs2 for this session, loads all modules marked as autoload.
 -- Note: After having called this function ones, all requires are done lazy!
+-- returns true, when initialization work was done, false if it is already initialized.
 CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
   if ("function" === typeof require) {
-    return true;
+    return false;
   }
-  let moduleCache = {};
+  moduleCache = {};
   load = function(key, source) {
+      plv8.elog(INFO, "Load module "+key);
       var module = {exports: {}};
-      eval("(function(module, exports) {" + source + "; })")(module, module.exports);
+      eval("(function(module, exports) {\n" + source + ";\n})")(module, module.exports);
       moduleCache[key] = module.exports;
       return module.exports;
   };
   require = function(module) {
-      if(moduleCache[module])
-          return moduleCache[module];
+      if(moduleCache[module]) {
+        plv8.elog(INFO, "Return cached module "+module);
+        return moduleCache[module];
+      }
       var rows = plv8.execute(
           "SELECT source FROM commonjs2_modules WHERE module = $1",
           [module]
@@ -38,5 +42,5 @@ CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
   plv8.execute("SELECT module, source FROM commonjs2_modules WHERE autoload = true").forEach((row) => {
       load(row.module, row.source);
   });
-  return false;
+  return true;
 $$ LANGUAGE 'plv8' IMMUTABLE;
