@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -131,16 +132,8 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
                     "ReadFeatures/ByRadiusPost/TC05_withPointRadiusTagProp/feature_response_part.json",
                     200
             ),
-            standardTestSpec(
-                    "tc06_testGetByRadiusPostWithPointRadiusLimit",
-                    "ReadFeatures/ByRadiusPost/TC06_withPointRadiusLimit/request_body.json",
-                    List.of(
-                            "radius=5",
-                            "limit=2"
-                    ),
-                    "ReadFeatures/ByRadiusPost/TC06_withPointRadiusLimit/feature_response_part.json",
-                    200
-            ),
+            // NOTE - tc06 is implemented as separate test
+            // to run custom assertion, as the response ordering is not guaranteed
             standardTestSpec(
                     "tc07_testGetByRadiusPostWithPointOutOfRadius",
                     "ReadFeatures/ByRadiusPost/TC07_withPointOutOfRadius/request_body.json",
@@ -208,6 +201,32 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
             .hasStatus(expectedResCode)
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Response body doesn't match");
+  }
+
+
+  @Test
+  void tc06_testGetByRadiusPostWithPointRadiusLimit() throws Exception {
+      // Given: Request parameters
+      final List<String> queryParamList = List.of(
+              "radius=5",
+              "limit=2"
+      );
+      final String urlQueryParams = String.join("&", queryParamList);
+      final String streamId = UUID.randomUUID().toString();
+
+      // Given: Request body
+      final String requestBody = loadFileOrFail("ReadFeatures/ByRadiusPost/TC06_withPointRadiusLimit/request_body.json");
+
+      // When: Get Features By Radius request is submitted to NakshaHub
+      final HttpResponse<String> response = nakshaClient
+              .post("hub/spaces/" + SPACE_ID + "/spatial?" + urlQueryParams, requestBody, streamId);
+
+      // Then: Perform custom assertions
+      assertThat(response)
+              .hasStatus(200)
+              .hasStreamIdHeader(streamId)
+              .hasFeatureCount(2)
+              .hasFeatureIdsAmongst(List.of("my-custom-id-1","my-custom-id-2","my-custom-id-3"));
   }
 
 }
