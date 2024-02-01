@@ -18,15 +18,60 @@
  */
 package com.here.naksha.lib.core.util;
 
+import static com.here.naksha.lib.core.NakshaVersion.v2_0_12;
+
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import java.util.*;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+@ApiStatus.AvailableSince(v2_0_12)
 public class PropertyPathUtil {
 
   private PropertyPathUtil() {}
 
+  /**
+   * <pre>
+   * The function generates merged property map by extracting desired properties from the given XyzFeature.
+   * It is useful when only certain properties are to be extracted from XyzFeature (instead of using entire payload)
+   *
+   * Assume XyzFeature represents following JSON:
+   * {
+   *     "id": "000YofljPAC0bLYg",
+   *     "addProp": "Root level additional property",
+   *     "properties": {
+   *         "status": "OPEN",
+   *         "innerProp": 53,
+   *         "description": [
+   *             {
+   *                 "lang": "en",
+   *                 "text": "Road is missing"
+   *             }
+   *         ],
+   *     }
+   * }
+   *
+   * And argument paths is list of JSON paths as:
+   *    "id"
+   *    "addProp"
+   *    "properties.innerProp"
+   *    "properties.description.0.lang"
+   *
+   * Then output map will be a merged map with nested key-value property pairs as:
+   *    "id" = "000YofljPAC0bLYg"
+   *    "addProp" = "Root level additional property"
+   *    "properties" (object)
+   *        "innerProp" = 53
+   *        "description" (array of object)
+   *            "lang" = "en"
+   *
+   * </pre>
+   * @param feature input XyzFeature from where the properties are to be extracted
+   * @param paths list of JSON paths to properties that are to be extracted from XyzFeature
+   * @return Map of merged nested key-value pairs extracted from XyzFeature
+   */
+  @ApiStatus.AvailableSince(v2_0_12)
   public static @NotNull Map<String, Object> extractPropertyMapFromFeature(
       final @NotNull XyzFeature feature, final @Nullable Set<@Nullable String> paths) {
     final Map<String, Object> tgtMap = new HashMap<>();
@@ -34,6 +79,16 @@ public class PropertyPathUtil {
     return tgtMap;
   }
 
+  /**
+   * This function is same as {@link #extractPropertyMapFromFeature(XyzFeature, Set)}
+   * except that it works on provided input Maps.
+   *
+   * @param srcMap input Map of nested key-value pairs from where the properties are to be extracted
+   * @param tgtMap output Map of merged nested key-value pairs extracted from srcMap
+   * @param paths list of JSON paths to properties that are to be extracted from srcMap
+   * @see #extractPropertyMapFromFeature(XyzFeature, Set)
+   */
+  @ApiStatus.AvailableSince(v2_0_12)
   public static void populatePropertyMapFromMap(
       final @NotNull Map<String, Object> srcMap,
       final @NotNull Map<String, Object> tgtMap,

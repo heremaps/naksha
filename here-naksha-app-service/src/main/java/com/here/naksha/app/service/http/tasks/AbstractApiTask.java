@@ -118,7 +118,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformDeleteResultToXyzFeatureResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable P1<XyzFeature> postProcessing) {
+      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable F1<R, R> postProcessing) {
     return transformResultToXyzFeatureResponse(wrResult, type, NOT_FOUND_ON_NO_ELEMENTS, postProcessing);
   }
 
