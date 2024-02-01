@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -34,6 +35,7 @@ public class PsqlPlv8Tests extends PsqlTests {
   }
 
   @Test
+  @EnabledIf("runTest")
   @Order(51)
   void testPlv8Function() throws SQLException {
     assert session != null;
