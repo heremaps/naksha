@@ -228,41 +228,217 @@ A GeoJSON Multi-Polygon, following by an array of position array arrays (positio
 ### (26-31) Reserved
 Reserved for further objects.
 
-## PLV8 Exports
+## Why not CBOR
+This section explains why [CBOR](https://www.rfc-editor.org/rfc/rfc8949.html) was not selected. The formats are similar in many points, when you read the two specification. So, why do something bew? The major two difference between them are:
 
-### Supported types
-- `bool`: **boolean**
-- `int`: **int4**
-- `float32`: **float**
-- `float64`: **double**
-- `string`: **text**
-- `map`: **bytea**
-- `array`: **bytea**
+### Size
+**JBON** supports de-duplication, especially for strings, which decreases the size of the data. Compared to **CBOR**, which actually increases the size of data and just makes it binary readable, when compared to a JSON. **JBON** not only allows to de-duplicate strings out of the box, it as well allows to de-duplicate complete objects.
 
-### Map operations
-- `jb_map_get_{type}(jbon bytea, path text, alternative {type}) : {type}`
-- `jb_map_get_type(jbon bytea, path text) : string`
-- `jb_map_contains_key(jbon bytea, path text) : boolean`
+Specifically the **text** type does actually allow to de-duplicate parts of a string and is very beneficial (for example in compressing **URN**s), where encoders may simply use the common prefix from a global dictionary.
 
-### Array operations
-- `jb_array_get_{type}(jbon bytea, index int4, alternative {type}) : {type}`
-- `jb_map_get_type(jbon bytea, path text) : string`
+### Default Values
+**JBON** supports default values using global dictionaries. **CBOR** does not, therefore, you need additional knowledge not being integral part of the format. For example, lets look at the MOM (Map Object Model) for topologies:
 
-### Support operations
-- `jb_to_jsonb(bytea) : jsonb`
-- `jb_from_jsonb(jsonb) : bytea`
+```json
+{
+  "offroadFlags": {
+    "isAlley": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isSkiRun": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isSkiLift": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isBmxTrack": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isDriveway": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isRaceTrack": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isHorseTrail": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isBicyclePath": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isHikingTrail": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isWalkingPath": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isOilFieldRoad": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isRunningTrack": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isGolfCourseTrail": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isMountainBikeTrail": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isOutdoorActivityRoad": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isCrossCountrySkiTrail": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isOutdoorActivityAccess": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isUndeterminedGeometryType": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ],
+    "isPrivateRoadForServiceVehicle": [
+      {
+        "range": {
+          "endOffset": 1,
+          "startOffset": 0
+        },
+        "value": false
+      }
+    ]
+  }
+}
+```
 
-- Global dictionary support
-  - Prepare SQL connection support for JUnit
-  - JbPlatform
-    - prepare()
-    - execute()
-    - ...
-- Session init (user, author, ...)
-- Code to create new transaction numbers
-  - GUID decoder and encoder
-- WriteFeatures
-- WriteCollections (CREATE, UPDATE, DELETE, ...)
-- Before and After Triggers (fiddle-out)
-- Support access to last error (errNo, errMsg)
-- Need the storage-id somewhere (in Platform)
+We see, that we over and over again have this sub-object:
+
+```json
+{
+  "isPrivateRoadForServiceVehicle": [
+    {
+      "range": {
+        "endOffset": 1,
+        "startOffset": 0
+      },
+      "value": false
+    }
+  ]
+}
+```
+
+In **JBON** we can add this array including the object into the global dictionary as default object. Additionally we put the _isPrivateRoadForServiceVehicle_ into the global dictionary and then can encode this as map entry:
+
+- key **string-reference** (2-3 byte)
+- object **reference** (2-3 byte)
+
+So effectively reducing the size of this whole entry to 4 to 6 byte. However, the best is, that we can ask for this property. When we use the reader, the object will appear as if it is part of the **JOBN**. The application does not need to know details, it only needs access to the global dictionaries.
+
+There was the idea of adding the dictionaries to **CBOR** using [tags](https://www.rfc-editor.org/rfc/rfc8949.html#name-tagging-of-items), but it would be proprietary extension and therefore anyway force us to do some own implementations. Apart, it would still lack many of the de-duplication features we now have.
+
