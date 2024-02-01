@@ -18,19 +18,18 @@
  */
 package com.here.naksha.lib.handlers.exceptions;
 
-import static com.here.naksha.lib.core.models.XyzError.NOT_FOUND;
-
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
+import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import org.jetbrains.annotations.NotNull;
 
-public final class MissingCollectionsException extends RuntimeException {
+public class UndefinedCollectionException extends RuntimeException {
 
-  public MissingCollectionsException(@NotNull XyzCollection collection) {
-    super("Could not find and auto-create collection: " + collection.getId());
+  public UndefinedCollectionException(@NotNull String handlerId, @NotNull String spaceId) {
+    super("Collection is not defined for both Event Handler (id = '" + handlerId + "') and Space (id = '" + spaceId
+        + "')");
   }
 
   public ErrorResult toErrorResult() {
-    return new ErrorResult(NOT_FOUND, getMessage(), this);
+    return new ErrorResult(XyzError.EXCEPTION, getMessage(), this);
   }
 }
