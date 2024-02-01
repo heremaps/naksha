@@ -74,7 +74,7 @@ public class PropertyPathUtil {
   @ApiStatus.AvailableSince(v2_0_12)
   public static @NotNull Map<String, Object> extractPropertyMapFromFeature(
       final @NotNull XyzFeature feature, final @Nullable Set<@Nullable String> paths) {
-    return populatePropertyMapFromMap(feature.asMap(), paths);
+    return extractPropertyMapFromMap(feature.asMap(), paths);
   }
 
   /**
@@ -87,7 +87,7 @@ public class PropertyPathUtil {
    * @see #extractPropertyMapFromFeature(XyzFeature, Set)
    */
   @ApiStatus.AvailableSince(v2_0_12)
-  public static @NotNull Map<String, Object> populatePropertyMapFromMap(
+  public static @NotNull Map<String, Object> extractPropertyMapFromMap(
       final @NotNull Map<String, Object> srcMap, final @Nullable Set<@Nullable String> paths) {
     final @NotNull Map<String, Object> tgtMap = new HashMap<>();
     if (paths == null || paths.size() == 0) return tgtMap;
