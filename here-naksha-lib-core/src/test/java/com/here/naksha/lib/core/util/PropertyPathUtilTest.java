@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class PropertyPathUtilTest {
+class PropertyPathUtilTest {
 
     private static final String TEST_DATA_FOLDER = "src/test/resources/prop_path_data/";
     private static final String COMMON_INPUT_FILE = "CommonInput.json";

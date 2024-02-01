@@ -74,26 +74,23 @@ public class PropertyPathUtil {
   @ApiStatus.AvailableSince(v2_0_12)
   public static @NotNull Map<String, Object> extractPropertyMapFromFeature(
       final @NotNull XyzFeature feature, final @Nullable Set<@Nullable String> paths) {
-    final Map<String, Object> tgtMap = new HashMap<>();
-    PropertyPathUtil.populatePropertyMapFromMap(feature.asMap(), tgtMap, paths);
-    return tgtMap;
+    return populatePropertyMapFromMap(feature.asMap(), paths);
   }
 
   /**
    * This function is same as {@link #extractPropertyMapFromFeature(XyzFeature, Set)}
-   * except that it works on provided input Maps.
+   * except that it works on provided input Map.
    *
    * @param srcMap input Map of nested key-value pairs from where the properties are to be extracted
-   * @param tgtMap output Map of merged nested key-value pairs extracted from srcMap
    * @param paths list of JSON paths to properties that are to be extracted from srcMap
+   * @return Map of merged nested key-value pairs extracted from srcMap
    * @see #extractPropertyMapFromFeature(XyzFeature, Set)
    */
   @ApiStatus.AvailableSince(v2_0_12)
-  public static void populatePropertyMapFromMap(
-      final @NotNull Map<String, Object> srcMap,
-      final @NotNull Map<String, Object> tgtMap,
-      final @Nullable Set<@Nullable String> paths) {
-    if (paths == null || paths.size() == 0) return;
+  public static @NotNull Map<String, Object> populatePropertyMapFromMap(
+      final @NotNull Map<String, Object> srcMap, final @Nullable Set<@Nullable String> paths) {
+    final @NotNull Map<String, Object> tgtMap = new HashMap<>();
+    if (paths == null || paths.size() == 0) return tgtMap;
     // iterate through all property paths and merge the extracted fields into tgtMap
     for (final String path : paths) {
       if (path == null || path.isEmpty()) continue;
@@ -103,6 +100,7 @@ public class PropertyPathUtil {
     }
     // Remove unwanted (null) list nodes from the tgtMap
     deepRemoveUnusedListNodes(tgtMap);
+    return tgtMap;
   }
 
   @SuppressWarnings({"unchecked"})
