@@ -19,6 +19,7 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInMeters;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
@@ -32,7 +33,6 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
@@ -222,9 +222,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
 
     // Parse and validate Query parameters
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     if (queryParams == null || queryParams.size() <= 0) {
       return verticle.sendErrorResponse(
           routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory query parameters");
@@ -254,9 +252,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
 
     // Parse and validate Query parameters
-    final QueryParameterList queryParams = (routingContext.request().query() != null)
-        ? new QueryParameterList(routingContext.request().query())
-        : null;
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+
     // Note : subsequent steps need to support queryParams being null
 
     // extract limit parameter
@@ -307,10 +304,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final XyzGeometry refGeometry = obtainReferenceGeometry(lat, lon, refSpaceId, refFeatureId);
 
     // Prepare read request based on parameters supplied
-    // TODO : Radius is divided by 100000 to get as closest to metre as possible, but this is incorrect and needs to
-    // be changed once lib-psql starts supporting intersect operation using metres
     final SOp radiusOp =
-        (radius > 0) ? SOp.intersectsWithBuffer(refGeometry, radius / 100000.00) : SOp.intersects(refGeometry);
+        (radius > 0) ? SOp.intersects(refGeometry, bufferInMeters(radius)) : SOp.intersects(refGeometry);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(radiusOp);
@@ -329,7 +324,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       final @Nullable String refFeatureId) {
     // if both lan and lon provided, then prepare Point geometry
     if (lat != NULL_COORDINATE && lon != NULL_COORDINATE) {
-      return new XyzPoint().withCoordinates(new PointCoordinates(lon, lat));
+      return new XyzPoint(lon, lat);
     }
 
     // Validate that both refSpaceId and refFeatureId provided and not just one
@@ -381,10 +376,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final XyzGeometry refGeometry = parseRequestBodyAs(XyzGeometry.class);
 
     // Prepare read request based on parameters supplied
-    // TODO : Radius is divided by 100000 to get as closest to metre as possible, but this is incorrect and needs to
-    // be changed once lib-psql starts supporting intersect operation using metres
     final SOp radiusOp =
-        (radius > 0) ? SOp.intersectsWithBuffer(refGeometry, radius / 100000.00) : SOp.intersects(refGeometry);
+        (radius > 0) ? SOp.intersects(refGeometry, bufferInMeters(radius)) : SOp.intersects(refGeometry);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(radiusOp);
