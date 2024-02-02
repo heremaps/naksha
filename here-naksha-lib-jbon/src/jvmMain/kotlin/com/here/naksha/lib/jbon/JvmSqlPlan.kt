@@ -6,7 +6,7 @@ import java.sql.PreparedStatement
 /**
  * The Java implementation of a plan.
  */
-class JvmPlan(internal val query : JvmSqlQuery, conn:Connection) : JvmSqlResult(), ISqlPlan {
+class JvmSqlPlan(internal val query : JvmSqlQuery, conn:Connection) : JvmSqlResult(), ISqlPlan {
     val stmt : PreparedStatement
     init {
         stmt = query.prepare(conn)

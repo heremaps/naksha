@@ -22,7 +22,7 @@ class JvmJbonTest {
                 Class.forName("org.postgresql.Driver");
                 val connection = DriverManager.getConnection(dbUrl)
                 connection.autoCommit = false
-                JvmSession.jvmGetter.get().sqlSet(JvmSql(connection))
+                JvmSession.get().setConnection(connection)
                 enableSqlTests = true
             }
         }

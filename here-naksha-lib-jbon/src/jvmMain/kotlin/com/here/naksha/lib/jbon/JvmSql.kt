@@ -1,16 +1,15 @@
 package com.here.naksha.lib.jbon
 
-import com.here.naksha.lib.core.AbstractTask.State
+import java.io.Closeable
 import java.sql.Connection
-import java.sql.Statement
 
 /**
  * Java JDBC binding to grant access to PostgresQL. Should be placed into [com.here.naksha.lib.jbon.JvmSession.sqlApi].
  */
 @Suppress("MemberVisibilityCanBePrivate")
-open class JvmSql(val conn: Connection) : ISql {
+open class JvmSql(val conn: Connection) : ISql, Closeable {
 
-    override fun execute(sql: String, args: Array<Any?>): ISqlResultSet {
+    override fun execute(sql: String, vararg args: Any?): ISqlResultSet {
         if (args.isEmpty()) {
             val stmt = conn.createStatement()
             try {
@@ -26,7 +25,7 @@ open class JvmSql(val conn: Connection) : ISql {
         val query = JvmSqlQuery(sql)
         val stmt = query.prepare(conn)
         try {
-            query.bindArguments(stmt, args)
+            query.bindArguments(stmt, *args)
             val hasResultSet = stmt.execute()
             if (hasResultSet) {
                 return JvmSqlResultSet(stmt.resultSet)
@@ -37,7 +36,11 @@ open class JvmSql(val conn: Connection) : ISql {
         }
     }
 
-    override fun prepare(sql: String, typeNames: Array<String>): ISqlPlan {
-        return JvmPlan(JvmSqlQuery(sql), conn)
+    override fun prepare(sql: String, vararg typeNames: String): ISqlPlan {
+        return JvmSqlPlan(JvmSqlQuery(sql), conn)
+    }
+
+    override fun close() {
+        conn.close()
     }
 }

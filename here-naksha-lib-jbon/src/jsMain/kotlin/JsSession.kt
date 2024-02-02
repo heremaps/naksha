@@ -2,21 +2,26 @@
 
 package com.here.naksha.lib.jbon;
 
-@Suppress("unused")
+@Suppress("unused", "UnsafeCastFromDynamic")
 @JsExport
 open class JsSession : JbSession() {
-    class JsGetterSession : IJbThreadLocalSession {
-        private val theNative = JsSession()
 
-        override fun get() : JbSession {
-            return theNative
+    class JsGetterSession(private val session: JsSession) : IJbThreadLocalSession {
+
+        override fun get(): JsSession {
+            return session
         }
     }
 
     companion object {
-        fun register() {
+        private val nativeMap = JsMap()
+        private val nativeList = JsList()
+        private val nativeLog = JsLog()
+        private val convertView: IDataView = JsSession().newDataView(ByteArray(16))
+
+        fun register(session: JsSession?) {
             if (instance == null) {
-                instance = JsGetterSession()
+                instance = JsGetterSession(session ?: JsSession())
                 js("""
 var platform = this;
 DataView.prototype.getByteArray = function() {
@@ -42,7 +47,7 @@ DataView.prototype.getSize = function() {
      * @param typeParam As returned by [JbReader.unitTypeParam].
      * @return A human-readable type value.
      */
-    fun typeToName(type:Int, typeParam:Int = -1):String {
+    fun typeToName(type: Int, typeParam: Int = -1): String {
         return when (type) {
             TYPE_NULL -> "null"
             else -> "eof"
@@ -55,18 +60,18 @@ DataView.prototype.getSize = function() {
      * @return The internal type identifier with optional subtype set.
      */
     fun typeFromName(typeName: String): Int {
-        return when(typeName) {
+        return when (typeName) {
             "null" -> TYPE_NULL
             else -> EOF
         }
     }
 
     override fun map(): INativeMap {
-        TODO("Not yet implemented")
+        return nativeMap
     }
 
     override fun list(): INativeList {
-        TODO("Not yet implemented")
+        return nativeList
     }
 
     override fun sql(): ISql {
@@ -74,34 +79,32 @@ DataView.prototype.getSize = function() {
     }
 
     override fun log(): INativeLog {
-        TODO("Not yet implemented")
+        return nativeLog
     }
 
     override fun stringify(any: Any, pretty: Boolean): String {
-        return js("JSON.stringify(any, pretty)") as String
+        return js("JSON.stringify(any, pretty)")
     }
 
     override fun parse(json: String): Any {
-        return js("JSON.parse(json)") as Any
+        return js("JSON.parse(json)")
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun longToBigInt(value: Long): Any {
-        // Read the four words unsigned
-        val hi = (value shr 32).toInt()
-        val lo = (value ushr 0xffff).toInt()
-        // Combine them to BigInt
-        return js("new BitInt(hi)<<32 | new BigInt(mid)<<16 | new BigInt(lo)") as Any;
+        val view = convertView
+        view.setInt32(0, (value ushr 32).toInt())
+        view.setInt32(4, value.toInt())
+        return js("view.getBigInt64(0)")
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun bigIntToLong(value: Any): Long {
-        var hi : Int = 0
-        var mid : Int = 0
-        var lo : Int = 0
-        js("hi = value");
-        TODO("Fix me")
-        //return (hi.toLong() shl 32) or (mid.toLong() shl 16) or (lo.toLong())
+        val view = convertView
+        js("view.setBigInt64(0, value)")
+        val hi = view.getInt32(0)
+        val lo = view.getInt32(4)
+        return ((hi.toLong() and 0xffff_ffff) shl 32) or (lo.toLong() and 0xffff_ffff)
     }
 
     @Suppress("UnsafeCastFromDynamic", "UNUSED_VARIABLE")
@@ -114,11 +117,11 @@ DataView.prototype.getSize = function() {
 
     override fun lz4Deflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
         val end = endOf(raw, offset, size)
-        val bytes : ByteArray
+        val bytes: ByteArray
         if (offset == 0 && end == raw.size) {
             bytes = raw
         } else {
-            bytes = ByteArray(end-offset)
+            bytes = ByteArray(end - offset)
             raw.copyInto(bytes, 0, offset, end)
         }
         return js("lz4.compress(bytes)") as ByteArray

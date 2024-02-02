@@ -4,6 +4,7 @@ package com.here.naksha.lib.jbon
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmStatic
 
 /**
  * The native API to be provided by the platform to grant access to native capabilities for this session.
@@ -15,12 +16,14 @@ abstract class JbSession {
         /**
          * The reference to the thread local session getter.
          */
-        internal var instance: IJbThreadLocalSession? = null
+        @JvmStatic
+        var instance: IJbThreadLocalSession? = null
 
         /**
          * Returns the thread-local session.
          * @return Returns the thread-local session.
          */
+        @JvmStatic
         fun get(): JbSession {
             return instance!!.get()
         }

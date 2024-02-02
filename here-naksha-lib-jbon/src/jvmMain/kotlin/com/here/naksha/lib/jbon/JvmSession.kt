@@ -5,8 +5,8 @@ import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
 import java.sql.Connection
 
-open class JvmSession() : JbSession() {
-    class JvmGetterSession : ThreadLocal<JvmSession>(), IJbThreadLocalSession {
+open class JvmSession : JbSession() {
+    private class JvmSessionGetter : ThreadLocal<JvmSession>(), IJbThreadLocalSession {
         override fun initialValue(): JvmSession {
             return JvmSession()
         }
@@ -15,8 +15,8 @@ open class JvmSession() : JbSession() {
     companion object {
         val unsafe: Unsafe
         val baseOffset: Int
-        val jvmGetter = JvmGetterSession()
-        private val log: INativeLog = Slf4jLogger()
+        @JvmStatic
+        private val nativeLog: INativeLog = Slf4jLogger()
         private val nativeMap = JvmMap()
         private val nativeList = JvmList()
 
@@ -28,14 +28,23 @@ open class JvmSession() : JbSession() {
             baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
         }
 
-        fun register() {
-            if (instance == null) instance = jvmGetter
+        @JvmStatic
+        fun register() : JvmSession {
+            if (instance == null) {
+                instance = JvmSessionGetter()
+            }
+            return get()
+        }
+
+        @JvmStatic
+        fun get(): JvmSession {
+            return instance!!.get() as JvmSession
         }
     }
 
     private val lz4Factory = LZ4Factory.fastestInstance()
 
-    private var sqlApi: ISql? = null
+    protected var jvmSql: JvmSql? = null
 
     override fun map(): INativeMap {
         return nativeMap
@@ -46,24 +55,32 @@ open class JvmSession() : JbSession() {
     }
 
     override fun sql(): ISql {
-        val sql = this.sqlApi
+        val sql = this.jvmSql
         check(sql != null)
         return sql
     }
 
     /**
-     * Sets the SQL implementation.
+     * Sets the SQL connection to be used for the SQL interface.
      * @return this.
      */
-    fun sqlSet(sql: ISql?): JvmSession {
-        this.sqlApi = sql
+    open fun setConnection(conn: Connection?): JvmSession {
+        val existing = jvmSql
+        if (existing != null) {
+            if (existing.conn === conn) {
+                return this
+            }
+            existing.conn.close()
+            jvmSql = null
+        }
+        jvmSql = if (conn == null) null else JvmSql(conn)
         return this
     }
 
     /**
      * Returns the JDBC connection of this session.
      */
-    fun sqlConnection(): Connection {
+    fun getConnection(): Connection {
         val sql = sql()
         check(sql is JvmSql)
         return sql.conn
@@ -72,7 +89,7 @@ open class JvmSession() : JbSession() {
     /**
      * Only the JVM session allows to commit the connection, requires an [JvmSql] instance.
      */
-    fun sqlCommit() {
+    fun commit() {
         val sql = sql()
         check(sql is JvmSql)
         sql.conn.commit()
@@ -81,14 +98,14 @@ open class JvmSession() : JbSession() {
     /**
      * Only the JVM session allows to roll back the connection, requires an [JvmSql] instance.
      */
-    fun sqlRollback() {
+    fun rollback() {
         val sql = sql()
         check(sql is JvmSql)
         sql.conn.rollback()
     }
 
     override fun log(): INativeLog {
-        return log
+        return nativeLog
     }
 
     override fun stringify(any: Any, pretty: Boolean): String {
@@ -152,12 +169,31 @@ open class JvmSession() : JbSession() {
         TODO("We need a way so that our lib-psql can override this")
     }
 
+    private fun getResourceAsText(path: String): String? =
+            object {}.javaClass.getResource(path)?.readText()
+
+    private fun applyReplacements(text: String, replacements: Map<String, String>?): String {
+        if (replacements != null) {
+            var t = text
+            val sb = StringBuilder()
+            for (entry in replacements) {
+                sb.setLength(0)
+                sb.append('$').append('{').append(entry.key).append('}')
+                t = t.replace(sb.toString(), entry.value, true)
+            }
+            return t
+        } else {
+            return text
+        }
+    }
+
     /**
      * Execute the SQL being in the file.
      * @param path The file-path, for example `/lz4.sql`.
+     * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    fun executeSqlFromResource(path: String) {
-        sql().execute(JvmSession::class.java.getResource(path)!!.readText(), arrayOf())
+    fun executeSqlFromResource(path: String, replacements: Map<String, String>? = null) {
+        sql().execute(applyReplacements(getResourceAsText(path)!!, replacements))
     }
 
     /**
@@ -166,20 +202,23 @@ open class JvmSession() : JbSession() {
      * @param path The file-path, for example `/lz4.js`.
      * @param autoload If the module should be automatically loaded.
      * @param extraCode Additional code to be executed, appended at the end of the module.
+     * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    fun installModuleFromResource(name: String, path: String, autoload: Boolean = false, extraCode: String? = null) {
+    fun installModuleFromResource(name: String, path: String, autoload: Boolean = false, extraCode: String? = null, replacements: Map<String, String>? = null) {
         val sql = sql()
-        var code = JvmSession::class.java.getResource(path)!!.readText()
+        var code = applyReplacements(getResourceAsText(path)!!, replacements)
         if (extraCode != null) code += extraCode
         sql.execute("INSERT INTO commonjs2_modules (module, autoload, source) VALUES ($1, $2, $3) " +
                 "ON CONFLICT (module) DO UPDATE SET autoload = $2, source = $3",
-                arrayOf(name, autoload, code))
+                name, autoload, code)
     }
 
     /**
      * Installs the commonjs2 code and all modules. Must only be executed ones per storage.
+     * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    open fun installModules() {
+    open fun installModules(replacements: Map<String, String>? = null) {
+        // Note: We know, that we do not need the replacements and code is faster without them!
         executeSqlFromResource("/commonjs2.sql")
         installModuleFromResource("lz4_util", "/lz4_util.js")
         installModuleFromResource("lz4_xxhash", "/lz4_xxhash.js")

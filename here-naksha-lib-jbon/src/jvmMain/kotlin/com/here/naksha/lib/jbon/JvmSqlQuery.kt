@@ -64,7 +64,7 @@ class JvmSqlQuery(query: String) {
         }
     }
 
-    fun bindArguments(stmt: PreparedStatement, args: Array<Any?>) {
+    fun bindArguments(stmt: PreparedStatement, vararg args: Any?) {
         var i = 0
         while (i < args.size) {
             val arg = args[i]
