@@ -2,7 +2,7 @@
 
 package com.here.naksha.lib.jbon;
 
-@Suppress("unused")
+@Suppress("unused", "UnsafeCastFromDynamic")
 @JsExport
 open class JsSession : JbSession() {
 
@@ -15,6 +15,9 @@ open class JsSession : JbSession() {
 
     companion object {
         private val nativeMap = JsMap()
+        private val nativeList = JsList()
+        private val nativeLog = JsLog()
+        private val convertView: IDataView = JsSession().newDataView(ByteArray(16))
 
         fun register(session: JsSession?) {
             if (instance == null) {
@@ -68,7 +71,7 @@ DataView.prototype.getSize = function() {
     }
 
     override fun list(): INativeList {
-        TODO("Not yet implemented")
+        return nativeList
     }
 
     override fun sql(): ISql {
@@ -76,34 +79,32 @@ DataView.prototype.getSize = function() {
     }
 
     override fun log(): INativeLog {
-        TODO("Not yet implemented")
+        return nativeLog
     }
 
     override fun stringify(any: Any, pretty: Boolean): String {
-        return js("JSON.stringify(any, pretty)") as String
+        return js("JSON.stringify(any, pretty)")
     }
 
     override fun parse(json: String): Any {
-        return js("JSON.parse(json)") as Any
+        return js("JSON.parse(json)")
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun longToBigInt(value: Long): Any {
-        // Read the four words unsigned
-        val hi = (value shr 32).toInt()
-        val lo = (value ushr 0xffff).toInt()
-        // Combine them to BigInt
-        return js("new BitInt(hi)<<32 | new BigInt(mid)<<16 | new BigInt(lo)") as Any;
+        val view = convertView
+        view.setInt32(0, (value ushr 32).toInt())
+        view.setInt32(4, value.toInt())
+        return js("view.getBigInt64(0)")
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun bigIntToLong(value: Any): Long {
-        var hi: Int = 0
-        var mid: Int = 0
-        var lo: Int = 0
-        js("hi = value");
-        TODO("Fix me")
-        //return (hi.toLong() shl 32) or (mid.toLong() shl 16) or (lo.toLong())
+        val view = convertView
+        js("view.setBigInt64(0, value)")
+        val hi = view.getInt32(0)
+        val lo = view.getInt32(4)
+        return ((hi.toLong() and 0xffff_ffff) shl 32) or (lo.toLong() and 0xffff_ffff)
     }
 
     @Suppress("UnsafeCastFromDynamic", "UNUSED_VARIABLE")

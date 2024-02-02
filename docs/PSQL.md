@@ -97,12 +97,13 @@ For the PostgresQL implementation the **uid** is either the row number (`i`) for
 
 The table layout for all tables:
 
-| Column    | Type                      | Modifiers            | Description                                                  |
-|-----------|---------------------------|----------------------|--------------------------------------------------------------|
-| i         | int8                      | PRIMARY KEY NOT NULL | `xyz.uid` - Primary row identifier                           |
-| geo       | geometry(GeometryZ, 4326) |                      | `geometry` - The geometry of the features.                   |
-| feature   | bytea                     |                      | The Geo-JSON feature in JBON, except for what was extracted. |
-| xyz       | bytea                     |                      | `feature->properties->@ns:com:here:xyz`                      |
+| Column   | Type                      | Modifiers            | Description                                                  |
+|----------|---------------------------|----------------------|--------------------------------------------------------------|
+| i        | int8                      | PRIMARY KEY NOT NULL | `xyz.uid` - Primary row identifier                           |
+| txn_next | double precision          | NOT NULL             | `xyz.txn_next` - Only needed in history                      |
+| geo      | geometry(GeometryZ, 4326) |                      | `geometry` - The geometry of the features.                   |
+| feature  | bytea                     |                      | The Geo-JSON feature in JBON, except for what was extracted. |
+| xyz      | bytea                     |                      | `feature->properties->@ns:com:here:xyz`                      |
 
 The **xyz** extension contains separate information, managed by Naksha. It should be merged into the feature under `feature->properties->@ns:com:here:xyz`.
 

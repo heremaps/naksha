@@ -53,7 +53,7 @@ interface ISql {
      * @param args The arguments to be set at $n position, where $1 is the first array element.
      * @return The result-set.
      */
-    fun execute(sql: String, args: Array<Any?>): ISqlResultSet
+    fun execute(sql: String, vararg args: Any?): ISqlResultSet
 
     /**
      * Prepare the given SQL statement using parameters of the given types.
@@ -61,5 +61,5 @@ interface ISql {
      * @param typeNames The name of the types of the arguments, to be at $n position, where $1 is the first array element.
      * @return The prepared plan.
      */
-    fun prepare(sql: String, typeNames: Array<String>): ISqlPlan
+    fun prepare(sql: String, vararg typeNames: String): ISqlPlan
 }

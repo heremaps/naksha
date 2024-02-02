@@ -39,29 +39,30 @@ open class JvmSqlResult {
         val columnTypes = this.columnTypes
         check(columnTypes != null)
         val row = HashMap<String, Any?>()
-        val i = 0
+        var i = 0
         while (i < columnNames.size) {
             val name = columnNames[i]
             val type = columnTypes[i]
             // See: https://www.postgresql.org/message-id/AANLkTinsk4rwT7v-751bwQkgTN1rkA=8uE-jk69nape-@mail.gmail.com
+            i++
             when (type) {
                 "null" -> row[name] = null
                 "text", "varchar", "character", "char", "json", "uuid", "inet", "cidr", "macaddr", "xml", "internal",
                 "point", "line", "lseg", "box", "path", "polygon", "circle", "int4range", "int8range", "numrange",
-                "tsrange", "tstzrange", "daterange" -> row[name] = rs.getString(i+1)
-                "smallint" -> row[name] = rs.getShort(i+1).toInt()
-                "integer" -> row[name] = rs.getInt(i+1)
-                "bigint" -> row[name] = rs.getLong(i+1)
-                "real" -> row[name] = rs.getFloat(i+1)
-                "double precision" -> row[name] = rs.getFloat(i+1)
-                "numeric" -> row[name] = rs.getBigDecimal(i+1)
-                "boolean" -> row[name] = rs.getBoolean(i+1)
-                "timestamp" -> row[name] = rs.getTimestamp(i+1)
-                "date" -> row[name] = rs.getDate(i+1)
-                "bytea" -> row[name] = rs.getBytes(i+1)
-                "jsonb" -> row[name] = JbSession.get().parse(rs.getString(i+1))
-                "array" -> row[name] = rs.getArray(i+1)
-                else -> row[name] = rs.getObject(i+1)
+                "tsrange", "tstzrange", "daterange" -> row[name] = rs.getString(i)
+                "smallint", "int2" -> row[name] = rs.getShort(i).toInt()
+                "integer", "int4" -> row[name] = rs.getInt(i)
+                "bigint", "int8" -> row[name] = rs.getLong(i)
+                "real" -> row[name] = rs.getFloat(i)
+                "double precision" -> row[name] = rs.getFloat(i)
+                "numeric" -> row[name] = rs.getBigDecimal(i)
+                "boolean" -> row[name] = rs.getBoolean(i)
+                "timestamp" -> row[name] = rs.getTimestamp(i)
+                "date" -> row[name] = rs.getDate(i)
+                "bytea" -> row[name] = rs.getBytes(i)
+                "jsonb" -> row[name] = JbSession.get().parse(rs.getString(i))
+                "array" -> row[name] = rs.getArray(i)
+                else -> row[name] = rs.getObject(i)
             }
         }
         return row
