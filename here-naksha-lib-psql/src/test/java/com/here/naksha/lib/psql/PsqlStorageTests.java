@@ -1177,7 +1177,7 @@ public class PsqlStorageTests extends PsqlTests {
     expect.accept(readFeatures);
 
     // when - search by json object
-    POp jsonSearch2 = POp.contains(new NonIndexedPRef("properties", "references"), reader.readValue("[{\"id\":\"urn:here::here:Topology:106003684\"}]", JsonNode.class));
+    POp jsonSearch2 = POp.contains(new NonIndexedPRef("properties", "references"), "[{\"id\":\"urn:here::here:Topology:106003684\"}]");
     readFeatures.setPropertyOp(jsonSearch2);
     // then
     expect.accept(readFeatures);

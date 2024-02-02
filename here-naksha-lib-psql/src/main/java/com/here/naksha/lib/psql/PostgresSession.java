@@ -377,7 +377,12 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     try (final Json jp = Json.get()) {
       final PGobject jsonb = new PGobject();
       jsonb.setType("jsonb");
-      jsonb.setValue(jp.writer().writeValueAsString(value));
+      if (value instanceof String && Json.mightBeJson((String) value)) {
+        // it's already a json - .writeValueAsString would add double quoting
+        jsonb.setValue((String) value);
+      } else {
+        jsonb.setValue(jp.writer().writeValueAsString(value));
+      }
       return jsonb;
     } catch (SQLException | JsonProcessingException e) {
       throw unchecked(e);
