@@ -1,39 +1,12 @@
 import com.here.naksha.lib.jbon.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.condition.EnabledIf
 import java.nio.charset.StandardCharsets
-import java.sql.DriverManager
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 
-class JvmJbonTest {
-    companion object {
-        @JvmStatic
-        @BeforeAll
-        fun initJvm(): Unit {
-            JvmSession.register()
-            // Install into database.
-            // Only run SQL tests when
-            val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
-            if (dbUrl != null) {
-                // Load PostgresQL driver.
-                Class.forName("org.postgresql.Driver");
-                val connection = DriverManager.getConnection(dbUrl)
-                connection.autoCommit = false
-                JvmSession.get().setConnection(connection)
-                enableSqlTests = true
-            }
-        }
-
-        private var enableSqlTests: Boolean = false
-
-        @JvmStatic
-        fun runSqlTests(): Boolean {
-            return enableSqlTests
-        }
-    }
+class JvmJbonTest : JvmTestContainer() {
 
     @Test
     fun testCompression() {
@@ -746,25 +719,18 @@ class JvmJbonTest {
         assertFalse(map.ok())
     }
 
-    @EnabledIf("runSqlTests")
-    @Test
-    fun testSql_001() {
-        val session = JvmSession.jvmGetter.get()
-        session.installModules()
-        session.sqlCommit()
-    }
-
     //@EnabledIf("runSqlTests")
-    @Disabled
     @Test
-    fun testSql_002() {
+    fun selectJbonModule() {
         val session = JbSession.get()
-        val plan = session.sql().prepare("SELECT * FROM TABLE WHERE foo = $1", arrayOf(SQL_STRING))
+        val plan = session.sql().prepare("SELECT * FROM commonjs2_modules WHERE module = $1", SQL_STRING)
         try {
-            val cursor = plan.cursor(arrayOf("test"))
+            val cursor = plan.cursor("jbon")
             try {
                 var row = cursor.next()
+                assertNotNull(row)
                 while (row != null) {
+                    check(row is HashMap<*, *>)
                     session.log().info("row: ", row)
                     row = cursor.next()
                 }

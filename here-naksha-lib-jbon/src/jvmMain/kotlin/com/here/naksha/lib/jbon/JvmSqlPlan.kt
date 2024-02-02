@@ -13,7 +13,7 @@ class JvmSqlPlan(internal val query : JvmSqlQuery, conn:Connection) : JvmSqlResu
     }
     var closed : Boolean = false
 
-    override fun execute(args: Array<Any?>): ISqlResultSet {
+    override fun execute(vararg args: Any?): ISqlResultSet {
         check(!closed)
         query.bindArguments(stmt, args)
         val hasResultSet = stmt.execute()
@@ -23,9 +23,9 @@ class JvmSqlPlan(internal val query : JvmSqlQuery, conn:Connection) : JvmSqlResu
         return JvmSqlResultSet(stmt.updateCount)
     }
 
-    override fun cursor(args: Array<Any?>): ISqlCursor {
+    override fun cursor(vararg args: Any?): ISqlCursor {
         check(!closed)
-        query.bindArguments(stmt, args)
+        query.bindArguments(stmt, *args)
         val hasResultSet = stmt.execute()
         if (hasResultSet) {
             return JvmSqlCursor(stmt.resultSet)

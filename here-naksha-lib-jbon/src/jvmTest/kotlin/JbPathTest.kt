@@ -1,12 +1,11 @@
-package com.here.naksha.lib.jbon
-
 import com.here.naksha.lib.jbon.JbPath.Companion.getBool
 import com.here.naksha.lib.jbon.JbPath.Companion.getDouble
 import com.here.naksha.lib.jbon.JbPath.Companion.getFloat32
 import com.here.naksha.lib.jbon.JbPath.Companion.getInt32
 import com.here.naksha.lib.jbon.JbPath.Companion.getInt64
 import com.here.naksha.lib.jbon.JbPath.Companion.getString
-import com.here.naksha.lib.jbon.JsonConverter.jsonToJbonByteArray
+import JsonConverter.jsonToJbonByteArray
+import com.here.naksha.lib.jbon.JvmSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeAll

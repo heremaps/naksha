@@ -1,5 +1,5 @@
-package com.here.naksha.lib.jbon
-
+import com.here.naksha.lib.jbon.JbBuilder
+import com.here.naksha.lib.jbon.JbSession
 import java.lang.UnsupportedOperationException
 
 object JsonConverter {
