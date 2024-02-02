@@ -64,6 +64,7 @@ open class JvmSqlResult {
                 "array" -> row[name] = rs.getArray(i)
                 else -> row[name] = rs.getObject(i)
             }
+            i++
         }
         return row
     }

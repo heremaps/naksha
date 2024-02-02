@@ -57,6 +57,8 @@ class JvmSqlQuery(query: String) {
                 is Float -> stmt.setFloat(index, arg)
                 is Double -> stmt.setDouble(index, arg)
                 is String -> stmt.setString(index, arg)
+                is ByteArray -> stmt.setBytes(index, arg)
+                null -> stmt.setNull(index, 0)
                 else -> throw IllegalArgumentException("args[" + (index - 1) + "]")
             }
         }
