@@ -1436,6 +1436,9 @@ components:
                   collection:
                     id: "um-mod-dev:topology"
                     type: "NakshaCollection"
+                    maxAge: 0
+                    history: true
+                    autoPurge: false
   responses:
     EmptyResponse:
       description: >-
@@ -1786,6 +1789,9 @@ components:
                   collection:
                     id: "um-mod-dev:topology"
                     type: "NakshaCollection"
+                    maxAge: 0
+                    history: true
+                    autoPurge: false
     SpacesResponse:
       description: The list of spaces.
       content:
@@ -1807,6 +1813,9 @@ components:
                     collection:
                       id: "um-mod-dev:topology"
                       type: "NakshaCollection"
+                      maxAge: 0
+                      history: true
+                      autoPurge: false
   schemas:
     Error:
       type: object
