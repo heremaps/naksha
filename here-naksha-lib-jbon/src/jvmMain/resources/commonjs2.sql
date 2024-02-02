@@ -42,5 +42,7 @@ CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
   plv8.execute("SELECT module, source FROM commonjs2_modules WHERE autoload = true").forEach((row) => {
       load(row.module, row.source);
   });
+
+  require("jbon").JsSession.Companion.register();
   return true;
 $$ LANGUAGE 'plv8' IMMUTABLE;

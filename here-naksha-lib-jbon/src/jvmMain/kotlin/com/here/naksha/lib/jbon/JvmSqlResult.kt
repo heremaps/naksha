@@ -39,7 +39,7 @@ open class JvmSqlResult {
         val columnTypes = this.columnTypes
         check(columnTypes != null)
         val row = HashMap<String, Any?>()
-        val i = 0
+        var i = 0
         while (i < columnNames.size) {
             val name = columnNames[i]
             val type = columnTypes[i]
@@ -63,6 +63,7 @@ open class JvmSqlResult {
                 "array" -> row[name] = rs.getArray(i+1)
                 else -> row[name] = rs.getObject(i+1)
             }
+            i++
         }
         return row
     }
