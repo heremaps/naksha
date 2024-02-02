@@ -52,7 +52,6 @@ import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
-import com.here.naksha.lib.handlers.exceptions.UndefinedCollectionException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -347,7 +346,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         return collectionDefinedInSpace;
       }
     }
-    throw new UndefinedCollectionException(eventHandler.getId(), eventTarget.getId());
+    logger.info(
+        "No collection definition found in Handler & Space properties, using default one with event target id: {}",
+        eventTarget.getId());
+    return new XyzCollection(eventTarget.getId());
   }
 
   private @NotNull Stream<@NotNull XyzCollection> collectionsFrom(@NotNull WriteCollections<?, ?, ?> wc) {

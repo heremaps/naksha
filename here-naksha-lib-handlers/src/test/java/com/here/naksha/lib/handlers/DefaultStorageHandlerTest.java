@@ -31,6 +31,7 @@ import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
+import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerTest.CollectionPriorityTestCase.ValidCollectionSource;
 import com.here.naksha.lib.psql.EPsqlState;
 import java.sql.SQLException;
@@ -87,10 +88,7 @@ class DefaultStorageHandlerTest {
   @ParameterizedTest
   @MethodSource("collectionPriorityTestCases")
   void shouldApplyCorrectCollection(CollectionPriorityTestCase testCase) {
-    // Given: configured space
-    Space space = space(testCase.spaceProperties);
-
-    // And: Always succeeding storage writer
+    // Given: Always succeeding storage writer
     when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResult());
 
     // And: feature to be saved in potentially different collection
@@ -98,7 +96,7 @@ class DefaultStorageHandlerTest {
     WriteXyzFeatures writeXyzFeatures = new WriteXyzFeatures("different_collection").create(featureToCreate);
 
     // And: Handler to test
-    DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, space);
+    DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, testCase.space);
 
     // When: Processing write features
     Result result = handler.processEvent(event(writeXyzFeatures));
@@ -122,10 +120,7 @@ class DefaultStorageHandlerTest {
   @ParameterizedTest
   @MethodSource("collectionPriorityTestCases")
   void shouldCreateMissingCollectionRespectingPriority(CollectionPriorityTestCase testCase) {
-    // Given: configured space
-    Space space = space(testCase.spaceProperties);
-
-    // And: Storage writer failing on WriteXyzFeatures due to undefined table but is able to create new collection
+    // Given: Storage writer failing on WriteXyzFeatures due to undefined table but is able to create new collection
     when(storageWriteSession.execute(any(WriteXyzFeatures.class)))
         .thenThrow(new RuntimeException(new SQLException("Some message", EPsqlState.UNDEFINED_TABLE.toString())));
     when(storageWriteSession.execute(any(WriteXyzCollections.class))).thenReturn(new SuccessResult());
@@ -135,7 +130,7 @@ class DefaultStorageHandlerTest {
     WriteXyzFeatures writeXyzFeatures = new WriteXyzFeatures("different_collection").create(featureToCreate);
 
     // And: Handler with autoCreateCollection enabled to test
-    DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, space);
+    DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, testCase.space);
     assertTrue(handler.properties.getAutoCreateCollection());
 
     // When: Processing write features
@@ -216,23 +211,30 @@ class DefaultStorageHandlerTest {
             "Collection from Handler has higher priority than collection from Space",
             new CollectionPriorityTestCase(
                 handlerPropertiesWithCollection("handler_collection"),
-                spacePropertiesWithCollection("space_collection_id"),
-                ValidCollectionSource.HANDLER
+                space("test_space", spacePropertiesWithCollection("space_collection_id")),
+                ValidCollectionSource.HANDLER_PROPERTIES
             )
         ),
         named(
             "Collection from Space is used when collection in Handler is undefined",
             new CollectionPriorityTestCase(
                 handlerPropertiesWithCollection(null),
-                spacePropertiesWithCollection("space_collection_id"),
-                ValidCollectionSource.SPACE
+                space("test_space", spacePropertiesWithCollection("space_collection_id")),
+                ValidCollectionSource.SPACE_PROPERTIES
             )
         ),
-        named("Collection from Header is used when collection in Space was undefined",
+        named("Collection from Handler is used when collection in Space was undefined",
             new CollectionPriorityTestCase(
                 handlerPropertiesWithCollection("handler_collection"),
-                spacePropertiesWithCollection(null),
-                ValidCollectionSource.HANDLER
+                space("test_space", spacePropertiesWithCollection(null)),
+                ValidCollectionSource.HANDLER_PROPERTIES
+            )
+        ),
+        named("Collection with id based on Event Target is used when no collection is defined in Space or Handler properties",
+            new CollectionPriorityTestCase(
+                handlerPropertiesWithCollection(null),
+                space("test_space", spacePropertiesWithCollection(null)),
+                ValidCollectionSource.SPACE_ID
             )
         )
     );
@@ -247,20 +249,22 @@ class DefaultStorageHandlerTest {
 
   record CollectionPriorityTestCase(
       DefaultStorageHandlerProperties handlerProperties,
-      SpaceProperties spaceProperties,
+      Space space,
       ValidCollectionSource validCollectionSource
 
   ) {
 
     enum ValidCollectionSource {
-      HANDLER,
-      SPACE
+      HANDLER_PROPERTIES,
+      SPACE_PROPERTIES,
+      SPACE_ID
     }
 
     XyzCollection correctCollection() {
       return switch (validCollectionSource) {
-        case HANDLER -> handlerProperties.getXyzCollection();
-        case SPACE -> spaceProperties.getXyzCollection();
+        case HANDLER_PROPERTIES -> handlerProperties.getXyzCollection();
+        case SPACE_PROPERTIES -> JsonSerializable.convert(space.getProperties(), SpaceProperties.class).getXyzCollection();
+        case SPACE_ID -> new XyzCollection(space.getId());
       };
     }
   }
@@ -288,6 +292,12 @@ class DefaultStorageHandlerTest {
 
   private static DefaultStorageHandlerProperties handlerPropertiesWithoutStorageId() {
     return handlerProperties(null);
+  }
+
+  private static Space space(String spaceId, SpaceProperties spaceProperties) {
+    Space space = new Space(spaceId);
+    space.setProperties(spaceProperties);
+    return space;
   }
 
   private static SpaceProperties spacePropertiesWithCollection(String collectionId) {
