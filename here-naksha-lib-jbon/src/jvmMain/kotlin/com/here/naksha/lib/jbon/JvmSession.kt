@@ -155,8 +155,9 @@ open class JvmSession() : JbSession() {
     /**
      * Execute the SQL being in the file.
      * @param path The file-path, for example `/lz4.sql`.
+     * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    fun executeSqlFromResource(path: String) {
+    fun executeSqlFromResource(path: String, replacements: HashMap<String, String>? = null) {
         sql().execute(JvmSession::class.java.getResource(path)!!.readText(), arrayOf())
     }
 
@@ -166,8 +167,9 @@ open class JvmSession() : JbSession() {
      * @param path The file-path, for example `/lz4.js`.
      * @param autoload If the module should be automatically loaded.
      * @param extraCode Additional code to be executed, appended at the end of the module.
+     * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    fun installModuleFromResource(name: String, path: String, autoload: Boolean = false, extraCode: String? = null) {
+    fun installModuleFromResource(name: String, path: String, autoload: Boolean = false, extraCode: String? = null, replacements: HashMap<String, String>? = null) {
         val sql = sql()
         var code = JvmSession::class.java.getResource(path)!!.readText()
         if (extraCode != null) code += extraCode
@@ -178,20 +180,21 @@ open class JvmSession() : JbSession() {
 
     /**
      * Installs the commonjs2 code and all modules. Must only be executed ones per storage.
+     * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    open fun installModules() {
-        executeSqlFromResource("/commonjs2.sql")
-        installModuleFromResource("lz4_util", "/lz4_util.js")
-        installModuleFromResource("lz4_xxhash", "/lz4_xxhash.js")
-        installModuleFromResource("lz4", "/lz4.js")
-        executeSqlFromResource("/lz4.sql")
+    open fun installModules(replacements: HashMap<String, String>? = null) {
+        executeSqlFromResource("/commonjs2.sql", replacements)
+        installModuleFromResource("lz4_util", "/lz4_util.js", replacements = replacements)
+        installModuleFromResource("lz4_xxhash", "/lz4_xxhash.js", replacements = replacements)
+        installModuleFromResource("lz4", "/lz4.js", replacements = replacements)
+        executeSqlFromResource("/lz4.sql", replacements = replacements)
         installModuleFromResource("jbon", "/here-naksha-lib-jbon.js", extraCode = """
                    
                    let input = module.exports["here-naksha-lib-jbon"].com.here.naksha.lib.jbon;
                    const prototypeDescriptors = Object.getOwnPropertyDescriptors(Object.getPrototypeOf(input));
                    const protoClone = Object.create(null, prototypeDescriptors);
                    module.exports = Object.create(protoClone, Object.getOwnPropertyDescriptors(input));
-                """.trimIndent());
-        executeSqlFromResource("/jbon.sql")
+                """.trimIndent(), replacements = replacements);
+        executeSqlFromResource("/jbon.sql", replacements = replacements)
     }
 }
