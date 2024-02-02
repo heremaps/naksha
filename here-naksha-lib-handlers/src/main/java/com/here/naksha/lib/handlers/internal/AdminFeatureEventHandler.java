@@ -18,6 +18,8 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
 import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValidator.nakshaFeatureValidation;
 
 import com.here.naksha.lib.core.IEvent;
@@ -49,20 +51,23 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     this.featureClass = featureClass;
   }
 
-  /**
-   * The method invoked by the event-pipeline to process EventHandler specific read/write operations
-   *
-   * @param event the event to process.
-   * @return the result.
-   */
   @Override
-  public final @NotNull Result processEvent(@NotNull IEvent event) {
+  protected EventProcessingStrategy processingStrategyFor(IEvent event) {
+    Request<?> request = event.getRequest();
+    if (request instanceof ReadRequest || request instanceof WriteXyzFeatures) {
+      return PROCESS;
+    }
+    return SUCCEED_WITHOUT_PROCESSING;
+  }
+
+  @Override
+  public final @NotNull Result process(@NotNull IEvent event) {
     final NakshaContext ctx = NakshaContext.currentContext();
     final Request<?> request = event.getRequest();
     // process request using Naksha Admin Storage instance
     addStorageIdToStreamInfo(PsqlStorage.ADMIN_STORAGE_ID, ctx);
     if (request instanceof ReadRequest<?> rr) {
-      try (final IReadSession reader = nakshaHub().getAdminStorage().newReadSession(ctx, false)) {
+      try (final IReadSession reader = nakshaHub.getAdminStorage().newReadSession(ctx, false)) {
         return reader.execute(rr);
       }
     } else if (request instanceof WriteXyzFeatures wr) {
@@ -72,7 +77,7 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
           return er;
         }
         // persist in storage
-        try (final IWriteSession writer = nakshaHub().getAdminStorage().newWriteSession(ctx, true)) {
+        try (final IWriteSession writer = nakshaHub.getAdminStorage().newWriteSession(ctx, true)) {
           final Result result = writer.execute(wr);
           if (result instanceof SuccessResult) {
             writer.commit(true);
@@ -86,7 +91,7 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
         }
       }
     } else {
-      return notImplemented(event);
+      return notImplemented(request);
     }
   }
 

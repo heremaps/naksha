@@ -81,14 +81,19 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     this.properties = JsonSerializable.convert(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
   }
 
-  /**
-   * The method invoked by the event-pipeline to process custom Storage specific read/write operations
-   *
-   * @param event the event to process.
-   * @return the result.
-   */
   @Override
-  public @NotNull Result processEvent(@NotNull IEvent event) {
+  protected EventProcessingStrategy processingStrategyFor(IEvent event) {
+    Request<?> request = event.getRequest();
+    if (request instanceof ReadFeatures
+        || request instanceof WriteFeatures
+        || request instanceof WriteCollections) {
+      return EventProcessingStrategy.PROCESS;
+    }
+    return EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
+  }
+
+  @Override
+  public @NotNull Result process(@NotNull IEvent event) {
     final NakshaContext ctx = NakshaContext.currentContext();
     final Request<?> request = event.getRequest();
 
@@ -103,7 +108,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     addStorageIdToStreamInfo(storageId, ctx);
 
     // Obtain IStorage implementation using NakshaHub
-    final IStorage storageImpl = nakshaHub().getStorageById(storageId);
+    final IStorage storageImpl = nakshaHub.getStorageById(storageId);
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
     XyzCollection collection = chooseCollection();
