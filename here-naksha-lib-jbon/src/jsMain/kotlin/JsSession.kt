@@ -61,11 +61,11 @@ DataView.prototype.getSize = function() {
         }
     }
 
-    override fun newMap(): Any {
-        return js("{}") as Any
+    override fun map(): INativeMap {
+        TODO("Not yet implemented")
     }
 
-    override fun map(): INativeMap {
+    override fun list(): INativeList {
         TODO("Not yet implemented")
     }
 

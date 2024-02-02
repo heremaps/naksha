@@ -16,6 +16,9 @@ open class JvmSession() : JbSession() {
         val unsafe: Unsafe
         val baseOffset: Int
         val jvmGetter = JvmGetterSession()
+        private val log: INativeLog = Slf4jLogger()
+        private val nativeMap = JvmMap()
+        private val nativeList = JvmList()
 
         init {
             val unsafeConstructor = Unsafe::class.java.getDeclaredConstructor()
@@ -32,22 +35,14 @@ open class JvmSession() : JbSession() {
 
     private val lz4Factory = LZ4Factory.fastestInstance()
 
-    /**
-     * The logger implementation to be used.
-     */
-    internal var log: INativeLog = Slf4jLogger()
-
-    /**
-     * The SQL connection to be used.
-     */
     private var sqlApi: ISql? = null
 
-    override fun newMap(): Any {
-        return HashMap<String, Any>()
+    override fun map(): INativeMap {
+        return nativeMap
     }
 
-    override fun map(): INativeMap {
-        TODO("Not yet implemented")
+    override fun list(): INativeList {
+        return nativeList
     }
 
     override fun sql(): ISql {
