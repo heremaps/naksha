@@ -9,4 +9,11 @@ import com.here.naksha.lib.jbon.JsSession
  */
 @JsExport
 class Plv8Session : JsSession() {
+    companion object {
+        fun register() {
+            register(Plv8Session())
+        }
+    }
+
+
 }

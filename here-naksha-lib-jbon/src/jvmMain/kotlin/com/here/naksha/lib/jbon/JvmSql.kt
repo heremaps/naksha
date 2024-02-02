@@ -1,8 +1,6 @@
 package com.here.naksha.lib.jbon
 
-import com.here.naksha.lib.core.AbstractTask.State
 import java.sql.Connection
-import java.sql.Statement
 
 /**
  * Java JDBC binding to grant access to PostgresQL. Should be placed into [com.here.naksha.lib.jbon.JvmSession.sqlApi].
@@ -38,6 +36,6 @@ open class JvmSql(val conn: Connection) : ISql {
     }
 
     override fun prepare(sql: String, typeNames: Array<String>): ISqlPlan {
-        return JvmPlan(JvmSqlQuery(sql), conn)
+        return JvmSqlPlan(JvmSqlQuery(sql), conn)
     }
 }

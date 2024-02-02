@@ -16,7 +16,7 @@ interface INativeMap {
      * @param any The object to test.
      * @return true if the given map is a native map; false otherwise.
      */
-    fun isMap(any: Any): Boolean
+    fun isMap(any: Any?): Boolean
 
     /**
      * Creates a new native map.
