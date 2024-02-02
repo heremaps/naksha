@@ -18,6 +18,10 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
+import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
+import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
@@ -27,21 +31,14 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
-import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.NotNull;
-
 import java.util.List;
 import java.util.NoSuchElementException;
-
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
-import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
-import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 
 public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHandler> {
 
@@ -121,13 +118,11 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       handlerId = codec.getFeature().getId();
     }
     // Scan through all spaces with JSON property "eventHandlerIds" containing the targeted handler ID
-    final PRef pRef =
-            RequestHelper.pRefFromPropPath(new String[] {EVENT_HANDLER_IDS});
+    final PRef pRef = RequestHelper.pRefFromPropPath(new String[] {EVENT_HANDLER_IDS});
     final POp activeSpacesPOp = POp.contains(pRef, handlerId);
-    final ReadFeatures readActiveHandlersRequest =
-            new ReadFeatures(SPACES).withPropertyOp(activeSpacesPOp);
+    final ReadFeatures readActiveHandlersRequest = new ReadFeatures(SPACES).withPropertyOp(activeSpacesPOp);
     try (final IReadSession readSession =
-                 nakshaHub().getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
+        nakshaHub().getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
       final Result readResult = readSession.execute(readActiveHandlersRequest);
       if (!(readResult instanceof SuccessResult)) {
         return readResult;
@@ -141,10 +136,8 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       } finally {
         readResult.close();
       }
-      final List<String> spaceIds =
-              spaces.stream().map(XyzFeature::getId).toList();
-      return new ErrorResult(
-              XyzError.CONFLICT, "The event handler is still in use by these spaces: " + spaceIds);
+      final List<String> spaceIds = spaces.stream().map(XyzFeature::getId).toList();
+      return new ErrorResult(XyzError.CONFLICT, "The event handler is still in use by these spaces: " + spaceIds);
     }
   }
 }
