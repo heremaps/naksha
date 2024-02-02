@@ -77,6 +77,9 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 CREATE OR REPLACE FUNCTION xyz_author_ts(xyz bytea) RETURNS double precision AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION xyz_uid(xyz bytea) RETURNS int8 AS $$
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION xyz_extend(xyz bytea) RETURNS int8 AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
