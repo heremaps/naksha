@@ -33,8 +33,6 @@ import org.jetbrains.annotations.Nullable;
 public final class ApiParams {
   public static final String ACCESS_TOKEN = "access_token";
   public static final String STORAGE_ID = "storageId";
-  public static final String HANDLER_ID = "handlerId";
-
   public static final String SPACE_ID = "spaceId";
   public static final String PREFIX_ID = "prefixId";
   public static final String FEATURE_ID = "featureId";
@@ -51,9 +49,17 @@ public final class ApiParams {
   public static final String TILE_ID = "tileId";
   public static final String HANDLE = "handle";
   public static final String MARGIN = "margin";
+  public static final String LAT = "lat";
+  public static final String LON = "lon";
+  public static final String RADIUS = "radius";
+  public static final String REF_SPACE_ID = "refSpaceId";
+  public static final String REF_FEATURE_ID = "refFeatureId";
 
   public static final long DEF_FEATURE_LIMIT = 30_000;
   public static final long DEF_ADMIN_FEATURE_LIMIT = 1_000;
+  // Note - using specific NULL value is not ideal, but practically it makes code less messy at few places
+  // and use of it doesn't cause any side effect
+  public static final double NULL_COORDINATE = 9999;
 
   public static final String TILE_TYPE_QUADKEY = "quadkey";
 
@@ -120,6 +126,14 @@ public final class ApiParams {
   }
 
   public static void validateParamRange(
+      final @NotNull String param, final long value, final long min, final long max) {
+    if (value < min || value > max) {
+      throw new XyzErrorException(
+          XyzError.ILLEGAL_ARGUMENT, "Invalid value " + value + " for parameter " + param);
+    }
+  }
+
+  public static void validateParamRange(
       final @NotNull String param, final double value, final double min, final double max) {
     if (value < min || value > max) {
       throw new XyzErrorException(
@@ -167,5 +181,18 @@ public final class ApiParams {
       }
     }
     return handle;
+  }
+
+  public static void validateLatLon(final double lat, final double lon) {
+    if (lat != NULL_COORDINATE) validateParamRange(LAT, lat, -90, 90);
+    if (lon != NULL_COORDINATE) validateParamRange(LON, lon, -180, 180);
+    // Validate that both lat and lon provided or none of them
+    if (lat == NULL_COORDINATE && lon != NULL_COORDINATE) {
+      // only lon provided, lan is not
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing latitude co-ordinate");
+    } else if (lat != NULL_COORDINATE && lon == NULL_COORDINATE) {
+      // only lan provided, lon is not
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing longitude co-ordinate");
+    }
   }
 }
