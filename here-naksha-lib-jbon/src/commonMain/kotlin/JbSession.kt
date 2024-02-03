@@ -8,101 +8,96 @@ import kotlin.jvm.JvmStatic
 
 /**
  * The native API to be provided by the platform to grant access to native capabilities for this session.
+ * @property appName The name of the application starting the session, only for debugging purpose.
+ * @property streamId The stream-identifier, to be added to the transaction logs for debugging purpose.
+ * @property appId The UPM identifier of the application (for audit).
+ * @property author The UPM identifier of the user (for audit).
+ * @constructor Create a new session.
  */
 @Suppress("unused")
 @JsExport
-abstract class JbSession {
+open class JbSession(val appName: String, val streamId: String, val appId: String, val author: String? = null) {
     companion object {
-        /**
-         * The reference to the thread local session getter.
-         */
         @JvmStatic
-        var instance: IJbThreadLocalSession? = null
+        fun isSame(s: Any): Boolean {
+            return this === s
+        }
 
         /**
-         * Returns the thread-local session.
-         * @return Returns the thread-local session.
+         * The thread local session.
+         */
+        @JvmStatic
+        lateinit var threadLocal: IThreadLocal
+
+        /**
+         * The environment (JVM, Browser, PLV8, ...).
+         */
+        @JvmStatic
+        lateinit var env: IEnv
+
+        /**
+         * Helpers to handle native lists.
+         */
+        @JvmStatic
+        lateinit var list: IList
+
+        /**
+         * Helpers to handle native arrays.
+         */
+        @JvmStatic
+        lateinit var map: IMap
+
+        /**
+         * Access to environment logger.
+         */
+        @JvmStatic
+        lateinit var log: ILog
+
+        /**
+         * Tests whether the session is initialized.
+         * @return true if the session is initialized; false otherwise.
+         */
+        @JvmStatic
+        fun isInitialized(): Boolean {
+            return Companion::threadLocal.isInitialized
+                    && Companion::env.isInitialized
+                    && Companion::list.isInitialized
+                    && Companion::map.isInitialized
+                    && Companion::log.isInitialized
+        }
+
+        /**
+         * Static initializer of the session, links environment specific implementations. Does nothing, if called multiple
+         * times. Should only be called, when [isInitialized] returns _false_.
+         * @param threadLocal The thread local storage.
+         * @param env The environment.
+         * @param list The native list accessor.
+         * @param map The native map accessor.
+         * @param log The native logger.
+         */
+        @JvmStatic
+        fun initialize(threadLocal: IThreadLocal, env: IEnv, list: IList, map: IMap, log: ILog) {
+            if (!isInitialized()) {
+                this.threadLocal = threadLocal
+                this.env = env
+                this.list = list
+                this.map = map
+                this.log = log
+            }
+        }
+
+        /**
+         * Returns the current thread local session.
+         * @return The current thread local session.
+         * @throws IllegalStateException If no session is available.
          */
         @JvmStatic
         fun get(): JbSession {
-            return instance!!.get()
+            val session = threadLocal.get()
+            check(session != null)
+            return session
         }
     }
-
-    /**
-     * The name of the application using this session.
-     */
-    var appName: String? = null
-
-    /**
-     * The application identifier of the application using this session.
-     */
-    var appId: String? = null
-
-    /**
-     * The author using this session.
-     */
-    var author: String? = null
-
-    /**
-     * The stream-id (used for logging and debugging) of session.
-     */
-    var streamId: String? = null
-
-    /**
-     * Returns the API that grants access to native maps.
-     * @return The API that grants access to native maps.
-     */
-    abstract fun map(): INativeMap
-
-    /**
-     * Returns the API that grants access to native lists.
-     * @return The API that grants access to native lists.
-     */
-    abstract fun list(): INativeList
-
-    /**
-     * Returns the API that grants access to the native SQL engine.
-     * @return The API that grants access to the native SQL engine.
-     */
-    abstract fun sql(): ISql
-
-    /**
-     * Returns the native logging API.
-     * @return The native logging API.
-     */
-    abstract fun log(): INativeLog
-
-    /**
-     * Converts an internal 64-bit integer into a platform specific.
-     * @param value The internal 64-bit.
-     * @return The platform specific 64-bit.
-     */
-    @Suppress("NON_EXPORTABLE_TYPE")
-    abstract fun longToBigInt(value: Long): Any
-
-    /**
-     * Converts a platform specific 64-bit integer into an internal one to be used for example with the [IDataView].
-     * @param value The platform specific 64-bit integer.
-     * @return The internal 64-bit integer.
-     */
-    @Suppress("NON_EXPORTABLE_TYPE")
-    abstract fun bigIntToLong(value: Any): Long
-
-    /**
-     * Stringify the given object into a JSON string.
-     * @param any The object to serialize.
-     * @param pretty If the result should be pretty-printed.
-     * @return The JSON text.
-     */
-    abstract fun stringify(any: Any, pretty: Boolean = false): String
-
-    /**
-     * Parse the given JSON into an object.
-     * @param json The JSON string.
-     * @return The parsed object.
-     */
-    abstract fun parse(json: String): Any
 
     /**
      * This is more for platform code, to create new byte-arrays the same way as Kotlin does it. For JAVA this
@@ -132,40 +127,10 @@ abstract class JbSession {
      * @param size The amount of byte to map, if longer than the byte-array, till the end of the byte-array.
      * @return The view to the byte-array.
      */
-    abstract fun newDataView(bytes: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): IDataView
-
-    internal fun endOf(bytes: ByteArray, offset: Int, size: Int): Int {
-        if (size <= 0 || size >= bytes.size) {
-            return bytes.size
-        }
-        val end = offset + size
-        if (end > bytes.size) {
-            return bytes.size
-        }
-        return end
+    fun newDataView(bytes: ByteArray, offset: Int = 0, size: Int = bytes.size): IDataView {
+        require(offset in bytes.indices)
+        require(size >= 0)
+        val length = if (offset + size <= bytes.size) size else bytes.size - offset
+        return env.newDataView(bytes, offset, length)
     }
-
-    /**
-     * Compress bytes.
-     * @param raw The bytes to compress.
-     * @param offset The offset of the first byte to compress.
-     * @param size The amount of bytes to compress.
-     * @return The deflated (compressed) bytes.
-     */
-    abstract fun lz4Deflate(raw: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
-
-    /**
-     * Decompress bytes.
-     * @param compressed The bytes to decompress.
-     * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
-     * @param offset The offset of the first byte to decompress.
-     * @param size The amount of bytes to decompress.
-     * @return The inflated (decompress) bytes.
-     */
-    abstract fun lz4Inflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
-
-    /**
-     * Ask the platform for the given global dictionary.
-     */
-    abstract fun getGlobalDictionary(id: String): JbDict;
 }

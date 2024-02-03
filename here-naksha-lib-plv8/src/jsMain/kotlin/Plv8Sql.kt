@@ -1,14 +1,38 @@
-package com.here.naksha.lib.plv8
+@file:OptIn(ExperimentalJsExport::class)
 
-import com.here.naksha.lib.jbon.ISql
-import com.here.naksha.lib.jbon.ISqlPlan
+package com.here.naksha.lib.plv8;
 
-class Plv8Sql : ISql {
-    override fun execute(sql: String, vararg args: Any?): Plv8SqlResultSet {
-        TODO("Not yet implemented")
+/**
+ * Thin wrapper around the native plv8 engine methods. This wrapper allows to simulate this in the JVM.
+ */
+@Suppress("UnsafeCastFromDynamic")
+@JsExport
+class Plv8Sql : IPlv8Sql {
+    override fun newTable(): ITable {
+        return Plv8Table()
     }
 
-    override fun prepare(sql: String, vararg typeNames: String): ISqlPlan {
-        TODO("Not yet implemented")
+    override fun quoteLiteral(vararg parts: String): String {
+        return js("plv8.quote_literal(parts.join(\"\"))")
+    }
+
+    override fun quoteIdent(vararg parts: String): String {
+        return js("plv8.quote_ident(parts.join(\"\"))")
+    }
+
+    override fun affectedRows(any: Any): Int? {
+        return js("typeof any === \"number\" && any || null")
+    }
+
+    override fun rows(any: Any): Array<Any>? {
+        return js("Array.isArray(any) && any || null")
+    }
+
+    override fun execute(sql: String, args: Array<Any?>?): Any {
+        return js("args ? plv8.execute(sql, args) : plv8.execute(sql)")
+    }
+
+    override fun prepare(sql: String, typeNames: Array<String>?): IPlv8Plan {
+        return js("typeNames ? plv8.prepare(sql, typeNames) : plv8.execute(typeNames)")
     }
 }

@@ -4,9 +4,9 @@ import org.slf4j.LoggerFactory
 import org.slf4j.spi.LoggingEventBuilder
 
 /**
- * The SLF4j logger implementation, default for [JvmSession].
+ * The SLF4j logger implementation, default for [JvmEnv].
  */
-class Slf4jLogger() : INativeLog{
+class Slf4jLogger() : ILog{
     private val logger = LoggerFactory.getLogger(Slf4jLogger::class.java)
     private var sb = StringBuilder()
 

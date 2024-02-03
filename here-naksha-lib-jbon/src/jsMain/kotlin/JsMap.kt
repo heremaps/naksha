@@ -1,7 +1,7 @@
 package com.here.naksha.lib.jbon
 
 @Suppress("UnsafeCastFromDynamic")
-class JsMap : INativeMap {
+class JsMap : IMap {
     override fun isMap(any: Any?): Boolean {
         return js("any !== undefined && any !== null && !Array.isArray(any)");
     }

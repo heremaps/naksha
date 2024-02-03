@@ -1,6 +1,6 @@
 package com.here.naksha.lib.jbon
 
-class JvmMap : INativeMap {
+class JvmMap : IMap {
     override fun isMap(any: Any?): Boolean {
         return any is MutableMap<*, *>
     }

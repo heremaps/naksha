@@ -1,7 +1,7 @@
 package com.here.naksha.lib.jbon
 
 @Suppress("UNCHECKED_CAST")
-class JvmList : INativeList {
+class JvmList : IList {
     override fun isList(any: Any?): Boolean {
         return any is List<*>
     }

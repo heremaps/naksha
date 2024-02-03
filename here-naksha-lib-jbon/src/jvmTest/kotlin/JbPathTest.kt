@@ -4,17 +4,15 @@ import com.here.naksha.lib.jbon.JbPath.Companion.getFloat32
 import com.here.naksha.lib.jbon.JbPath.Companion.getInt32
 import com.here.naksha.lib.jbon.JbPath.Companion.getInt64
 import com.here.naksha.lib.jbon.JbPath.Companion.getString
-import JsonConverter.jsonToJbonByteArray
-import com.here.naksha.lib.jbon.JvmSession
+import JbJsonConverter.jsonToJbonByteArray
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class JbPathTest {
+class JbPathTest : JbAbstractTest() {
 
     private val json = JbPathTest::class.java.getResource("/pathTest.json")!!.readText(StandardCharsets.UTF_8)
     private val bytea = jsonToJbonByteArray(json)
@@ -80,13 +78,5 @@ class JbPathTest {
 
         // then
         assertNull(result)
-    }
-
-    companion object {
-        @JvmStatic
-        @BeforeAll
-        fun init(): Unit {
-            JvmSession.register()
-        }
     }
 }

@@ -1,7 +1,7 @@
 package com.here.naksha.lib.jbon
 
 @Suppress("UnsafeCastFromDynamic")
-class JsList : INativeList {
+class JsList : IList {
     override fun isList(any: Any?): Boolean {
         return js("any !== undefined && any !== null && Array.isArray(any)");
     }

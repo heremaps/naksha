@@ -13,6 +13,9 @@ kotlin {
     js(IR) {
         moduleName = "plv8"
         browser {
+            webpackTask {
+                output.libraryTarget = "commonjs2"
+            }
         }
         nodejs {
         }

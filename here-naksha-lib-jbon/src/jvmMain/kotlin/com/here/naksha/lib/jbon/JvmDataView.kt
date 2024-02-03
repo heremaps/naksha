@@ -8,11 +8,11 @@ class JvmDataView(val buffer: ByteArray, val startOffset: Int, val endOffset: In
     }
 
     override fun getStart(): Int {
-        return startOffset - JvmSession.baseOffset
+        return startOffset - JvmEnv.baseOffset
     }
 
     override fun getEnd(): Int {
-        return endOffset - JvmSession.baseOffset
+        return endOffset - JvmEnv.baseOffset
     }
 
     override fun getSize(): Int {
@@ -65,46 +65,46 @@ class JvmDataView(val buffer: ByteArray, val startOffset: Int, val endOffset: In
     }
 
     override fun getFloat32(pos: Int, littleEndian: Boolean): Float {
-        val value = JvmSession.unsafe.getFloat(buffer, offset(pos,4))
+        val value = JvmEnv.unsafe.getFloat(buffer, offset(pos,4))
         return ordered(value, littleEndian)
     }
 
     override fun setFloat32(pos: Int, value: Float, littleEndian: Boolean) {
-        JvmSession.unsafe.putFloat(buffer, offset(pos, 4), ordered(value, littleEndian))
+        JvmEnv.unsafe.putFloat(buffer, offset(pos, 4), ordered(value, littleEndian))
     }
 
     override fun getFloat64(pos: Int, littleEndian: Boolean): Double {
-        val value = JvmSession.unsafe.getDouble(buffer, offset(pos, 8))
+        val value = JvmEnv.unsafe.getDouble(buffer, offset(pos, 8))
         return ordered(value, littleEndian)
     }
 
     override fun setFloat64(pos: Int, value: Double, littleEndian: Boolean) {
-        JvmSession.unsafe.putDouble(buffer, offset(pos, 8), ordered(value, littleEndian))
+        JvmEnv.unsafe.putDouble(buffer, offset(pos, 8), ordered(value, littleEndian))
     }
 
     override fun getInt8(pos: Int): Byte {
-        return JvmSession.unsafe.getByte(buffer, offset(pos, 1))
+        return JvmEnv.unsafe.getByte(buffer, offset(pos, 1))
     }
 
     override fun setInt8(pos: Int, value: Byte) {
-        JvmSession.unsafe.putByte(buffer, offset(pos, 1), value)
+        JvmEnv.unsafe.putByte(buffer, offset(pos, 1), value)
     }
 
     override fun getInt16(pos: Int, littleEndian: Boolean): Short {
-        val value = JvmSession.unsafe.getShort(buffer, offset(pos, 2))
+        val value = JvmEnv.unsafe.getShort(buffer, offset(pos, 2))
         return ordered(value, littleEndian)
     }
 
     override fun setInt16(pos: Int, value: Short, littleEndian: Boolean) {
-        JvmSession.unsafe.putShort(buffer, offset(pos, 2), ordered(value, littleEndian))
+        JvmEnv.unsafe.putShort(buffer, offset(pos, 2), ordered(value, littleEndian))
     }
 
     override fun getInt32(pos: Int, littleEndian: Boolean): Int {
-        val value = JvmSession.unsafe.getInt(buffer, offset(pos, 4))
+        val value = JvmEnv.unsafe.getInt(buffer, offset(pos, 4))
         return ordered(value, littleEndian)
     }
 
     override fun setInt32(pos: Int, value: Int, littleEndian: Boolean) {
-        JvmSession.unsafe.putInt(buffer, offset(pos, 4), ordered(value, littleEndian))
+        JvmEnv.unsafe.putInt(buffer, offset(pos, 4), ordered(value, littleEndian))
     }
 }

@@ -1,13 +1,12 @@
-import com.here.naksha.lib.jbon.JvmSession
-import com.here.naksha.lib.plv8.Plv8Session
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.MethodOrderer
-import org.junit.jupiter.api.TestMethodOrder
+import com.here.naksha.lib.jbon.JbSession
+import com.here.naksha.lib.jbon.JvmEnv
+import com.here.naksha.lib.plv8.NakshaSession
+import com.here.naksha.lib.plv8.Plv8Env
+import org.junit.jupiter.api.*
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils
 import org.testcontainers.utility.DockerImageName
-import java.sql.Connection
 import java.sql.DriverManager
 
 /**
@@ -15,12 +14,13 @@ import java.sql.DriverManager
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 open class Plv8TestContainer {
+    val env = JbSession.env
+
     companion object {
         private val logger = LoggerFactory.getLogger(Plv8TestContainer::class.java)
         private lateinit var postgreSQLContainer: PostgreSQLContainer<*>
         private var existingUrl: String? = null
         lateinit var url: String
-        lateinit var session: JvmSession
 
         @JvmStatic
         @BeforeAll
@@ -47,17 +47,23 @@ open class Plv8TestContainer {
                         postgreSQLContainer.password)
             }
 
-            session = Plv8Session.register()
-            session.setConnection(DriverManager.getConnection(url))
-            session.installModules(mapOf("version" to "0"))
-            // Should be done by naksha_start_session!
-            // session.sql().execute("SELECT commonjs2_init()")
+            val env = Plv8Env()
+            JbSession.env = env
+            val conn = DriverManager.getConnection(url)
+            env.install(conn, 0)
+            env.startSession(
+                    conn,
+                    "plv8_test",
+                    env.randomString(),
+                    "plv8_test_app",
+                    "plv8_test_user"
+            )
         }
 
         @JvmStatic
         @AfterAll
         fun afterAll() {
-            session.setConnection(null)
+            Plv8Env.get().endSession()
             if (existingUrl == null) {
                 // Add a breakpoint here, when you want to query the database after the test.
                 val port = postgreSQLContainer.getMappedPort(5432)
