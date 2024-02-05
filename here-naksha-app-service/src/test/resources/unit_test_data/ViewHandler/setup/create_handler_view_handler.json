@@ -3,7 +3,7 @@
   "type": "EventHandler",
   "title": "Storage Handler for UniMap Moderation Dev Storage",
   "description": "Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage",
-  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "className": "com.here.naksha.lib.handlers.ViewHandler",
   "active": true,
   "extensionId": null,
   "properties": {
