@@ -99,12 +99,7 @@ paths:
           $ref: '#/components/responses/ErrorResponse513'
   '/hub/storages/{storageId}':
     parameters:
-      - name: storageId
-        in: path
-        description: ID of storage to delete
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/StorageId'
     get:
       tags:
         - Manage Storages
@@ -245,12 +240,7 @@ paths:
           $ref: '#/components/responses/ErrorResponse513'
   '/hub/handlers/{handlerId}':
     parameters:
-      - name: handlerId
-        in: path
-        description: ID of handler to update
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/HandlerId'
     get:
       tags:
         - Manage Event Handlers
@@ -991,6 +981,20 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    StorageId:
+      name: storageId
+      in: path
+      description: Unique Id of a Storage to fetch / update / delete
+      required: true
+      schema:
+        type: string
+    HandlerId:
+      name: handlerId
+      in: path
+      description: Unique Id of an Event Handler to fetch / update / delete
+      required: true
+      schema:
+        type: string
     SpaceId:
       name: spaceId
       in: path
