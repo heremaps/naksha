@@ -30,6 +30,7 @@ import com.here.naksha.lib.core.models.storage.Request;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,11 +71,29 @@ public class ViewHandler extends AbstractEventHandler {
 
     final IStorage storageImpl = nakshaHub().getStorageById(storageId);
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
-//Validate ? It need to be iview ?
+    // TODO Validate ? It need to be iview ?
 
+    List<String> spaceIds = getSpaceIds(properties);
 
-
+    if (spaceIds.isEmpty()) {
+      return new ErrorResult(XyzError.NOT_FOUND, "No spaceIds configured for handler.");
+    }
 
     return event.sendUpstream();
+  }
+
+  private List<String> getSpaceIds(EventHandlerProperties properties) {
+
+    Object spaceIds = properties.get("spaceIds");
+    if (spaceIds != null && spaceIds instanceof List<?>) {
+
+      try {
+        return (List<String>) spaceIds;
+      } catch (ClassCastException castException) {
+        logger.warn("spaceIds collection can't be casted to List of String");
+        throw castException;
+      }
+    }
+    return List.of();
   }
 }
