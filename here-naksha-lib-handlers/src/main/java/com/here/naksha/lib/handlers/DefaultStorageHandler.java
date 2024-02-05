@@ -20,6 +20,8 @@ package com.here.naksha.lib.handlers;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_COLLECTION_CREATION;
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_STORAGE_INITIALIZATION;
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
@@ -83,13 +85,13 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    Request<?> request = event.getRequest();
+    final Request<?> request = event.getRequest();
     if (request instanceof ReadFeatures
         || request instanceof WriteFeatures
         || request instanceof WriteCollections) {
-      return EventProcessingStrategy.PROCESS;
+      return PROCESS;
     }
-    return EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
+    return NOT_IMPLEMENTED;
   }
 
   @Override
@@ -108,7 +110,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     addStorageIdToStreamInfo(storageId, ctx);
 
     // Obtain IStorage implementation using NakshaHub
-    final IStorage storageImpl = nakshaHub.getStorageById(storageId);
+    final IStorage storageImpl = nakshaHub().getStorageById(storageId);
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
     XyzCollection collection = chooseCollection();

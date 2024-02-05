@@ -19,7 +19,7 @@
 package com.here.naksha.lib.handlers.val;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
 import static com.here.naksha.lib.handlers.util.MockUtil.parseJson;
 import static com.here.naksha.lib.handlers.util.MockUtil.parseJsonFile;
 import static com.here.naksha.lib.handlers.util.MockUtil.toJson;
@@ -70,11 +70,11 @@ public class MockValidationHandler extends AbstractEventHandler {
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    Request<?> request = event.getRequest();
+    final Request<?> request = event.getRequest();
     if (request instanceof ContextWriteFeatures<?, ?, ?, ?, ?>) {
       return PROCESS;
     }
-    return SUCCEED_WITHOUT_PROCESSING;
+    return SEND_UPSTREAM_WITHOUT_PROCESSING;
   }
 
   /**

@@ -82,7 +82,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     final ReadFeatures readActiveHandlersRequest =
         new ReadFeatures(EVENT_HANDLERS).withPropertyOp(activeHandlersPOp);
     try (final IReadSession readSession =
-        nakshaHub.getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
+        nakshaHub().getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
       final Result readResult = readSession.execute(readActiveHandlersRequest);
       if (!(readResult instanceof SuccessResult)) {
         return readResult;

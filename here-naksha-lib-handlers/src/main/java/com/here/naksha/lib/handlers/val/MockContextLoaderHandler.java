@@ -19,6 +19,7 @@
 package com.here.naksha.lib.handlers.val;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
 
 import com.here.naksha.lib.core.IEvent;
@@ -33,6 +34,7 @@ import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Request;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteFeatures;
@@ -62,11 +64,14 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    Request<?> request = event.getRequest();
+    final Request<?> request = event.getRequest();
     if (request instanceof WriteFeatures<?, ?, ?>) {
       return PROCESS;
     }
-    return SUCCEED_WITHOUT_PROCESSING;
+    if (request instanceof ReadFeatures) {
+      return SUCCEED_WITHOUT_PROCESSING;
+    }
+    return SEND_UPSTREAM_WITHOUT_PROCESSING;
   }
 
   /**

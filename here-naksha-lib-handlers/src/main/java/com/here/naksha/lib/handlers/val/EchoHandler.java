@@ -55,7 +55,7 @@ public class EchoHandler extends AbstractEventHandler {
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    Request<?> request = event.getRequest();
+    final Request<?> request = event.getRequest();
     if (request instanceof ContextWriteFeatures<?, ?, ?, ?, ?>) {
       return PROCESS;
     }

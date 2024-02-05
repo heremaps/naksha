@@ -68,7 +68,7 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    Request<?> request = event.getRequest();
+    final Request<?> request = event.getRequest();
     if (request instanceof ReadFeatures || request instanceof WriteXyzFeatures) {
       return PROCESS;
     }
@@ -77,7 +77,7 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   @Override
   public @NotNull Result process(@NotNull IEvent event) {
-    Request<?> request = event.getRequest();
+    final Request<?> request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
     if (request instanceof ReadFeatures readRequest) {
       transformPropertyOperation(readRequest);

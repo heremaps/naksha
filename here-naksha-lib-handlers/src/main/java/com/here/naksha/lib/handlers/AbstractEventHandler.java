@@ -39,6 +39,10 @@ public abstract class AbstractEventHandler implements IEventHandler {
     this.nakshaHub = hub;
   }
 
+  protected final @NotNull INaksha nakshaHub() {
+    return nakshaHub;
+  }
+
   protected abstract EventProcessingStrategy processingStrategyFor(IEvent event);
 
   protected abstract @NotNull Result process(@NotNull IEvent event);
@@ -49,6 +53,7 @@ public abstract class AbstractEventHandler implements IEventHandler {
       case PROCESS -> process(event);
       case SEND_UPSTREAM_WITHOUT_PROCESSING -> event.sendUpstream();
       case SUCCEED_WITHOUT_PROCESSING -> new SuccessResult();
+      case NOT_IMPLEMENTED -> notImplemented(event);
     };
   }
 
@@ -73,6 +78,7 @@ public abstract class AbstractEventHandler implements IEventHandler {
   public enum EventProcessingStrategy {
     PROCESS,
     SEND_UPSTREAM_WITHOUT_PROCESSING,
-    SUCCEED_WITHOUT_PROCESSING
+    SUCCEED_WITHOUT_PROCESSING,
+    NOT_IMPLEMENTED
   }
 }
