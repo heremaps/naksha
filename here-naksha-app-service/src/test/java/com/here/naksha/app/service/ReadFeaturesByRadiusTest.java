@@ -83,6 +83,22 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     TC 18 - Point1, radius=5m, Prop-1, Tag-3, select only p.speedlimit and @ns:com:here:xyz.tags, clip=false (should return feature 3 only)
     TC 19 - Point1, radius=5m, Prop-1, Tag-3, select invalid p.unknown_prop (should return feature 3 only, no properties in returned feature)
     TC 20 - Wrong delimiter in prop selection (should return 400)
+    TC 21 - clip=false, see below
+    TC 22 - clip=true, see below
+
+    TC 21 and 22 use the following geometry to test clipping
+    select
+        t.geom AS geom, -- used as feature geometry
+        t.circle AS circle,
+        st_intersection(st_makevalid(t.geom, 'method=structure'), t.circle) AS clipped_geo_circle, -- expected resultant clipped geometry against radius
+        st_asgeojson(st_intersection(st_makevalid(t.geom, 'method=structure'), t.circle)) AS clipped_geo_circle_as_json,
+        st_asgeojson(t.geom) AS geom_json
+    FROM
+        (SELECT
+        st_geomfromgeojson('{"type":"LineString","coordinates":[[5.630866303,6.303472939,0],[5.63092979,6.301495703,0],[5.631035602,6.299623631,0],[5.631480011,6.296447405,0]]}') AS geom,
+        st_buffer(st_geomfromgeojson('{"type":"Point","coordinates":[5.631480011,6.296447405,0]}')::geography, 500.0) AS circle
+        ) AS t
+    ;
   */
 
   @BeforeAll
@@ -271,6 +287,26 @@ class ReadFeaturesByRadiusTest extends ApiTest {
                     ),
                     "ReadFeatures/ByRadius/TC20_withWrongDelimiterInPropSelection/feature_response_part.json",
                     400
+            ),
+            standardTestSpec(
+                    "tc21_withClipFalse",
+                    List.of(
+                            "clip=false",
+                            "lon=5.631480011&lat=6.296447405",
+                            "radius=500"
+                    ),
+                    "ReadFeatures/ByRadius/TC21_withClipFalse/response.json",
+                    200
+//            ),
+//            standardTestSpec(
+//                    "tc22_withClipTrue",
+//                    List.of(
+//                            "clip=true",
+//                            "lon=5.631480011&lat=6.296447405",
+//                            "radius=500"
+//                    ),
+//                    "ReadFeatures/ByRadius/TC22_withClipTrue/response.json",
+//                    200
             )
     );
 
@@ -376,4 +412,25 @@ class ReadFeaturesByRadiusTest extends ApiTest {
               .hasFeatureIdsAmongst(List.of("my-custom-id-1","my-custom-id-2","my-custom-id-3"));
   }
 
+//    @Test
+//    void tc22_withClipTrue() throws Exception {
+//        // Given: Request parameters
+//        final List<String> queryParamList = List.of(
+//                "lon=5.631480011&lat=6.296447405",
+//                "radius=500",
+//                "clip=true"
+//        );
+//        final String urlQueryParams = String.join("&", queryParamList);
+//        final String streamId = UUID.randomUUID().toString();
+//
+//        // When: Get Features By Radius request is submitted to NakshaHub
+//        final HttpResponse<String> response = nakshaClient
+//                .get("hub/spaces/" + SPACE_ID + "/spatial?" + urlQueryParams, streamId);
+//
+//        // Then: Perform custom assertions
+//        assertThat(response)
+//                .hasStatus(200)
+//                .hasStreamIdHeader(streamId)
+//                .hasJsonBody("ReadFeatures/ByRadius/TC22_withClipTrue/response.json");
+//    }
 }

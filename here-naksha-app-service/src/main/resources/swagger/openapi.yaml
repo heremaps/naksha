@@ -1179,7 +1179,7 @@ components:
       name: radius
       in: query
       description: >-
-        Radius in meters which defines the diameter of the search request.
+        Radius in meters of the search request.
       schema:
         type: integer
     RefFeatureId:
