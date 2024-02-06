@@ -80,7 +80,9 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     TC 15 - Invalid Lat (should return 400)
     TC 16 - Invalid Lon (should return 400)
     TC 17 - RefSpace, RefFeature3 (missing geometry) (should return 404)
-    TC 18 - Point1, radius=5m, Prop-1, Tag-3, select only p.speedlimit and @ns:com:here:xyz.tags (should return feature 3 only)
+    TC 18 - Point1, radius=5m, Prop-1, Tag-3, select only p.speedlimit and @ns:com:here:xyz.tags, clip=false (should return feature 3 only)
+    TC 19 - Point1, radius=5m, Prop-1, Tag-3, select invalid p.unknown_prop (should return feature 3 only, no properties in returned feature)
+    TC 20 - Wrong delimiter in prop selection (should return 400)
   */
 
   @BeforeAll
@@ -258,18 +260,17 @@ class ReadFeaturesByRadiusTest extends ApiTest {
                     404
             ),
             standardTestSpec(
-                    "tc18_withLatLonRadiusTagPropSelection",
+                    "tc20_withWrongDelimiterInPropSelection",
                     List.of(
                             "lon=8.6123&lat=50.1234",
                             "radius=5",
                             "tags=tag-3",
                             "p.speedLimit='60'",
-                            "selection=p.speedLimit,%s".formatted(urlEncoded("p.@ns:com:here:xyz.tags")),
-                            "clip=false"
+                            "selection=p.speedLimit+p.length"
 
                     ),
-                    "ReadFeatures/ByRadius/TC18_withLatLonRadiusTagPropSelection/feature_response_part.json",
-                    200
+                    "ReadFeatures/ByRadius/TC20_withWrongDelimiterInPropSelection/feature_response_part.json",
+                    400
             )
     );
 
@@ -289,6 +290,19 @@ class ReadFeaturesByRadiusTest extends ApiTest {
 
                         ),
                         "ReadFeatures/ByRadius/TC18_withLatLonRadiusTagPropSelection/feature_response_part.json",
+                        200
+                ),
+                standardTestSpec(
+                        "tc19_withInvalidSelectionProp",
+                        List.of(
+                                "lon=8.6123&lat=50.1234",
+                                "radius=5",
+                                "tags=tag-3",
+                                "p.speedLimit='60'",
+                                "selection=p.unknown_prop"
+
+                        ),
+                        "ReadFeatures/ByRadius/TC19_withInvalidSelectionProp/feature_response_part.json",
                         200
                 )
         );
