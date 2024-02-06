@@ -102,7 +102,8 @@ val awaitility = "org.awaitility:awaitility:4.2.0"
 val junit_jupiter = "org.junit.jupiter:junit-jupiter:5.9.2"
 val junit_params = "org.junit.jupiter:junit-jupiter-params:5.9.2"
 val mockito = "org.mockito:mockito-core:5.8.0"
-val test_containers = "org.testcontainers:testcontainers:1.19.3"
+val test_containers = "org.testcontainers:testcontainers:1.19.4"
+val test_containers_postgres = "org.testcontainers:postgresql:1.19.4"
 
 val flipkart_zjsonpatch = "com.flipkart.zjsonpatch:zjsonpatch:0.4.13"
 val json_assert = "org.skyscreamer:jsonassert:1.5.1"
@@ -343,6 +344,7 @@ project(":here-naksha-lib-psql") {
 
         testImplementation(mockito)
         testImplementation(spatial4j)
+        testImplementation(test_containers_postgres)
     }
     setOverallCoverage(0.0) // only increasing allowed!
 }

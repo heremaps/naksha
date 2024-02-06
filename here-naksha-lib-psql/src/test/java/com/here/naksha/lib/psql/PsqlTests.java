@@ -50,6 +50,8 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -64,12 +66,15 @@ abstract class PsqlTests {
 
   static final Logger log = LoggerFactory.getLogger(PsqlTests.class);
 
+  static PostgreSQLContainer<?> postgreSQLContainer;
+
   /**
    * The test database, if any is available.
    */
   @SuppressWarnings("unused")
-  static final @NotNull PsqlStorageConfig config =
-      configFromFileOrEnv("test_psql_db.url", "NAKSHA_TEST_PSQL_DB_URL", "naksha_psql_schema");
+  static PsqlStorageConfig config;
+
+  static String existingUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL");
 
   /**
    * Prevents that the test drops the schema at the start.
@@ -142,6 +147,26 @@ abstract class PsqlTests {
     NakshaContext.currentContext().setAppId("naksha-lib-psql-unit-tests");
     nakshaContext = new NakshaContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
     fg = new PsqlFeatureGenerator();
+    final String url;
+    if (existingUrl != null) {
+      url = existingUrl;
+    } else {
+      final DockerImageName image = DockerImageName.parse("greenoag/postgres-plv8-postgis:15.2-3.1.5-3.3")
+                      .asCompatibleSubstituteFor("postgres");
+      postgreSQLContainer =
+              new PostgreSQLContainer<>(image)
+                      .withDatabaseName("unimap")
+                      .withUsername("postgres")
+                      .withPassword("postgres");
+
+      postgreSQLContainer.start();
+      url = String.format(
+              "%s?&schema=naksha_test&id=com.here.naksha&app=PsqlTests&user=%s&password=%s",
+              postgreSQLContainer.getJdbcUrl(),
+              postgreSQLContainer.getUsername(),
+              postgreSQLContainer.getPassword());
+    }
+    config = new PsqlStorageConfig(url);
   }
 
   /**
@@ -169,7 +194,7 @@ abstract class PsqlTests {
   @Order(10)
   @EnabledIf("runTest")
   void createStorage() {
-    storage = new PsqlStorage(config);
+    storage = new PsqlStorage(config).withParams(getParams());
     schema = storage.getSchema();
     if (!schema.equals(schema())) {
       storage.setSchema(schema());
@@ -209,7 +234,7 @@ abstract class PsqlTests {
   @EnabledIf("runTest")
   void initStorage() {
     assertNotNull(storage);
-    storage.initStorage(getParams());
+    storage.initStorage();
   }
 
   @Test

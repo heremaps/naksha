@@ -432,6 +432,15 @@ public final class PsqlStorage implements IStorage, DataSource {
     return this;
   }
 
+  public void setParams(@NotNull Params params) {
+    storage().setParams(params);
+  }
+
+  public @NotNull PsqlStorage withParams(@NotNull Params params) {
+    setParams(params);
+    return this;
+  }
+
   /**
    * Returns the storage identifier.
    *
@@ -453,7 +462,7 @@ public final class PsqlStorage implements IStorage, DataSource {
   public void stopMaintainer() {}
 
   /**
-   * The Parameters map that is expected as parameter to {@link #initStorage(Map)}.
+   * The Parameters map that is expected to modify underlying PostgreSQL environment.
    */
   public static class Params extends HashMap<String, Object> {
 
@@ -545,27 +554,15 @@ public final class PsqlStorage implements IStorage, DataSource {
     }
   }
 
-  @Override
-  public void initStorage() {
-    initStorage(null);
-  }
-
   /**
    * Ensure that the administration tables exists, and the Naksha extension script installed in the latest version.
    *
-   * @param params Parameters special to PostgresQL.
    * @throws SQLException If any error occurred while accessing the database.
    * @throws IOException  If reading the SQL extensions from the resources fail.
    */
   @Override
-  public void initStorage(@Nullable Map<String, Object> params) {
-    final Params p;
-    if (params instanceof Params) {
-      p = (Params) params;
-    } else {
-      p = new Params(params);
-    }
-    storage().initStorage(p, getIoHelp());
+  public void initStorage() {
+    storage().initStorage(getIoHelp());
   }
 
   private @Nullable IoHelp ioHelp;
