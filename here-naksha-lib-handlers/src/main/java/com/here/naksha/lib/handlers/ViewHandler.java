@@ -31,6 +31,10 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.util.List;
+
+import com.here.naksha.lib.view.IView;
+import com.here.naksha.lib.view.ViewLayer;
+import com.here.naksha.lib.view.ViewLayerCollection;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,12 +75,21 @@ public class ViewHandler extends AbstractEventHandler {
 
     final IStorage storageImpl = nakshaHub().getStorageById(storageId);
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
-    // TODO Validate ? It need to be iview ?
 
-    List<String> spaceIds = getSpaceIds(properties);
+    if (storageImpl instanceof IView iView) {
 
-    if (spaceIds.isEmpty()) {
-      return new ErrorResult(XyzError.NOT_FOUND, "No spaceIds configured for handler.");
+      List<String> spaceIds = getSpaceIds(properties);
+      if (spaceIds.isEmpty()) {
+        return new ErrorResult(XyzError.NOT_FOUND, "No spaceIds configured for handler.");
+      }
+
+      iView.setViewLayerCollection(prepareViewLayerCollection(nakshaHub().getSpaceStorage(), spaceIds));
+
+      //process
+
+    } else {
+      logger.info("Storage is not and instance of IView. Processing event to next handler.");
+      return event.sendUpstream();
     }
 
     return event.sendUpstream();
@@ -95,5 +108,15 @@ public class ViewHandler extends AbstractEventHandler {
       }
     }
     return List.of();
+  }
+
+  private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> storageIds) {
+
+    List<ViewLayer> viewLayerList = storageIds.
+            stream()
+            .map(storageId -> new ViewLayer(nhStorage, storageId))
+            .toList();
+
+    return new ViewLayerCollection("", viewLayerList);
   }
 }
