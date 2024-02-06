@@ -37,6 +37,7 @@ import java.util.stream.Stream;
 import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 class ReadFeaturesByRadiusTest extends ApiTest {
@@ -79,6 +80,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     TC 15 - Invalid Lat (should return 400)
     TC 16 - Invalid Lon (should return 400)
     TC 17 - RefSpace, RefFeature3 (missing geometry) (should return 404)
+    TC 18 - Point1, radius=5m, Prop-1, Tag-3, select only p.speedlimit and @ns:com:here:xyz.tags (should return feature 3 only)
   */
 
   @BeforeAll
@@ -254,17 +256,49 @@ class ReadFeaturesByRadiusTest extends ApiTest {
                     ),
                     "ReadFeatures/ByRadius/TC17_withRefFeatureMissingGeometry/feature_response_part.json",
                     404
+            ),
+            standardTestSpec(
+                    "tc18_withLatLonRadiusTagPropSelection",
+                    List.of(
+                            "lon=8.6123&lat=50.1234",
+                            "radius=5",
+                            "tags=tag-3",
+                            "p.speedLimit='60'",
+                            "selection=p.speedLimit,%s".formatted(urlEncoded("p.@ns:com:here:xyz.tags")),
+                            "clip=false"
+
+                    ),
+                    "ReadFeatures/ByRadius/TC18_withLatLonRadiusTagPropSelection/feature_response_part.json",
+                    200
             )
     );
 
   }
 
-  @ParameterizedTest
-  @MethodSource("standardTestParams")
-  void commonTestExecution(
+    private static Stream<Arguments> strictJsonTestParams() {
+        return Stream.of(
+                standardTestSpec(
+                        "tc18_withLatLonRadiusTagPropSelection",
+                        List.of(
+                                "lon=8.6123&lat=50.1234",
+                                "radius=5",
+                                "tags=tag-3",
+                                "p.speedLimit='60'",
+                                "selection=p.speedLimit,%s".formatted(urlEncoded("p.@ns:com:here:xyz.tags")),
+                                "clip=false"
+
+                        ),
+                        "ReadFeatures/ByRadius/TC18_withLatLonRadiusTagPropSelection/feature_response_part.json",
+                        200
+                )
+        );
+  }
+
+  void baseTestExecution(
           final @Nullable List<String> queryParamList,
           final @NotNull String fPathOfExpectedResBody,
-          final int expectedResCode) throws Exception {
+          final int expectedResCode,
+          boolean strictChecking) throws Exception {
     // Given: Request parameters
     String urlQueryParams = "";
     if (queryParamList!=null && !queryParamList.isEmpty()) {
@@ -273,7 +307,8 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     final String streamId = UUID.randomUUID().toString();
 
     // Given: Expected response body
-    final String expectedBodyPart = loadFileOrFail(fPathOfExpectedResBody);
+      final String loadedString = loadFileOrFail(fPathOfExpectedResBody);
+    final String expectedBodyPart = (strictChecking) ? loadedString.replaceAll("\\{\\{streamId}}",streamId) : loadedString;
 
     // When: Get Features By Radius request is submitted to NakshaHub
     final HttpResponse<String> response = nakshaClient
@@ -283,8 +318,26 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     assertThat(response)
             .hasStatus(expectedResCode)
             .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart, "Response body doesn't match");
+            .hasJsonBody(expectedBodyPart, "Response body doesn't match",strictChecking);
   }
+
+    @ParameterizedTest
+    @MethodSource("strictJsonTestParams")
+    void strictResponseTestExecution(
+            final @Nullable List<String> queryParamList,
+            final @NotNull String fPathOfExpectedResBody,
+            final int expectedResCode) throws Exception {
+      baseTestExecution(queryParamList,fPathOfExpectedResBody,expectedResCode,true);
+    }
+
+    @ParameterizedTest
+    @MethodSource("standardTestParams")
+    void commonTestExecution(
+            final @Nullable List<String> queryParamList,
+            final @NotNull String fPathOfExpectedResBody,
+            final int expectedResCode) throws Exception {
+        baseTestExecution(queryParamList,fPathOfExpectedResBody,expectedResCode,false);
+    }
 
   @Test
   void tc06_testGetByRadiusWithLatLonRadiusLimit() throws Exception {
