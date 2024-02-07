@@ -18,15 +18,6 @@
  */
 package com.here.naksha.lib.psql;
 
-import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
@@ -56,6 +47,8 @@ import org.testcontainers.utility.DockerImageName;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Base class for all PostgresQL tests that require some test database.
