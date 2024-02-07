@@ -18,17 +18,29 @@
  */
 package com.here.naksha.lib.handlers;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.models.storage.POp;
+import com.here.naksha.lib.core.models.storage.POpType;
+import com.here.naksha.lib.core.models.storage.PRef;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import com.here.naksha.lib.core.models.storage.Request;
+import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +54,7 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private @NotNull EventHandler eventHandler;
   private @NotNull EventTarget<?> eventTarget;
-  private @NotNull EventHandlerProperties properties;
+  private @NotNull XyzProperties properties;
 
   public SourceIdHandler(
       final @NotNull EventHandler eventHandler,
@@ -51,12 +63,20 @@ public class SourceIdHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), EventHandlerProperties.class);
+    this.properties = JsonSerializable.convert(eventHandler.getProperties(), XyzProperties.class);
   }
 
   @Override
-  public @NotNull Result processEvent(@NotNull IEvent event) {
+  protected EventProcessingStrategy processingStrategyFor(IEvent event) {
+    final Request<?> request = event.getRequest();
+    if (request instanceof ReadFeatures || request instanceof WriteXyzFeatures) {
+      return PROCESS;
+    }
+    return SEND_UPSTREAM_WITHOUT_PROCESSING;
+  }
 
+  @Override
+  public @NotNull Result process(@NotNull IEvent event) {
     final Request<?> request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
     if (request instanceof ReadFeatures readRequest) {

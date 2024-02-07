@@ -31,29 +31,40 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public final class ApiParams {
-  public static String ACCESS_TOKEN = "access_token";
-  public static String STORAGE_ID = "storageId";
-  public static String SPACE_ID = "spaceId";
-  public static String PREFIX_ID = "prefixId";
-  public static String FEATURE_ID = "featureId";
-  public static String ADD_TAGS = "addTags";
-  public static String REMOVE_TAGS = "removeTags";
-  public static String TAGS = "tags";
-  public static String FEATURE_IDS = "id";
-  public static String WEST = "west";
-  public static String NORTH = "north";
-  public static String EAST = "east";
-  public static String SOUTH = "south";
-  public static String LIMIT = "limit";
-  public static String TILE_TYPE = "type";
-  public static String TILE_ID = "tileId";
-  public static String HANDLE = "handle";
-  public static String MARGIN = "margin";
+  public static final String ACCESS_TOKEN = "access_token";
+  public static final String STORAGE_ID = "storageId";
+  public static final String SPACE_ID = "spaceId";
+  public static final String PREFIX_ID = "prefixId";
+  public static final String FEATURE_ID = "featureId";
+  public static final String ADD_TAGS = "addTags";
+  public static final String REMOVE_TAGS = "removeTags";
+  public static final String TAGS = "tags";
+  public static final String FEATURE_IDS = "id";
+  public static final String WEST = "west";
+  public static final String NORTH = "north";
+  public static final String EAST = "east";
+  public static final String SOUTH = "south";
+  public static final String LIMIT = "limit";
+  public static final String TILE_TYPE = "type";
+  public static final String TILE_ID = "tileId";
+  public static final String HANDLE = "handle";
+  public static final String MARGIN = "margin";
+  public static final String LAT = "lat";
+  public static final String LON = "lon";
+  public static final String RADIUS = "radius";
+  public static final String REF_SPACE_ID = "refSpaceId";
+  public static final String REF_FEATURE_ID = "refFeatureId";
+  public static final String PROP_SELECTION = "selection";
+  public static final String CLIP_GEO = "clip";
 
-  public static long DEF_FEATURE_LIMIT = 30_000;
-  public static long DEF_ADMIN_FEATURE_LIMIT = 1_000;
+  public static final long DEF_FEATURE_LIMIT = 30_000;
+  public static final long DEF_ADMIN_FEATURE_LIMIT = 1_000;
+  // Note - using specific NULL value is not ideal, but practically it makes code less messy at few places
+  // and use of it doesn't cause any side effect
+  public static final double NULL_COORDINATE = 9999;
 
-  public static String TILE_TYPE_QUADKEY = "quadkey";
+  public static final String TILE_TYPE_QUADKEY = "quadkey";
+  public static final String HANDLER_ID = "handlerId";
 
   public static @NotNull String extractMandatoryPathParam(
       final @NotNull RoutingContext routingContext, final @NotNull String param) {
@@ -64,20 +75,57 @@ public final class ApiParams {
     return value;
   }
 
+  public static @Nullable QueryParameter extractQueryParamForKey(
+      final @Nullable QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
+    if (queryParams == null) {
+      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Query parameters missing");
+      else return null;
+    }
+    final QueryParameter queryParam = queryParams.get(key);
+    if (queryParam == null || queryParam.values().isEmpty()) {
+      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
+      else return null;
+    }
+    return queryParam;
+  }
+
+  public static boolean extractQueryParamAsBoolean(
+      final @Nullable QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
+    return extractQueryParamAsBoolean(queryParams, key, isMandatory, false);
+  }
+
+  public static boolean extractQueryParamAsBoolean(
+      final @Nullable QueryParameterList queryParams,
+      final @NotNull String key,
+      final boolean isMandatory,
+      final boolean defVal) {
+    final QueryParameter queryParam = extractQueryParamForKey(queryParams, key, isMandatory);
+    if (queryParam == null && !isMandatory) {
+      return defVal;
+    }
+    final ValueList values = queryParam.values();
+    if (values.isBoolean(0)) {
+      return values.getBoolean(0, defVal);
+    } else if (values.isString(0)) {
+      return Boolean.parseBoolean(values.getString(0));
+    }
+    throw new XyzErrorException(
+        XyzError.ILLEGAL_ARGUMENT, "Invalid value " + values.get(0) + " for parameter " + key);
+  }
+
   public static double extractQueryParamAsDouble(
-      final @NotNull QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
+      final @Nullable QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
     return extractQueryParamAsDouble(queryParams, key, isMandatory, 0.0);
   }
 
   public static double extractQueryParamAsDouble(
-      final @NotNull QueryParameterList queryParams,
+      final @Nullable QueryParameterList queryParams,
       final @NotNull String key,
       final boolean isMandatory,
       final double defVal) {
-    final QueryParameter queryParam = queryParams.get(key);
-    if (queryParam == null || queryParam.values().isEmpty()) {
-      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
-      else return defVal;
+    final QueryParameter queryParam = extractQueryParamForKey(queryParams, key, isMandatory);
+    if (queryParam == null && !isMandatory) {
+      return defVal;
     }
     final ValueList values = queryParam.values();
     if (values.isDouble(0)) {
@@ -100,14 +148,9 @@ public final class ApiParams {
       final @NotNull String key,
       final boolean isMandatory,
       final long defVal) {
-    if (queryParams == null) {
-      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Query parameters missing");
-      else return defVal;
-    }
-    final QueryParameter queryParam = queryParams.get(key);
-    if (queryParam == null || queryParam.values().isEmpty()) {
-      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
-      else return defVal;
+    final QueryParameter queryParam = extractQueryParamForKey(queryParams, key, isMandatory);
+    if (queryParam == null && !isMandatory) {
+      return defVal;
     }
     final ValueList values = queryParam.values();
     if (!values.isLong(0)) {
@@ -115,6 +158,14 @@ public final class ApiParams {
           XyzError.ILLEGAL_ARGUMENT, "Invalid value " + values.getString(0) + " for parameter " + key);
     }
     return values.getLong(0, defVal);
+  }
+
+  public static void validateParamRange(
+      final @NotNull String param, final long value, final long min, final long max) {
+    if (value < min || value > max) {
+      throw new XyzErrorException(
+          XyzError.ILLEGAL_ARGUMENT, "Invalid value " + value + " for parameter " + param);
+    }
   }
 
   public static void validateParamRange(
@@ -165,5 +216,18 @@ public final class ApiParams {
       }
     }
     return handle;
+  }
+
+  public static void validateLatLon(final double lat, final double lon) {
+    if (lat != NULL_COORDINATE) validateParamRange(LAT, lat, -90, 90);
+    if (lon != NULL_COORDINATE) validateParamRange(LON, lon, -180, 180);
+    // Validate that both lat and lon provided or none of them
+    if (lat == NULL_COORDINATE && lon != NULL_COORDINATE) {
+      // only lon provided, lan is not
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing latitude co-ordinate");
+    } else if (lat != NULL_COORDINATE && lon == NULL_COORDINATE) {
+      // only lan provided, lon is not
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing longitude co-ordinate");
+    }
   }
 }

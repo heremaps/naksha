@@ -26,6 +26,7 @@ import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFro
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
 import static java.util.Collections.emptyList;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.models.IterateHandle;
@@ -33,18 +34,25 @@ import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.lambdas.P1;
+import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
+import com.here.naksha.lib.core.util.PropertyPathUtil;
+import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.core.util.json.JsonSerializable;
+import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
 import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.util.GeometryFixer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,8 +98,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzFeatureResponse(
-      final @NotNull Result rdResult, final @NotNull Class<R> type, @Nullable P1<XyzFeature> postProcessing) {
-    return transformResultToXyzFeatureResponse(rdResult, type, NOT_FOUND_ON_NO_ELEMENTS, postProcessing);
+      final @NotNull Result rdResult, final @NotNull Class<R> type, @Nullable F1<R, R> preResponseProcessing) {
+    return transformResultToXyzFeatureResponse(rdResult, type, NOT_FOUND_ON_NO_ELEMENTS, preResponseProcessing);
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzFeatureResponse(
@@ -100,8 +108,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzFeatureResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable P1<XyzFeature> postProcessing) {
-    return transformResultToXyzFeatureResponse(wrResult, type, FAIL_ON_NO_ELEMENTS, postProcessing);
+      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable F1<R, R> preResponseProcessing) {
+    return transformResultToXyzFeatureResponse(wrResult, type, FAIL_ON_NO_ELEMENTS, preResponseProcessing);
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformDeleteResultToXyzFeatureResponse(
@@ -110,7 +118,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformDeleteResultToXyzFeatureResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable P1<XyzFeature> postProcessing) {
+      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable F1<R, R> postProcessing) {
     return transformResultToXyzFeatureResponse(wrResult, type, NOT_FOUND_ON_NO_ELEMENTS, postProcessing);
   }
 
@@ -122,23 +130,26 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final @Nullable Result result,
       final @NotNull Class<R> type,
       final @NotNull NoElementsStrategy noElementsStrategy,
-      final @Nullable P1<XyzFeature> postProcessing) {
+      final @Nullable F1<R, R> preResponseProcessing) {
     final XyzResponse validatedErrorResponse = validateErrorResult(result);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
     } else {
       try {
-        R feature = readFeatureFromResult(result, type);
-        if (feature == null) {
+        final R feature = readFeatureFromResult(result, type);
+        R processedFeature = feature;
+        if (feature != null && preResponseProcessing != null) {
+          processedFeature = preResponseProcessing.call(feature);
+        }
+        if (processedFeature == null) {
           return verticle.sendErrorResponse(
               routingContext,
               XyzError.NOT_FOUND,
               "No feature found for id "
                   + result.getXyzFeatureCursor().getId());
         }
-        if (postProcessing != null) postProcessing.call(feature);
         final List<R> featureList = new ArrayList<>();
-        featureList.add(feature);
+        featureList.add(processedFeature);
         final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(featureList);
         return verticle.sendXyzResponse(routingContext, HttpResponseType.FEATURE, featureResponse);
       } catch (NoCursor | NoSuchElementException emptyException) {
@@ -150,9 +161,9 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
       final @Nullable Result rdResult,
       final @NotNull Class<R> type,
-      final @Nullable P1<XyzFeature> postProcessing) {
+      final @Nullable F1<R, R> preResponseProcessing) {
     return transformReadResultToXyzCollectionResponse(
-        rdResult, type, 0, DEF_ADMIN_FEATURE_LIMIT, null, postProcessing);
+        rdResult, type, 0, DEF_ADMIN_FEATURE_LIMIT, null, preResponseProcessing);
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
@@ -180,24 +191,31 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final long offset,
       final long maxLimit,
       final @Nullable IterateHandle handle,
-      final @Nullable P1<XyzFeature> postProcessing) {
+      final @Nullable F1<R, R> preResponseProcessing) {
     final XyzResponse validatedErrorResponse = validateErrorResultEmptyCollection(rdResult);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
     } else {
       try {
         final List<R> features = readFeaturesFromResult(rdResult, type, offset, maxLimit);
-        if (postProcessing != null) {
-          for (XyzFeature feature : features) {
-            postProcessing.call(feature);
+        List<R> processedFeatures = features;
+        if (preResponseProcessing != null) {
+          processedFeatures = new ArrayList<>();
+          for (R feature : features) {
+            final R processedFeature = preResponseProcessing.call(feature);
+            if (processedFeature != null) {
+              processedFeatures.add(processedFeature);
+            }
           }
         }
         // Populate handle (if provided), with the values ready for next iteration
-        final String handleStr = getIterateHandleAsString(features.size(), offset, maxLimit, handle);
+        final String handleStr = getIterateHandleAsString(processedFeatures.size(), offset, maxLimit, handle);
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
-            new XyzFeatureCollection().withFeatures(features).withNextPageToken(handleStr));
+            new XyzFeatureCollection()
+                .withFeatures(processedFeatures)
+                .withNextPageToken(handleStr));
       } catch (NoCursor | NoSuchElementException emptyException) {
         logger.info("No data found in ResultCursor, returning empty collection");
         return verticle.sendXyzResponse(
@@ -292,5 +310,46 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return verticle.sendErrorResponse(routingContext, er.reason, er.message);
     }
     return null;
+  }
+
+  protected <F> @NotNull F parseRequestBodyAs(final Class<F> type) throws JsonProcessingException {
+    try (final Json json = Json.get()) {
+      final String bodyJson = routingContext.body().asString();
+      return json.reader(ViewDeserialize.User.class).forType(type).readValue(bodyJson);
+    }
+  }
+
+  protected <F extends XyzFeature> @Nullable F1<F, F> standardReadFeaturesPreResponseProcessing(
+      final @Nullable Set<String> propPaths, final boolean clip, final Geometry clipGeo) {
+    if (propPaths == null && !clip) return null;
+    return f -> {
+      F newF = f;
+      // Apply prop selection if enabled
+      if (propPaths != null) newF = applyPropertySelection(newF, propPaths);
+      // Apply geometry clipping if enabled
+      if (clip) applyGeometryClipping(newF, clipGeo);
+      return newF;
+    };
+  }
+
+  @SuppressWarnings("unchecked")
+  private <F extends XyzFeature> @NotNull F applyPropertySelection(
+      final @NotNull F f, final @NotNull Set<String> propPaths) {
+    final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(f, propPaths);
+    return (F) JsonSerializable.fromMap(tgtMap, f.getClass());
+  }
+
+  private <F extends XyzFeature> void applyGeometryClipping(final @NotNull F f, final Geometry clipGeo) {
+    // clip Feature geometry (if present) to a given clipGeo geometry
+    final XyzGeometry xyzGeo = f.getGeometry();
+    if (xyzGeo != null) {
+      // NOTE - in JTS when we say:
+      //    GeometryFixer.fix(geom).intersection(bbox)
+      // it is the best available way of clipping geometry, equivalent to PostGIS approach of:
+      //    ST_Intersection(ST_MakeValid(geo, 'method=structure'), bbox)
+      final Geometry clippedGeo =
+          GeometryFixer.fix(xyzGeo.getJTSGeometry()).intersection(clipGeo);
+      f.setGeometry(XyzGeometry.convertJTSGeometry(clippedGeo));
+    }
   }
 }

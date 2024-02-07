@@ -77,14 +77,19 @@ public class ResponseAssertions {
   }
 
   public ResponseAssertions hasJsonBody(String expectedJsonBody) {
-    return hasJsonBody(expectedJsonBody, "Actual and expected json body don't match");
+    return hasJsonBody(expectedJsonBody, "Actual and expected json body don't match", false);
   }
 
   public ResponseAssertions hasJsonBody(String expectedJsonBody, String failureMessage) {
+    return hasJsonBody(expectedJsonBody, failureMessage, false);
+  }
+
+  public ResponseAssertions hasJsonBody(String expectedJsonBody, String failureMessage, boolean strictChecking) {
     String actualBody = subject.body();
     Assertions.assertNotNull(actualBody, "Response body is null");
     try {
-      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody, JSONCompareMode.LENIENT);
+      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody,
+              (strictChecking) ? JSONCompareMode.STRICT : JSONCompareMode.LENIENT);
     } catch (JSONException e) {
       Assertions.fail("Unable to parse response body", e);
     }
@@ -196,6 +201,20 @@ public class ResponseAssertions {
   public ResponseAssertions hasNoNextPageToken() {
     if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     assertNull(collectionResponse.getNextPageToken(), "No nextPageToken was expected");
+    return this;
+  }
+
+  public ResponseAssertions hasFeatureCount(int count) {
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    assertEquals(count, collectionResponse.getFeatures().size(), "Feature count in the response doesn't match");
+    return this;
+  }
+
+  public ResponseAssertions hasFeatureIdsAmongst(final @NotNull List<String> fIds) {
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    for (final XyzFeature feature : collectionResponse.getFeatures()) {
+      assertTrue(fIds.contains(feature.getId()), "No matching feature found in response with given Id : "+ feature.getId());
+    }
     return this;
   }
 

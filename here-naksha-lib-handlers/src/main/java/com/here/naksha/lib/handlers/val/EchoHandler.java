@@ -18,11 +18,14 @@
  */
 package com.here.naksha.lib.handlers.val;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
@@ -38,7 +41,7 @@ public class EchoHandler extends AbstractEventHandler {
   private static final Logger logger = LoggerFactory.getLogger(EchoHandler.class);
   protected @NotNull EventHandler eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
-  protected @NotNull EventHandlerProperties properties;
+  protected @NotNull XyzProperties properties;
 
   public EchoHandler(
       final @NotNull EventHandler eventHandler,
@@ -47,7 +50,16 @@ public class EchoHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), EventHandlerProperties.class);
+    this.properties = JsonSerializable.convert(eventHandler.getProperties(), XyzProperties.class);
+  }
+
+  @Override
+  protected EventProcessingStrategy processingStrategyFor(IEvent event) {
+    final Request<?> request = event.getRequest();
+    if (request instanceof ContextWriteFeatures<?, ?, ?, ?, ?>) {
+      return PROCESS;
+    }
+    return SUCCEED_WITHOUT_PROCESSING;
   }
 
   /**
@@ -57,7 +69,7 @@ public class EchoHandler extends AbstractEventHandler {
    * @return the result.
    */
   @Override
-  public @NotNull Result processEvent(@NotNull IEvent event) {
+  public @NotNull Result process(@NotNull IEvent event) {
     final Request<?> request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());

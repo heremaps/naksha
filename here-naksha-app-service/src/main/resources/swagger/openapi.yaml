@@ -13,7 +13,7 @@ servers:
 info:
   title: "Naskha Hub-API"
   description: "Naksha Hub-API is a REST API to provide simple access to geo data."
-  version: "2.0.11"
+  version: "2.0.12"
 
 security:
   - AccessToken: [ ]
@@ -98,6 +98,8 @@ paths:
         '513':
           $ref: '#/components/responses/ErrorResponse513'
   '/hub/storages/{storageId}':
+    parameters:
+      - $ref: '#/components/parameters/StorageId'
     get:
       tags:
         - Manage Storages
@@ -105,13 +107,6 @@ paths:
       description: >-
         Return the storage detail corresponding to the given ID if the current authenticated user has access to.
       operationId: getStorageById
-      parameters:
-        - name: storageId
-          in: path
-          description: ID of storage to fetch
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           $ref: '#/components/responses/StorageResponse'
@@ -141,13 +136,6 @@ paths:
       operationId: putStorage
       requestBody:
         $ref: '#/components/requestBodies/StorageRequest'
-      parameters:
-        - name: storageId
-          in: path
-          description: ID of storage to update
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           $ref: '#/components/responses/StorageResponse'
@@ -180,13 +168,6 @@ paths:
         Storages still being bound to active event handlers will not be deleted, 
         in such cases the response will have HTTP 409 error status code.
       operationId: deleteStorage
-      parameters:
-        - name: storageId
-          in: path
-          description: ID of storage to delete
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           $ref: '#/components/responses/StorageResponse'
@@ -258,19 +239,14 @@ paths:
         '513':
           $ref: '#/components/responses/ErrorResponse513'
   '/hub/handlers/{handlerId}':
+    parameters:
+      - $ref: '#/components/parameters/HandlerId'
     get:
       tags:
         - Manage Event Handlers
       summary: Get the event handler with the specific ID.
       description: Return the handler detail corresponding to the given ID if the current authenticated user has access to.
       operationId: getHandlerById
-      parameters:
-        - name: handlerId
-          in: path
-          description: ID of event handler to fetch
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           $ref: '#/components/responses/HandlerResponse'
@@ -298,13 +274,6 @@ paths:
       operationId: updateHandler
       requestBody:
         $ref: '#/components/requestBodies/HandlerRequest'
-      parameters:
-        - name: handlerId
-          in: path
-          description: ID of handler to update
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           $ref: '#/components/responses/HandlerResponse'
@@ -316,6 +285,34 @@ paths:
           $ref: '#/components/responses/ErrorResponse404'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
+    delete:
+      tags:
+        - Manage Event Handlers
+      summary: Delete the event handler with the specific ID.
+      description: >-
+        Delete the handler with the specific ID if the current authenticated user has access to.
+        Handlers still being bound to active spaces will not be deleted, 
+        in such cases the response will have HTTP 409 error status code.
+      operationId: deleteHandler
+      responses:
+        '200':
+          $ref: '#/components/responses/HandlerResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -378,19 +375,14 @@ paths:
         '513':
           $ref: '#/components/responses/ErrorResponse513'
   '/hub/spaces/{spaceId}':
+    parameters:
+      - $ref: '#/components/parameters/SpaceId'
     get:
       tags:
         - Manage Spaces
       summary: Get the space with the specific ID.
       description: Return the space detail corresponding to the given ID if the current authenticated user has access to.
       operationId: getSpaceById
-      parameters:
-        - name: spaceId
-          in: path
-          description: ID of space to fetch
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           $ref: '#/components/responses/SpaceResponse'
@@ -418,16 +410,42 @@ paths:
       operationId: putSpace
       requestBody:
         $ref: '#/components/requestBodies/SpaceRequest'
-      parameters:
-        - name: spaceId
-          in: path
-          description: ID of Space to update
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           $ref: '#/components/responses/SpaceResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '409':
+          $ref: '#/components/responses/ErrorResponse409'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
+    delete:
+      tags:
+        - Manage Spaces
+      summary: Delete the space with the specific ID.
+      description: >
+        This operation deletes Space as logical entity. 
+        It can also delete physical collection that is associated with this space if these conditions are met:
+        - this space is handled by `DefaultStorageHandler`
+        - 'autoDeleteCollection` property of the handler was set to `true`.
+      operationId: deleteSpace
+      responses:
+        '200':
+          $ref: '#/components/responses/StorageResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
         '401':
           $ref: '#/components/responses/ErrorResponse401'
         '403':
@@ -740,8 +758,10 @@ paths:
         - $ref: '#/components/parameters/East'
         - $ref: '#/components/parameters/South'
         - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/Clip'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/PropertiesQuery'
+        - $ref: '#/components/parameters/PropertiesSelection'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionResponse'
@@ -780,6 +800,88 @@ paths:
         - $ref: '#/components/parameters/PropertiesQuery'
         - $ref: '#/components/parameters/Margin'
         - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/FeatureCollectionResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
+  '/hub/spaces/{spaceId}/spatial':
+    get:
+      tags:
+        - Read Features
+      summary: Get features with radius search
+      description: |
+        List the features which are inside the specified radius.
+        The radius is formed around a given point coordinates latitude & longitude.
+        If lat/lon are not given then radius is formed around the entire geometry of an existing
+        feature referenced by given refSpaceId and refFeatureId.
+        
+        Either a combination of lat,lon (higher preference) or refSpaceId,refFeatureId is mandatory.
+      operationId: getFeaturesBySpatial
+      parameters:
+        - $ref: '#/components/parameters/SpaceId'
+        - $ref: '#/components/parameters/Latitude'
+        - $ref: '#/components/parameters/Longitude'
+        - $ref: '#/components/parameters/RefSpaceId'
+        - $ref: '#/components/parameters/RefFeatureId'
+        - $ref: '#/components/parameters/Radius'
+        - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PropertiesQuery'
+        - $ref: '#/components/parameters/PropertiesSelection'
+#        - $ref: '#/components/parameters/Clip'
+      responses:
+        '200':
+          $ref: '#/components/responses/FeatureCollectionResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse400'
+        '401':
+          $ref: '#/components/responses/ErrorResponse401'
+        '403':
+          $ref: '#/components/responses/ErrorResponse403'
+        '404':
+          $ref: '#/components/responses/ErrorResponse404'
+        '429':
+          $ref: '#/components/responses/ErrorResponse429'
+        '500':
+          $ref: '#/components/responses/ErrorResponse500'
+        '502':
+          $ref: '#/components/responses/ErrorResponse502'
+        '504':
+          $ref: '#/components/responses/ErrorResponse504'
+        '513':
+          $ref: '#/components/responses/ErrorResponse513'
+    post:
+      tags:
+        - Read Features
+      summary: Get features which intersects the provided geometry.
+      description: |
+        List the features which are inside the specified radius, formed around the geometry provided as payload.
+      operationId: getFeaturesBySpatialPost
+      parameters:
+        - $ref: '#/components/parameters/SpaceId'
+        - $ref: '#/components/parameters/Radius'
+        - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PropertiesQuery'
+      requestBody:
+        $ref: '#/components/requestBodies/GeometryRequest'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionResponse'
@@ -840,7 +942,7 @@ paths:
         be passed as a query parameter for the following request in order to
         continue the iteration from the marked position.
         
-
+        
         Note - The features in the response are not ordered (due to perf overhead),
         and so features may repeat across pages.
         If this limitation affects you, please discuss with Naksha team.
@@ -881,6 +983,20 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    StorageId:
+      name: storageId
+      in: path
+      description: Unique Id of a Storage to fetch / update / delete
+      required: true
+      schema:
+        type: string
+    HandlerId:
+      name: handlerId
+      in: path
+      description: Unique Id of an Event Handler to fetch / update / delete
+      required: true
+      schema:
+        type: string
     SpaceId:
       name: spaceId
       in: path
@@ -898,6 +1014,15 @@ components:
         type: array
         items:
           type: string
+    Clip:
+      name: clip
+      in: query
+      description: >-
+        If set to _true_ the features' geometries are clipped to the geometry of
+        the tile, bounding box or input geometry. Default is _false_.
+      required: false
+      schema:
+        type: boolean
     East:
       name: east
       in: query
@@ -923,6 +1048,15 @@ components:
       description: The handle to continue the iteration.
       schema:
         type: string
+    Latitude:
+      name: lat
+      in: query
+      description: >-
+        The latitude in WGS'84 decimal degree (-90 to +90) of the center Point.
+      schema:
+        type: number
+        minimum: -90
+        maximum: 90
     Limit:
       name: limit
       in: query
@@ -931,6 +1065,15 @@ components:
         Default is _30000_. Hard limit is _100000_.
       schema:
         type: integer
+    Longitude:
+      name: lon
+      in: query
+      description: >-
+        The longitude in WGS'84 decimal degree (-180 to +180) of the center Point.
+      schema:
+        type: number
+        minimum: -180
+        maximum: 180
     Margin:
       name: margin
       in: query
@@ -1019,6 +1162,44 @@ components:
           p.some_property: '.null'
         additionalProperties:
           type: string
+    PropertiesSelection:
+      name: selection
+      in: query
+      description: |
+        A list of properties to be returned in the features result list. Multiple attributes can be
+        specified by using comma(,).
+
+        Example: ?selection=p.name,p.capacity,p.color,rootPropertyName
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+    Radius:
+      name: radius
+      in: query
+      description: >-
+        Radius in meters of the search request.
+      schema:
+        type: integer
+    RefFeatureId:
+      name: refFeatureId
+      in: query
+      description: >-
+        The unique identifier of a feature in the referenced space.
+
+        The feature's geometry is used as a reference in the spatial search.
+      schema:
+        type: string
+    RefSpaceId:
+      name: refSpaceId
+      in: query
+      description: >-
+        The space where the feature, referenced by refFeatureId, is stored.
+
+        Required if refFeatureId is used.
+      schema:
+        type: string
     RemoveTags:
       name: removeTags
       in: query
@@ -1172,6 +1353,12 @@ components:
                   amenity: Football Stadium
                   capacity: 54074
                   description: Home of Liverpool Football Club
+    GeometryRequest:
+      description: A geometry request.
+      content:
+        application/geo+json:
+          schema:
+            $ref: '#/components/schemas/Geometry'
     StorageRequest:
       required: true
       content:
@@ -1207,16 +1394,23 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/EventHandler'
-          examples:
-            response:
-              value:
-                id: "um-mod-dev"
-                type: "EventHandler"
-                title: "Storage Handler for UniMap Moderation Dev Storage"
-                description: "Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage"
-                className: "com.here.naksha.lib.handlers.DefaultStorageHandler"
-                properties:
-                  storageId: "ID"
+          example:
+            id: "sample_handler"
+            type: "EventHandler"
+            title: "Sample Handler"
+            description: "Well written handler description"
+            className: "com.here.naksha.lib.handlers.DefaultStorageHandler"
+            active: true
+            properties:
+              storageId: "some_storage_id"
+              collection:
+                id: "custom_collection_id"
+                type: "NakshaCollection"
+                maxAge: 0
+                history: true
+                autoPurge: false
+              autoCreateCollection: true
+              autoDeleteCollection: true
     SpaceRequest:
       required: true
       content:
@@ -1236,6 +1430,9 @@ components:
                   collection:
                     id: "um-mod-dev:topology"
                     type: "NakshaCollection"
+                    maxAge: 0
+                    history: true
+                    autoPurge: false
   responses:
     EmptyResponse:
       description: >-
@@ -1523,16 +1720,23 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/EventHandler'
-          examples:
-            response:
-              value:
-                id: "um-mod-dev"
-                type: "EventHandler"
-                title: "Storage Handler for UniMap Moderation Dev Storage"
-                description: "Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage"
-                className: "com.here.naksha.lib.handlers.DefaultStorageHandler"
-                properties:
-                  storageId: "ID"
+          example:
+            id: "sample_handler"
+            type: "EventHandler"
+            title: "Sample Handler"
+            description: "Well written handler description"
+            className: "com.here.naksha.lib.handlers.DefaultStorageHandler"
+            active: true
+            properties:
+              storageId: "some_storage_id"
+              collection:
+                id: "custom_collection_id"
+                type: "NakshaCollection"
+                maxAge: 0
+                history: true
+                autoPurge: false
+              autoCreateCollection: true
+              autoDeleteCollection: true
     HandlersResponse:
       description: The list of event handlers.
       content:
@@ -1544,13 +1748,22 @@ components:
           examples:
             response:
               value:
-                - id: "um-mod-dev"
-                  type: "EventHandler"
-                  title: "Storage Handler for UniMap Moderation Dev Storage"
-                  description: "Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage"
-                  className: "com.here.naksha.lib.handlers.DefaultStorageHandler"
-                  properties:
-                    storageId: "ID"
+              - id: "sample_handler"
+                type: "EventHandler"
+                title: "Sample Handler"
+                description: "Well written handler description"
+                className: "com.here.naksha.lib.handlers.DefaultStorageHandler"
+                active: true
+                properties:
+                  storageId: "some_storage_id"
+                  collection:
+                    id: "custom_collection_id"
+                    type: "NakshaCollection"
+                    maxAge: 0
+                    history: true
+                    autoPurge: false
+                  autoCreateCollection: true
+                  autoDeleteCollection: true
     SpaceResponse:
       description: The space details.
       content:
@@ -1570,6 +1783,9 @@ components:
                   collection:
                     id: "um-mod-dev:topology"
                     type: "NakshaCollection"
+                    maxAge: 0
+                    history: true
+                    autoPurge: false
     SpacesResponse:
       description: The list of spaces.
       content:
@@ -1591,6 +1807,9 @@ components:
                     collection:
                       id: "um-mod-dev:topology"
                       type: "NakshaCollection"
+                      maxAge: 0
+                      history: true
+                      autoPurge: false
   schemas:
     Error:
       type: object
@@ -1890,8 +2109,8 @@ components:
           type: string
           nullable: true
         properties:
-          $ref: '#/components/schemas/HandlerProperties'
-    HandlerProperties:
+          $ref: '#/components/schemas/DefaultStorageHandlerProperties'
+    DefaultStorageHandlerProperties:
       type: object
       description: >-
         This object represents properties, as supported by default Naksha Handler implementation, but it can be customized as per custom handler implementation.
@@ -1901,6 +2120,33 @@ components:
           type: string
         collection:
           $ref: '#/components/schemas/NakshaCollection'
+        autoCreateCollection:
+          description: >
+            If set to true, Naksha will automatically create collection when read/write feature operations are processed by the handler associated with a space.
+            Set to 'true' by default.
+          type: boolean
+        autoDeleteCollection:
+          description: >
+            If set to true, Naksha will automatically delete collection when when Delete Space API call is processed by handler associated with a space.
+            Set to 'true' by default.
+          type: boolean
+      example:
+        id: "sample_handler"
+        type: "EventHandler"
+        title: "Sample Handler"
+        description: "Well written handler description"
+        className: "com.here.naksha.lib.handlers.DefaultStorageHandler"
+        active: true
+        properties:
+          storageId: "some_storage_id"
+          collection:
+            id: "custom_collection_id"
+            type: "NakshaCollection"
+            maxAge: 0
+            history: true
+            autoPurge: false
+          autoCreateCollection: true
+          autoDeleteCollection: true
     Space:
       type: object
       description: >-
@@ -1978,6 +2224,12 @@ components:
           description: A value greater than zero implies that the collection shall be treated as deleted and represents the UTC Epoch timestamp in
             milliseconds when the deletion has been done.
           type: number
+        autoPurge:
+          description: >
+            If set to false, all features that will be deleted from the collection will get their "shadow copy" stored in separate `_del` collection. 
+            If set to true, all features that will be deleted from this collection won't have their "shadowy copy" created at stored anywhere.
+            By default, it is set to `false`.
+          type: boolean
     XyzNamespace:
       type: object
       description: The XYZ namespace object managed by Naksha service
