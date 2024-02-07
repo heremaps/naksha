@@ -227,6 +227,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
           routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory query parameters");
     }
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
 
@@ -242,8 +243,11 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
+    final F1<XyzFeature, XyzFeature> preResponseProcessing =
+        standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, limit);
+    return transformReadResultToXyzCollectionResponse(
+        result, XyzFeature.class, 0, limit, null, preResponseProcessing);
   }
 
   private @NotNull XyzResponse executeIterate() {

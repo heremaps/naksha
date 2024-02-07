@@ -919,6 +919,7 @@ paths:
         - $ref: '#/components/parameters/TagList'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/PropertiesQuery'
+        - $ref: '#/components/parameters/PropertiesSelection'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionResponse'
