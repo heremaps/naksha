@@ -347,6 +347,25 @@ project(":here-naksha-lib-psql") {
     setOverallCoverage(0.0) // only increasing allowed!
 }
 
+project(":here-naksha-storage-http") {
+    description = "Naksha Http Storage Library"
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        withJavadocJar()
+        withSourcesJar()
+
+    }
+    dependencies {
+        api(project(":here-naksha-lib-core"))
+
+        implementation(commons_lang3)
+    }
+    setOverallCoverage(0.0) // only increasing allowed!
+
+}
+
+
 project(":here-naksha-lib-view") {
     description = "Naksha View Library"
     java {
@@ -452,6 +471,7 @@ project(":here-naksha-lib-handlers") {
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-storage-http"))
 
         implementation(commons_lang3)
         implementation(commons_dbutils)
