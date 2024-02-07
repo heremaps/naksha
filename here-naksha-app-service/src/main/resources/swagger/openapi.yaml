@@ -957,6 +957,7 @@ paths:
         - $ref: '#/components/parameters/SpaceId'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Handle'
+        - $ref: '#/components/parameters/PropertiesSelection'
       responses:
         '200':
           $ref: '#/components/responses/IterateResponse'

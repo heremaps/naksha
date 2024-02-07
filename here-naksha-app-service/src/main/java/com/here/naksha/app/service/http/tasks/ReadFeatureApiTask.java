@@ -264,6 +264,9 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Parse and validate Query parameters
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
 
+    // Parse property selection
+    final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
+
     // Note : subsequent steps need to support queryParams being null
 
     // extract limit parameter
@@ -284,9 +287,12 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
+    final F1<XyzFeature, XyzFeature> preResponseProcessing =
+        standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http FeatureCollection response,
     // restricted by given feature limit and by adding "handle" attribute to support subsequent iteration
-    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, offset, limit, handle);
+    return transformReadResultToXyzCollectionResponse(
+        result, XyzFeature.class, offset, limit, handle, preResponseProcessing);
   }
 
   private @NotNull XyzResponse executeFeaturesByRadius() {
