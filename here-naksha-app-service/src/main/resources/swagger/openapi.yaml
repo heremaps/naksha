@@ -880,6 +880,8 @@ paths:
         - $ref: '#/components/parameters/TagList'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/PropertiesQuery'
+        - $ref: '#/components/parameters/PropertiesSelection'
+#        - $ref: '#/components/parameters/Clip'
       requestBody:
         $ref: '#/components/requestBodies/GeometryRequest'
       responses:
