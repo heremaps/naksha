@@ -113,9 +113,10 @@ class SearchFeaturesTest extends ApiTest {
     // Given: search query
     final String tagsQueryParam = "tags=one+four";
     final String propQueryParam = "p.speedLimit='60'";
-    final String selectionParam = "selection=p.speedLimit,%s".formatted(urlEncoded("p.@ns:com:here:xyz.tags"));
-    final String expectedBodyPart = loadFileOrFail("ReadFeatures/Search/TC1003_searchWithTagsAndProp/search_response.json");
     final String streamId = UUID.randomUUID().toString();
+    final String selectionParam = "selection=p.speedLimit,%s".formatted(urlEncoded("p.@ns:com:here:xyz.tags"));
+    final String expectedBodyPart = loadFileOrFail("ReadFeatures/Search/TC1003_searchWithTagsAndProp/search_response.json")
+            .replaceAll("\\{\\{streamId}}",streamId);
 
     // When: Get Features By Tile request is submitted to NakshaHub
     final HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/search" + "?" + tagsQueryParam + "&" + propQueryParam + "&" + selectionParam, streamId);
@@ -124,7 +125,7 @@ class SearchFeaturesTest extends ApiTest {
     ResponseAssertions.assertThat(response)
             .hasStatus(200)
             .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match",true);
   }
 
   @Test

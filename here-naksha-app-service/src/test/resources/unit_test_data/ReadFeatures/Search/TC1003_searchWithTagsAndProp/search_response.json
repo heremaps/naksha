@@ -15,5 +15,6 @@
         "coordinates":[ 8.6578, 50.1234, 0.0 ]
       }
     }
-  ]
+  ],
+  "streamId": "{{streamId}}"
 }
