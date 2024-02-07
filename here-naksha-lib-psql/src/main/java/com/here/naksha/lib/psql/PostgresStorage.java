@@ -66,6 +66,7 @@ final class PostgresStorage extends ClosableRootResource {
 
   private static final long MIN_LOCK_TIMEOUT_MILLIS = 100;
   private static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
+  public static final String SQL_NULL = "null";
 
   private static long value(@Nullable Long value, long minValue, long defaultValue) {
     if (value == null) {
@@ -243,7 +244,8 @@ final class PostgresStorage extends ClosableRootResource {
    */
   private long lockTimeout;
 
-  private PsqlStorage.Params params;
+  @NotNull
+  private PsqlStorage.Params params = new PsqlStorage.Params();
 
   // TODO: Add getter/setter, add value to constructor, to properties ...
   private final int fetchSize = 1000;
@@ -313,10 +315,10 @@ final class PostgresStorage extends ClosableRootResource {
     sql.add("SET SESSION search_path TO ").addLiteral(schema).add(",topology,public;\n");
     sql.add("SET SESSION application_name TO ").addLiteral(appName).add(";\n");
     if (context != null) {
+      sql.add("SELECT naksha_start_session(");
+      sql.addLiteral(appName);
+      sql.add(',');
       if (params.pg_plv8()) {
-        sql.add("SELECT naksha_start_session(");
-        sql.addLiteral(appName);
-        sql.add(',');
         sql.addLiteral(context.getStreamId());
         sql.add(',');
         sql.addLiteral(context.getAppId());
@@ -325,25 +327,21 @@ final class PostgresStorage extends ClosableRootResource {
         if (author != null) {
           sql.addLiteral(author);
         } else {
-          sql.add("null");
+          sql.add(SQL_NULL);
         }
-        sql.add(");\n");
       } else {
-        sql.add("SELECT naksha_start_session(");
-        sql.addLiteral(appName);
-        sql.add(',');
         sql.addLiteral(context.getAppId());
         sql.add(',');
         final String author = context.getAuthor();
         if (author != null) {
           sql.addLiteral(author);
         } else {
-          sql.add("null");
+          sql.add(SQL_NULL);
         }
         sql.add(',');
         sql.addLiteral(context.getStreamId());
-        sql.add(");\n");
       }
+      sql.add(");\n");
     }
     sql.add("SET SESSION work_mem TO '256 MB';\n");
     sql.add("SET SESSION enable_seqscan TO OFF;\n");
@@ -378,7 +376,6 @@ final class PostgresStorage extends ClosableRootResource {
   @SuppressWarnings("SqlSourceToSinkFlow")
   synchronized void initStorage(@NotNull IoHelp ioHelp) {
     assertNotClosed();
-    String SQL;
     // Note: We need to open a "raw connection", so one, that is not initialized!
     //       The reason is, that the normal initialization would invoke naksha_init_plv8(),
     //       but init-storage is called to install exactly this method.
@@ -427,9 +424,9 @@ final class PostgresStorage extends ClosableRootResource {
                   .log();
             }
             if (params.pg_plv8()) {
-              initStoragePlv8(params, ioHelp, stmt, conn);
+              initStoragePlv8(conn);
             } else {
-              initStoragePlpgsql(params, ioHelp, stmt, conn);
+              initStoragePlpgsql(ioHelp, stmt, conn);
             }
           }
         }
@@ -439,17 +436,13 @@ final class PostgresStorage extends ClosableRootResource {
     }
   }
 
-  private void initStoragePlv8(
-      PsqlStorage.@NotNull Params params, @NotNull IoHelp ioHelp, Statement stmt, PsqlConnection conn)
-      throws SQLException {
+  private void initStoragePlv8(PsqlConnection conn) throws SQLException {
     final Plv8Env plv8Env = new Plv8Env();
     plv8Env.install(conn, latest.toLong());
     conn.commit();
   }
 
-  private void initStoragePlpgsql(
-      PsqlStorage.@NotNull Params params, @NotNull IoHelp ioHelp, Statement stmt, PsqlConnection conn)
-      throws SQLException {
+  private void initStoragePlpgsql(@NotNull IoHelp ioHelp, Statement stmt, PsqlConnection conn) throws SQLException {
     String SQL;
     SQL = ioHelp.readResource(ioHelp.findResource("/naksha_plpgsql.sql", PostgresStorage.class));
     if (logLevel.toLong() >= EPsqlLogLevel.DEBUG.toLong()) {

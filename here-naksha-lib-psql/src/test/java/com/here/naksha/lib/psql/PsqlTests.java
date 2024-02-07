@@ -342,6 +342,7 @@ abstract class PsqlTests {
         storage = null;
       }
     }
+    postgreSQLContainer.stop();
   }
 
   private boolean isLockReleased(PsqlWriteSession session, String collectionId) throws SQLException {
