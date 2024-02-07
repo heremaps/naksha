@@ -18,6 +18,9 @@
  */
 package com.here.naksha.lib.handlers;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
@@ -30,14 +33,10 @@ import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.view.IView;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerCollection;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
 
 public class ViewHandler extends AbstractEventHandler {
 
@@ -60,7 +59,9 @@ public class ViewHandler extends AbstractEventHandler {
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
     final Request<?> request = event.getRequest();
-    if (request instanceof ReadFeatures || request instanceof WriteXyzFeatures || request instanceof WriteXyzCollections) {
+    if (request instanceof ReadFeatures
+        || request instanceof WriteXyzFeatures
+        || request instanceof WriteXyzCollections) {
       return PROCESS;
     }
     return SEND_UPSTREAM_WITHOUT_PROCESSING;
@@ -94,8 +95,6 @@ public class ViewHandler extends AbstractEventHandler {
 
       iView.setViewLayerCollection(prepareViewLayerCollection(nakshaHub().getSpaceStorage(), spaceIds));
 
-      //process
-
     } else {
       logger.info("Storage is not and instance of IView. Processing event to next handler.");
       return event.sendUpstream();
@@ -121,10 +120,9 @@ public class ViewHandler extends AbstractEventHandler {
 
   private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> storageIds) {
 
-    List<ViewLayer> viewLayerList = storageIds.
-            stream()
-            .map(storageId -> new ViewLayer(nhStorage, storageId))
-            .toList();
+    List<ViewLayer> viewLayerList = storageIds.stream()
+        .map(storageId -> new ViewLayer(nhStorage, storageId))
+        .toList();
 
     return new ViewLayerCollection("", viewLayerList);
   }
