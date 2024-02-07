@@ -22,12 +22,11 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Request;
-import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.util.List;
@@ -39,13 +38,16 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
+
 public class ViewHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ViewHandler.class);
 
   private @NotNull EventHandler eventHandler;
   private @NotNull EventTarget<?> eventTarget;
-  private @NotNull EventHandlerProperties properties;
+  private @NotNull DefaultStorageHandlerProperties properties;
 
   public ViewHandler(
       final @NotNull EventHandler eventHandler,
@@ -54,11 +56,20 @@ public class ViewHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), EventHandlerProperties.class);
+    this.properties = JsonSerializable.convert(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
   }
 
   @Override
-  public @NotNull Result processEvent(@NotNull IEvent event) {
+  protected EventProcessingStrategy processingStrategyFor(IEvent event) {
+    final Request<?> request = event.getRequest();
+    if (request instanceof ReadFeatures || request instanceof WriteXyzFeatures || request instanceof WriteXyzCollections) {
+      return PROCESS;
+    }
+    return SEND_UPSTREAM_WITHOUT_PROCESSING;
+  }
+
+  @Override
+  public @NotNull Result process(@NotNull IEvent event) {
 
     final NakshaContext ctx = NakshaContext.currentContext();
     final Request<?> request = event.getRequest();
@@ -95,7 +106,7 @@ public class ViewHandler extends AbstractEventHandler {
     return event.sendUpstream();
   }
 
-  private List<String> getSpaceIds(EventHandlerProperties properties) {
+  private List<String> getSpaceIds(DefaultStorageHandlerProperties properties) {
 
     Object spaceIds = properties.get("spaceIds");
     if (spaceIds != null && spaceIds instanceof List<?>) {
