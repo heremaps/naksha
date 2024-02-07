@@ -118,6 +118,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
     final QueryParameterList queryParameters = queryParamsFromRequest(routingContext);
     final List<String> featureIds = extractParamAsStringList(queryParameters, FEATURE_IDS);
+    final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParameters);
 
     // Validate parameters
     if (featureIds == null || featureIds.isEmpty()) {
@@ -127,8 +128,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
+      final F1<XyzFeature, XyzFeature> preResponseProcessing =
+          standardReadFeaturesPreResponseProcessing(propPaths, false, null);
       // transform Result to Http FeatureCollection response
-      return transformReadResultToXyzCollectionResponse(result, XyzFeature.class);
+      return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, preResponseProcessing);
     }
   }
 
@@ -136,13 +139,17 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Parse and validate Path parameters
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final String featureId = extractMandatoryPathParam(routingContext, FEATURE_ID);
+    final QueryParameterList queryParameters = queryParamsFromRequest(routingContext);
+    final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParameters);
 
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdRequest(spaceId, featureId);
 
     // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
+      final F1<XyzFeature, XyzFeature> preResponseProcessing =
+          standardReadFeaturesPreResponseProcessing(propPaths, false, null);
       // transform Result to Http XyzFeature response
-      return transformReadResultToXyzFeatureResponse(result, XyzFeature.class);
+      return transformReadResultToXyzFeatureResponse(result, XyzFeature.class, preResponseProcessing);
     }
   }
 

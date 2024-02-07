@@ -476,6 +476,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/SpaceId'
         - $ref: '#/components/parameters/RequiredIds'
+        - $ref: '#/components/parameters/PropertiesSelection'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionResponse'
@@ -627,6 +628,8 @@ paths:
       summary: Get a feature by ID
       description: Retrieves the feature with the provided identifier.
       operationId: getFeature
+      parameters:
+        - $ref: '#/components/parameters/PropertiesSelection'
       responses:
         '200':
           $ref: '#/components/responses/FeatureResponse'
