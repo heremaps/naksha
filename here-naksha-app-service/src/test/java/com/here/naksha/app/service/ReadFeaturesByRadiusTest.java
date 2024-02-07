@@ -275,6 +275,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
                     "ReadFeatures/ByRadius/TC17_withRefFeatureMissingGeometry/feature_response_part.json",
                     404
             ),
+            // TC 18 and 19 are in another params set strictJsonTestParams()
             standardTestSpec(
                     "tc20_withWrongDelimiterInPropSelection",
                     List.of(

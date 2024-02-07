@@ -845,7 +845,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/PropertiesQuery'
         - $ref: '#/components/parameters/PropertiesSelection'
-        - $ref: '#/components/parameters/Clip'
+#        - $ref: '#/components/parameters/Clip'
       responses:
         '200':
           $ref: '#/components/responses/FeatureCollectionResponse'
