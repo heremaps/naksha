@@ -22,21 +22,19 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.util.List;
-
 import com.here.naksha.lib.view.IView;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerCollection;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
