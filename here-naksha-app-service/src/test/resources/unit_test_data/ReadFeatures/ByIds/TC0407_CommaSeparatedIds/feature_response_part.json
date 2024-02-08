@@ -6,6 +6,7 @@
       "type": "Feature",
       "properties": {
         "speedLimit": "60",
+        "filteredOut": "yes",
         "@ns:com:here:xyz": {
           "tags": [ "selection-test" ]
         }
@@ -20,6 +21,7 @@
       "type": "Feature",
       "properties": {
         "speedLimit": "80",
+        "filteredOut": "yes",
         "@ns:com:here:xyz": {
           "tags": [ "selection-test" ]
         }
