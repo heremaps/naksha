@@ -554,15 +554,28 @@ public final class PsqlStorage implements IStorage, DataSource {
     }
   }
 
+  @Override
+  public void initStorage() {
+    storage().initStorage(getIoHelp());
+  }
+
   /**
    * Ensure that the administration tables exists, and the Naksha extension script installed in the latest version.
    *
+   * @param params Parameters special to PostgresQL.
    * @throws SQLException If any error occurred while accessing the database.
    * @throws IOException  If reading the SQL extensions from the resources fail.
    */
   @Override
-  public void initStorage() {
-    storage().initStorage(getIoHelp());
+  public void initStorage(@Nullable Map<String, Object> params) {
+    final Params p;
+    if (params instanceof Params) {
+      p = (Params) params;
+    } else {
+      p = new Params(params);
+    }
+    setParams(p);
+    initStorage();
   }
 
   private @Nullable IoHelp ioHelp;
