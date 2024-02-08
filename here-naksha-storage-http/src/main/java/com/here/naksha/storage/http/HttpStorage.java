@@ -18,12 +18,12 @@
  */
 package com.here.naksha.storage.http;
 
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
+import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import org.jetbrains.annotations.NotNull;
@@ -70,6 +70,6 @@ public class HttpStorage implements IStorage {
   }
 
   private static @NotNull HttpStorageProperties getProperties(@NotNull Storage storage) {
-    return new JsonMapper().convertValue(storage.getProperties(), HttpStorageProperties.class);
+    return JsonSerializable.convert(storage.getProperties(), HttpStorageProperties.class);
   }
 }

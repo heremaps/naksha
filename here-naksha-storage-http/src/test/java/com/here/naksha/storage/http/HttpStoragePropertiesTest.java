@@ -1,60 +1,75 @@
 package com.here.naksha.storage.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
+import com.here.naksha.lib.core.util.json.JsonSerializable;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class HttpStoragePropertiesTest {
 
     final static String TEST_RESOURCE_DIR = "/unit_test_data/HttpStorageProperties/";
-    final static ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void t01_testConvertAllFields() throws IOException {
-        var properties = convertResourceToProperties("t01_testConvertAllFields");
+    void t01_testConvertAllFields() {
+        var properties = jsonResourceToPropertiesOrFail("t01_testConvertAllFields");
 
-        assertEquals("https://example.org", properties.url);
-        assertEquals(60, properties.connectTimeout);
-        assertEquals(3600, properties.socketTimeout);
+        assertEquals("https://example.org", properties.getUrl());
+        assertEquals(60, properties.getConnectTimeout());
+        assertEquals(3600, properties.getSocketTimeout());
 
-        assertEquals("Bearer <token>", properties.headers.get("Authorization"));
-        assertEquals("application/json", properties.headers.get("Content-Type"));
-        assertEquals(2, properties.headers.size());
+        Map<String, String> headers = properties.getHeaders();
+        assertEquals("Bearer <token>", headers.get("Authorization"));
+        assertEquals("application/json", headers.get("Content-Type"));
+        assertEquals(2, properties.getHeaders().size());
     }
 
     @Test
-    void t02_testConvertMissingToNull() throws IOException {
-        var properties = convertResourceToProperties("t02_testConvertMissingToNull");
+    void t02_testConvertMissingToDefault() {
+        var properties = jsonResourceToPropertiesOrFail("t02_testConvertMissingToNull");
 
-        assertEquals("https://example.org", properties.url);
-        assertNull(properties.connectTimeout);
-        assertNull(properties.socketTimeout);
+        assertEquals("https://example.org", properties.getUrl());
+        assertEquals(HttpStorageProperties.DEFAULT_CONNECTION_TIMEOUT, properties.getConnectTimeout());
+        assertEquals(HttpStorageProperties.DEFAULT_SOCKET_TIMEOUT, properties.getSocketTimeout());
 
-        assertNull(properties.headers);
+        assertEquals(HttpStorageProperties.DEFAULT_HEADERS, properties.getHeaders());
     }
 
     @Test
     void t03_testDontThrowOnExcessFields() {
         assertDoesNotThrow(
-                () -> convertResourceToProperties("t03_testDontThrowOnExcessFields")
+                () -> jsonResourceToPropertiesOrFail("t03_testDontThrowOnExcessFields")
         );
     }
 
     @Test
     void t04_testThrowOnMissingMandatory() {
-        assertThrows(
+        UncheckedIOException wrappingException = assertThrows(
+                UncheckedIOException.class,
+                () -> jsonResourceToPropertiesOrFail("t04_testThrowOnMissingMandatory")
+        );
+
+        IOException causeException = wrappingException.getCause();
+        assertInstanceOf(
                 MismatchedInputException.class,
-                () -> convertResourceToProperties("t04_testThrowOnMissingMandatory")
+                causeException
         );
     }
 
-    private HttpStorageProperties convertResourceToProperties(String fileName) throws IOException {
-        InputStream testResourceStream = this.getClass().getResourceAsStream(TEST_RESOURCE_DIR + fileName + ".json");
-        return objectMapper.readValue(testResourceStream, HttpStorageProperties.class);
+    private HttpStorageProperties jsonResourceToPropertiesOrFail(String fileName) {
+        String resource = TEST_RESOURCE_DIR + fileName + ".json";
+
+        try (InputStream testResourceStream = this.getClass().getResourceAsStream(resource)) {
+            if (testResourceStream == null) throw new IOException("Could not access " + resource + " resource");
+            return JsonSerializable.deserialize(testResourceStream, HttpStorageProperties.class);
+        } catch (IOException e) {
+            fail("Unable to convert json resource", e);
+            return null;
+        }
     }
 }

@@ -33,23 +33,53 @@ import org.jetbrains.annotations.Nullable;
 @AvailableSince(NakshaVersion.v2_0_12)
 public class HttpStorageProperties extends XyzProperties {
 
+  // TODO adamczyk: adjust values
+  public static final Long DEFAULT_CONNECTION_TIMEOUT = 90L;
+  public static final Long DEFAULT_SOCKET_TIMEOUT = 9000L;
+  public static final Map<String, String> DEFAULT_HEADERS = Map.of("Content-Type", "application/json");
+
+  private static final String URL = "url";
+  private static final String CONNECTION_TIMEOUT = "connectTimeout";
+  private static final String SOCKET_TIMEOUT = "socketTimeout";
+  private static final String HEADERS = "headers";
+
+  @JsonProperty(URL)
+  private @NotNull String url;
+
+  @JsonProperty(CONNECTION_TIMEOUT)
+  private @NotNull Long connectTimeout;
+
+  @JsonProperty(SOCKET_TIMEOUT)
+  private @NotNull Long socketTimeout;
+
+  @JsonProperty(HEADERS)
+  private @NotNull Map<String, String> headers;
+
   @JsonCreator
   public HttpStorageProperties(
-      @JsonProperty(value = "url", required = true) @NotNull String url,
-      @JsonProperty("connectTimeout") @Nullable Long connectTimeout,
-      @JsonProperty("socketTimeout") @Nullable Long socketTimeout,
-      @JsonProperty("headers") @Nullable Map<String, String> headers) {
+      @JsonProperty(value = URL, required = true) @NotNull String url,
+      @JsonProperty(CONNECTION_TIMEOUT) @Nullable Long connectTimeout,
+      @JsonProperty(SOCKET_TIMEOUT) @Nullable Long socketTimeout,
+      @JsonProperty(HEADERS) @Nullable Map<String, String> headers) {
     this.url = url;
-    this.connectTimeout = connectTimeout;
-    this.socketTimeout = socketTimeout;
-    this.headers = headers;
+    this.connectTimeout = connectTimeout == null ? DEFAULT_CONNECTION_TIMEOUT : connectTimeout;
+    this.socketTimeout = socketTimeout == null ? DEFAULT_SOCKET_TIMEOUT : socketTimeout;
+    this.headers = headers == null ? DEFAULT_HEADERS : headers;
   }
 
-  // Mandatory fields
-  public @NotNull String url;
+  public @NotNull String getUrl() {
+    return url;
+  }
 
-  // Optional fields
-  public @Nullable Long connectTimeout;
-  public @Nullable Long socketTimeout;
-  public @Nullable Map<String, String> headers;
+  public @NotNull Long getConnectTimeout() {
+    return connectTimeout;
+  }
+
+  public @NotNull Long getSocketTimeout() {
+    return socketTimeout;
+  }
+
+  public @NotNull Map<String, String> getHeaders() {
+    return headers;
+  }
 }
