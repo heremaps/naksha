@@ -28,7 +28,9 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
+import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.view.IView;
 import com.here.naksha.lib.view.ViewLayer;
@@ -86,21 +88,47 @@ public class ViewHandler extends AbstractEventHandler {
     final IStorage storageImpl = nakshaHub().getStorageById(storageId);
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
-    if (storageImpl instanceof IView iView) {
+    if (storageImpl instanceof IView view) {
 
       List<String> spaceIds = getSpaceIds(properties);
       if (spaceIds.isEmpty()) {
         return new ErrorResult(XyzError.NOT_FOUND, "No spaceIds configured for handler.");
       }
 
-      iView.setViewLayerCollection(prepareViewLayerCollection(nakshaHub().getSpaceStorage(), spaceIds));
+      view.setViewLayerCollection(prepareViewLayerCollection(nakshaHub().getSpaceStorage(), spaceIds));
+
+      return processRequest(ctx, view, request);
 
     } else {
       logger.info("Storage is not and instance of IView. Processing event to next handler.");
-      return event.sendUpstream();
+      return new ErrorResult(XyzError.EXCEPTION, "Storage is not instance of IView");
     }
+  }
 
-    return event.sendUpstream();
+  private Result processRequest(NakshaContext ctx, IView view, Request<?> request) {
+
+    if (request instanceof ReadFeatures rf) {
+      return forwardReadFeatures(ctx, view, rf);
+    } else if (request instanceof WriteFeatures<?, ?, ?> wf) {
+      return forwardWriteFeatures(ctx, view, wf);
+    } else if (request instanceof WriteCollections<?, ?, ?> wc) {
+      return forwardWriteFeatures(ctx, view, wc);
+    } else {
+      return notImplemented(request);
+    }
+  }
+
+  private Result forwardWriteFeatures(NakshaContext ctx, IView view, WriteRequest<?, ?, ?> wr) {
+    try (final IWriteSession writeSession = view.newWriteSession(ctx, false)) {
+      return writeSession.execute(wr);
+    }
+  }
+
+  private Result forwardReadFeatures(NakshaContext ctx, IView view, ReadFeatures rf) {
+
+    try (final IReadSession reader = view.newReadSession(ctx, false)) {
+      return reader.execute(rf);
+    }
   }
 
   private List<String> getSpaceIds(DefaultStorageHandlerProperties properties) {
