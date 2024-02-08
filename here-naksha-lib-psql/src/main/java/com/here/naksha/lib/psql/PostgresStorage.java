@@ -35,6 +35,7 @@ import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
 import com.here.naksha.lib.core.exceptions.Unauthorized;
 import com.here.naksha.lib.core.util.ClosableRootResource;
 import com.here.naksha.lib.core.util.IoHelp;
+import com.here.naksha.lib.plv8.Plv8Env;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -43,7 +44,6 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -58,14 +58,15 @@ import org.slf4j.LoggerFactory;
 final class PostgresStorage extends ClosableRootResource {
 
   private static final Logger log = LoggerFactory.getLogger(PostgresStorage.class);
-  private static long MIN_CONN_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
-  private static long DEFAULT_CONN_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
+  private static final long MIN_CONN_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
+  private static final long DEFAULT_CONN_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
 
-  private static long MIN_STMT_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(2);
-  private static long DEFAULT_STMT_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(60);
+  private static final long MIN_STMT_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(2);
+  private static final long DEFAULT_STMT_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(60);
 
-  private static long MIN_LOCK_TIMEOUT_MILLIS = 100;
-  private static long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
+  private static final long MIN_LOCK_TIMEOUT_MILLIS = 100;
+  private static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
+  public static final String SQL_NULL = "null";
 
   private static long value(@Nullable Long value, long minValue, long defaultValue) {
     if (value == null) {
@@ -164,6 +165,10 @@ final class PostgresStorage extends ClosableRootResource {
     this.logLevel = logLevel == null ? EPsqlLogLevel.OFF : logLevel;
   }
 
+  public void setParams(PsqlStorage.Params params) {
+    this.params = params;
+  }
+
   /**
    * The storage identification.
    */
@@ -174,7 +179,7 @@ final class PostgresStorage extends ClosableRootResource {
    */
   @JsonProperty("master")
   @JsonInclude(Include.NON_NULL)
-  private @Nullable PsqlInstanceConfig masterConfig;
+  private final @Nullable PsqlInstanceConfig masterConfig;
 
   @JsonIgnore
   private final @NotNull AtomicReference<@Nullable PsqlInstance> master = new AtomicReference<>(null);
@@ -184,7 +189,7 @@ final class PostgresStorage extends ClosableRootResource {
    */
   @JsonProperty("reader")
   @JsonInclude(Include.NON_EMPTY)
-  private @Nullable List<@NotNull PsqlInstanceConfig> readerConfigs;
+  private final @Nullable List<@NotNull PsqlInstanceConfig> readerConfigs;
 
   @JsonIgnore
   private final @NotNull CopyOnWriteArrayList<@NotNull PsqlInstance> readers = new CopyOnWriteArrayList<>();
@@ -239,8 +244,11 @@ final class PostgresStorage extends ClosableRootResource {
    */
   private long lockTimeout;
 
+  @NotNull
+  private PsqlStorage.Params params = new PsqlStorage.Params();
+
   // TODO: Add getter/setter, add value to constructor, to properties ...
-  private int fetchSize = 1000;
+  private final int fetchSize = 1000;
 
   int getFetchSize() {
     return fetchSize;
@@ -310,16 +318,29 @@ final class PostgresStorage extends ClosableRootResource {
       sql.add("SELECT naksha_start_session(");
       sql.addLiteral(appName);
       sql.add(',');
-      sql.addLiteral(context.getAppId());
-      sql.add(',');
-      final String author = context.getAuthor();
-      if (author != null) {
-        sql.addLiteral(author);
+      if (params.pg_plv8()) {
+        sql.addLiteral(context.getStreamId());
+        sql.add(',');
+        sql.addLiteral(context.getAppId());
+        sql.add(',');
+        final String author = context.getAuthor();
+        if (author != null) {
+          sql.addLiteral(author);
+        } else {
+          sql.add(SQL_NULL);
+        }
       } else {
-        sql.add("null");
+        sql.addLiteral(context.getAppId());
+        sql.add(',');
+        final String author = context.getAuthor();
+        if (author != null) {
+          sql.addLiteral(author);
+        } else {
+          sql.add(SQL_NULL);
+        }
+        sql.add(',');
+        sql.addLiteral(context.getStreamId());
       }
-      sql.add(',');
-      sql.addLiteral(context.getStreamId());
       sql.add(");\n");
     }
     sql.add("SET SESSION work_mem TO '256 MB';\n");
@@ -353,9 +374,8 @@ final class PostgresStorage extends ClosableRootResource {
   }
 
   @SuppressWarnings("SqlSourceToSinkFlow")
-  synchronized void initStorage(@NotNull PsqlStorage.Params params, @NotNull IoHelp ioHelp) {
+  synchronized void initStorage(@NotNull IoHelp ioHelp) {
     assertNotClosed();
-    String SQL;
     // Note: We need to open a "raw connection", so one, that is not initialized!
     //       The reason is, that the normal initialization would invoke naksha_init_plv8(),
     //       but init-storage is called to install exactly this method.
@@ -403,51 +423,57 @@ final class PostgresStorage extends ClosableRootResource {
                   .addArgument(latest)
                   .log();
             }
-            SQL = ioHelp.readResource(ioHelp.findResource("/naksha_plpgsql.sql", PostgresStorage.class));
-            if (logLevel.toLong() >= EPsqlLogLevel.DEBUG.toLong()) {
-              SQL = SQL.replaceAll("--RAISE ", "RAISE ");
-              SQL = SQL.replaceAll("--DEBUG ", " ");
-            }
-            if (logLevel.toLong() >= EPsqlLogLevel.VERBOSE.toLong()) {
-              SQL = SQL.replaceAll("--VERBOSE ", " ");
-            }
-            if (params.pg_hint_plan()) {
-              SQL = SQL.replaceAll("--pg_hint_plan:", " ");
-            }
-            if (params.pg_stat_statements()) {
-              SQL = SQL.replaceAll("--pg_stat_statements:", " ");
-            }
-            SQL = SQL.replaceAll("\n--#", "\n");
-            SQL = SQL.replaceAll("\nCREATE OR REPLACE FUNCTION nk__________.*;\n", "\n");
-            SQL = SQL.replaceAll("\\$\\{schema}", getSchema());
-            SQL = SQL.replaceAll(
-                "\\$\\{version}",
-                logLevel.toLong() > EPsqlLogLevel.OFF.toLong()
-                    ? "0"
-                    : Long.toString(latest.toLong(), 10));
-            SQL = SQL.replaceAll("\\$\\{storage_id}", storageId);
             if (params.pg_plv8()) {
-              SQL += ioHelp.readResource(ioHelp.findResource("/naksha_plv8.sql", PostgresStorage.class));
-              String nakshaLibPlv8Js = ioHelp.readResource(
-                  ioHelp.findResource("/here-naksha-lib-plv8.js", PostgresStorage.class));
-              SQL = SQL.replaceFirst(
-                  "\\$\\{here-naksha-lib-plv8\\.js}", Matcher.quoteReplacement(nakshaLibPlv8Js));
+              initStoragePlv8(conn);
+            } else {
+              initStoragePlpgsql(ioHelp, stmt, conn);
             }
-            //noinspection SqlSourceToSinkFlow
-            stmt.execute(SQL);
-            conn.commit();
-
-            // Now, we can be sure that the code exists, and we can invoke it.
-            // Note: We do not want to naksha_start_session to be invoked, therefore pass null!
-            initConnection(conn.postgresConnection, null);
-            stmt.execute("SELECT naksha_init();");
-            conn.commit();
           }
         }
       }
     } catch (Throwable t) {
       throw unchecked(t);
     }
+  }
+
+  private void initStoragePlv8(PsqlConnection conn) throws SQLException {
+    final Plv8Env plv8Env = new Plv8Env();
+    plv8Env.install(conn, latest.toLong());
+    conn.commit();
+  }
+
+  private void initStoragePlpgsql(@NotNull IoHelp ioHelp, Statement stmt, PsqlConnection conn) throws SQLException {
+    String SQL;
+    SQL = ioHelp.readResource(ioHelp.findResource("/naksha_plpgsql.sql", PostgresStorage.class));
+    if (logLevel.toLong() >= EPsqlLogLevel.DEBUG.toLong()) {
+      SQL = SQL.replaceAll("--RAISE ", "RAISE ");
+      SQL = SQL.replaceAll("--DEBUG ", " ");
+    }
+    if (logLevel.toLong() >= EPsqlLogLevel.VERBOSE.toLong()) {
+      SQL = SQL.replaceAll("--VERBOSE ", " ");
+    }
+    if (params.pg_hint_plan()) {
+      SQL = SQL.replaceAll("--pg_hint_plan:", " ");
+    }
+    if (params.pg_stat_statements()) {
+      SQL = SQL.replaceAll("--pg_stat_statements:", " ");
+    }
+    SQL = SQL.replaceAll("\n--#", "\n");
+    SQL = SQL.replaceAll("\nCREATE OR REPLACE FUNCTION nk__________.*;\n", "\n");
+    SQL = SQL.replaceAll("\\$\\{schema}", getSchema());
+    SQL = SQL.replaceAll(
+        "\\$\\{version}",
+        logLevel.toLong() > EPsqlLogLevel.OFF.toLong() ? "0" : Long.toString(latest.toLong(), 10));
+    SQL = SQL.replaceAll("\\$\\{storage_id}", storageId);
+    //noinspection SqlSourceToSinkFlow
+    stmt.execute(SQL);
+    conn.commit();
+
+    // Now, we can be sure that the code exists, and we can invoke it.
+    // Note: We do not want to naksha_start_session to be invoked, therefore pass null!
+    initConnection(conn.postgresConnection, null);
+    stmt.execute("SELECT naksha_init();");
+    conn.commit();
   }
 
   void dropSchema() {

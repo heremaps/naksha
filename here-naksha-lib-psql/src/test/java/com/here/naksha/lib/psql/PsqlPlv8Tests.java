@@ -43,7 +43,6 @@ public class PsqlPlv8Tests extends PsqlTests {
     // naksha_init_v8 should be moved to session
     final SQL sql = pgSession.sql()
         .add("select ")
-        .add("naksha_init_v8(), ")
         .add("evalToText('new plv8.__lib.DummyHello().sayHello()'), ")
         .add("evalToText('new plv8.__lib.DummyHello().add(100,2)')");
     try (PreparedStatement stmt = pgSession.prepareStatement(sql)) {

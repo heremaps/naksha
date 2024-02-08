@@ -134,7 +134,7 @@ class PsqlViewTests {
   @Order(10)
   @EnabledIf("runTest")
   void createStorage() {
-    storage = new PsqlStorage(config);
+    storage = new PsqlStorage(config).withParams(new Params().pg_hint_plan(false).pg_stat_statements(false));
     schema = storage.getSchema();
     if (!schema.equals(schema())) {
       storage.setSchema(schema());
@@ -156,7 +156,7 @@ class PsqlViewTests {
   @EnabledIf("runTest")
   void initStorage() {
     assertNotNull(storage);
-    storage.initStorage(new Params().pg_hint_plan(false).pg_stat_statements(false));
+    storage.initStorage();
   }
 
   @Test

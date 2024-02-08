@@ -432,6 +432,15 @@ public final class PsqlStorage implements IStorage, DataSource {
     return this;
   }
 
+  public void setParams(@NotNull Params params) {
+    storage().setParams(params);
+  }
+
+  public @NotNull PsqlStorage withParams(@NotNull Params params) {
+    setParams(params);
+    return this;
+  }
+
   /**
    * Returns the storage identifier.
    *
@@ -453,7 +462,7 @@ public final class PsqlStorage implements IStorage, DataSource {
   public void stopMaintainer() {}
 
   /**
-   * The Parameters map that is expected as parameter to {@link #initStorage(Map)}.
+   * The Parameters map that is expected to modify underlying PostgreSQL environment.
    */
   public static class Params extends HashMap<String, Object> {
 
@@ -547,7 +556,7 @@ public final class PsqlStorage implements IStorage, DataSource {
 
   @Override
   public void initStorage() {
-    initStorage(null);
+    storage().initStorage(getIoHelp());
   }
 
   /**
@@ -565,7 +574,8 @@ public final class PsqlStorage implements IStorage, DataSource {
     } else {
       p = new Params(params);
     }
-    storage().initStorage(p, getIoHelp());
+    setParams(p);
+    initStorage();
   }
 
   private @Nullable IoHelp ioHelp;
