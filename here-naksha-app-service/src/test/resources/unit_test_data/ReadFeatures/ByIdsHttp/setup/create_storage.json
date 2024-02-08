@@ -5,14 +5,12 @@
   "description": "Http storage instance for testing purpose",
   "className": "com.here.naksha.storage.http.HttpStorage",
   "properties": {
-    "master": {
-      "host": "${dataDb.host}",
-      "db": "${dataDb.db}",
-      "user": "${dataDb.user}",
-      "password": "${dataDb.password}",
-      "readOnly": false
-    },
-    "appName": "test-app-name",
-    "schema": "${dataDb.schema}"
+    "url" : "https://example.org",
+    "connectTimeout" : 60,
+    "socketTimeout" : 3600,
+    "headers" : {
+      "Authorization" : "Bearer <token>",
+      "Content-Type" :  "application/json"
+    }
   }
 }

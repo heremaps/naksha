@@ -487,6 +487,7 @@ project(":here-naksha-lib-hub") {
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-storage-http"))
         //implementation(project(":here-naksha-lib-extension"))
         implementation(project(":here-naksha-lib-handlers"))
 
@@ -508,6 +509,7 @@ project(":here-naksha-app-service") {
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-storage-http"))
         //implementation(project(":here-naksha-lib-extension"))
         //implementation(project(":here-naksha-handler-psql"))
         implementation(project(":here-naksha-lib-hub"))

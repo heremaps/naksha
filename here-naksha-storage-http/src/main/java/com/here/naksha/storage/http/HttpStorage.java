@@ -18,6 +18,7 @@
  */
 package com.here.naksha.storage.http;
 
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
@@ -34,11 +35,15 @@ public class HttpStorage implements IStorage {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorage.class);
 
+  private final HttpStorageProperties properties;
+
   static {
     log.info("HttpStorage class initialized");
   }
 
-  public HttpStorage(@NotNull Storage storage) {}
+  public HttpStorage(@NotNull Storage storage) {
+    properties = HttpStorage.getProperties(storage);
+  }
 
   @Override
   public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
@@ -62,5 +67,9 @@ public class HttpStorage implements IStorage {
   @Override
   public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
     return new FutureTask<>(() -> onShutdown != null ? onShutdown.call(this) : null);
+  }
+
+  private static @NotNull HttpStorageProperties getProperties(@NotNull Storage storage) {
+    return new JsonMapper().convertValue(storage.getProperties(), HttpStorageProperties.class);
   }
 }
