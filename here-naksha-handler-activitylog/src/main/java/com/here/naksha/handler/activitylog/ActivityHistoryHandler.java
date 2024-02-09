@@ -40,6 +40,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzName
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
+import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Request;
 import com.here.naksha.lib.core.models.storage.Result;
@@ -112,6 +113,21 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
       return us.toErrorResult();
     }
   }
+
+  private @NotNull ReadFeatures transformRequest(Request<?> request) {
+    final ReadFeatures readFeatures = (ReadFeatures) request;
+    readFeatures.withReturnAllVersions(true);
+    translateRequestIdToFeatureUuid(readFeatures);
+    translateRequestFeatureIdToId(readFeatures);
+    return readFeatures;
+  }
+
+  private void translateRequestIdToFeatureUuid(ReadFeatures readFeatures) {
+    POp pop = readFeatures.getPropertyOp();
+    if (pop != null) {}
+  }
+
+  private void translateRequestFeatureIdToId(ReadFeatures readFeatures) {}
 
   private @NotNull String extractStorageId() {
     final String storageId = properties.getStorageId();

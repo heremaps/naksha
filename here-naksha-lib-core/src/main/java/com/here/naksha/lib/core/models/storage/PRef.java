@@ -18,9 +18,17 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
+import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.ID;
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.PROPERTIES;
+import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_ACTIVITY_LOG_NS;
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_NAMESPACE;
-import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.*;
+import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.APP_ID;
+import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.AUTHOR;
+import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.GRID;
+import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.TAGS;
+import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.TXN;
+import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.TXN_NEXT;
+import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.UUID;
 import static com.here.naksha.lib.core.util.StringCache.string;
 
 import java.util.HashMap;
@@ -49,7 +57,7 @@ public class PRef {
     return this;
   }
 
-  public static final String[] ID_PROP_PATH = new String[] {"id"};
+  public static final String[] ID_PROP_PATH = new String[] {ID};
   public static final String[] APP_ID_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, APP_ID};
   public static final String[] AUTHOR_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, AUTHOR};
   public static final String[] UUID_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, UUID};
@@ -58,6 +66,8 @@ public class PRef {
   public static final String[] TXN_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TXN};
   public static final String[] TXN_NEXT_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TXN_NEXT};
   public static final String[] TAGS_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TAGS};
+
+  public static final String[] ACTIVITY_LOG_ID_PATH = new String[] {PROPERTIES, XYZ_ACTIVITY_LOG_NS, ID};
 
   static final PRef PREF_ID = new PRef(ID_PROP_PATH);
   static final PRef PREF_APP_ID = new PRef(APP_ID_PROP_PATH);
@@ -68,6 +78,8 @@ public class PRef {
   static final PRef PREF_TXN = new PRef(TXN_PROP_PATH);
   static final PRef PREF_TXN_NEXT = new PRef(TXN_NEXT_PROP_PATH);
   static final PRef PREF_TAGS = new PRef(TAGS_PROP_PATH);
+
+  static final PRef PREF_ACTIVITY_LOG_ID = new PRef(ACTIVITY_LOG_ID_PATH);
 
   // Mapping of JSON Prop path to PRef object
   public static final Map<String[], PRef> PATH_TO_PREF_MAPPING = new HashMap<>() {};
@@ -188,5 +200,9 @@ public class PRef {
    */
   public static @NotNull PRef txn_next() {
     return PREF_TXN_NEXT;
+  }
+
+  public static @NotNull PRef activityLogId() {
+    return PREF_ACTIVITY_LOG_ID;
   }
 }
