@@ -512,6 +512,11 @@ public class WebMercatorTile {
     if (eBbox != null && eBuffer == buffer) {
       return bbox;
     }
+    if (buffer == 0) {
+      eBuffer = buffer;
+      eBbox = getBBox(false);
+      return eBbox;
+    }
 
     long TILE_SIZE_IN_PIXEL = TileSizeInPixel;
     double bufferRelative = (double) buffer / (double) TILE_SIZE_IN_PIXEL;

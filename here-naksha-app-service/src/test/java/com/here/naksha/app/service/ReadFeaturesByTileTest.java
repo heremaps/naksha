@@ -328,6 +328,70 @@ class ReadFeaturesByTileTest extends ApiTest {
                     "ReadFeatures/ByTile/TC0821_TileWithOnlyPropMatch/feature_response_part.json",
                     200,
                     false
+            ),
+            standardTestSpec(
+                    // for given filter parameters and selecting only few properties of Feature
+                    "tc0822_testGetByTileWithPropSelection",
+                    TYPE_QUADKEY,
+                    "120203302030322200",
+                    List.of(
+                            "margin=0",
+                            "tags=%s".formatted(urlEncoded("@ThRee")),
+                            "p.speedLimit='70'",
+                            "selection=p.speedLimit,%s".formatted(urlEncoded("p.@ns:com:here:xyz.tags")),
+                            "clip=false"
+                    ),
+                    "ReadFeatures/ByTile/TC0822_TileWithPropSelection/feature_response_part.json",
+                    200,
+                    true
+            ),
+            standardTestSpec(
+                    // for given filter parameters and selecting unknown properties of Feature
+                    "tc0823_testGetByTileWithUnknownPropSelection",
+                    TYPE_QUADKEY,
+                    "120203302030322200",
+                    List.of(
+                            "margin=0",
+                            "tags=%s".formatted(urlEncoded("@ThRee")),
+                            "p.speedLimit='70'",
+                            "selection=p.unknown_prop",
+                            "clip=false"
+                    ),
+                    "ReadFeatures/ByTile/TC0823_TileWithUnknownPropSelection/feature_response_part.json",
+                    200,
+                    true
+            ),
+            standardTestSpec(
+                    // for given filter parameters and invalid delimiter in property selection
+                    "tc0824_testGetByTileWithInvalidPropSelectionDelimiter",
+                    TYPE_QUADKEY,
+                    "120203302030322200",
+                    List.of(
+                            "margin=0",
+                            "tags=%s".formatted(urlEncoded("@ThRee")),
+                            "p.speedLimit='70'",
+                            "selection=p.speedLimit+p.length",
+                            "clip=false"
+                    ),
+                    "ReadFeatures/ByTile/TC0824_TileWithInvalidPropSelectionDelimiter/feature_response_part.json",
+                    400,
+                    false
+            ),
+            standardTestSpec(
+                    // for given filter parameters and property selection and when clip is true
+                    "tc0825_testGetByTileWithClip",
+                    TYPE_QUADKEY,
+                    "120203302030322200",
+                    List.of(
+                            "margin=0",
+                            "tags=%s".formatted(urlEncoded("@ThRee")),
+                            "p.speedLimit='70'",
+                            "selection=p.speedLimit,%s".formatted(urlEncoded("p.@ns:com:here:xyz.tags")),
+                            "clip=true"
+                    ),
+                    "ReadFeatures/ByTile/TC0825_TileWithClip/feature_response_part.json",
+                    200,
+                    true
             )
     );
   }
