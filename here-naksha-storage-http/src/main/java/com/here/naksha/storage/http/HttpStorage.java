@@ -24,6 +24,8 @@ import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import org.jetbrains.annotations.NotNull;
@@ -32,6 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HttpStorage implements IStorage {
+
+  private final HttpClient httpStorageClient;
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorage.class);
 
@@ -43,11 +47,14 @@ public class HttpStorage implements IStorage {
 
   public HttpStorage(@NotNull Storage storage) {
     properties = HttpStorage.getProperties(storage);
+    httpStorageClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(properties.getConnectTimeout()))
+        .build();
   }
 
   @Override
   public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new HttpStorageReadSession(context);
+    return new HttpStorageReadSession(context, properties, httpStorageClient);
   }
 
   @Override

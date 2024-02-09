@@ -18,12 +18,19 @@
  */
 package com.here.naksha.storage.http;
 
+import static java.net.http.HttpRequest.Builder;
+import static java.net.http.HttpRequest.newBuilder;
+
 import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.models.storage.Notification;
-import com.here.naksha.lib.core.models.storage.ReadRequest;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
+import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -36,10 +43,34 @@ public final class HttpStorageReadSession implements IReadSession {
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadSession.class);
 
   @NotNull
-  final NakshaContext context;
+  private final NakshaContext context;
 
-  HttpStorageReadSession(@Nullable NakshaContext context) {
+  @NotNull
+  private final HttpClient httpStorageClient;
+
+  @NotNull
+  private final Builder requestBuilderBase;
+
+  @NotNull
+  private final String hostUrl;
+
+  HttpStorageReadSession(
+      @Nullable NakshaContext context,
+      @NotNull HttpStorageProperties properties,
+      @NotNull HttpClient httpStorageClient) {
     this.context = context == null ? NakshaContext.currentContext() : context;
+    this.requestBuilderBase = createRequestBuilderBase(properties);
+    this.httpStorageClient = httpStorageClient;
+    this.hostUrl = properties.getUrl();
+  }
+
+  /**
+   * Builds builder with set socketTimeout and headers from {@link HttpStorageProperties}
+   */
+  private Builder createRequestBuilderBase(HttpStorageProperties properties) {
+    Builder builder = newBuilder().timeout(Duration.ofSeconds(properties.getSocketTimeout()));
+    properties.getHeaders().forEach(builder::header);
+    return builder;
   }
 
   @Override
@@ -84,8 +115,17 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @Override
   public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
-    log.info("Hello Naksha!");
-    return new SuccessResult();
+    log.info("Hello Naksha! HttpStorageReadSession.execute");
+    try {
+      HttpRequest putRequest =
+          requestBuilderBase.uri(ofEndpoint("/")).GET().build();
+      HttpResponse<String> httpResponse =
+          httpStorageClient.send(putRequest, HttpResponse.BodyHandlers.ofString());
+      log.info(httpResponse.body());
+      return new SuccessResult();
+    } catch (Exception e) {
+      return new ErrorResult(XyzError.EXCEPTION, e.getMessage());
+    }
   }
 
   @Override
@@ -96,5 +136,9 @@ public final class HttpStorageReadSession implements IReadSession {
   @Override
   public void close() {
     log.info("Bye Naksha!");
+  }
+
+  private URI ofEndpoint(String endpoint) throws URISyntaxException {
+    return new URI(hostUrl + endpoint);
   }
 }
