@@ -74,7 +74,7 @@ public class ViewHandler extends AbstractEventHandler {
 
     final NakshaContext ctx = NakshaContext.currentContext();
     final Request<?> request = event.getRequest();
-    logger.info("Handler received request {}", request.getClass().getSimpleName());
+    logger.debug("Handler received request {}", request.getClass().getSimpleName());
 
     final String storageId = properties.getStorageId();
 
@@ -82,11 +82,11 @@ public class ViewHandler extends AbstractEventHandler {
       logger.error("No storageId configured");
       return new ErrorResult(XyzError.NOT_FOUND, "No storageId configured for handler.");
     }
-    logger.info("Against Storage id={}", storageId);
+    logger.debug("Against Storage id={}", storageId);
     addStorageIdToStreamInfo(storageId, ctx);
 
     final IStorage storageImpl = nakshaHub().getStorageById(storageId);
-    logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
+    logger.debug("Using storage implementation [{}]", storageImpl.getClass().getName());
 
     if (storageImpl instanceof IView view) {
 
@@ -98,7 +98,7 @@ public class ViewHandler extends AbstractEventHandler {
       //TODO Replace the way how view is created. Should be immutable without need to use set method.
       return processRequest(ctx, view, request);
     } else {
-      logger.info("Storage is not and instance of IView. Processing event to next handler.");
+      logger.error("Storage is not and instance of IView. Processing event to next handler.");
       return new ErrorResult(XyzError.EXCEPTION, "Storage is not instance of IView");
     }
   }
