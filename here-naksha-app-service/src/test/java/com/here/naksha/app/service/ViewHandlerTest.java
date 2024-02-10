@@ -16,9 +16,11 @@ import static com.here.naksha.app.common.assertions.ResponseAssertions.assertTha
 
 public class ViewHandlerTest extends ApiTest {
 
-    private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient(150);
+    private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
     private static final String SPACE_ID = "mod-dev:topology-view";
-    public static final String FIRST_CONFIGURED_SPACE = "mod-dev:topology-delta";
+    private static final String DELTA_CONFIGURED_SPACE = "mod-dev:topology-delta";
+    private static final String DLB_CONFIGURED_SPACE = "mod-dev:topology-dlb";
+    private static final String BASE_CONFIGURED_SPACE = "mod-dev:topology-base";
 
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
@@ -40,6 +42,13 @@ public class ViewHandlerTest extends ApiTest {
         createSpace(nakshaClient, "ViewHandler/setup/create_space_mod_delta.json");
         createSpace(nakshaClient, "ViewHandler/setup/create_view_space.json");
 
+        //setup data
+        final String deltaBodyJson = loadFileOrFail("ViewHandler/setup/create_features_delta.json");
+        nakshaClient.post("hub/spaces/" + DELTA_CONFIGURED_SPACE + "/features", deltaBodyJson, UUID.randomUUID().toString());
+        final String dlbBodyJson = loadFileOrFail("ViewHandler/setup/create_features_dlb.json");
+        nakshaClient.post("hub/spaces/" + DLB_CONFIGURED_SPACE + "/features", dlbBodyJson, UUID.randomUUID().toString());
+        final String baseBodyJson = loadFileOrFail("ViewHandler/setup/create_features_base.json");
+        nakshaClient.post("hub/spaces/" + BASE_CONFIGURED_SPACE + "/features", baseBodyJson, UUID.randomUUID().toString());
     }
 
     @Test
@@ -54,7 +63,7 @@ public class ViewHandlerTest extends ApiTest {
 
         // When
         HttpResponse<String> viewResponse = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
-        HttpResponse<String> spaceSearchResponse = getNakshaClient().get("hub/spaces/" + FIRST_CONFIGURED_SPACE + "/features?" + idsQueryParam, streamId);
+        HttpResponse<String> spaceSearchResponse = getNakshaClient().get("hub/spaces/" + DELTA_CONFIGURED_SPACE + "/features?" + idsQueryParam, streamId);
 
         // Then
         assertThat(viewResponse)
@@ -73,21 +82,86 @@ public class ViewHandlerTest extends ApiTest {
 
 
     @Test
-    void tc5002_searchById() throws Exception {
+    void tc5002_searchById_GetFromDeltaWhenAvailableAtDeltaAndDlb() throws Exception {
+        //given
+        final String idsQueryParam = "id=my-custom-id-5002-1";
+        final String streamId = UUID.randomUUID().toString();
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5002_searchById/feature_response_part.json");
 
+        //when
+        HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
+
+        //then
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
 
     @Test
-    void tc5003_SearchByBBox() throws Exception {
+    void tc5003_searchById_GetFromDeltaWhenAvailableAtDeltaAndBase() throws Exception {
+        //given
+        final String idsQueryParam = "id=my-custom-id-5003-1";
+        final String streamId = UUID.randomUUID().toString();
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5003_searchById/feature_response_part.json");
 
+        //when
+        HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
+
+        //then
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+    }
+    @Test
+    void tc5004_searchById_GetFromDlbWhenAvailableAtDlbAndBase() throws Exception {
+        //given
+        final String idsQueryParam = "id=my-custom-id-5004-1";
+        final String streamId = UUID.randomUUID().toString();
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5004_searchById/feature_response_part.json");
+
+        //when
+        HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
+
+        //then
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
 
     @Test
-    void tc5004_SearchByTile() throws Exception {
+    void tc5005_searchById_GetFromBaseWhenAvailableOnlyAtBase() throws Exception {
+        //given
+        final String idsQueryParam = "id=my-custom-id-5005-1";
+        final String streamId = UUID.randomUUID().toString();
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5005_searchById/feature_response_part.json");
 
+        //when
+        HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
+
+        //then
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
 
+    @Test
+    void tc5006_searchById_ResultFromMultipleSpaces() throws Exception {
+        //given
+        final String idsQueryParam = "id=my-custom-id-5002-1&id=my-custom-id-5004-1&id=my-custom-id-5005-1";
+        final String streamId = UUID.randomUUID().toString();
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5006_searchById/feature_response_part.json");
 
+        //when
+        HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
 
-
+        //then
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+    }
 }
