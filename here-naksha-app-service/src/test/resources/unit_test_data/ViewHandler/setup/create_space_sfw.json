@@ -8,7 +8,7 @@
   ],
   "properties": {
     "collection": {
-      "id": "topology",
+      "id": "topologies",
       "type": "NakshaCollection"
     }
   }

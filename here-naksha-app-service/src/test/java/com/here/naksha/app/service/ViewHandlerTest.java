@@ -18,6 +18,7 @@ public class ViewHandlerTest extends ApiTest {
 
     private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient(150);
     private static final String SPACE_ID = "mod-dev:topology-view";
+    public static final String FIRST_CONFIGURED_SPACE = "mod-dev:topology-delta";
 
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
@@ -42,24 +43,51 @@ public class ViewHandlerTest extends ApiTest {
     }
 
     @Test
-    void tc2004_searchWithoutSourceId() throws Exception {
-        //given
-        final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
-        final String propQueryParam = "p.speedLimit='60'";
+    void tc5001_createFeatureByViewHandler() throws Exception {
 
-
+        // Given:
+        final String bodyJson = loadFileOrFail("ViewHandler/TC5001_createFeature/create_feature.json");
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5001_createFeature/feature_response_part.json");
+        final String idsQueryParam = "id=my-custom-id-5001-1";
+        String viewStreamId = UUID.randomUUID().toString();
         String streamId = UUID.randomUUID().toString();
 
         // When
-        HttpResponse<String> response = nakshaClient
-                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam , streamId);
+        HttpResponse<String> viewResponse = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
+        HttpResponse<String> spaceSearchResponse = getNakshaClient().get("hub/spaces/" + FIRST_CONFIGURED_SPACE + "/features?" + idsQueryParam, streamId);
 
         // Then
-        assertThat(response)
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(viewStreamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+                .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
+                .hasInsertedIdsMatchingFeatureIds(null)
+                .hasUuids();
+
+        assertThat(spaceSearchResponse)
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
-                .hasJsonBody("", "Get Feature response body doesn't match");
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
+
+
+    @Test
+    void tc5002_searchById() throws Exception {
+
+    }
+
+    @Test
+    void tc5003_SearchByBBox() throws Exception {
+
+    }
+
+    @Test
+    void tc5004_SearchByTile() throws Exception {
+
+    }
+
+
 
 
 }
