@@ -44,9 +44,9 @@ public class ViewHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ViewHandler.class);
 
-  private @NotNull EventHandler eventHandler;
-  private @NotNull EventTarget<?> eventTarget;
-  private @NotNull DefaultStorageHandlerProperties properties;
+  private final @NotNull EventHandler eventHandler;
+  private final @NotNull EventTarget<?> eventTarget;
+  private final @NotNull DefaultStorageHandlerProperties properties;
 
   public ViewHandler(
       final @NotNull EventHandler eventHandler,
