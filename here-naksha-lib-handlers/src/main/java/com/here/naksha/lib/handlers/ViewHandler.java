@@ -94,11 +94,9 @@ public class ViewHandler extends AbstractEventHandler {
       if (spaceIds.isEmpty()) {
         return new ErrorResult(XyzError.NOT_FOUND, "No spaceIds configured for handler.");
       }
-
       view.setViewLayerCollection(prepareViewLayerCollection(nakshaHub().getSpaceStorage(), spaceIds));
-
+      //TODO Replace the way how view is created. Should be immutable without need to use set method.
       return processRequest(ctx, view, request);
-
     } else {
       logger.info("Storage is not and instance of IView. Processing event to next handler.");
       return new ErrorResult(XyzError.EXCEPTION, "Storage is not instance of IView");

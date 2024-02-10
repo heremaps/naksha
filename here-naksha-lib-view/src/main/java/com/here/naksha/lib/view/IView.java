@@ -22,5 +22,5 @@ import com.here.naksha.lib.core.storage.IStorage;
 
 public interface IView extends IStorage {
 
-    void setViewLayerCollection(ViewLayerCollection viewLayerCollection);
+  void setViewLayerCollection(ViewLayerCollection viewLayerCollection);
 }
