@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.68872,
+          50.0561,
+          292.94377758
+        ]
+      },
+      "properties": {
+        "@ns:com:here:xyz": {
+          "action": "CREATE"
+        },
+        "@ns:com:here:xyz:log": {
+          "action": "CREATE",
+          "id": "activity_feature_1",
+          "invalidatedAt": 0,
+          "original": {
+            "space": "activity_history_space"
+          }
+        },
+        "speedLimit": "60"
+      }
+    }
+  ]
+}
