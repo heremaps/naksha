@@ -266,4 +266,99 @@ public class DefaultViewHandlerTest extends ApiTest {
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
+
+    @Test
+    void tc5020_searchByBBox_AvailableInAllSpaces() throws Exception {
+        //given Feature with this id is available in all spaces (delta,dlb,base)
+        final String bboxQueryParam = "west=18.5&south=54.5&east=19&north=55";
+
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5020_searchByBBox/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When: Get Features By BBox request is submitted to NakshaHub
+        HttpResponse<String> viewResponse = nakshaClient
+                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
+
+        //then expect that feature from last layer will be returned (delta)
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+    }
+
+    @Test
+    void tc5021_searchByBBox_AvailableInDlbAndBase() throws Exception {
+        //given Feature with this id is available in base and dlb
+        final String bboxQueryParam = "west=5.6&south=40.0&east=5.7&north=40.1";
+
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5021_searchByBBox/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When: Get Features By BBox request is submitted to NakshaHub
+        HttpResponse<String> viewResponse = nakshaClient
+                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
+
+        //then expect that feature from last layer will be returned (dlb)
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+    }
+
+    @Test
+    void tc5021_searchByBBox_AvailableOnlyInBase() throws Exception {
+        //given Feature with this id is available only in base
+        final String bboxQueryParam = "west=0.5&south=30.0&east=1&north=30.1";
+
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5022_searchByBBox/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When: Get Features By BBox request is submitted to NakshaHub
+        HttpResponse<String> viewResponse = nakshaClient
+                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
+
+        //then expect that feature from last layer will be returned (dlb)
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+    }
+
+    @Test
+    void tc5021_searchByBBox_PullingByIdWhenOutsideBBox() throws Exception {
+        //given Feature with this id is available only in base
+        final String bboxQueryParam = "west=0.5&south=30.0&east=1&north=30.1";
+
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5022_searchByBBox/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When: Get Features By BBox request is submitted to NakshaHub
+        HttpResponse<String> viewResponse = nakshaClient
+                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
+
+        //then expect that feature from last layer will be returned (dlb)
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+    }
+
+    @Test
+    void tc5023_searchByBBox_PullingByIdWhenOutsideBBox() throws Exception {
+        //given  DLB and Delta features have slightly  different geometries. Bbox covers only feature from DLB
+        final String bboxQueryParam = "west=17.79&south=53.59&east=17.82&north=53.62";
+
+        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5023_searchByBBox/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When: Get Features By BBox request is submitted to NakshaHub
+        HttpResponse<String> viewResponse = nakshaClient
+                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
+
+        //then Feature from delta is returned as gathered by ID in second internal call.
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+    }
 }
