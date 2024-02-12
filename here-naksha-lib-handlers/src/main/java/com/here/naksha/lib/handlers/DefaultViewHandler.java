@@ -18,6 +18,8 @@
  */
 package com.here.naksha.lib.handlers;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
@@ -32,12 +34,12 @@ import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.view.IView;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerCollection;
+
+import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
 
 public class DefaultViewHandler extends AbstractEventHandler {
 
@@ -45,7 +47,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
   private final @NotNull EventHandler eventHandler;
   private final @NotNull EventTarget<?> eventTarget;
-  private final @NotNull DefaultStorageHandlerProperties properties;
+  private final @NotNull DefaultViewHandlerProperties properties;
 
   public DefaultViewHandler(
       final @NotNull EventHandler eventHandler,
@@ -54,7 +56,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
+    this.properties = JsonSerializable.convert(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
   }
 
   @Override
@@ -89,12 +91,9 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
     if (storageImpl instanceof IView view) {
 
-      List<String> spaceIds = getSpaceIds(properties);
-      if (spaceIds.isEmpty()) {
-        return new ErrorResult(XyzError.NOT_FOUND, "No spaceIds configured for handler.");
-      }
-      view.setViewLayerCollection(prepareViewLayerCollection(nakshaHub().getSpaceStorage(), spaceIds));
-      //TODO MCPODS-7046 Replace the way how view is created. Should be immutable without need to use set method.
+      view.setViewLayerCollection(
+              prepareViewLayerCollection(nakshaHub().getSpaceStorage(), properties.getSpaceIds()));
+      // TODO MCPODS-7046 Replace the way how view is created. Should be immutable without need to use set method.
       return processRequest(ctx, view, request);
     } else {
       logger.error("Associated storage doesn't implement View, so can't process this request");
@@ -116,7 +115,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
   }
 
   private Result forwardWriteFeatures(NakshaContext ctx, IView view, WriteRequest<?, ?, ?> wr) {
-    try (final IWriteSession writeSession = view.newWriteSession(ctx, false)) {
+    try (final IWriteSession writeSession = view.newWriteSession(ctx, true)) {
       return writeSession.execute(wr);
     }
   }
@@ -128,26 +127,12 @@ public class DefaultViewHandler extends AbstractEventHandler {
     }
   }
 
-  private List<String> getSpaceIds(DefaultStorageHandlerProperties properties) {
+  private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> spaceIds) {
 
-    Object spaceIds = properties.get("spaceIds");
-    if (spaceIds != null && spaceIds instanceof List<?>) {
-
-      try {
-        return (List<String>) spaceIds;
-      } catch (ClassCastException castException) {
-        logger.warn("spaceIds collection can't be casted to List of String");
-        throw castException;
-      }
+    final List<ViewLayer> viewLayerList = new ArrayList<>();
+    for (final String spaceId : spaceIds) {
+      viewLayerList.add(new ViewLayer(nhStorage, spaceId));
     }
-    return List.of();
-  }
-
-  private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> storageIds) {
-
-    List<ViewLayer> viewLayerList = storageIds.stream()
-        .map(storageId -> new ViewLayer(nhStorage, storageId))
-        .toList();
 
     return new ViewLayerCollection("", viewLayerList);
   }
