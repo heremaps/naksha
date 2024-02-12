@@ -67,6 +67,9 @@ public class HttpStorageProperties extends XyzProperties {
     this.headers = headers == null ? DEFAULT_HEADERS : headers;
   }
 
+  /**
+   * Points to the instance, not to an endpoint.
+   */
   public @NotNull String getUrl() {
     return url;
   }

@@ -23,6 +23,7 @@ import static java.net.http.HttpRequest.newBuilder;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import java.net.URI;
@@ -31,6 +32,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -41,6 +45,9 @@ import org.slf4j.LoggerFactory;
 public final class HttpStorageReadSession implements IReadSession {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadSession.class);
+
+  // Temporary for unit tests, before we can test e2e
+  public static final List<String> testLog = new LinkedList<>();
 
   @NotNull
   private final NakshaContext context;
@@ -115,8 +122,17 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @Override
   public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
-    log.info("Hello Naksha! HttpStorageReadSession.execute");
     try {
+      if (readRequest instanceof ReadFeaturesProxyWrapper proxyRequest) {
+        String getBy = proxyRequest.getGetBy().toString();
+        Map<String, QueryParameter> queryParameters = proxyRequest.getQueryParameters();
+
+        testLog.add(getBy);
+        queryParameters.forEach((k, v) -> {
+          if (v.hasValues()) testLog.add(k + " = " + v.values());
+        });
+      }
+
       HttpRequest putRequest =
           requestBuilderBase.uri(ofEndpoint("/")).GET().build();
       HttpResponse<String> httpResponse =

@@ -21,6 +21,7 @@ package com.here.naksha.app.service;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.assertions.ResponseAssertions;
+import com.here.naksha.storage.http.HttpStorageReadSession;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -28,10 +29,12 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.UUID;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 class ReadFeaturesByIdsHttpTest extends ApiTest {
@@ -50,15 +53,21 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
         // Test API : GET /hub/spaces/{spaceId}/features
         // Validate empty collection getting returned for missing ids
         // Given: Features By Ids request (against configured space)
-        final String idsQueryParam = "?id=missing_id";
-        final String expectedBodyPart =
+        String bboxQuery = "hub/spaces/" + SPACE_ID + "/bbox?north=1&east=2&south=3&west=4";
+        String expectedBodyPart =
                 loadFileOrFail("ReadFeatures/ByIdsHttp/TC0401_MissingIds/feature_response_part.json");
         String streamId = UUID.randomUUID().toString();
 
         // When: Create Features request is submitted to NakshaHub Space Storage instance
-        HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features" + idsQueryParam, streamId);
+        HttpResponse<String> response = getNakshaClient().get(bboxQuery, streamId);
 
         // Then: Perform assertions
+        assertTrue(
+                HttpStorageReadSession.testLog.containsAll(
+                        List.of("BBOX", "north = [1]", "east = [2]","south = [3]","west = [4]")
+                )
+        );
+
         ResponseAssertions.assertThat(response)
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
