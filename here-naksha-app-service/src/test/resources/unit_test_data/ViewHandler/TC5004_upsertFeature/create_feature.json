@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
-      "id": "FeatId-create-5001",
+      "id": "FeatId-create-5004",
       "type": "Feature",
       "properties": {
         "@ns:com:here:mom:meta": {
@@ -14,7 +14,7 @@
           "lastUpdatedBy": "topology_adapter_service",
           "updatedByUser": "topology_adapter_service"
         },
-        "speedLimit": "50"
+        "speedLimit": "70"
       },
       "geometry": {
         "type": "Point",
