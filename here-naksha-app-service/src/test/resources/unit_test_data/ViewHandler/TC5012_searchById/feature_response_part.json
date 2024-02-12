@@ -3,7 +3,7 @@
   "features": [
     {
       "type": "Feature",
-      "id": "my-custom-id-5003-1",
+      "id": "FeatId-getById-5012",
       "geometry": {
         "type": "Point",
         "coordinates": [

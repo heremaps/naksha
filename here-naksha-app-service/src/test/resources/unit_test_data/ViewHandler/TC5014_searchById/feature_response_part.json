@@ -3,7 +3,7 @@
   "features": [
     {
       "type": "Feature",
-      "id": "my-custom-id-5004-1",
+      "id": "FeatId-getById-5014",
       "geometry": {
         "type": "Point",
         "coordinates": [
@@ -22,8 +22,8 @@
           "tid": "urn:here::here:Topology-Transaction:1866780",
           "operation": "CREATED"
         },
-        "speedLimit": "50",
-        "testSpace": "dlb"
+        "speedLimit": "20",
+        "testSpace": "base"
       }
     }
   ]
