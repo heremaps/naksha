@@ -18,9 +18,6 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
@@ -39,6 +36,8 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
 
 public class ViewHandler extends AbstractEventHandler {
 
@@ -66,7 +65,7 @@ public class ViewHandler extends AbstractEventHandler {
         || request instanceof WriteXyzCollections) {
       return PROCESS;
     }
-    return SEND_UPSTREAM_WITHOUT_PROCESSING;
+    return NOT_IMPLEMENTED;
   }
 
   @Override
@@ -74,7 +73,7 @@ public class ViewHandler extends AbstractEventHandler {
 
     final NakshaContext ctx = NakshaContext.currentContext();
     final Request<?> request = event.getRequest();
-    logger.debug("Handler received request {}", request.getClass().getSimpleName());
+    logger.info("Handler received request {}", request.getClass().getSimpleName());
 
     final String storageId = properties.getStorageId();
 
@@ -82,11 +81,11 @@ public class ViewHandler extends AbstractEventHandler {
       logger.error("No storageId configured");
       return new ErrorResult(XyzError.NOT_FOUND, "No storageId configured for handler.");
     }
-    logger.debug("Against Storage id={}", storageId);
+    logger.info("Against Storage id={}", storageId);
     addStorageIdToStreamInfo(storageId, ctx);
 
     final IStorage storageImpl = nakshaHub().getStorageById(storageId);
-    logger.debug("Using storage implementation [{}]", storageImpl.getClass().getName());
+    logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
     if (storageImpl instanceof IView view) {
 
@@ -95,11 +94,11 @@ public class ViewHandler extends AbstractEventHandler {
         return new ErrorResult(XyzError.NOT_FOUND, "No spaceIds configured for handler.");
       }
       view.setViewLayerCollection(prepareViewLayerCollection(nakshaHub().getSpaceStorage(), spaceIds));
-      // TODO Replace the way how view is created. Should be immutable without need to use set method.
+      //TODO MCPODS-7046 Replace the way how view is created. Should be immutable without need to use set method.
       return processRequest(ctx, view, request);
     } else {
-      logger.error("Storage is not and instance of IView. Processing event to next handler.");
-      return new ErrorResult(XyzError.EXCEPTION, "Storage is not instance of IView");
+      logger.error("Associated storage doesn't implement View, so can't process this request");
+      return new ErrorResult(XyzError.EXCEPTION, "Associated storage doesn't implement View");
     }
   }
 
