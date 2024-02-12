@@ -14,7 +14,7 @@ import static com.here.naksha.app.common.CommonApiTestSetup.*;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
-public class ViewHandlerTest extends ApiTest {
+public class DefaultViewHandlerTest extends ApiTest {
 
     private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
     private static final String SPACE_ID = "mod-dev:topology-view";

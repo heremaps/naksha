@@ -39,15 +39,15 @@ import org.slf4j.LoggerFactory;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
 
-public class ViewHandler extends AbstractEventHandler {
+public class DefaultViewHandler extends AbstractEventHandler {
 
-  private static final Logger logger = LoggerFactory.getLogger(ViewHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(DefaultViewHandler.class);
 
   private final @NotNull EventHandler eventHandler;
   private final @NotNull EventTarget<?> eventTarget;
   private final @NotNull DefaultStorageHandlerProperties properties;
 
-  public ViewHandler(
+  public DefaultViewHandler(
       final @NotNull EventHandler eventHandler,
       final @NotNull INaksha hub,
       final @NotNull EventTarget<?> eventTarget) {
