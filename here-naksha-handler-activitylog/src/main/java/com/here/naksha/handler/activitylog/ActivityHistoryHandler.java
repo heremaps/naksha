@@ -33,6 +33,7 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
+import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
@@ -40,7 +41,8 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzName
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.storage.POp;
+import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Request;
 import com.here.naksha.lib.core.models.storage.Result;
@@ -54,6 +56,7 @@ import com.here.naksha.lib.handlers.AbstractEventHandler;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -67,7 +70,7 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
   private final @NotNull ActivityHistoryHandlerProperties properties;
 
   public ActivityHistoryHandler(
-      @NotNull INaksha hub, @NotNull EventHandler handlerConfig, @NotNull EventTarget<?> eventTarget) {
+      @NotNull EventHandler handlerConfig, @NotNull INaksha hub, @NotNull EventTarget<?> eventTarget) {
     super(hub);
     this.eventTarget = eventTarget;
     this.handlerConfig = handlerConfig;
@@ -98,7 +101,7 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
   @Override
   protected @NotNull Result process(@NotNull IEvent event) {
     final NakshaContext ctx = NakshaContext.currentContext();
-    final ReadFeatures request = (ReadFeatures) event.getRequest();
+    final ReadFeatures request = transformRequest(event.getRequest());
     try {
       final String storageId = extractStorageId();
       addStorageIdToStreamInfo(storageId, ctx);
@@ -117,17 +120,21 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
   private @NotNull ReadFeatures transformRequest(Request<?> request) {
     final ReadFeatures readFeatures = (ReadFeatures) request;
     readFeatures.withReturnAllVersions(true);
-    translateRequestIdToFeatureUuid(readFeatures);
-    translateRequestFeatureIdToId(readFeatures);
+    ActivityHistoryRequestTranslationUtil.translatePropertyOperation(readFeatures);
+    overrideCollectionIfApplicable(readFeatures);
     return readFeatures;
   }
 
-  private void translateRequestIdToFeatureUuid(ReadFeatures readFeatures) {
-    POp pop = readFeatures.getPropertyOp();
-    if (pop != null) {}
+  private void overrideCollectionIfApplicable(ReadFeatures readFeatures) {
+    if (eventTarget instanceof Space space) {
+      final SpaceProperties spaceProperties =
+          JsonSerializable.convert(space.getProperties(), SpaceProperties.class);
+      final XyzCollection collectionDefinedInSpace = spaceProperties.getXyzCollection();
+      if (collectionDefinedInSpace != null) {
+        readFeatures.setCollections(List.of(collectionDefinedInSpace.getId()));
+      }
+    }
   }
-
-  private void translateRequestFeatureIdToId(ReadFeatures readFeatures) {}
 
   private @NotNull String extractStorageId() {
     final String storageId = properties.getStorageId();
@@ -144,13 +151,11 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
     return featuresEnhancedWithActivity(historyFeatures);
   }
 
-  private List<XyzFeature> fetchHistoryFeatures(
-      IStorage storage, ReadFeatures readFeatures, NakshaContext nakshaContext) {
-    readFeatures.withReturnAllVersions(true);
-    try (IReadSession readSession = storage.newReadSession(nakshaContext, true)) {
+  private List<XyzFeature> fetchHistoryFeatures(IStorage storage, ReadFeatures readFeatures, NakshaContext context) {
+    try (IReadSession readSession = storage.newReadSession(context, true)) {
       Result result = readSession.execute(readFeatures);
       return readFeaturesFromResult(result, XyzFeature.class);
-    } catch (NoCursor e) {
+    } catch (NoCursor | NoSuchElementException e) {
       return Collections.emptyList();
     }
   }
@@ -186,10 +191,10 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
     XyzActivityLog activityLog = activityLog(featureWithPredecessor);
     XyzFeature feature = featureWithPredecessor.feature;
     feature.getProperties().setXyzActivityLog(activityLog);
+    feature.setId(feature.getProperties().getXyzNamespace().getUuid());
     return feature;
   }
 
-  // note (TODO: delete): to jest de facto `@ns:com:here:xyz:log`
   private XyzActivityLog activityLog(@NotNull FeatureWithPredecessor featureWithPredecessor) {
     final XyzNamespace xyzNamespace =
         featureWithPredecessor.feature.getProperties().getXyzNamespace();
@@ -201,14 +206,30 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
     return xyzActivityLog;
   }
 
-  private JsonNode calculateDiff(@NotNull FeatureWithPredecessor featureWithPredecessor) {
-    Difference diff = Patcher.getDifference(featureWithPredecessor.feature, featureWithPredecessor.oldFeature);
-    return jsonDiff(diff);
+  private @Nullable JsonNode calculateDiff(@NotNull FeatureWithPredecessor featureWithPredecessor) {
+    EXyzAction action = getActionFrom(featureWithPredecessor.feature);
+    if (EXyzAction.CREATE.equals(action)) {
+      return null;
+    } else if (EXyzAction.UPDATE.equals(action)) {
+      // TODO
+      Difference diff = Patcher.getDifference(featureWithPredecessor.feature, featureWithPredecessor.oldFeature);
+      return jsonDiff(diff);
+    } else if (EXyzAction.DELETE.equals(action)) {
+      // TODO
+      Difference diff = Patcher.getDifference(featureWithPredecessor.feature, featureWithPredecessor.oldFeature);
+      return jsonDiff(diff);
+    } else {
+      throw new IllegalStateException("Unable to process unknown action type: " + action.toString());
+    }
   }
 
   private JsonNode jsonDiff(Difference diff) {
     // TODO: implement
     return BooleanNode.TRUE;
+  }
+
+  private EXyzAction getActionFrom(XyzFeature historyFeature) {
+    return historyFeature.getProperties().getXyzNamespace().getAction();
   }
 
   private Original original(@Nullable XyzNamespace xyzNamespace, @Nullable String spaceId) {

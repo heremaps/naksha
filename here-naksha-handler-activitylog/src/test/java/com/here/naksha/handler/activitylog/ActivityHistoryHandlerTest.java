@@ -24,6 +24,7 @@ import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.storage.IStorage;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -85,6 +86,13 @@ class ActivityHistoryHandlerTest {
     // And: SuccessResult was returned
     assertInstanceOf(SuccessResult.class, result);
   }
+
+  @Test
+  void shouldProcessHistory(){
+    // Given:
+
+  }
+
 
   private IEvent eventWith(Request request){
     IEvent event = Mockito.mock(IEvent.class);

@@ -37,7 +37,7 @@ public class ActivityHistoryHandlerProperties extends XyzProperties {
 
   @AvailableSince(NakshaVersion.v2_0_12)
   @JsonCreator
-  public ActivityHistoryHandlerProperties(@NotNull String storageId) {
+  public ActivityHistoryHandlerProperties(@JsonProperty(STORAGE_ID) @NotNull String storageId) {
     this.storageId = storageId;
   }
 

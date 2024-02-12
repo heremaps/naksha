@@ -29,14 +29,8 @@ import java.util.List;
 
 public class ActivityHistorySuccessResult extends SuccessResult {
 
-  private final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor;
-
   private ActivityHistorySuccessResult(ForwardCursor<XyzFeature, XyzFeatureCodec> cursor) {
     this.cursor = cursor;
-  }
-
-  public ForwardCursor<XyzFeature, XyzFeatureCodec> getCursor() {
-    return cursor;
   }
 
   static ActivityHistorySuccessResult forFeatures(List<XyzFeature> features) {

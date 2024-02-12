@@ -519,6 +519,8 @@ project(":here-naksha-app-service") {
         testImplementation(resillience4j_retry)
         testImplementation(test_containers)
         testImplementation(testFixtures(project(":here-naksha-lib-core")))
+
+        testImplementation(project(":here-naksha-handler-activitylog"))
     }
     setOverallCoverage(0.25) // only increasing allowed!
 }

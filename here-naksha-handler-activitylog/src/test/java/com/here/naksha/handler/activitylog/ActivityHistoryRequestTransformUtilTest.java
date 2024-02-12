@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Named.named;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import java.util.function.Function;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Named;
@@ -32,7 +31,7 @@ class ActivityHistoryRequestTransformUtilTest {
     ReadFeatures propertyBasedQuery = new ReadFeatures().withPropertyOp(translationExpectation.originalQuery);
 
     // When
-    ActivityHistoryRequestTransformUtil.translateIdPropertyToFeatureUuid(propertyBasedQuery);
+    ActivityHistoryRequestTranslationUtil.translatePropertyOperation(propertyBasedQuery);
 
     // Then
     assertEquals(translationExpectation.queryAfterTranslation, propertyBasedQuery.getPropertyOp());
