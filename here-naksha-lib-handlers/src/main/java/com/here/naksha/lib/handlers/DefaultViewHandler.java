@@ -34,7 +34,6 @@ import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.view.IView;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerCollection;
-
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -92,7 +91,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
     if (storageImpl instanceof IView view) {
 
       view.setViewLayerCollection(
-              prepareViewLayerCollection(nakshaHub().getSpaceStorage(), properties.getSpaceIds()));
+          prepareViewLayerCollection(nakshaHub().getSpaceStorage(), properties.getSpaceIds()));
       // TODO MCPODS-7046 Replace the way how view is created. Should be immutable without need to use set method.
       return processRequest(ctx, view, request);
     } else {
