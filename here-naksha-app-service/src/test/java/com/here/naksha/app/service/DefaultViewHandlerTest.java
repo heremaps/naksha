@@ -89,7 +89,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         String streamId = UUID.randomUUID().toString();
 
         // When: Sent create feature request to view space.
-        HttpResponse<String> viewResponse = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
+        HttpResponse<String> viewResponse = getNakshaClient().put("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
         HttpResponse<String> spaceSearchResponse = getNakshaClient().get("hub/spaces/" + DELTA_CONFIGURED_SPACE + "/features?" + idsQueryParam, streamId);
 
         // Then: Assert that feature was correctly updated by view space and was located in correct space(top one -> delta)
@@ -115,7 +115,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         String streamId = UUID.randomUUID().toString();
 
         // When: Sent create feature request to view space.
-        HttpResponse<String> viewResponse = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
+        HttpResponse<String> viewResponse = getNakshaClient().put("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
         HttpResponse<String> spaceSearchResponse = getNakshaClient().get("hub/spaces/" + DELTA_CONFIGURED_SPACE + "/features?" + idsQueryParam, streamId);
 
         // Then: Assert that feature was correctly created by view space and was located in correct space(top one -> delta)
@@ -143,7 +143,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         String streamId = UUID.randomUUID().toString();
 
         // When: Sent create feature request to view space.
-        HttpResponse<String> viewResponse = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
+        HttpResponse<String> viewResponse = getNakshaClient().put("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
         HttpResponse<String> spaceSearchResponse = getNakshaClient().get("hub/spaces/" + DELTA_CONFIGURED_SPACE + "/features?" + idsQueryParam, streamId);
 
         // Then: Assert that feature was correctly created by view space and was located in correct space(top one -> delta)
