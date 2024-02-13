@@ -10,13 +10,13 @@ import java.sql.SQLException;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class PsqlPlv8Tests extends PsqlTests {
 
   @Override
   boolean enabled() {
-    // turn me on
-    return false;
+    return true;
   }
 
   @Override
@@ -40,17 +40,21 @@ public class PsqlPlv8Tests extends PsqlTests {
   void testPlv8Function() throws SQLException {
     assert session != null;
     final PostgresSession pgSession = session.session();
-    // naksha_init_v8 should be moved to session
+
+    // jbonByteArray = "{"bool":true}"
+    byte[] jbonByteArray = new byte[]{18, -116, 0, 0, 17, -123, -60, 98, 111, 111, 108, -47, 2, -32, 2};
+
     final SQL sql = pgSession.sql()
-        .add("select ")
-        .add("evalToText('new plv8.__lib.DummyHello().sayHello()'), ")
-        .add("evalToText('new plv8.__lib.DummyHello().add(100,2)')");
+        .add("SELECT jb_get_bool(?,?,?)");
+
     try (PreparedStatement stmt = pgSession.prepareStatement(sql)) {
+      stmt.setBytes(1, jbonByteArray);
+      stmt.setString(2, "bool");
+      stmt.setBoolean(3, false); // default value
       try (ResultSet resultSet = stmt.executeQuery()) {
         // then
         resultSet.next();
-        assertEquals("hello world", resultSet.getString(2));
-        assertEquals("102", resultSet.getString(3));
+        assertEquals(true, resultSet.getBoolean(1));
       }
     }
   }
