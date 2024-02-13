@@ -1,8 +1,8 @@
 package com.here.naksha.handler.activitylog;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -18,13 +18,11 @@ import com.here.naksha.lib.core.models.storage.ReadCollections;
 import com.here.naksha.lib.core.models.storage.Request;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.WriteCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.storage.IStorage;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -49,15 +47,15 @@ class ActivityHistoryHandlerTest {
   private ActivityHistoryHandler handler;
 
   @BeforeEach
-  void setup(){
+  void setup() {
     MockitoAnnotations.openMocks(this);
     when(naksha.getStorageById(any())).thenReturn(storage);
-    handler = new ActivityHistoryHandler(naksha, eventHandler, eventTarget);
+    handler = new ActivityHistoryHandler(eventHandler, naksha, eventTarget);
   }
 
   @ParameterizedTest
   @MethodSource("unhandledRequests")
-  void shouldFailOnNonReadFeaturesRequests(Request<?> unhandledRequest){
+  void shouldFailOnNonReadFeaturesRequests(Request<?> unhandledRequest) {
     // Given:
     IEvent event = eventWith(unhandledRequest);
 
@@ -73,7 +71,7 @@ class ActivityHistoryHandlerTest {
   }
 
   @Test
-  void shouldImmediatelySucceedOnSingleCollectionDelete(){
+  void shouldImmediatelySucceedOnSingleCollectionDelete() {
     // Given:
     IEvent event = eventWith(new WriteXyzCollections().delete(new XyzCollection("some_collection")));
 
@@ -88,19 +86,19 @@ class ActivityHistoryHandlerTest {
   }
 
   @Test
-  void shouldProcessHistory(){
+  void shouldProcessHistory() {
     // Given:
 
   }
 
 
-  private IEvent eventWith(Request request){
+  private IEvent eventWith(Request request) {
     IEvent event = Mockito.mock(IEvent.class);
     when(event.getRequest()).thenReturn(request);
     return event;
   }
 
-  private static Stream<Request<?>> unhandledRequests(){
+  private static Stream<Request<?>> unhandledRequests() {
     return Stream.of(
         new WriteXyzFeatures("some_collection").create(new XyzFeature("some_feature")),
         new WriteXyzCollections().create(new XyzCollection("some_collection")),

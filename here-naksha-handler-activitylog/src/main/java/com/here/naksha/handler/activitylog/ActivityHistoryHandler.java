@@ -27,7 +27,6 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.here.naksha.handler.activitylog.exceptions.UndefinedStorageIdException;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -49,8 +48,6 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteCollections;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
-import com.here.naksha.lib.core.util.diff.Difference;
-import com.here.naksha.lib.core.util.diff.Patcher;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import java.util.Collections;
@@ -210,22 +207,13 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
     EXyzAction action = getActionFrom(featureWithPredecessor.feature);
     if (EXyzAction.CREATE.equals(action)) {
       return null;
-    } else if (EXyzAction.UPDATE.equals(action)) {
-      // TODO
-      Difference diff = Patcher.getDifference(featureWithPredecessor.feature, featureWithPredecessor.oldFeature);
-      return jsonDiff(diff);
-    } else if (EXyzAction.DELETE.equals(action)) {
-      // TODO
-      Difference diff = Patcher.getDifference(featureWithPredecessor.feature, featureWithPredecessor.oldFeature);
-      return jsonDiff(diff);
+    } else if (EXyzAction.UPDATE.equals(action) || EXyzAction.DELETE.equals(action)) {
+      ActivityLogReversePatch reversePatch = ActivityLogReversePatchUtil.reversePatch(
+          featureWithPredecessor.oldFeature, featureWithPredecessor.feature);
+      return ActivityLogReversePatchUtil.toJsonNode(reversePatch);
     } else {
       throw new IllegalStateException("Unable to process unknown action type: " + action.toString());
     }
-  }
-
-  private JsonNode jsonDiff(Difference diff) {
-    // TODO: implement
-    return BooleanNode.TRUE;
   }
 
   private EXyzAction getActionFrom(XyzFeature historyFeature) {
