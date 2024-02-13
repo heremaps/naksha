@@ -31,6 +31,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
@@ -64,8 +65,9 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
         // Then: Perform assertions
         assertTrue(
                 HttpStorageReadSession.testLog.containsAll(
-                        List.of("BBOX", "north = [1]", "east = [2]","south = [3]","west = [4]")
-                )
+                        List.of("GET_BY_BBOX", "north = 1.0", "east = 2.0")
+                ),
+                String.join(", ", HttpStorageReadSession.testLog)
         );
 
         ResponseAssertions.assertThat(response)

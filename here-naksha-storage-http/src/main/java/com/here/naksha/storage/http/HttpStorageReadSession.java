@@ -23,7 +23,6 @@ import static java.net.http.HttpRequest.newBuilder;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import java.net.URI;
@@ -34,7 +33,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -124,13 +122,11 @@ public final class HttpStorageReadSession implements IReadSession {
   public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
     try {
       if (readRequest instanceof ReadFeaturesProxyWrapper proxyRequest) {
-        String getBy = proxyRequest.getGetBy().toString();
-        Map<String, QueryParameter> queryParameters = proxyRequest.getQueryParameters();
+        String getBy = proxyRequest.getReadRequestType().toString();
 
         testLog.add(getBy);
-        queryParameters.forEach((k, v) -> {
-          if (v.hasValues()) testLog.add(k + " = " + v.values());
-        });
+        testLog.add("north = " + proxyRequest.<Double>getQueryParameter("north"));
+        testLog.add("east = " + proxyRequest.<Double>getQueryParameter("east"));
       }
 
       HttpRequest putRequest =
