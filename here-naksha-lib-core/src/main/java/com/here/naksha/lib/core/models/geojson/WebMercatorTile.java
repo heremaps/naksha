@@ -510,7 +510,7 @@ public class WebMercatorTile {
    */
   public BBox getExtendedBBox(int buffer) {
     if (eBbox != null && eBuffer == buffer) {
-      return bbox;
+      return eBbox;
     }
     if (buffer == 0) {
       eBuffer = buffer;

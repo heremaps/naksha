@@ -19,7 +19,6 @@
 package com.here.naksha.app.service.http.ops;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.TILE_TYPE_QUADKEY;
-
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
@@ -36,10 +35,9 @@ public class SpatialUtil {
       if (!TILE_TYPE_QUADKEY.equals(tileType)) {
         throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Tile type " + tileType + " not supported");
       }
-      final Geometry geo = WebMercatorTile.forQuadkey(tileId)
+      return WebMercatorTile.forQuadkey(tileId)
           .getExtendedBBoxAsPolygon(margin)
           .getGeometry();
-      return geo;
     } catch (Exception ex) {
       throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Error interpreting tile input: " + ex.getMessage());
     }
