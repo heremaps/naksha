@@ -3,7 +3,7 @@
   "type": "EventHandler",
   "title": "Sample Activity History Handler",
   "description": "Activity History Handler used for tests",
-  "className": "com.here.naksha.handler.activitylog.ActivityHistoryHandler",
+  "className": "com.here.naksha.handler.activitylog.ActivityLogHandler",
   "active": true,
   "extensionId": null,
   "properties": {

@@ -1,44 +1,43 @@
 package com.here.naksha.handler.activitylog;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.here.naksha.handler.activitylog.ActivityLogReversePatch.ReverseOp;
-import java.util.List;
-import org.junit.jupiter.api.Assertions;
+import com.here.naksha.handler.activitylog.ReversePatch.PatchOp;
 
 public class ReversePatchAssertions {
-  private final ActivityLogReversePatch subject;
+  private final ReversePatch subject;
 
-  private ReversePatchAssertions(ActivityLogReversePatch subject) {
+  private ReversePatchAssertions(ReversePatch subject) {
     this.subject = subject;
   }
 
-  static ReversePatchAssertions assertThat(ActivityLogReversePatch reversePatch){
+  static ReversePatchAssertions assertThat(ReversePatch reversePatch){
     return new ReversePatchAssertions(reversePatch);
   }
 
   ReversePatchAssertions hasAddOpsCount(int expectedAddOps){
-    Assertions.assertEquals(expectedAddOps, subject.add());
+    assertEquals(expectedAddOps, subject.insert());
     return this;
   }
 
-  ReversePatchAssertions hasReplaceOpsCount(int expectedReplaceOps){
-    Assertions.assertEquals(expectedReplaceOps, subject.replace());
+  ReversePatchAssertions hasUpdateOpsCount(int expectedUpdateOps){
+    assertEquals(expectedUpdateOps, subject.update());
     return this;
   }
 
   ReversePatchAssertions hasRemoveOpsCount(int expectedRemoveOps){
-    Assertions.assertEquals(expectedRemoveOps, subject.remove());
+    assertEquals(expectedRemoveOps, subject.remove());
     return this;
   }
 
-  ReversePatchAssertions hasReverseOp(ActivityLogReversePatch.ReverseOp reverseOp){
+  ReversePatchAssertions hasReverseOp(PatchOp reverseOp){
     assertTrue(subject.ops().contains(reverseOp), "Missing op: %s\nActual ops: %s".formatted(reverseOp, subject.ops()));
     return this;
   }
 
-  ReversePatchAssertions hasReverseOps(ActivityLogReversePatch.ReverseOp... reverseOps){
-    for(ReverseOp op: reverseOps){
+  ReversePatchAssertions hasReverseOps(PatchOp... reverseOps){
+    for(PatchOp op: reverseOps){
       hasReverseOp(op);
     }
     return this;

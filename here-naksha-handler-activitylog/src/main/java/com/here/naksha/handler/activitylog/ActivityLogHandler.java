@@ -59,20 +59,19 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ActivityHistoryHandler extends AbstractEventHandler {
+public class ActivityLogHandler extends AbstractEventHandler {
 
-  private final @NotNull Logger logger = LoggerFactory.getLogger(ActivityHistoryHandler.class);
+  private final @NotNull Logger logger = LoggerFactory.getLogger(ActivityLogHandler.class);
   private final @NotNull EventTarget<?> eventTarget;
   private final @NotNull EventHandler handlerConfig;
-  private final @NotNull ActivityHistoryHandlerProperties properties;
+  private final @NotNull ActivityLogHandlerProperties properties; // TODO: include spaceId, and then delegate read to it
 
-  public ActivityHistoryHandler(
+  public ActivityLogHandler(
       @NotNull EventHandler handlerConfig, @NotNull INaksha hub, @NotNull EventTarget<?> eventTarget) {
     super(hub);
     this.eventTarget = eventTarget;
     this.handlerConfig = handlerConfig;
-    this.properties =
-        JsonSerializable.convert(handlerConfig.getProperties(), ActivityHistoryHandlerProperties.class);
+    this.properties = JsonSerializable.convert(handlerConfig.getProperties(), ActivityLogHandlerProperties.class);
   }
 
   @Override
@@ -81,7 +80,7 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
     if (request instanceof ReadFeatures) {
       return PROCESS;
     }
-    if (isDeleteSingleCollectionRequest(request)) {
+    if (isDeleteSingleCollectionRequest(request)) { // TODO: forward all WriteCollection requests
       return SUCCEED_WITHOUT_PROCESSING;
     }
     return NOT_IMPLEMENTED;
@@ -108,7 +107,7 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
           "Using storage implementation [{}]", storageImpl.getClass().getName());
 
       List<XyzFeature> activityHistoryFeatures = activityHistoryFeatures(storageImpl, request, ctx);
-      return ActivityHistorySuccessResult.forFeatures(activityHistoryFeatures);
+      return ActivityLogSuccessResult.forFeatures(activityHistoryFeatures);
     } catch (UndefinedStorageIdException us) {
       return us.toErrorResult();
     }
@@ -117,7 +116,7 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
   private @NotNull ReadFeatures transformRequest(Request<?> request) {
     final ReadFeatures readFeatures = (ReadFeatures) request;
     readFeatures.withReturnAllVersions(true);
-    ActivityHistoryRequestTranslationUtil.translatePropertyOperation(readFeatures);
+    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
     overrideCollectionIfApplicable(readFeatures);
     return readFeatures;
   }
@@ -165,15 +164,20 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
   }
 
   private List<FeatureWithPredecessor> featuresWithPredecessors(List<XyzFeature> historyFeatures) {
-    Map<String, XyzFeature> featuresByUuid = featuresByUuid(historyFeatures);
+    Map<String, XyzFeature> featuresByUuid = featuresByUuid(historyFeatures); // TODO: run a second query against puuidS -> predecessors might not be there (example: single query against uuid)
     return historyFeatures.stream()
         .map(feature -> new FeatureWithPredecessor(feature, featuresByUuid.get(puuid(feature))))
         .toList();
   }
 
+  // TODO: get this add pass to bulk read operations
+  private List<String> missingPuuids(){
+    return null;
+  }
+
   @NotNull
   private static Map<String, XyzFeature> featuresByUuid(List<XyzFeature> historyFeatures) {
-    return historyFeatures.stream().collect(toMap(ActivityHistoryHandler::uuid, identity()));
+    return historyFeatures.stream().collect(toMap(ActivityLogHandler::uuid, identity()));
   }
 
   private static String uuid(XyzFeature feature) {
@@ -205,12 +209,12 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
 
   private @Nullable JsonNode calculateDiff(@NotNull FeatureWithPredecessor featureWithPredecessor) {
     EXyzAction action = getActionFrom(featureWithPredecessor.feature);
-    if (EXyzAction.CREATE.equals(action)) {
+    if (EXyzAction.CREATE.equals(action)) { // TODO: match simple create (and other action types) response with sample
       return null;
     } else if (EXyzAction.UPDATE.equals(action) || EXyzAction.DELETE.equals(action)) {
-      ActivityLogReversePatch reversePatch = ActivityLogReversePatchUtil.reversePatch(
-          featureWithPredecessor.oldFeature, featureWithPredecessor.feature);
-      return ActivityLogReversePatchUtil.toJsonNode(reversePatch);
+      ReversePatch reversePatch =
+          ReversePatchUtil.reversePatch(featureWithPredecessor.oldFeature, featureWithPredecessor.feature);
+      return ReversePatchUtil.toJsonNode(reversePatch);
     } else {
       throw new IllegalStateException("Unable to process unknown action type: " + action.toString());
     }
@@ -224,7 +228,6 @@ public class ActivityHistoryHandler extends AbstractEventHandler {
     Original original = new Original();
     if (xyzNamespace != null) {
       original.setPuuid(xyzNamespace.getPuuid());
-      //      original.setMuuid(xyzNamespace.getMuuid()); TODO: where to get Muuid from?
       original.setUpdatedAt(xyzNamespace.getUpdatedAt());
       original.setCreatedAt(xyzNamespace.getCreatedAt());
     }

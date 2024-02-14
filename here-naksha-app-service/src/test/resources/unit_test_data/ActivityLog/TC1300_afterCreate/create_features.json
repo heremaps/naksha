@@ -2,14 +2,14 @@
   "type": "FeatureCollection",
   "features": [
     {
-      "id": "activity_feature_1",
+      "id": "TC1300_feature",
       "type": "Feature",
-      "properties": {
-        "speedLimit": "80"
-      },
       "geometry": {
         "type":"Point",
         "coordinates":[ 8.68872, 50.0561, 292.94377758]
+      },
+      "properties": {
+        "speedLimit": "60"
       }
     }
   ]

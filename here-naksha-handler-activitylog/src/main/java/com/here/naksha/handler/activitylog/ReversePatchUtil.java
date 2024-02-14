@@ -21,8 +21,9 @@ package com.here.naksha.handler.activitylog;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.util.diff.Difference;
-import com.here.naksha.lib.core.util.diff.IgnoreKey;
 import com.here.naksha.lib.core.util.diff.InsertOp;
 import com.here.naksha.lib.core.util.diff.ListDiff;
 import com.here.naksha.lib.core.util.diff.MapDiff;
@@ -31,57 +32,78 @@ import com.here.naksha.lib.core.util.diff.PrimitiveDiff;
 import com.here.naksha.lib.core.util.diff.RemoveOp;
 import com.here.naksha.lib.core.util.diff.UpdateOp;
 import java.util.Map;
+import org.jetbrains.annotations.Nullable;
 
-class ActivityLogReversePatchUtil {
+class ReversePatchUtil {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
-  private static final IgnoreKey IGNORE_ID = (key, sm, m) -> XyzFeature.ID.equals(key);
+  private static final String PATCH_PATH_DELIMITER = "/";
+  private static final String XYZ_NAMESPACE_PATH = patchPath(XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE);
+  private static final String XYZ_NAMESPACE_TAGS_PATH = patchPath(PRef.TAGS_PROP_PATH);
 
-  private ActivityLogReversePatchUtil() {}
+  private ReversePatchUtil() {}
 
-  static JsonNode toJsonNode(ActivityLogReversePatch activityLogReversePatch) {
+  static JsonNode toJsonNode(ReversePatch activityLogReversePatch) {
     return MAPPER.valueToTree(activityLogReversePatch);
   }
 
-  static ActivityLogReversePatch reversePatch(XyzFeature older, XyzFeature younger) {
-    Difference difference = Patcher.getDifference(older, younger, IGNORE_ID);
-    return fromDifference(difference);
+  static @Nullable ReversePatch reversePatch(XyzFeature older, XyzFeature younger) {
+    Difference difference = Patcher.getDifference(older, younger);
+    if (difference == null) {
+      return null;
+    } else {
+      return fromDifference(difference);
+    }
   }
 
-  private static ActivityLogReversePatch fromDifference(Difference difference) {
+  private static ReversePatch fromDifference(Difference difference) {
     if (!(difference instanceof MapDiff rootDiff)) {
       throw new IllegalArgumentException("Expected root Difference to be MapDiff, got "
           + difference.getClass().getName() + " instead");
     }
-    ActivityLogReversePatch.Builder diffBuilder = ActivityLogReversePatch.builder();
-    handle(rootDiff, diffBuilder, "");
+    ReversePatch.Builder diffBuilder = ReversePatch.builder();
+    handleMap(rootDiff, diffBuilder, "");
     return diffBuilder.build();
   }
 
-  private static void handle(Difference difference, ActivityLogReversePatch.Builder builder, String currentPath) {
+  private static void handle(Difference difference, ReversePatch.Builder builder, String currentPath) {
     if (difference instanceof PrimitiveDiff pd) {
-      handle(pd, builder, currentPath);
+      handlePrimitive(pd, builder, currentPath);
     } else if (difference instanceof MapDiff md) {
-      handle(md, builder, currentPath);
+      handleMap(md, builder, currentPath);
     } else if (difference instanceof ListDiff ld) {
-      // TODO: ?
+      handleList(ld, builder, currentPath);
     } else {
       throw new UnsupportedOperationException("Unable to  process unknown Difference type: "
           + difference.getClass().getName());
     }
   }
 
-  private static void handle(MapDiff mapDiff, ActivityLogReversePatch.Builder builder, String currentPath) {
+  private static void handleMap(MapDiff mapDiff, ReversePatch.Builder builder, String currentPath) {
     for (Map.Entry<Object, Difference> diffEntry : mapDiff.entrySet()) {
       handle(diffEntry.getValue(), builder, path(currentPath, diffEntry.getKey()));
     }
   }
 
-  private static void handle(
-      PrimitiveDiff primitiveDiff, ActivityLogReversePatch.Builder builder, String currentPath) {
-    if (primitiveDiff instanceof InsertOp insertOp) {
-      builder.reverseInsert(insertOp, currentPath);
+  // TODO: fix ListDiff calculation in Patcher (when source.size < target.size)
+  private static void handleList(ListDiff listDiff, ReversePatch.Builder builder, String currentPath) {
+    for (int i = 0; i < listDiff.size(); i++) {
+      Difference diff = listDiff.get(i);
+      if (diff == null) {
+        //        Difference elementRemoved = new RemoveOp()
+      } else {
+        handle(diff, builder, path(currentPath, i));
+      }
+    }
+  }
+
+  private static void handlePrimitive(PrimitiveDiff primitiveDiff, ReversePatch.Builder builder, String currentPath) {
+    if (shouldFilter(currentPath)) {
+      return;
+    }
+    if (primitiveDiff instanceof InsertOp) {
+      builder.reverseInsert(currentPath);
     } else if (primitiveDiff instanceof RemoveOp removeOp) {
       builder.reverseRemove(removeOp, currentPath);
     } else if (primitiveDiff instanceof UpdateOp updateOp) {
@@ -92,10 +114,28 @@ class ActivityLogReversePatchUtil {
     }
   }
 
+  private static void handleRemovedListElement(ReversePatch.Builder builder, String currentPath) {}
+
+  private static boolean shouldFilter(String currentPath) {
+    return isId(currentPath) || isXyzNamespaceButNotTag(currentPath);
+  }
+
+  private static boolean isId(String currentPath) {
+    return XyzFeature.ID.equals(currentPath);
+  }
+
+  private static boolean isXyzNamespaceButNotTag(String currentPath) {
+    return !currentPath.startsWith(XYZ_NAMESPACE_TAGS_PATH) && currentPath.startsWith(XYZ_NAMESPACE_PATH);
+  }
+
   private static String path(String currentPath, Object diffPlacement) {
     if (currentPath.isEmpty()) {
       return diffPlacement.toString();
     }
-    return "%s.%s".formatted(currentPath, diffPlacement);
+    return patchPath(currentPath, diffPlacement.toString());
+  }
+
+  private static String patchPath(String... components) {
+    return String.join(PATCH_PATH_DELIMITER, components);
   }
 }

@@ -27,18 +27,18 @@ import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import java.util.List;
 
-public class ActivityHistorySuccessResult extends SuccessResult {
+public class ActivityLogSuccessResult extends SuccessResult {
 
-  private ActivityHistorySuccessResult(ForwardCursor<XyzFeature, XyzFeatureCodec> cursor) {
+  private ActivityLogSuccessResult(ForwardCursor<XyzFeature, XyzFeatureCodec> cursor) {
     this.cursor = cursor;
   }
 
-  static ActivityHistorySuccessResult forFeatures(List<XyzFeature> features) {
+  static ActivityLogSuccessResult forFeatures(List<XyzFeature> features) {
     XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
     List<XyzFeatureCodec> codecs = features.stream()
         .map(feature -> featureCodec(codecFactory, feature))
         .toList();
-    return new ActivityHistorySuccessResult(new ListBasedForwardCursor<>(codecFactory, codecs));
+    return new ActivityLogSuccessResult(new ListBasedForwardCursor<>(codecFactory, codecs));
   }
 
   private static XyzFeatureCodec featureCodec(XyzFeatureCodecFactory codecFactory, XyzFeature feature) {

@@ -17,7 +17,7 @@
         },
         "@ns:com:here:xyz:log": {
           "action": "CREATE",
-          "id": "activity_feature_1",
+          "id": "TC1300_feature",
           "invalidatedAt": 0,
           "original": {
             "space": "activity_history_space"

@@ -1,6 +1,6 @@
 package com.here.naksha.handler.activitylog;
 
-import static com.here.naksha.handler.activitylog.ActivityHistoryRequestTransformUtilTest.TranslationExpectation.Builder.query;
+import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtilTest.TranslationExpectation.Builder.query;
 import static com.here.naksha.lib.core.models.storage.POp.and;
 import static com.here.naksha.lib.core.models.storage.POp.eq;
 import static com.here.naksha.lib.core.models.storage.POp.or;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-class ActivityHistoryRequestTransformUtilTest {
+class ActivityLogRequestTranslationUtilTest {
 
   @ParameterizedTest
   @MethodSource("translationSamples")
@@ -31,7 +31,7 @@ class ActivityHistoryRequestTransformUtilTest {
     ReadFeatures propertyBasedQuery = new ReadFeatures().withPropertyOp(translationExpectation.originalQuery);
 
     // When
-    ActivityHistoryRequestTranslationUtil.translatePropertyOperation(propertyBasedQuery);
+    ActivityLogRequestTranslationUtil.translatePropertyOperation(propertyBasedQuery);
 
     // Then
     assertEquals(translationExpectation.queryAfterTranslation, propertyBasedQuery.getPropertyOp());

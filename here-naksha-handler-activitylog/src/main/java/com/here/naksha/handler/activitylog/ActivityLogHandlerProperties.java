@@ -26,7 +26,7 @@ import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
 @AvailableSince(NakshaVersion.v2_0_12)
-public class ActivityHistoryHandlerProperties extends XyzProperties {
+public class ActivityLogHandlerProperties extends XyzProperties {
 
   @AvailableSince(NakshaVersion.v2_0_12)
   public static final String STORAGE_ID = "storageId";
@@ -37,7 +37,7 @@ public class ActivityHistoryHandlerProperties extends XyzProperties {
 
   @AvailableSince(NakshaVersion.v2_0_12)
   @JsonCreator
-  public ActivityHistoryHandlerProperties(@JsonProperty(STORAGE_ID) @NotNull String storageId) {
+  public ActivityLogHandlerProperties(@JsonProperty(STORAGE_ID) @NotNull String storageId) {
     this.storageId = storageId;
   }
 

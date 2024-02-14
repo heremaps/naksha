@@ -18,31 +18,32 @@
  */
 package com.here.naksha.handler.activitylog;
 
-import com.here.naksha.lib.core.util.diff.InsertOp;
 import com.here.naksha.lib.core.util.diff.RemoveOp;
 import com.here.naksha.lib.core.util.diff.UpdateOp;
 import java.util.ArrayList;
 import java.util.List;
 
-public record ActivityLogReversePatch(int add, int copy, int move, int remove, int replace, List<ReverseOp> ops) {
+// TODO: what about 'copy' and 'move'?
+// TODO: was it ok to rename (add => insert, replace => update)
+record ReversePatch(int insert, int remove, int update, List<PatchOp> ops) {
 
-  record ReverseOp(String name, String path, Object value) {
+  record PatchOp(String name, String path, Object value) {
 
-    static final String REVERSE_INSERT = "remove";
-    static final String REVERSE_REMOVE = "insert";
+    static final String REMOVE = "remove";
+    static final String ADD = "add";
 
-    static final String REVERSE_UPDATE = "update"; // TODO: there was a 'replace' before
+    static final String REPLACE = "replace"; // TODO: there was a 'replace' before
 
-    static ReverseOp reverseOf(InsertOp insertOp, String path) {
-      return new ReverseOp(REVERSE_INSERT, path, null);
+    static PatchOp remove(String path) {
+      return new PatchOp(REMOVE, path, null);
     }
 
-    static ReverseOp reverseOf(RemoveOp removeOp, String path) {
-      return new ReverseOp(REVERSE_REMOVE, path, removeOp.oldValue());
+    static PatchOp insert(String path, Object value) {
+      return new PatchOp(ADD, path, value);
     }
 
-    static ReverseOp reverseOf(UpdateOp updateOp, String path) {
-      return new ReverseOp(REVERSE_UPDATE, path, updateOp.oldValue());
+    static PatchOp update(String path, Object newValue) {
+      return new PatchOp(REPLACE, path, newValue);
     }
 
     @Override
@@ -57,37 +58,37 @@ public record ActivityLogReversePatch(int add, int copy, int move, int remove, i
 
   static class Builder {
 
-    int add;
+    int insert;
     int remove;
-    int replace;
-    List<ReverseOp> ops;
+    int update;
+    List<PatchOp> ops;
 
     private Builder() {
-      add = 0;
+      insert = 0;
       remove = 0;
-      replace = 0;
+      update = 0;
       ops = new ArrayList<>();
     }
 
-    ActivityLogReversePatch build() {
-      return new ActivityLogReversePatch(add, 0, 0, remove, replace, ops); // TODO: copy & move?
+    ReversePatch build() {
+      return new ReversePatch(insert, remove, update, ops);
     }
 
-    Builder reverseInsert(InsertOp insertOp, String path) {
+    Builder reverseInsert(String path) {
       remove++;
-      ops.add(ReverseOp.reverseOf(insertOp, path));
+      ops.add(PatchOp.remove(path));
       return this;
     }
 
     Builder reverseRemove(RemoveOp removeOp, String path) {
-      add++;
-      ops.add(ReverseOp.reverseOf(removeOp, path));
+      insert++;
+      ops.add(PatchOp.insert(path, removeOp.oldValue()));
       return this;
     }
 
     Builder reverseUpdate(UpdateOp updateOp, String path) {
-      replace++; // TODO: sure?
-      ops.add(ReverseOp.reverseOf(updateOp, path));
+      update++;
+      ops.add(PatchOp.update(path, updateOp.oldValue()));
       return this;
     }
   }

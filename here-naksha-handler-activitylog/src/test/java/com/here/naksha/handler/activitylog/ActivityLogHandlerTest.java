@@ -30,7 +30,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-class ActivityHistoryHandlerTest {
+class ActivityLogHandlerTest {
 
   @Mock
   INaksha naksha;
@@ -44,13 +44,13 @@ class ActivityHistoryHandlerTest {
   @Mock
   IStorage storage;
 
-  private ActivityHistoryHandler handler;
+  private ActivityLogHandler handler;
 
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
     when(naksha.getStorageById(any())).thenReturn(storage);
-    handler = new ActivityHistoryHandler(eventHandler, naksha, eventTarget);
+    handler = new ActivityLogHandler(eventHandler, naksha, eventTarget);
   }
 
   @ParameterizedTest

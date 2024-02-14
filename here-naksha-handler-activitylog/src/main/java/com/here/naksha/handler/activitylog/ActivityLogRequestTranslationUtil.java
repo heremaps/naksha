@@ -28,9 +28,9 @@ import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-class ActivityHistoryRequestTranslationUtil {
+class ActivityLogRequestTranslationUtil {
 
-  private ActivityHistoryRequestTranslationUtil() {}
+  private ActivityLogRequestTranslationUtil() {}
 
   /**
    * Mutates given ReadFeatures request by translating equality Property Operations for specific property refs.
@@ -42,7 +42,7 @@ class ActivityHistoryRequestTranslationUtil {
    * <li>'id' ({{@link PRef#id()}} => 'properties.@ns:com:here:xyz.uuid' ({{@link PRef#uuid()}})</li>
    * <li>'properties.@ns:com:here:xyz:log.id' ({{@link PRef#activityLogId()}}) => 'id' ({{@link PRef#id()}})</li>
    * </ul>
-   * Translation is required because the ReadRequest that reach {{@link ActivityHistoryHandler}} are being delegated to HistoryHandler
+   * Translation is required because the ReadRequest that reach {{@link ActivityLogHandler}} are being delegated to HistoryHandler
    *
    * @param readFeatures ReadFeatures bearing potential POp to be translated (request will be mutated after this operation!)
    */
@@ -51,7 +51,7 @@ class ActivityHistoryRequestTranslationUtil {
     if (pOp != null) {
       if (hasChildren(pOp)) {
         PropertyOperationUtil.transformPropertyInPropertyOperationTree(
-            pOp, ActivityHistoryRequestTranslationUtil::translateIfApplicable);
+            pOp, ActivityLogRequestTranslationUtil::translateIfApplicable);
       } else {
         translateIfApplicable(pOp).ifPresent(readFeatures::setPropertyOp);
       }
