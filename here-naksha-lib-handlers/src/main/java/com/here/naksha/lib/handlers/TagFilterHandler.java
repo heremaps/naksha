@@ -18,6 +18,8 @@
  */
 package com.here.naksha.lib.handlers;
 
+import static com.here.naksha.lib.core.util.CollectionUtils.isNotNullOrEmpty;
+import static com.here.naksha.lib.core.util.CollectionUtils.isNullOrEmpty;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
 
@@ -67,11 +69,10 @@ public class TagFilterHandler extends AbstractEventHandler {
     final Request<?> request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
-    // Forward the request if no tag configuration specified
-    if ((properties.getAdd() == null || properties.getAdd().isEmpty())
-        && (properties.getRemoveWithPrefixes() == null
-            || properties.getRemoveWithPrefixes().isEmpty())
-        && (properties.getContains() == null || properties.getContains().isEmpty())) {
+    // Forward the request without changing it, if no tag configuration specified
+    if (isNullOrEmpty(properties.getAdd())
+        && isNullOrEmpty(properties.getRemoveWithPrefixes())
+        && isNullOrEmpty(properties.getContains())) {
       logger.warn("No tag filtering applicable, forwarding request as is.");
       return event.sendUpstream();
     }
@@ -87,7 +88,7 @@ public class TagFilterHandler extends AbstractEventHandler {
 
   public static void applyFilterConditionOnRequest(
       final @NotNull ReadFeatures readRequest, final @Nullable List<String> tagValues) {
-    if (tagValues == null || tagValues.isEmpty()) {
+    if (isNullOrEmpty(tagValues)) {
       return;
     }
     final POp origPOp = readRequest.getPropertyOp();
@@ -97,9 +98,11 @@ public class TagFilterHandler extends AbstractEventHandler {
   }
 
   private static POp buildFilterOperationForTags(final @NotNull List<String> tagValues) {
+    // Do we have only one tag? Then use EXISTS operation
     if (tagValues.size() == 1) {
       return POp.exists(PRef.tag(tagValues.get(0)));
     }
+    // we have multiple tags, so use AND operation
     final POp[] ops = new POp[tagValues.size()];
     int idx = 0;
     for (final @NotNull String value : tagValues) {
@@ -112,14 +115,14 @@ public class TagFilterHandler extends AbstractEventHandler {
       final @NotNull WriteFeatures<?, ?, ?> wf,
       final @Nullable List<String> addTags,
       final @Nullable List<String> removeTags) {
-    if ((addTags == null || addTags.isEmpty()) && (removeTags == null || removeTags.isEmpty())) return;
+    if (isNullOrEmpty(addTags) && isNullOrEmpty(removeTags)) return;
     List<XyzFeatureCodec> codecList = null;
     if (wf instanceof WriteXyzFeatures wxf) {
       codecList = wxf.features;
     } else if (wf instanceof ContextWriteXyzFeatures cwxf) {
       codecList = cwxf.features;
     }
-    if (codecList != null) {
+    if (isNotNullOrEmpty(codecList)) {
       for (final @NotNull XyzFeatureCodec codec : codecList) {
         applyTagChangesOnFeature(codec.getFeature(), addTags, removeTags);
       }
@@ -132,7 +135,8 @@ public class TagFilterHandler extends AbstractEventHandler {
       final @Nullable List<String> removeTags) {
     if (feature == null) return;
     final XyzNamespace xyzNS = feature.getProperties().getXyzNamespace();
-    if (addTags != null) xyzNS.addTags(addTags, true);
-    if (removeTags != null) xyzNS.removeTagsWithPrefixes(removeTags);
+    // NOTE - we need to remove existing tags first, before adding new ones
+    if (isNotNullOrEmpty(removeTags)) xyzNS.removeTagsWithPrefixes(removeTags);
+    if (isNotNullOrEmpty(addTags)) xyzNS.addTags(addTags, true);
   }
 }
