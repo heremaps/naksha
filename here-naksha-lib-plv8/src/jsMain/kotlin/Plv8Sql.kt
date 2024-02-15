@@ -45,8 +45,4 @@ class Plv8Sql : IPlv8Sql {
     override fun <T> cast(o: Any): T {
         return js("o")
     }
-
-    override fun <T> readCol(row: Any, name: String): T {
-        return js("row[name]")
-    }
 }

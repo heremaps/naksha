@@ -94,6 +94,4 @@ interface IPlv8Sql {
     fun md5(text: String): String
 
     fun <T> cast(o: Any): T
-
-    fun <T> readCol(row: Any, name: String): T
 }

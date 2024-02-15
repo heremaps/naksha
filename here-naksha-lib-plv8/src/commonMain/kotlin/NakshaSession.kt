@@ -271,10 +271,9 @@ CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("ve
                 // TODO add to return table
                 continue
             }
-
             if (op == 0) {
-                val rows: Array<Any> = sql.rows(insertStmt.execute(arrayOf(feature, geo)))!!
-                r_feature = sql.readCol(rows[0], "jsondata")
+                val rows = sql.rows(insertStmt.execute(arrayOf(feature, geo)))!!
+                r_feature = sql.cast(asMap(rows[0])["jsondata"]!!)
                 // TODO GET DIAGNOSTICS rows_affected = ROW_COUNT;
                 r_op = "CREATED"
             }

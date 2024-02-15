@@ -59,8 +59,4 @@ class Plv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
         return o as T
     }
 
-    override fun <T> readCol(row: Any, name: String): T {
-        return (row as Map<String, *>)[name] as T
-    }
-
 }

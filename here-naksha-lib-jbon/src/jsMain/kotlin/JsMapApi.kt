@@ -9,10 +9,9 @@ class JsMapApi : IMapApi {
 
         fun toMap(any: Any?): IMap {
             if (any is JsMap) return any
-            if (isMap(any)) throw IllegalArgumentException("require object")
+            if (!isMap(any)) throw IllegalArgumentException("require object")
             val t = this.smt
-            // TODO: Use setPrototype(any, Object.getPrototypeOf(t))
-            return js("Object.assign(any,Object.getPrototypeOf(t))")
+            return js("Object.setPrototypeOf(any,Object.getPrototypeOf(t))")
         }
     }
 
