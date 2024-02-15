@@ -5,7 +5,7 @@
   "description": "Http storage instance for testing purpose",
   "className": "com.here.naksha.storage.http.HttpStorage",
   "properties": {
-    "url" : "https://example.org",
+    "url" : "http://localhost:8089",
     "connectTimeout" : 60,
     "socketTimeout" : 3600,
     "headers" : {

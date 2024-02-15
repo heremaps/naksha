@@ -18,13 +18,19 @@
  */
 package com.here.naksha.storage.http;
 
+import static java.net.http.HttpRequest.newBuilder;
+
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
@@ -54,7 +60,7 @@ public class HttpStorage implements IStorage {
 
   @Override
   public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new HttpStorageReadSession(context, properties, httpStorageClient);
+    return new HttpStorageReadSession(context, new RequestSender());
   }
 
   @Override
@@ -78,5 +84,36 @@ public class HttpStorage implements IStorage {
 
   private static @NotNull HttpStorageProperties getProperties(@NotNull Storage storage) {
     return JsonSerializable.convert(storage.getProperties(), HttpStorageProperties.class);
+  }
+
+  class RequestSender {
+
+    private static final Logger log = LoggerFactory.getLogger(RequestSender.class);
+    private final HttpRequest.Builder builder = createRequestBuilderBase();
+
+    public HttpRequest.Builder decorateRequest() {
+      return builder;
+    }
+
+    /**
+     * @param endpoint does not contain host:port part, starts with "/".
+     */
+    HttpResponse<String> sendRequest(String endpoint) throws IOException, InterruptedException {
+      String uri = properties.getUrl() + endpoint;
+      HttpRequest request = builder.uri(URI.create(uri)).build();
+
+      long startTime = System.currentTimeMillis();
+      HttpResponse<String> response = httpStorageClient.send(request, HttpResponse.BodyHandlers.ofString());
+      long executionTime = System.currentTimeMillis() - startTime;
+      log.info("Request to {} took {}ms", request.uri(), executionTime);
+
+      return response;
+    }
+
+    private HttpRequest.Builder createRequestBuilderBase() {
+      HttpRequest.Builder builder = newBuilder().timeout(Duration.ofSeconds(properties.getSocketTimeout()));
+      properties.getHeaders().forEach(builder::header);
+      return builder;
+    }
   }
 }

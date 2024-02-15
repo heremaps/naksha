@@ -143,7 +143,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final String featureId = extractMandatoryPathParam(routingContext, FEATURE_ID);
 
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdRequest(spaceId, featureId)
-        .withReadRequestType(ReadRequestType.GET_BY_ID);
+        .withReadRequestType(ReadRequestType.GET_BY_ID)
+        .withQueryParameters(Map.of(FEATURE_ID, featureId));
 
     // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {

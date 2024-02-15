@@ -2,8 +2,6 @@
 
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import java.net.URI
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 repositories {
     maven {

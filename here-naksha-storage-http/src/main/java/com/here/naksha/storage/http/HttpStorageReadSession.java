@@ -18,19 +18,10 @@
  */
 package com.here.naksha.storage.http;
 
-import static java.net.http.HttpRequest.Builder;
-import static java.net.http.HttpRequest.newBuilder;
-
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -51,31 +42,11 @@ public final class HttpStorageReadSession implements IReadSession {
   private final NakshaContext context;
 
   @NotNull
-  private final HttpClient httpStorageClient;
+  private final HttpStorage.RequestSender requestSender;
 
-  @NotNull
-  private final Builder requestBuilderBase;
-
-  @NotNull
-  private final String hostUrl;
-
-  HttpStorageReadSession(
-      @Nullable NakshaContext context,
-      @NotNull HttpStorageProperties properties,
-      @NotNull HttpClient httpStorageClient) {
+  HttpStorageReadSession(@Nullable NakshaContext context, @NotNull HttpStorage.RequestSender requestSender) {
     this.context = context == null ? NakshaContext.currentContext() : context;
-    this.requestBuilderBase = createRequestBuilderBase(properties);
-    this.httpStorageClient = httpStorageClient;
-    this.hostUrl = properties.getUrl();
-  }
-
-  /**
-   * Builds builder with set socketTimeout and headers from {@link HttpStorageProperties}
-   */
-  private Builder createRequestBuilderBase(HttpStorageProperties properties) {
-    Builder builder = newBuilder().timeout(Duration.ofSeconds(properties.getSocketTimeout()));
-    properties.getHeaders().forEach(builder::header);
-    return builder;
+    this.requestSender = requestSender;
   }
 
   @Override
@@ -121,21 +92,9 @@ public final class HttpStorageReadSession implements IReadSession {
   @Override
   public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
     try {
-      if (readRequest instanceof ReadFeaturesProxyWrapper proxyRequest) {
-        String getBy = proxyRequest.getReadRequestType().toString();
-
-        testLog.add(getBy);
-        testLog.add("north = " + proxyRequest.<Double>getQueryParameter("north"));
-        testLog.add("east = " + proxyRequest.<Double>getQueryParameter("east"));
-      }
-
-      HttpRequest putRequest =
-          requestBuilderBase.uri(ofEndpoint("/")).GET().build();
-      HttpResponse<String> httpResponse =
-          httpStorageClient.send(putRequest, HttpResponse.BodyHandlers.ofString());
-      log.info(httpResponse.body());
-      return new SuccessResult();
+      return new HttpStorageReadExecute((ReadFeaturesProxyWrapper) readRequest, requestSender).execute();
     } catch (Exception e) {
+      log.warn("", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage());
     }
   }
@@ -146,11 +105,5 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public void close() {
-    log.info("Bye Naksha!");
-  }
-
-  private URI ofEndpoint(String endpoint) throws URISyntaxException {
-    return new URI(hostUrl + endpoint);
-  }
+  public void close() {}
 }
