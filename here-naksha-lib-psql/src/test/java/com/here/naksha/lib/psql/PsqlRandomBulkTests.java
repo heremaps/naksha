@@ -39,7 +39,7 @@ import org.junit.jupiter.api.condition.EnabledIf;
  */
 @SuppressWarnings({"ConstantValue", "RedundantSuppression"})
 @TestMethodOrder(OrderAnnotation.class)
-public class PsqlRandomBulkTests extends PsqlTests {
+public class PsqlRandomBulkTests extends PsqlCollectionTests {
 
   @Override
   boolean enabled() {

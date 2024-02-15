@@ -100,7 +100,7 @@ import org.postgresql.util.PSQLException;
 
 @SuppressWarnings({"unused"})
 @TestMethodOrder(OrderAnnotation.class)
-public class PsqlStorageTests extends PsqlTests {
+public class PsqlStorageTests extends PsqlCollectionTests {
 
   @Override
   boolean enabled() {
