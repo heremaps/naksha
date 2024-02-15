@@ -85,4 +85,15 @@ interface IPlv8Sql {
      * @return The prepared plan.
      */
     fun prepare(sql: String, typeNames: Array<String>? = null): IPlv8Plan
+
+    /**
+     * Calculates md5 hash for given string.
+     * @param text
+     * @return md5-hash string
+     */
+    fun md5(text: String): String
+
+    fun <T> cast(o: Any): T
+
+    fun <T> readCol(row: Any, name: String): T
 }

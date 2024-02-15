@@ -9,7 +9,7 @@ class Plv8Table : ITable {
      */
     val rows = ArrayList<Any>()
 
-    override fun returnNext(row: Any) {
-        rows.add(row)
+    override fun returnNext(vararg columns: Pair<String, Any?>) {
+        rows.add(columns)
     }
 }

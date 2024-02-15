@@ -22,5 +22,5 @@ interface ITable {
      * Returns a new row.
      * @param row The native map of the row.
      */
-    fun returnNext(row: Any)
+    fun returnNext(vararg columns: Pair<String, Any?>)
 }

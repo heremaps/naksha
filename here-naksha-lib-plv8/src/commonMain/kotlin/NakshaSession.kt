@@ -3,9 +3,12 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.jbon.JbPath
+import com.here.naksha.lib.jbon.JbSession
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
+import kotlin.reflect.cast
 
 /**
  * A session linked to a PostgresQL database connection with support for some special table layout and triggers. Its purpose is
@@ -112,7 +115,7 @@ class NakshaSession(
      * @param day The day between 1 and 31.
      * @return The name of the corresponding history partition.
      */
-    fun historyPartitionFromDate(year:Int, month:Int, day:Int) : String {
+    fun historyPartitionFromDate(year: Int, month: Int, day: Int): String {
         val sb = StringBuilder()
         sb.append(year)
         sb.append('_')
@@ -129,7 +132,7 @@ class NakshaSession(
      * @param millis The epoch-timestamp in milliseconds.
      * @return The name of the corresponding history partition.
      */
-    fun historyPartitionFromMillis(millis: BigInt64) : String {
+    fun historyPartitionFromMillis(millis: BigInt64): String {
         val ts = JbTimestamp.fromMillis(millis)
         return historyPartitionFromDate(ts.year, ts.month, ts.day)
     }
@@ -147,7 +150,7 @@ class NakshaSession(
     /**
      * The cached Postgres version.
      */
-    private lateinit var pgVersion : XyzVersion
+    private lateinit var pgVersion: XyzVersion
 
     /**
      * Returns the PostgresQL version.
@@ -208,12 +211,10 @@ CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("ve
     // return: op text, id text, xyz bytea, tags bytea, geo geometry, feature bytea, err_no text, err_msg text
     fun writeFeatures(
             collectionId: String,
-            ops: Array<String>,
-            ids: Array<String>,
-            uuids: Array<String>,
+            ops: Array<ByteArray>,
             geometries: Array<Any?>,
             features: Array<ByteArray>,
-            xyz: Array<ByteArray>
+            tags: Array<ByteArray>,
     ): ITable {
         errNo = null
         errMsg = null
@@ -221,6 +222,85 @@ CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("ve
         val sql = naksha.sql
         val table = sql.newTable()
         // TODO: Implement me!
+        // TODO implement validation checks
+
+        val partitionId = partitionId("TODO")
+        val tableName = collectionId //"""${collectionId}_p${partitionId}"""
+
+        // prepared statements
+        // id
+        val selectHeadStmt = sql.prepare("""SELECT jsondata, geo FROM $tableName WHERE jb_get_text(jsondata, 'id', null)=$1;""", arrayOf("text"))
+        // feature, geo
+        val insertStmt = sql.prepare("""INSERT INTO $tableName (jsondata, geo) VALUES ($1, ST_Force3D($2)) RETURNING jsondata;""", arrayOf("bytea", "geometry"))
+        // feature, geo, id
+        val updateStmt = sql.prepare("""UPDATE $tableName SET jsondata=$1, geo=ST_Force3D($2) WHERE jb_get_text(jsondata, 'id', null)=$3 RETURNING jsondata;""", arrayOf("bytea", "geometry", "text"))
+        // feature, geo, id, uuid
+        val updateAtomicStmt = sql.prepare("""UPDATE $tableName SET jsondata=$1, geo=ST_Force3D($2) WHERE jb_get_text(jsondata, 'id', null)=$3 AND jb_get_text(jsondata, 'properties.@ns:com:here:xyz.uuid', null)=$4 RETURNING jsondata;""", arrayOf("bytea", "geometry", "text", "text"))
+        // id
+        val deleteStmt = sql.prepare("""DELETE FROM $tableName WHERE jb_get_text(jsondata, 'id', null)=$1 RETURNING jsondata, geo;""", arrayOf("text"))
+        // id, uuid
+        val deleteAtomicStmt = sql.prepare("""DELETE FROM $tableName WHERE jb_get_text(jsondata, 'id', null)=$1 AND jb_get_text(jsondata, 'properties.@ns:com:here:xyz.uuid', null)=$2 RETURNING jsondata, geo;""", arrayOf("text", "text"))
+        /*
+                // id
+                val purgeStmt = sql.prepare("""DELETE FROM ${collectionId + "_del"} WHERE jb_get_text(jsondata, 'id', null)=$1 RETURNING jsondata, geo;""", arrayOf("text"))
+                // id, uuid
+                val purgeAtomicStmt = sql.prepare("""DELETE FROM ${collectionId + "_del"} WHERE jb_get_text(jsondata, 'id', null)=$1 AND jb_get_text(jsondata, 'properties.@ns:com:here:xyz.uuid', null)=$2 RETURNING jsondata, geo;""", arrayOf("text"))
+                // id
+                val selectDelStmt = sql.prepare("""SELECT jsondata, geo FROM ${collectionId + "_del"} WHERE jb_get_text(jsondata, 'id', null)=$1;""", arrayOf("text"))
+        */
+        var i = 0
+
+        while (i < ops.size) {
+            var r_op: String? = null
+            var r_id: String? = null
+            var r_feature: ByteArray? = null
+            var r_geometry: Any? = null
+            var r_err: String? = null
+
+            val xyzOp = XyzOp().mapBytes(ops[i])
+            var op = xyzOp.op()
+            val feature = features[i]
+            var id = xyzOp.id()
+            val uuid = xyzOp.uuid()
+            val geo = geometries[i]
+
+            // Prefill result values, but they should be updated ones we have real values.
+            r_id = id;
+
+            if (op < 0 || op > 4) {
+                r_op = "ERROR"
+                // TODO
+                r_err = "TODO return proper error"
+                // TODO add to return table
+                continue
+            }
+
+            if (op == 0) {
+                val rows: Array<Any> = sql.rows(insertStmt.execute(arrayOf(feature, geo)))!!
+                r_feature = sql.readCol(rows[0], "jsondata")
+                // TODO GET DIAGNOSTICS rows_affected = ROW_COUNT;
+                r_op = "CREATED"
+            }
+
+            // TODO exception handling
+
+            // TODO rows_affected logic
+
+            // TODO errors_only and min_result
+            table.returnNext(
+                    "op" to r_op,
+                    "id" to r_id,
+                    "xyz" to xyzOp,
+                    "tags" to null,
+                    "geo" to r_geometry,
+                    "feature" to r_feature,
+                    "err_no" to null,
+                    "err_msg" to null
+            )
+
+            i += 1
+        }
+
         return table
     }
 
@@ -240,5 +320,27 @@ CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("ve
         val table = sql.newTable()
         // TODO: Implement me!
         return table
+    }
+
+    private fun headPartitionName(collectionId: String, partitionId: Int): String {
+        return if (partitionId < 0 || partitionId > 255) {
+            collectionId
+        } else {
+            """${collectionId}_p${partitionId.toString().padStart(3, '0')}"""
+        }
+    }
+
+    private fun getPtype(feature: ByteArray): String? {
+        return JbPath.getString(feature, "properties.type")
+                ?: JbPath.getString(feature, "properties.featureType")
+                ?: JbPath.getString(feature, "momType")
+    }
+
+    private fun readProperty(result: Any, col: String): Any? {
+        return when (result) {
+            is Array<*> -> Map::class.cast(result[0])[col]
+            is Collection<*> -> Map::class.cast(result.iterator().next())[col]
+            else -> result
+        }
     }
 }

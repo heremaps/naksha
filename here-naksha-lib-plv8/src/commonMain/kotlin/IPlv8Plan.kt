@@ -15,7 +15,7 @@ interface IPlv8Plan {
      * @param args The arguments to be set at $n position, where $1 is the first array element.
      * @return Either the number of affected rows or the rows.
      */
-    fun execute(args: Array<Any?>? = null): Any
+    fun <T> execute(args: Array<Any?>? = null): T
 
     /**
      * Execute the prepared plan with the given arguments. The types must match to the prepared statement.

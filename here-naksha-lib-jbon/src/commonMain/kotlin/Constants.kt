@@ -63,7 +63,9 @@ const val SQL_BYTE_ARRAY = "bytea"
 const val SQL_STRING = "text"
 const val SQL_JSON_TEXT = "json"
 const val SQL_OBJECT = "jsonb"
-
+const val SQL_STRING_ARRAY = "text array"
+const val SQL_BYTEA_ARRAY = "bytea array"
+const val SQL_GEOMETRY_ARRAY = "geometry array"
 
 /**
  * An array with the Web-Safe Base-64 characters.

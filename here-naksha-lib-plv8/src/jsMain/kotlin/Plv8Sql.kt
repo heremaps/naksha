@@ -37,4 +37,16 @@ class Plv8Sql : IPlv8Sql {
     override fun prepare(sql: String, typeNames: Array<String>?): IPlv8Plan {
         return js("typeNames ? plv8.prepare(sql, typeNames) : plv8.execute(typeNames)")
     }
+
+    override fun md5(text: String): String {
+        TODO("Implement or load CryptoJS md5.js first and then use it md5 hash")
+    }
+
+    override fun <T> cast(o: Any): T {
+        return js("o")
+    }
+
+    override fun <T> readCol(row: Any, name: String): T {
+        return js("row[name]")
+    }
 }

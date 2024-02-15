@@ -2006,6 +2006,8 @@ BEGIN
   END LOOP;
 END $$;
 
+
+-- old one
 CREATE OR REPLACE FUNCTION naksha_write_features( collection_id text, write_ops jsonb[], geometries geometry[])
   RETURNS TABLE (r_op text, r_id text, r_uuid text, r_type text, r_ptype text, r_feature jsonb, r_geometry geometry)
   LANGUAGE 'plpgsql' VOLATILE STRICT AS $$

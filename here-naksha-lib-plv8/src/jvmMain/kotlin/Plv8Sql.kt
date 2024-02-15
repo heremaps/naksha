@@ -2,6 +2,7 @@ package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.IMap
 import java.io.Closeable
+import java.security.MessageDigest
 import java.sql.Connection
 
 /**
@@ -30,7 +31,7 @@ class Plv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
                 return if (stmt.execute(sql)) Plv8ResultSet(stmt.resultSet).toArray() else stmt.updateCount
             }
         }
-        val query = Plv8SqlQuery(sql)
+        val query = Plv8SqlQuery(sql, null)
         val stmt = query.prepare(conn)
         stmt.use {
             if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
@@ -41,11 +42,25 @@ class Plv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
     override fun prepare(sql: String, typeNames: Array<String>?): IPlv8Plan {
         val conn = this.conn
         check(conn != null)
-        return Plv8Plan(Plv8SqlQuery(sql), conn)
+        return Plv8Plan(Plv8SqlQuery(sql, typeNames), conn)
     }
 
     override fun close() {
         conn?.close()
         conn = null
     }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    override fun md5(text: String): String {
+        return MessageDigest.getInstance("MD5").digest(text.toByteArray()).toHexString()
+    }
+
+    override fun <T> cast(o: Any): T {
+        return o as T
+    }
+
+    override fun <T> readCol(row: Any, name: String): T {
+        return (row as Map<String, *>)[name] as T
+    }
+
 }

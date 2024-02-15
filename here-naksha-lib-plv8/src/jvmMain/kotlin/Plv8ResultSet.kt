@@ -74,7 +74,6 @@ open class Plv8ResultSet(private var rs: ResultSet?) {
                 "array" -> row[name] = rs.getArray(i)
                 else -> row[name] = rs.getObject(i)
             }
-            i++
         }
         return row
     }

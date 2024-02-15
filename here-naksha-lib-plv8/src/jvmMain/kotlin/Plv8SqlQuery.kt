@@ -1,11 +1,14 @@
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.jbon.SQL_BYTEA_ARRAY
+import com.here.naksha.lib.jbon.SQL_GEOMETRY_ARRAY
+import com.here.naksha.lib.jbon.SQL_STRING_ARRAY
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.ArrayList
 import java.util.HashMap
 
-class Plv8SqlQuery(query: String) {
+class Plv8SqlQuery(query: String, val typeNames: Array<String>?) {
 
     /**
      * We map "$1" to a list of positions (`1..n`) in the prepared statement. For example
@@ -45,10 +48,11 @@ class Plv8SqlQuery(query: String) {
         sql = sb.toString()
     }
 
-    private fun setArgument(stmt: PreparedStatement, arg: Any?, indices: ArrayList<Int>) {
+    private fun setArgument(stmt: PreparedStatement, arg: Any?, indices: ArrayList<Int>, argType: String?) {
         var i = 0
         while (i < indices.size) {
             val index = indices[i++]
+            // TODO whole when should relly on argType
             when (arg) {
                 is Boolean -> stmt.setBoolean(index, arg)
                 is Short -> stmt.setShort(index, arg)
@@ -58,6 +62,15 @@ class Plv8SqlQuery(query: String) {
                 is Double -> stmt.setDouble(index, arg)
                 is String -> stmt.setString(index, arg)
                 is ByteArray -> stmt.setBytes(index, arg)
+                is Array<*> -> {
+                    when (argType) {
+                        SQL_BYTEA_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("bytea", arg) )
+                        SQL_GEOMETRY_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("bytea", arg) )
+                        SQL_STRING_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("text", arg) )
+                        null -> throw IllegalArgumentException("Unknown array type, define typeName")
+                    }
+
+                }
                 null -> stmt.setNull(index, 0)
                 else -> throw IllegalArgumentException("args[" + (index - 1) + "]")
             }
@@ -70,7 +83,8 @@ class Plv8SqlQuery(query: String) {
             val arg = args[i]
             val indices = dollarToIndices[i + 1]
             check(indices != null)
-            setArgument(stmt, arg, indices)
+            val argType = typeNames?.get(i)
+            setArgument(stmt, arg, indices, argType)
             i++
         }
     }
