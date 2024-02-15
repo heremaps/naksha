@@ -90,10 +90,17 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
     if (storageImpl instanceof IView view) {
 
-      view.setViewLayerCollection(
-          prepareViewLayerCollection(nakshaHub().getSpaceStorage(), properties.getSpaceIds()));
-      // TODO MCPODS-7046 Replace the way how view is created. Should be immutable without need to use set method.
-      return processRequest(ctx, view, request);
+      if (properties.getSpaceIds() == null || properties.getSpaceIds().isEmpty()) {
+        logger.error("No spaces configured, so can't process this request");
+        return new ErrorResult(XyzError.NOT_FOUND, "No spaces configured for handler.");
+      } else {
+
+        view.setViewLayerCollection(
+            prepareViewLayerCollection(nakshaHub().getSpaceStorage(), properties.getSpaceIds()));
+        // TODO MCPODS-7046 Replace the way how view is created. Should be immutable without need to use set
+        // method.
+        return processRequest(ctx, view, request);
+      }
     } else {
       logger.error("Associated storage doesn't implement View, so can't process this request");
       return new ErrorResult(XyzError.EXCEPTION, "Associated storage doesn't implement View");

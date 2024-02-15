@@ -306,7 +306,7 @@ public class DefaultViewHandlerTest extends ApiTest {
     }
 
     @Test
-    void tc5021_searchByBBox_AvailableOnlyInBase() throws Exception {
+    void tc5022_searchByBBox_AvailableOnlyInBase() throws Exception {
         //given Feature with this id is available only in base
         final String bboxQueryParam = "west=0.5&south=30.0&east=1&north=30.1";
 
@@ -317,26 +317,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         HttpResponse<String> viewResponse = nakshaClient
                 .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
 
-        //then expect that feature from last layer will be returned (dlb)
-        assertThat(viewResponse)
-                .hasStatus(200)
-                .hasStreamIdHeader(streamId)
-                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
-    }
-
-    @Test
-    void tc5021_searchByBBox_PullingByIdWhenOutsideBBox() throws Exception {
-        //given Feature with this id is available only in base
-        final String bboxQueryParam = "west=0.5&south=30.0&east=1&north=30.1";
-
-        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5022_searchByBBox/feature_response_part.json");
-        String streamId = UUID.randomUUID().toString();
-
-        // When: Get Features By BBox request is submitted to NakshaHub
-        HttpResponse<String> viewResponse = nakshaClient
-                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
-
-        //then expect that feature from last layer will be returned (dlb)
+        //then expect that feature from last layer will be returned (base)
         assertThat(viewResponse)
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)

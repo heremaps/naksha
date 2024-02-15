@@ -24,7 +24,7 @@ import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import java.util.List;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @AvailableSince(NakshaVersion.v2_0_12)
 public class DefaultViewHandlerProperties extends XyzProperties {
@@ -37,34 +37,34 @@ public class DefaultViewHandlerProperties extends XyzProperties {
 
   @AvailableSince(NakshaVersion.v2_0_12)
   @JsonProperty(STORAGE_ID)
-  private @NotNull String storageId;
+  private @Nullable String storageId;
 
   @AvailableSince(NakshaVersion.v2_0_12)
   @JsonProperty(SPACE_IDS)
-  private @NotNull List<String> spaceIds;
+  private @Nullable List<String> spaceIds;
 
   @AvailableSince(NakshaVersion.v2_0_12)
   @JsonCreator
   public DefaultViewHandlerProperties(
-      final @JsonProperty(STORAGE_ID) @NotNull String storageId,
-      final @JsonProperty(SPACE_IDS) @NotNull List<String> spaceIds) {
+      final @JsonProperty(STORAGE_ID) @Nullable String storageId,
+      final @JsonProperty(SPACE_IDS) @Nullable List<String> spaceIds) {
     this.storageId = storageId;
     this.spaceIds = spaceIds;
   }
 
-  public @NotNull String getStorageId() {
+  public @Nullable String getStorageId() {
     return storageId;
   }
 
-  public void setStorageId(@NotNull String storageId) {
+  public void setStorageId(@Nullable String storageId) {
     this.storageId = storageId;
   }
 
-  public @NotNull List<String> getSpaceIds() {
+  public @Nullable List<String> getSpaceIds() {
     return spaceIds;
   }
 
-  public void setSpaceIds(@NotNull List<String> spaceIds) {
+  public void setSpaceIds(@Nullable List<String> spaceIds) {
     this.spaceIds = spaceIds;
   }
 }
