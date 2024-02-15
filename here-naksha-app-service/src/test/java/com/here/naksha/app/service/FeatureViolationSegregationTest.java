@@ -22,15 +22,12 @@ import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
-
 import static com.here.naksha.app.common.CommonApiTestSetup.*;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 class FeatureViolationSegregationTest extends ApiTest {
@@ -88,7 +85,7 @@ class FeatureViolationSegregationTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + TOPOLOGY_SPACE + "/bbox?" + bboxQueryParam, streamId);
+    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + TOPOLOGY_SPACE + "/bbox?" + bboxQueryParam, streamId);
 
     // Then: Perform assertions
     assertThat(response)
@@ -109,7 +106,7 @@ class FeatureViolationSegregationTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Id request is submitted to NakshaHub
-    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + TOPOLOGY_SPACE + "/features/" + featureId, streamId);
+    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + TOPOLOGY_SPACE + "/features/" + featureId, streamId);
 
     // Then: Perform assertions
     assertThat(response)
@@ -130,13 +127,81 @@ class FeatureViolationSegregationTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By Id request is submitted to NakshaHub
-    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SIGN_SPACE + "/features/" + featureId, streamId);
+    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SIGN_SPACE + "/features/" + featureId, streamId);
 
     // Then: Perform assertions
     assertThat(response)
             .hasStatus(404)
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
+
+  @Test
+  void tc04_testTagManipulation() throws Exception {
+    /*
+      Although as a combined steps, below scenario doesn't exactly simulate real usecase,
+      we are still able to test the tag based space segregation using individual steps.
+      1. Execute GetById (my-custom-id-03) for Sign Violation from topology-violations space (should return no record)
+      2. Do the same from sign-violations space (should get one record)
+      3. Execute Update of Sign violation on topology-violations space (which should replace tag, and make it a Topology violation)
+      4. Do GetById again from topology-violations space (now we should get the updated record as Topology Violation)
+      5. Do GetById from sign-violations space (should return no record, as sign violation got tagged as topology violation)
+    */
+
+    // Given: Feature Id belonging to Sign Violation
+    final String featureId = "my-custom-id-03";
+    final String streamId = UUID.randomUUID().toString();
+
+    // When: GetById request is triggered on topology-violations space
+    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + TOPOLOGY_SPACE + "/features/" + featureId, streamId);
+    // Then: Perform assertions (no record found)
+    String expectedBodyPart =
+            loadFileOrFail("FeatureViolationSegregation/TC04_TagManipulation/no_feature_found.json");
+    assertThat(response)
+            .hasStatus(404)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
+    // When: GetById request is triggered on sign-violations space
+    response = getNakshaClient().get("hub/spaces/" + SIGN_SPACE + "/features/" + featureId, streamId);
+    // Then: Perform assertions (that we got Sign Violation)
+    expectedBodyPart =
+            loadFileOrFail("FeatureViolationSegregation/TC04_TagManipulation/orig_sign_violation.json");
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
+    // When: Update Sign Violation is sent to topology-violations space
+    response = getNakshaClient().put("hub/spaces/" + TOPOLOGY_SPACE + "/features/"+featureId, expectedBodyPart, streamId);
+    // Then: Perform assertions (to validate that we got the tags updated)
+    expectedBodyPart =
+            loadFileOrFail("FeatureViolationSegregation/TC04_TagManipulation/update_sign_violation_response.json");
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Update Feature response body doesn't match");
+
+    // When: GetById request is again triggered on topology-violations space
+    response = getNakshaClient().get("hub/spaces/" + TOPOLOGY_SPACE + "/features/" + featureId, streamId);
+    // Then: Perform assertions (this time we get updated record as Topology Violation)
+    expectedBodyPart =
+            loadFileOrFail("FeatureViolationSegregation/TC04_TagManipulation/updated_topology_violation.json");
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
+    // When: GetById request is again triggered on sign-violations space
+    response = getNakshaClient().get("hub/spaces/" + SIGN_SPACE + "/features/" + featureId, streamId);
+    // Then: Perform assertions (this time we don't get record as Sign Violation got tagged as Topology Violation)
+    expectedBodyPart =
+            loadFileOrFail("FeatureViolationSegregation/TC04_TagManipulation/no_feature_found.json");
+    assertThat(response)
+            .hasStatus(404)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
   }
 
 }
