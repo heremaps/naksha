@@ -469,6 +469,7 @@ project(":here-naksha-lib-handlers") {
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-lib-view"))
         implementation(project(":here-naksha-storage-http"))
 
         implementation(commons_lang3)
