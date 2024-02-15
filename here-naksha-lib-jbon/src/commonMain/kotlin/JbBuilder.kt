@@ -4,16 +4,17 @@ package com.here.naksha.lib.jbon;
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.math.floor
 
 /**
  * Creates a new JBON builder using the given view and optional dictionary.
  */
 @Suppress("DuplicatedCode")
 @JsExport
-class JbBuilder(val view: IDataView, val global: JbDict? = null) {
+open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
     companion object {
         val wordUnicode = BooleanArray(128) {
-            (it >= 'a'.code && it <= 'z'.code) || (it >= 'A'.code && it <= 'Z'.code)
+            (it >= 'a'.code && it <= 'z'.code) || (it >= 'A'.code && it <= 'Z'.code) || it == ':'.code
         }
     }
 
@@ -51,12 +52,6 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      * The next index to use, when adding a string into the local dictionary.
      */
     private var localNextIndex: Int = 0
-
-    /**
-     * Stores text, maps and arrays encoded in this binary. The key is the FNV1b hash, the value is a map, with the
-     * key being the offset of the object in the binary, and the value being always null.
-     */
-    private val indices: HashMap<Int, Map<Int, Any?>>? = null
 
     /**
      * The current end in the view.
@@ -167,16 +162,30 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      * @param value The integer to write.
      * @return The offset of the value written.
      */
-    @Suppress("NON_EXPORTABLE_TYPE")
-    fun writeInt64(value: Long): Int {
-        if (value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) {
+    fun writeInt64(value: BigInt64): Int {
+        if (value gtei Int.MIN_VALUE && value ltei Int.MAX_VALUE) {
             return writeInt32(value.toInt())
         }
         val offset = end;
         view.setInt8(offset, TYPE_INT64.toByte())
-        view.setInt32(offset + 1, (value ushr 32).toInt())
-        view.setInt32(offset + 5, value.toInt())
+        view.setBigInt64(offset + 1, value)
         end += 9
+        return offset
+    }
+
+    /**
+     * Write an 48-bit unsigned integer which represents a Unix-Epoch-Timestamp im milliseconds.
+     * @param value The timestamp to write.
+     * @return The offset of the value written.
+     */
+    fun writeTimestamp(value: BigInt64): Int {
+        val offset = end;
+        view.setInt8(offset, TYPE_TIMESTAMP.toByte())
+        val hi = (value ushr 32).toShort()
+        val lo = value.toInt()
+        view.setInt16(offset + 1, hi)
+        view.setInt32(offset + 3, lo)
+        end += 7
         return offset
     }
 
@@ -187,12 +196,11 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      */
     fun writeFloat32(value: Float): Int {
         val pos = end
-        for (i in 0..15) {
-            val tiny = TINY_FLOATS[i]
-            if (tiny == value) {
-                view.setInt8(end++, (TYPE_FLOAT4 or i).toByte())
-                return pos
-            }
+        if (value >= -8.0 && value <= 7.0 && value == floor(value)) {
+            // Note: The integer value 0 represents -8!
+            val i = value.toInt() + 8
+            view.setInt8(end++, (TYPE_FLOAT4 or i).toByte())
+            return pos
         }
         view.setInt8(end, TYPE_FLOAT32.toByte())
         view.setFloat32(end + 1, value)
@@ -207,12 +215,11 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      */
     fun writeFloat64(value: Double): Int {
         val pos = end
-        for (i in 0..15) {
-            val tiny = TINY_DOUBLES[i]
-            if (tiny == value) {
-                view.setInt8(end++, (TYPE_FLOAT4 or i).toByte())
-                return pos
-            }
+        if (value >= -8.0 && value <= 7.0 && value == floor(value)) {
+            // Note: The integer value 0 represents -8!
+            val i = value.toInt() + 8
+            view.setInt8(end++, (TYPE_FLOAT4 or i).toByte())
+            return pos
         }
         view.setInt8(end, TYPE_FLOAT64.toByte())
         view.setFloat64(end + 1, value)
@@ -369,7 +376,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         var i = 0
         var wordStart = -1
         val stringReader = JbString()
-        while (i < string.length) {
+        char_loop@while (i < string.length) {
             val hi = string[i++]
             var unicode: Int
             if (i < string.length && hi.isHighSurrogate()) {
@@ -406,6 +413,34 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
                     var index = -1
                     if (global != null) {
                         index = global.indexOf(subString)
+                        if (index < 0) {
+                            // Let's try for URNs, which are for example "urn:here:mom:Topology:123456".
+                            // In that case, "urn:here:mom:Topology:" is always the same.
+                            var reversePos = pos - 1
+                            val stopAt = wordStart + 3
+                            while (reversePos > stopAt) {
+                                val c = view.getInt8(reversePos).toInt() and 0xff
+                                if (':'.code == c) {
+                                    // We found a colon at reversePos
+                                    // Try to look it up in the global dictionary (reversePos is excluded below).
+                                    stringReader.map(view, wordStart, wordStart, reversePos, null, null)
+                                    val prefix = stringReader.toString()
+                                    index = global.indexOf(prefix)
+                                    if (index >= 0) {
+                                        // Found the prefix in the global dict, now we encode the prefix as reference.
+                                        pos = writeStringRef(wordStart, index, true, ADD_COLON)
+                                        // Seek back behind the colon.
+                                        i = reversePos + 1
+                                        // A new word starts
+                                        wordStart = -1
+                                        // Continue normal reading.
+                                        continue@char_loop
+                                    }
+                                }
+                                reversePos--
+                            }
+                            // When we reach this, we did not find a colon.
+                        }
                     }
                     if (index < 0) {
                         index = writeToLocalDictionary(subString)
@@ -616,10 +651,10 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      * @param key The key to write.
      * @return The previously written key.
      */
-    fun writeKey(key : String) : Int {
+    fun writeKey(key: String): Int {
         val start = end
         val global = this.global
-        var index : Int
+        var index: Int
         if (global != null) {
             index = global.indexOf(key)
             if (index >= 0) {
@@ -716,6 +751,103 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
     }
 
     /**
+     * Expects a GeoJSON feature as input and convert it into JBON. The first being the JBON feature,
+     * the second being the XYZ namespace, the third being the geometry.
+     * @param map The GeoJSON feature to convert into JBON.
+     * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
+     */
+    fun buildFeatureFromMap(map: IMap): ByteArray {
+        val raw = map["id"]
+        val id: String? = if (raw is String) raw else null
+        xyz = null
+        val start = startMap()
+        for (entry in map) {
+            val key = entry.key
+            val value = entry.value
+            // TODO: Remember geometry to encode it later
+            if ("id" == key || "geometry" == key) continue
+            writeKey(entry.key)
+            if ("properties" == key) {
+                check(value is IMap)
+                writeMap(value, true)
+            } else {
+                writeValue(value)
+            }
+        }
+        endMap(start)
+        return buildFeature(id)
+    }
+
+    /**
+     * When invoking [buildFeatureFromMap] this is used to capture the XYZ namespace reference, if any is found.
+     */
+    var xyz: IMap? = null
+
+    /**
+     * Writes a map recursively.
+     * @param map The map to write.
+     * @param ignoreXyzNs If the key _@ns:com:here:xyz_ should be ignored (a reference is added to [xyz]).
+     * @return The offset of the value written.
+     */
+    fun writeMap(map: IMap, ignoreXyzNs: Boolean = false): Int {
+        val start = startMap()
+        for (entry in map) {
+            val key = entry.key
+            val value = entry.value
+            if (ignoreXyzNs && ("@ns:com:here:xyz" == key)) {
+                if (value is IMap) xyz = value
+                continue
+            }
+            writeKey(entry.key)
+            writeValue(entry.value)
+        }
+        endMap(start)
+        return start
+    }
+
+    /**
+     * Writes an array recursively.
+     * @param array The array to write.
+     * @return The offset of the value written.
+     */
+    fun writeArray(array: Array<Any?>): Int {
+        val start = startArray()
+        for (value in array) writeValue(value)
+        endArray(start)
+        return start
+    }
+
+    /**
+     * Writes an arbitrary value, recursive if a map or array are provided.
+     * @param value The value to write.
+     * @return The offset of the value written.
+     * @throws IllegalArgumentException If the given value is not writable.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun writeValue(value: Any?): Int {
+        val start = end
+        when (value) {
+            is Char -> writeString(value.toString())
+            is String -> writeString(value)
+            is Boolean -> writeBool(value)
+            is Byte -> writeInt32(value.toInt())
+            is Short -> writeInt32(value.toInt())
+            is Int -> writeInt32(value)
+            is Long -> writeInt64(JbSession.int64.longToBigInt64(value))
+            is BigInt64 -> writeInt64(value)
+            is Float -> writeFloat32(value)
+            is Double -> if (JbSession.env.canBeFloat32(value)) writeFloat32(value.toFloat()) else writeFloat64(value)
+            is IMap -> writeMap(value)
+            is Array<*> -> writeArray(value as Array<Any?>)
+            null -> writeNull()
+            else -> {
+                throw IllegalArgumentException()
+            }
+        }
+        return start
+    }
+
+    /**
      * Creates a feature out of this builder and the current local dictionary.
      * @param id The unique identifier of the feature, may be null.
      * @return The feature.
@@ -737,7 +869,7 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         val startOfFeatureId = end
         // Write the id, we copy that into the target soon.
         if (id != null) {
-            writeString(id)
+            if (global != null) writeText(id) else writeString(id)
         } else {
             writeNull()
         }
@@ -768,14 +900,14 @@ class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         while (source < endOfTotalSize) {
             targetView.setInt8(target++, view.getInt8(source++))
         }
-        // Copy the feature id.
-        source = startOfFeatureId
-        while (source < endOfFeatureId) {
-            targetView.setInt8(target++, view.getInt8(source++))
-        }
         // Copy the global dictionary id.
         source = startOfGlobalDictId
         while (source < endOfGlobalDictId) {
+            targetView.setInt8(target++, view.getInt8(source++))
+        }
+        // Copy the feature id.
+        source = startOfFeatureId
+        while (source < endOfFeatureId) {
             targetView.setInt8(target++, view.getInt8(source++))
         }
         // Write lead-in local dict.

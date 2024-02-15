@@ -8,29 +8,29 @@ import kotlin.js.JsExport
 /**
  * The base class for all object mapper.
  */
-@Suppress("UNCHECKED_CAST", "MemberVisibilityCanBePrivate")
+@Suppress("UNCHECKED_CAST", "MemberVisibilityCanBePrivate", "PropertyName")
 @JsExport
 abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
     /**
      * The reader used to read from the mapped view. This makes multiple readers from the same underlying view
      * independent, but they share the local dictionary.
      */
-    internal val reader = JbReader()
+    val reader = JbReader()
 
     /**
      * The start of the currently mapped object.
      */
-    internal var start: Int = 0
+    var start: Int = 0
 
     /**
      * The start of the object content.
      */
-    internal var encodingStart: Int = 0
+    var encodingStart: Int = 0
 
     /**
      * The end of the object content.
      */
-    internal var encodingEnd: Int = 0
+    var encodingEnd: Int = 0
 
     /**
      * Invoked after a view or reader was mapped to parse the header. If the invocation is mandatory, then the method must update
@@ -43,7 +43,7 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
      *
      * @param mandatory If true, then parsing the header is required.
      */
-    internal abstract fun parseHeader(mandatory: Boolean)
+    protected abstract fun parseHeader(mandatory: Boolean)
 
     /**
      * Can be invoked by [parseHeader] after the header is parsed and when the [reader] is located at the end of the header
@@ -51,9 +51,9 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
      * calculates the [encodingStart] and [encodingEnd].
      * @param size The size as read from the object header.
      */
-    internal fun setContentSize(size: Int) {
+    protected fun setContentSize(size: Int) {
         val headerStart = start
-        val headerEnd = reader.offset()
+        val headerEnd = reader.offset
         val headerSize = headerEnd - headerStart
         encodingStart = headerEnd
         encodingEnd = headerEnd + (size - headerSize)
@@ -64,9 +64,17 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
      * @param contentStart The start of the content.
      * @param contentEnd The end of the content, so the first byte that must **not** be read.
      */
-    internal fun setContent(contentStart: Int, contentEnd: Int) {
+    protected fun setContent(contentStart: Int, contentEnd: Int) {
         encodingStart = contentStart
         encodingEnd = contentEnd
+    }
+
+    /**
+     * Can be invoked by [parseHeader] to signal that there is no content.
+     */
+    protected fun noContent() {
+        encodingStart = reader.useView().getSize()
+        encodingEnd = encodingStart
     }
 
     /**
@@ -81,16 +89,16 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    internal open fun mapInternal(view: IDataView?, leadInOffset: Int, contentStart: Int, contentEnd: Int, localDict: JbDict?, globalDict: JbDict?): SELF {
+    protected open fun mapInternal(view: IDataView?, leadInOffset: Int, contentStart: Int, contentEnd: Int, localDict: JbDict?, globalDict: JbDict?): SELF {
         clear()
         reader.localDict = localDict
         reader.globalDict = globalDict
         if (view != null) {
             require(leadInOffset in 0..contentStart && contentStart <= contentEnd && contentEnd <= view.getSize())
-            reader.view = view
             start = leadInOffset
             encodingStart = contentStart
             encodingEnd = contentEnd
+            reader.view = view
             reader.offset = leadInOffset
             parseHeader(leadInOffset == contentStart && contentStart == contentEnd)
             check(start in 0..encodingStart && encodingStart <= encodingEnd && encodingEnd <= view.getSize())
@@ -103,18 +111,10 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
      * Returns the local dictionary or throws an [IllegalStateException].
      * @return The local dictionary.
      */
-    internal fun localDict(): JbDict {
+    fun localDict(): JbDict {
         val localDict = reader.localDict
         check(localDict != null)
         return localDict
-    }
-
-    /**
-     * Returns the reader used for this mapping.
-     * @return The reader used for this mapping.
-     */
-    fun reader(): JbReader {
-        return reader
     }
 
     /**
@@ -122,9 +122,9 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
      */
     open fun clear(): SELF {
         reader.view = null
+        reader.offset = 0
         reader.localDict = null
         reader.globalDict = null
-        reader.offset = 0
         start = 0
         encodingStart = 0
         encodingEnd = 0
@@ -169,8 +169,22 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    fun mapView(view: IDataView?, start: Int, localDict: JbDict? = null, globalDict: JbDict? = null): SELF {
+    fun mapView(view: IDataView?, start: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): SELF {
         mapInternal(view, start, start, start, localDict, globalDict)
+        return this as SELF
+    }
+
+    /**
+     * When called, this method will map the given byte-array, automatically creating a view for them, detecting the
+     * [encodingStart] and [encodingEnd] from the header stored in the bytes. May additionally do other header processing.
+     * @param bytes The bytes to map.
+     * @param start The offset of the lead-in byte of the byte-array.
+     * @param end The offset of the first byte not to map.
+     * @return this.
+     */
+    fun mapBytes(bytes: ByteArray?, start: Int = 0, end: Int = bytes?.size ?: Int.MAX_VALUE): SELF {
+        val view = if (bytes != null) JbSession.env.newDataView(bytes, start, end) else null
+        mapInternal(view, 0, 0, 0, null, null)
         return this as SELF
     }
 
@@ -182,7 +196,7 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
      */
     fun mapReader(reader: JbReader?): SELF {
         if (reader != null) {
-            val offset = reader.offset()
+            val offset = reader.offset
             mapInternal(reader.view, offset, offset, offset, reader.localDict, reader.globalDict)
         } else {
             mapInternal(null, 0, 0, 0, null, null)
@@ -193,7 +207,7 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
     /**
      * Returns the size of the content (amount of byte).
      */
-    fun contentSize() : Int {
+    fun contentSize(): Int {
         return encodingEnd - encodingStart
     }
 
@@ -203,7 +217,4 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
     fun mapSize(): Int {
         return encodingEnd - start
     }
-
-    // equalsString(String)
-    // equalsJbString(JbString)
 }

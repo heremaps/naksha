@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 class JbMap : JbEntryArray<JbMap>() {
     override fun parseHeader(mandatory: Boolean) {
         if (mandatory) {
-            val view = reader.view()
+            val view = reader.useView()
             val leadIn = view.getInt8(reader.offset).toInt() and 0xff
             check((leadIn and 0xf0) == TYPE_CONTAINER)
             check((leadIn and 0b0000_1100) == TYPE_CONTAINER_MAP)

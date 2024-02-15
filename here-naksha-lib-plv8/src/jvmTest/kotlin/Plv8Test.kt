@@ -1,4 +1,5 @@
 import com.here.naksha.lib.jbon.JbSession
+import com.here.naksha.lib.jbon.JvmMap
 import com.here.naksha.lib.jbon.SQL_STRING
 import com.here.naksha.lib.plv8.NakshaSession
 import org.junit.jupiter.api.*
@@ -38,7 +39,7 @@ class Plv8Test : Plv8TestContainer() {
         val map = JbSession.map!!
         val result = session.sql.execute("select naksha_version() as version")
         assertNull(session.sql.affectedRows(result))
-        val rows = assertIs<Array<HashMap<String,Any?>>>(session.sql.rows(result))
+        val rows = assertIs<Array<JvmMap>>(session.sql.rows(result))
         for (row in rows) {
             assertEquals(1, row.size)
             assertEquals(0L, row["version"])

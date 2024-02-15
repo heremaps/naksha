@@ -16,7 +16,7 @@ abstract class JbUnicodeMapper<SELF : JbUnicodeMapper<SELF>> : JbObjectMapper<SE
      * @return The unicode of the code-point at the current offset.
      */
     internal fun readCodePoint(moveForward: Boolean): Int {
-        val view = reader.view()
+        val view = reader.useView()
         if (reader.offset >= encodingEnd) return -1
         var unicode = view.getInt8(reader.offset).toInt() and 0xff
         if (unicode < 128) {
@@ -50,7 +50,7 @@ abstract class JbUnicodeMapper<SELF : JbUnicodeMapper<SELF>> : JbObjectMapper<SE
      * @return 1 to 3 when a unicode code-point of that size is found; 0 when a string-reference is found; -1 for EOF.
      */
     private fun unitUnicodeSize() : Int {
-        val view = reader.view()
+        val view = reader.useView()
         val offset = reader.offset
         if (offset < 0 || offset >= view.getSize()) return EOF
         return when(val byteValue = (view.getInt8(offset).toInt() and 0b0000_0000)) {

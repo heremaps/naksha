@@ -12,24 +12,24 @@ import kotlin.js.JsExport
 @JsExport
 open class JbReader {
     /**
-     * The view to which the reader maps.
+     * The view to which the reader maps, if any.
      */
-    internal var view: IDataView? = null
+    var view: IDataView? = null
 
     /**
      * The local dictionary to be used when decoding text or references.
      */
-    internal var localDict: JbDict? = null
+    var localDict: JbDict? = null
 
     /**
      * The global dictionary to be used when decoding text or references.
      */
-    internal var globalDict: JbDict? = null
+    var globalDict: JbDict? = null
 
     /**
      * The current offset in the view, starts with zero.
      */
-    internal var offset = 0
+    var offset = 0
 
     /**
      * Maps the given view.
@@ -50,18 +50,34 @@ open class JbReader {
     /**
      * Returns the view.
      * @return The view.
-     * @throws IllegalStateException If the view is invalid.
+     * @throws IllegalStateException If the view is _null_.
      */
-    fun view(): IDataView {
+    fun useView(): IDataView {
         return view ?: throw IllegalStateException("view")
     }
 
     /**
-     * Returns the current offset.
-     * @return the current offset.
+     * Set the offset in the [useView].
+     * @param pos The offset to set, must be between 0 and view size.
+     * @return this.
+     * @throws IllegalStateException If the view is null.
+     * @throws IllegalArgumentException If the given offset is out of bounds.
      */
-    fun offset(): Int {
-        return offset
+    fun setOffset(pos: Int): JbReader {
+        val view = useView()
+        require(pos in 0..view.getSize())
+        this.offset = pos
+        return this
+    }
+
+    /**
+     * Adds the given amount to the current offset.
+     * @param amount The amount of byte add to the [getOffset].
+     * @return this.
+     */
+    fun addOffset(amount: Int): JbReader {
+        setOffset(offset + amount)
+        return this
     }
 
     /**
@@ -72,30 +88,6 @@ open class JbReader {
     fun isValid(offset: Int): Boolean {
         val view = this.view ?: return false
         return offset >= 0 && offset < view.getSize()
-    }
-
-    /**
-     * Set the offset in the [view].
-     * @param pos The offset to set, must be between 0 and view size.
-     * @return this.
-     * @throws IllegalStateException If the view is null.
-     * @throws IllegalArgumentException If the given offset is out of bounds.
-     */
-    fun setOffset(pos: Int): JbReader {
-        val view = view()
-        require(pos in 0..view.getSize())
-        this.offset = pos
-        return this
-    }
-
-    /**
-     * Adds the given amount to the current offset.
-     * @param amount The amount of byte add to the [offset].
-     * @return this.
-     */
-    fun addOffset(amount: Int): JbReader {
-        setOffset(offset + amount)
-        return this
     }
 
     /**
@@ -167,7 +159,7 @@ open class JbReader {
      * @return The size of the value in bytes including the lead-in (so between 1 and n), 0 when EOF.
      */
     open fun unitSize(): Int {
-        val view = view()
+        val view = useView()
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return 0
         val raw = view.getInt8(offset).toInt() and 0xff
@@ -191,6 +183,7 @@ open class JbReader {
             TYPE_INT64 -> 9
             TYPE_FLOAT32 -> 5
             TYPE_FLOAT64 -> 9
+            TYPE_TIMESTAMP -> 7
 
             TYPE_REFERENCE -> {
                 when (raw and 3) {
@@ -293,7 +286,7 @@ open class JbReader {
     }
 
     fun readInt32(alternative: Int = -1): Int {
-        val view = view()
+        val view = useView()
         val offset = this.offset
         val type = unitType()
         return when (type) {
@@ -306,20 +299,25 @@ open class JbReader {
         }
     }
 
-    @Suppress("NON_EXPORTABLE_TYPE")
-    fun readInt64(alternative: Long = -1): Long {
-        val view = view()
+    fun readInt64(alternative: BigInt64? = null): BigInt64 {
+        val view = useView()
         val type = unitType()
         return when (type) {
-            TYPE_UINT4, TYPE_SINT4, TYPE_INT8, TYPE_INT16, TYPE_INT32 -> readInt32().toLong()
-            TYPE_INT64 -> {
-                val hi = view.getInt32(offset + 1)
-                val lo = view.getInt32(offset + 5)
-                ((hi.toLong() and 0xffff_ffff) shl 32) or (lo.toLong() and 0xffff_ffff)
-            }
-
-            else -> alternative
+            TYPE_UINT4, TYPE_SINT4, TYPE_INT8, TYPE_INT16, TYPE_INT32 -> JbSession.int64.intToBigInt64(readInt32())
+            TYPE_INT64 -> view.getBigInt64(offset + 1)
+            else -> alternative ?: JbSession.int64.intToBigInt64(0)
         }
+    }
+
+    fun isTimestamp(): Boolean {
+        return unitType() == TYPE_TIMESTAMP
+    }
+
+    fun readTimestamp(): BigInt64 {
+        val view = useView()
+        check(unitType() == TYPE_TIMESTAMP)
+        val hi = (view.getInt16(offset + 1).toLong() and 0xffff) shl 32
+        return BigInt64(hi or (view.getInt32(offset + 3).toLong() and 0xffff_ffff))
     }
 
     fun isFloat32(): Boolean {
@@ -343,7 +341,7 @@ open class JbReader {
      * @param readStrict If set to true, the method does not lose precision, rather returns the alternative.
      */
     fun readFloat32(alternative: Float = Float.NaN, readStrict: Boolean = false): Float {
-        val view = view()
+        val view = useView()
         val offset = this.offset
         return when (unitType()) {
             TYPE_UINT4, TYPE_SINT4, TYPE_INT8, TYPE_INT16 -> {
@@ -371,7 +369,7 @@ open class JbReader {
 
             TYPE_FLOAT64 -> {
                 if (readStrict) return alternative
-                readDouble().toFloat()
+                readFloat64().toFloat()
             }
 
             else -> alternative
@@ -384,8 +382,8 @@ open class JbReader {
      * @param alternative The value to return, when the value can't be read as a double.
      * @param readStrict If set to true, the method does not lose precision, rather returns the alternative.
      */
-    fun readDouble(alternative: Double = Double.NaN, readStrict: Boolean = false): Double {
-        val view = view()
+    fun readFloat64(alternative: Double = Double.NaN, readStrict: Boolean = false): Double {
+        val view = useView()
         val offset = this.offset
         return when (unitType()) {
             TYPE_UINT4, TYPE_SINT4, TYPE_INT8, TYPE_INT16, TYPE_INT32 -> {
@@ -434,7 +432,7 @@ open class JbReader {
     }
 
     /**
-     * Uses an internal string reader to parse the string at the current [offset] and return it.
+     * Uses an internal string reader to parse the string at the current [getOffset] and return it.
      * @return The parsed string.
      */
     fun readString(): String {
@@ -460,7 +458,7 @@ open class JbReader {
 
 
     /**
-     * Uses an internal text reader to parse the text at the current [offset] and return it.
+     * Uses an internal text reader to parse the text at the current [getOffset] and return it.
      * @return The parsed text as string.
      */
     fun readText(): String {
@@ -479,7 +477,7 @@ open class JbReader {
     }
 
     fun isLocalRef(): Boolean {
-        val view = view()
+        val view = useView()
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return false
         val raw = view.getInt8(offset).toInt() and 0xff
@@ -491,7 +489,7 @@ open class JbReader {
     }
 
     fun isGlobalRef(): Boolean {
-        val view = view()
+        val view = useView()
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return false
         val raw = view.getInt8(offset).toInt() and 0xff
@@ -503,7 +501,7 @@ open class JbReader {
     }
 
     fun readRef(): Int {
-        val view = view()
+        val view = useView()
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return -1
         val raw = view.getInt8(offset).toInt() and 0xff
@@ -542,7 +540,7 @@ open class JbReader {
     }
 
     fun isMap(): Boolean {
-        val view = view()
+        val view = useView()
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return false
         val raw = view.getInt8(offset).toInt() and 0xff
@@ -552,7 +550,7 @@ open class JbReader {
 
 
     fun isArray(): Boolean {
-        val view = view()
+        val view = useView()
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return false
         val raw = view.getInt8(offset).toInt() and 0xff
@@ -565,7 +563,7 @@ open class JbReader {
      * @return true if the current offset is at the lead-in of a text; false otherwise.
      */
     fun isText(): Boolean {
-        val view = view()
+        val view = useView()
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return false
         val raw = view.getInt8(offset).toInt() and 0xff
@@ -573,4 +571,15 @@ open class JbReader {
         return (type == TYPE_CONTAINER) && (raw and 0b0000_1100 == TYPE_CONTAINER_TEXT)
     }
 
+    /**
+     * Test if the current offset is at the lead-in of an XYZ special.
+     * @return true if the current offset is at the lead-in of an XYZ special; false otherwise.
+     */
+    fun isXyz(): Boolean = unitType() == TYPE_XYZ
+
+    /**
+     * Returns the XYZ variant or _-1_, if not being an XYZ type.
+     * @return The XYZ variant or _-1_, if not being an XYZ type.
+     */
+    fun xyzVariant(): Int = if (unitType() == TYPE_XYZ) useView().getInt8(offset + 1).toInt() else -1
 }

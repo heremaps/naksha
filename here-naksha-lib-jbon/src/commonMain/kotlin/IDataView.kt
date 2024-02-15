@@ -41,6 +41,8 @@ interface IDataView {
     fun setInt16(pos: Int, value: Short, littleEndian: Boolean = false)
     fun getInt32(pos: Int, littleEndian: Boolean = false): Int
     fun setInt32(pos: Int, value: Int, littleEndian: Boolean = false)
+    fun getBigInt64(pos: Int, littleEndian: Boolean = false): BigInt64
+    fun setBigInt64(pos: Int, value: BigInt64, littleEndian: Boolean = false)
 
     // We can introduce BigInt later and simply add some methods to BigInt.prototype like:
     // add(other), sub(other), mul(other), div(other), or(other), and(other), xor(other), ...

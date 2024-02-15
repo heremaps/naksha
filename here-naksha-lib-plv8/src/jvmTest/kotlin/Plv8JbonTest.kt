@@ -1,4 +1,3 @@
-import JbJsonConverter.jsonToJbonByteArray
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.IPlv8Plan
 import com.here.naksha.lib.plv8.NakshaSession
@@ -8,6 +7,13 @@ import kotlin.test.assertEquals
 
 @Suppress("UNCHECKED_CAST")
 class Plv8JbonTest : Plv8TestContainer() {
+    private val builder = JbBuilder(newDataView(16384))
+
+    private fun jsonToJbonByteArray(json:String) : ByteArray {
+        builder.reset()
+        val raw = env.parse(json)
+        return builder.buildFeatureFromMap(raw as IMap)
+    }
 
     @Test
     fun testSql_jb_get_bool() {

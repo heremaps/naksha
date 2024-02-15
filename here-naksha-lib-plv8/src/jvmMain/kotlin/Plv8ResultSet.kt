@@ -1,7 +1,9 @@
 package com.here.naksha.lib.plv8
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
+import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.JbSession
+import com.here.naksha.lib.jbon.JvmMap
 import java.sql.ResultSet
 import kotlin.collections.HashMap
 
@@ -38,14 +40,14 @@ open class Plv8ResultSet(private var rs: ResultSet?) {
      * Reads the next row into a native map.
      * @return The next row as native map.
      */
-    fun readRow(): HashMap<String, Any?> {
+    fun readRow(): JvmMap {
         val rs = this.rs
         check(rs != null)
         val columnNames = this.columnNames
         check(columnNames != null)
         val columnTypes = this.columnTypes
         check(columnTypes != null)
-        val row = HashMap<String, Any?>()
+        val row = JvmMap()
         var i = 0
         while (i < columnNames.size) {
             val name = columnNames[i]
@@ -84,7 +86,7 @@ open class Plv8ResultSet(private var rs: ResultSet?) {
     fun toArray(): Array<HashMap<String, Any?>> {
         val rs = this.rs
         check(rs != null)
-        val array = ArrayList<HashMap<String, Any?>>(30)
+        val array = ArrayList<JvmMap>(30)
         while (rs.next()) {
             array.add(readRow())
         }

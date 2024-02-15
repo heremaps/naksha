@@ -10,10 +10,10 @@ The admin database of Naksha will (currently) be based upon a PostgresQL databas
 
 Within PostgresQL a collection is a set of database tables. All these tables are prefixed by the `collection` identifier. The tables are:
 
-- `{collection}`: The HEAD table (`PARTITION BY LIST substring(md5(jsondata->>'id'),1,1)`) with all features in their live state. This table is the only one that should be directly accessed for manual SQL queries and has triggers attached that will ensure that the history is written accordingly.
-- `{collection}_p[n]`: The 16 HEAD partitions (`FOR VALUES FROM '{n}' TO '{n+1}'`, `n=[0..9a..f]`).
+- `{collection}`: The HEAD table (`PARTITION BY LIST naksha_partition_number(naksha_feature_id(feature))`) with all features in their live state. This table is the only one that should be directly accessed for manual SQL queries and has triggers attached that will ensure that the history is written accordingly.
+- `{collection}_p[n]`: The 256 HEAD partitions (`PARTITION OF {collection} FOR VALUES WITH (MODULUS 256, REMAINDER {n})`), beware that the name of the partition is taken from `naksha_partition_id('{collection}')`, which will return a string of the length 3 (`000` to `255`).
 - `{collection}_del`: The HEAD deletion table holding all features that are deleted from the HEAD table. This can be used to read zombie features (features that have been deleted, but are not yet fully unrecoverable dead).
-- `{collection}_hst`: The history view, this is partitioned table, partitioned by `txn_next`.
+- `{collection}_hst`: The history table, this is partitioned table, partitioned by `txn_next`.
 - `{collection}_hst_{YYYY}_{MM}_{YY}`: The history partition for a specific day (`txn_next >= naksha_txn('2023-09-29',0) AND txn_next < naksha_txn('2023-09-30',0)`.
 - `{collection}_meta`: The meta-data sub-table, used for arbitrary meta-information and statistics.
 
@@ -58,9 +58,9 @@ The transaction-number is a 64-bit integers, split into four parts:
 * _Year_: The year in which the transactions started (e.g. 2023).
 * _Month_: The month of the year in which the transaction started (e.g. 9 for September).
 * _Day_: The day of the month in which the transaction started (1 to 31).
-* _Id_: The local **sequence-number** in this day.
+* _Seq_: The local **sequence-number** in this day.
 
-The local **sequence-number** (_id_) is stored in a sequence named `naksha_tx_id_seq`. Every day starts with the sequence-number reset to zero. The final value is calculated by **year** x _1,000,000,000,000,000_ + **month** x _10,000,000,000,000_ **day** x _100,000,000,000_ + **sequence-number**.
+The local **sequence-number** is stored in a sequence named `naksha_txn_seq`. Every day starts with the sequence-number reset to zero. The final value is calculated by **year** x _1,000,000,000,000,000_ + **month** x _10,000,000,000,000_ **day** x _100,000,000,000_ + **sequence-number**.
 
 This concept allows up to 100 billion transactions per day. It will work up until the year 9222, where it will overflow. Should there be more than 100 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible.
 
@@ -77,11 +77,11 @@ Human-Readable:                  2023,01,30,0
 uuid:                            "{storageId}:{collectionId}:2023:1:30:0"
 ```
 
-Normally, when a new unique identifier is requested, the method `naksha_txn()` will read the sequence (`naksha_tx_id_seq`) and verify it, so, if the year, month and day of the current transaction start-time (`now()`) matches the one stored in the sequence-number. If this is not the case, it will enter an advisory lock and retry the operation, if the sequence-number is still invalid, it will reset the sequence-number to the correct date, with the _sequence_ part being set to `1`, so that the next `naksha_uid(collection)` method that enters the lock or queries the _sequence_, receives a correct number, starting at _sequence_ `1`. The method itself will use the _sequence_ value `0` in the rollover case.
+Normally, when a new unique identifier is requested, the method `naksha_txn()` will use the next value from the sequence (`naksha_txn_seq`) and verify it, so, if the year, month and day of the current transaction start-time (`transaction_timestamp()`) matches the one stored in the sequence-number. If this is not the case, it will enter an advisory lock and retry the operation, if the sequence-number is still invalid, it will reset the sequence-number to the correct date, with the _sequence_ part being set to `1`, so that the next `naksha_txn()` method that enters the lock or queries the _sequence_, receives a correct number, starting at _sequence_ `1`. The method itself will use the _sequence_ value `0` in the rollover case.
 
-**Note**: We store the current transaction-number for the current transaction in a transaction local config value, so that we only need to read it ones, when needed the first time in a transaction. Additionally, there is a helper methods to be used to create arbitrary bounds for a unique identifier being `naksha_txn(timestamptz, bigint)`.
+**Note**: We cache the current transaction-number in the session, so that we do not need to perform the above action multiple times per transaction.
 
-## GUID _(aka UUID)_
+## GUID [`uuid`]
 
 Traditionally XYZ-Hub used UUIDs as state-identifiers, but exposed them as strings in the JSON. Basically all known clients ignore the format of the UUID, so none of them expected to really find a UUID in it. This is good, because in Naksha we decided to change the format, but to stick with the name for downward compatibility.
 
@@ -91,21 +91,21 @@ The new format is called GUID (global unique identifier), returning to the roots
 
 **Note**: This format holds all information needed for Naksha to know in which storage a feature is located, of which it only has the _GUID_. The PSQL storage knows from this _GUID_ exactly in which database table the features is located, even taking partitioning into account. The reason is, that partitioning is done by transaction start date, which is contained in the _GUID_. Therefore, providing a _GUID_, directly identifies the storage location of a feature, which in itself holds the information to which transaction it belongs to (`txn`). Beware that the transaction-number as well encodes the transaction start time and therefore allows as well to know exactly where the features of a transaction are located (including finding the transaction details itself).
 
-For the PostgresQL implementation the **uid** is either the row number (`i`) for features in collections or the **sequence-number** of the transaction.
-
 ## Table layout
 
 The table layout for all tables:
 
-| Column   | Type                      | Modifiers            | Description                                                  |
-|----------|---------------------------|----------------------|--------------------------------------------------------------|
-| i        | int8                      | PRIMARY KEY NOT NULL | `xyz.uid` - Primary row identifier                           |
-| txn_next | double precision          | NOT NULL             | `xyz.txn_next` - Only needed in history                      |
-| geo      | geometry(GeometryZ, 4326) |                      | `geometry` - The geometry of the features.                   |
-| feature  | bytea                     |                      | The Geo-JSON feature in JBON, except for what was extracted. |
-| xyz      | bytea                     |                      | `feature->properties->@ns:com:here:xyz`                      |
+| Column   | Type                      | Modifiers                              | Description                                                  |
+|----------|---------------------------|----------------------------------------|--------------------------------------------------------------|
+| uid      | int8                      | PRIMARY KEY NOT NULL                   | `xyz->uid` - Primary row identifier                          |
+| txn_next | int8                      | NOT NULL                               | `xyz->txn_next` - Only needed in history                     |
+| id       | text                      |                                        | The **id** of the feature.                                   |
+| feature  | bytea                     |                                        | The Geo-JSON feature in JBON, except for what was extracted. |
+| geo      | geometry(GeometryZ, 4326) |                                        | `geometry` - The geometry of the features.                   |
+| tags     | bytea                     |                                        | `xyz->tags`                                                  |
+| xyz      | bytea                     |                                        | `feature->properties->@ns:com:here:xyz`                      |
 
-The **xyz** extension contains separate information, managed by Naksha. It should be merged into the feature under `feature->properties->@ns:com:here:xyz`.
+The **xyz** and **tags** columns contains special information, managed by Naksha. They should be merged into the feature under `feature->properties->@ns:com:here:xyz`.
 
 ## Collection-Info
 
@@ -199,35 +199,25 @@ Therefore, the union of all the query returns only exactly one feature, the sear
 
 ## Transaction Logs
 
-The transaction logs are stored in the `naksha_tx` table. Each transaction persists out of **signals**, grouped by the transaction-number (`tnx`). Note that there is a `naksha_tx_uid_seq` encoded into the `txn`. The table layout is:
+The transaction logs are stored in the `naksha_txn` table. Each transaction persists out of **signals**, grouped by the transaction-number (`tnx`). Note that there is a `naksha_txn_uid_seq` encoded into the `txn`. The table layout is:
 
-| Column     | Type         | Modifiers            | Description                                                                                                 |
-|------------|--------------|----------------------|-------------------------------------------------------------------------------------------------------------|
-| i          | bigserial    | PRIMARY KEY NOT NULL | Primary unique signal identifier.                                                                           |
-| ts         | timestamptz  |                      | The time when the transaction started. The year, month and day are encoded as well in the `txn`.            |
-| psql_id    | int8         |                      | The PostgresQL transaction id. Can be used to detect consistency.                                           |
-| seq_number | int8         |                      | The sequence number, set by the sequencer of `lib-naksha-psql`, as soon as the transaction becomes visible. |
-| seq_ts     | timestamptz  |                      | The sequencing time, set by the sequencer of `lib-naksha-psql`, as soon as the transaction becomes visible. |
-| txn        | int8         | NOT NULL             | The transaction-number to which this signal belongs.                                                        |
-| action     | text         |                      | The action that this signal represents.                                                                     |
-| id         | text         |                      | The unique transaction local identifier of this signal.                                                     |
-| app_id     | text         |                      | The application identifier used for the transaction.                                                        |
-| author     | text         |                      | The author used for the transaction.                                                                        |
-| msg_text   | text         |                      | If this signal is a message, the text of the message.                                                       |
-| msg_json   | jsonb        |                      | If this signal is a message, the JSON attachment.                                                           |
-| msg_binary | bytea        |                      | If this signal is a message, the binary attachment.                                                         |
+| Column     | Type        | Modifiers            | Description                                                                                |
+|------------|-------------|----------------------|--------------------------------------------------------------------------------------------|
+| uid        | int8        | PRIMARY KEY NOT NULL | Primary unique signal identifier.                                                          |
+| txn        | int8        | NOT NULL             | The transaction-number.                                                                    |
+| ts         | timestamptz | NOT NULL             | The time when the transaction started (`transaction_timestamp()`).                         |
+| xact_id    | int8        | NOT NULL             | The PostgresQL transaction id. Can be used to detect consistency (`pg_current_xact_id()`). |
+| app_id     | text        |                      | The application identifier used for the transaction.                                       |
+| author     | text        |                      | The author used for the transaction.                                                       |
+| details    | bytea       |                      | The details of what happened as part of this transaction (`XyzTxDetails`).                 |
+| seq_id     | int8        |                      | The sequencing identifier, set by the sequencer of `lib-naksha-psql`.                      |
+| seq_ts     | timestamptz |                      | The sequencing time, set by the sequencer of `lib-naksha-psql`.                            |
+| version    | int8        |                      | An arbitrary version tag that can be set.                                                  |
+| attachment | bytea       |                      | An arbitrary attachment as JBON feature.                                                   |
 
-The transaction-log should have a combined unique index on (**txn**, **action**, **id**).
+**Note**: The transaction table itself is partitioned by `txn`, **not by** `txn_next`, but except for this the same way the history of the collections is partitioned (`naksha_txn_YYYY_MM_DD`). This is mainly helpful to purge transaction-logs and to improve the access speed.
 
-**Note**: The transaction table itself is partitioned by `txn`, **not by** `txn_next`, but except for this the same way the history of the collections is partitioned (`naksha_tx_YYYY_MM_DD`). This is mainly helpful to purge transaction-logs and to improve the access speed.
-
-### Actions
-
-| Action            | Meaning                                                                              |
-|-------------------|--------------------------------------------------------------------------------------|
-| MODIFY_FEATURES   | Features in the collection are modified. The **id** is the collection name.          |
-| MODIFY_COLLECTION | A collection itself was modified. The **id** is the collection name.                 |
-| MESSAGE           | An arbitrary message added into the transaction. The **id** is a message identifier. |
+**Note**: More information about Postgres transaction numbers are available in the [documentation](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-PG-SNAPSHOT). We should enable [track-commit-timestamp](https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-TRACK-COMMIT-TIMESTAMP) so that `pg_commit_ts` holds information when a transaction was committed. This would make our own tracking more reliable.
 
 ## History creation
 

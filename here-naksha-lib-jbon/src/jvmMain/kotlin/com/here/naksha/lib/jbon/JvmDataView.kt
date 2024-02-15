@@ -107,4 +107,14 @@ class JvmDataView(val buffer: ByteArray, val startOffset: Int, val endOffset: In
     override fun setInt32(pos: Int, value: Int, littleEndian: Boolean) {
         JvmEnv.unsafe.putInt(buffer, offset(pos, 4), ordered(value, littleEndian))
     }
+
+    override fun getBigInt64(pos: Int, littleEndian: Boolean): BigInt64 {
+        val value = JvmEnv.unsafe.getLong(buffer, offset(pos, 8))
+        return JvmBigInt64(ordered(value, littleEndian))
+    }
+
+    override fun setBigInt64(pos: Int, value: BigInt64, littleEndian: Boolean) {
+        check(value is JvmBigInt64)
+        JvmEnv.unsafe.putLong(buffer, offset(pos, 8), ordered(value.value, littleEndian))
+    }
 }

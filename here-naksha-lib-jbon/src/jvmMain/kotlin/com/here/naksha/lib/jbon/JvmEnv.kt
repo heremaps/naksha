@@ -1,9 +1,18 @@
 package com.here.naksha.lib.jbon
 
-import com.here.naksha.lib.core.util.json.Json
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.PropertyAccessor
+import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.core.JsonFactoryBuilder
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.MapperFeature
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.json.JsonMapper
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
-import java.security.SecureRandom
+import java.util.Calendar
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 
@@ -20,7 +29,6 @@ open class JvmEnv : IEnv {
         val globalDictionaries = ConcurrentHashMap<String, JbDict>()
         val unsafe: Unsafe
         val baseOffset: Int
-        val lz4Factory: LZ4Factory = LZ4Factory.fastestInstance()
 
         init {
             val unsafeConstructor = Unsafe::class.java.getDeclaredConstructor()
@@ -30,6 +38,30 @@ open class JvmEnv : IEnv {
             baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
         }
 
+        val lz4Factory: LZ4Factory = LZ4Factory.fastestInstance()
+        val threadLocal = JvmThreadLocal()
+        val objectMapper = ThreadLocal.withInitial {
+            val jsonFactory = JsonFactoryBuilder()
+                    .configure(JsonFactory.Feature.INTERN_FIELD_NAMES, false)
+                    .configure(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES, false)
+                    .configure(JsonFactory.Feature.USE_THREAD_LOCAL_FOR_BUFFER_RECYCLING, true)
+                    .build()
+            jsonFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false)
+            jsonFactory.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, false)
+            return@withInitial JsonMapper.builder(jsonFactory)
+                    .enable(MapperFeature.DEFAULT_VIEW_INCLUSION)
+                    .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+                    .enable(MapperFeature.SORT_CREATOR_PROPERTIES_FIRST)
+                    .serializationInclusion(JsonInclude.Include.NON_NULL)
+                    .visibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.ANY)
+                    .visibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.PUBLIC_ONLY)
+                    .visibility(PropertyAccessor.IS_GETTER, JsonAutoDetect.Visibility.NONE)
+                    .visibility(PropertyAccessor.CREATOR, JsonAutoDetect.Visibility.ANY)
+                    .configure(SerializationFeature.CLOSE_CLOSEABLE, false)
+                    .addModule(JvmJsonModule())
+                    .build()
+        }
+
         /**
          * Returns the current environment, if not available, initializes it and then returns it. Must be called
          * at least ones before using [JbSession] in a JVM.
@@ -37,54 +69,50 @@ open class JvmEnv : IEnv {
         @JvmStatic
         fun get(): JvmEnv {
             if (!JbSession.isInitialized()) {
-                JbSession.initialize(JvmThreadLocal(), JvmEnv(), JvmList(), JvmMap(), Slf4jLogger())
+                JbSession.initialize(JvmThreadLocal(), JvmEnv(), JvmMapApi(), JvmBigInt64Api(), Slf4jLogger())
             }
             return JbSession.env as JvmEnv
         }
     }
 
     override fun stringify(any: Any, pretty: Boolean): String {
-        Json.get().use {
-            if (pretty) {
-                return it.writer().withDefaultPrettyPrinter().writeValueAsString(any)
-            }
-            return it.writer().writeValueAsString(any)
-        }
+        val writer = objectMapper.get().writer()
+        return (if (pretty) writer.withDefaultPrettyPrinter() else writer).writeValueAsString(any)
     }
 
     override fun parse(json: String): Any {
-        Json.get().use {
-            return it.reader().forType(Object::class.java).readValue(json)
-        }
+        return objectMapper.get().reader().forType(Object::class.java).readValue(json)
     }
 
-    override fun epochMillis(): Long {
-        return System.currentTimeMillis()
+    override fun canBeFloat32(value: Double): Boolean {
+        // IEEE-754, 32-bit = One sign-bit, 8-bit exponent biased by 127, then 23-bit mantissa
+        // IEEE-754, 64-bit = One sign-bit, 11-bit exponent biased by 1023, then 52-bit mantissa
+        // E = 0 means denormalized number (M>0) or null (M=0)
+        // E = 255|2047 means either endless (M=0) or not a number (M>0)
+        val binary = value.toRawBits()
+        var exponent = (binary ushr 52).toInt() and 0x7ff
+        if (exponent == 0 || exponent == 2047) return false
+        // Remove bias: -1023 (0) .. 1024 (2047)
+        exponent -= 1023
+        // 32-bit exponent is 8-bit with bias 127: -127 (0) .. 128 (255)
+        // We want to avoid extremes as they encode special states.
+        if (exponent < -126 || exponent > 127) return false
+        // We do not want to lose precision in mantissa either.
+        // Either the lower 29-bit of mantissa are zero (only 23-bit used) or all bits are set.
+        val mantissa = binary and 0x000f_ffff_ffff_ffff
+        return (mantissa and 0x0000_0000_1fff_ffff) == 0L || mantissa == 0x000f_ffff_ffff_ffff
+    }
+
+    override fun currentMillis(): BigInt64 {
+        return JvmBigInt64(System.currentTimeMillis())
     }
 
     override fun random(): Double {
         return ThreadLocalRandom.current().nextDouble()
     }
 
-    override fun longToBigInt(value: Long): Any {
-        return value
-    }
-
-    override fun bigIntToLong(value: Any): Long {
-        require(value is Long)
-        return value
-    }
-
     override fun newDataView(bytes: ByteArray, offset: Int, size: Int): IDataView {
-        if (offset < 0) throw Exception("offset must be greater or equal zero")
-        var end = offset + size
-        if (end < offset) { // means, size is less than zero!
-            end += bytes.size // size is counted from end of array
-            if (end < 0) throw Exception("invalid end, must be greater/equal zero")
-        }
-        // Cap to end of array
-        if (end > bytes.size) end = bytes.size
-        if (end < offset) throw Exception("end is before start")
+        val end = endOf(bytes, offset, size) // offset + size
         return JvmDataView(bytes, offset + baseOffset, end + baseOffset)
     }
 

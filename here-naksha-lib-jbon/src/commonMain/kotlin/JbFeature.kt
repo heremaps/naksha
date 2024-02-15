@@ -28,18 +28,20 @@ open class JbFeature : JbObjectMapper<JbFeature>() {
         check(reader.isInt())
         val size = reader.readInt32()
         check(reader.nextUnit())
-        // The feature-id (optional).
+        // The id of global dictionary (optional).
         if (reader.isString()) {
-            id = reader.readString().toString()
+            val globalDictId = reader.readString()
+            reader.globalDict = JbSession.env.getGlobalDictionary(globalDictId)
+            check(reader.globalDict != null)
         } else {
             check(reader.isNull())
         }
         check(reader.nextUnit())
-        // The id of global dictionary (optional).
+        // The feature-id (optional).
         if (reader.isString()) {
-            val globalDictId = reader.readString()
-            reader.globalDict = JbSession.env!!.getGlobalDictionary(globalDictId)
-            check(reader.globalDict != null)
+            id = reader.readString()
+        } else if (reader.isText()) {
+            id = reader.readText()
         } else {
             check(reader.isNull())
         }

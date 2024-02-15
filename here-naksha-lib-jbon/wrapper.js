@@ -1,13 +1,18 @@
 var module = {exports: {}};
 var exports = module.exports;
 function jbon() {
-  let jbon = module.exports["here-naksha-lib-jbon"].com.here.naksha.lib.jbon
-  jbon.JsSession.Companion.register();
-  return jbon;
+  let jb = module.exports["here-naksha-lib-jbon"].com.here.naksha.lib.jbon
+  jb.JsEnv.Companion.get();
+  return jb;
 }
 
-// Put code below, then do:
-/*
+// Put code HERE:
+
+
+// $imask$.iid
+// $metadata$.iid
 var jb = jbon();
-var session = jb.JbSession.Companion.get();
-*/
+var env = jb.JsEnv.Companion.get();
+
+
+// (()=>{ debugger; env.isMap({"$imask$":6}) })()

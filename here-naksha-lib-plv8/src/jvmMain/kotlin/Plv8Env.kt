@@ -37,12 +37,14 @@ class Plv8Env : JvmEnv() {
      * to the given SQL connection, so that all other session methods work the same way they would normally behave
      * inside the Postgres database (so, when executed in PLV8 engine).
      * @param conn The connection to bind to the [NakshaSession].
+     * @param schema The schema to use.
+     * @param storageId The storage-identifier.
      * @param appName The name of this application (arbitrary string, seen in SQL connections).
      * @param streamId The logging stream-id, can be found in transaction logs for error search.
      * @param appId The UPM application identifier.
      * @param author The UPM user identifier that uses this session.
      */
-    fun startSession(conn: Connection, appName: String, streamId: String, appId: String, author: String?) {
+    fun startSession(conn: Connection, schema: String, storageId: String, appName: String, streamId: String, appId: String, author: String?) {
         // Prepare the connection, need to load the module system.
         conn.autoCommit = false
         val sql = Plv8Sql(conn)
@@ -51,7 +53,7 @@ class Plv8Env : JvmEnv() {
         sql.conn!!.commit()
         // Create the JVM Naksha session.
         get()
-        val session = NakshaSession(Plv8Sql(conn), appName, streamId, appId, author)
+        val session = NakshaSession(Plv8Sql(conn), schema, storageId, appName, streamId, appId, author)
         JbSession.threadLocal.set(session)
     }
 
@@ -127,7 +129,7 @@ class Plv8Env : JvmEnv() {
         val resourceAsText = getResourceAsText(path)
         check(resourceAsText != null)
         var code = applyReplacements(resourceAsText, replacements)
-        if (extraCode != null) code += "\n"+extraCode
+        if (extraCode != null) code += "\n" + extraCode
         sql.execute("INSERT INTO commonjs2_modules (module, autoload, source) VALUES ($1, $2, $3) " +
                 "ON CONFLICT (module) DO UPDATE SET autoload = $2, source = $3",
                 arrayOf(name, autoload, code))

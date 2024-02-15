@@ -1,5 +1,6 @@
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.jbon.IMap
 import java.io.Closeable
 import java.sql.Connection
 

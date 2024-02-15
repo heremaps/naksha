@@ -2,7 +2,7 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.JbSession
+import com.here.naksha.lib.jbon.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -19,16 +19,22 @@ import kotlin.jvm.JvmStatic
  * database connection wrapper. In the JVM bound by the `startSession` call of the `Plv8Env` class.
  * Technically, the `lib-psql` will always use the SQL function, therefore the only reason to use the
  * JVM function `startSession` is, when testing the code to simulate a PLV8 environment.
- * @property appName The name of the application starting the session, only for debugging purpose.
- * @property streamId The stream-identifier, to be added to the transaction logs for debugging purpose.
- * @property appId The UPM identifier of the application (for audit).
- * @property author The UPM identifier of the user (for audit).
+ * @property schema The database schema of this session.
+ * @property storageId The storage-identifier of this session.
+ * @param appName The name of the application starting the session, only for debugging purpose.
+ * @param streamId The stream-identifier, to be added to the transaction logs for debugging purpose.
+ * @param appId The UPM identifier of the application (for audit).
+ * @param author The UPM identifier of the user (for audit).
  * @constructor Create a new session.
  */
 @Suppress("UNUSED_PARAMETER", "unused")
 @JsExport
-class NakshaSession(val sql: IPlv8Sql, appName: String, streamId: String, appId: String, author: String? = null) :
-        JbSession(appName, streamId, appId, author) {
+class NakshaSession(
+        val sql: IPlv8Sql,
+        val schema: String,
+        val storageId: String,
+        appName: String, streamId: String, appId: String, author: String? = null
+) : JbSession(appName, streamId, appId, author) {
 
     companion object {
 
@@ -67,24 +73,141 @@ class NakshaSession(val sql: IPlv8Sql, appName: String, streamId: String, appId:
     }
 
     /**
+     * An internal view to calculate the partition id.
+     */
+    private lateinit var partView: IDataView
+
+    /**
+     * Internally used FNV1a hash.
+     */
+    private val fnv1a = Fnv1a()
+
+    /**
+     * Returns the partition number.
+     * @param id The feature-id for which to return the partition-id.
+     * @return The partition id as number between 0 and 255.
+     */
+    fun partitionNumber(id: String): Int {
+        val fnv1a = this.fnv1a
+        fnv1a.reset()
+        fnv1a.string(id)
+        return fnv1a.hash and 0xff
+    }
+
+    /**
      * Returns the partition id as three digit string.
      * @param id The feature-id for which to return the partition-id.
      * @return The partition id as three digit string.
      */
-    fun partitionId(id:String) : String {
-        TODO("Implement me!")
+    fun partitionId(id: String): String = when (val partNumber = partitionNumber(id)) {
+        in 0..9 -> "00$partNumber"
+        in 10..99 -> "0$partNumber"
+        else -> "$partNumber"
+    }
+
+    /**
+     * Returns the partition from date.
+     * @param year The year, e.g. 2024.
+     * @param month The month between 1 (January) and 12 (December).
+     * @param day The day between 1 and 31.
+     * @return The name of the corresponding history partition.
+     */
+    fun historyPartitionFromDate(year:Int, month:Int, day:Int) : String {
+        val sb = StringBuilder()
+        sb.append(year)
+        sb.append('_')
+        if (month < 10) sb.append('0')
+        sb.append(month)
+        sb.append('_')
+        if (day < 10) sb.append('0')
+        sb.append(day)
+        return sb.toString() // 2024_01_15
+    }
+
+    /**
+     * Returns the partition id based upon the given timestamp (for history partitions).
+     * @param millis The epoch-timestamp in milliseconds.
+     * @return The name of the corresponding history partition.
+     */
+    fun historyPartitionFromMillis(millis: BigInt64) : String {
+        val ts = JbTimestamp.fromMillis(millis)
+        return historyPartitionFromDate(ts.year, ts.month, ts.day)
     }
 
     /**
      * The last error number as SQLState.
      */
-    var errNo : String? = null
+    var errNo: String? = null
 
     /**
      * The last human-readable error message.
      */
-    var errMsg : String? = null
+    var errMsg: String? = null
 
+    /**
+     * The cached Postgres version.
+     */
+    private lateinit var pgVersion : XyzVersion
+
+    /**
+     * Returns the PostgresQL version.
+     * @return The PostgresQL version.
+     */
+    fun postgresVersion(): XyzVersion {
+        if (!this::pgVersion.isInitialized) {
+            val r = sql.execute("select version() as version")
+            val rows = sql.rows(r)
+            check(rows != null)
+            val row = asMap(rows[0])
+            // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
+            val versionString = row["version"] as String
+            val firstSpace = versionString.indexOf(' ')
+            check(firstSpace > 0)
+            val secondSpace = versionString.indexOf(' ', firstSpace + 1)
+            check(secondSpace > firstSpace)
+            val thirdSpace = versionString.indexOf(' ', secondSpace + 1)
+            check(thirdSpace > secondSpace)
+            val pgv = versionString.substring(secondSpace + 1, thirdSpace)
+            pgVersion = XyzVersion.fromString(pgv)
+        }
+        return pgVersion
+    }
+
+    private fun ensureHistoryPartition() {
+
+    }
+
+    /**
+     * Creates all necessary tables and structures, if not already existing.
+     */
+    fun initStorage() {
+        val sql = this.sql
+        sql.execute("CREATE SEQUENCE IF NOT EXISTS naksha_txn_uid_seq AS int8;")
+        sql.execute("""
+CREATE TABLE IF NOT EXISTS naksha_txn (
+    txn         int8         PRIMARY KEY NOT NULL,
+    ts          timestamptz  NOT NULL,
+    xact_id     int8         NOT NULL,
+    app_id      text         NOT NULL,
+    author      text         NOT NULL,
+    seq_id      int8,
+    seq_ts      timestamptz,
+    version     int8,
+    details     bytea,
+    attachment  bytea
+) PARTITION BY RANGE (txn);
+-- txn index is created automatically
+CREATE INDEX IF NOT EXISTS naksha_txn_ts_idx ON naksha_txn USING btree ("ts" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_app_id_ts_idx ON naksha_txn USING btree ("app_id" ASC, "ts" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_author_ts_idx ON naksha_txn USING btree ("author" ASC, "ts" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_seq_id_idx ON naksha_txn USING btree ("seq_id" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_seq_ts_idx ON naksha_txn USING btree ("seq_ts" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("version" ASC);
+""")
+        sql.execute("COMMIT")
+    }
+
+    // return: op text, id text, xyz bytea, tags bytea, geo geometry, feature bytea, err_no text, err_msg text
     fun writeFeatures(
             collectionId: String,
             ops: Array<String>,
@@ -103,6 +226,7 @@ class NakshaSession(val sql: IPlv8Sql, appName: String, streamId: String, appId:
         return table
     }
 
+    // return: op text, id text, xyz bytea, tags bytea, geo geometry, feature bytea, err_no text, err_msg text
     fun writeCollections(
             ops: Array<String>,
             ids: Array<String>,

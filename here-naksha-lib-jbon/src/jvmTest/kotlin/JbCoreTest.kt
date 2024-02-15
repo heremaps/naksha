@@ -20,15 +20,25 @@ class JbCoreTest : JbAbstractTest() {
     }
 
     @Test
-    fun testRandomString(){
+    fun testRandomString() {
         val r = env.randomString(100)
         assertEquals(100, r.length)
         var i = 0
         while (i < r.length) {
             val c = r[i++]
             assertTrue(c in '0'..'9' || c in 'a'..'z' || c in 'A'..'Z' || c == '_' || c == '-',
-                    "Invalid character: "+c)
+                    "Invalid character: " + c)
         }
+    }
+
+    @Test
+    fun testDoubleToFloat() {
+        assertTrue(env.canBeFloat32(12.0))
+        assertTrue(env.canBeFloat32(Float.MAX_VALUE.toDouble()))
+        // Note: Technically the conversion is possible, but when widening to double, the exponent is inflated to -149
+        //       Even while this is technically correct, our simple method then rejects this, because it only allows
+        //       the exponent to be -126 for safe-conversion.
+        assertFalse(env.canBeFloat32(Float.MIN_VALUE.toDouble()))
     }
 
     @Test
@@ -129,6 +139,7 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testIntEncoding() {
+        val int64 = JvmBigInt64Api()
         val view = JbSession.get().newDataView(ByteArray(256))
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
@@ -193,28 +204,28 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(5, builder.reset())
 
         // Test 64-bit integers
-        builder.writeInt64(Long.MIN_VALUE)
+        builder.writeInt64(int64.MIN_VALUE())
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT64, reader.unitType())
-        assertEquals(Long.MIN_VALUE, reader.readInt64(0))
+        assertEquals(int64.MIN_VALUE(), reader.readInt64(int64.intToBigInt64(0)))
         assertEquals(9, reader.unitSize())
         assertEquals(9, builder.reset())
 
-        builder.writeInt64(Long.MAX_VALUE)
+        builder.writeInt64(int64.MAX_VALUE())
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT64, reader.unitType())
-        assertEquals(Long.MAX_VALUE, reader.readInt64(0))
+        assertEquals(int64.MAX_VALUE(), reader.readInt64(int64.intToBigInt64(0)))
         assertEquals(9, reader.unitSize())
         assertEquals(9, builder.reset())
 
         // This ensures that high and low bits are encoded and decoded correctly in order
-        builder.writeInt64(Long.MIN_VALUE + 65535)
+        builder.writeInt64(int64.MIN_VALUE() addi 65535)
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT64, reader.unitType())
-        assertEquals(Long.MIN_VALUE + 65535, reader.readInt64(0))
+        assertEquals(int64.MIN_VALUE() addi 65535, reader.readInt64(int64.intToBigInt64(0)))
         assertEquals(9, reader.unitSize())
         assertEquals(9, builder.reset())
     }
@@ -233,7 +244,7 @@ class JbCoreTest : JbAbstractTest() {
             assertTrue(reader.isFloat64())
             assertTrue(reader.isNumber())
             assertEquals(value, reader.readFloat32(-100f))
-            assertEquals(value.toDouble(), reader.readDouble(-100.0))
+            assertEquals(value.toDouble(), reader.readFloat64(-100.0))
             assertEquals(1, reader.unitSize())
             assertEquals(1, builder.reset())
         }
@@ -245,8 +256,8 @@ class JbCoreTest : JbAbstractTest() {
         assertFalse(reader.isFloat64())
         assertTrue(reader.isNumber())
         assertEquals(1.25f, reader.readFloat32(0f))
-        assertEquals(1.25, reader.readDouble(0.0))
-        assertEquals(1.25, reader.readDouble(0.0, true))
+        assertEquals(1.25, reader.readFloat64(0.0))
+        assertEquals(1.25, reader.readFloat64(0.0, true))
         assertEquals(5, reader.unitSize())
         assertEquals(5, builder.reset())
     }
@@ -265,7 +276,7 @@ class JbCoreTest : JbAbstractTest() {
             assertTrue(reader.isFloat64())
             assertTrue(reader.isNumber())
             assertEquals(value.toFloat(), reader.readFloat32(-100f))
-            assertEquals(value, reader.readDouble(-100.0))
+            assertEquals(value, reader.readFloat64(-100.0))
             assertEquals(1, reader.unitSize())
             assertEquals(1, builder.reset())
         }
@@ -276,7 +287,7 @@ class JbCoreTest : JbAbstractTest() {
         assertFalse(reader.isFloat32())
         assertTrue(reader.isFloat64())
         assertTrue(reader.isNumber())
-        assertEquals(1.25, reader.readDouble(0.0))
+        assertEquals(1.25, reader.readFloat64(0.0))
         assertEquals(1.25f, reader.readFloat32(0f))
         assertEquals(0.0f, reader.readFloat32(0.0f, true))
         assertEquals(9, reader.unitSize())
@@ -577,12 +588,12 @@ class JbCoreTest : JbAbstractTest() {
         // Simple test using low level reader.
         val reader = JbReader().mapView(featureView, 0)
         assertEquals(TYPE_FEATURE, reader.unitType())
-        assertEquals(11779, reader.unitSize())
+        assertEquals(11763, reader.unitSize())
 
         // Simple test using low level reader.
         val reader2 = JbReader().mapView(featureView2, 0)
         assertEquals(TYPE_FEATURE, reader2.unitType())
-        assertEquals(8497, reader2.unitSize())
+        assertEquals(8339, reader2.unitSize())
 
         // Use the feature reader.
         val feature = JbFeature().mapView(featureView, 0)
@@ -729,4 +740,38 @@ class JbCoreTest : JbAbstractTest() {
         map.seek(2)
         assertFalse(map.ok())
     }
+
+    @Test
+    fun testJbonTimestamp() {
+        val nowLong = 1707491351417L
+        val nowBigInt64 = BigInt64(nowLong)
+        val view = JbSession.get().newDataView(ByteArray(256))
+        val builder = JbBuilder(view)
+        val reader = JbReader().mapView(view, 0)
+        builder.writeTimestamp(nowBigInt64)
+        assertEquals(TYPE_TIMESTAMP, view.getInt8(0).toInt())
+        assertEquals(TYPE_TIMESTAMP, reader.unitType())
+        assertEquals((nowLong ushr 32).toShort(), view.getInt16(reader.offset + 1))
+        assertEquals(nowLong.toInt(), view.getInt32(reader.offset + 3))
+        assertTrue(reader.isTimestamp())
+        val ts = reader.readTimestamp()
+        assertEquals(nowLong, ts.toLong())
+        assertEquals(7, reader.unitSize())
+        assertEquals(7, builder.reset())
+    }
+
+    @Test
+    fun testTimestamp() {
+        val millis = BigInt64(1707985967244)
+        val ts = JbTimestamp.fromMillis(millis)
+        assertEquals(millis, ts.ts)
+        assertEquals(2024, ts.year)
+        assertEquals(2, ts.month)
+        assertEquals(15, ts.day)
+        assertEquals(8, ts.hour)
+        assertEquals(32, ts.minute)
+        assertEquals(47, ts.second)
+        assertEquals(244, ts.millis)
+    }
+
 }

@@ -53,6 +53,8 @@ open class Plv8TestContainer {
             env.install(conn, 0)
             env.startSession(
                     conn,
+                    "public",
+                    "test",
                     "plv8_test",
                     env.randomString(),
                     "plv8_test_app",

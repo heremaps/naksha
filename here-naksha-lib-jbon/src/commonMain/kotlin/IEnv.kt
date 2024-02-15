@@ -4,20 +4,7 @@ package com.here.naksha.lib.jbon
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-
-/**
- * An array with the Web-Safe Base-64 characters.
- */
-val randomCharacters = CharArray(64) {
-    when (it) {
-        in 0..9 -> ('0'.code + it).toChar()
-        in 10 .. 35 -> ('a'.code + (it-10)).toChar()
-        in 36 .. 61 -> ('A'.code + (it-36)).toChar()
-        62 -> '_'
-        63 -> '-'
-        else -> throw IllegalStateException()
-    }
-}
+import kotlin.math.round
 
 /**
  * Abstraction to environment APIs, from JVM, Browser, PLV8, ...
@@ -33,28 +20,24 @@ interface IEnv {
      * @return The end-offset (the first byte not to use), greater or equal to offset and not larger than [ByteArray.size].
      */
     fun endOf(bytes: ByteArray, offset: Int, size: Int): Int {
-        check(offset >= 0)
+        if (offset < 0) throw IllegalArgumentException("offset must not be less than zero")
+        if (offset >= bytes.size) throw IllegalArgumentException("offset must be within the given byte-array")
+        if (size < 0) throw IllegalArgumentException("size must not be less than zero")
         val end = offset + size
-        if (size <= offset) {
-            return offset
-        }
-        if (end > bytes.size) {
-            return bytes.size
-        }
-        return end
+        return if (end > bytes.size) bytes.size else end
     }
 
     /**
      * Returns the current epoch milliseconds.
      * @return The current epoch milliseconds.
      */
-    fun epochMillis() : Long
+    fun currentMillis(): BigInt64
 
     /**
      * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).
      * @return The new random number between 0 and 1.
      */
-    fun random() : Double
+    fun random(): Double
 
     /**
      * Generates a random string that Web-URL safe and matches those of the Web-Safe Base64 encoding, so persists
@@ -62,7 +45,7 @@ interface IEnv {
      * @param length The amount of characters to return, if less than or equal zero, 12 characters are used.
      * @return The random string.
      */
-    fun randomString(length:Int = 12) : String {
+    fun randomString(length: Int = 12): String {
         // This way, in Javascript, we catch undefined.
         val end = if (length >= 1) length else 12
         val chars = randomCharacters
@@ -73,20 +56,6 @@ interface IEnv {
         }
         return sb.toString()
     }
-
-    /**
-     * Converts an internal 64-bit integer into a platform specific.
-     * @param value The internal 64-bit.
-     * @return The platform specific 64-bit.
-     */
-    fun longToBigInt(value: Long): Any
-
-    /**
-     * Converts a platform specific 64-bit integer into an internal one to be used for example with the [IDataView].
-     * @param value The platform specific 64-bit integer.
-     * @return The internal 64-bit integer.
-     */
-    fun bigIntToLong(value: Any): Long
 
     /**
      * Stringify the given object into a JSON string.
@@ -104,10 +73,20 @@ interface IEnv {
     fun parse(json: String): Any
 
     /**
-     * Creates a new session.
+     * Tests if the given 64-bit floating point number can be converted into a 32-bit floating point number without losing information.
+     * @param value The 64-bit floating point number.
+     * @return _true_ if the given 64-bit float can be converted into a 32-bit one without losing information; _false_ otherwise.
      */
-    fun newSession() : JbSession {
-        TODO("Not implemented yet")
+    fun canBeFloat32(value: Double) : Boolean
+
+    /**
+     * Tests if the given 64-bit floating point number can be converted into a 32-bit integer without losing information.
+     * @param value The 64-bit floating point number.
+     * @return _true_ if the given 64-bit float can be converted into a 32-bit integer without losing information; _false_ otherwise.
+     */
+    fun canBeInt32(value: Double) : Boolean {
+        val rounded = round(value)
+        return rounded == value && (rounded in MIN_INT_VALUE_AS_DOUBLE..MAX_INT_VALUE_AS_DOUBLE)
     }
 
     /**
@@ -117,7 +96,7 @@ interface IEnv {
      * @param size The amount of byte to map, if longer than the byte-array, till the end of the byte-array.
      * @return The view to the byte-array.
      */
-    fun newDataView(bytes: ByteArray, offset: Int=0, size: Int=bytes.size): IDataView
+    fun newDataView(bytes: ByteArray, offset: Int = 0, size: Int = bytes.size): IDataView
 
     /**
      * Compress bytes.
@@ -142,13 +121,13 @@ interface IEnv {
      * Store the given global dictionary in a global cache.
      * @param dict The global dictionary to store.
      */
-    fun putGlobalDictionary(dict:JbDict)
+    fun putGlobalDictionary(dict: JbDict)
 
     /**
      * Removes the global dictionary from the environment cache.
      * @param dict The global dictionary to store.
      */
-    fun removeGlobalDictionary(dict:JbDict)
+    fun removeGlobalDictionary(dict: JbDict)
 
     /**
      * Retrieve the global dictionary with the given identifier from the global cache.

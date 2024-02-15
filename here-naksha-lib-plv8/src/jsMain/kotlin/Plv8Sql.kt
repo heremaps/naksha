@@ -2,6 +2,8 @@
 
 package com.here.naksha.lib.plv8;
 
+import com.here.naksha.lib.jbon.IMap
+
 /**
  * Thin wrapper around the native plv8 engine methods. This wrapper allows to simulate this in the JVM.
  */

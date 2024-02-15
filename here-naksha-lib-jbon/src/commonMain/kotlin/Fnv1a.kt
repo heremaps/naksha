@@ -8,6 +8,7 @@ import kotlin.js.JsExport
 /**
  * A helper class to perform an FNV-1a hashing.
  */
+@Suppress("DuplicatedCode")
 @JsExport
 class Fnv1a {
     /**
@@ -22,6 +23,37 @@ class Fnv1a {
     fun reset(): Fnv1a {
         // 0x811C9DC5
         hash = -0x7ee3623b
+        return this
+    }
+
+    /**
+     * Hash the given string. Internally all code-points are hashed by their width, so 8-bit, 16-bit or 24-bit
+     * (unicode is never more than 21-bit) produce 1 to 3 hash calculations.
+     * @param string The string to hash.
+     * @return this.
+     */
+    fun string(string: String): Fnv1a {
+        var i = 0
+        while (i < string.length) {
+            val hi = string[i++]
+            var unicode: Int
+            if (i < string.length && hi.isHighSurrogate()) {
+                val lo = string[i++]
+                require(lo.isLowSurrogate())
+                unicode = CodePoints.toCodePoint(hi, lo)
+            } else {
+                unicode = hi.code
+            }
+            when (unicode) {
+                in 0..255 -> int8(unicode.toByte())
+                in 256..65535 -> int16BE(unicode.toShort())
+                in 65536..2_097_151 -> {
+                    int8((unicode ushr 16).toByte())
+                    int16BE(unicode.toShort())
+                }
+                else -> throw IllegalArgumentException("Invalid unicode found: $unicode")
+            }
+        }
         return this
     }
 

@@ -36,16 +36,16 @@ open class JbSession(val appName: String, val streamId: String, val appId: Strin
         lateinit var env: IEnv
 
         /**
-         * Helpers to handle native lists.
-         */
-        @JvmStatic
-        lateinit var list: IList
-
-        /**
          * Helpers to handle native arrays.
          */
         @JvmStatic
-        lateinit var map: IMap
+        lateinit var map: IMapApi
+
+        /**
+         * The accessor to native 64-bit integers.
+         */
+        @JvmStatic
+        lateinit var int64: BigInt64Api
 
         /**
          * Access to environment logger.
@@ -61,8 +61,8 @@ open class JbSession(val appName: String, val streamId: String, val appId: Strin
         fun isInitialized(): Boolean {
             return Companion::threadLocal.isInitialized
                     && Companion::env.isInitialized
-                    && Companion::list.isInitialized
                     && Companion::map.isInitialized
+                    && Companion::int64.isInitialized
                     && Companion::log.isInitialized
         }
 
@@ -71,17 +71,17 @@ open class JbSession(val appName: String, val streamId: String, val appId: Strin
          * times. Should only be called, when [isInitialized] returns _false_.
          * @param threadLocal The thread local storage.
          * @param env The environment.
-         * @param list The native list accessor.
-         * @param map The native map accessor.
+         * @param map The native map accessor API.
+         * @param int64 The native 64-bit integer accessor API.
          * @param log The native logger.
          */
         @JvmStatic
-        fun initialize(threadLocal: IThreadLocal, env: IEnv, list: IList, map: IMap, log: ILog) {
+        fun initialize(threadLocal: IThreadLocal, env: IEnv, map: IMapApi, int64: BigInt64Api, log: ILog) {
             if (!isInitialized()) {
                 this.threadLocal = threadLocal
                 this.env = env
-                this.list = list
                 this.map = map
+                this.int64 = int64
                 this.log = log
             }
         }

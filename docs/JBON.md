@@ -167,10 +167,9 @@ If set as key in a map, the key-value pair is removed. In such a case no value w
 The next four byte store the value, big-endian.
 ### (5) float64
 The next eight byte store the value, big-endian.
-### (6) reserved
-Maybe _float128_.
+### (6) time48 - Unix Timestamp in Milliseconds
+Unix epoch timestamp (UTC) in milliseconds, stored in big-endian encoding as 6-byte value. We choose 48-bit, because a year has 31,536,000,000 milliseconds, therefore 36-bit are enough for only 2 years, 40-bit for only 34 years, but 48-bit are already sufficient for 8925 years. I do not believe this format will still exist in that year, so we choose 48-bit.
 ### (7) reserved
-Maybe _int128_.
 ### (8) int8
 ### (9) int16
 ### (10) int32
@@ -199,13 +198,64 @@ A JBON feature is a container for a JBON object of any type. The format looks li
 
 - Lead-In byte.
 - The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
-- The **id** of the feature as **string**, can be **null**.
-- The **id** of the global dictionary to be used, can be **null**.
+- The **id** of the global dictionary to be used (**string**), can be _null_.
+- The **id** of the feature, **string**, **text** or _null_.
 - The embedded local dictionary.
 - The embedded JBON object (the root object).
 
 A feature can't create references to other features, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
-### (19) JbLz4
+### (19) XYZ-Specials
+This type is reserved for XYZ interactions. It is a flat object, optimized to be very small, with the following layout:
+
+- Lead-In byte.
+- variant as **integer** (either **uint4**, **int8**, **int16** or **int32**).
+- ... content dependent on the variant
+
+#### (0) XyzNs
+The information that the database manages and what is delivered by the database.
+
+- **createdAt** (timestamp)
+- **updatedAt** (timestamp, _null_, if being the same as **createdAt**)
+- **txn** (BigInt64)
+- **action** (integer), constants for CREATE (0), UPDATE (1) and DELETE (2)
+- **version** (integer)
+- **author_ts** (timestamp)
+- **extend** (double)
+- **puuid** (string or _null_)
+- **uuid** (string)
+- **app_id** (string)
+- **author** (string)
+- **crid** (string or _null_)
+- **grid** (string) SELECT ST_GeoHash(ST_Centroid(geo),7);
+
+Notes: Tags are now a dedicated map, but when exposed, they are joined by an equal sign, the _null_ is default and causes the equal sign to disappear. So the tag "foo" becomes "tag=null" and when converting back "tag=null" is converted into "tag". Any other value, not being _null_, will be encoded into the tag. We do not allow equal signs otherwise, so only one equal sign is allowed in a tag. We do this, because we add an GIN index on the tags and allows key-value search at low level.
+
+#### (1) XyzOp
+The information that clients should send to the database to write features or collections. This has to be provided together with a new feature.
+
+- **op** (integer) - The requested operation (CREATE, UPDATE, UPSERT, DELETE or PURGE).
+- **id** (string) - The feature-id.
+- **uuid** (string or _null_) - If not _null_, then the operation is atomic and the state must be this one (only UPDATE, DELETE and PURGE).
+- **crid** (string or _null_) - If a custom-reference-id should be used.
+
+#### (2) XyzTags
+The tags, basically just a normal JBON map, but the values must only be **null**, **boolean**, **string** or **float64**. The map is preceded by the **id** of the global dictionary to be used, can be **null**, so actually being:
+
+- **id** (string or _null_) of the global dictionary to use.
+- Now the tags follow, split into a key and value part:
+  - **string** or **string-reference** - The key or reference to the key to index.
+  - **null**, **boolean**, **string**, **string-reference**, **integer** or **float**. If an integer is stored, it must be exposed as floating point number.
+
+Tags do not support integers directly, but as floating pointer numbers support up to 53-bit precision with integer values, a limited amount of integer support is available.
+
+**Note**: Externally _tags_ are only arrays of strings, therefore to convert external to internal representation the equal sign is used to split individual tag-strings. If a colon is set in-front of the equal sign, a value conversion is done, so _"foo=12"_ results in the value being a string "12", while _"foo:=12"_ results in a value being a floating point number _12_. Please read more about tags in the [documentation](../docs/TAGS.md).
+
+#### (3) XyzTxDetails (TDB)
+Details about a transaction:
+
+- **collections** - A map where the key is the collection identifier and the value is an integer bit-mask with what happened. 
+
+### (20) JbLz4Compressed
 Some LZ4 compressed payload, requires decompression. The format is:
 
 - Lead-In byte.
@@ -213,19 +263,21 @@ Some LZ4 compressed payload, requires decompression. The format is:
 - Decompressed size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
 - The compressed bytes. The **compressed-size** amount of bytes, should inflate to **compressed-size**.
 
-### (20) Point (draft-only)
+### (21) Reserved.
+### (22) Reserved.
+### (23) Point (draft-only)
 A GeoJSON Point, followed by a single position.
-### (21) MultiPoint (draft-only)
+### (24) MultiPoint (draft-only)
 A GeoJSON MultiPoint, followed by an array of positions (position[]).
-### (22) LineString (draft-only)
+### (25) LineString (draft-only)
 A GeoJSON LineString, followed by an array of positions (position[]).
-### (23) MultiLineString (draft-only)
+### (26) MultiLineString (draft-only)
 A GeoJSON MultiLineString, followed by an array of position arrays (position[][]).
-### (24) Polygon (draft-only)
+### (27) Polygon (draft-only)
 A GeoJSON Polygon, following by an array of position arrays (position[][]).
-### (25) MultiPolygon (draft-only)
+### (28) MultiPolygon (draft-only)
 A GeoJSON Multi-Polygon, following by an array of position array arrays (position[][][]).
-### (26-31) Reserved
+### (29-31) Reserved
 Reserved for further objects.
 
 ## Why not CBOR

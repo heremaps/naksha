@@ -48,7 +48,7 @@ class JbPath {
                 if (valueReader.isFloat32()) {
                     return valueReader.readFloat32().toDouble()
                 } else if (valueReader.isFloat64()) {
-                    return valueReader.readDouble()
+                    return valueReader.readFloat64()
                 }
             }
             return alternative

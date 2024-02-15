@@ -25,7 +25,7 @@ const val TYPE_BOOL_TRUE = 2
 const val TYPE_BOOL_FALSE = 3
 const val TYPE_FLOAT32 = 4
 const val TYPE_FLOAT64 = 5
-// 6 = Reserved
+const val TYPE_TIMESTAMP = 6 // UTC epoch in milliseconds
 // 7 = Reserved
 const val TYPE_INT8 = 8
 const val TYPE_INT16 = 9
@@ -34,7 +34,8 @@ const val TYPE_INT64 = 11
 const val TYPE_GLOBAL_DICTIONARY = 16
 const val TYPE_LOCAL_DICTIONARY = 17
 const val TYPE_FEATURE = 18
-// 18 - 31 = Reserved
+const val TYPE_XYZ = 19
+// 20 - 31 = Reserved
 /**
  * A special type returned when the offset in a reader is invalid or for any other error.
  */
@@ -44,9 +45,13 @@ internal const val ADD_SPACE = 0b01
 internal const val ADD_UNDERSCORE = 0b10
 internal const val ADD_COLON = 0b11
 
+const val UNDEFINED_STRING = "undefined"
+
 // Internally used to encode float4
 internal val TINY_FLOATS = floatArrayOf(-8f, -7f, -6f, -5f, -4f, -3f, -2f, -1f, 0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)
 internal val TINY_DOUBLES = doubleArrayOf(-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
+internal const val MIN_INT_VALUE_AS_DOUBLE = Int.MIN_VALUE.toDouble()
+internal const val MAX_INT_VALUE_AS_DOUBLE = Int.MAX_VALUE.toDouble()
 
 // The type names to be used in SQL queries.
 const val SQL_BOOLEAN = "boolean"
@@ -58,3 +63,21 @@ const val SQL_BYTE_ARRAY = "bytea"
 const val SQL_STRING = "text"
 const val SQL_JSON_TEXT = "json"
 const val SQL_OBJECT = "jsonb"
+
+
+/**
+ * An array with the Web-Safe Base-64 characters.
+ */
+val randomCharacters = CharArray(64) {
+    when (it) {
+        in 0..9 -> ('0'.code + it).toChar()
+        in 10 .. 35 -> ('a'.code + (it-10)).toChar()
+        in 36 .. 61 -> ('A'.code + (it-36)).toChar()
+        62 -> '_'
+        63 -> '-'
+        else -> throw IllegalStateException()
+    }
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun newDataView(size:Int) = JbSession.env.newDataView(ByteArray(size))

@@ -15,8 +15,8 @@ class JbString : JbUnicodeMapper<JbString>() {
 
     override fun parseHeader(mandatory: Boolean) {
         if (mandatory) {
-            val view = reader.view()
-            val start = reader.offset()
+            val view = reader.useView()
+            val start = reader.offset
             val type = reader.unitType()
             check(type == TYPE_STRING);
             when (val raw = view.getInt8(start).toInt() and 0xf) {

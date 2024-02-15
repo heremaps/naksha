@@ -94,7 +94,7 @@ class JbDict : JbObjectMapper<JbDict>() {
             while (length <= index && reader.isString()) {
                 val string = reader.readString()
                 content.add(string)
-                indexToOffset.add(reader.offset())
+                indexToOffset.add(reader.offset)
                 length++
                 reader.nextUnit()
             }

@@ -4,9 +4,11 @@ import com.here.naksha.lib.jbon.JbPath.Companion.getFloat32
 import com.here.naksha.lib.jbon.JbPath.Companion.getInt32
 import com.here.naksha.lib.jbon.JbPath.Companion.getInt64
 import com.here.naksha.lib.jbon.JbPath.Companion.getString
-import JbJsonConverter.jsonToJbonByteArray
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
+import com.here.naksha.lib.jbon.IMap
+import com.here.naksha.lib.jbon.JbSession
+import com.here.naksha.lib.jbon.JvmEnv
+import com.here.naksha.lib.jbon.JvmMap
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertNull
@@ -15,7 +17,24 @@ import kotlin.test.assertTrue
 class JbPathTest : JbAbstractTest() {
 
     private val json = JbPathTest::class.java.getResource("/pathTest.json")!!.readText(StandardCharsets.UTF_8)
-    private val bytea = jsonToJbonByteArray(json)
+    private val bytea = run {
+        val feature = env.parse(json)
+        check(feature is IMap)
+        val builder = JbSession.get().newBuilder()
+        val bytes = builder.buildFeatureFromMap(feature)
+        assertEquals(223, bytes.size)
+        bytes
+    }
+
+    @Test
+    fun testParsingJson() {
+        val env = JvmEnv()
+        val raw = env.parse(json)
+        val root = assertInstanceOf(JvmMap::class.java, raw)
+        val properties = assertInstanceOf(JvmMap::class.java, root["properties"])
+        val array = assertInstanceOf(Array::class.java, properties["array"])
+        assertEquals(2, array.size)
+    }
 
     @Test
     fun shouldProperlyReadTypes() {
@@ -46,7 +65,6 @@ class JbPathTest : JbAbstractTest() {
     @Test
     fun shouldUseAlternativeNullWhenPathNotExist() {
         // given
-        val alternative = null
         val invalidPath = "dummy.not.real.path"
 
         // when

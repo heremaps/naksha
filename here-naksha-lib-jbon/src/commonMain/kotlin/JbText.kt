@@ -17,7 +17,7 @@ class JbText : JbUnicodeMapper<JbText>() {
 
     override fun parseHeader(mandatory: Boolean) {
         if (mandatory) {
-            val view = reader.view()
+            val view = reader.useView()
             check(reader.unitType() == TYPE_CONTAINER)
             val param = reader.unitTypeParam()
             check(param and 0b0000_1100 == TYPE_CONTAINER_TEXT)
@@ -53,11 +53,11 @@ class JbText : JbUnicodeMapper<JbText>() {
         if (s == null) {
             val sb = StringBuilder()
             val reader = reader
-            val view = reader.view()
+            val view = reader.useView()
             val backup = reader.offset
             reader.offset = encodingStart
             while (reader.offset < encodingEnd) {
-                val unitType = view.getInt8(reader.offset()).toInt()
+                val unitType = view.getInt8(reader.offset).toInt()
                 // 111_ssgvv = reference
                 if (unitType and 0b1110_0000 == 0b1110_0000) {
                     // vv-bits
