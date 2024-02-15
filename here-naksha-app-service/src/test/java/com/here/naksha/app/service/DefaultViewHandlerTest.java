@@ -25,29 +25,29 @@ public class DefaultViewHandlerTest extends ApiTest {
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
         //create storages
-        createStorage(nakshaClient, "ViewHandler/setup/create_storage_sfw.json");
-        createStorage(nakshaClient, "ViewHandler/setup/create_storage_mod_dlb.json");
-        createStorage(nakshaClient, "ViewHandler/setup/create_storage_mod_delta.json");
-        createStorage(nakshaClient, "ViewHandler/setup/create_storage_mod_view_dev.json");
+        createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_sfw.json");
+        createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_dlb.json");
+        createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_delta.json");
+        createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_view_dev.json");
 
         //create handlers
-        createHandler(nakshaClient, "ViewHandler/setup/create_handler_sfw.json");
-        createHandler(nakshaClient, "ViewHandler/setup/create_handler_mod_dlb.json");
-        createHandler(nakshaClient, "ViewHandler/setup/create_handler_mod_delta.json");
-        createHandler(nakshaClient, "ViewHandler/setup/create_handler_view_handler.json");
+        createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_sfw.json");
+        createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_mod_dlb.json");
+        createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_mod_delta.json");
+        createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_view_handler.json");
 
         //create spaces
-        createSpace(nakshaClient, "ViewHandler/setup/create_space_sfw.json");
-        createSpace(nakshaClient, "ViewHandler/setup/create_space_mod_dlb.json");
-        createSpace(nakshaClient, "ViewHandler/setup/create_space_mod_delta.json");
-        createSpace(nakshaClient, "ViewHandler/setup/create_view_space.json");
+        createSpace(nakshaClient, "DefaultViewHandler/setup/create_space_sfw.json");
+        createSpace(nakshaClient, "DefaultViewHandler/setup/create_space_mod_dlb.json");
+        createSpace(nakshaClient, "DefaultViewHandler/setup/create_space_mod_delta.json");
+        createSpace(nakshaClient, "DefaultViewHandler/setup/create_view_space.json");
 
         //setup data
-        final String deltaBodyJson = loadFileOrFail("ViewHandler/setup/create_features_delta.json");
+        final String deltaBodyJson = loadFileOrFail("DefaultViewHandler/setup/create_features_delta.json");
         nakshaClient.post("hub/spaces/" + DELTA_CONFIGURED_SPACE + "/features", deltaBodyJson, UUID.randomUUID().toString());
-        final String dlbBodyJson = loadFileOrFail("ViewHandler/setup/create_features_dlb.json");
+        final String dlbBodyJson = loadFileOrFail("DefaultViewHandler/setup/create_features_dlb.json");
         nakshaClient.post("hub/spaces/" + DLB_CONFIGURED_SPACE + "/features", dlbBodyJson, UUID.randomUUID().toString());
-        final String baseBodyJson = loadFileOrFail("ViewHandler/setup/create_features_base.json");
+        final String baseBodyJson = loadFileOrFail("DefaultViewHandler/setup/create_features_base.json");
         nakshaClient.post("hub/spaces/" + BASE_CONFIGURED_SPACE + "/features", baseBodyJson, UUID.randomUUID().toString());
     }
 
@@ -55,8 +55,8 @@ public class DefaultViewHandlerTest extends ApiTest {
     void tc5001_createFeatureByViewHandler() throws Exception {
 
         // Given: Load data to be sent to view handler
-        final String bodyJson = loadFileOrFail("ViewHandler/TC5001_createFeature/create_feature.json");
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5001_createFeature/feature_response_part.json");
+        final String bodyJson = loadFileOrFail("DefaultViewHandler/TC5001_createFeature/create_feature.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5001_createFeature/feature_response_part.json");
         final String idsQueryParam = "id=FeatId-create-5001";
         String viewStreamId = UUID.randomUUID().toString();
         String streamId = UUID.randomUUID().toString();
@@ -82,8 +82,8 @@ public class DefaultViewHandlerTest extends ApiTest {
     @Test
     void tc5002_upsertFeatureByViewHandler_featureAvailableInAllLayers() throws Exception {
         // Given: Load data to be sent to view handler. Object with this id is available in all spaces.
-        final String bodyJson = loadFileOrFail("ViewHandler/TC5002_upsertFeature/create_feature.json");
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5002_upsertFeature/feature_response_part.json");
+        final String bodyJson = loadFileOrFail("DefaultViewHandler/TC5002_upsertFeature/create_feature.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5002_upsertFeature/feature_response_part.json");
         final String idsQueryParam = "id=FeatId-create-5002";
         String viewStreamId = UUID.randomUUID().toString();
         String streamId = UUID.randomUUID().toString();
@@ -108,8 +108,8 @@ public class DefaultViewHandlerTest extends ApiTest {
     @Test
     void tc5003_upsertFeatureByViewHandler_featureAvailableInDlbAndBase() throws Exception {
         // Given: Load data to be sent to view handler. Object with this id is available in DLB and BASE.
-        final String bodyJson = loadFileOrFail("ViewHandler/TC5003_upsertFeature/create_feature.json");
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5003_upsertFeature/feature_response_part.json");
+        final String bodyJson = loadFileOrFail("DefaultViewHandler/TC5003_upsertFeature/create_feature.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5003_upsertFeature/feature_response_part.json");
         final String idsQueryParam = "id=FeatId-create-5003";
         String viewStreamId = UUID.randomUUID().toString();
         String streamId = UUID.randomUUID().toString();
@@ -136,8 +136,8 @@ public class DefaultViewHandlerTest extends ApiTest {
     @Test
     void tc5004_upsertFeatureByViewHandler_featureAvailableOnlyInBase() throws Exception{
         // Given: Load data to be sent to view handler. Object with this id is available in DLB and BASE.
-        final String bodyJson = loadFileOrFail("ViewHandler/TC5004_upsertFeature/create_feature.json");
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5004_upsertFeature/feature_response_part.json");
+        final String bodyJson = loadFileOrFail("DefaultViewHandler/TC5004_upsertFeature/create_feature.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5004_upsertFeature/feature_response_part.json");
         final String idsQueryParam = "id=FeatId-create-5004";
         String viewStreamId = UUID.randomUUID().toString();
         String streamId = UUID.randomUUID().toString();
@@ -167,7 +167,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given Feature with this id is available in all spaces (delta,dlb,base)
         final String idsQueryParam = "id=FeatId-getById-5010";
         final String streamId = UUID.randomUUID().toString();
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5010_searchById/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5010_searchById/feature_response_part.json");
 
         //when : perform search by id operation
         HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
@@ -185,7 +185,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given Feature with this id is available in delta and dlb spaces
         final String idsQueryParam = "id=FeatId-getById-5011";
         final String streamId = UUID.randomUUID().toString();
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5011_searchById/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5011_searchById/feature_response_part.json");
 
         //when
         HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
@@ -203,7 +203,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given Feature with this id is available in delta and base spaces
         final String idsQueryParam = "id=FeatId-getById-5012";
         final String streamId = UUID.randomUUID().toString();
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5012_searchById/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5012_searchById/feature_response_part.json");
 
         //when
         HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
@@ -221,7 +221,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given Feature with this id is available in dlb and base spaces
         final String idsQueryParam = "id=FeatId-getById-5013";
         final String streamId = UUID.randomUUID().toString();
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5013_searchById/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5013_searchById/feature_response_part.json");
 
         //when
         HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
@@ -238,7 +238,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given Feature with this id is available in base spaces
         final String idsQueryParam = "id=FeatId-getById-5014";
         final String streamId = UUID.randomUUID().toString();
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5014_searchById/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5014_searchById/feature_response_part.json");
 
         //when
         HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
@@ -255,7 +255,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given get id from multiple spaces
         final String idsQueryParam = "id=FeatId-getById-5011&id=FeatId-getById-5013&id=FeatId-getById-5014";
         final String streamId = UUID.randomUUID().toString();
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5015_searchById/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5015_searchById/feature_response_part.json");
 
         //when
         HttpResponse<String> viewResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
@@ -272,7 +272,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given Feature with this id is available in all spaces (delta,dlb,base)
         final String bboxQueryParam = "west=18.5&south=54.5&east=19&north=55";
 
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5020_searchByBBox/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5020_searchByBBox/feature_response_part.json");
         String streamId = UUID.randomUUID().toString();
 
         // When: Get Features By BBox request is submitted to NakshaHub
@@ -291,7 +291,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given Feature with this id is available in base and dlb
         final String bboxQueryParam = "west=5.6&south=40.0&east=5.7&north=40.1";
 
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5021_searchByBBox/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5021_searchByBBox/feature_response_part.json");
         String streamId = UUID.randomUUID().toString();
 
         // When: Get Features By BBox request is submitted to NakshaHub
@@ -310,7 +310,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given Feature with this id is available only in base
         final String bboxQueryParam = "west=0.5&south=30.0&east=1&north=30.1";
 
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5022_searchByBBox/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5022_searchByBBox/feature_response_part.json");
         String streamId = UUID.randomUUID().toString();
 
         // When: Get Features By BBox request is submitted to NakshaHub
@@ -329,7 +329,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given Feature with this id is available only in base
         final String bboxQueryParam = "west=0.5&south=30.0&east=1&north=30.1";
 
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5022_searchByBBox/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5022_searchByBBox/feature_response_part.json");
         String streamId = UUID.randomUUID().toString();
 
         // When: Get Features By BBox request is submitted to NakshaHub
@@ -348,7 +348,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         //given  DLB and Delta features have slightly  different geometries. Bbox covers only feature from DLB
         final String bboxQueryParam = "west=17.79&south=53.59&east=17.82&north=53.62";
 
-        final String expectedBodyPart = loadFileOrFail("ViewHandler/TC5023_searchByBBox/feature_response_part.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5023_searchByBBox/feature_response_part.json");
         String streamId = UUID.randomUUID().toString();
 
         // When: Get Features By BBox request is submitted to NakshaHub
