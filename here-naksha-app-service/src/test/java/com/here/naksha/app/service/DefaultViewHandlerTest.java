@@ -34,6 +34,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_sfw.json");
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_mod_dlb.json");
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_mod_delta.json");
+        createHandler(nakshaClient, "DefaultViewHandler/setup/create_sourceId_handler.json");
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_view_handler.json");
 
         //create spaces
@@ -326,6 +327,25 @@ public class DefaultViewHandlerTest extends ApiTest {
 
     @Test
     void tc5023_searchByBBox_PullingByIdWhenOutsideBBox() throws Exception {
+        //given  DLB and Delta features have slightly  different geometries. Bbox covers only feature from DLB
+        final String bboxQueryParam = "west=17.79&south=53.59&east=17.82&north=53.62";
+
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5023_searchByBBox/feature_response_part.json");
+        String streamId = UUID.randomUUID().toString();
+
+        // When: Get Features By BBox request is submitted to NakshaHub
+        HttpResponse<String> viewResponse = nakshaClient
+                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
+
+        //then Feature from delta is returned as gathered by ID in second internal call.
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+    }
+
+    @Test
+    void tc5030_patch_() throws Exception {
         //given  DLB and Delta features have slightly  different geometries. Bbox covers only feature from DLB
         final String bboxQueryParam = "west=17.79&south=53.59&east=17.82&north=53.62";
 
