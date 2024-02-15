@@ -3,12 +3,9 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.jbon.JbPath
-import com.here.naksha.lib.jbon.JbSession
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
-import kotlin.reflect.cast
 
 /**
  * A session linked to a PostgresQL database connection with support for some special table layout and triggers. Its purpose is
@@ -322,25 +319,4 @@ CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("ve
         return table
     }
 
-    private fun headPartitionName(collectionId: String, partitionId: Int): String {
-        return if (partitionId < 0 || partitionId > 255) {
-            collectionId
-        } else {
-            """${collectionId}_p${partitionId.toString().padStart(3, '0')}"""
-        }
-    }
-
-    private fun getPtype(feature: ByteArray): String? {
-        return JbPath.getString(feature, "properties.type")
-                ?: JbPath.getString(feature, "properties.featureType")
-                ?: JbPath.getString(feature, "momType")
-    }
-
-    private fun readProperty(result: Any, col: String): Any? {
-        return when (result) {
-            is Array<*> -> Map::class.cast(result[0])[col]
-            is Collection<*> -> Map::class.cast(result.iterator().next())[col]
-            else -> result
-        }
-    }
 }
