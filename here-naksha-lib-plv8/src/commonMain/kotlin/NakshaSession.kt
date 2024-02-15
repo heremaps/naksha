@@ -165,9 +165,7 @@ class NakshaSession(
             check(firstSpace > 0)
             val secondSpace = versionString.indexOf(' ', firstSpace + 1)
             check(secondSpace > firstSpace)
-            val thirdSpace = versionString.indexOf(' ', secondSpace + 1)
-            check(thirdSpace > secondSpace)
-            val pgv = versionString.substring(secondSpace + 1, thirdSpace)
+            val pgv = versionString.substring(firstSpace + 1, secondSpace)
             pgVersion = XyzVersion.fromString(pgv)
         }
         return pgVersion
@@ -196,7 +194,6 @@ CREATE TABLE IF NOT EXISTS naksha_txn (
     details     bytea,
     attachment  bytea
 ) PARTITION BY RANGE (txn);
--- txn index is created automatically
 CREATE INDEX IF NOT EXISTS naksha_txn_ts_idx ON naksha_txn USING btree ("ts" ASC);
 CREATE INDEX IF NOT EXISTS naksha_txn_app_id_ts_idx ON naksha_txn USING btree ("app_id" ASC, "ts" ASC);
 CREATE INDEX IF NOT EXISTS naksha_txn_author_ts_idx ON naksha_txn USING btree ("author" ASC, "ts" ASC);
@@ -204,6 +201,7 @@ CREATE INDEX IF NOT EXISTS naksha_txn_seq_id_idx ON naksha_txn USING btree ("seq
 CREATE INDEX IF NOT EXISTS naksha_txn_seq_ts_idx ON naksha_txn USING btree ("seq_ts" ASC);
 CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("version" ASC);
 """)
+
         sql.execute("COMMIT")
     }
 

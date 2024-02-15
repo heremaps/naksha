@@ -7,7 +7,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
-class XyzVersion(val major: Int, val minor: Int, val revision: Int) {
+class XyzVersion(val major: Int, val minor: Int, val revision: Int) : Comparable<XyzVersion> {
     companion object {
         fun fromString(s: String): XyzVersion {
             val majorEnd: Int = s.indexOf('.')
@@ -37,6 +37,14 @@ class XyzVersion(val major: Int, val minor: Int, val revision: Int) {
 
     fun toBigInt() : BigInt64 {
         return (BigInt64(major) shl 32) or BigInt64(minor shl 16) or BigInt64(revision)
+    }
+
+    override fun compareTo(other: XyzVersion): Int {
+        var d = major - other.major
+        if (d != 0) return d
+        d = minor - other.minor
+        if (d != 0) return d
+        return revision - other.revision
     }
 
     override fun equals(other: Any?) : Boolean {

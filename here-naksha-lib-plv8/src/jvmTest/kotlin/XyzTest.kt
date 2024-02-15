@@ -90,5 +90,13 @@ class XyzTest : Plv8TestContainer() {
         val v1_2_3 = XyzVersion(1,2,3)
         assertEquals("1.2.3", v1_2_3.toString())
         assertEquals(v1_2_3, XyzVersion.fromString("1.2.3"))
+        assertTrue(v1_0_0 < v1_2_3)
+    }
+
+    @Test
+    fun testDbVersion() {
+        val session = NakshaSession.get()
+        val version = session.postgresVersion()
+        assertTrue(version >= XyzVersion(14,0,0))
     }
 }

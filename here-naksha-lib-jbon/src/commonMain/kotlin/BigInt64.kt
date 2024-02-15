@@ -56,6 +56,10 @@ inline infix fun BigInt64.divf(other: Double): BigInt64 = JbSession.int64.divf(t
 inline infix fun BigInt64.and(other: BigInt64): BigInt64 = JbSession.int64.and(this, other)
 inline infix fun BigInt64.or(other: BigInt64): BigInt64 = JbSession.int64.or(this, other)
 inline infix fun BigInt64.xor(other: BigInt64): BigInt64 = JbSession.int64.xor(this, other)
+inline operator fun BigInt64.compareTo(other:BigInt64) : Int {
+    val diff = this.toLong() - other.toLong()
+    return if (diff == 0L) 0 else if (diff < 0) -1 else 1
+}
 inline operator fun BigInt64.unaryPlus(): BigInt64 = this
 inline operator fun BigInt64.unaryMinus(): BigInt64 = JbSession.int64.muli(this, -1)
 inline operator fun BigInt64.inc(): BigInt64 = JbSession.int64.addi(this, 1)
