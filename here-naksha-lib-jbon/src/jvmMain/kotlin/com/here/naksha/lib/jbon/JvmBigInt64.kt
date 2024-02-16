@@ -47,4 +47,8 @@ class JvmBigInt64(val value: Long) : Number(), BigInt64 {
     override fun toDouble(): Double {
         return value.toDouble()
     }
+
+    override fun toString() : String {
+        return value.toString()
+    }
 }

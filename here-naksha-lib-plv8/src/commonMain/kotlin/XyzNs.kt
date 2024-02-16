@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 class XyzNs : XyzSpecial<XyzNs>() {
     private lateinit var createdAt: BigInt64
     private lateinit var updatedAt: BigInt64
-    private lateinit var txn: BigInt64
+    private lateinit var txn: NakshaTxn
     private var action: Int = 0
     private var version: Int = 0
     private lateinit var authorTs: BigInt64
@@ -32,7 +32,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
         check(reader.nextUnit())
         updatedAt = if (reader.isNull()) createdAt else reader.readTimestamp()
         check(reader.nextUnit())
-        txn = reader.readInt64()
+        txn = NakshaTxn(reader.readInt64())
         check(reader.nextUnit())
         action = reader.readInt32()
         check(reader.nextUnit())
@@ -48,13 +48,13 @@ class XyzNs : XyzSpecial<XyzNs>() {
 
     fun createdAt(): BigInt64 = createdAt
     fun updatedAt(): BigInt64 = updatedAt
-    fun txn(): BigInt64 = txn
+    fun txn(): NakshaTxn = txn
     fun action(): Int = action
     fun version(): Int = version
     fun authorTs(): BigInt64 = authorTs
     fun extend(): BigInt64 = extend
 
-    fun puuid() : String? {
+    fun puuid(): String? {
         var value = this.puuid
         if (value === UNDEFINED_STRING) {
             reset()
@@ -75,7 +75,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
         return value
     }
 
-    fun appId() : String {
+    fun appId(): String {
         var value = this.appId
         if (value === UNDEFINED_STRING) {
             reset()
@@ -87,7 +87,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
         return value
     }
 
-    fun author() : String {
+    fun author(): String {
         var value = this.author
         if (value === UNDEFINED_STRING) {
             reset()
@@ -100,7 +100,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
         return value
     }
 
-    fun crid() : String? {
+    fun crid(): String? {
         var value = this.crid
         if (value === UNDEFINED_STRING) {
             reset()
@@ -114,7 +114,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
         return value
     }
 
-    fun grid() : String {
+    fun grid(): String {
         var value = this.grid
         if (value === UNDEFINED_STRING) {
             reset()
@@ -130,11 +130,31 @@ class XyzNs : XyzSpecial<XyzNs>() {
     }
 
     /**
-     * Convert this XYZ namespace into a map.
+     * Convert this XYZ namespace into a map. Beware that the transaction-number (txn) will be exposed as string.
+     * @param storageId The storage-identifier, this is necessary to expose the transaction-number in a form readable by Javascript clients.
      * @param tags The tags to merge into, if any.
      * @return the XYZ namespace as map.
      */
-    fun toIMap(tags:XyzTags?) : IMap {
-        TODO("Implement me!")
+    fun toIMap(storageId: String, tags: IMap?): IMap {
+        val map = newMap()
+        map["createdAt"] = createdAt().toDouble()
+        map["updatedAt"] = updatedAt().toDouble()
+        map["txn"] = txn().toUuid(storageId).toString()
+        when (action()) {
+            ACTION_CREATE -> map["action"] = "CREATE"
+            ACTION_UPDATE -> map["action"] = "UPDATE"
+            ACTION_DELETE -> map["action"] = "DELETE"
+        }
+        map["version"] = version()
+        map["author_ts"] = authorTs().toDouble()
+        map["extend"] = extend().toDouble()
+        if (puuid() != null) map["puuid"] = puuid()
+        map["uuid"] = uuid()
+        map["author"] = author()
+        map["app_id"] = appId()
+        if (crid() != null) map["crid"] = crid()
+        map["grid"] = grid()
+        if (tags != null) map["tags"] = tags
+        return map
     }
 }

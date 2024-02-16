@@ -1,9 +1,12 @@
 package com.here.naksha.lib.jbon
 
+import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.TreeNode
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.BooleanNode
@@ -15,6 +18,7 @@ import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.ShortNode
 import com.fasterxml.jackson.databind.node.TextNode
+import kotlin.math.floor
 
 class JvmJsonModule : SimpleModule() {
     class JvmDeserializer : JsonDeserializer<Any?>() {
@@ -36,7 +40,26 @@ class JvmJsonModule : SimpleModule() {
         }
     }
 
+    class JvmDoubleSerializer : JsonSerializer<Double>() {
+        override fun serialize(value: Double?, gen: JsonGenerator?, serializers: SerializerProvider?) {
+            check(gen != null)
+            if (value == null) {
+                gen.writeNull()
+            } else {
+                val r = floor(value)
+                if (r != value) {
+                    gen.writeNumber(value)
+                } else {
+                    gen.writeNumber(r.toLong())
+                }
+            }
+        }
+
+    }
+
     init {
+        addSerializer(Double::class.java, JvmDoubleSerializer())
+        addSerializer(Double::class.javaObjectType, JvmDoubleSerializer())
         addDeserializer(Any::class.java, JvmDeserializer())
     }
 }
