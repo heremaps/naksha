@@ -18,12 +18,13 @@
  */
 package com.here.naksha.storage.http;
 
+import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import com.here.naksha.common.http.apis.ApiParamsConst;
 import com.here.naksha.lib.core.exceptions.UncheckedException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.io.IOException;
@@ -61,7 +62,7 @@ class HttpStorageReadExecute {
     try {
       return switch (readRequest.getReadRequestType()) {
         case GET_BY_ID -> executeFeatureById();
-        case GET_BY_IDS -> throw new NotImplementedException();
+        case GET_BY_IDS -> executeFeaturesById();
         case GET_BY_BBOX -> executeFeatureByBBox();
         case GET_BY_TILE -> throw new NotImplementedException();
       };
@@ -72,7 +73,7 @@ class HttpStorageReadExecute {
   }
 
   private Result executeFeatureById() throws IOException, InterruptedException {
-    String featureId = readRequest.getQueryParameter(ApiParamsConst.FEATURE_ID);
+    String featureId = readRequest.getQueryParameter(FEATURE_ID);
 
     HttpResponse<String> response =
         requestSender.sendRequest(String.format("/%s/%s/features/%s", environment, store, featureId));
@@ -82,6 +83,20 @@ class HttpStorageReadExecute {
 
     XyzFeature resultFeature = JsonSerializable.deserialize(response.body(), XyzFeature.class);
     return createHttpResultFromFeatureList(List.of(resultFeature));
+  }
+
+  private Result executeFeaturesById() throws IOException, InterruptedException {
+    List<String> featureIds = readRequest.getQueryParameter(FEATURE_IDS);
+    String featureIdsAsQueryParams = FEATURE_IDS + "=" + String.join("&" + FEATURE_IDS + "=", featureIds);
+
+    HttpResponse<String> response = requestSender.sendRequest(
+        String.format("/%s/%s/features?%s", environment, store, featureIdsAsQueryParams));
+
+    XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
+    if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
+
+    XyzFeatureCollection resultFeatures = JsonSerializable.deserialize(response.body(), XyzFeatureCollection.class);
+    return createHttpResultFromFeatureList(resultFeatures.getFeatures());
   }
 
   private Result executeFeatureByBBox() {
@@ -95,9 +110,8 @@ class HttpStorageReadExecute {
       String getBy = proxyRequest.getReadRequestType().toString();
 
       HttpStorageReadSession.testLog.add(getBy);
-      HttpStorageReadSession.testLog.add(
-          "north = " + proxyRequest.<Double>getQueryParameter(ApiParamsConst.NORTH));
-      HttpStorageReadSession.testLog.add("east = " + proxyRequest.<Double>getQueryParameter(ApiParamsConst.EAST));
+      HttpStorageReadSession.testLog.add("north = " + proxyRequest.<Double>getQueryParameter(NORTH));
+      HttpStorageReadSession.testLog.add("east = " + proxyRequest.<Double>getQueryParameter(EAST));
 
       HttpResponse<String> httpResponse = requestSender.sendRequest("");
 

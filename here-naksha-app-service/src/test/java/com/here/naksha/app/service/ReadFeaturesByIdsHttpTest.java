@@ -74,7 +74,7 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
 
     // Then: also match individual JSON attributes (in addition to whole object comparison above)
     final XyzFeature feature = parseJson(response.body(), XyzFeature.class);
-//        assertNotNull(
+//        assertNotNull( //TODO adamczyk: discuss
 //                feature.getProperties().getXyzNamespace().getUuid(), "UUID found missing in response for feature");
   }
 
@@ -97,10 +97,55 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
+  @Test
+  void tc03_testReadFeaturesByIds() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate features getting returned for existing Ids and not failing due to missing ids
+    // Given: Features By Ids request (against above space)
+    final String idsQueryParam =
+            "id=my-custom-id-400-1" + "&id=my-custom-id-400-2" + "&id=missing-id-1" + "&id=missing-id-2";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByIdsHttp/TC03_ExistingAndMissingIds/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+    stubFor(get("/my_env/my_storage/features?" + idsQueryParam).willReturn(okJson(expectedBodyPart)));
+
+    // When: Get Features request is submitted to NakshaHub Space Storage instance
+    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
+
+    // Then: Perform assertions
+    ResponseAssertions.assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match")
+         //   .hasUuids() //TODO adamczyk: discuss
+    ;
+  }
+
+  @Test
+  void tc04_testReadFeaturesForMissingIds() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/features
+    // Validate empty collection getting returned for missing ids
+    // Given: Features By Ids request (against configured space)
+    final String idsQueryParam = "?id=1000" + "&id=missing-id-1" + "&id=missing-id-2";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByIdsHttp/TC04_MissingIds/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+    stubFor(get("/my_env/my_storage/features" + idsQueryParam).willReturn(okJson(expectedBodyPart)));
+
+    // When: Get Features request is submitted to NakshaHub Space Storage instance
+    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features" + idsQueryParam, streamId);
+
+    // Then: Perform assertions
+    ResponseAssertions.assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
+
   /**
    * Temporary test for debugging. Will be removed
    * Test API : GET /hub/spaces/{spaceId}/bbox
-   */
+   */ //TODO adamczyk: rm
   @Test
   void tc099_testTmpTest() throws Exception {
     String bboxQuery = "hub/spaces/" + SPACE_ID + "/bbox?north=1&east=2&south=3&west=4";
