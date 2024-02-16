@@ -23,8 +23,6 @@ import com.here.naksha.lib.core.util.diff.UpdateOp;
 import java.util.ArrayList;
 import java.util.List;
 
-// TODO: what about 'copy' and 'move'?
-// TODO: was it ok to rename (add => insert, replace => update)
 record ReversePatch(int insert, int remove, int update, List<PatchOp> ops) {
 
   record PatchOp(String name, String path, Object value) {
@@ -32,7 +30,7 @@ record ReversePatch(int insert, int remove, int update, List<PatchOp> ops) {
     static final String REMOVE = "remove";
     static final String ADD = "add";
 
-    static final String REPLACE = "replace"; // TODO: there was a 'replace' before
+    static final String REPLACE = "replace";
 
     static PatchOp remove(String path) {
       return new PatchOp(REMOVE, path, null);

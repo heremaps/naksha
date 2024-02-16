@@ -1,0 +1,32 @@
+{
+  "id": "${id}",
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      8.68872,
+      50.0561,
+      292.94377758
+    ]
+  },
+  "properties": {
+    "@ns:com:here:xyz": {
+      "action": "DELETE",
+      "tags": [
+        "three",
+        "four",
+        "five"
+      ],
+      "version": 3
+    },
+    "@ns:com:here:xyz:log": {
+      "id": "${activityLogId}",
+      "action": "DELETE",
+      "invalidatedAt": 0,
+      "original": {
+        "space": "regular_space_ah"
+      }
+    },
+    "speedLimit": "80"
+  }
+}

@@ -3,6 +3,40 @@
   "features": [
     {
       "type": "Feature",
+      "id": "naksha-admin:um-mod-dev:activity_history_test_collection:2024:02:20:3",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.68872,
+          50.0561,
+          292.94377758
+        ]
+      },
+      "properties": {
+        "@ns:com:here:xyz": {
+          "action": "DELETE",
+          "tags": [
+            "three",
+            "four",
+            "five"
+          ],
+          "version": 3
+        },
+        "@ns:com:here:xyz:log": {
+          "action": "DELETE",
+          "diff": {},
+          "id": "TC1305_feature",
+          "invalidatedAt": 0,
+          "original": {
+            "space": "regular_space_ah"
+          }
+        },
+        "speedLimit": "80"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "naksha-admin:um-mod-dev:activity_history_test_collection:2024:02:20:2",
       "geometry": {
         "type": "Point",
         "coordinates": [
@@ -29,12 +63,12 @@
             "update": 3,
             "ops": [
               {
-                "name": "update",
+                "name": "replace",
                 "path": "properties/@ns:com:here:xyz/tags/0",
                 "value": "one"
               },
               {
-                "name": "update",
+                "name": "replace",
                 "path": "properties/@ns:com:here:xyz/tags/1",
                 "value": "two"
               },
@@ -44,12 +78,12 @@
                 "value": null
               },
               {
-                "name": "update",
+                "name": "replace",
                 "path": "properties/speedLimit",
                 "value": "60"
               },
               {
-                "name": "insert",
+                "name": "add",
                 "path": "properties/toBeDeleted",
                 "value": {
                   "foo": "bar"
@@ -57,10 +91,9 @@
               }
             ]
           },
-          "id": "TC1301_feature",
-          "invalidatedAt": 0,
+          "id": "TC1305_feature",
           "original": {
-            "space": "activity_history_space"
+            "space": "regular_space_ah"
           }
         },
         "speedLimit": "80"
@@ -68,6 +101,7 @@
     },
     {
       "type": "Feature",
+      "id": "naksha-admin:um-mod-dev:activity_history_test_collection:2024:02:20:1",
       "geometry": {
         "type": "Point",
         "coordinates": [
@@ -87,9 +121,9 @@
         },
         "@ns:com:here:xyz:log": {
           "action": "CREATE",
-          "id": "TC1301_feature",
+          "id": "TC1305_feature",
           "original": {
-            "space": "activity_history_space"
+            "space": "regular_space_ah"
           }
         },
         "toBeDeleted": {

@@ -29,19 +29,19 @@ import org.jetbrains.annotations.NotNull;
 public class ActivityLogHandlerProperties extends XyzProperties {
 
   @AvailableSince(NakshaVersion.v2_0_12)
-  public static final String STORAGE_ID = "storageId";
+  public static final String SPACE_ID = "spaceId";
 
   @AvailableSince(NakshaVersion.v2_0_12)
-  @JsonProperty(STORAGE_ID)
-  private final @NotNull String storageId;
+  @JsonProperty(SPACE_ID)
+  private final @NotNull String spaceId;
 
   @AvailableSince(NakshaVersion.v2_0_12)
   @JsonCreator
-  public ActivityLogHandlerProperties(@JsonProperty(STORAGE_ID) @NotNull String storageId) {
-    this.storageId = storageId;
+  public ActivityLogHandlerProperties(@JsonProperty(SPACE_ID) @NotNull String spaceId) {
+    this.spaceId = spaceId;
   }
 
-  public @NotNull String getStorageId() {
-    return storageId;
+  public @NotNull String getSpaceId() {
+    return spaceId;
   }
 }

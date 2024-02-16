@@ -79,4 +79,8 @@ public class ListBasedForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
     }
     featureIdx = totalFeatures;
   }
+
+  public int size() {
+    return featureCodecList.size();
+  }
 }

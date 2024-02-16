@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "activity_history_test_storage"
+    "spaceId": "regular_space_ah"
   }
 }

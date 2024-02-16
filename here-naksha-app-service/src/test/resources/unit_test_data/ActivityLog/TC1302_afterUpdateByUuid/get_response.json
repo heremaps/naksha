@@ -1,0 +1,66 @@
+{
+  "id": "${id}",
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      8.68872,
+      50.0561,
+      292.94377758
+    ]
+  },
+  "properties": {
+    "@ns:com:here:xyz": {
+      "action": "UPDATE",
+      "tags": [
+        "three",
+        "four",
+        "five"
+      ],
+      "version": 2
+    },
+    "@ns:com:here:xyz:log": {
+      "id": "${activityLogId}",
+      "action": "UPDATE",
+      "diff": {
+        "insert": 1,
+        "remove": 1,
+        "update": 3,
+        "ops": [
+          {
+            "name": "replace",
+            "path": "properties/@ns:com:here:xyz/tags/0",
+            "value": "one"
+          },
+          {
+            "name": "replace",
+            "path": "properties/@ns:com:here:xyz/tags/1",
+            "value": "two"
+          },
+          {
+            "name": "remove",
+            "path": "properties/@ns:com:here:xyz/tags/2",
+            "value": null
+          },
+          {
+            "name": "replace",
+            "path": "properties/speedLimit",
+            "value": "60"
+          },
+          {
+            "name": "add",
+            "path": "properties/toBeDeleted",
+            "value": {
+              "foo": "bar"
+            }
+          }
+        ]
+      },
+      "invalidatedAt": 0,
+      "original": {
+        "space": "regular_space_ah"
+      }
+    },
+    "speedLimit": "80"
+  }
+}

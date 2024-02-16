@@ -392,6 +392,7 @@ project(":here-naksha-handler-activitylog") {
         implementation(flipkart_zjsonpatch)
         testImplementation(jayway_jsonpath)
         testImplementation(mockito)
+        testImplementation(testFixtures(project(":here-naksha-lib-core")))
     }
     setOverallCoverage(0.4) // only increasing allowed!
 }
