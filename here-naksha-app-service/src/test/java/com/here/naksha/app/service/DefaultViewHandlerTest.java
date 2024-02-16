@@ -345,21 +345,82 @@ public class DefaultViewHandlerTest extends ApiTest {
     }
 
     @Test
-    void tc5030_patch_() throws Exception {
-        //given  DLB and Delta features have slightly  different geometries. Bbox covers only feature from DLB
-        final String bboxQueryParam = "west=17.79&south=53.59&east=17.82&north=53.62";
+    void tc5030_patchFeature_featureAvailableInAllLayer() throws Exception {
 
-        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5023_searchByBBox/feature_response_part.json");
+        //given Feature is available in all three spaces
+        final String bodyJson = loadFileOrFail("DefaultViewHandler/TC5030_patchFeature/patch_feature.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5030_patchFeature/feature_response_part.json");
+        final String idsQueryParam = "id=FeatId-patchOp-5030";
+        String viewStreamId = UUID.randomUUID().toString();
         String streamId = UUID.randomUUID().toString();
 
-        // When: Get Features By BBox request is submitted to NakshaHub
-        HttpResponse<String> viewResponse = nakshaClient
-                .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
+        // when: Sent patch feature request to view space.
+        HttpResponse<String> viewResponse = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
+        HttpResponse<String> spaceSearchResponse = getNakshaClient().get("hub/spaces/" + DELTA_CONFIGURED_SPACE + "/features?" + idsQueryParam, streamId);
 
-        //then Feature from delta is returned as gathered by ID in second internal call.
+        // Then: Assert that feature was correctly patched by view space and was updated in correct space(top one -> delta)
         assertThat(viewResponse)
                 .hasStatus(200)
+                .hasStreamIdHeader(viewStreamId)
+                .hasJsonBody(expectedBodyPart, "Patch Feature response body doesn't match")
+                .hasUuids();
+
+        assertThat(spaceSearchResponse)
+                .hasStatus(200)
                 .hasStreamIdHeader(streamId)
-                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
+                .hasJsonBody(expectedBodyPart, "Feature response body doesn't match");
+    }
+
+    @Test
+    void tc5031_patchFeature_featureAvailableInDLBAndBase() throws Exception {
+
+        //given Feature is available in dlb and base
+        final String bodyJson = loadFileOrFail("DefaultViewHandler/TC5031_patchFeature/patch_feature.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5031_patchFeature/feature_response_part.json");
+        final String idsQueryParam = "id=FeatId-patchOp-5031";
+        String viewStreamId = UUID.randomUUID().toString();
+        String streamId = UUID.randomUUID().toString();
+
+        // when: Sent patch feature request to view space.
+        HttpResponse<String> viewResponse = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
+        HttpResponse<String> spaceSearchResponse = getNakshaClient().get("hub/spaces/" + DELTA_CONFIGURED_SPACE + "/features?" + idsQueryParam, streamId);
+
+        // Then: Assert that feature was correctly patched by view space and was stored in delta space
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(viewStreamId)
+                .hasJsonBody(expectedBodyPart, "Patch Feature response body doesn't match")
+                .hasUuids();
+
+        assertThat(spaceSearchResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Feature response body doesn't match");
+    }
+    @Test
+    void tc5032_patchFeature_featureAvailableOnlyInBase() throws Exception {
+
+        //given Feature is available in base
+        final String bodyJson = loadFileOrFail("DefaultViewHandler/TC5032_patchFeature/patch_feature.json");
+        final String expectedBodyPart = loadFileOrFail("DefaultViewHandler/TC5032_patchFeature/feature_response_part.json");
+        final String idsQueryParam = "id=FeatId-patchOp-5032";
+        String viewStreamId = UUID.randomUUID().toString();
+        String streamId = UUID.randomUUID().toString();
+
+        // when: Sent patch feature request to view space.
+        HttpResponse<String> viewResponse = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, viewStreamId);
+        HttpResponse<String> spaceSearchResponse = getNakshaClient().get("hub/spaces/" + DELTA_CONFIGURED_SPACE + "/features?" + idsQueryParam, streamId);
+
+        // Then: Assert that feature was correctly patched by view space and was stored in delta space
+        assertThat(viewResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(viewStreamId)
+                .hasJsonBody(expectedBodyPart, "Patch Feature response body doesn't match")
+                .hasUuids();
+
+        assertThat(spaceSearchResponse)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Feature response body doesn't match");
     }
 }
