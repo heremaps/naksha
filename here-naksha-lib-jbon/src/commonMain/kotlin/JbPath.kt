@@ -64,7 +64,10 @@ class JbPath {
 
         private fun readElement(binary: ByteArray, path: String): JbReader? {
             if (!bytes.contentEquals(binary)) {
+                bytes = binary
                 feature = JbFeature().mapBytes(bytes)
+                reader = feature.reader
+                view = reader.view!!
                 jmap = JbMap()
                 jmap.mapReader(feature.reader)
             }
