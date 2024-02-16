@@ -41,17 +41,13 @@ public class TagFilterHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(TagFilterHandler.class);
 
-  private @NotNull EventHandler eventHandler;
-  private @NotNull EventTarget<?> eventTarget;
-  private @NotNull TagFilterHandlerProperties properties;
+  private final @NotNull TagFilterHandlerProperties properties;
 
   public TagFilterHandler(
       final @NotNull EventHandler eventHandler,
       final @NotNull INaksha hub,
       final @NotNull EventTarget<?> eventTarget) {
     super(hub);
-    this.eventHandler = eventHandler;
-    this.eventTarget = eventTarget;
     this.properties = JsonSerializable.convert(eventHandler.getProperties(), TagFilterHandlerProperties.class);
   }
 
