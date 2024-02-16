@@ -357,6 +357,7 @@ project(":here-naksha-storage-http") {
     }
     dependencies {
         implementation(project(":here-naksha-lib-core"))
+        implementation(project(":here-naksha-common-http"))
 
         implementation(commons_lang3)
     }
@@ -513,6 +514,7 @@ project(":here-naksha-app-service") {
         //implementation(project(":here-naksha-lib-extension"))
         //implementation(project(":here-naksha-handler-psql"))
         implementation(project(":here-naksha-lib-hub"))
+        implementation(project(":here-naksha-common-http"))
 
         implementation(log4j_slf4j)
         implementation(log4j_api)

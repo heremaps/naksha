@@ -19,6 +19,7 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.*;
+import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInMeters;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;

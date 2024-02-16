@@ -20,6 +20,7 @@ package com.here.naksha.storage.http;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
+import com.here.naksha.common.http.apis.ApiParamsConst;
 import com.here.naksha.lib.core.exceptions.UncheckedException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -71,7 +72,7 @@ class HttpStorageReadExecute {
   }
 
   private Result executeFeatureById() throws IOException, InterruptedException {
-    String featureId = readRequest.getQueryParameter("featureId");
+    String featureId = readRequest.getQueryParameter(ApiParamsConst.FEATURE_ID);
 
     HttpResponse<String> response =
         requestSender.sendRequest(String.format("/%s/%s/features/%s", environment, store, featureId));
@@ -94,8 +95,9 @@ class HttpStorageReadExecute {
       String getBy = proxyRequest.getReadRequestType().toString();
 
       HttpStorageReadSession.testLog.add(getBy);
-      HttpStorageReadSession.testLog.add("north = " + proxyRequest.<Double>getQueryParameter("north"));
-      HttpStorageReadSession.testLog.add("east = " + proxyRequest.<Double>getQueryParameter("east"));
+      HttpStorageReadSession.testLog.add(
+          "north = " + proxyRequest.<Double>getQueryParameter(ApiParamsConst.NORTH));
+      HttpStorageReadSession.testLog.add("east = " + proxyRequest.<Double>getQueryParameter(ApiParamsConst.EAST));
 
       HttpResponse<String> httpResponse = requestSender.sendRequest("");
 
