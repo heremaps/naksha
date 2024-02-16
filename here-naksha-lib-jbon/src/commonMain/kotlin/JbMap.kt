@@ -123,4 +123,14 @@ class JbMap : JbEntryArray<JbMap>() {
         reader.offset = backup
         return false
     }
+
+    /**
+     * Returns this map as [IMap].
+     * @return This binary as [IMap].
+     */
+    fun toIMap() : IMap {
+        // newMap()
+        // arrayOf() you can ask for length JbArray <-> Array<Any?>(length)
+        TODO("Implement me!")
+    }
 }

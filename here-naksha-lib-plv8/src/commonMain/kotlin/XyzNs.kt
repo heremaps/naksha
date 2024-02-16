@@ -128,4 +128,13 @@ class XyzNs : XyzSpecial<XyzNs>() {
         }
         return value
     }
+
+    /**
+     * Convert this XYZ namespace into a map.
+     * @param tags The tags to merge into, if any.
+     * @return the XYZ namespace as map.
+     */
+    fun toIMap(tags:XyzTags?) : IMap {
+        TODO("Implement me!")
+    }
 }

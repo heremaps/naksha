@@ -63,13 +63,8 @@ class JbPath {
         }
 
         private fun readElement(binary: ByteArray, path: String): JbReader? {
-            val session = JbSession.get()
             if (!bytes.contentEquals(binary)) {
-                bytes = binary
-                view = session.newDataView(bytes)
-                reader = JbReader()
-                reader.mapView(view, 0)
-                feature = JbFeature().mapReader(reader)
+                feature = JbFeature().mapBytes(bytes)
                 jmap = JbMap()
                 jmap.mapReader(feature.reader)
             }
