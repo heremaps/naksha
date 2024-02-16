@@ -303,9 +303,9 @@ open class JbReader {
         val view = useView()
         val type = unitType()
         return when (type) {
-            TYPE_UINT4, TYPE_SINT4, TYPE_INT8, TYPE_INT16, TYPE_INT32 -> JbSession.int64.intToBigInt64(readInt32())
+            TYPE_UINT4, TYPE_SINT4, TYPE_INT8, TYPE_INT16, TYPE_INT32 -> Jb.int64.intToBigInt64(readInt32())
             TYPE_INT64 -> view.getBigInt64(offset + 1)
-            else -> alternative ?: JbSession.int64.intToBigInt64(0)
+            else -> alternative ?: Jb.int64.intToBigInt64(0)
         }
     }
 

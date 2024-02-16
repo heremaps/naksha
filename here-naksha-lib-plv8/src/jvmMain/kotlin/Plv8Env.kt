@@ -1,8 +1,6 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.JbSession
-import com.here.naksha.lib.jbon.JvmEnv
-import com.here.naksha.lib.jbon.JvmThreadLocal
+import com.here.naksha.lib.jbon.*
 import java.sql.Connection
 
 /**
@@ -13,18 +11,24 @@ import java.sql.Connection
  */
 class Plv8Env : JvmEnv() {
     companion object {
+        private lateinit var env : Plv8Env
+
+        @JvmStatic
+        fun initialize() {
+            if (!Jb.isInitialized()) JvmEnv.initialize()
+            if (!this::env.isInitialized) {
+                env = Plv8Env()
+                Jb.env = env
+            }
+        }
+
         /**
-         * Returns the current environment, if not available, initializes it and then returns it. Must be called
-         * at least ones before using [JbSession] in a JVM.
+         * Returns the current environment, if not available, initializes it and then returns it.
          */
         @JvmStatic
         fun get(): Plv8Env {
-            var env = JvmEnv.get()
-            if (env !is Plv8Env) {
-                env = Plv8Env()
-                JbSession.env = env
-            }
-            return env
+            initialize()
+            return Jb.env as Plv8Env
         }
     }
 
@@ -37,23 +41,22 @@ class Plv8Env : JvmEnv() {
      * to the given SQL connection, so that all other session methods work the same way they would normally behave
      * inside the Postgres database (so, when executed in PLV8 engine).
      * @param conn The connection to bind to the [NakshaSession].
-     * @param schema The schema to use.
-     * @param storageId The storage-identifier.
      * @param appName The name of this application (arbitrary string, seen in SQL connections).
      * @param streamId The logging stream-id, can be found in transaction logs for error search.
      * @param appId The UPM application identifier.
      * @param author The UPM user identifier that uses this session.
      */
-    fun startSession(conn: Connection, schema: String, storageId: String, appName: String, streamId: String, appId: String, author: String?) {
+    fun startSession(conn: Connection, appName: String, streamId: String, appId: String, author: String?) {
         // Prepare the connection, need to load the module system.
         conn.autoCommit = false
         val sql = Plv8Sql(conn)
-        sql.execute("SELECT commonjs2_init(); SELECT naksha_start_session($1, $2, $3, $4);",
-                arrayOf(appName, streamId, appId, author))
-        sql.conn!!.commit()
-        // Create the JVM Naksha session.
+        sql.execute("SELECT naksha_start_session($1, $2, $3, $4);", arrayOf(appName, streamId, appId, author))
+        conn.commit()
+        // Create our self.
         get()
-        val session = NakshaSession(Plv8Sql(conn), schema, storageId, appName, streamId, appId, author)
+        // Create the JVM Naksha session.
+        val data = asMap(asArray(sql.execute("SELECT naksha_storage_id() as storage_id, naksha_schema() as schema"))[0])
+        val session = NakshaSession(sql, data["schema"]!!, data["storage_id"]!!, appName, streamId, appId, author)
         JbSession.threadLocal.set(session)
     }
 
@@ -137,12 +140,14 @@ class Plv8Env : JvmEnv() {
 
     /**
      * Installs the `commonjs2`, `lz4`, `jbon` and `naksha` modules into a PostgresQL database with a _PLV8_ extension. Must only
-     * be executed ones per storage.
+     * be executed ones per storage. This as well creates the needed admin-tables (for transactions, global dictionary aso.).
      * @param conn The connection to use for the installation.
      * @param version The Naksha Version.
      */
-    fun install(conn: Connection, version: Long) {
+    fun install(conn: Connection, version: Long, schema: String, storageId: String) {
+        conn.autoCommit = false
         val sql = Plv8Sql(conn)
+        val replacements = mapOf("version" to version.toString(), "schema" to schema, "storage_id" to storageId)
         // Note: We know, that we do not need the replacements and code is faster without them!
         executeSqlFromResource(sql, "/commonjs2.sql")
         installModuleFromResource(sql, "lz4_util", "/lz4_util.js")
@@ -156,7 +161,6 @@ class Plv8Env : JvmEnv() {
 //        installModuleFromResource(sql, "jbon", "/here-naksha-lib-jbon.js", extraCode = """
 //module.exports = module.exports["here-naksha-lib-jbon"].com.here.naksha.lib.jbon;
 //""");
-        val replacements = mapOf("version" to version.toString())
         installModuleFromResource(sql, "naksha", "/here-naksha-lib-plv8.js",
                 replacements = replacements,
                 extraCode = """
@@ -165,8 +169,34 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
 """)
         executeSqlFromResource(sql, "/naksha.sql", replacements)
         executeSqlFromResource(sql, "/jbon.sql")
-        if (!conn.autoCommit) {
-            conn.commit()
-        }
+        conn.commit()
+        sql.execute("""
+CREATE TABLE IF NOT EXISTS naksha_global (
+    id          text        PRIMARY KEY NOT NULL,
+    data        bytea       NOT NULL
+)
+""")
+        sql.execute("CREATE SEQUENCE IF NOT EXISTS naksha_txn_seq AS int8;")
+        sql.execute("""
+CREATE TABLE IF NOT EXISTS naksha_txn (
+    txn         int8         PRIMARY KEY NOT NULL,
+    ts          timestamptz  NOT NULL,
+    xact_id     int8         NOT NULL,
+    app_id      text         NOT NULL,
+    author      text         NOT NULL,
+    seq_id      int8,
+    seq_ts      timestamptz,
+    version     int8,
+    details     bytea,
+    attachment  bytea
+) PARTITION BY RANGE (txn);
+CREATE INDEX IF NOT EXISTS naksha_txn_ts_idx ON naksha_txn USING btree ("ts" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_app_id_ts_idx ON naksha_txn USING btree ("app_id" ASC, "ts" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_author_ts_idx ON naksha_txn USING btree ("author" ASC, "ts" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_seq_id_idx ON naksha_txn USING btree ("seq_id" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_seq_ts_idx ON naksha_txn USING btree ("seq_ts" ASC);
+CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("version" ASC);
+""")
+        conn.commit()
     }
 }

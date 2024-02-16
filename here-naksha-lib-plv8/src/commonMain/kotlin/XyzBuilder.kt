@@ -55,9 +55,9 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
             is Boolean -> writeBool(value)
 
             is Double -> {
-                if (JbSession.env.canBeInt32(value)) {
+                if (Jb.env.canBeInt32(value)) {
                     writeInt32(value.toInt())
-                } else if (JbSession.env.canBeFloat32(value)) {
+                } else if (Jb.env.canBeFloat32(value)) {
                     writeFloat32(value.toFloat())
                 } else {
                     writeFloat64(value)

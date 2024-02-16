@@ -80,4 +80,7 @@ val randomCharacters = CharArray(64) {
 }
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun newDataView(size:Int) = JbSession.env.newDataView(ByteArray(size))
+inline fun newDataView(size:Int) = Jb.env.newDataView(ByteArray(size))
+
+@Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
+inline fun asArray(any:Any?) : Array<Any?> = any as Array<Any?>

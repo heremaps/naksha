@@ -28,6 +28,12 @@ interface IEnv {
     }
 
     /**
+     * Returns a new thread-local.
+     * @return The thread-local.
+     */
+    fun newThreadLocal() : IThreadLocal
+
+    /**
      * Returns the current epoch milliseconds.
      * @return The current epoch milliseconds.
      */

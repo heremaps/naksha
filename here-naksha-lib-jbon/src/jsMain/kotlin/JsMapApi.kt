@@ -1,24 +1,21 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package com.here.naksha.lib.jbon
 
-@Suppress("UnsafeCastFromDynamic")
+@Suppress("UnsafeCastFromDynamic", "unused", "NON_EXPORTABLE_TYPE")
+@JsExport
 class JsMapApi : IMapApi {
-    companion object {
-        private val smt = JsMap()
-        fun isMap(any: Any?): Boolean =
-                js("any !== undefined && any !== null && typeof any === 'object' && !Array.isArray(any)")
+    val mapTemplate = JsMap()
 
-        fun toMap(any: Any?): IMap {
-            if (any is JsMap) return any
-            if (isMap(any)) throw IllegalArgumentException("require object")
-            val t = this.smt
-            // TODO: Use setPrototype(any, Object.getPrototypeOf(t))
-            return js("Object.assign(any,Object.getPrototypeOf(t))")
-        }
+    override fun isMap(any: Any?): Boolean {
+        return js("any !== undefined && any !== null && typeof any === 'object' && !Array.isArray(any)")
     }
 
-    override fun isMap(any: Any?): Boolean = Companion.isMap(any)
-
-    override fun asMap(any: Any?): IMap = Companion.toMap(any)
+    override fun asMap(any: Any?): IMap {
+        if (any is JsMap) return any
+        if (!isMap(any)) throw IllegalArgumentException("require object")
+        return js("Object.setPrototypeOf(any,Object.getPrototypeOf(this.mapTemplate))")
+    }
 
     override fun newMap(): IMap {
         return js("{}")
@@ -67,6 +64,6 @@ class JsMapApi : IMapApi {
     }
 
     override fun iterator(map: IMap): IMapIterator {
-        TODO("Not yet implemented")
+        return JsMapInterator(map, keys(map))
     }
 }

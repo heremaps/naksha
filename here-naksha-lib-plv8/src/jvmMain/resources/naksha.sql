@@ -111,17 +111,10 @@ CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, a
     }
   }
   let naksha = require("naksha");
+  naksha.Plv8Env.Companion.initialize();
   let jb = require("jbon");
-  let env = naksha.Plv8Env.Companion.get();
   let session = new naksha.NakshaSession(new naksha.Plv8Sql(), '${schema}', '${storage_id}', app_name, stream_id, app_id, author);
   jb.JbSession.Companion.threadLocal.set(session);
-$$ LANGUAGE 'plv8' IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION naksha_init_storage() RETURNS void AS $$
-  let naksha = require("naksha");
-  let jb = require("jbon");
-  let session = jb.NakshaSession.Companion.get();
-  session.initStorage();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$

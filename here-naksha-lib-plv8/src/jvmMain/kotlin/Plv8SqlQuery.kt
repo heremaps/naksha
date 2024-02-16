@@ -1,5 +1,8 @@
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.JvmBigInt64
+import com.here.naksha.lib.jbon.toLong
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.ArrayList
@@ -54,6 +57,7 @@ class Plv8SqlQuery(query: String) {
                 is Short -> stmt.setShort(index, arg)
                 is Int -> stmt.setInt(index, arg)
                 is Long -> stmt.setLong(index, arg)
+                is JvmBigInt64 -> stmt.setLong(index, arg.value)
                 is Float -> stmt.setFloat(index, arg)
                 is Double -> stmt.setDouble(index, arg)
                 is String -> stmt.setString(index, arg)

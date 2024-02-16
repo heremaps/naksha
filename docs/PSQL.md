@@ -60,22 +60,16 @@ The transaction-number is a 64-bit integers, split into four parts:
 * _Day_: The day of the month in which the transaction started (1 to 31).
 * _Seq_: The local **sequence-number** in this day.
 
-The local **sequence-number** is stored in a sequence named `naksha_txn_seq`. Every day starts with the sequence-number reset to zero. The final value is calculated by **year** x _1,000,000,000,000,000_ + **month** x _10,000,000,000,000_ **day** x _100,000,000,000_ + **sequence-number**.
+The local **sequence-number** is stored in a sequence named `naksha_txn_seq`. Every day starts with the sequence-number reset to zero. The final 64-bit value is combined as:
 
-This concept allows up to 100 billion transactions per day. It will work up until the year 9222, where it will overflow. Should there be more than 100 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible.
+- 13-bit **year**, between 0 and 8191 {_shift-by 51_}.
+- 4-bit **month**, between 1 (January) and 12 (December) {_shift-by 47_}.
+- 5-bit **day**, between 1 and 31 {_shift-by 42_}.
+- 42-bit **seq**uence number.
 
-Demo calculation:
+This concept allows up to 4096 billion transactions per day (between 0 and 2^42-1). It will work up until the year 8191, where it will overflow. Should there be more than 4096 billion transaction in a single day, this will overflow as into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible.
 
-```
-Date: 2023-01-30 (YYYY-MM-DD)
-Max value int8:                  9,223,372,036,854,775,807
-  2023 * 1,000,000,000,000,000 = 2,023,000,000,000,000,000
-     1 *    10,000,000,000,000 =        10,000,000,000,000
-    30 *       100,000,000,000 =         3,000,000,000,000
-                               = 2,023,013,000,000,000,000
-Human-Readable:                  2023,01,30,0
-uuid:                            "{storageId}:{collectionId}:2023:1:30:0"
-```
+The human-readable (Javascript compatible) representation is as a string in the format `{storageId}:txn:{year}:{month}:{day}:{seq}`.
 
 Normally, when a new unique identifier is requested, the method `naksha_txn()` will use the next value from the sequence (`naksha_txn_seq`) and verify it, so, if the year, month and day of the current transaction start-time (`transaction_timestamp()`) matches the one stored in the sequence-number. If this is not the case, it will enter an advisory lock and retry the operation, if the sequence-number is still invalid, it will reset the sequence-number to the correct date, with the _sequence_ part being set to `1`, so that the next `naksha_txn()` method that enters the lock or queries the _sequence_, receives a correct number, starting at _sequence_ `1`. The method itself will use the _sequence_ value `0` in the rollover case.
 
@@ -91,7 +85,15 @@ The new format is called GUID (global unique identifier), returning to the roots
 
 **Note**: This format holds all information needed for Naksha to know in which storage a feature is located, of which it only has the _GUID_. The PSQL storage knows from this _GUID_ exactly in which database table the features is located, even taking partitioning into account. The reason is, that partitioning is done by transaction start date, which is contained in the _GUID_. Therefore, providing a _GUID_, directly identifies the storage location of a feature, which in itself holds the information to which transaction it belongs to (`txn`). Beware that the transaction-number as well encodes the transaction start time and therefore allows as well to know exactly where the features of a transaction are located (including finding the transaction details itself).
 
-## Table layout
+## Global dictionaries (`naksha_global`)
+As the PostgresQL code switched to [JBON](./JBON.md) encoding, a table for the global dictionaries is needed with the following layout:
+
+| Column | Type  | Modifiers                              | Description                              |
+|--------|-------|----------------------------------------|------------------------------------------|
+| id     | text  | PRIMARY KEY NOT NULL                   | The unique identifier of the dictionary. |
+| data   | bytea | NOT NULL                               | The dictionary JBON data.                |
+
+## Collection table layout
 
 The table layout for all tables:
 
@@ -197,7 +199,7 @@ The second query will look into all history tables that can contain features for
 
 Therefore, the union of all the query returns only exactly one feature, the searched one (`foo,speedLimit=25`). This operation does use index-only scans, and is done in parallel for all potential partition.
 
-## Transaction Logs
+## Transaction Table (`naksha_txn`)
 
 The transaction logs are stored in the `naksha_txn` table. Each transaction persists out of **signals**, grouped by the transaction-number (`tnx`). Note that there is a `naksha_txn_uid_seq` encoded into the `txn`. The table layout is:
 

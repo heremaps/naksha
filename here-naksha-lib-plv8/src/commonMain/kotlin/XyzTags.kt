@@ -19,7 +19,7 @@ class XyzTags : XyzSpecial<XyzTags>() {
 
         val globalDictId = if (reader.isString()) reader.readString() else null
         if (globalDictId != null) {
-            reader.globalDict = JbSession.env.getGlobalDictionary(globalDictId)
+            reader.globalDict = Jb.env.getGlobalDictionary(globalDictId)
         }
 
         // Now all key-value pairs follow.

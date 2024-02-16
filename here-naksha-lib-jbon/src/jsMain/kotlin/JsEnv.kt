@@ -11,11 +11,10 @@ open class JsEnv : IEnv {
 
     companion object {
         /**
-         * Returns the current environment, if it is not yet initialized, initializes it.
-         * @return The environment.
+         * Initializes the environment.
          */
-        fun get() : JsEnv {
-            if (!JbSession.isInitialized()) {
+        fun initialize() {
+            if (!Jb.isInitialized()) {
                 // Note: The definition of the MAX64 and MIN64 is just necessary, because Kotlin
                 //       does not understand the simple notation 9223372036854775807n and alike.
                 // (~(-9223372036854775808n-1n)) - 9223372036854775808n
@@ -72,12 +71,21 @@ Object.assign(BigInt, {
     or: function(t,v) { return BigInt.s64(BigInt.u64(t) | BigInt.u64(v)); },
     xor: function(t,v) { return BigInt.s64(BigInt.u64(t) ^ BigInt.u64(v)); },
     inv: function(t) { return BigInt.s64(~BigInt.u64(t)); },
+    equals: function(t) { return this == t; },
     hashCode: function(t) { var u=BigInt.u64(t); return BigInt.s32((u >> BigInt(32)) ^ (u & BigInt.MASK_LO_32)); }
 });
 """)
-                JbSession.initialize(JsThreadLocal(), JsEnv(), JsMapApi(), JsBigInt64Api(), BrowserLog())
+                Jb.initialize(JsEnv(), JsMapApi(), JsBigInt64Api(), BrowserLog())
             }
-            return JbSession.env as JsEnv
+        }
+
+        /**
+         * Returns the current environment, if it is not yet initialized, initializes it.
+         * @return The environment.
+         */
+        fun get() : JsEnv {
+            if (!Jb.isInitialized()) initialize()
+            return Jb.env as JsEnv
         }
 
         private val globalDictionaries = HashMap<String, JbDict>()
@@ -113,6 +121,10 @@ Object.assign(BigInt, {
         return mantissaLo and 0x1fff_ffff == 0 || (mantissaHi == 0x000f_ffff && mantissaLo == 0xffff_ffffu.toInt())
     }
 
+    override fun newThreadLocal(): IThreadLocal {
+        return JsThreadLocal()
+    }
+
     override fun currentMillis(): BigInt64 {
         return js("BigInt(Date.now())")
     }
@@ -124,7 +136,7 @@ Object.assign(BigInt, {
     internal fun view() : IDataView {
         var view = convertView
         if (view == null) {
-            view = JbSession.env.newDataView(ByteArray(16))
+            view = get().newDataView(ByteArray(16))
             convertView = view
         }
         return view

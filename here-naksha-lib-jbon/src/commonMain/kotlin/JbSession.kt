@@ -24,67 +24,10 @@ open class JbSession(val appName: String, val streamId: String, val appId: Strin
         }
 
         /**
-         * The thread local session.
+         * The current thread local session.
          */
         @JvmStatic
-        lateinit var threadLocal: IThreadLocal
-
-        /**
-         * The environment (JVM, Browser, PLV8, ...).
-         */
-        @JvmStatic
-        lateinit var env: IEnv
-
-        /**
-         * Helpers to handle native arrays.
-         */
-        @JvmStatic
-        lateinit var map: IMapApi
-
-        /**
-         * The accessor to native 64-bit integers.
-         */
-        @JvmStatic
-        lateinit var int64: BigInt64Api
-
-        /**
-         * Access to environment logger.
-         */
-        @JvmStatic
-        lateinit var log: ILog
-
-        /**
-         * Tests whether the session is initialized.
-         * @return true if the session is initialized; false otherwise.
-         */
-        @JvmStatic
-        fun isInitialized(): Boolean {
-            return Companion::threadLocal.isInitialized
-                    && Companion::env.isInitialized
-                    && Companion::map.isInitialized
-                    && Companion::int64.isInitialized
-                    && Companion::log.isInitialized
-        }
-
-        /**
-         * Static initializer of the session, links environment specific implementations. Does nothing, if called multiple
-         * times. Should only be called, when [isInitialized] returns _false_.
-         * @param threadLocal The thread local storage.
-         * @param env The environment.
-         * @param map The native map accessor API.
-         * @param int64 The native 64-bit integer accessor API.
-         * @param log The native logger.
-         */
-        @JvmStatic
-        fun initialize(threadLocal: IThreadLocal, env: IEnv, map: IMapApi, int64: BigInt64Api, log: ILog) {
-            if (!isInitialized()) {
-                this.threadLocal = threadLocal
-                this.env = env
-                this.map = map
-                this.int64 = int64
-                this.log = log
-            }
-        }
+        val threadLocal: IThreadLocal = Jb.env.newThreadLocal()
 
         /**
          * Returns the current thread local session.
@@ -131,6 +74,6 @@ open class JbSession(val appName: String, val streamId: String, val appId: Strin
         require(offset in bytes.indices)
         require(size >= 0)
         val length = if (offset + size <= bytes.size) size else bytes.size - offset
-        return env.newDataView(bytes, offset, length)
+        return Jb.env.newDataView(bytes, offset, length)
     }
 }

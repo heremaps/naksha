@@ -757,8 +757,7 @@ open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
      */
     fun buildFeatureFromMap(map: IMap): ByteArray {
-        val raw = map["id"]
-        val id: String? = if (raw is String) raw else null
+        val id: String? = map["id"]
         xyz = null
         val start = startMap()
         for (entry in map) {
@@ -833,10 +832,10 @@ open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
             is Byte -> writeInt32(value.toInt())
             is Short -> writeInt32(value.toInt())
             is Int -> writeInt32(value)
-            is Long -> writeInt64(JbSession.int64.longToBigInt64(value))
+            is Long -> writeInt64(Jb.int64.longToBigInt64(value))
             is BigInt64 -> writeInt64(value)
             is Float -> writeFloat32(value)
-            is Double -> if (JbSession.env.canBeFloat32(value)) writeFloat32(value.toFloat()) else writeFloat64(value)
+            is Double -> if (Jb.env.canBeFloat32(value)) writeFloat32(value.toFloat()) else writeFloat64(value)
             is IMap -> writeMap(value)
             is Array<*> -> writeArray(value as Array<Any?>)
             null -> writeNull()

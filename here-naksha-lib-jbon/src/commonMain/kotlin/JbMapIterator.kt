@@ -2,7 +2,7 @@ package com.here.naksha.lib.jbon
 
 class JbMapIterator(val imap: IMap) : Iterator<Map.Entry<String,Any?>> {
     class MapEntry(override var key: String, override var value: Any?) : Map.Entry<String,Any?>
-    private val it = JbSession.map.iterator(imap)
+    private val it = Jb.map.iterator(imap)
     private val entry = MapEntry("", null)
 
     override fun hasNext(): Boolean {

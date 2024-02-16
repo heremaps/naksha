@@ -6,16 +6,20 @@ import org.slf4j.spi.LoggingEventBuilder
 /**
  * The SLF4j logger implementation, default for [JvmEnv].
  */
-class Slf4jLogger() : ILog{
+class Slf4jLogger : ILog{
     private val logger = LoggerFactory.getLogger(Slf4jLogger::class.java)
     private var sb = StringBuilder()
 
     internal fun log(ctx : LoggingEventBuilder, msg:String, vararg args: Any) {
-        val streamId = JbSession.get().streamId
+        val session = JbSession.threadLocal.get()
         sb.setLength(0)
-        if (streamId != null) {
-            sb.append("[").append(streamId).append("] ")
+        sb.append("[")
+        if (session != null) {
+            sb.append(session.streamId)
+        } else {
+            sb.append("-")
         }
+        sb.append("] ")
         sb.append(msg)
         ctx.setMessage(sb.toString())
         for (arg in args) ctx.addArgument(arg)

@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
-import java.util.Calendar
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 
@@ -63,15 +62,21 @@ open class JvmEnv : IEnv {
         }
 
         /**
+         * Initializes the environment.
+         */
+        @JvmStatic
+        fun initialize() {
+            if (!Jb.isInitialized()) Jb.initialize(JvmEnv(), JvmMapApi(), JvmBigInt64Api(), Slf4jLogger())
+        }
+
+        /**
          * Returns the current environment, if not available, initializes it and then returns it. Must be called
          * at least ones before using [JbSession] in a JVM.
          */
         @JvmStatic
         fun get(): JvmEnv {
-            if (!JbSession.isInitialized()) {
-                JbSession.initialize(JvmThreadLocal(), JvmEnv(), JvmMapApi(), JvmBigInt64Api(), Slf4jLogger())
-            }
-            return JbSession.env as JvmEnv
+            if (!Jb.isInitialized()) initialize()
+            return Jb.env as JvmEnv
         }
     }
 
@@ -101,6 +106,10 @@ open class JvmEnv : IEnv {
         // Either the lower 29-bit of mantissa are zero (only 23-bit used) or all bits are set.
         val mantissa = binary and 0x000f_ffff_ffff_ffff
         return (mantissa and 0x0000_0000_1fff_ffff) == 0L || mantissa == 0x000f_ffff_ffff_ffff
+    }
+
+    override fun newThreadLocal(): IThreadLocal {
+        return JvmThreadLocal()
     }
 
     override fun currentMillis(): BigInt64 {

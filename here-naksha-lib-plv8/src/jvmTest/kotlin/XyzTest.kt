@@ -53,7 +53,7 @@ class XyzTest : Plv8TestContainer() {
     fun testXyzNs() {
         val view = env.newDataView(ByteArray(1024))
         val builder = XyzBuilder(view)
-        val createdTs = JbSession.env.currentMillis()
+        val createdTs = Jb.env.currentMillis()
         val xyz = builder.buildXyzNs(createdTs, createdTs, createdTs + 10,
                 ACTION_CREATE, 1, createdTs + 20,
                 BigInt64(0), null, "test-uuid",
@@ -98,5 +98,26 @@ class XyzTest : Plv8TestContainer() {
         val session = NakshaSession.get()
         val version = session.postgresVersion()
         assertTrue(version >= XyzVersion(14,0,0))
+    }
+
+    @Test
+    fun testPartitionNumbering() {
+        val session = NakshaSession.get()
+        var i = 0
+        while (i++ < 10_000) {
+            val s = env.randomString(12)
+            val pnum = session.partitionNumber(s)
+            assertTrue(pnum in 0..255)
+            val pid = session.partitionId(s)
+            assertEquals(3, pid.length)
+            val expectedId = if (pnum < 10) "00$pnum" else if (pnum < 100) "0$pnum" else "$pnum"
+            assertEquals(expectedId, pid)
+        }
+    }
+
+    @Test
+    fun testTransactionNumber() {
+        val session = NakshaSession.get()
+        assertNotNull(session.txn())
     }
 }

@@ -3,6 +3,9 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -35,9 +38,23 @@ class NakshaSession(
         val storageId: String,
         appName: String, streamId: String, appId: String, author: String? = null
 ) : JbSession(appName, streamId, appId, author) {
+    /**
+     * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
+     */
+    val schemaOid: Int
+
+    /**
+     * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the transaction sequence.
+     */
+    val txnOid: Int
+
+    init {
+        sql.execute("SET SESSION search_path TO " + sql.quoteIdent(schema) + ", public, topology;")
+        schemaOid = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
+        txnOid = asMap(asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = 'naksha_txn_seq' and relnamespace = $1", arrayOf(schemaOid)))[0])["oid"]!!
+    }
 
     companion object {
-
         /**
          * Returns the current thread local [NakshaSession].
          * @return The current thread local [NakshaSession].
@@ -80,7 +97,23 @@ class NakshaSession(
     /**
      * Internally used FNV1a hash.
      */
-    private val fnv1a = Fnv1a()
+    private val fnv1a32 = Fnv1a32()
+
+    /**
+     * Internally used FNV1a hash.
+     */
+    private val fnv1a64 = Fnv1a64()
+
+    /**
+     * Returns the lock-id for the given name.
+     * @param name The name to query the lock-id for.
+     * @return The 64-bit FNV1a hash.
+     */
+    fun lockId(name: String): BigInt64 {
+        fnv1a64.reset()
+        fnv1a64.string(name)
+        return fnv1a64.hash
+    }
 
     /**
      * Returns the partition number.
@@ -88,7 +121,7 @@ class NakshaSession(
      * @return The partition id as number between 0 and 255.
      */
     fun partitionNumber(id: String): Int {
-        val fnv1a = this.fnv1a
+        val fnv1a = this.fnv1a32
         fnv1a.reset()
         fnv1a.string(id)
         return fnv1a.hash and 0xff
@@ -112,7 +145,7 @@ class NakshaSession(
      * @param day The day between 1 and 31.
      * @return The name of the corresponding history partition.
      */
-    fun historyPartitionFromDate(year:Int, month:Int, day:Int) : String {
+    fun historyPartitionFromDate(year: Int, month: Int, day: Int): String {
         val sb = StringBuilder()
         sb.append(year)
         sb.append('_')
@@ -129,7 +162,7 @@ class NakshaSession(
      * @param millis The epoch-timestamp in milliseconds.
      * @return The name of the corresponding history partition.
      */
-    fun historyPartitionFromMillis(millis: BigInt64) : String {
+    fun historyPartitionFromMillis(millis: BigInt64): String {
         val ts = JbTimestamp.fromMillis(millis)
         return historyPartitionFromDate(ts.year, ts.month, ts.day)
     }
@@ -147,7 +180,7 @@ class NakshaSession(
     /**
      * The cached Postgres version.
      */
-    private lateinit var pgVersion : XyzVersion
+    private lateinit var pgVersion: XyzVersion
 
     /**
      * Returns the PostgresQL version.
@@ -160,7 +193,7 @@ class NakshaSession(
             check(rows != null)
             val row = asMap(rows[0])
             // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
-            val versionString = row["version"] as String
+            val versionString: String = row["version"]!!
             val firstSpace = versionString.indexOf(' ')
             check(firstSpace > 0)
             val secondSpace = versionString.indexOf(' ', firstSpace + 1)
@@ -171,38 +204,51 @@ class NakshaSession(
         return pgVersion
     }
 
-    private fun ensureHistoryPartition() {
+    /**
+     * The current transaction number.
+     */
+    private lateinit var txn: NakshaTxn
+
+    /**
+     * The PostgresQL transaction number.
+     */
+    private lateinit var xactId: BigInt64
+
+    /**
+     * Internally called to ensure that the trans
+     */
+    private fun createTxnPartition() {
 
     }
 
     /**
-     * Creates all necessary tables and structures, if not already existing.
+     * Returns the current transaction number, if no transaction number is yet generated, generates a new one.
+     * @return The current transaction number.
      */
-    fun initStorage() {
-        val sql = this.sql
-        sql.execute("CREATE SEQUENCE IF NOT EXISTS naksha_txn_uid_seq AS int8;")
-        sql.execute("""
-CREATE TABLE IF NOT EXISTS naksha_txn (
-    txn         int8         PRIMARY KEY NOT NULL,
-    ts          timestamptz  NOT NULL,
-    xact_id     int8         NOT NULL,
-    app_id      text         NOT NULL,
-    author      text         NOT NULL,
-    seq_id      int8,
-    seq_ts      timestamptz,
-    version     int8,
-    details     bytea,
-    attachment  bytea
-) PARTITION BY RANGE (txn);
-CREATE INDEX IF NOT EXISTS naksha_txn_ts_idx ON naksha_txn USING btree ("ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_app_id_ts_idx ON naksha_txn USING btree ("app_id" ASC, "ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_author_ts_idx ON naksha_txn USING btree ("author" ASC, "ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_seq_id_idx ON naksha_txn USING btree ("seq_id" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_seq_ts_idx ON naksha_txn USING btree ("seq_ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("version" ASC);
-""")
-
-        sql.execute("COMMIT")
+    @Suppress("UNCHECKED_CAST")
+    fun txn(): NakshaTxn {
+        if (!this::xactId.isInitialized) {
+            xactId = asBigInt64(asMap((sql.execute("SELECT pg_current_xact_id() as v") as Array<Any>)[0])["v"])
+            var raw = asBigInt64(asMap((sql.execute("SELECT nextval($1) as v", arrayOf(txnOid)) as Array<Any>)[0])["v"])
+            txn = NakshaTxn(raw)
+            val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+            if (txn.year != now.year || txn.month != now.monthNumber || txn.day != now.dayOfMonth) {
+                val lockId = lockId("naksha_txn_seq")
+                sql.execute("SELECT pg_advisory_lock($1)", arrayOf(lockId))
+                try {
+                    raw = asBigInt64(asMap((sql.execute("SELECT nextval($1) as v", arrayOf(txnOid)) as Array<Any>)[0])["v"])
+                    txn = NakshaTxn(raw)
+                    if (txn.year != now.year || txn.month != now.monthNumber || txn.day != now.dayOfMonth) {
+                        // Rollover, we update sequence of the day.
+                        txn = NakshaTxn.of(now.year, now.monthNumber, now.dayOfMonth, BigInt64(0))
+                        sql.execute("SELECT setval($1, $2)", arrayOf(txnOid, txn.value + 1))
+                    }
+                } finally {
+                    sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(lockId))
+                }
+            }
+        }
+        return txn
     }
 
     // return: op text, id text, xyz bytea, tags bytea, geo geometry, feature bytea, err_no text, err_msg text

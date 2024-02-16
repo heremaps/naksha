@@ -2,29 +2,40 @@
 
 package com.here.naksha.lib.plv8;
 
+import com.here.naksha.lib.jbon.Jb
 import com.here.naksha.lib.jbon.JbSession
 import com.here.naksha.lib.jbon.JsEnv
 
 /**
  * Special JS session that is optimized for PLV8 (Postgres extension).
  */
-@Suppress("unused", "UNUSED_VALUE")
+@Suppress("unused", "UNUSED_VALUE", "MemberVisibilityCanBePrivate")
 @JsExport
 class Plv8Env : JsEnv() {
 
     companion object {
+        private lateinit var env : Plv8Env
+        private lateinit var log : Plv8Log
+
+        fun initialize() {
+            if (!Jb.isInitialized()) JsEnv.initialize()
+            if (!this::env.isInitialized) {
+                env = Plv8Env()
+                Jb.env = env
+            }
+            if (!this::log.isInitialized) {
+                log = Plv8Log()
+                Jb.log = log
+            }
+        }
+
         /**
          * Returns the current environment, if it is not yet initialized, initializes it.
          * @return The environment.
          */
         fun get() : Plv8Env {
-            var env = JsEnv.get()
-            if (env !is Plv8Env) {
-                env = Plv8Env()
-                JbSession.env = env
-                JbSession.log = Plv8Log()
-            }
-            return env
+            initialize()
+            return Jb.env as Plv8Env
         }
     }
 

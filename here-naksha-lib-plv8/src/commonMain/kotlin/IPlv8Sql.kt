@@ -19,38 +19,44 @@ interface IPlv8Sql {
     fun newTable(): ITable
 
     /**
-     * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all double quotes
-     * (`"`) with two double quotes (`""`).
+     * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
+     * (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
      * @param parts The literal parts to merge and quote.
      * @return The quoted literal.
      */
     fun quoteLiteral(vararg parts: String): String {
         val sb = StringBuilder()
+        sb.append("E'")
         for (part in parts) {
             for (c in part) {
-                sb.append(c)
-                if (c == '"') {
-                    sb.append('"')
+                when (c) {
+                    '\'' -> sb.append('\'').append('\'')
+                    '\\' -> sb.append('\\').append('\\')
+                    else -> sb.append(c)
                 }
             }
         }
+        sb.append('\'')
         return sb.toString()
     }
 
     /**
-     * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all single quotes
-     * (`'`) with two single quotes (`''`).
+     * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
+     * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
      */
     fun quoteIdent(vararg parts: String): String {
         val sb = StringBuilder()
+        sb.append('"')
         for (part in parts) {
             for (c in part) {
-                sb.append(c)
-                if (c == '\'') {
-                    sb.append('\'')
+                when (c) {
+                    '"' -> sb.append('"').append('"')
+                    '\\' -> sb.append('\\').append('\\')
+                    else -> sb.append(c)
                 }
             }
         }
+        sb.append('"')
         return sb.toString()
     }
 

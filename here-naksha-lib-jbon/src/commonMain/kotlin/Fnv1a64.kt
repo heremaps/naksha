@@ -10,19 +10,23 @@ import kotlin.js.JsExport
  */
 @Suppress("DuplicatedCode")
 @JsExport
-class Fnv1a {
+class Fnv1a64 {
+    /**
+     * The multiplicator used.
+     */
+    private val MUL = BigInt64(1099511628211L)
+
     /**
      * The current hash.
      */
-    var hash = -0x7ee3623b // 0x811C9DC5
+    var hash = BigInt64(0xCBF29CE484222325uL.toLong())
 
     /**
      * Reset the hash to the default initial value.
      * @return this.
      */
-    fun reset(): Fnv1a {
-        // 0x811C9DC5
-        hash = -0x7ee3623b
+    fun reset(): Fnv1a64 {
+        hash = BigInt64(0xCBF29CE484222325uL.toLong())
         return this
     }
 
@@ -32,7 +36,7 @@ class Fnv1a {
      * @param string The string to hash.
      * @return this.
      */
-    fun string(string: String): Fnv1a {
+    fun string(string: String): Fnv1a64 {
         var i = 0
         while (i < string.length) {
             val hi = string[i++]
@@ -62,9 +66,9 @@ class Fnv1a {
      * @param v The value to hash.
      * @return this.
      */
-    fun int8(v: Byte): Fnv1a {
-        hash = hash xor (v.toInt() and 0xff)
-        hash *= 16777619
+    fun int8(v: Byte): Fnv1a64 {
+        hash = hash xor BigInt64(v.toInt() and 0xff)
+        hash *= MUL
         return this
     }
 
@@ -73,11 +77,11 @@ class Fnv1a {
      * @param v The value to hash.
      * @return this.
      */
-    fun int16BE(v: Short): Fnv1a {
-        hash = hash xor ((v.toInt() and 0xffff) ushr 8)
-        hash *= 16777619
-        hash = hash xor (v.toInt() and 0xff)
-        hash *= 16777619
+    fun int16BE(v: Short): Fnv1a64 {
+        hash = hash xor BigInt64((v.toInt() and 0xffff) ushr 8)
+        hash *= MUL
+        hash = hash xor BigInt64(v.toInt() and 0xff)
+        hash *= MUL
         return this
     }
 
@@ -86,11 +90,11 @@ class Fnv1a {
      * @param v The value to hash.
      * @return this.
      */
-    fun int16LE(v: Short): Fnv1a {
-        hash = hash xor (v.toInt() and 0xff)
-        hash *= 16777619
-        hash = hash xor ((v.toInt() and 0xffff) ushr 8)
-        hash *= 16777619
+    fun int16LE(v: Short): Fnv1a64 {
+        hash = hash xor BigInt64(v.toInt() and 0xff)
+        hash *= MUL
+        hash = hash xor BigInt64((v.toInt() and 0xffff) ushr 8)
+        hash *= MUL
         return this
     }
 
@@ -99,15 +103,15 @@ class Fnv1a {
      * @param v The value to hash.
      * @return this.
      */
-    fun int32BE(v: Int): Fnv1a {
-        hash = hash xor (v ushr 24)
-        hash *= 16777619
-        hash = hash xor ((v ushr 16) and 0xff)
-        hash *= 16777619
-        hash = hash xor ((v ushr 8) and 0xff)
-        hash *= 16777619
-        hash = hash xor (v and 0xff)
-        hash *= 16777619
+    fun int32BE(v: Int): Fnv1a64 {
+        hash = hash xor BigInt64(v ushr 24)
+        hash *= MUL
+        hash = hash xor BigInt64((v ushr 16) and 0xff)
+        hash *= MUL
+        hash = hash xor BigInt64((v ushr 8) and 0xff)
+        hash *= MUL
+        hash = hash xor BigInt64(v and 0xff)
+        hash *= MUL
         return this
     }
 
@@ -116,15 +120,15 @@ class Fnv1a {
      * @param v The value to hash.
      * @return this.
      */
-    fun int32LE(v: Int): Fnv1a {
-        hash = hash xor (v and 0xff)
-        hash *= 16777619
-        hash = hash xor ((v ushr 8) and 0xff)
-        hash *= 16777619
-        hash = hash xor ((v ushr 16) and 0xff)
-        hash *= 16777619
-        hash = hash xor (v ushr 24)
-        hash *= 16777619
+    fun int32LE(v: Int): Fnv1a64 {
+        hash = hash xor BigInt64(v and 0xff)
+        hash *= MUL
+        hash = hash xor BigInt64((v ushr 8) and 0xff)
+        hash *= MUL
+        hash = hash xor BigInt64((v ushr 16) and 0xff)
+        hash *= MUL
+        hash = hash xor BigInt64(v ushr 24)
+        hash *= MUL
         return this
     }
 }

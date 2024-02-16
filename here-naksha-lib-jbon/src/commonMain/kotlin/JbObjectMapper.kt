@@ -183,7 +183,7 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
      * @return this.
      */
     fun mapBytes(bytes: ByteArray?, start: Int = 0, end: Int = bytes?.size ?: Int.MAX_VALUE): SELF {
-        val view = if (bytes != null) JbSession.env.newDataView(bytes, start, end) else null
+        val view = if (bytes != null) Jb.env.newDataView(bytes, start, end) else null
         mapInternal(view, 0, 0, 0, null, null)
         return this as SELF
     }

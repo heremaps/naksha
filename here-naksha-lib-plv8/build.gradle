@@ -32,12 +32,14 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-common"))
                 implementation(project(":here-naksha-lib-jbon"))
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
         jvmMain {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-jbon"))
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
             resources.srcDirs += "$buildDir/dist/js/productionExecutable/"
         }
@@ -57,6 +59,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-js"))
                 implementation(project(":here-naksha-lib-jbon"))
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
     }

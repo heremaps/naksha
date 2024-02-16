@@ -31,7 +31,7 @@ open class JbFeature : JbObjectMapper<JbFeature>() {
         // The id of global dictionary (optional).
         if (reader.isString()) {
             val globalDictId = reader.readString()
-            reader.globalDict = JbSession.env.getGlobalDictionary(globalDictId)
+            reader.globalDict = Jb.env.getGlobalDictionary(globalDictId)
             check(reader.globalDict != null)
         } else {
             check(reader.isNull())

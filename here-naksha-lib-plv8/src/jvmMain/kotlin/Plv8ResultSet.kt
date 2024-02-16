@@ -1,9 +1,7 @@
 package com.here.naksha.lib.plv8
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
-import com.here.naksha.lib.jbon.IMap
-import com.here.naksha.lib.jbon.JbSession
-import com.here.naksha.lib.jbon.JvmMap
+import com.here.naksha.lib.jbon.*
 import java.sql.ResultSet
 import kotlin.collections.HashMap
 
@@ -61,8 +59,8 @@ open class Plv8ResultSet(private var rs: ResultSet?) {
                 "tsrange", "tstzrange", "daterange" -> row[name] = rs.getString(i)
 
                 "smallint", "int2" -> row[name] = rs.getShort(i).toInt()
-                "integer", "int4" -> row[name] = rs.getInt(i)
-                "bigint", "int8" -> row[name] = rs.getLong(i)
+                "integer", "int4", "xid4", "oid" -> row[name] = rs.getInt(i)
+                "bigint", "int8", "xid8" -> row[name] = JvmBigInt64(rs.getLong(i))
                 "real" -> row[name] = rs.getFloat(i)
                 "double precision" -> row[name] = rs.getFloat(i)
                 "numeric" -> row[name] = rs.getBigDecimal(i)
@@ -70,11 +68,10 @@ open class Plv8ResultSet(private var rs: ResultSet?) {
                 "timestamp" -> row[name] = rs.getTimestamp(i)
                 "date" -> row[name] = rs.getDate(i)
                 "bytea" -> row[name] = rs.getBytes(i)
-                "jsonb" -> row[name] = JbSession.env!!.parse(rs.getString(i))
+                "jsonb" -> row[name] = Jb.env.parse(rs.getString(i))
                 "array" -> row[name] = rs.getArray(i)
                 else -> row[name] = rs.getObject(i)
             }
-            i++
         }
         return row
     }
@@ -83,7 +80,7 @@ open class Plv8ResultSet(private var rs: ResultSet?) {
      * Convert the while result-set into an array and then close the result-set.
      * @return The result set as array of rows (native maps).
      */
-    fun toArray(): Array<HashMap<String, Any?>> {
+    fun toArray(): Array<JvmMap> {
         val rs = this.rs
         check(rs != null)
         val array = ArrayList<JvmMap>(30)

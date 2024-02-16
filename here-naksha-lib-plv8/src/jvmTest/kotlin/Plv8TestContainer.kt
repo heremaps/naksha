@@ -1,11 +1,10 @@
+import com.here.naksha.lib.jbon.Jb
 import com.here.naksha.lib.jbon.JbSession
-import com.here.naksha.lib.jbon.JvmEnv
 import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.Plv8Env
 import org.junit.jupiter.api.*
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils
 import org.testcontainers.utility.DockerImageName
 import java.sql.DriverManager
 
@@ -14,7 +13,7 @@ import java.sql.DriverManager
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 open class Plv8TestContainer {
-    val env = JbSession.env
+    val env = Jb.env
 
     companion object {
         private val logger = LoggerFactory.getLogger(Plv8TestContainer::class.java)
@@ -47,19 +46,19 @@ open class Plv8TestContainer {
                         postgreSQLContainer.password)
             }
 
-            val env = Plv8Env()
-            JbSession.env = env
+            Plv8Env.initialize()
+            val env = Plv8Env.get()
             val conn = DriverManager.getConnection(url)
-            env.install(conn, 0)
+            // TODO: Parse the url to extract the schema!
+            env.install(conn, 0, "test_schema", "test_storage")
             env.startSession(
                     conn,
-                    "public",
-                    "test",
                     "plv8_test",
                     env.randomString(),
                     "plv8_test_app",
                     "plv8_test_user"
             )
+            conn.commit()
         }
 
         @JvmStatic
