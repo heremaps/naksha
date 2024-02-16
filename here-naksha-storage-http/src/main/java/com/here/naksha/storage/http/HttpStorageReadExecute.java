@@ -18,17 +18,21 @@
  */
 package com.here.naksha.storage.http;
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+
 import com.here.naksha.lib.core.exceptions.UncheckedException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +66,7 @@ class HttpStorageReadExecute {
       };
     } catch (Exception e) {
       log.warn("", e);
-      return new ErrorResult(XyzError.EXCEPTION, e.getMessage());
+      return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
     }
   }
 
@@ -71,6 +75,10 @@ class HttpStorageReadExecute {
 
     HttpResponse<String> response =
         requestSender.sendRequest(String.format("/%s/%s/features/%s", environment, store, featureId));
+
+    XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
+    if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
+
     XyzFeature resultFeature = JsonSerializable.deserialize(response.body(), XyzFeature.class);
     return createHttpResultFromFeatureList(List.of(resultFeature));
   }
@@ -98,7 +106,7 @@ class HttpStorageReadExecute {
     }
   }
 
-  public static HttpSuccessResult<XyzFeature, XyzFeatureCodec> createHttpResultFromFeatureList(
+  private static HttpSuccessResult<XyzFeature, XyzFeatureCodec> createHttpResultFromFeatureList(
       final @NotNull List<XyzFeature> features) {
     // Create ForwardCursor with input features
     final List<XyzFeatureCodec> codecs = new ArrayList<>();
@@ -112,8 +120,24 @@ class HttpStorageReadExecute {
     final ListBasedForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
         new ListBasedForwardCursor<>(codecFactory, codecs);
 
-    // Create ContextResult with cursor, context and violations
-    final HttpSuccessResult<XyzFeature, XyzFeatureCodec> ctxResult = new HttpSuccessResult(cursor);
-    return ctxResult;
+    return new HttpSuccessResult<>(cursor);
+  }
+
+  private @Nullable XyzError mapHttpStatusToErrorOrNull(final int httpStatus) {
+    if (httpStatus < 400) return null;
+    return switch (httpStatus) {
+      case HttpURLConnection.HTTP_INTERNAL_ERROR -> XyzError.EXCEPTION;
+      case HttpURLConnection.HTTP_NOT_IMPLEMENTED -> XyzError.NOT_IMPLEMENTED;
+      case HttpURLConnection.HTTP_BAD_REQUEST -> XyzError.ILLEGAL_ARGUMENT;
+      case HttpURLConnection.HTTP_ENTITY_TOO_LARGE -> XyzError.PAYLOAD_TOO_LARGE;
+      case HttpURLConnection.HTTP_BAD_GATEWAY -> XyzError.BAD_GATEWAY;
+      case HttpURLConnection.HTTP_CONFLICT -> XyzError.CONFLICT;
+      case HttpURLConnection.HTTP_UNAUTHORIZED -> XyzError.UNAUTHORIZED;
+      case HttpURLConnection.HTTP_FORBIDDEN -> XyzError.FORBIDDEN;
+      case 429 -> XyzError.TOO_MANY_REQUESTS;
+      case HttpURLConnection.HTTP_GATEWAY_TIMEOUT -> XyzError.TIMEOUT;
+      case HttpURLConnection.HTTP_NOT_FOUND -> XyzError.NOT_FOUND;
+      default -> throw unchecked(new IllegalAccessException());
+    };
   }
 }
