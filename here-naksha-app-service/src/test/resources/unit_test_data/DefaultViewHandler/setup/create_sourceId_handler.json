@@ -1,5 +1,5 @@
 {
-  "id": "source_id_test_handler",
+  "id": "source_id_handler_for_view_handler",
   "type": "EventHandler",
   "title": "Storage Handler for UniMap Moderation Dev Storage",
   "description": "Default Naksha Source Id Handler for operations on UniMap Moderation Dev Storage",
