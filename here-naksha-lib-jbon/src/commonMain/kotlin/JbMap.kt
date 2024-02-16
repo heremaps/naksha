@@ -129,8 +129,6 @@ class JbMap : JbEntryArray<JbMap>() {
      * @return This binary as [IMap].
      */
     fun toIMap() : IMap {
-        // newMap()
-        // arrayOf() you can ask for length JbArray <-> Array<Any?>(length)
-        TODO("Implement me!")
+        return JbValuesReader.readMap(this)
     }
 }

@@ -45,7 +45,6 @@ kotlin {
         jvmMain {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
-                implementation(project(":here-naksha-lib-core"))
                 api("org.lz4:lz4-java:1.8.0")
             }
             resources.srcDirs += "$buildDir/dist/js/productionExecutable/"
