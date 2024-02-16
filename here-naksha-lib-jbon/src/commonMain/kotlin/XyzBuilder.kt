@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
+package com.here.naksha.lib.jbon
 
-import com.here.naksha.lib.jbon.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -111,16 +111,16 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
             createdAt: BigInt64,
             updatedAt: BigInt64,
             txn: BigInt64,
-            action: Int,
+            action: Int?,
             version: Int,
             authorTs: BigInt64,
             extend: BigInt64,
             puuid: String?,
-            uuid: String,
-            appId: String,
-            author: String,
+            uuid: String?,
+            appId: String?,
+            author: String?,
             crid: String?,
-            grid: String
+            grid: String?
     ): ByteArray {
         reset()
         val view = this.view
@@ -129,16 +129,16 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
         writeTimestamp(createdAt)
         if (createdAt == updatedAt) writeNull() else writeTimestamp(updatedAt)
         writeInt64(txn)
-        writeInt32(action)
+        if (action == null) writeNull() else writeInt32(action)
         writeInt32(version)
         writeTimestamp(authorTs)
         writeInt64(extend)
         if (puuid == null) writeNull() else writeString(puuid)
-        writeString(uuid)
-        writeString(appId)
-        writeString(author)
+        if (uuid == null) writeNull() else writeString(uuid)
+        if (appId == null) writeNull() else writeString(appId)
+        if (author == null) writeNull() else writeString(author)
         if (crid == null) writeNull() else writeString(crid)
-        writeString(grid)
+        if (grid == null) writeNull() else writeString(grid)
         return view.getByteArray().copyOf(end)
     }
 

@@ -22,11 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.here.naksha.lib.core.SessionTest;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import org.junit.jupiter.api.Test;
 
-public class ResultTest {
+public class ResultTest extends SessionTest {
 
   @Test
   void shouldBeAbleToGetForwardCursorBack() throws NoCursor {

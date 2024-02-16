@@ -89,9 +89,9 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     op = otherCodec.op;
     id = otherCodec.id;
     uuid = otherCodec.uuid;
-    featureType = otherCodec.featureType;
-    propertiesType = otherCodec.propertiesType;
-    json = otherCodec.json;
+    xyzNsJbon = otherCodec.xyzNsJbon;
+    tagsJbon = otherCodec.tagsJbon;
+    featureJbon = otherCodec.featureJbon;
     wkb = otherCodec.wkb;
     geometry = otherCodec.geometry;
     return self();
@@ -142,10 +142,11 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     feature = null;
     id = null;
     uuid = null;
-    featureType = null;
-    propertiesType = null;
     wkb = null;
     geometry = null;
+    featureJbon = null;
+    xyzNsJbon = null;
+    tagsJbon = null;
     return self();
   }
 
@@ -159,8 +160,9 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     err = null;
     id = null;
     uuid = null;
-    featureType = null;
-    propertiesType = null;
+    featureJbon = null;
+    xyzNsJbon = null;
+    tagsJbon = null;
     wkb = null;
     geometry = null;
     return self();
@@ -208,18 +210,6 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    */
   protected @Nullable String uuid;
   /**
-   * The {@code type} of the feature.
-   */
-  protected @Nullable String featureType;
-  /**
-   * The {@code type} of the feature properties.
-   */
-  protected @Nullable String propertiesType;
-  /**
-   * The JSON of the feature.
-   */
-  protected @Nullable String json;
-  /**
    * The <link href="https://libgeos.org/specifications/wkb/">Extended WKB</b> encoded geometry.
    */
   protected byte @Nullable [] wkb;
@@ -231,6 +221,18 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    * The JSON of the error.
    */
   protected @Nullable String errorJson;
+  /**
+   * The JBON of the feature.
+   */
+  protected byte[] featureJbon;
+  /**
+   * XyzOp jbon.
+   */
+  protected byte[] xyzNsJbon;
+  /**
+   * tags
+   */
+  protected byte[] tagsJbon;
 
   /**
    * Sets the given geometry and clears the WKB.
@@ -321,38 +323,6 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   }
 
   /**
-   * Returns the JSON of the feature.
-   *
-   * @return The JSON of the feature.
-   */
-  public @Nullable String getJson() {
-    return json;
-  }
-
-  /**
-   * Sets the JSON of the feature.
-   *
-   * @param json The JSON to set.
-   * @return The previously set feature JSON.
-   */
-  public @Nullable String setJson(@Nullable CharSequence json) {
-    final String old = this.json;
-    this.json = string(json);
-    return old;
-  }
-
-  /**
-   * Sets the JSON of the feature.
-   *
-   * @param json The JSON to set.
-   * @return this.
-   */
-  public @NotNull SELF withJson(@Nullable String json) {
-    setJson(json);
-    return self();
-  }
-
-  /**
    * Sets the JSON of the error.
    *
    * @param json The JSON to set.
@@ -428,70 +398,6 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   }
 
   /**
-   * Returns the feature type identifier, normally stored in the root of the feature ({@code "type"}).
-   *
-   * @return the feature type identifier.
-   */
-  public @Nullable String getFeatureType() {
-    return featureType;
-  }
-
-  /**
-   * Sets the feature type identifier, normally stored in the root of the feature ({@code "type"}).
-   *
-   * @param typeId The feature type identifier, normally stored in the root of the feature ({@code "type"}).
-   * @return the previously set feature type identifier.
-   */
-  public @Nullable String setFeatureType(@Nullable CharSequence typeId) {
-    final String old = this.featureType;
-    this.featureType = string(typeId);
-    return old;
-  }
-
-  /**
-   * Sets the feature type identifier, normally stored in the root of the feature ({@code "type"}).
-   *
-   * @param type The feature type identifier, normally stored in the root of the feature ({@code "type"}).
-   * @return this.
-   */
-  public final @NotNull SELF withFeatureType(@Nullable CharSequence type) {
-    setFeatureType(type);
-    return self();
-  }
-
-  /**
-   * Returns the properties type identifier, normally stored in the properties of the feature ({@code "properties.type"}).
-   *
-   * @return the properties type identifier.
-   */
-  public @Nullable String getPropertiesType() {
-    return propertiesType;
-  }
-
-  /**
-   * Sets the properties type identifier, normally stored in the properties of the feature ({@code "properties.type"}).
-   *
-   * @param type The properties type identifier, normally stored in the properties of the feature ({@code "properties.type"}).
-   * @return the previously set properties type identifier.
-   */
-  public @Nullable String setPropertiesType(@Nullable CharSequence type) {
-    final String old = this.propertiesType;
-    this.propertiesType = string(type);
-    return old;
-  }
-
-  /**
-   * Sets the properties type identifier, normally stored in the properties of the feature ({@code "properties.type"}).
-   *
-   * @param type The properties type identifier, normally stored in the properties of the feature ({@code "properties.type"}).
-   * @return this.
-   */
-  public final @NotNull SELF withPropertiesType(@Nullable CharSequence type) {
-    setPropertiesType(type);
-    return self();
-  }
-
-  /**
    * Tests if the codec has an error from the last encoding or decoding.
    *
    * @return {@code true} if the codec has an error; {@code false} otherwise.
@@ -516,6 +422,55 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    */
   public void setErr(@Nullable CodecError err) {
     this.err = err;
+  }
+
+  /**
+   * Returns feature as jbon byte array.
+   *
+   * @return
+   */
+  public byte[] getFeatureJbon() {
+    return featureJbon;
+  }
+
+  /**
+   * Sets feature as jbon byte array.
+   * @param featureJbon
+   */
+  public void setFeatureJbon(byte[] featureJbon) {
+    this.featureJbon = featureJbon;
+  }
+
+  /**
+   * Sets tags as jbon byte array.
+   * @param tagsJbon
+   */
+  public void setTagsJbon(byte[] tagsJbon) {
+    this.tagsJbon = tagsJbon;
+  }
+
+  /**
+   * Returns tags as jbon byte array.
+   * @return
+   */
+  public byte[] getTagsJbon() {
+    return tagsJbon;
+  }
+
+  /**
+   * Sets xyz as jbon byte array.
+   * @param xyzNsJbon
+   */
+  public void setXyzNsJbon(byte[] xyzNsJbon) {
+    this.xyzNsJbon = xyzNsJbon;
+  }
+
+  /**
+   * Returns tags as jbon byte array.
+   * @return
+   */
+  public byte[] getXyzNsJbon() {
+    return xyzNsJbon;
   }
 
   @Override

@@ -18,15 +18,30 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.jbon.BigInt64Kt.BigInt64;
+import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
+import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_CREATE;
+import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_DELETE;
+import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_UPDATE;
+import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
+import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
-import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzTags;
+import com.here.naksha.lib.jbon.IMap;
+import com.here.naksha.lib.jbon.JbBuilder;
+import com.here.naksha.lib.jbon.JbDict;
+import com.here.naksha.lib.jbon.JbFeature;
+import com.here.naksha.lib.jbon.JbMap;
+import com.here.naksha.lib.jbon.JvmEnv;
+import com.here.naksha.lib.jbon.JvmMap;
+import com.here.naksha.lib.jbon.XyzBuilder;
+import com.here.naksha.lib.jbon.XyzNs;
+import java.util.List;
+import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,62 +67,137 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
       throw new NullPointerException();
     }
     XyzGeometry xyzGeometry = feature.removeGeometry();
-    try (final Json jp = Json.get()) {
-      id = feature.getId();
-      final XyzProperties properties = feature.getProperties();
-      final XyzNamespace xyz = properties.getXyzNamespace();
-      uuid = xyz.getUuid();
-      if (feature.get("type") instanceof String) {
-        featureType = (String) feature.get("type");
-      } else if (feature.get("momType") instanceof String) {
-        featureType = (String) feature.get("momType");
-      } else {
-        // TODO: Let's tell Jackson, that we want to keep the "type" property to prevent this!
-        featureType = null;
-      }
-      if (feature.getProperties().get("type") instanceof String) {
-        propertiesType = (String) feature.getProperties().get("type");
-      } else if (feature.getProperties().get("featureType") instanceof String) {
-        propertiesType = (String) feature.getProperties().get("featureType");
-      } else if (feature.get("momType") instanceof String) {
-        propertiesType = (String) feature.get("momType");
-      } else {
-        propertiesType = null;
-      }
-      if (xyzGeometry != null) {
-        geometry = xyzGeometry.getJTSGeometry();
-      } else {
-        geometry = null;
-      }
-      wkb = null;
-      json = jp.writer().writeValueAsString(feature);
-    } catch (JsonProcessingException e) {
-      throw unchecked(e);
-    } finally {
-      feature.setGeometry(xyzGeometry);
-      isDecoded = true;
+
+    id = feature.getId();
+    final XyzNamespace xyz = feature.getProperties().getXyzNamespace();
+    uuid = xyz.getUuid();
+
+    if (xyzGeometry != null) {
+      geometry = xyzGeometry.getJTSGeometry();
+    } else {
+      geometry = null;
     }
+    wkb = null;
+
+    IMap featureAsMap = JvmEnv.get().convert(feature, JvmMap.class);
+    // TODO global dict
+    // TODO what about features that need more than 64KB of buffer? newDataView should handle it?
+    JbDict globalDict = null;
+    JbBuilder builder = new JbBuilder(newDataView(65536), globalDict);
+    featureJbon = builder.buildFeatureFromMap(featureAsMap);
+
+    feature.setGeometry(xyzGeometry);
+
+    decodeXyzNamespace(xyz, globalDict);
+    decodeTags(xyz.getTags(), globalDict);
+
+    isDecoded = true;
     return self();
   }
 
-  @Nullable
+  public void decodeXyzNamespace(@NotNull XyzNamespace xyz, @Nullable JbDict globalDict) {
+    XyzBuilder xyzBuilder = new XyzBuilder(newDataView(1024), globalDict);
+    xyzNsJbon = xyzBuilder.buildXyzNs(
+        BigInt64(xyz.getCreatedAt()),
+        BigInt64(xyz.getUpdatedAt()),
+        BigInt64(xyz.getTxn()),
+        mapAction(xyz.getAction()),
+        Math.toIntExact(xyz.getVersion()),
+        BigInt64(xyz.getAuthorTime()),
+        BigInt64(xyz.getExtend()),
+        xyz.getPuuid(),
+        xyz.getUuid(),
+        xyz.getAppId(),
+        xyz.getAuthor(),
+        xyz.getCrid(),
+        xyz.getGrid());
+  }
+
+  private void decodeTags(@Nullable List<@NotNull String> tags, @Nullable JbDict globalDict) {
+    XyzBuilder xyzBuilder = new XyzBuilder(newDataView(512), globalDict);
+    tagsJbon = null;
+    if (tags != null && !tags.isEmpty()) {
+      xyzBuilder.startTags();
+      for (String tag : tags) {
+        xyzBuilder.writeTag(tag);
+      }
+      tagsJbon = xyzBuilder.buildTags();
+    }
+  }
+
+  private Integer mapAction(EXyzAction action) {
+    if (action == EXyzAction.CREATE) {
+      return ACTION_CREATE;
+    } else if (action == EXyzAction.UPDATE) {
+      return ACTION_UPDATE;
+    } else if (action == EXyzAction.DELETE) {
+      return ACTION_DELETE;
+    } else if (action == null || action.isNull()) {
+      return null;
+    }
+    throw new UnsupportedOperationException(String.format("Action type %s is not supported", action));
+  }
+
   @Override
-  public final SELF encodeFeature(boolean force) {
+  public final @NotNull SELF encodeFeature(boolean force) {
     if (!force && isEncoded) {
       return self();
     }
-    if (json == null) {
+    if (featureJbon == null) {
       return self();
     }
     feature = null;
-    try (final Json jp = Json.get()) {
-      feature = jp.reader().forType(featureClass).readValue(json);
-      feature.setGeometry(JTSHelper.fromGeometry(getGeometry()));
-    } catch (JsonProcessingException e) {
-      throw unchecked(e);
-    } finally {
-      isEncoded = true;
+
+    feature = getFeatureFromJbon();
+    if (id != null) {
+      feature.setId(id);
     }
+    feature.setGeometry(JTSHelper.fromGeometry(getGeometry()));
+    if (xyzNsJbon != null) {
+      feature.getProperties().setXyzNamespace(getXyzNamespaceFromFromJbon());
+    }
+    isEncoded = true;
     return self();
+  }
+
+  @SuppressWarnings("unchecked")
+  private FEATURE getFeatureFromJbon() {
+    JbFeature jbFeature = new JbFeature().mapBytes(featureJbon, 0, featureJbon.length);
+    Map<String, Object> featureAsMap = (Map<String, Object>)
+        new JbMap().mapReader(jbFeature.getReader()).toIMap();
+    return JvmEnv.get().convert(featureAsMap, featureClass);
+  }
+
+  private XyzNamespace getXyzNamespaceFromFromJbon() {
+    XyzNs xyzNs = new XyzNs();
+    xyzNs.mapBytes(xyzNsJbon, 0, xyzNsJbon.length);
+
+    XyzNamespace retNs = new XyzNamespace();
+    retNs.setUuid(xyzNs.uuid());
+    retNs.setAction(xyzNs.actionAsString());
+    retNs.setAuthor(xyzNs.author());
+    retNs.setPuuid(xyzNs.puuid());
+    retNs.setTxn(toLong(xyzNs.txn().getValue()));
+    retNs.setCreatedAt(toLong(xyzNs.createdAt()));
+    retNs.setUpdatedAt(toLong(xyzNs.updatedAt()));
+    retNs.setExtend(toLong(xyzNs.extend()));
+    retNs.setAppId(xyzNs.appId());
+    retNs.setAuthorTime(toLong(xyzNs.authorTs()));
+    retNs.setRealTimeUpdatedAt(toLong(xyzNs.updatedAt()));
+    retNs.setVersion(xyzNs.version());
+    retNs.setTags(getXyzTagsFromJbon(), false);
+
+    return retNs;
+  }
+
+  private XyzTags getXyzTagsFromJbon() {
+    if (tagsJbon == null) {
+      return null;
+    }
+    com.here.naksha.lib.jbon.XyzTags xyzTags =
+        new com.here.naksha.lib.jbon.XyzTags().mapBytes(tagsJbon, 0, tagsJbon.length);
+    XyzTags tags = new XyzTags();
+    tags.addAll(List.of(xyzTags.tagsArray()));
+    return tags;
   }
 }

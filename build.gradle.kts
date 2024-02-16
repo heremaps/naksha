@@ -303,6 +303,7 @@ project(":here-naksha-lib-core") {
         implementation(commons_lang3)
         implementation(vividsolutions_jts_core)
         implementation(google_flatbuffers)
+        implementation(project(":here-naksha-lib-jbon"))
         testImplementation(mockito)
         testImplementation(json_assert)
     }

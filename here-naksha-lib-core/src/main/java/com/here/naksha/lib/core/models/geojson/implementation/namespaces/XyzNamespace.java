@@ -835,4 +835,14 @@ public class XyzNamespace extends JsonObject {
     setExtend(extend);
     return this;
   }
+
+  @AvailableSince(NakshaVersion.v2_0_13)
+  public String getGrid() {
+    return grid;
+  }
+
+  @AvailableSince(NakshaVersion.v2_0_13)
+  public String getCrid() {
+    return crid;
+  }
 }

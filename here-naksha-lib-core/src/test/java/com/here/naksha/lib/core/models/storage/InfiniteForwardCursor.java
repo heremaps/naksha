@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
+import com.here.naksha.lib.core.util.json.JsonUtil;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,6 +26,7 @@ public class InfiniteForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, 
     extends ForwardCursor<FEATURE, CODEC> {
 
   private String json = "{\"type\":\"Feature\"}";
+  private byte[] jbon = JsonUtil.jsonToJbonByte(json);
   private int lastId = 0;
 
   protected InfiniteForwardCursor(@NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
@@ -41,10 +43,8 @@ public class InfiniteForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, 
     row.codec.setOp("CREATED");
     row.codec.setId("id:" + lastId);
     row.codec.setUuid(UUID.randomUUID().toString());
-    row.codec.setFeatureType("Feature");
-    row.codec.setPropertiesType(null);
-    row.codec.setJson(json);
     row.codec.setWkb(null);
+    row.codec.setFeatureJbon(JsonUtil.jsonToJbonByte(json));
     row.codec.setRawError(null);
     row.codec.setErr(null);
     row.valid = true;

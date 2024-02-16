@@ -438,7 +438,7 @@ final class PostgresStorage extends ClosableRootResource {
 
   private void initStoragePlv8(PsqlConnection conn) throws SQLException {
     final JvmPlv8Env plv8Env = new JvmPlv8Env();
-    plv8Env.install(conn, latest.toLong());
+    plv8Env.install(conn, latest.toLong(), schema, storageId);
     conn.commit();
   }
 

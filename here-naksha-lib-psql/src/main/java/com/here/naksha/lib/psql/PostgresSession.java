@@ -534,7 +534,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         final String[] op_arr = new String[SIZE];
         final String[] id_arr = new String[SIZE];
         final String[] uuid_arr = new String[SIZE];
-        final String[] json_arr = new String[SIZE];
+        final byte[][] feature_arr = new byte[SIZE][];
         final byte[][] geo_arr = new byte[SIZE][];
         final boolean min_result = writeFeatures.minResults;
         final boolean err_only = false;
@@ -545,7 +545,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           op_arr[i] = codec.getOp();
           id_arr[i] = codec.getId();
           uuid_arr[i] = codec.getUuid();
-          json_arr[i] = codec.getJson();
+          feature_arr[i] = codec.getFeatureJbon();
           geo_arr[i] = codec.getWkb();
         }
         stmt.setString(1, collection_id);
@@ -553,7 +553,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         stmt.setArray(3, psqlConnection.createArrayOf("text", op_arr));
         stmt.setArray(4, psqlConnection.createArrayOf("text", id_arr));
         stmt.setArray(5, psqlConnection.createArrayOf("text", uuid_arr));
-        stmt.setArray(6, psqlConnection.createArrayOf("jsonb", json_arr));
+        stmt.setArray(6, psqlConnection.createArrayOf("jsonb", feature_arr));
         stmt.setArray(7, psqlConnection.createArrayOf("bytea", geo_arr));
         stmt.setBoolean(8, min_result);
         stmt.setBoolean(9, err_only);

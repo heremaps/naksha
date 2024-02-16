@@ -1,7 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
+package com.here.naksha.lib.jbon
 
-import com.here.naksha.lib.jbon.JbObjectMapper
-import com.here.naksha.lib.jbon.TYPE_XYZ
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

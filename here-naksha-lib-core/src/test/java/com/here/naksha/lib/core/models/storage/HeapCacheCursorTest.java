@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.here.naksha.lib.core.SessionTest;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import java.util.HashMap;
@@ -34,7 +35,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 
-public class HeapCacheCursorTest {
+public class HeapCacheCursorTest extends SessionTest {
 
   @Test
   void testAlreadyUsedFrowardCursorConversion() throws NoCursor {
