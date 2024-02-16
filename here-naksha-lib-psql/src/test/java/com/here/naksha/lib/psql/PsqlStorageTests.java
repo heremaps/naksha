@@ -70,6 +70,7 @@ import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.SeekableCursor;
@@ -79,11 +80,16 @@ import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import com.here.naksha.lib.core.models.storage.transformation.BufferTransformation;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
+import org.locationtech.jts.io.ParseException;
+import org.locationtech.jts.io.WKTReader;
 import org.locationtech.jts.operation.buffer.BufferOp;
 import com.spatial4j.core.context.jts.JtsSpatialContext;
 import com.spatial4j.core.distance.DistanceUtils;
@@ -260,6 +266,24 @@ public class PsqlStorageTests extends PsqlTests {
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
              session.execute(readFeatures).getXyzFeatureCursor()) {
       assertTrue(cursor.hasNext());
+    }
+  }
+
+  @Test
+  @Order(52)
+  @EnabledIf("runTest")
+  void readWithBufferFromWKT() throws NoCursor, ParseException {
+    assertNotNull(storage);
+    assertNotNull(session);
+    Geometry geom = new WKTReader(new GeometryFactory(new PrecisionModel(), 4326)).read("POINT(44.0 45.0)");
+
+    ReadFeatures readRequest = (new ReadFeatures(collectionId())
+        .withReturnDeleted(true)
+        .withSpatialOp(SOp.intersects(geom, BufferTransformation.bufferInMeters(10))));
+
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+        session.execute(readRequest).getXyzFeatureCursor()) {
+      assertFalse(cursor.hasNext());
     }
   }
 
