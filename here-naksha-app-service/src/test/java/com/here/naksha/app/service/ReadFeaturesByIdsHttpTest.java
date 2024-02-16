@@ -18,13 +18,13 @@
  */
 package com.here.naksha.app.service;
 
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.assertions.ResponseAssertions;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.storage.http.HttpStorageReadSession;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -33,30 +33,35 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
+/**
+ * Tests for GET /hub/spaces/{spaceId}/features/{featureId} against {@link com.here.naksha.storage.http.HttpStorage}
+ */
+@WireMockTest(httpPort = 8089)
 class ReadFeaturesByIdsHttpTest extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
 
   private static final String SPACE_ID = "read_features_by_ids_http_test_space";
 
+
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
     setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByIdsHttp/setup");
   }
 
-  @Disabled("Need http mock or local server")
   @Test
   void tc01_testReadFeatureById() throws Exception {
     final String featureId = "1";
     final String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByIdsHttp/TC01_ExistingId/feature_response_part.json");
     final String streamId = UUID.randomUUID().toString();
+    stubFor(get("/my_env/my_storage/features/1").willReturn(okJson(expectedBodyPart)));
 
     // When: Get Features request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/" + featureId, streamId);
@@ -73,16 +78,14 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
 //                feature.getProperties().getXyzNamespace().getUuid(), "UUID found missing in response for feature");
   }
 
-  @Disabled("Need http mock or local server")
+
   @Test
   void tc02_testReadFeatureForMissingId() throws Exception {
-    // Test API : GET /hub/spaces/{spaceId}/features/{featureId}
-    // Validate request gets failed when attempted to load feature for missing Id
-    // Given: Feature By Id request, against existing space, for missing feature Id
     final String featureId = "missing-id";
     final String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByIdsHttp/TC02_MissingId/feature_response_part.json");
     final String streamId = UUID.randomUUID().toString();
+    stubFor(get("/my_env/my_storage/features/missing-id").willReturn(notFound()));
 
     // When: Get Features request is submitted to NakshaHub Space Storage instance
     final HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/" + featureId, streamId);
@@ -96,17 +99,16 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
 
   /**
    * Temporary test for debugging. Will be removed
+   * Test API : GET /hub/spaces/{spaceId}/bbox
    */
-  @Disabled("Need http mock or local server")
   @Test
   void tc099_testTmpTest() throws Exception {
-    // Test API : GET /hub/spaces/{spaceId}/features
-    // Validate empty collection getting returned for missing ids
-    // Given: Features By Ids request (against configured space)
     String bboxQuery = "hub/spaces/" + SPACE_ID + "/bbox?north=1&east=2&south=3&west=4";
     String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByIdsHttp/TC99_TmpTest/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
+    stubFor(any(urlMatching(".*")).willReturn(ok()));
+
 
     // When: Create Features request is submitted to NakshaHub Space Storage instance
     HttpResponse<String> response = getNakshaClient().get(bboxQuery, streamId);
@@ -124,5 +126,4 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
-
 }

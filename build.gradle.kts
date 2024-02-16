@@ -104,6 +104,7 @@ val junit_jupiter = "org.junit.jupiter:junit-jupiter:5.9.2"
 val junit_params = "org.junit.jupiter:junit-jupiter-params:5.9.2"
 val mockito = "org.mockito:mockito-core:5.8.0"
 val test_containers = "org.testcontainers:testcontainers:1.19.3"
+val wiremock =  "org.wiremock:wiremock:3.3.1"
 
 val flipkart_zjsonpatch = "com.flipkart.zjsonpatch:zjsonpatch:0.4.13"
 val json_assert = "org.skyscreamer:jsonassert:1.5.1"
@@ -355,7 +356,7 @@ project(":here-naksha-storage-http") {
 
     }
     dependencies {
-        api(project(":here-naksha-lib-core"))
+        implementation(project(":here-naksha-lib-core"))
 
         implementation(commons_lang3)
     }
@@ -529,6 +530,7 @@ project(":here-naksha-app-service") {
         testImplementation(json_assert)
         testImplementation(resillience4j_retry)
         testImplementation(test_containers)
+        testImplementation(wiremock)
     }
     setOverallCoverage(0.25) // only increasing allowed!
 }
