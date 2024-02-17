@@ -23,21 +23,18 @@ import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.assertions.ResponseAssertions;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.storage.http.HttpStorageReadSession;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
-import java.util.List;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for GET /hub/spaces/{spaceId}/features/{featureId} against {@link com.here.naksha.storage.http.HttpStorage}
@@ -136,36 +133,6 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
     HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features" + idsQueryParam, streamId);
 
     // Then: Perform assertions
-    ResponseAssertions.assertThat(response)
-            .hasStatus(200)
-            .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
-  }
-
-  /**
-   * Temporary test for debugging. Will be removed
-   * Test API : GET /hub/spaces/{spaceId}/bbox
-   */ //TODO adamczyk: rm
-  @Test
-  void tc099_testTmpTest() throws Exception {
-    String bboxQuery = "hub/spaces/" + SPACE_ID + "/bbox?north=1&east=2&south=3&west=4";
-    String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByIdsHttp/TC99_TmpTest/feature_response_part.json");
-    String streamId = UUID.randomUUID().toString();
-    stubFor(any(urlMatching(".*")).willReturn(ok()));
-
-
-    // When: Create Features request is submitted to NakshaHub Space Storage instance
-    HttpResponse<String> response = getNakshaClient().get(bboxQuery, streamId);
-
-    // Then: Perform assertions
-    assertTrue(
-            HttpStorageReadSession.testLog.containsAll(
-                    List.of("GET_BY_BBOX", "north = 1.0", "east = 2.0")
-            ),
-            String.join(", ", HttpStorageReadSession.testLog)
-    );
-
     ResponseAssertions.assertThat(response)
             .hasStatus(200)
             .hasStreamIdHeader(streamId)

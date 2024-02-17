@@ -21,7 +21,6 @@ package com.here.naksha.storage.http;
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import com.here.naksha.lib.core.exceptions.UncheckedException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
@@ -31,7 +30,9 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -87,10 +88,10 @@ class HttpStorageReadExecute {
 
   private Result executeFeaturesById() throws IOException, InterruptedException {
     List<String> featureIds = readRequest.getQueryParameter(FEATURE_IDS);
-    String featureIdsAsQueryParams = FEATURE_IDS + "=" + String.join("&" + FEATURE_IDS + "=", featureIds);
+    String queryParamsString = FEATURE_IDS + "=" + String.join("&" + FEATURE_IDS + "=", featureIds);
 
-    HttpResponse<String> response = requestSender.sendRequest(
-        String.format("/%s/%s/features?%s", environment, store, featureIdsAsQueryParams));
+    HttpResponse<String> response =
+        requestSender.sendRequest(String.format("/%s/%s/features?%s", environment, store, queryParamsString));
 
     XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
     if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
@@ -99,27 +100,26 @@ class HttpStorageReadExecute {
     return createHttpResultFromFeatureList(resultFeatures.getFeatures());
   }
 
-  private Result executeFeatureByBBox() {
-    // To be replaced
-    return testExecute(readRequest);
+  private Result executeFeatureByBBox() throws IOException, InterruptedException {
+    String queryParamsString = keysToKeyValuesStrings(WEST, NORTH, EAST, SOUTH, CLIP_GEO, LIMIT);
+
+    HttpResponse<String> response =
+        requestSender.sendRequest(String.format("/%s/%s/bbox?%s", environment, store, queryParamsString));
+
+    XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
+    if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
+
+    XyzFeatureCollection resultFeatures = JsonSerializable.deserialize(response.body(), XyzFeatureCollection.class);
+    return createHttpResultFromFeatureList(resultFeatures.getFeatures());
   }
 
-  /* To be deleted */
-  private Result testExecute(ReadFeaturesProxyWrapper proxyRequest) {
-    try {
-      String getBy = proxyRequest.getReadRequestType().toString();
-
-      HttpStorageReadSession.testLog.add(getBy);
-      HttpStorageReadSession.testLog.add("north = " + proxyRequest.<Double>getQueryParameter(NORTH));
-      HttpStorageReadSession.testLog.add("east = " + proxyRequest.<Double>getQueryParameter(EAST));
-
-      HttpResponse<String> httpResponse = requestSender.sendRequest("");
-
-      log.info(httpResponse.body());
-      return new SuccessResult();
-    } catch (Exception e) {
-      throw new UncheckedException(e);
-    }
+  /**
+   * Only for keys with string values
+   */
+  private String keysToKeyValuesStrings(String... key) {
+    return Arrays.stream(key)
+        .map(k -> k + "=" + readRequest.getQueryParameter(k))
+        .collect(Collectors.joining("&"));
   }
 
   private static HttpSuccessResult<XyzFeature, XyzFeatureCodec> createHttpResultFromFeatureList(
