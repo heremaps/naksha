@@ -54,7 +54,6 @@ class JvmJsonModule : SimpleModule() {
                 }
             }
         }
-
     }
 
     init {

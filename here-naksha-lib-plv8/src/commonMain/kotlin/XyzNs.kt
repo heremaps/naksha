@@ -50,6 +50,12 @@ class XyzNs : XyzSpecial<XyzNs>() {
     fun updatedAt(): BigInt64 = updatedAt
     fun txn(): NakshaTxn = txn
     fun action(): Int = action
+    fun actionAsString() : String? = when(action) {
+        ACTION_CREATE -> "CREATE"
+        ACTION_UPDATE -> "UPDATE"
+        ACTION_DELETE -> "DELETE"
+        else -> null
+    }
     fun version(): Int = version
     fun authorTs(): BigInt64 = authorTs
     fun extend(): BigInt64 = extend
@@ -128,6 +134,8 @@ class XyzNs : XyzSpecial<XyzNs>() {
         }
         return value
     }
+
+    fun mrid() : String = crid() ?: mrid()
 
     /**
      * Convert this XYZ namespace into a map. Beware that the transaction-number (txn) will be exposed as string.

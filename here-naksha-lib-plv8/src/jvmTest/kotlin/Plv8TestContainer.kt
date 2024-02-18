@@ -1,7 +1,5 @@
 import com.here.naksha.lib.jbon.Jb
-import com.here.naksha.lib.jbon.JbSession
-import com.here.naksha.lib.plv8.NakshaSession
-import com.here.naksha.lib.plv8.Plv8Env
+import com.here.naksha.lib.plv8.JvmPlv8Env
 import org.junit.jupiter.api.*
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.PostgreSQLContainer
@@ -46,8 +44,8 @@ open class Plv8TestContainer {
                         postgreSQLContainer.password)
             }
 
-            Plv8Env.initialize()
-            val env = Plv8Env.get()
+            JvmPlv8Env.initialize()
+            val env = JvmPlv8Env.get()
             val conn = DriverManager.getConnection(url)
             // TODO: Parse the url to extract the schema!
             env.install(conn, 0, "test_schema", "test_storage")
@@ -64,7 +62,7 @@ open class Plv8TestContainer {
         @JvmStatic
         @AfterAll
         fun afterAll() {
-            Plv8Env.get().endSession()
+            JvmPlv8Env.get().endSession()
             if (existingUrl == null) {
                 // Add a breakpoint here, when you want to query the database after the test.
                 val port = postgreSQLContainer.getMappedPort(5432)

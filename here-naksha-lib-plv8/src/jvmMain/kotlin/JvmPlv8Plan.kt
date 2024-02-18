@@ -6,7 +6,7 @@ import java.sql.PreparedStatement
 /**
  * The Java implementation of a plan.
  */
-class Plv8Plan(internal val query: Plv8SqlQuery, conn: Connection) : IPlv8Plan {
+class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : IPlv8Plan {
     val stmt: PreparedStatement = query.prepare(conn)
     var closed: Boolean = false
 
@@ -15,7 +15,7 @@ class Plv8Plan(internal val query: Plv8SqlQuery, conn: Connection) : IPlv8Plan {
         if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
         val hasResultSet = stmt.execute()
         if (hasResultSet) {
-            return Plv8ResultSet(stmt.resultSet).toArray()
+            return JvmPlv8ResultSet(stmt.resultSet).toArray()
         }
         return stmt.updateCount
     }
@@ -25,9 +25,9 @@ class Plv8Plan(internal val query: Plv8SqlQuery, conn: Connection) : IPlv8Plan {
         if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
         val hasResultSet = stmt.execute()
         if (hasResultSet) {
-            return Plv8Cursor(stmt.resultSet)
+            return JvmPlv8Cursor(stmt.resultSet)
         }
-        return Plv8Cursor(null)
+        return JvmPlv8Cursor(null)
     }
 
     override fun free() {

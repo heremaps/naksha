@@ -9,13 +9,13 @@ class JbFnv1aHashTest : JbAbstractTest() {
         // See: https://md5calc.com/hash/fnv1a32/
         val testString = "test"
         val expectedHash : Int = 0xafd071e5.toInt()
-        val fnv1a = Fnv1a32()
+        var hash = Fnv1a32.start()
         var i = 0
         while (i < testString.length) {
             val c = testString[i++]
-            fnv1a.int8((c.code and 0xff).toByte())
+            hash = Fnv1a32.int8(hash, (c.code and 0xff).toByte())
         }
-        assertEquals(expectedHash, fnv1a.hash)
+        assertEquals(expectedHash, hash)
     }
 
     @Test
@@ -23,13 +23,13 @@ class JbFnv1aHashTest : JbAbstractTest() {
         // See: https://toolkitbay.com/tkb/tool/FNV-1
         val testString = "test"
         val expectedHash = BigInt64(0xf9e6e6ef197c2b25uL.toLong())
-        val fnv1a = Fnv1a64()
+        var hash = Fnv1a64.start()
         var i = 0
         while (i < testString.length) {
             val c = testString[i++]
-            fnv1a.int8((c.code and 0xff).toByte())
+            hash = Fnv1a64.int8(hash, (c.code and 0xff).toByte())
         }
-        assertTrue(expectedHash eq fnv1a.hash)
-        assertEquals(expectedHash, fnv1a.hash)
+        assertTrue(expectedHash eq hash)
+        assertEquals(expectedHash, hash)
     }
 }

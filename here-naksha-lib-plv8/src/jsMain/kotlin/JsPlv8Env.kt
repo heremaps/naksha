@@ -3,7 +3,6 @@
 package com.here.naksha.lib.plv8;
 
 import com.here.naksha.lib.jbon.Jb
-import com.here.naksha.lib.jbon.JbSession
 import com.here.naksha.lib.jbon.JsEnv
 
 /**
@@ -11,20 +10,20 @@ import com.here.naksha.lib.jbon.JsEnv
  */
 @Suppress("unused", "UNUSED_VALUE", "MemberVisibilityCanBePrivate")
 @JsExport
-class Plv8Env : JsEnv() {
+class JsPlv8Env : JsEnv() {
 
     companion object {
-        private lateinit var env : Plv8Env
-        private lateinit var log : Plv8Log
+        private lateinit var env : JsPlv8Env
+        private lateinit var log : JsPlv8Log
 
         fun initialize() {
             if (!Jb.isInitialized()) JsEnv.initialize()
             if (!this::env.isInitialized) {
-                env = Plv8Env()
+                env = JsPlv8Env()
                 Jb.env = env
             }
             if (!this::log.isInitialized) {
-                log = Plv8Log()
+                log = JsPlv8Log()
                 Jb.log = log
             }
         }
@@ -33,9 +32,9 @@ class Plv8Env : JsEnv() {
          * Returns the current environment, if it is not yet initialized, initializes it.
          * @return The environment.
          */
-        fun get() : Plv8Env {
+        fun get() : JsPlv8Env {
             initialize()
-            return Jb.env as Plv8Env
+            return Jb.env as JsPlv8Env
         }
     }
 

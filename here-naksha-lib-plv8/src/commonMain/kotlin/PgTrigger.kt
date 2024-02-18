@@ -2,6 +2,7 @@
 
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.jbon.IMap
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -37,6 +38,6 @@ class PgTrigger(
         val TG_RELID: Double, // TODO: Clarify is this is double or bigint!
         val TG_TABLE_NAME: String,
         val TG_TABLE_SCHEMA: String,
-        val NEW: Any?,
-        val OLD: Any?
+        val NEW: IMap?,
+        val OLD: IMap?
 )

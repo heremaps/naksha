@@ -5,7 +5,7 @@ package com.here.naksha.lib.plv8;
 import com.here.naksha.lib.jbon.ILog
 
 @JsExport
-class Plv8Log : ILog {
+class JsPlv8Log : ILog {
     override fun info(msg: String, vararg args: Any) {
         js("plv8.elog(INFO, msg, args)")
     }
