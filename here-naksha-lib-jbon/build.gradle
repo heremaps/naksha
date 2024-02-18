@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
-
 plugins {
     id 'org.jetbrains.kotlin.multiplatform' version '1.9.21'
 }
@@ -45,7 +43,6 @@ kotlin {
         jvmMain {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
-                implementation(project(":here-naksha-lib-core"))
                 api("org.lz4:lz4-java:1.8.0")
             }
             resources.srcDirs += "$buildDir/dist/js/productionExecutable/"

@@ -1,7 +1,4 @@
-import com.here.naksha.lib.jbon.Jb
-import com.here.naksha.lib.jbon.JbSession
-import com.here.naksha.lib.jbon.JvmMap
-import com.here.naksha.lib.jbon.SQL_STRING
+import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.NakshaSession
 import org.junit.jupiter.api.*
 import kotlin.test.assertEquals
@@ -41,9 +38,9 @@ class Plv8Test : Plv8TestContainer() {
         val rows = assertIs<Array<JvmMap>>(session.sql.rows(result))
         for (row in rows) {
             assertEquals(1, row.size)
-            assertEquals(0L, row["version"])
+            assertEquals(BigInt64(0L), row["version"])
             assertEquals(1, Jb.map.size(row))
-            assertEquals(0L, Jb.map.get(row, "version"))
+            assertEquals(BigInt64(0L), Jb.map.get(row, "version"))
         }
     }
 }

@@ -89,6 +89,10 @@ open class JvmEnv : IEnv {
         return objectMapper.get().reader().forType(Object::class.java).readValue(json)
     }
 
+    fun <T> convert(value: Any, toValueType: Class<T>): T {
+        return objectMapper.get().convertValue(value, toValueType)
+    }
+
     override fun canBeFloat32(value: Double): Boolean {
         // IEEE-754, 32-bit = One sign-bit, 8-bit exponent biased by 127, then 23-bit mantissa
         // IEEE-754, 64-bit = One sign-bit, 11-bit exponent biased by 1023, then 52-bit mantissa
