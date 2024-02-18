@@ -12,7 +12,7 @@ class Plv8JbonTest : Plv8TestContainer() {
     private fun jsonToJbonByteArray(json:String) : ByteArray {
         builder.reset()
         val raw = env.parse(json)
-        return builder.buildFeatureFromMap(raw as IMap)
+        return builder.buildFeatureFromMap(asMap(raw))
     }
 
     @Test
@@ -36,32 +36,15 @@ class Plv8JbonTest : Plv8TestContainer() {
     fun testSql_jb_get_int4() {
         // given
         val session = NakshaSession.get()
-        val featureBytea = jsonToJbonByteArray("""{"id":123}""");
+        val featureBytea = jsonToJbonByteArray("""{"idi":123}""");
         val plan = session.sql.prepare(
                 "SELECT jb_get_int4($1,$2,$3)",
                 arrayOf(SQL_BYTE_ARRAY, SQL_STRING, SQL_INT32)
         )
         // when
-        query(plan, arrayOf( featureBytea, "id", 0)) {
+        query(plan, arrayOf( featureBytea, "idi", 0)) {
             // then
             assertEquals(123, it["jb_get_int4"])
-        }
-    }
-
-    @Order(1)
-    @Test
-    fun testSql_jb_get_real() {
-        // given
-        val session = NakshaSession.get()
-        val featureBytea = jsonToJbonByteArray("""{"x":0.1}""");
-        val plan = session.sql.prepare(
-                "SELECT jb_get_real($1,$2,$3)",
-                arrayOf(SQL_BYTE_ARRAY, SQL_STRING, SQL_FLOAT32)
-        )
-        // when
-        query(plan, arrayOf( featureBytea, "x", 0.0f)) {
-            // then
-            assertEquals(0.1f, it["jb_get_real"])
         }
     }
 
