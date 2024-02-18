@@ -15,14 +15,22 @@ import kotlin.js.JsExport
  */
 @JsExport
 class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
-    val year = (value ushr 51).toInt()
-    val month = (value ushr 47).toInt()
-    val day = (value ushr 42).toInt()
-    val seq = value and BigInt64(0x0000_03ff_ffff_ffff)
-    private lateinit var string: String
-    private lateinit var uuid: NakshaUuid
-
     companion object {
+        /**
+         * The minimum value of the sequence, so just zero.
+         */
+        internal val SEQ_MIN = BigInt64(0)
+
+        /**
+         * The maximum value for the sequence, can be used as well as bitmask.
+         */
+        internal val SEQ_MAX = BigInt64(0x0000_03ff_ffff_ffff)
+
+        /**
+         * The value to be added to calculate the end of a day.
+         */
+        internal val SEQ_NEXT = BigInt64(0x0000_0400_0000_0000)
+
         /**
          * Create a transaction number from its parts.
          * @param year The year to encode, between 0 and 8191.
@@ -31,7 +39,34 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
          * @param seq The sequence in the day, between 0 and 2^42-1.
          */
         fun of(year:Int, month:Int, day:Int, seq: BigInt64) : NakshaTxn =
-                NakshaTxn((BigInt64(year) shl 51) or (BigInt64(month) shl 47) or (BigInt64(day) shl 42) or seq)
+                NakshaTxn((BigInt64(year) shl 51) or (BigInt64(month) shl 47) or (BigInt64(day) shl 42) add seq)
+    }
+
+    val year = (value ushr 51).toInt()
+    val month = (value ushr 47).toInt() and 15
+    val day = (value ushr 42).toInt() and 31
+    val seq = value and SEQ_MAX
+    private lateinit var _tablePostfix : String
+    private lateinit var _string: String
+    private lateinit var _uuid: NakshaUuid
+
+    /**
+     * Translate the transaction number into a table postfix in the format _yyyy_mm_dd_.
+     * @return The table postfix.
+     */
+    fun historyPostfix() : String {
+        if (!this::_tablePostfix.isInitialized) {
+            val sb = StringBuilder()
+            sb.append(year)
+            sb.append('_')
+            if (month < 10) sb.append('0')
+            sb.append(month)
+            sb.append('_')
+            if (day < 10) sb.append('0')
+            sb.append(day)
+            _tablePostfix = sb.toString()
+        }
+        return _tablePostfix
     }
 
     override fun equals(other: Any?):Boolean {
@@ -50,12 +85,12 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
     }
 
     override fun toString() : String {
-        if (!this::string.isInitialized) string = "$year:$month:$day:$seq"
-        return string
+        if (!this::_string.isInitialized) _string = "$year:$month:$day:$seq"
+        return _string
     }
 
     fun toUuid(storageId: String) : NakshaUuid {
-        if (!this::uuid.isInitialized) uuid = NakshaUuid(storageId, "txn", year, month, day, seq)
-        return uuid
+        if (!this::_uuid.isInitialized) _uuid = NakshaUuid(storageId, "txn", year, month, day, seq)
+        return _uuid
     }
 }

@@ -35,7 +35,7 @@ import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
 import com.here.naksha.lib.core.exceptions.Unauthorized;
 import com.here.naksha.lib.core.util.ClosableRootResource;
 import com.here.naksha.lib.core.util.IoHelp;
-import com.here.naksha.lib.plv8.Plv8Env;
+import com.here.naksha.lib.plv8.JvmPlv8Env;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -437,7 +437,7 @@ final class PostgresStorage extends ClosableRootResource {
   }
 
   private void initStoragePlv8(PsqlConnection conn) throws SQLException {
-    final Plv8Env plv8Env = new Plv8Env();
+    final JvmPlv8Env plv8Env = new JvmPlv8Env();
     plv8Env.install(conn, latest.toLong());
     conn.commit();
   }

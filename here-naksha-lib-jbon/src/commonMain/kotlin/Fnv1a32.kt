@@ -10,28 +10,22 @@ import kotlin.js.JsExport
  */
 @Suppress("DuplicatedCode")
 @JsExport
-class Fnv1a32 {
+object Fnv1a32 {
     /**
-     * The current hash.
+     * Start a new hash.
+     * @return the default initial value.
      */
-    var hash = 0x811C9DC5u.toInt()
-
-    /**
-     * Reset the hash to the default initial value.
-     * @return this.
-     */
-    fun reset(): Fnv1a32 {
-        hash = 0x811C9DC5u.toInt()
-        return this
-    }
+    fun start(): Int = 0x811C9DC5u.toInt()
 
     /**
      * Hash the given string. Internally all code-points are hashed by their width, so 8-bit, 16-bit or 24-bit
      * (unicode is never more than 21-bit) produce 1 to 3 hash calculations.
+     * @param hashCode The current hash code.
      * @param string The string to hash.
-     * @return this.
+     * @return the updated hash-code.
      */
-    fun string(string: String): Fnv1a32 {
+    fun string(hashCode: Int, string: String): Int {
+        var hash = hashCode
         var i = 0
         while (i < string.length) {
             val hi = string[i++]
@@ -44,62 +38,67 @@ class Fnv1a32 {
                 unicode = hi.code
             }
             when (unicode) {
-                in 0..255 -> int8(unicode.toByte())
-                in 256..65535 -> int16BE(unicode.toShort())
+                in 0..255 -> hash = int8(hash, unicode.toByte())
+                in 256..65535 -> hash = int16BE(hash, unicode.toShort())
                 in 65536..2_097_151 -> {
-                    int8((unicode ushr 16).toByte())
-                    int16BE(unicode.toShort())
+                    hash = int8(hash, (unicode ushr 16).toByte())
+                    hash = int16BE(hash, unicode.toShort())
                 }
+
                 else -> throw IllegalArgumentException("Invalid unicode found: $unicode")
             }
         }
-        return this
+        return hash
     }
 
     /**
      * Hash a single byte.
+     * @param hashCode The current hash code.
      * @param v The value to hash.
-     * @return this.
+     * @return the updated hash.
      */
-    fun int8(v: Byte): Fnv1a32 {
-        hash = hash xor (v.toInt() and 0xff)
+    fun int8(hashCode: Int, v: Byte): Int {
+        var hash = hashCode xor (v.toInt() and 0xff)
         hash *= 16777619
-        return this
+        return hash
     }
 
     /**
      * Hash a short that was read in big-endian encoding. This is the default encoding used by [IDataView].
+     * @param hashCode The current hash code.
      * @param v The value to hash.
-     * @return this.
+     * @return the updated hash.
      */
-    fun int16BE(v: Short): Fnv1a32 {
-        hash = hash xor ((v.toInt() and 0xffff) ushr 8)
+    fun int16BE(hashCode: Int, v: Short): Int {
+        var hash = hashCode xor ((v.toInt() and 0xffff) ushr 8)
         hash *= 16777619
         hash = hash xor (v.toInt() and 0xff)
         hash *= 16777619
-        return this
+        return hash
     }
 
     /**
-     * Hash an short that was read in little-endian encoding.
+     * Hash a short that was read in little-endian encoding.
+     * @param hashCode The current hash code.
      * @param v The value to hash.
-     * @return this.
+     * @return the updated hash.
      */
-    fun int16LE(v: Short): Fnv1a32 {
-        hash = hash xor (v.toInt() and 0xff)
+    fun int16LE(hashCode: Int, v: Short): Int {
+        var hash = hashCode xor (v.toInt() and 0xff)
         hash *= 16777619
         hash = hash xor ((v.toInt() and 0xffff) ushr 8)
         hash *= 16777619
-        return this
+        return hash
     }
 
     /**
      * Hash an integer that was read in big-endian encoding. This is the default encoding used by [IDataView].
+     * @param hashCode The current hash code.
      * @param v The value to hash.
-     * @return this.
+     * @return the updated hash.
      */
-    fun int32BE(v: Int): Fnv1a32 {
-        hash = hash xor (v ushr 24)
+    fun int32BE(hashCode: Int, v: Int): Int {
+        var hash = hashCode xor (v ushr 24)
         hash *= 16777619
         hash = hash xor ((v ushr 16) and 0xff)
         hash *= 16777619
@@ -107,16 +106,17 @@ class Fnv1a32 {
         hash *= 16777619
         hash = hash xor (v and 0xff)
         hash *= 16777619
-        return this
+        return hash
     }
 
     /**
      * Hash an integer that was read in little-endian encoding.
+     * @param hashCode The current hash code.
      * @param v The value to hash.
-     * @return this.
+     * @return the updated hash.
      */
-    fun int32LE(v: Int): Fnv1a32 {
-        hash = hash xor (v and 0xff)
+    fun int32LE(hashCode: Int, v: Int): Int {
+        var hash = hashCode xor (v and 0xff)
         hash *= 16777619
         hash = hash xor ((v ushr 8) and 0xff)
         hash *= 16777619
@@ -124,6 +124,6 @@ class Fnv1a32 {
         hash *= 16777619
         hash = hash xor (v ushr 24)
         hash *= 16777619
-        return this
+        return hash
     }
 }

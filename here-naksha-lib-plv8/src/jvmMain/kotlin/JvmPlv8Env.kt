@@ -9,15 +9,15 @@ import java.sql.Connection
  *
  * This class extends the standard [JvmEnv] by SQL support to simulate the internal database connection of PLV8.
  */
-class Plv8Env : JvmEnv() {
+class JvmPlv8Env : JvmEnv() {
     companion object {
-        private lateinit var env : Plv8Env
+        private lateinit var env : JvmPlv8Env
 
         @JvmStatic
         fun initialize() {
             if (!Jb.isInitialized()) JvmEnv.initialize()
             if (!this::env.isInitialized) {
-                env = Plv8Env()
+                env = JvmPlv8Env()
                 Jb.env = env
             }
         }
@@ -26,9 +26,9 @@ class Plv8Env : JvmEnv() {
          * Returns the current environment, if not available, initializes it and then returns it.
          */
         @JvmStatic
-        fun get(): Plv8Env {
+        fun get(): JvmPlv8Env {
             initialize()
-            return Jb.env as Plv8Env
+            return Jb.env as JvmPlv8Env
         }
     }
 
@@ -49,7 +49,7 @@ class Plv8Env : JvmEnv() {
     fun startSession(conn: Connection, appName: String, streamId: String, appId: String, author: String?) {
         // Prepare the connection, need to load the module system.
         conn.autoCommit = false
-        val sql = Plv8Sql(conn)
+        val sql = JvmPlv8Sql(conn)
         sql.execute("SELECT naksha_start_session($1, $2, $3, $4);", arrayOf(appName, streamId, appId, author))
         conn.commit()
         // Create our self.
@@ -66,7 +66,7 @@ class Plv8Env : JvmEnv() {
     fun getConnection(): Connection {
         val naksha = NakshaSession.get()
         val sql = naksha.sql
-        check(sql is Plv8Sql)
+        check(sql is JvmPlv8Sql)
         val conn = sql.conn
         check(conn != null)
         return conn
@@ -81,7 +81,7 @@ class Plv8Env : JvmEnv() {
         val conn: Connection?
         if (session is NakshaSession) {
             val sql = session.sql
-            conn = if (sql is Plv8Sql) sql.conn else null
+            conn = if (sql is JvmPlv8Sql) sql.conn else null
         } else {
             conn = null
         }
@@ -113,7 +113,7 @@ class Plv8Env : JvmEnv() {
      * @param path The file-path, for example `/lz4.sql`.
      * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    private fun executeSqlFromResource(sql: Plv8Sql, path: String, replacements: Map<String, String>? = null) {
+    private fun executeSqlFromResource(sql: JvmPlv8Sql, path: String, replacements: Map<String, String>? = null) {
         val resourceAsText = getResourceAsText(path)
         check(resourceAsText != null)
         sql.execute(applyReplacements(resourceAsText, replacements))
@@ -128,7 +128,7 @@ class Plv8Env : JvmEnv() {
      * @param extraCode Additional code to be executed, appended at the end of the module.
      * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    private fun installModuleFromResource(sql: Plv8Sql, name: String, path: String, autoload: Boolean = false, extraCode: String? = null, replacements: Map<String, String>? = null) {
+    private fun installModuleFromResource(sql: JvmPlv8Sql, name: String, path: String, autoload: Boolean = false, extraCode: String? = null, replacements: Map<String, String>? = null) {
         val resourceAsText = getResourceAsText(path)
         check(resourceAsText != null)
         var code = applyReplacements(resourceAsText, replacements)
@@ -146,7 +146,7 @@ class Plv8Env : JvmEnv() {
      */
     fun install(conn: Connection, version: Long, schema: String, storageId: String) {
         conn.autoCommit = false
-        val sql = Plv8Sql(conn)
+        val sql = JvmPlv8Sql(conn)
         val replacements = mapOf("version" to version.toString(), "schema" to schema, "storage_id" to storageId)
         // Note: We know, that we do not need the replacements and code is faster without them!
         executeSqlFromResource(sql, "/commonjs2.sql")
@@ -169,34 +169,7 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
 """)
         executeSqlFromResource(sql, "/naksha.sql", replacements)
         executeSqlFromResource(sql, "/jbon.sql")
-        conn.commit()
-        sql.execute("""
-CREATE TABLE IF NOT EXISTS naksha_global (
-    id          text        PRIMARY KEY NOT NULL,
-    data        bytea       NOT NULL
-)
-""")
-        sql.execute("CREATE SEQUENCE IF NOT EXISTS naksha_txn_seq AS int8;")
-        sql.execute("""
-CREATE TABLE IF NOT EXISTS naksha_txn (
-    txn         int8         PRIMARY KEY NOT NULL,
-    ts          timestamptz  NOT NULL,
-    xact_id     int8         NOT NULL,
-    app_id      text         NOT NULL,
-    author      text         NOT NULL,
-    seq_id      int8,
-    seq_ts      timestamptz,
-    version     int8,
-    details     bytea,
-    attachment  bytea
-) PARTITION BY RANGE (txn);
-CREATE INDEX IF NOT EXISTS naksha_txn_ts_idx ON naksha_txn USING btree ("ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_app_id_ts_idx ON naksha_txn USING btree ("app_id" ASC, "ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_author_ts_idx ON naksha_txn USING btree ("author" ASC, "ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_seq_id_idx ON naksha_txn USING btree ("seq_id" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_seq_ts_idx ON naksha_txn USING btree ("seq_ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("version" ASC);
-""")
+        Naksha.initStorage(sql, schema)
         conn.commit()
     }
 }

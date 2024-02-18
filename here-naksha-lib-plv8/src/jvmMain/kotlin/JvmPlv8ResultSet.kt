@@ -1,14 +1,12 @@
 package com.here.naksha.lib.plv8
 
-import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.here.naksha.lib.jbon.*
 import java.sql.ResultSet
-import kotlin.collections.HashMap
 
 /**
  * Internal helper class to handle results as if they were returned by PLV8 engine.
  */
-open class Plv8ResultSet(private var rs: ResultSet?) {
+open class JvmPlv8ResultSet(private var rs: ResultSet?) {
     private val columnCount: Int
     private val columnNames: Array<String>?
     private val columnTypes: Array<String>?

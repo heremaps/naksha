@@ -2,16 +2,14 @@
 
 package com.here.naksha.lib.plv8;
 
-import com.here.naksha.lib.jbon.IMap
-
 /**
  * Thin wrapper around the native plv8 engine methods. This wrapper allows to simulate this in the JVM.
  */
 @Suppress("UnsafeCastFromDynamic")
 @JsExport
-class Plv8Sql : IPlv8Sql {
+class JsPlv8Sql : IPlv8Sql {
     override fun newTable(): ITable {
-        return Plv8Table()
+        return JsPlv8Table()
     }
 
     override fun quoteLiteral(vararg parts: String): String {

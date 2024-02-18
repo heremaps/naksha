@@ -16,7 +16,7 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("unused")
 @JsExport
-open class JbSession(val appName: String, val streamId: String, val appId: String, val author: String? = null) {
+open class JbSession(var appName: String, var streamId: String, var appId: String, var author: String? = null) {
     companion object {
         @JvmStatic
         fun isSame(s: Any): Boolean {
@@ -40,6 +40,20 @@ open class JbSession(val appName: String, val streamId: String, val appId: Strin
             check(session != null)
             return session
         }
+    }
+
+    /**
+     * Reset the session.
+     * @param appName The name of the application starting the session, only for debugging purpose.
+     * @param streamId The stream-identifier, to be added to the transaction logs for debugging purpose.
+     * @param appId The UPM identifier of the application (for audit).
+     * @param author The UPM identifier of the user (for audit).
+     */
+    open fun reset(appName: String, streamId: String, appId: String, author: String?) {
+        this.appName = appName
+        this.streamId = streamId
+        this.appId = appId
+        this.author = author
     }
 
     /**

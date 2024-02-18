@@ -1,14 +1,12 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.JvmBigInt64
-import com.here.naksha.lib.jbon.toLong
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.ArrayList
 import java.util.HashMap
 
-class Plv8SqlQuery(query: String) {
+class JvmPlv8SqlQuery(query: String) {
 
     /**
      * We map "$1" to a list of positions (`1..n`) in the prepared statement. For example

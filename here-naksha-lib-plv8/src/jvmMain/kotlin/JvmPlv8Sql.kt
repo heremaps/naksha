@@ -1,6 +1,5 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.IMap
 import java.io.Closeable
 import java.sql.Connection
 
@@ -8,9 +7,9 @@ import java.sql.Connection
  * Java JDBC binding to grant access to PostgresQL.
  */
 @Suppress("MemberVisibilityCanBePrivate", "UNCHECKED_CAST")
-class Plv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
+class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
     override fun newTable(): ITable {
-        return Plv8Table()
+        return JvmPlv8Table()
     }
 
     override fun affectedRows(any: Any): Int? {
@@ -27,21 +26,21 @@ class Plv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
         if (args.isNullOrEmpty()) {
             val stmt = conn.createStatement()
             stmt.use {
-                return if (stmt.execute(sql)) Plv8ResultSet(stmt.resultSet).toArray() else stmt.updateCount
+                return if (stmt.execute(sql)) JvmPlv8ResultSet(stmt.resultSet).toArray() else stmt.updateCount
             }
         }
-        val query = Plv8SqlQuery(sql)
+        val query = JvmPlv8SqlQuery(sql)
         val stmt = query.prepare(conn)
         stmt.use {
             if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
-            return if (stmt.execute()) Plv8ResultSet(stmt.resultSet).toArray() else stmt.updateCount
+            return if (stmt.execute()) JvmPlv8ResultSet(stmt.resultSet).toArray() else stmt.updateCount
         }
     }
 
     override fun prepare(sql: String, typeNames: Array<String>?): IPlv8Plan {
         val conn = this.conn
         check(conn != null)
-        return Plv8Plan(Plv8SqlQuery(sql), conn)
+        return JvmPlv8Plan(JvmPlv8SqlQuery(sql), conn)
     }
 
     override fun close() {

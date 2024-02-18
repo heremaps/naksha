@@ -1,12 +1,11 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.IMap
 import java.sql.ResultSet
 
 /**
  * Wraps a native JDBC result-set.
  */
-class Plv8Cursor(resultSet: ResultSet?) : Plv8ResultSet(resultSet), IPlv8Cursor {
+class JvmPlv8Cursor(resultSet: ResultSet?) : JvmPlv8ResultSet(resultSet), IPlv8Cursor {
 
     override fun fetch(): Any? {
         val rs = rs()
