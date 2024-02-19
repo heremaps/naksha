@@ -1,8 +1,7 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.plv8
+package com.here.naksha.lib.jbon
 
-import com.here.naksha.lib.jbon.BigInt64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

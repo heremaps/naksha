@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.plv8
+package com.here.naksha.lib.jbon
 
 import com.here.naksha.lib.jbon.*
 import kotlin.js.ExperimentalJsExport
@@ -19,17 +19,17 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
         /**
          * The minimum value of the sequence, so just zero.
          */
-        internal val SEQ_MIN = BigInt64(0)
+        val SEQ_MIN = BigInt64(0)
 
         /**
          * The maximum value for the sequence, can be used as well as bitmask.
          */
-        internal val SEQ_MAX = BigInt64(0x0000_03ff_ffff_ffff)
+        val SEQ_MAX = BigInt64(0x0000_03ff_ffff_ffff)
 
         /**
          * The value to be added to calculate the end of a day.
          */
-        internal val SEQ_NEXT = BigInt64(0x0000_0400_0000_0000)
+        val SEQ_NEXT = BigInt64(0x0000_0400_0000_0000)
 
         /**
          * Create a transaction number from its parts.

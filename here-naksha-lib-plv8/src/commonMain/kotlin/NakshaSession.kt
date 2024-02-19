@@ -2,9 +2,12 @@
 
 package com.here.naksha.lib.plv8
 
+import XyzOp
+import XyzTags
+import XyzVersion
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.plv8.NakshaTxn.Companion.SEQ_MIN
-import com.here.naksha.lib.plv8.NakshaTxn.Companion.SEQ_NEXT
+import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_MIN
+import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_NEXT
 import kotlinx.datetime.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -56,216 +59,12 @@ class NakshaSession(
 
     companion object {
         /**
-         * The lock-id for the transaction number sequence.
-         */
-        val TXN_LOCK_ID = Naksha.lockId("naksha_txn_seq")
-
-        /**
-         * Tests if specific database table (in the Naksha session schema) exists already
-         * @param sql The SQL API.
-         * @param name The table name.
-         * @param schemaOid The object-id of the schema to look into.
-         * @return _true_ if a table with this name exists; _false_ otherwise.
-         */
-        fun tableExists(sql: IPlv8Sql, name: String, schemaOid:Int): Boolean {
-            val rows = asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = $1 AND relnamespace = $2", arrayOf(name, schemaOid)))
-            return rows.isNotEmpty()
-        }
-
-        /**
-         * Optimize the table storage configuration.
-         * @param sql The SQL API.
-         * @param tableName The table name.
-         * @param history If _true_, then optimized for historic data; otherwise a volatile HEAD table.
-         */
-        fun collectionOptimizeTable(sql: IPlv8Sql, tableName: String, history: Boolean) {
-            val quotedTableName = sql.quoteIdent(tableName)
-            var query = """ALTER TABLE $quotedTableName
-ALTER COLUMN feature SET STORAGE MAIN,
-ALTER COLUMN geo SET STORAGE MAIN,
-ALTER COLUMN tags SET STORAGE MAIN,
-ALTER COLUMN xyz SET STORAGE MAIN,
-SET (toast_tuple_target=8160"""
-            query += if (history) ",fillfactor=100,autovacuum_enabled=OFF,toast.autovacuum_enabled=OFF"
-            else """,fillfactor=50
--- Specifies the minimum number of updated or deleted tuples needed to trigger a VACUUM in any one table.
-,autovacuum_vacuum_threshold=10000, toast.autovacuum_vacuum_threshold=10000
--- Specifies the number of inserted tuples needed to trigger a VACUUM in any one table.
-,autovacuum_vacuum_insert_threshold=10000, toast.autovacuum_vacuum_insert_threshold=10000
--- Specifies a fraction of the table size to add to autovacuum_vacuum_threshold when deciding whether to trigger a VACUUM.
-,autovacuum_vacuum_scale_factor=0.1, toast.autovacuum_vacuum_scale_factor=0.1
--- Specifies a fraction of the table size to add to autovacuum_analyze_threshold when deciding whether to trigger an ANALYZE.
-,autovacuum_analyze_threshold=10000, autovacuum_analyze_scale_factor=0.1"""
-            query += ")"
-            sql.execute(query)
-        }
-
-        /**
-         * Creates all the indices needed for a collection.
-         * @param sql The SQL API.
-         * @param tableName The table name.
-         * @param spGist If SP-GIST index should be used, which is better only for point geometry.
-         * @param history If _true_, then optimized for historic data; otherwise a volatile HEAD table.
-         */
-        fun collectionAddIndices(sql: IPlv8Sql, tableName: String, spGist: Boolean, history: Boolean) {
-            val fillFactor = if (history) "100" else "50"
-            // https://www.postgresql.org/docs/current/gin-tips.html
-            val geoIndexType = if (spGist) "sp-gist" else "gist"
-            val unique = if (history) "UNIQUE " else ""
-
-            // quoted table name
-            val qtn = sql.quoteIdent(tableName)
-            // quoted index name
-            var qin = sql.quoteIdent("${tableName}_id_idx")
-            var query = """CREATE ${unique}INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-((id) COLLATE "C" text_pattern_ops DESC) WITH (fillfactor=$fillFactor);
-"""
-
-            qin = sql.quoteIdent("${tableName}_uid_idx")
-            query += """CREATE UNIQUE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(uid) WITH (fillfactor=$fillFactor);
-"""
-
-            qin = sql.quoteIdent("${tableName}_txn_idx")
-            query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(xyz_txn(xyz) DESC) WITH (fillfactor=$fillFactor);
-"""
-
-            qin = sql.quoteIdent("${tableName}_geo_idx")
-            query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndexType
-(geo, xyz_txn(xyz), xyz_extend(xyz)) WITH (buffering=ON,fillfactor=$fillFactor);
-"""
-
-            qin = sql.quoteIdent("${tableName}_tags_idx")
-            query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin 
-(tags_to_jsonb(tags), xyz_txn(xyz), xyz_extend(xyz)) WITH (fastupdate=ON,gin_pending_list_limit=32768);
-"""
-
-            qin = sql.quoteIdent("${tableName}_grid_idx")
-            query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(xyz_grid(xyz) COLLATE "C" DESC, xyz_txn(xyz) DESC, xyz_extend(xyz)) WITH (fillfactor=$fillFactor);
-"""
-
-            qin = sql.quoteIdent("${tableName}_mrid_idx")
-            query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(xyz_mrid(xyz) COLLATE "C" DESC, xyz_txn(xyz) DESC, xyz_extend(xyz)) WITH (fillfactor=$fillFactor);
-"""
-
-            qin = sql.quoteIdent("${tableName}_app_id_idx")
-            query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(xyz_app_id(xyz) COLLATE "C" DESC, xyz_updated_at(xyz) DESC, xyz_txn(xyz) DESC) WITH (fillfactor=$fillFactor);
-"""
-
-            qin = sql.quoteIdent("${tableName}_author_idx")
-            query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(xyz_author(xyz) COLLATE "C" DESC, xyz_author_ts(xyz) DESC, xyz_txn(xyz) DESC) WITH (fillfactor=$fillFactor);
-"""
-            sql.execute(query)
-        }
-
-        /**
-         * Low level function to create a (optionally partitioned) collection table set.
-         * @param sql The SQL API.
-         * @param id The collection identifier.
-         * @param spGist If SP-GIST index should be used, which is better only for point geometry.
-         * @param partition If the collection should be partitioned.
-         */
-        fun collectionCreate(sql: IPlv8Sql, id: String, spGist: Boolean, partition: Boolean) {
-            val CREATE_TABLE = """CREATE TABLE {table} (
-    uid         int8,
-    txn_next    int8,
-    id          text COMPRESSION lz4,
-    feature     bytea COMPRESSION lz4,
-    geo         geometry(GeometryZ, 4326),
-    tags        bytea COMPRESSION lz4,
-    xyz         bytea COMPRESSION lz4
-) """
-            var query: String
-
-            // HEAD
-            val headNameQuoted = sql.quoteIdent(id)
-            query = CREATE_TABLE.replace("{table}", headNameQuoted)
-            if (!partition) {
-                sql.execute(query)
-                collectionOptimizeTable(sql, id, false)
-                collectionAddIndices(sql, id, spGist, false)
-            } else {
-                query += "PARTITION BY RANGE (naksha_partition_number(id))"
-                sql.execute(query)
-                var i = 0
-                while (i < 256) {
-                    val partName = id + "_p" + Naksha.PARTITION_ID[i]
-                    val partNameQuoted = sql.quoteIdent(partName)
-                    query = "CREATE TABLE $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($i) "
-                    i++
-                    query += "TO ($i)"
-                    sql.execute(query)
-                    collectionOptimizeTable(sql, partName, false)
-                    collectionAddIndices(sql, partName, spGist, false)
-                }
-            }
-
-            // DEL.
-            val delName = id + "_del"
-            val delNameQuoted = sql.quoteIdent(delName)
-            query = CREATE_TABLE.replace("{table}", delNameQuoted)
-            sql.execute(query)
-            collectionOptimizeTable(sql, delName, false)
-            collectionAddIndices(sql, delName, spGist, false)
-
-            // META.
-            val metaName = id + "_meta"
-            val metaNameQuoted = sql.quoteIdent(metaName)
-            query = CREATE_TABLE.replace("{table}", metaNameQuoted)
-            sql.execute(query)
-            collectionOptimizeTable(sql, metaName, false)
-            collectionAddIndices(sql, metaName, spGist, false)
-
-            // HISTORY.
-            val hstName = id + "_hst"
-            val hstNameQuoted = sql.quoteIdent(hstName)
-            query = CREATE_TABLE.replace("{table}", hstNameQuoted)
-            query += "PARTITION BY RANGE (txn_next)"
-            sql.execute(query)
-            // Optimizations are done on the history partitions!
-        }
-
-        /**
-         * Add the before and after triggers.
-         * @param sql The SQL API.
-         * @param id The collection identifier.
-         */
-        fun collectionAttachTriggers(sql: IPlv8Sql, id: String) {
-
-        }
-
-        /**
-         * Deletes the collection with the given identifier.
-         * @param sql The SQL API.
-         * @param id The collection identifier.
-         */
-        fun collectionDrop(sql: IPlv8Sql, id: String) {
-            require(!id.startsWith("naksha_"))
-            val headName = sql.quoteIdent(id)
-            val delName = sql.quoteIdent(id + "_del")
-            val metaName = sql.quoteIdent(id + "_meta")
-            val hstName = sql.quoteIdent(id + "_hst")
-            sql.execute("""DROP TABLE IF EXISTS $headName CASCADE;
-DROP TABLE IF EXISTS $delName CASCADE;
-DROP TABLE IF EXISTS $metaName CASCADE;
-DROP TABLE IF EXISTS $hstName CASCADE;""")
-        }
-
-        /**
          * Returns the current thread local [NakshaSession].
          * @return The current thread local [NakshaSession].
          * @throws IllegalStateException If the current session is no Naksha session.
          */
         @JvmStatic
-        fun get(): NakshaSession {
-            return threadLocal.get() as NakshaSession
-        }
-
+        fun get(): NakshaSession = threadLocal.get() as NakshaSession
     }
 
     /**
@@ -424,7 +223,7 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
             val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
             val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
             if (txn.year != txDate.year || txn.month != txDate.monthNumber || txn.day != txDate.dayOfMonth) {
-                sql.execute("SELECT pg_advisory_lock($1)", arrayOf(TXN_LOCK_ID))
+                sql.execute("SELECT pg_advisory_lock($1)", arrayOf(Static.TXN_LOCK_ID))
                 try {
                     val raw = asBigInt64(asMap((sql.execute("SELECT nextval($1) as v", arrayOf(txnOid)) as Array<Any>)[0])["v"])
                     txn = NakshaTxn(raw)
@@ -436,7 +235,7 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
                         sql.execute("SELECT setval($1, $2)", arrayOf(txnOid, txn.value + 1))
                     }
                 } finally {
-                    sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(TXN_LOCK_ID))
+                    sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(Static.TXN_LOCK_ID))
                 }
             }
             // If the history partition cache does not exist or is outdated, initialize empty.
@@ -446,7 +245,7 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
                 historyPartitionCache = Jb.map.newMap()
             }
             val tableName = "naksha_txn_${txn.historyPostfix()}"
-            if (!tableExists(sql, tableName, schemaOid)) {
+            if (!Static.tableExists(sql, tableName, schemaOid)) {
                 val start = NakshaTxn.of(txn.year, txn.month, txn.day, SEQ_MIN)
                 val end = NakshaTxn.of(txn.year, txn.month, txn.day, SEQ_NEXT)
                 val query = """CREATE TABLE $tableName PARTITION OF naksha_txn FOR VALUES FROM (${start.value}) TO (${end.value});
@@ -488,15 +287,12 @@ SET (toast_tuple_target=8160,fillfactor=100
         return _xactId!!
     }
 
-    // return: op text, id text, xyz bytea, tags bytea, geo geometry, feature bytea, err_no text, err_msg text
     fun writeFeatures(
             collectionId: String,
-            ops: Array<String>,
-            ids: Array<String>,
-            uuids: Array<String>,
-            geometries: Array<Any?>,
+            ops: Array<ByteArray>,
             features: Array<ByteArray>,
-            xyz: Array<ByteArray>
+            geometries: Array<Any?>,
+            tags: Array<ByteArray>
     ): ITable {
         errNo = null
         errMsg = null
@@ -507,20 +303,42 @@ SET (toast_tuple_target=8160,fillfactor=100
         return table
     }
 
-    // return: op text, id text, xyz bytea, tags bytea, geo geometry, feature bytea, err_no text, err_msg text
     fun writeCollections(
-            ops: Array<String>,
-            ids: Array<String>,
-            uuids: Array<String>,
-            geometries: Array<Any?>,
-            features: Array<ByteArray>,
-            xyz: Array<ByteArray>
+            op_arr: Array<ByteArray>,
+            feature_arr: Array<ByteArray>,
+            geo_arr: Array<Any?>,
+            tags_arr: Array<ByteArray>
     ): ITable {
         errNo = null
         errMsg = null
+        val sql = this.sql
         val table = sql.newTable()
+        val op = XyzOp()
+        val feature = JbFeature()
+        val tags = XyzTags()
+        var i = 0
+        while (i < op_arr.size) {
+            op.mapBytes(op_arr[i])
+            feature.mapBytes(feature_arr[i])
+            val geometry = geo_arr[i]
+            tags.mapBytes(tags_arr[i])
+            try {
+                var id = op.id()
+                if (id == null) {
+                    id = feature.id()
+                }
+                if (id == null) {
 
-        // TODO: Implement me!
+                }
+                if (op.op() == XYZ_OP_CREATE || op.op() == XYZ_OP_UPSERT) {
+
+                }
+            } catch (e: Exception) {
+
+            } finally {
+                i++
+            }
+        }
         return table
     }
 }

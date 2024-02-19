@@ -60,7 +60,7 @@ CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
   let asMap = require("jbon").Jb.map.asMap;
   // TODO: Clarify if TG_RELID is double or bigint!
   let t = new naksha.PgTrigger(TG_OP, TG_NAME, TG_WHEN, TG_LEVEL, TG_RELID, TG_TABLE_NAME, TG_TABLE_SCHEMA, asMap(NEW), asMap(OLD));
-  let session = naksha.NakshaSession.get();
+  let session = naksha.NakshaSession.Companion.get();
   session.triggerBefore(t);
   if (TG_OP == "INSERT" || TG_OP == "UPDATE") {
     return NEW
@@ -73,7 +73,7 @@ CREATE OR REPLACE FUNCTION naksha_trigger_after() RETURNS trigger AS $$
   let asMap = require("jbon").Jb.map.asMap;
   // TODO: Clarify if TG_RELID is double or bigint!
   let t = new naksha.PgTrigger(TG_OP, TG_NAME, TG_WHEN, TG_LEVEL, TG_RELID, TG_TABLE_NAME, TG_TABLE_SCHEMA, asMap(NEW), asMap(OLD));
-  let session = naksha.NakshaSession.get();
+  let session = naksha.NakshaSession.Companion.get();
   session.triggerAfter(t);
   if (TG_OP == "INSERT" || TG_OP == "UPDATE") {
     return NEW
@@ -85,36 +85,36 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 CREATE OR REPLACE FUNCTION naksha_write_features(
   collection_id text,
   ops bytea[], -- XyzOp (op, id, uuid, crid)
-  geometries geometry[], -- WKB
   features bytea[], -- JbFeature
+  geometries geometry[], -- WKB
   tags bytea[] -- XyzTags
-) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, geo geometry, feature bytea, err_no text, err_msg text) AS $$
+) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo geometry, err_no text, err_msg text) AS $$
   let naksha = require("naksha");
-  let session = naksha.NakshaSession.get();
+  let session = naksha.NakshaSession.Companion.get();
   session.writeFeatures(collection_id, ops, geometries, features, tags);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 -- Returns always op, id, xyz, optional: geo, feature, tags, err_no and err_msg
 CREATE OR REPLACE FUNCTION naksha_write_collections(
   ops bytea[], -- XyzOp (op, id, uuid, crid)
-  geometries geometry[], -- WKB
   features bytea[], -- JbFeature
+  geometries geometry[], -- WKB
   tags bytea[] -- XyzTags
-) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, geo geometry, feature bytea, err_no text, err_msg text) AS $$
+) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo geometry, err_no text, err_msg text) AS $$
   let naksha = require("naksha");
-  let session = naksha.NakshaSession.get();
+  let session = naksha.NakshaSession.Companion.get();
   session.writeCollections(ops, geometries, features, tags);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_err_no() RETURNS text AS $$
   let naksha = require("naksha");
-  let session = naksha.NakshaSession.get();
+  let session = naksha.NakshaSession.Companion.get();
   return session.errNo;
 $$ LANGUAGE 'plv8' VOLATILE;
 
 CREATE OR REPLACE FUNCTION naksha_err_msg() RETURNS text AS $$
   let naksha = require("naksha");
-  let session = naksha.NakshaSession.get();
+  let session = naksha.NakshaSession.Companion.get();
   return session.errMsg;
 $$ LANGUAGE 'plv8' VOLATILE;
 

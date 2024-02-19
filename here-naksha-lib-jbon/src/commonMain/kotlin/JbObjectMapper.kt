@@ -217,4 +217,10 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
     fun mapSize(): Int {
         return encodingEnd - start
     }
+
+    /**
+     * Tests whether this mapper has any mapping.
+     * @return _true_ if this mapper has any mapping; _false_ otherwise.
+     */
+    fun isMapped() : Boolean = reader.view != null
 }

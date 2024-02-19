@@ -2,7 +2,7 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.IMap
+import com.here.naksha.lib.jbon.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -17,6 +17,7 @@ import kotlin.js.JsExport
  * For the JVM implementation it will create an in-memory virtual tuple-store. The function, e.g. [NakshaSession.writeFeatures],
  * will then return the table so that the results can be verified.
  */
+@Suppress("DuplicatedCode")
 @JsExport
 interface ITable {
     /**
@@ -24,4 +25,39 @@ interface ITable {
      * @param row The native map of the row.
      */
     fun returnNext(row: IMap)
+
+    /**
+     * Returns a Naksha default row for a successful operation.
+     */
+    fun returnOk(op: String, id: String, xyz: ByteArray, tags: ByteArray, feature: ByteArray? = null, geo: Any? = null) {
+        val map = Jb.map.newMap()
+        map["op"] = op
+        map["id"] = id
+        map["xyz"] = xyz
+        map["tags"] = tags
+        map["feature"] = feature
+        map["geo"] = geo
+        map["errNo"] = null
+        map["errMsg"] = null
+        returnNext(map)
+    }
+
+    /**
+     * Returns a Naksha default row for a failure.
+     */
+    fun returnErr(errNo: String, errMsg: String, op: String, id: String, xyz: ByteArray?, tags: ByteArray?, feature: ByteArray? = null, geo: Any? = null) {
+        val map = Jb.map.newMap()
+        map["op"] = op
+        map["id"] = id
+        map["xyz"] = xyz
+        map["tags"] = tags
+        map["feature"] = feature
+        map["geo"] = geo
+        map["errNo"] = errNo
+        map["errMsg"] = errMsg
+        val session = NakshaSession.get()
+        session.errNo = errNo
+        session.errMsg = errMsg
+        returnNext(map)
+    }
 }
