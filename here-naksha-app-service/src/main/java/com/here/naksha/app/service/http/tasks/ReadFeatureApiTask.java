@@ -241,6 +241,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
 
     final Map<String, Object> queryParamsMap = new HashMap<>();
+    queryParamsMap.put(TILE_ID, margin);
     queryParamsMap.put(MARGIN, margin);
     queryParamsMap.put(LIMIT, limit);
     if (tagsOp != null) queryParamsMap.put(TAGS_OP, tagsOp);

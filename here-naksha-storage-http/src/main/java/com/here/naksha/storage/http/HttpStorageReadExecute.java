@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -65,7 +64,7 @@ class HttpStorageReadExecute {
         case GET_BY_ID -> executeFeatureById();
         case GET_BY_IDS -> executeFeaturesById();
         case GET_BY_BBOX -> executeFeatureByBBox();
-        case GET_BY_TILE -> throw new NotImplementedException();
+        case GET_BY_TILE -> executeFeaturesByTile();
       };
     } catch (Exception e) {
       log.warn("", e);
@@ -105,6 +104,20 @@ class HttpStorageReadExecute {
 
     HttpResponse<String> response =
         requestSender.sendRequest(String.format("/%s/%s/bbox?%s", environment, store, queryParamsString));
+
+    XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
+    if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
+
+    XyzFeatureCollection resultFeatures = JsonSerializable.deserialize(response.body(), XyzFeatureCollection.class);
+    return createHttpResultFromFeatureList(resultFeatures.getFeatures());
+  }
+
+  private Result executeFeaturesByTile() throws IOException, InterruptedException {
+    String queryParamsString = keysToKeyValuesStrings(MARGIN, LIMIT);
+    Long tileId = readRequest.getQueryParameter(TILE_ID);
+
+    HttpResponse<String> response = requestSender.sendRequest(
+        String.format("/%s/%s/quadkey/%s?%s", environment, store, tileId, queryParamsString));
 
     XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
     if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());

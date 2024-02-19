@@ -1,0 +1,169 @@
+/*
+ * Copyright (C) 2017-2023 HERE Europe B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * License-Filename: LICENSE
+ */
+package com.here.naksha.app.service;
+
+import com.github.tomakehurst.wiremock.client.MappingBuilder;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.NakshaTestWebClient;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.http.HttpResponse;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+
+@WireMockTest(httpPort = 8089)
+class ReadFeaturesByTileHttpTest extends ApiTest {
+
+  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
+
+  private static final String SPACE_ID = "read_features_by_tile_http_test_space";
+  private static final String TYPE_QUADKEY = "quadkey";
+
+  /*
+  For this test suite, we upfront create various Features using different combination of Tags and Geometry.
+  To know what exact features we create, check the create_features.json.
+  And then in subsequent tests, we validate the various GetByTile APIs using different query parameters.
+  */
+  @BeforeAll
+  static void setup() throws URISyntaxException, IOException, InterruptedException {
+    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByTileHttp/setup");
+  }
+
+  private static Stream<Arguments> standardTestParams() {
+    return Stream.of(
+            standardTestSpec(
+                    // for empty Tile Id
+                    "tc0809_testGetByTileWithoutTile",
+                    TYPE_QUADKEY,
+                    "",
+                    null,
+                    "ReadFeatures/ByTile/TC0809_WithoutTile/feature_response_part.json",
+                    400,
+                    false
+            ),
+            standardTestSpec(
+                    // for invalid Tile Id
+                    "tc0810_testGetByTileWithInvalidTileId",
+                    TYPE_QUADKEY,
+                    "A",
+                    null,
+                    "ReadFeatures/ByTile/TC0810_InvalidTileId/feature_response_part.json",
+                    400,
+                    false
+            ),
+            standardTestSpec(
+                    // for given Tile condition and margin
+                    "tc0817_testGetByTileWithMargin",
+                    TYPE_QUADKEY,
+                    "120203302030322200",
+                    List.of(
+                            "margin=20"
+                    ),
+                    "ReadFeatures/ByTile/TC0817_TileWithMargin/feature_response_part.json",
+                    200,
+                    false
+            ),
+            standardTestSpec(
+                    // for supported Tile Id but Margin value is invalid
+                    "tc0818_testGetByTileWithInvalidMargin",
+                    TYPE_QUADKEY,
+                    "120203302030322200",
+                    List.of(
+                            "margin=-1"
+                    ),
+                    "ReadFeatures/ByTile/TC0818_InvalidMargin/feature_response_part.json",
+                    400,
+                    false
+            )
+    );
+  }
+
+  private static Arguments standardTestSpec(final String testDesc,
+                                            final @NotNull String tileType,
+                                            final @NotNull String tileId,
+                                            final @Nullable List<String> queryParamList,
+                                            final @NotNull String fPathOfExpectedResBody,
+                                            final int expectedResCode,
+                                            final boolean strictChecking) {
+    return Arguments.arguments(tileType, tileId, queryParamList, fPathOfExpectedResBody, expectedResCode, Named.named(testDesc, strictChecking));
+  }
+
+  @ParameterizedTest
+  @MethodSource("standardTestParams")
+  void standardTestExecution(
+          final @NotNull String tileType,
+          final @NotNull String tileId,
+          final @Nullable List<String> queryParamList,
+          final @NotNull String fPathOfExpectedResBody,
+          final int expectedResCode,
+          final boolean strictChecking) throws Exception {
+    // Given: Request parameters
+    String urlQueryParams = "";
+    if (queryParamList != null && !queryParamList.isEmpty()) {
+      urlQueryParams += String.join("&", queryParamList);
+    }
+    final String streamId = UUID.randomUUID().toString();
+
+    // Given: Expected response body
+    final String loadedString = loadFileOrFail(fPathOfExpectedResBody);
+    final String expectedBodyPart = (strictChecking) ? loadedString.replaceAll("\\{\\{streamId}}", streamId) : loadedString;
+
+    final MappingBuilder mappingBuilder = get(urlPathMatching("/my_env/my_storage/quadkey/.*"));
+    withQueryParams(mappingBuilder, queryParamList);
+    stubFor(mappingBuilder.willReturn(jsonResponse(expectedBodyPart, expectedResCode)));
+
+    // When: Get Features By Tile request is submitted to NakshaHub
+    final HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/tile/" + tileType + "/" + tileId + "?" + urlQueryParams, streamId);
+
+    // Then: Perform standard assertions
+    assertThat(response)
+            .hasStatus(expectedResCode)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Response body doesn't match", strictChecking);
+  }
+
+  /**
+   * Handles only key=1&key=2 format, not key=1,2 format
+   */
+  private MappingBuilder withQueryParams(MappingBuilder mappingBuilder, List<String> queryParamList) {
+    if (queryParamList != null) queryParamList.forEach(
+            str -> {
+              String[] split = str.split("=");
+              mappingBuilder.withQueryParam(split[0], equalTo(split[1]));
+            });
+    return mappingBuilder;
+  }
+
+}
