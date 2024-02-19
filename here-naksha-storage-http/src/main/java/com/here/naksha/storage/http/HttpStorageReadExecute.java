@@ -45,16 +45,15 @@ class HttpStorageReadExecute {
   private final ReadFeaturesProxyWrapper readRequest;
   private final HttpStorage.RequestSender requestSender;
 
-  private final String environment;
-  private final String store;
-
   public HttpStorageReadExecute(ReadFeaturesProxyWrapper readRequest, HttpStorage.RequestSender requestSender) {
     this.readRequest = readRequest;
     this.requestSender = requestSender;
 
     String[] splitCollectionName = readRequest.getCollections().get(0).split("/");
-    this.environment = splitCollectionName[0];
-    this.store = splitCollectionName[1];
+    String environment = splitCollectionName[0];
+    String store = splitCollectionName[1];
+    String featureType = splitCollectionName[2];
+    requestSender.setBaseEndpoint(String.format("/%s/%s/%s", environment, store, featureType));
   }
 
   @NotNull
@@ -75,8 +74,7 @@ class HttpStorageReadExecute {
   private Result executeFeatureById() throws IOException, InterruptedException {
     String featureId = readRequest.getQueryParameter(FEATURE_ID);
 
-    HttpResponse<String> response =
-        requestSender.sendRequest(String.format("/%s/%s/features/%s", environment, store, featureId));
+    HttpResponse<String> response = requestSender.sendRequest(String.format("/features/%s", featureId));
 
     XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
     if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
@@ -89,8 +87,7 @@ class HttpStorageReadExecute {
     List<String> featureIds = readRequest.getQueryParameter(FEATURE_IDS);
     String queryParamsString = FEATURE_IDS + "=" + String.join("&" + FEATURE_IDS + "=", featureIds);
 
-    HttpResponse<String> response =
-        requestSender.sendRequest(String.format("/%s/%s/features?%s", environment, store, queryParamsString));
+    HttpResponse<String> response = requestSender.sendRequest(String.format("/features?%s", queryParamsString));
 
     XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
     if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
@@ -102,8 +99,7 @@ class HttpStorageReadExecute {
   private Result executeFeatureByBBox() throws IOException, InterruptedException {
     String queryParamsString = keysToKeyValuesStrings(WEST, NORTH, EAST, SOUTH, CLIP_GEO, LIMIT);
 
-    HttpResponse<String> response =
-        requestSender.sendRequest(String.format("/%s/%s/bbox?%s", environment, store, queryParamsString));
+    HttpResponse<String> response = requestSender.sendRequest(String.format("/bbox?%s", queryParamsString));
 
     XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
     if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
@@ -116,8 +112,8 @@ class HttpStorageReadExecute {
     String queryParamsString = keysToKeyValuesStrings(MARGIN, LIMIT);
     Long tileId = readRequest.getQueryParameter(TILE_ID);
 
-    HttpResponse<String> response = requestSender.sendRequest(
-        String.format("/%s/%s/quadkey/%s?%s", environment, store, tileId, queryParamsString));
+    HttpResponse<String> response =
+        requestSender.sendRequest(String.format("/quadkey/%s?%s", tileId, queryParamsString));
 
     XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
     if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());

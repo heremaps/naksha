@@ -91,15 +91,15 @@ public class HttpStorage implements IStorage {
     private static final Logger log = LoggerFactory.getLogger(RequestSender.class);
     private final HttpRequest.Builder builder = createRequestBuilderBase();
 
-    public HttpRequest.Builder decorateRequest() {
-      return builder;
-    }
+    private String baseEndpoint;
 
     /**
+     * Send a request configured based on enclosing {@link HttpStorage}.
+     *
      * @param endpoint does not contain host:port part, starts with "/".
      */
     HttpResponse<String> sendRequest(String endpoint) throws IOException, InterruptedException {
-      String uri = properties.getUrl() + endpoint;
+      String uri = properties.getUrl() + baseEndpoint + endpoint;
       HttpRequest request = builder.uri(URI.create(uri)).build();
 
       long startTime = System.currentTimeMillis();
@@ -108,6 +108,15 @@ public class HttpStorage implements IStorage {
       log.info("Request to {} took {}ms", request.uri(), executionTime);
 
       return response;
+    }
+
+    /**
+     * Set base endpoint path that is always appended to HttpStorage specific target host:port
+     *
+     * @param baseEndpoint does not contain host:port part, starts with "/", does not end with "/".
+     */
+    public void setBaseEndpoint(String baseEndpoint) {
+      this.baseEndpoint = baseEndpoint;
     }
 
     private HttpRequest.Builder createRequestBuilderBase() {

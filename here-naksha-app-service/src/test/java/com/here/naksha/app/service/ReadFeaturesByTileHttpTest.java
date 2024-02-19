@@ -139,7 +139,7 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
     final String loadedString = loadFileOrFail(fPathOfExpectedResBody);
     final String expectedBodyPart = (strictChecking) ? loadedString.replaceAll("\\{\\{streamId}}", streamId) : loadedString;
 
-    final MappingBuilder mappingBuilder = get(urlPathMatching("/my_env/my_storage/quadkey/.*"));
+    final MappingBuilder mappingBuilder = get(urlPathMatching("/my_env/my_storage/my_feat_type/quadkey/.*"));
     withQueryParams(mappingBuilder, queryParamList);
     stubFor(mappingBuilder.willReturn(jsonResponse(expectedBodyPart, expectedResCode)));
 
@@ -157,13 +157,12 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
   /**
    * Handles only key=1&key=2 format, not key=1,2 format
    */
-  private MappingBuilder withQueryParams(MappingBuilder mappingBuilder, List<String> queryParamList) {
+  private void withQueryParams(MappingBuilder mappingBuilder, List<String> queryParamList) {
     if (queryParamList != null) queryParamList.forEach(
             str -> {
               String[] split = str.split("=");
               mappingBuilder.withQueryParam(split[0], equalTo(split[1]));
             });
-    return mappingBuilder;
   }
 
 }

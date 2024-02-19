@@ -40,7 +40,7 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
 
   private static final String SPACE_ID = "read_features_by_bbox_http_test_space";
-  private static final String ENDPOINT = "/my_env/my_storage/bbox";
+  private static final String ENDPOINT = "/my_env/my_storage/my_feat_type/bbox";
 
   /*
   For this test suite, we upfront create various Features using different combination of Tags and Geometry.
