@@ -129,6 +129,6 @@ class JbMap : JbEntryArray<JbMap>() {
      * @return This binary as [IMap].
      */
     fun toIMap() : IMap {
-        return JbValuesReader.readMap(this)
+        return JbReader.readMap(this)
     }
 }

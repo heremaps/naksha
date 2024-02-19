@@ -11,6 +11,27 @@ import kotlin.js.JsExport
 @Suppress("DuplicatedCode")
 @JsExport
 open class JbReader {
+
+    companion object {
+        fun readMap(jbMap: JbMap): IMap {
+            val imap = newMap()
+            while (jbMap.next()) {
+                imap.put(jbMap.key(), jbMap.value().readValue())
+            }
+            return imap
+        }
+
+        fun readArray(jbArray: JbArray): Array<Any?> {
+            val arr = Array<Any?>(jbArray.length()) {}
+            var i = 0
+            while (jbArray.next() && jbArray.ok()) {
+                arr[i] = jbArray.value().readValue()
+                i += 1
+            }
+            return arr
+        }
+    }
+
     /**
      * The view to which the reader maps, if any.
      */
@@ -582,4 +603,34 @@ open class JbReader {
      * @return The XYZ variant or _-1_, if not being an XYZ type.
      */
     fun xyzVariant(): Int = if (unitType() == TYPE_XYZ) useView().getInt8(offset + 1).toInt() else -1
+
+
+
+    fun readValue(): Any? {
+        return if (isInt32()) {
+            readInt32()
+        } else if (isInt()) {
+            readInt64()
+        } else if (isString()) {
+            readString()
+        } else if (isBool()) {
+            readBoolean()
+        } else if (isFloat32()) {
+            readFloat32()
+        } else if (isFloat64()) {
+            readFloat64()
+        } else if (isNull()) {
+            null
+        } else if (isText()) {
+            readText()
+        } else if (isTimestamp()) {
+            readTimestamp()
+        } else if (isMap()) {
+            readMap(JbMap().mapReader(this))
+        } else if (isArray()) {
+            readArray(JbArray().mapReader(this))
+        } else {
+            throw UnsupportedOperationException("Not implemented jbon value type")
+        }
+    }
 }

@@ -3,7 +3,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
-class JbValuesReaderTest : JbAbstractTest() {
+class JbReaderTest : JbAbstractTest() {
 
     @Test
     fun shouldReadTopElements() {
