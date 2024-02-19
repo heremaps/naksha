@@ -13,6 +13,7 @@ const val TYPE_CONTAINER_ARRAY = 0b0000_0100
 const val TYPE_CONTAINER_TEXT = 0b0000_1100
 const val TYPE_TINY_LOCAL_REF = 0b1110_0000
 const val TYPE_TINY_GLOBAL_REF = 0b1111_0000
+
 // 0b0100_0000 = Reserved
 // 0b0101_0000 = Reserved
 // 0b0110_0000 = Reserved
@@ -26,6 +27,7 @@ const val TYPE_BOOL_FALSE = 3
 const val TYPE_FLOAT32 = 4
 const val TYPE_FLOAT64 = 5
 const val TYPE_TIMESTAMP = 6 // UTC epoch in milliseconds
+
 // 7 = Reserved
 const val TYPE_INT8 = 8
 const val TYPE_INT16 = 9
@@ -78,7 +80,10 @@ const val XYZ_OP_UPDATE = 1
 const val XYZ_OP_UPSERT = 2
 const val XYZ_OP_DELETE = 3
 const val XYZ_OP_PURGE = 4
+val XYZ_OP_NAME = arrayOf("CREATE", "UPDATE", "UPSERT", "DELETE", "PURGE")
 
+@Suppress("NOTHING_TO_INLINE")
+inline fun xyzOpName(op:Int) = if (op >= 0 && op <= XYZ_OP_NAME.size) XYZ_OP_NAME[op] else "undefined"
 
 /**
  * An array with the Web-Safe Base-64 characters.
@@ -86,8 +91,8 @@ const val XYZ_OP_PURGE = 4
 val randomCharacters = CharArray(64) {
     when (it) {
         in 0..9 -> ('0'.code + it).toChar()
-        in 10 .. 35 -> ('a'.code + (it-10)).toChar()
-        in 36 .. 61 -> ('A'.code + (it-36)).toChar()
+        in 10..35 -> ('a'.code + (it - 10)).toChar()
+        in 36..61 -> ('A'.code + (it - 36)).toChar()
         62 -> '_'
         63 -> '-'
         else -> throw IllegalStateException()
@@ -95,7 +100,7 @@ val randomCharacters = CharArray(64) {
 }
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun newDataView(size:Int) = Jb.env.newDataView(ByteArray(size))
+inline fun newDataView(size: Int) = Jb.env.newDataView(ByteArray(size))
 
 @Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
-inline fun asArray(any:Any?) : Array<Any?> = any as Array<Any?>
+inline fun asArray(any: Any?): Array<Any?> = any as Array<Any?>

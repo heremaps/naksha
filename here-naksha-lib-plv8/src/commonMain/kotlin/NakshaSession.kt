@@ -313,28 +313,29 @@ SET (toast_tuple_target=8160,fillfactor=100
         errMsg = null
         val sql = this.sql
         val table = sql.newTable()
-        val op = XyzOp()
+        val xyzOp = XyzOp()
         val feature = JbFeature()
-        val tags = XyzTags()
+        val xyzTags = XyzTags()
         var i = 0
         while (i < op_arr.size) {
-            op.mapBytes(op_arr[i])
-            feature.mapBytes(feature_arr[i])
-            val geometry = geo_arr[i]
-            tags.mapBytes(tags_arr[i])
             try {
-                var id = op.id()
+                xyzOp.mapBytes(op_arr[i])
+                feature.mapBytes(feature_arr[i])
+                xyzTags.mapBytes(tags_arr[i])
+                val op = xyzOp.op()
+                var id = xyzOp.id()
                 if (id == null) {
                     id = feature.id()
                 }
-                if (id == null) {
+                if (id == null) throw NakshaException(ERR_ID_MISSING, "Missing id", xyzOpName(op), id, feature_arr[i], geo_arr[i], tags_arr[i])
+                if (xyzOp.op() == XYZ_OP_CREATE || xyzOp.op() == XYZ_OP_UPSERT) {
+                    // Try creation
 
                 }
-                if (op.op() == XYZ_OP_CREATE || op.op() == XYZ_OP_UPSERT) {
-
-                }
+            } catch (e: NakshaException) {
+                table.returnException(e)
             } catch (e: Exception) {
-
+                table.returnErr(ERR_FATAL, e.message?: "Fatal")
             } finally {
                 i++
             }

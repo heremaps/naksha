@@ -1,12 +1,18 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package com.here.naksha.lib.plv8
 
+import kotlin.js.ExperimentalJsExport
+import kotlin.js.JsExport
+
+@JsExport
 class NakshaException(
         val errNo: String,
         val errMsg: String,
         val op: String,
-        val id: String,
-        val xyz: ByteArray?,
-        val tags: ByteArray?,
+        val id: String? = null,
         val feature: ByteArray? = null,
-        val geo: Any? = null
+        val geo: Any? = null,
+        val tags: ByteArray? = null,
+        val xyz: ByteArray? = null
 ) : RuntimeException(errMsg)

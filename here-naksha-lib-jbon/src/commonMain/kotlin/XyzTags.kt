@@ -9,7 +9,8 @@ import kotlin.js.JsExport
  */
 @JsExport
 class XyzTags : XyzSpecial<XyzTags>() {
-    private lateinit var tags: IMap
+    private lateinit var _tagsMap: IMap
+    private lateinit var _tagsArray: Array<String>
 
     override fun parseHeader(mandatory: Boolean) {
         super.parseHeader(mandatory)
@@ -21,7 +22,8 @@ class XyzTags : XyzSpecial<XyzTags>() {
         }
 
         // Now all key-value pairs follow.
-        val tags = newMap()
+        val map = newMap()
+        val array = ArrayList<String>()
         while (reader.nextUnit()) {
             var key: String
             if (reader.isGlobalRef()) {
@@ -34,19 +36,30 @@ class XyzTags : XyzSpecial<XyzTags>() {
             var value: Any?
             if (reader.isNumber()) {
                 value = reader.readFloat64()
+                if (Jb.env.canBeInt32(value)) {
+                    val intValue = value.toInt()
+                    array.add("$key:=$intValue")
+                } else {
+                    array.add("$key:=$value")
+                }
             } else if (reader.isBool()) {
                 value = reader.readBoolean()
+                array.add("$key:=$value")
             } else if (reader.isString()) {
                 value = reader.readString()
+                array.add("$key=$value")
             } else if (reader.isGlobalRef()) {
                 val index = reader.readRef()
                 value = reader.globalDict!!.get(index)
+                array.add("$key=$value")
             } else {
                 value = null
+                array.add(key)
             }
-            tags.put(key, value)
+            map.put(key, value)
         }
-        this.tags = tags
+        this._tagsMap = map
+        this._tagsArray = array.toTypedArray()
         noContent()
     }
 
@@ -57,7 +70,12 @@ class XyzTags : XyzSpecial<XyzTags>() {
     fun globalDictId(): String? = reader.globalDict?.id()
 
     /**
-     * Returns all the tags.
+     * Returns the tags as map.
      */
-    fun tags(): IMap = tags
+    fun tagsMap(): IMap = _tagsMap
+
+    /**
+     * Returns the tags as array.
+     */
+    fun tagsArray(): Array<String> = _tagsArray
 }

@@ -24,7 +24,7 @@ class XyzTest : JbAbstractTest() {
     fun testXyzTags() {
         val tagBytes = createTags()
         val tagReader = XyzTags().mapBytes(tagBytes)
-        val tags = tagReader.tags()
+        val tags = tagReader.tagsMap()
         assertEquals(7, tags.size())
         assertTrue(tags.containsKey("restaurant"))
         assertNull(tags["restaurant"])
@@ -40,6 +40,16 @@ class XyzTest : JbAbstractTest() {
         assertEquals(1.56, tags["x"])
         assertTrue(tags.containsKey("y"))
         assertEquals(-1.99, tags["y"])
+
+        val array = tagReader.tagsArray()
+        assertEquals(7, tags.size())
+        assertEquals("restaurant", array[0])
+        assertEquals("isNoBool=true", array[1])
+        assertEquals("isOpen:=true", array[2])
+        assertEquals("foo=12", array[3])
+        assertEquals("bar:=14", array[4])
+        assertEquals("x:=1.56", array[5])
+        assertEquals("y:=-1.99", array[6])
     }
 
     @Order(2)
@@ -89,7 +99,7 @@ class XyzTest : JbAbstractTest() {
         // Convert to namespace.
         val tagBytes = createTags()
         val tagReader = XyzTags().mapBytes(tagBytes)
-        val ns = reader.toIMap("test_storage", tagReader.tags())
+        val ns = reader.toIMap("test_storage", tagReader.tagsMap())
         assertEquals(12, ns.size())
         assertEquals(createdTs.toDouble(), ns["createdAt"])
         assertEquals(createdTs.toDouble(), ns["updatedAt"])
