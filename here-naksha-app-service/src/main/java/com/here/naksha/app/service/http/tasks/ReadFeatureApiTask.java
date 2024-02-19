@@ -195,7 +195,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     queryParamsMap.put(NORTH, north);
     queryParamsMap.put(EAST, east);
     queryParamsMap.put(SOUTH, south);
-    queryParamsMap.put(CLIP_GEO, clip);
     queryParamsMap.put(LIMIT, limit);
     if (tagsOp != null) queryParamsMap.put(TAGS_OP, tagsOp);
     if (propSearchOp != null) queryParamsMap.put(PROPERTY_SEARCH_OP, propSearchOp);
@@ -241,9 +240,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
 
     final Map<String, Object> queryParamsMap = new HashMap<>();
-    queryParamsMap.put(TILE_ID, margin);
     queryParamsMap.put(MARGIN, margin);
     queryParamsMap.put(LIMIT, limit);
+    queryParamsMap.put(TILE_TYPE, tileType);
+    queryParamsMap.put(TILE_ID, tileId);
     if (tagsOp != null) queryParamsMap.put(TAGS_OP, tagsOp);
     if (propSearchOp != null) queryParamsMap.put(PROPERTY_SEARCH_OP, propSearchOp);
 

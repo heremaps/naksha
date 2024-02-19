@@ -99,6 +99,9 @@ class HttpStorageReadExecute {
   private Result executeFeatureByBBox() throws IOException, InterruptedException {
     String queryParamsString = keysToKeyValuesStrings(WEST, NORTH, EAST, SOUTH, CLIP_GEO, LIMIT);
 
+    warnOnUnsupportedQueryParam(TAGS_OP);
+    warnOnUnsupportedQueryParam(PROPERTY_SEARCH_OP);
+
     HttpResponse<String> response = requestSender.sendRequest(String.format("/bbox?%s", queryParamsString));
 
     XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
@@ -110,7 +113,13 @@ class HttpStorageReadExecute {
 
   private Result executeFeaturesByTile() throws IOException, InterruptedException {
     String queryParamsString = keysToKeyValuesStrings(MARGIN, LIMIT);
-    Long tileId = readRequest.getQueryParameter(TILE_ID);
+    String tileType = readRequest.getQueryParameter(TILE_TYPE);
+    String tileId = readRequest.getQueryParameter(TILE_ID);
+
+    if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY))
+      return new ErrorResult(XyzError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
+    warnOnUnsupportedQueryParam(TAGS_OP);
+    warnOnUnsupportedQueryParam(PROPERTY_SEARCH_OP);
 
     HttpResponse<String> response =
         requestSender.sendRequest(String.format("/quadkey/%s?%s", tileId, queryParamsString));
@@ -120,6 +129,12 @@ class HttpStorageReadExecute {
 
     XyzFeatureCollection resultFeatures = JsonSerializable.deserialize(response.body(), XyzFeatureCollection.class);
     return createHttpResultFromFeatureList(resultFeatures.getFeatures());
+  }
+
+  private void warnOnUnsupportedQueryParam(String tag) {
+    if (readRequest.getQueryParameter(tag) != null)
+      log.warn("The " + tag + " query param for " + readRequest.getReadRequestType()
+          + " is not supported yet and will be ignored.");
   }
 
   /**

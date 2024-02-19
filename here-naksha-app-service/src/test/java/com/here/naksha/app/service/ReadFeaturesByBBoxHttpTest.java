@@ -52,6 +52,36 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
     setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBoxHttp/setup");
   }
 
+
+  @Test
+  void tc0700_testGetByBBoxWithSingleTag_willIgnoreTag() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Validate features getting returned for given BBox coordinate and given single tag value
+    // Given: Features By BBox request (against above space)
+    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tagsQueryParam = "tags=one";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByBBoxHttp/TC0700_SingleTag/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+    stubFor(get(urlPathEqualTo(ENDPOINT))
+            .withQueryParam("west", equalTo("-180.0"))
+            .withQueryParam("south", equalTo("-90.0"))
+            .withQueryParam("east", equalTo("180.0"))
+            .withQueryParam("north", equalTo("90.0"))
+            .willReturn(okJson(expectedBodyPart)));
+    // Now the tags are not supported and will be ignored. TODO adamczyk: fix when tags will be supported
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
+
   @Test
   void tc0707_testGetByBBox() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox

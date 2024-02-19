@@ -20,6 +20,7 @@ package com.here.naksha.app.service;
 
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import org.jetbrains.annotations.NotNull;
@@ -68,8 +69,9 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
                     TYPE_QUADKEY,
                     "",
                     null,
-                    "ReadFeatures/ByTile/TC0809_WithoutTile/feature_response_part.json",
+                    "ReadFeatures/ByTileHttp/TC0809_WithoutTile/feature_response_part.json",
                     400,
+                    false,
                     false
             ),
             standardTestSpec(
@@ -78,8 +80,9 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
                     TYPE_QUADKEY,
                     "A",
                     null,
-                    "ReadFeatures/ByTile/TC0810_InvalidTileId/feature_response_part.json",
+                    "ReadFeatures/ByTileHttp/TC0810_InvalidTileId/feature_response_part.json",
                     400,
+                    false,
                     false
             ),
             standardTestSpec(
@@ -90,9 +93,10 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
                     List.of(
                             "margin=20"
                     ),
-                    "ReadFeatures/ByTile/TC0817_TileWithMargin/feature_response_part.json",
+                    "ReadFeatures/ByTileHttp/TC0817_TileWithMargin/feature_response_part.json",
                     200,
-                    false
+                    false,
+                    true
             ),
             standardTestSpec(
                     // for supported Tile Id but Margin value is invalid
@@ -102,8 +106,20 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
                     List.of(
                             "margin=-1"
                     ),
-                    "ReadFeatures/ByTile/TC0818_InvalidMargin/feature_response_part.json",
+                    "ReadFeatures/ByTileHttp/TC0818_InvalidMargin/feature_response_part.json",
                     400,
+                    false,
+                    false
+            ),
+            standardTestSpec(
+                    // for supported Tile Id but Margin value is invalid
+                    "tc0900_testGetByTileWithNonQuadkeyTileType",
+                    "not_supported_file_type",
+                    "120203302030322200",
+                    null,
+                    "ReadFeatures/ByTileHttp/TC0818_InvalidMargin/feature_response_part.json",
+                    400, // Http storage returns 501 but at Hub level validation is preformed an 400 thrown
+                    false,
                     false
             )
     );
@@ -115,8 +131,9 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
                                             final @Nullable List<String> queryParamList,
                                             final @NotNull String fPathOfExpectedResBody,
                                             final int expectedResCode,
-                                            final boolean strictChecking) {
-    return Arguments.arguments(tileType, tileId, queryParamList, fPathOfExpectedResBody, expectedResCode, Named.named(testDesc, strictChecking));
+                                            final boolean strictChecking,
+                                            final boolean shouldReachEndpoint) {
+    return Arguments.arguments(tileType, tileId, queryParamList, fPathOfExpectedResBody, expectedResCode, Named.named(testDesc, strictChecking), shouldReachEndpoint);
   }
 
   @ParameterizedTest
@@ -127,7 +144,8 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
           final @Nullable List<String> queryParamList,
           final @NotNull String fPathOfExpectedResBody,
           final int expectedResCode,
-          final boolean strictChecking) throws Exception {
+          final boolean strictChecking,
+          final boolean shouldReachEndpoint) throws Exception {
     // Given: Request parameters
     String urlQueryParams = "";
     if (queryParamList != null && !queryParamList.isEmpty()) {
@@ -135,13 +153,17 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
     }
     final String streamId = UUID.randomUUID().toString();
 
+    // Given: Http endpoint
+    final UrlPathPattern urlPathPattern = urlPathEqualTo("/my_env/my_storage/my_feat_type/quadkey/" + tileId);
+    final MappingBuilder mappingBuilder = get(urlPathPattern);
+    withQueryParams(mappingBuilder, queryParamList);
+
     // Given: Expected response body
     final String loadedString = loadFileOrFail(fPathOfExpectedResBody);
     final String expectedBodyPart = (strictChecking) ? loadedString.replaceAll("\\{\\{streamId}}", streamId) : loadedString;
-
-    final MappingBuilder mappingBuilder = get(urlPathMatching("/my_env/my_storage/my_feat_type/quadkey/.*"));
-    withQueryParams(mappingBuilder, queryParamList);
-    stubFor(mappingBuilder.willReturn(jsonResponse(expectedBodyPart, expectedResCode)));
+    if (shouldReachEndpoint) {
+      stubFor(mappingBuilder.willReturn(jsonResponse(expectedBodyPart, expectedResCode)));
+    }
 
     // When: Get Features By Tile request is submitted to NakshaHub
     final HttpResponse<String> response = nakshaClient
@@ -152,6 +174,8 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
             .hasStatus(expectedResCode)
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Response body doesn't match", strictChecking);
+
+    verify(shouldReachEndpoint ? 1 : 0, getRequestedFor(urlPathPattern));
   }
 
   /**
