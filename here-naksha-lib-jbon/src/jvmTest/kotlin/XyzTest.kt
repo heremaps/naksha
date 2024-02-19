@@ -1,5 +1,4 @@
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.plv8.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
