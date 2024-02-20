@@ -183,26 +183,18 @@ class NakshaSession(
      * Create the XYZ namespace for an _INSERT_ operation.
      * @param collectionId The collection into which a feature is inserted.
      * @param featureId The ID of the feature.
+     * @param uid The UID to use.
      * @param geo The geometry of the feature as EWKB; if any.
      * @return The new XYZ namespace for this feature.
      */
-    internal fun xyzInsert(collectionId: String, featureId: String, geo: ByteArray?): ByteArray {
+    internal fun xyzInsert(collectionId: String, featureId: String, uid:BigInt64, geo: ByteArray?): ByteArray {
         val env = Jb.env
         val createdAt = env.currentMillis()
-        return xyzBuilder.buildXyzNs(
-                createdAt,
-                createdAt,
-                txn().value,
-                XYZ_OP_CREATE,
-                1,
-                createdAt,
-                Static.extent(sql, geo),
-                null,
-                txn().newFeatureUuid(storageId, collectionId, newUid(collectionId)).toString(),
-                appId,
-                author ?: appId,
-                Static.grid(sql, featureId, geo)
-        )
+        val txn = txn();
+        val extent = Static.extent(sql, geo)
+        val uuid = txn.newFeatureUuid(storageId, collectionId, uid).toString()
+        val grid = Static.grid(sql, featureId, geo)
+        return xyzBuilder.buildXyzNs(createdAt,createdAt,txn.value,XYZ_OP_CREATE,1,createdAt,extent,null,uuid,appId,author?:appId,grid)
     }
 
     private fun xyzUpdate(): ByteArray {
@@ -229,12 +221,18 @@ class NakshaSession(
         }
         if (data.TG_OP == TG_OP_INSERT) {
             check(data.NEW != null)
+            data.NEW[COL_TXN_NEXT] = Jb.int64.ZERO()
+            val uid = newUid(collectionId)
+            data.NEW[COL_UID] = uid
             val id: String = data.NEW[COL_ID] ?: throw NakshaException(ERR_ID_MISSING, "Missing id")
-            data.NEW[COL_XYZ] = xyzInsert(collectionId, id, data.NEW[COL_GEOMETRY])
+            data.NEW[COL_XYZ] = xyzInsert(collectionId, id, uid, data.NEW[COL_GEOMETRY])
         } else if (data.TG_OP == TG_OP_UPDATE) {
+            check(data.NEW != null)
+            check(data.OLD != null)
             TODO("Implement me!")
         }
         // We should not be called for delete, in that case do nothing.
+        Jb.log.info("Trigger before DONE: "+Jb.env.stringify(data, true))
     }
 
     /**
@@ -313,7 +311,7 @@ class NakshaSession(
      */
     fun txn(): NakshaTxn {
         if (_txn == null) {
-            val row = asMap(asArray(sql.execute("SELECT pg_current_xact_id() xactid, nextval($1) txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time", arrayOf(txnSeqOid)))[0])
+            val row = asMap(asArray(sql.execute("SELECT txid_current() xactid, nextval($1) txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time", arrayOf(txnSeqOid)))[0])
             _xactId = asBigInt64(row["xactid"])
             val txts = asBigInt64(row["time"])
             _txts = txts
@@ -361,7 +359,6 @@ SET (toast_tuple_target=8160,fillfactor=100
 -- Specifies a fraction of the table size to add to autovacuum_analyze_threshold when deciding whether to trigger an ANALYZE.
 ,autovacuum_analyze_threshold=10000,autovacuum_analyze_scale_factor=0.1
 );"""
-                Jb.log.info("query: $query")
                 sql.execute(query)
             }
         }

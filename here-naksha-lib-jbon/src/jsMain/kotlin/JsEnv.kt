@@ -75,6 +75,11 @@ Object.assign(BigInt, {
     equals: function(t) { return this == t; },
     hashCode: function(t) { var u=BigInt.u64(t); return BigInt.s32((u >> BigInt(32)) ^ (u & BigInt.MASK_LO_32)); }
 });
+Object.assign(JSON, {
+    naksha_replacer: function(key, value) {
+        return (typeof value === 'bigint') ? Number(value) : value;
+    }
+});
 """)
                 Jb.initialize(JsEnv(), JsMapApi(), JsBigInt64Api(), BrowserLog())
             }
@@ -94,8 +99,9 @@ Object.assign(BigInt, {
     }
 
     override fun stringify(any: Any, pretty: Boolean): String {
-        return js("JSON.stringify(any, pretty)")
+        return js("JSON.stringify(any, JSON.naksha_replacer, pretty?3:null)")
     }
+
 
     override fun parse(json: String): Any {
         return js("JSON.parse(json)")

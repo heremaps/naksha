@@ -22,7 +22,7 @@ internal const val TG_LEVEL_STATEMENT = "STATEMENT"
  * @property TG_NAME name of the trigger which fired.
  * @property TG_WHEN [TG_WHEN_BEFORE], [TG_WHEN_AFTER], or [TG_WHEN_INSTEAD_OF], depending on the trigger's definition.
  * @property TG_LEVEL [TG_LEVEL_ROW] or [TG_LEVEL_STATEMENT], depending on the trigger's definition.
- * @property TG_RELID object ID of the table that caused the trigger invocation.
+ * @property TG_RELID object ID of the table that caused the trigger invocation (oid).
  * @property TG_TABLE_NAME table that caused the trigger invocation.
  * @property TG_TABLE_SCHEMA schema of the table that caused the trigger invocation.
  * @property NEW new database row for [TG_OP_INSERT]/[TG_OP_UPDATE] operations in row-level triggers. This variable is _null_ in statement-level triggers and for [TG_OP_DELETE] operations.
@@ -35,7 +35,7 @@ class PgTrigger(
         val TG_NAME: String,
         val TG_WHEN: String,
         val TG_LEVEL: String,
-        val TG_RELID: Double, // TODO: Clarify is this is double or bigint!
+        val TG_RELID: Int,
         val TG_TABLE_NAME: String,
         val TG_TABLE_SCHEMA: String,
         val NEW: IMap?,

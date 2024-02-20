@@ -56,7 +56,6 @@ CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, a
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
-  // TODO: Clarify if TG_RELID is double or bigint!
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
   let mapi = require("jbon").Jb.map;
@@ -66,6 +65,8 @@ CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
     mapi.isMap(OLD) ? mapi.asMap(OLD) : null
   );
   session.triggerBefore(t);
+  plv8.elog(INFO, "NEW = "+JSON.stringify(NEW));
+  plv8.elog(INFO, "t.NEW = "+JSON.stringify(t.NEW));
   if (TG_OP == "INSERT" || TG_OP == "UPDATE") {
     return NEW
   }
@@ -73,7 +74,6 @@ CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_trigger_after() RETURNS trigger AS $$
-  // TODO: Clarify if TG_RELID is double or bigint!
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
   let mapi = require("jbon").Jb.map;

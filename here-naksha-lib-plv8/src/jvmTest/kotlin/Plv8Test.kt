@@ -1,9 +1,11 @@
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.plv8.NakshaSession
-import com.here.naksha.lib.plv8.Static
+import com.here.naksha.lib.plv8.*
+import com.here.naksha.lib.plv8.TG_OP_INSERT
+import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -126,14 +128,43 @@ class Plv8Test : Plv8TestContainer() {
         assertEquals(BigInt64(6), session.newUid("foo"))
         assertEquals(BigInt64(7), session.newUid("foo"))
         assertEquals(BigInt64(8), session.newUid("foo"))
-        assertEquals(BigInt64(9), session.newUid("foo"))
-        val xyzBytes = session.xyzInsert("foo", "bar", null)
+        // 9 and 10 are next UIDs!
+        val pgNew = Jb.map.newMap()
+        pgNew[COL_UID] = null // Should be set by trigger
+        pgNew[COL_ID] = "foo"
+        pgNew[COL_TXN_NEXT] =null // Should be set by trigger
+        pgNew[COL_FEATURE] = null
+        pgNew[COL_GEOMETRY] = null
+        pgNew[COL_TAGS] = null
+        pgNew[COL_XYZ] = null // Should be set by trigger
+        val pgOld = null
+        val t = PgTrigger(
+                TG_OP_INSERT,
+                "naksha_trigger_before",
+                TG_WHEN_BEFORE,
+                TG_LEVEL_ROW,
+                0,
+                "foo",
+                session.schema,
+                pgNew,
+                pgOld
+        )
+        // Simulate a trigger invocation.
+        session.triggerBefore(t)
+        assertEquals(BigInt64(9), pgNew[COL_UID])
+        assertEquals(BigInt64(0), pgNew[COL_TXN_NEXT])
+        assertNotNull(pgNew[COL_XYZ])
+        // Try the XYZ insert directly
+        val uid = session.newUid("foo")
+        assertEquals(BigInt64(10), uid)
+        val xyzBytes = session.xyzInsert("foo", "bar", uid,null)
         val xyzNs = XyzNs().mapBytes(xyzBytes)
-        assertEquals(session.txn(), xyzNs.txn())
+        val txn = session.txn()
+        assertEquals(txn, xyzNs.txn())
         val expectedGrid = Static.grid(session.sql, "bar", null)
         assertEquals(expectedGrid, xyzNs.grid())
         val uuid = xyzNs.uuid()
-        //assertEquals(BigInt64(10), )
+        assertEquals("${session.storageId}:foo:${txn.year}:${txn.month}:${txn.day}:10", uuid)
         session.sql.execute("COMMIT")
     }
 }
