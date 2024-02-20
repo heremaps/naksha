@@ -65,8 +65,6 @@ CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
     mapi.isMap(OLD) ? mapi.asMap(OLD) : null
   );
   session.triggerBefore(t);
-  plv8.elog(INFO, "NEW = "+JSON.stringify(NEW));
-  plv8.elog(INFO, "t.NEW = "+JSON.stringify(t.NEW));
   if (TG_OP == "INSERT" || TG_OP == "UPDATE") {
     return NEW
   }
@@ -135,85 +133,99 @@ CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_created_at(xyz bytea) RETURNS int8 AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.createdAt();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_updated_at(xyz bytea) RETURNS int8 AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.updatedAt();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_txn(xyz bytea) RETURNS int8 AS $$
-  let xyzNs = new (require("jbon").XyzNs)();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.txn().value;
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_version(xyz bytea) RETURNS int4 AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.version();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_extent(xyz bytea) RETURNS int8 AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.extent();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_author(xyz bytea) RETURNS text AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.author();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_author_ts(xyz bytea) RETURNS int8 AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.authorTs();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_app_id(xyz bytea) RETURNS text AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.appId();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_uuid(xyz bytea) RETURNS text AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.uuid();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_puuid(xyz bytea) RETURNS text AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.puuid();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_action(xyz bytea) RETURNS text AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.actionAsString();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_crid(xyz bytea) RETURNS text AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.crid();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_grid(xyz bytea) RETURNS text AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.grid();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_mrid(xyz bytea) RETURNS text AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let jb = require("jbon");
+  let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.mrid();
 $$ LANGUAGE 'plv8' IMMUTABLE;
@@ -228,7 +240,11 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 -- https://support.smartbear.com/alertsite/docs/monitors/api/endpoint/jsonpath.html
 -- https://goessner.net/articles/JsonPath/
 CREATE OR REPLACE FUNCTION tags_to_jsonb(tags bytea) RETURNS jsonb AS $$
-  return (new require("jbon").XyzTags()).mapBytes(xyz).tagsMap()
+  if (tags == null) return {};
+  let jb = require("jbon");
+  let xyzTags = new jb.XyzTags();
+  xyzTags.mapBytes(tags);
+  return xyzTags.tagsMap();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_feature_id(feature bytea) RETURNS text AS $$
