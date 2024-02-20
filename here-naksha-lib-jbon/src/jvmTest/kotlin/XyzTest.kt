@@ -97,7 +97,7 @@ class XyzTest : JbAbstractTest() {
         // Convert to namespace.
         val tagBytes = createTags()
         val tagReader = XyzTags().mapBytes(tagBytes)
-        val ns = reader.toIMap("test_storage", tagReader.tagsMap())
+        val ns = reader.toIMap("test_storage", tagReader.tagsArray())
         assertEquals(12, ns.size())
         assertEquals(createdTs.toDouble(), ns["createdAt"])
         assertEquals(createdTs.toDouble(), ns["updatedAt"])

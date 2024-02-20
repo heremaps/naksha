@@ -230,6 +230,17 @@ CREATE OR REPLACE FUNCTION xyz_mrid(xyz bytea) RETURNS text AS $$
   return xyzNs.mrid();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION xyz_to_jsonb(xyz bytea, tags bytea) RETURNS jsonb AS $$
+  let naksha = require("naksha");
+  let jb = require("jbon");
+  let session = naksha.NakshaSession.Companion.get();
+  let xyzNs = new jb.XyzNs();
+  xyzNs.mapBytes(xyz);
+  let xyzTags = new jb.XyzTags();
+  xyzTags.mapBytes(tags);
+  return xyzNs.toIMap(session.storageId, xyzTags.isMapped()?xyzTags.tagsArray():null);
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
 -- query like:
 -- where tags_to_jsonb(tags) @? '$.x?(@ starts with "Hello")'
 -- where tags_to_jsonb(tags) @? '$.y?(@ >= 500)'

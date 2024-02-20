@@ -123,7 +123,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
      * @param tags The tags to merge into, if any.
      * @return the XYZ namespace as map.
      */
-    fun toIMap(storageId: String, tags: IMap?): IMap {
+    fun toIMap(storageId: String, tags: Array<String>?): IMap {
         val map = newMap()
         map["createdAt"] = createdAt().toDouble()
         map["updatedAt"] = updatedAt().toDouble()
@@ -135,7 +135,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
         }
         map["version"] = version()
         map["author_ts"] = authorTs().toDouble()
-        map["extend"] = extent().toDouble()
+        map["extent"] = extent().toDouble()
         if (puuid() != null) map["puuid"] = puuid()
         map["uuid"] = uuid()
         map["author"] = author()
