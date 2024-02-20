@@ -18,7 +18,7 @@ CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
   }
   plv8.moduleCache = {};
   load = function(key, source) {
-      plv8.elog(INFO, "Load module "+key);
+      plv8.elog(INFO, "Load module " + key);
       var module = {exports: {}};
       eval("(function(module, exports) {\n" + source + ";\n})")(module, module.exports);
       plv8.moduleCache[key] = module.exports;
@@ -26,7 +26,7 @@ CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
   };
   require = function(module) {
       if(plv8.moduleCache[module]) {
-        plv8.elog(INFO, "Return cached module "+module);
+        //plv8.elog(INFO, "Return cached module "+module);
         return plv8.moduleCache[module];
       }
       var rows = plv8.execute(

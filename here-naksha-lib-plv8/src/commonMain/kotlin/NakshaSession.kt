@@ -46,12 +46,12 @@ class NakshaSession(
     /**
      * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the transaction sequence.
      */
-    val txnOid: Int
+    val txnSeqOid: Int
 
     init {
         sql.execute("SET SESSION search_path TO " + sql.quoteIdent(schema) + ", public, topology;")
         schemaOid = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
-        txnOid = asMap(asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = 'naksha_txn_seq' and relnamespace = $1", arrayOf(schemaOid)))[0])["oid"]!!
+        txnSeqOid = asMap(asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = 'naksha_txn_seq' and relnamespace = $1", arrayOf(schemaOid)))[0])["oid"]!!
     }
 
     companion object {
@@ -91,6 +91,16 @@ class NakshaSession(
     private lateinit var historyPartitionCache: IMap
 
     /**
+     * The cache for the object ids of the collection sequence counters.
+     */
+    private lateinit var collectionSeqOidCache: IMap
+
+    /**
+     * The cache for UID.
+     */
+    private lateinit var collectionUidCache: IMap
+
+    /**
      * The last error number as SQLState.
      */
     var errNo: String? = null
@@ -122,19 +132,85 @@ class NakshaSession(
         }
     }
 
-    private fun newUid() : BigInt64 {
+    /**
+     * Fills the internal UID cache for the given collection with the given amount of UIDs.
+     * @param collectionId The collection identifier.
+     * @param min The minimal amount of UIDs to cache (if that many are still cached, we are okay).
+     * @param max The maximum amount of UIDs to cache (if some need to be fetched, then this many are fetched).
+     */
+    fun prefetchUids(collectionId: String, min: Int, max: Int) {
+        require(min in 1..max)
+        if (!this::collectionUidCache.isInitialized) collectionUidCache = Jb.map.newMap()
+        var cached_uids: ArrayList<BigInt64>? = collectionUidCache[collectionId]
+        if (cached_uids == null) {
+            cached_uids = ArrayList()
+            collectionUidCache[collectionId] = cached_uids
+        }
+        if (cached_uids.size >= min) return
+
+        // Fill the cache.
+        if (!this::collectionSeqOidCache.isInitialized) collectionSeqOidCache = Jb.map.newMap()
+        var uidSeqOid: Int? = collectionSeqOidCache[collectionId]
+        if (uidSeqOid == null) {
+            val seqName = collectionId + "_uid_seq"
+            uidSeqOid = asMap(asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = $1 and relnamespace = $2",
+                    arrayOf(seqName, schemaOid)))[0])["oid"]!!
+            collectionSeqOidCache[collectionId] = uidSeqOid
+        }
+
+        val need = max - cached_uids.size
+        val rows = asArray(sql.execute("SELECT nextval($1) as v from generate_series(1,$need);", arrayOf(uidSeqOid)))
+        var i = 0
+        while (i < rows.size) {
+            cached_uids.add(asMap(rows[i])["v"]!!)
+            i++
+        }
+    }
+
+    /**
+     * Returns a new UID for the given collection from the cached UIDs.
+     * @return The new UID.
+     */
+    fun newUid(collectionId: String): BigInt64 {
+        prefetchUids(collectionId, 1, 10)
+        val cached_uids: ArrayList<BigInt64> = collectionUidCache[collectionId]!!
+        return cached_uids.removeFirst()
+    }
+
+    private val xyzBuilder = XyzBuilder(Jb.env.newDataView(ByteArray(500)))
+
+    /**
+     * Create the XYZ namespace for an _INSERT_ operation.
+     * @param collectionId The collection into which a feature is inserted.
+     * @param featureId The ID of the feature.
+     * @param geo The geometry of the feature as EWKB; if any.
+     * @return The new XYZ namespace for this feature.
+     */
+    internal fun xyzInsert(collectionId: String, featureId: String, geo: ByteArray?): ByteArray {
+        val env = Jb.env
+        val createdAt = env.currentMillis()
+        return xyzBuilder.buildXyzNs(
+                createdAt,
+                createdAt,
+                txn().value,
+                XYZ_OP_CREATE,
+                1,
+                createdAt,
+                Static.extent(sql, geo),
+                null,
+                txn().newFeatureUuid(storageId, collectionId, newUid(collectionId)).toString(),
+                appId,
+                author ?: appId,
+                null,
+                Static.grid(sql, featureId, geo)
+        )
+    }
+
+    private fun xyzUpdate(): ByteArray {
         TODO("Implement me!")
     }
 
-    private fun xyzInsert() : ByteArray {
-        TODO("Implement me!")
-    }
-
-    private fun xyzUpdate() : ByteArray {
-        TODO("Implement me!")
-    }
-
-    private fun xyzDelete() : ByteArray {
+    private fun xyzDelete(): ByteArray {
         TODO("Implement me!")
     }
 
@@ -144,7 +220,22 @@ class NakshaSession(
      * @param data The trigger data, allows the modification of [PgTrigger.NEW].
      */
     fun triggerBefore(data: PgTrigger) {
-        Jb.log.info("Trigger before")
+        var collectionId = data.TG_TABLE_NAME
+        // Note: "topology_p000" is a partition, but we need collection-id.
+        //        0123456789012
+        // So, in that case we will find an underscore at index 8, so i = length-4!
+        val i = collectionId.lastIndexOf('_')
+        if (i >= 0 && i == (collectionId.length - 4) && collectionId[i + 1] == 'p') {
+            collectionId = collectionId.substring(0, i)
+        }
+        if (data.TG_OP == TG_OP_INSERT) {
+            check(data.NEW != null)
+            val id: String = data.NEW[COL_ID] ?: throw NakshaException(ERR_ID_MISSING, "Missing id")
+            data.NEW[COL_XYZ] = xyzInsert(collectionId, id, data.NEW[COL_GEOMETRY])
+        } else if (data.TG_OP == TG_OP_UPDATE) {
+            TODO("Implement me!")
+        }
+        // We should not be called for delete, in that case do nothing.
     }
 
     /**
@@ -223,7 +314,7 @@ class NakshaSession(
      */
     fun txn(): NakshaTxn {
         if (_txn == null) {
-            val row = asMap(asArray(sql.execute("SELECT pg_current_xact_id() xactid, nextval($1) txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time", arrayOf(txnOid)))[0])
+            val row = asMap(asArray(sql.execute("SELECT pg_current_xact_id() xactid, nextval($1) txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time", arrayOf(txnSeqOid)))[0])
             _xactId = asBigInt64(row["xactid"])
             val txts = asBigInt64(row["time"])
             _txts = txts
@@ -234,14 +325,14 @@ class NakshaSession(
             if (txn.year != txDate.year || txn.month != txDate.monthNumber || txn.day != txDate.dayOfMonth) {
                 sql.execute("SELECT pg_advisory_lock($1)", arrayOf(Static.TXN_LOCK_ID))
                 try {
-                    val raw = asBigInt64(asMap((sql.execute("SELECT nextval($1) as v", arrayOf(txnOid)) as Array<Any>)[0])["v"])
+                    val raw = asBigInt64(asMap((sql.execute("SELECT nextval($1) as v", arrayOf(txnSeqOid)) as Array<Any>)[0])["v"])
                     txn = NakshaTxn(raw)
                     _txn = txn
                     if (txn.year != txDate.year || txn.month != txDate.monthNumber || txn.day != txDate.dayOfMonth) {
                         // Rollover, we update sequence of the day.
                         txn = NakshaTxn.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, BigInt64(0))
                         _txn = txn
-                        sql.execute("SELECT setval($1, $2)", arrayOf(txnOid, txn.value + 1))
+                        sql.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1))
                     }
                 } finally {
                     sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(Static.TXN_LOCK_ID))
@@ -336,7 +427,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                     val rows = asArray(sql.execute("SELECT uid, id, feature, tags, xzy FROM naksha_collections"))
                     val existing = if (rows.isEmpty()) null else asMap(rows[0])
                     if (op == XYZ_OP_UPSERT) {
-                        op = if (existing!=null) XYZ_OP_UPDATE else XYZ_OP_CREATE
+                        op = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
                     }
                     if (op == XYZ_OP_CREATE) {
                         if (existing != null) {
@@ -353,7 +444,7 @@ SET (toast_tuple_target=8160,fillfactor=100
             } catch (e: NakshaException) {
                 table.returnException(e)
             } catch (e: Exception) {
-                table.returnErr(ERR_FATAL, e.message?: "Fatal")
+                table.returnErr(ERR_FATAL, e.message ?: "Fatal")
             } finally {
                 i++
             }

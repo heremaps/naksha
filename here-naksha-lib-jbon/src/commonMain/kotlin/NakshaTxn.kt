@@ -88,8 +88,22 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
         return _string
     }
 
+    /**
+     * Convert this transaction number into a UUID representation.
+     * @param storageId The storage-identifier where this transaction is stored.
+     * @return The transaction number as UUID.
+     */
     fun toUuid(storageId: String) : NakshaUuid {
         if (!this::_uuid.isInitialized) _uuid = NakshaUuid(storageId, "txn", year, month, day, seq)
         return _uuid
     }
+
+    /**
+     * Create a new UUID for a feature state that is part of this transaction.
+     * @param storageId The storage-identifier where this transaction is stored.
+     * @param collectionId The collection-identifier in which the feature is located.
+     * @param uid The unique row identifier of the feature.
+     * @return The UUID for this new feature state.
+     */
+    fun newFeatureUuid(storageId: String, collectionId: String, uid:BigInt64) : NakshaUuid = NakshaUuid(storageId, collectionId, year, month, day, uid)
 }

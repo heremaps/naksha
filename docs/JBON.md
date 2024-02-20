@@ -215,11 +215,11 @@ This type is reserved for XYZ interactions. It is a flat object, optimized to be
 The information that the database manages and what is delivered by the database.
 
 - **createdAt** (timestamp)
-- **updatedAt** (timestamp, _null_, if being the same as **createdAt**)
+- **updatedAt** (timestamp) - _null_, if being the same as **createdAt**
 - **txn** (BigInt64)
 - **action** (integer), constants for CREATE (0), UPDATE (1) and DELETE (2)
 - **version** (integer)
-- **author_ts** (timestamp)
+- **author_ts** (timestamp) - _null_, if being the same as **updatedAt**, which can be the same as **createdAt**
 - **extend** (double)
 - **puuid** (string or _null_)
 - **uuid** (string)

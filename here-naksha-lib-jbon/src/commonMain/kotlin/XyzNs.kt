@@ -12,7 +12,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
     private var action: Int = 0
     private var version: Int = 0
     private lateinit var authorTs: BigInt64
-    private lateinit var extend: BigInt64
+    private lateinit var extent: BigInt64
 
     // Strings and maps are expensive to parse, therefore we only do on demand.
     private var uuid: String = UNDEFINED_STRING
@@ -35,9 +35,9 @@ class XyzNs : XyzSpecial<XyzNs>() {
         check(reader.nextUnit())
         version = reader.readInt32()
         check(reader.nextUnit())
-        authorTs = reader.readTimestamp()
+        authorTs = if (reader.isNull()) updatedAt else  reader.readTimestamp()
         check(reader.nextUnit())
-        extend = reader.readInt64()
+        extent = reader.readInt64()
         check(reader.nextUnit())
 
         setContent(reader.offset, reader.useView().getSize())
@@ -55,7 +55,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
     }
     fun version(): Int = version
     fun authorTs(): BigInt64 = authorTs
-    fun extend(): BigInt64 = extend
+    fun extent(): BigInt64 = extent
 
     fun puuid(): String? {
         var value = this.puuid
@@ -135,7 +135,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
         }
         map["version"] = version()
         map["author_ts"] = authorTs().toDouble()
-        map["extend"] = extend().toDouble()
+        map["extend"] = extent().toDouble()
         if (puuid() != null) map["puuid"] = puuid()
         map["uuid"] = uuid()
         map["author"] = author()

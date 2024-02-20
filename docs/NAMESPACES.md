@@ -20,7 +20,7 @@ The XYZ namespace was originally introduced by the XYZ-Hub to store state relate
 | author_ts | Long            | yes | The epoch timestamp in milliseconds when the author made the last change.                               |
 | tags      | List\<String\>? | no  | The tags.                                                                                               |
 | grid      | String          | yes | The GeoHash-Reference-ID (14 characters).                                                               |
-| extend    | Long            | yes | The size of the feature in milliseconds. Points and features without geometry will have a size of zero. |
+| extent    | Long            | yes | The size of the feature in milliseconds. Points and features without geometry will have a size of zero. |
 
 * The **author** must not be `null` in the namespace, but the client does not need to set an author. In this case, the author of features being updated will stay unchanged. For created features, the author defined in the collection-information will be used, if this is as well `null`, then the **app_id** is used (all features **must** eventually have an author).
 

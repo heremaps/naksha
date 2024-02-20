@@ -141,6 +141,13 @@ $$ LANGUAGE 'plv8';
     }
 
     /**
+     * Calculates the extent, the size of the feature in milliseconds.
+     */
+    @JvmStatic
+    fun extent(sql: IPlv8Sql, geo: ByteArray?) : BigInt64 = Jb.int64.ZERO()
+    // TODO: Implement me!
+
+    /**
      * Tests if specific database table (in the Naksha session schema) exists already
      * @param sql The SQL API.
      * @param name The table name.
@@ -219,19 +226,19 @@ SET (toast_tuple_target=8160"""
         // geo
         qin = sql.quoteIdent("${tableName}_geo_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndexType
-(geo, xyz_txn(xyz), xyz_extend(xyz)) WITH (buffering=ON,fillfactor=$fillFactor);
+(geo, xyz_txn(xyz), xyz_extent(xyz)) WITH (buffering=ON,fillfactor=$fillFactor);
 """
 
         // tags
         qin = sql.quoteIdent("${tableName}_tags_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin 
-(tags_to_jsonb(tags), xyz_txn(xyz), xyz_extend(xyz)) WITH (fastupdate=ON,gin_pending_list_limit=32768);
+(tags_to_jsonb(tags), xyz_txn(xyz), xyz_extent(xyz)) WITH (fastupdate=ON,gin_pending_list_limit=32768);
 """
 
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(xyz_grid(xyz) COLLATE "C" DESC, xyz_txn(xyz) DESC, xyz_extend(xyz)) WITH (fillfactor=$fillFactor);
+(xyz_grid(xyz) COLLATE "C" DESC, xyz_txn(xyz) DESC, xyz_extent(xyz)) WITH (fillfactor=$fillFactor);
 """
 
         // app_id
@@ -257,6 +264,7 @@ SET (toast_tuple_target=8160"""
      */
     @JvmStatic
     fun collectionCreate(sql: IPlv8Sql, id: String, spGist: Boolean, partition: Boolean) {
+        // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         val CREATE_TABLE = """CREATE TABLE {table} (
     uid         int8 NOT NULL,
     txn_next    int8 NOT NULL CHECK(txn_next {condition}),
@@ -291,6 +299,12 @@ SET (toast_tuple_target=8160"""
                 collectionAddIndices(sql, partName, spGist, false)
             }
         }
+
+        // Create sequence.
+        val sequenceName = id+"_uid_seq";
+        val sequenceNameQuoted = sql.quoteIdent(sequenceName)
+        query = "CREATE SEQUENCE IF NOT EXISTS $sequenceNameQuoted AS int8 START WITH 1 CACHE 100 OWNED BY ${headNameQuoted}.uid"
+        sql.execute(query)
 
         // DEL.
         val delName = id + "_del"

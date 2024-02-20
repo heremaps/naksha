@@ -86,7 +86,7 @@ class XyzTest : JbAbstractTest() {
         assertEquals(ACTION_CREATE, reader.action())
         assertEquals(1, reader.version())
         assertEquals(createdTs + 20, reader.authorTs())
-        assertEquals(BigInt64(0), reader.extend())
+        assertEquals(BigInt64(0), reader.extent())
 
         assertNull(reader.puuid())
         assertEquals("test-uuid", reader.uuid())

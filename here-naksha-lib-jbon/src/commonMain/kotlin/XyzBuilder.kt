@@ -113,7 +113,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
             action: Int,
             version: Int,
             authorTs: BigInt64,
-            extend: BigInt64,
+            extent: BigInt64,
             puuid: String?,
             uuid: String,
             appId: String,
@@ -129,8 +129,8 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
         writeInt64(txn)
         writeInt32(action)
         writeInt32(version)
-        writeTimestamp(authorTs)
-        writeInt64(extend)
+        if (authorTs == updatedAt) writeNull() else writeTimestamp(authorTs)
+        writeInt64(extent)
         if (puuid == null) writeNull() else writeString(puuid)
         writeString(uuid)
         writeString(appId)

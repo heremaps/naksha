@@ -158,10 +158,10 @@ CREATE OR REPLACE FUNCTION xyz_version(xyz bytea) RETURNS int4 AS $$
   return xyzNs.version();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION xyz_extend(xyz bytea) RETURNS int8 AS $$
+CREATE OR REPLACE FUNCTION xyz_extent(xyz bytea) RETURNS int8 AS $$
   let xyzNs = new require("jbon").XyzNs();
   xyzNs.mapBytes(xyz);
-  return xyzNs.extend();
+  return xyzNs.extent();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_author(xyz bytea) RETURNS text AS $$
