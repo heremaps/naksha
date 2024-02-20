@@ -18,20 +18,31 @@
  */
 package com.here.naksha.lib.psql;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.jbon.JbFeature;
+import com.here.naksha.lib.jbon.JbMap;
+import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 
 class StringCodec extends FeatureCodec<String, StringCodec> {
 
+
   @Override
   public @NotNull StringCodec decodeParts(boolean force) {
-    json = feature;
+    featureJbon = JsonUtil.jsonToJbonByte(feature);
     return this;
   }
 
   @Override
   public @NotNull StringCodec encodeFeature(boolean force) {
-    feature = json;
+    JbFeature jbFeature = new JbFeature().mapBytes(featureJbon, 0, featureJbon.length);
+    Map<String, Object> featureAsMap = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
+    try {
+      feature = Json.get().writer().writeValueAsString(featureAsMap);
+    } catch (JsonProcessingException e) {
+    }
     return this;
   }
 }

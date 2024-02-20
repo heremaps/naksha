@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
+package com.here.naksha.lib.jbon
 
-import com.here.naksha.lib.jbon.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -19,7 +19,6 @@ class XyzNs : XyzSpecial<XyzNs>() {
     private var puuid: String? = UNDEFINED_STRING
     private var appId: String = UNDEFINED_STRING
     private var author: String = UNDEFINED_STRING
-    private var crid: String? = UNDEFINED_STRING
     private var grid: String = UNDEFINED_STRING
 
     override fun parseHeader(mandatory: Boolean) {
@@ -104,20 +103,6 @@ class XyzNs : XyzSpecial<XyzNs>() {
         return value
     }
 
-    fun crid(): String? {
-        var value = this.crid
-        if (value === UNDEFINED_STRING) {
-            reset()
-            reader.nextUnit() // puuid
-            reader.nextUnit() // uuid
-            reader.nextUnit() // appId
-            reader.nextUnit() // author
-            value = if (reader.isNull()) null else reader.readString()
-            this.crid = value
-        }
-        return value
-    }
-
     fun grid(): String {
         var value = this.grid
         if (value === UNDEFINED_STRING) {
@@ -126,14 +111,13 @@ class XyzNs : XyzSpecial<XyzNs>() {
             reader.nextUnit() // uuid
             reader.nextUnit() // appId
             reader.nextUnit() // author
-            reader.nextUnit() // crid
             value = reader.readString()
             this.grid = value
         }
         return value
     }
 
-    fun mrid() : String = crid() ?: mrid()
+    fun mrid() : String = grid()
 
     /**
      * Convert this XYZ namespace into a map. Beware that the transaction-number (txn) will be exposed as string.
@@ -158,7 +142,6 @@ class XyzNs : XyzSpecial<XyzNs>() {
         map["uuid"] = uuid()
         map["author"] = author()
         map["app_id"] = appId()
-        if (crid() != null) map["crid"] = crid()
         map["grid"] = grid()
         if (tags != null) map["tags"] = tags
         return map

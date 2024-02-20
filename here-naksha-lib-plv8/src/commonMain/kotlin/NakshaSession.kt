@@ -2,8 +2,6 @@
 
 package com.here.naksha.lib.plv8
 
-import XyzOp
-import XyzVersion
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_MIN
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_NEXT

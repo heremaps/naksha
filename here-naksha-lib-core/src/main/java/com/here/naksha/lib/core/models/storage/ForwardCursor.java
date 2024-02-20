@@ -209,9 +209,6 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
       codec.setOp(EExecutedOp.get(EExecutedOp.class, op));
       codec.setId(id);
       codec.setUuid(uuid);
-      codec.setFeatureType(typeId);
-      codec.setPropertiesType(propertiesTypeId);
-      codec.setJson(json);
       codec.setWkb(wkb);
       return this;
     }
@@ -308,34 +305,6 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
   }
 
   /**
-   * Returns the "type" from the root of the feature. When the feature follows the standard, the value will be "Feature".
-   *
-   * @return the "type" from the root of the feature.
-   * @throws NoSuchElementException If the cursor currently is not at a valid result.
-   */
-  public @NotNull String getFeatureType() throws NoSuchElementException {
-    if (!currentRow.valid) {
-      throw new NoSuchElementException();
-    }
-    String typeId = currentRow.codec.getFeatureType();
-    assert typeId != null;
-    return typeId;
-  }
-
-  /**
-   * Returns the "type" from the "properties" of the feature.
-   *
-   * @return the "type" from the "properties" of the feature.
-   * @throws NoSuchElementException If the cursor currently is not at a valid result.
-   */
-  public @Nullable String getPropertiesType() throws NoSuchElementException {
-    if (!currentRow.valid) {
-      throw new NoSuchElementException();
-    }
-    return currentRow.codec.getPropertiesType();
-  }
-
-  /**
    * Returns the "id" from the root of the feature.
    *
    * @return the "id" from the root of the feature.
@@ -363,21 +332,6 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
     String uuid = currentRow.codec.getUuid();
     assert uuid != null;
     return uuid;
-  }
-
-  /**
-   * Returns the raw JSON string of the feature without the geometry.
-   *
-   * @return the raw JSON string of the feature without the geometry.
-   * @throws NoSuchElementException If the cursor currently is not at a valid result.
-   */
-  public @NotNull String getJson() throws NoSuchElementException {
-    if (!currentRow.valid) {
-      throw new NoSuchElementException();
-    }
-    String json = currentRow.codec.getJson();
-    assert json != null;
-    return json;
   }
 
   /**
@@ -435,6 +389,14 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
    */
   public @Nullable CodecError getError() {
     return currentRow.codec.getError();
+  }
+
+  /**
+   * Returns current row jbon byte[].
+   * @return
+   */
+  public @NotNull byte[] getFeatureJbon() {
+    return currentRow.codec.featureJbon;
   }
 
   /**

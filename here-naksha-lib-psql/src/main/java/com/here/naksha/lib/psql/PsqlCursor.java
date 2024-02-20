@@ -62,20 +62,19 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
       if (rs.next()) {
         final String r_op = rs.getString(1);
         final String r_id = rs.getString(2);
-        final String r_uuid = rs.getString(3);
-        final String r_type = rs.getString(4);
-        final String r_ptype = rs.getString(5);
-        final String r_feature = rs.getString(6);
-        final byte[] r_geo = rs.getBytes(7);
+        final byte[] r_xyz = rs.getBytes(3);
+        final byte[] r_tags = rs.getBytes(4);
+        final byte[] r_geo = rs.getBytes(5);
+        final byte[] r_feature = rs.getBytes(6);
+        // final Integer r_no = rs.getInt(7);
         final String r_err = rs.getString(8);
 
         row.codec.setOp(r_op);
         row.codec.setId(r_id);
-        row.codec.setUuid(r_uuid);
-        row.codec.setFeatureType(r_type);
-        row.codec.setPropertiesType(r_ptype);
-        row.codec.setJson(r_feature);
+        row.codec.setXyzNsJbon(r_xyz);
+        row.codec.setTagsJbon(r_tags);
         row.codec.setWkb(r_geo);
+        row.codec.setFeatureJbon(r_feature);
         row.codec.setRawError(r_err);
         row.codec.setErr(mapToCodecError(r_err));
         row.valid = true;

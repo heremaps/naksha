@@ -39,7 +39,7 @@ class PostgresWriteOp {
 
   @JsonRawValue
   @JsonProperty("feature")
-  String feature;
+  byte[] feature;
 
   @JsonIgnore
   <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> @NotNull PostgresWriteOp decode(@NotNull CODEC codec) {
@@ -47,7 +47,7 @@ class PostgresWriteOp {
     this.op = codec.getOp();
     this.id = codec.getId();
     this.uuid = codec.getUuid();
-    this.feature = codec.getJson();
+    this.feature = codec.getFeatureJbon();
     return this;
   }
 }

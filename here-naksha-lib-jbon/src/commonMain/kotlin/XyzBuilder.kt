@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
+package com.here.naksha.lib.jbon
 
-import com.here.naksha.lib.jbon.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -91,7 +91,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * @param crid The customer-reference-id to be set, if any.
      * @return The JBON encoded XYZ operation.
      */
-    fun buildXyzOp(op: Int, id: String?, uuid: String?, crid: String?): ByteArray {
+    fun buildXyzOp(op: Int, id: String?, uuid: String?): ByteArray {
         reset()
         val view = this.view
         view.setInt8(end++, TYPE_XYZ.toByte())
@@ -99,7 +99,6 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
         writeInt32(op)
         if (id == null) writeNull() else writeString(id)
         if (uuid == null) writeNull() else writeString(uuid)
-        if (crid == null) writeNull() else writeString(crid)
         return view.getByteArray().copyOf(end)
     }
 
@@ -119,7 +118,6 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
             uuid: String,
             appId: String,
             author: String,
-            crid: String?,
             grid: String
     ): ByteArray {
         reset()
@@ -137,7 +135,6 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
         writeString(uuid)
         writeString(appId)
         writeString(author)
-        if (crid == null) writeNull() else writeString(crid)
         writeString(grid)
         return view.getByteArray().copyOf(end)
     }

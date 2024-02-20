@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.psql;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,7 +40,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
-public class PsqlCursorTest {
+public class PsqlCursorTest extends SessionTest{
 
   @Test
   void testCursorCodecChange() throws SQLException {
@@ -49,20 +50,21 @@ public class PsqlCursorTest {
     StringCodecFactory stringCodecFactory = new StringCodecFactory();
     XyzFeatureCodecFactory xyzFeatureCodecFactory = XyzFeatureCodecFactory.get();
 
+
     PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, statement, rs);
 
     // when
     when(rs.next()).thenReturn(true);
 
     when(rs.getString(intThat(i -> i < 6))).thenReturn("id");
-    when(rs.getString(6)).thenReturn("feature");
+    when(rs.getBytes(6)).thenReturn(new byte[]{});
     when(rs.getString(8)).thenReturn(null);
     ForwardCursor<String, StringCodec> forwardCursor = cursor.withCodecFactory(stringCodecFactory, true);
 
     // expect
     assertEquals(stringCodecFactory, cursor.getCodecFactory());
     assertTrue(forwardCursor.next());
-    assertEquals("feature", forwardCursor.getFeature());
+    assertArrayEquals(new byte[]{}, forwardCursor.getFeatureJbon());
   }
 
   @ParameterizedTest
@@ -80,7 +82,7 @@ public class PsqlCursorTest {
     assertNotNull(cursor.getError());
     assertEquals(expected, cursor.getError().err);
     assertEquals("Error Message", cursor.getError().msg);
-    assertEquals("{}", cursor.getJson());
+    assertArrayEquals(new byte[]{}, cursor.getFeatureJbon());
   }
 
   private static Stream<Arguments> psqlErrorValues() {
@@ -105,7 +107,7 @@ public class PsqlCursorTest {
     when(rs.next()).thenReturn(true);
 
     when(rs.getString(intThat(i -> i < 6))).thenReturn("id");
-    when(rs.getString(6)).thenReturn("{}");
+    when(rs.getBytes(6)).thenReturn(new byte[] {});
     when(rs.getString(8)).thenReturn(errJson);
 
     return cursor;
