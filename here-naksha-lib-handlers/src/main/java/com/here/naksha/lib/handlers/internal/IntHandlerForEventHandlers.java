@@ -37,6 +37,9 @@ import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import java.util.List;
 import java.util.NoSuchElementException;
+
+import com.here.naksha.lib.handlers.DefaultViewHandler;
+import com.here.naksha.lib.handlers.DefaultViewHandlerProperties;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -63,33 +66,73 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     if (pluginValidation instanceof ErrorResult) {
       return pluginValidation;
     }
-    return defaultStorageValidation(eventHandler);
+    return defaultHandlerValidation(eventHandler);
   }
 
-  private Result defaultStorageValidation(EventHandler eventHandler) {
-    if (isDefaultStorageHandler(eventHandler)) {
-      return storageValidationError(eventHandler);
+  private Result defaultHandlerValidation(EventHandler eventHandler) {
+    if (handlerClassMatches(DefaultStorageHandler.class, eventHandler)) {
+      return storageValidationError(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+    }
+    if (handlerClassMatches(DefaultViewHandler.class, eventHandler)) {
+      return propertiesValidationError(eventHandler);
     }
     return new SuccessResult();
   }
 
-  private boolean isDefaultStorageHandler(@NotNull EventHandler eventHandler) {
-    return DefaultStorageHandler.class.getName().equals(eventHandler.getClassName());
+  private @NotNull Result propertiesValidationError(EventHandler eventHandler) {
+    Result storageValidation = storageValidationError(eventHandler, DefaultViewHandlerProperties.STORAGE_ID);
+
+    if (!(storageValidation instanceof SuccessResult)) {
+      return storageValidation;
+    }
+
+    Object spaceIdsProperty = eventHandler.getProperties().get(DefaultViewHandlerProperties.SPACE_IDS);
+    if (spaceIdsProperty == null) {
+      return new ErrorResult(
+              XyzError.ILLEGAL_ARGUMENT,
+              "Mandatory properties parameter %s missing!".formatted(DefaultViewHandlerProperties.SPACE_IDS));
+    }
+
+    if (!(spaceIdsProperty instanceof List<?>)) {
+      return new ErrorResult(
+              XyzError.ILLEGAL_ARGUMENT, "Mandatory property parameter %s should be a collection of string"
+              .formatted(DefaultViewHandlerProperties.SPACE_IDS)
+      );
+    }
+    List<String> spaceIds = (List<String>) spaceIdsProperty;
+
+    if (spaceIds.isEmpty()) {
+      return new ErrorResult(
+              XyzError.ILLEGAL_ARGUMENT,
+              "Mandatory parameter %s can't be empty/blank!"
+                      .formatted(DefaultViewHandlerProperties.SPACE_IDS));
+    }
+
+    return spaceExistenceValidation(spaceIds);
   }
 
-  private @NotNull Result storageValidationError(@NotNull EventHandler eventHandler) {
-    Object storageIdProp = eventHandler.getProperties().get(DefaultStorageHandlerProperties.STORAGE_ID);
+  private Result spaceExistenceValidation(List<String> spaceIds) {
+    //search for spaces
+    return null;
+  }
+
+  private boolean handlerClassMatches(@NotNull Class<?> requestedClass, @NotNull EventHandler eventHandler) {
+    return requestedClass.getName().equals(eventHandler.getClassName());
+  }
+
+  private @NotNull Result storageValidationError(@NotNull EventHandler eventHandler, @NotNull String storagePropertyName) {
+    Object storageIdProp = eventHandler.getProperties().get(storagePropertyName);
     if (storageIdProp == null) {
       return new ErrorResult(
           XyzError.ILLEGAL_ARGUMENT,
-          "Mandatory properties parameter %s missing!".formatted(DefaultStorageHandlerProperties.STORAGE_ID));
+              "Mandatory properties parameter %s missing!".formatted(storagePropertyName));
     }
     String storageId = storageIdProp.toString();
     if (StringUtils.isBlank(storageId)) {
       return new ErrorResult(
           XyzError.ILLEGAL_ARGUMENT,
           "Mandatory parameter %s can't be empty/blank!"
-              .formatted(DefaultStorageHandlerProperties.STORAGE_ID));
+                  .formatted(storagePropertyName));
     }
     return storageExistenceValidation(storageId);
   }
