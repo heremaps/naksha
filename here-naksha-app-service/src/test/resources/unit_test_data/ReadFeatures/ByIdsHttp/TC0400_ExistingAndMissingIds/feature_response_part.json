@@ -6,10 +6,7 @@
       "type": "Feature",
       "properties": {
         "speedLimit": "60",
-        "filteredOut": "yes",
-        "@ns:com:here:xyz": {
-          "tags": [ "selection-test" ]
-        }
+        "filteredOut": "yes"
       },
       "geometry": {
         "type":"Point",
@@ -21,10 +18,7 @@
       "type": "Feature",
       "properties": {
         "speedLimit": "80",
-        "filteredOut": "yes",
-        "@ns:com:here:xyz": {
-          "tags": [ "selection-test" ]
-        }
+        "filteredOut": "yes"
       },
       "geometry": {
         "type":"Point",

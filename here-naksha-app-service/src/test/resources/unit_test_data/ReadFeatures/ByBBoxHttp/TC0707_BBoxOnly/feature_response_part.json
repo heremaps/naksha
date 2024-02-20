@@ -8,9 +8,6 @@
         "speedLimit": "60",
         "length": 10,
         "isBidirectional": true,
-        "@ns:com:here:xyz": {
-          "tags": [ "one", "two", "three", "four", "five", "six" ]
-        },
         "references": [
           {
             "id": "urn:here::here:Topology:1",
@@ -46,9 +43,6 @@
         "length": 10.5,
         "direction": "A to B",
         "isBidirectional": false,
-        "@ns:com:here:xyz": {
-          "tags": [ "non-matching-tag", "@ThRee" ]
-        },
         "references": [
           {
             "id": "urn:here::here:Topology:2",
@@ -84,9 +78,6 @@
         "length": 11,
         "direction": "B to A",
         "isBidirectional": false,
-        "@ns:com:here:xyz": {
-          "tags": [ "non-matching-tag", "@ThRee", "@Four" ]
-        },
         "references": [
           {
             "id": "urn:here::here:Topology:3",

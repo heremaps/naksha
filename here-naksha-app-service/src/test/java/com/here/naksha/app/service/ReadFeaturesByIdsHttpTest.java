@@ -19,6 +19,7 @@
 package com.here.naksha.app.service;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.assertions.ResponseAssertions;
@@ -53,53 +54,18 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
   }
 
   @Test
-  void tc01_testReadFeatureById() throws Exception {
-    final String featureId = "1";
-    final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByIdsHttp/TC01_ExistingId/feature_response_part.json");
-    final String streamId = UUID.randomUUID().toString();
-    stubFor(get(ENDPOINT + "/1").willReturn(okJson(expectedBodyPart)));
-
-    // When: Get Features request is submitted to NakshaHub Space Storage instance
-    final HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/" + featureId, streamId);
-
-    // Then: Perform assertions
-    ResponseAssertions.assertThat(response)
-            .hasStatus(200)
-            .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
-  }
-
-
-  @Test
-  void tc02_testReadFeatureForMissingId() throws Exception {
-    final String featureId = "missing-id";
-    final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByIdsHttp/TC02_MissingId/feature_response_part.json");
-    final String streamId = UUID.randomUUID().toString();
-    stubFor(get(ENDPOINT + "/" + featureId).willReturn(notFound()));
-
-    // When: Get Features request is submitted to NakshaHub Space Storage instance
-    final HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/" + featureId, streamId);
-
-    // Then: Perform assertions
-    ResponseAssertions.assertThat(response)
-            .hasStatus(404)
-            .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
-  }
-
-  @Test
-  void tc03_testReadFeaturesByIds() throws Exception {
+  void tc0400_testReadFeaturesByIds() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/features
     // Validate features getting returned for existing Ids and not failing due to missing ids
     // Given: Features By Ids request (against above space)
     final String idsQueryParam =
             "id=my-custom-id-400-1" + "&id=my-custom-id-400-2" + "&id=missing-id-1" + "&id=missing-id-2";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByIdsHttp/TC03_ExistingAndMissingIds/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByIdsHttp/TC0400_ExistingAndMissingIds/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
-    stubFor(get(ENDPOINT + "?" + idsQueryParam).willReturn(okJson(expectedBodyPart)));
+
+    UrlPattern endpointPath = urlEqualTo(ENDPOINT + "?" + idsQueryParam);
+    stubFor(get(endpointPath).willReturn(okJson(expectedBodyPart)));
 
     // When: Get Features request is submitted to NakshaHub Space Storage instance
     HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
@@ -108,20 +74,24 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
     ResponseAssertions.assertThat(response)
             .hasStatus(200)
             .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match")
-    ;
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
+    // Then: Verify request reached endpoint once
+    verify(1, getRequestedFor(endpointPath));
   }
 
   @Test
-  void tc04_testReadFeaturesForMissingIds() throws Exception {
+  void tc0401_testReadFeaturesForMissingIds() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/features
     // Validate empty collection getting returned for missing ids
     // Given: Features By Ids request (against configured space)
     final String idsQueryParam = "?id=1000" + "&id=missing-id-1" + "&id=missing-id-2";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByIdsHttp/TC04_MissingIds/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByIdsHttp/TC0401_MissingIds/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
-    stubFor(get(urlPathEqualTo(ENDPOINT)).withQueryParam("id", equalTo("1000")).willReturn(okJson(expectedBodyPart)));
+
+    UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
+    stubFor(get(endpointPath).withQueryParam("id", equalTo("1000")).willReturn(okJson(expectedBodyPart)));
 
     // When: Get Features request is submitted to NakshaHub Space Storage instance
     HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features" + idsQueryParam, streamId);
@@ -131,5 +101,60 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
             .hasStatus(200)
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
+    // Then: Verify request reached endpoint once
+    verify(1, getRequestedFor(endpointPath));
+  }
+
+  @Test
+  void tc0404_testReadFeatureById() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/features/{featureId}
+    // Validate feature getting returned for given Id
+    // Given: Feature By Id request (against already existing space)
+    final String featureId = "1";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByIdsHttp/TC0404_ExistingId/feature_response_part.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT + "/1");
+    stubFor(get(endpointPath).willReturn(okJson(expectedBodyPart)));
+
+    // When: Get Features request is submitted to NakshaHub Space Storage instance
+    final HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/" + featureId, streamId);
+
+    // Then: Perform assertions
+    ResponseAssertions.assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
+    // Then: Verify request reached endpoint once
+    verify(1, getRequestedFor(endpointPath));
+  }
+
+  @Test
+  void tc0405_testReadFeatureForMissingId() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/features/{featureId}
+    // Validate request gets failed when attempted to load feature for missing Id
+    // Given: Feature By Id request, against existing space, for missing feature Id
+    final String featureId = "missing-id";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByIdsHttp/TC0405_MissingId/feature_response_part.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT + "/" + featureId);
+    stubFor(get(endpointPath).willReturn(notFound()));
+
+    // When: Get Features request is submitted to NakshaHub Space Storage instance
+    final HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/" + featureId, streamId);
+
+    // Then: Perform assertions
+    ResponseAssertions.assertThat(response)
+            .hasStatus(404)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
+    // Then: Verify request reached endpoint once
+    verify(1, getRequestedFor(endpointPath));
   }
 }

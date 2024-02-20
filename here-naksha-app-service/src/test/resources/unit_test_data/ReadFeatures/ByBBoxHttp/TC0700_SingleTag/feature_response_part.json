@@ -5,10 +5,7 @@
       "id": "my-custom-id-700-1",
       "type": "Feature",
       "properties": {
-        "speedLimit": "10",
-        "@ns:com:here:xyz": {
-          "tags": [ "one" ]
-        }
+        "speedLimit": "10"
       },
       "geometry": {
         "type":"Point",
@@ -19,10 +16,7 @@
       "id": "my-custom-id-700-2",
       "type": "Feature",
       "properties": {
-        "speedLimit": "20",
-        "@ns:com:here:xyz": {
-          "tags": [ "one", "two" ]
-        }
+        "speedLimit": "20"
       },
       "geometry": {
         "type":"Point",
@@ -33,10 +27,7 @@
       "id": "my-custom-id-700-3",
       "type": "Feature",
       "properties": {
-        "speedLimit": "30",
-        "@ns:com:here:xyz": {
-          "tags": [ "one", "two", "three" ]
-        }
+        "speedLimit": "30"
       },
       "geometry": {
         "type":"Point",
@@ -47,10 +38,7 @@
       "id": "my-custom-id-700-4",
       "type": "Feature",
       "properties": {
-        "speedLimit": "40",
-        "@ns:com:here:xyz": {
-          "tags": [ "one", "two", "three", "four" ]
-        }
+        "speedLimit": "40"
       },
       "geometry": {
         "type":"Point",
@@ -61,10 +49,7 @@
       "id": "my-custom-id-700-5",
       "type": "Feature",
       "properties": {
-        "speedLimit": "50",
-        "@ns:com:here:xyz": {
-          "tags": [ "one", "two", "three", "four", "five" ]
-        }
+        "speedLimit": "50"
       },
       "geometry": {
         "type":"Point",
@@ -78,9 +63,6 @@
         "speedLimit": "60",
         "length": 10,
         "isBidirectional": true,
-        "@ns:com:here:xyz": {
-          "tags": [ "one", "two", "three", "four", "five", "six" ]
-        },
         "references": [
           {
             "id": "urn:here::here:Topology:1",

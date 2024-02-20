@@ -51,11 +51,6 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
   private static final String SPACE_ID = "read_features_by_tile_http_test_space";
   private static final String TYPE_QUADKEY = "quadkey";
 
-  /*
-  For this test suite, we upfront create various Features using different combination of Tags and Geometry.
-  To know what exact features we create, check the create_features.json.
-  And then in subsequent tests, we validate the various GetByTile APIs using different query parameters.
-  */
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
     setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByTileHttp/setup");
@@ -175,6 +170,7 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Response body doesn't match", strictChecking);
 
+    // Then: Verify request reached/not reached endpoint
     verify(shouldReachEndpoint ? 1 : 0, getRequestedFor(urlPathPattern));
   }
 

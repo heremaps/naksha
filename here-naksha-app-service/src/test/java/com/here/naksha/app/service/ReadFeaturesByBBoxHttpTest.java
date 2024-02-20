@@ -19,6 +19,7 @@
 package com.here.naksha.app.service;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,7 +53,6 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
     setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBoxHttp/setup");
   }
 
-
   @Test
   void tc0700_testGetByBBoxWithSingleTag_willIgnoreTag() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
@@ -63,7 +63,9 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
     final String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByBBoxHttp/TC0700_SingleTag/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
-    stubFor(get(urlPathEqualTo(ENDPOINT))
+
+    final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
+    stubFor(get(endpointPath)
             .withQueryParam("west", equalTo("-180.0"))
             .withQueryParam("south", equalTo("-90.0"))
             .withQueryParam("east", equalTo("180.0"))
@@ -80,6 +82,9 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
             .hasStatus(200)
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
+    // Then: Verify request reached endpoint once
+    verify(1, getRequestedFor(endpointPath));
   }
 
   @Test
@@ -91,7 +96,9 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
     final String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByBBoxHttp/TC0707_BBoxOnly/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
-    stubFor(get(urlPathEqualTo(ENDPOINT))
+
+    final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
+    stubFor(get(endpointPath)
             .withQueryParam("west", equalTo("8.6476"))
             .withQueryParam("south", equalTo("50.1175"))
             .withQueryParam("east", equalTo("8.6729"))
@@ -107,21 +114,19 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
 
-    // Then: Verify request reached endpoint
-    verify(1, getRequestedFor(urlPathEqualTo(ENDPOINT)));
+    // Then: Verify request reached endpoint once
+    verify(1, getRequestedFor(endpointPath));
   }
 
   @Test
   void tc0710_testGetByBBoxWithInvalidCoordinate() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
     // Validate API error when BBox coordinates are invalid
-
     // Given: Features By BBox request (against configured space)
     final String bboxQueryParam = "west=-181&south=50.1175&east=8.6729&north=50.1248";
     final String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByBBoxHttp/TC0710_InvalidCoordinate/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
-
 
     // When: Get Features By BBox request is submitted to NakshaHub
     HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
@@ -132,7 +137,7 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
 
-    // Then: verify request not reached endpoint
+    // Then: Verify request did not reach endpoint
     verify(0, getRequestedFor(urlPathEqualTo(ENDPOINT)));
   }
 }

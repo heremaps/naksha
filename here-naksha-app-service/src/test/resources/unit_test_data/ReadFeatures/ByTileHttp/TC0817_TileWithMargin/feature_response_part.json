@@ -5,10 +5,7 @@
       "id": "my-custom-id-800-6",
       "type": "Feature",
       "properties": {
-        "speedLimit": "60",
-        "@ns:com:here:xyz": {
-          "tags": [ "one", "two", "three", "four", "five", "six" ]
-        }
+        "speedLimit": "60"
       },
       "geometry": {
         "type":"Point",
@@ -20,10 +17,7 @@
       "type": "Feature",
       "properties": {
         "speedLimit": "70",
-        "length": 50,
-        "@ns:com:here:xyz": {
-          "tags": [ "non-matching-tag", "@ThRee" ]
-        }
+        "length": 50
       },
       "geometry": {
         "type":"LineString",
@@ -34,10 +28,7 @@
       "id": "my-custom-id-800-8",
       "type": "Feature",
       "properties": {
-        "speedLimit": "80",
-        "@ns:com:here:xyz": {
-          "tags": [ "non-matching-tag", "@ThRee", "same-tags-as-7-but-within-tile-margin-20" ]
-        }
+        "speedLimit": "80"
       },
       "geometry": {
         "type":"Point",
