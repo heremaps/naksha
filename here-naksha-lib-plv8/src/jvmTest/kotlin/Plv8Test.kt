@@ -47,8 +47,18 @@ class Plv8Test : Plv8TestContainer() {
         }
     }
 
-    @Order(4)
+    @Order(3)
+    @Test
+    fun testGrid() {
+        val session = NakshaSession.get()
+        val grid = Static.grid(session.sql, "foo", null)
+        assertNotNull(grid)
+        assertEquals(14, grid.length)
+        assertEquals("6rcpmez33pmdte", grid)
+    }
+
     @Suppress("LocalVariableName")
+    @Order(4)
     @Test
     fun testVersion() {
         val v1_0_0 = XyzVersion(1, 0, 0)

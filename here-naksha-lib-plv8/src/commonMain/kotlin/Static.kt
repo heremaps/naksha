@@ -79,6 +79,13 @@ $$ LANGUAGE 'plv8';
     val TXN_LOCK_ID = lockId("naksha_txn_seq")
 
     /**
+     * Array to create a pseudo GeoHash, which is BASE-32 encoded.
+     */
+    @JvmStatic
+    private val BASE32 = arrayOf('0','1','2','3','4','5','6','7','8','9','b','c','d','e','f','g',
+            'h','j','k','m','n','p','q','r','s','t','u','v','w','x','y','z')
+
+    /**
      * Returns the lock-id for the given name.
      * @param name The name to query the lock-id for.
      * @return The 64-bit FNV1a hash.
@@ -101,6 +108,37 @@ $$ LANGUAGE 'plv8';
      */
     @JvmStatic
     fun partitionNameForId(id: String): String = PARTITION_ID[partitionNumber(id)]
+
+    /**
+     * Create a GRID ([GeoHash](https://en.wikipedia.org/wiki/Geohash) Reference ID) from the given geometry.
+     * The GRID is used for distributed processing of features. This method uses GeoHash at level 14, which uses
+     * 34 bits for latitude and 36 bits for longitude (70-bit total). The precision is therefore higher than 1mm.
+     *
+     * If the feature does not have a geometry, this method creates a pseudo GRID (GeoHash Reference ID) from the
+     * given feature-id, this is based upon [Geohash](https://en.wikipedia.org/wiki/Geohash#Textual_representation).
+     *
+     * See [https://www.movable-type.co.uk/scripts/geohash.html](https://www.movable-type.co.uk/scripts/geohash.html)
+     * @param sql The SQL API.
+     * @param id The feature-id.
+     * @param geo The feature geometry; if any.
+     * @return The GRID (7 character long string).
+     */
+    @JvmStatic
+    fun grid(sql: IPlv8Sql, id:String, geo: ByteArray?) : String {
+        if (geo == null) {
+            val sb = StringBuilder()
+            var hash = Fnv1a64.string(Fnv1a64.start(), id)
+            var i = 0
+            sb.append(BASE32[id[0].code and 31])
+            while (i++ < 13) {
+                val b32 = hash.toInt() and 31
+                sb.append(BASE32[b32])
+                hash = hash ushr 5
+            }
+            return sb.toString()
+        }
+        return asMap(asArray(sql.execute("SELECT ST_GeoHash(ST_Centroid(ST_GeomFromEWKB(geo)),14) as geohash"))[0])["geohash"]!!
+    }
 
     /**
      * Tests if specific database table (in the Naksha session schema) exists already
@@ -227,7 +265,7 @@ SET (toast_tuple_target=8160"""
     fun collectionCreate(sql: IPlv8Sql, id: String, spGist: Boolean, partition: Boolean) {
         val CREATE_TABLE = """CREATE TABLE {table} (
     uid         int8 NOT NULL,
-    txn_next    int8 NOT NULL,
+    txn_next    int8 NOT NULL CHECK(txn_next {condition}),
     id          text COMPRESSION lz4 NOT NULL,
     feature     bytea COMPRESSION lz4 NOT NULL,
     geo         geometry(GeometryZ, 4326),
@@ -239,6 +277,7 @@ SET (toast_tuple_target=8160"""
         // HEAD
         val headNameQuoted = sql.quoteIdent(id)
         query = CREATE_TABLE.replace("{table}", headNameQuoted)
+        query = query.replace("{condition}", "= 0")
         if (!partition) {
             sql.execute(query)
             collectionOptimizeTable(sql, id, false)
@@ -263,6 +302,7 @@ SET (toast_tuple_target=8160"""
         val delName = id + "_del"
         val delNameQuoted = sql.quoteIdent(delName)
         query = CREATE_TABLE.replace("{table}", delNameQuoted)
+        query = query.replace("{condition}", "= 0")
         sql.execute(query)
         collectionOptimizeTable(sql, delName, false)
         collectionAddIndices(sql, delName, spGist, false)
@@ -271,6 +311,7 @@ SET (toast_tuple_target=8160"""
         val metaName = id + "_meta"
         val metaNameQuoted = sql.quoteIdent(metaName)
         query = CREATE_TABLE.replace("{table}", metaNameQuoted)
+        query = query.replace("{condition}", "= 0")
         sql.execute(query)
         collectionOptimizeTable(sql, metaName, false)
         collectionAddIndices(sql, metaName, spGist, false)
@@ -279,6 +320,7 @@ SET (toast_tuple_target=8160"""
         val hstName = id + "_hst"
         val hstNameQuoted = sql.quoteIdent(hstName)
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
+        query = query.replace("{condition}", "> 0")
         query += "PARTITION BY RANGE (txn_next)"
         sql.execute(query)
         // Optimizations are done on the history partitions!

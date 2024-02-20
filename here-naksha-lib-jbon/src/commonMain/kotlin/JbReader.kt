@@ -604,8 +604,11 @@ open class JbReader {
      */
     fun xyzVariant(): Int = if (unitType() == TYPE_XYZ) useView().getInt8(offset + 1).toInt() else -1
 
-
-
+    /**
+     * Read the current unit as _null_, [Boolean], [Int], [BigInt64], [Double], [String], [IMap] or [Array].
+     * @return the current unit as _null_, [Boolean], [Int], [BigInt64], [Double], [String], [IMap] or [Array].
+     * @throws IllegalStateException If the reader position or the unit-type is invalid.
+     */
     fun readValue(): Any? {
         return if (isInt32()) {
             readInt32()
@@ -615,8 +618,6 @@ open class JbReader {
             readString()
         } else if (isBool()) {
             readBoolean()
-        } else if (isFloat32()) {
-            readFloat32()
         } else if (isFloat64()) {
             readFloat64()
         } else if (isNull()) {
@@ -630,7 +631,7 @@ open class JbReader {
         } else if (isArray()) {
             readArray(JbArray().mapReader(this))
         } else {
-            throw UnsupportedOperationException("Not implemented jbon value type")
+            throw IllegalStateException("Not implemented jbon value type")
         }
     }
 }

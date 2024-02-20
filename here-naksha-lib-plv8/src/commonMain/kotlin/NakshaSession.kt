@@ -125,6 +125,22 @@ class NakshaSession(
         }
     }
 
+    private fun newUid() : BigInt64 {
+        TODO("Implement me!")
+    }
+
+    private fun xyzInsert() : ByteArray {
+        TODO("Implement me!")
+    }
+
+    private fun xyzUpdate() : ByteArray {
+        TODO("Implement me!")
+    }
+
+    private fun xyzDelete() : ByteArray {
+        TODO("Implement me!")
+    }
+
     /**
      * Invoked by the SQL trigger functions. When being used in the JVM, the JVM engine will call
      * this method to simulate triggers.
@@ -209,10 +225,10 @@ class NakshaSession(
     }
 
     /**
-     * Internally called to ensure that the [_txn] if valid and that the corresponding partition is created.
+     * Returns the current transaction number, if no transaction number is yet generated, generates a new one.
+     * @return The current transaction number.
      */
-    @Suppress("UNCHECKED_CAST")
-    private fun verifyTxn() {
+    fun txn(): NakshaTxn {
         if (_txn == null) {
             val row = asMap(asArray(sql.execute("SELECT pg_current_xact_id() xactid, nextval($1) txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time", arrayOf(txnOid)))[0])
             _xactId = asBigInt64(row["xactid"])
@@ -266,14 +282,6 @@ SET (toast_tuple_target=8160,fillfactor=100
                 sql.execute(query)
             }
         }
-    }
-
-    /**
-     * Returns the current transaction number, if no transaction number is yet generated, generates a new one.
-     * @return The current transaction number.
-     */
-    fun txn(): NakshaTxn {
-        verifyTxn()
         return _txn!!
     }
 
@@ -283,16 +291,16 @@ SET (toast_tuple_target=8160,fillfactor=100
      * @return The current PostgresQL transaction number.
      */
     fun xactId(): BigInt64 {
-        verifyTxn()
+        txn()
         return _xactId!!
     }
 
     fun writeFeatures(
             collectionId: String,
-            ops: Array<ByteArray>,
-            features: Array<ByteArray>,
-            geometries: Array<Any?>,
-            tags: Array<ByteArray>
+            op_arr: Array<ByteArray>,
+            feature_arr: Array<ByteArray>,
+            geo_arr: Array<ByteArray?>,
+            tags_arr: Array<ByteArray>
     ): ITable {
         errNo = null
         errMsg = null
@@ -322,15 +330,36 @@ SET (toast_tuple_target=8160,fillfactor=100
                 xyzOp.mapBytes(op_arr[i])
                 feature.mapBytes(feature_arr[i])
                 xyzTags.mapBytes(tags_arr[i])
-                val op = xyzOp.op()
+                var op = xyzOp.op()
+                var uuid = xyzOp.uuid()
+                var crid = xyzOp.crid()
                 var id = xyzOp.id()
                 if (id == null) {
                     id = feature.id()
                 }
-                if (id == null) throw NakshaException(ERR_ID_MISSING, "Missing id", xyzOpName(op), id, feature_arr[i], geo_arr[i], tags_arr[i])
-                if (xyzOp.op() == XYZ_OP_CREATE || xyzOp.op() == XYZ_OP_UPSERT) {
-                    // Try creation
+                if (id == null) {
+                    throw NakshaException(ERR_ID_MISSING, "Missing id", xyzOpName(op), id, feature_arr[i], geo_arr[i], tags_arr[i])
+                }
+                val lockId = Static.lockId(id)
+                sql.execute("SELECT pg_advisory_lock($1)", arrayOf(lockId))
+                try {
+                    val rows = asArray(sql.execute("SELECT uid, id, feature, tags, xzy FROM naksha_collections"))
+                    val existing = if (rows.isEmpty()) null else asMap(rows[0])
+                    if (op == XYZ_OP_UPSERT) {
+                        op = if (existing!=null) XYZ_OP_UPDATE else XYZ_OP_CREATE
+                    }
+                    if (op == XYZ_OP_CREATE) {
+                        if (existing != null) {
+                            throw NakshaException(ERR_CONFLICT, "Feature exists already", xyzOpName(op), id, feature_arr[i], geo_arr[i], tags_arr[i])
+                        }
+                    }
+                    // TODO: Fix me!
+                    Static.collectionCreate(sql, id, false, false)
+                    val query = "INSERT INTO naksha_collections (id, feature, ST_Force3DZ(ST_GeomFromEWKB(geo)), tags) VALUES($1,$2,$3,$4)"
+                    val affectedRows = sql.execute(query, arrayOf(id, feature_arr[i], geo_arr[i], tags_arr[i]))
 
+                } finally {
+                    sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(lockId))
                 }
             } catch (e: NakshaException) {
                 table.returnException(e)
