@@ -4,7 +4,7 @@ package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.Jb
-import com.here.naksha.lib.jbon.JbMapObject
+import com.here.naksha.lib.jbon.JbMapFeature
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -12,12 +12,22 @@ import kotlin.js.JsExport
  * A collection feature as defined in the Naksha architecture. This class will instantly read the well known properties.
  */
 @JsExport
-class NakshaCollection : JbMapObject() {
+class NakshaCollection : JbMapFeature() {
     private var _partitionHead = false
     private var _pointsOnly = false
     private var _disableHistory = false
     private var _maxAge : BigInt64? = null
     private var _estimatedFeatureCount : BigInt64? = null
+
+    override fun clear(): NakshaCollection {
+        super.clear()
+        _partitionHead = false
+        _pointsOnly = false
+        _disableHistory = false
+        _maxAge = null
+        _estimatedFeatureCount = null
+        return this
+    }
 
     override fun parseHeader(mandatory: Boolean) {
         super.parseHeader(mandatory)

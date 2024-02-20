@@ -154,4 +154,44 @@ class Plv8JbonTest : Plv8TestContainer() {
             plan.free()
         }
     }
+
+    @Test
+    fun testFeatureReading() {
+        val session = NakshaSession.get()
+        val builder = JbBuilder.create(1000)
+        var feature = builder.buildFeatureFromMap(asMap(env.parse("""{
+    "id": "Foo",
+    "type": "Feature",
+    "momType": "Topology",
+    "properties": {
+        "featureType": "Topology"
+    }
+}""")))
+        assertEquals("Foo", session.getFeatureId(feature))
+        assertEquals("Topology", session.getFeatureType(feature))
+
+        feature = builder.buildFeatureFromMap(asMap(env.parse("""{
+    "id": "Foo",
+    "type": "Feature",
+    "momType": "Topology",
+    "properties": {
+    }
+}""")))
+        assertEquals("Topology", session.getFeatureType(feature))
+
+        feature = builder.buildFeatureFromMap(asMap(env.parse("""{
+    "id": "Foo",
+    "type": "FeatureX",
+    "properties": {
+    }
+}""")))
+        assertEquals("FeatureX", session.getFeatureType(feature))
+
+        feature = builder.buildFeatureFromMap(asMap(env.parse("""{
+    "id": "Foo",
+    "properties": {
+    }
+}""")))
+        assertEquals("Feature", session.getFeatureType(feature))
+    }
 }

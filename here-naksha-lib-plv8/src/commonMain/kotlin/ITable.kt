@@ -29,7 +29,7 @@ interface ITable {
     /**
      * Returns a Naksha default row for a successful operation.
      */
-    fun returnOk(op: String, id: String, xyz: ByteArray, tags: ByteArray, feature: ByteArray? = null, geo: Any? = null) {
+    fun returnOpOk(op: String, id: String, xyz: ByteArray, tags: ByteArray?, feature: ByteArray? = null, geo: Any? = null) {
         val map = Jb.map.newMap()
         map["op"] = op
         map["id"] = id
@@ -46,15 +46,15 @@ interface ITable {
      * Returns a Naksha default row for a failure.
      */
     fun returnException(e: NakshaException) {
-        returnErr(e.errNo, e.errMsg, e.op, e.id, e.xyz, e.tags, e.feature, e.geo)
+        returnOpErr(e.errNo, e.errMsg, e.id, e.xyz, e.tags, e.feature, e.geo)
     }
 
     /**
      * Returns a Naksha default row for a failure.
      */
-    fun returnErr(errNo: String, errMsg: String, op: String?=null, id: String? = null, xyz: ByteArray? = null, tags: ByteArray? = null, feature: ByteArray? = null, geo: Any? = null) {
+    fun returnOpErr(errNo: String, errMsg: String, id: String? = null, xyz: ByteArray? = null, tags: ByteArray? = null, feature: ByteArray? = null, geo: Any? = null) {
         val map = Jb.map.newMap()
-        map["op"] = op
+        map["op"] = XYZ_EXECUTED_ERROR
         map["id"] = id
         map["xyz"] = xyz
         map["tags"] = tags

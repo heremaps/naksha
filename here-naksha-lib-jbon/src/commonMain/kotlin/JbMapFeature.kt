@@ -9,18 +9,25 @@ import kotlin.js.JsExport
  * A feature that wraps a map.
  */
 @JsExport
-open class JbMapObject : JbFeature() {
-    private lateinit var map: JbMap
+open class JbMapFeature : JbFeature() {
+    private lateinit var _map: JbMap
+
+    override fun clear(): JbMapFeature {
+        super.clear()
+        if (this::_map.isInitialized) _map.clear()
+        return this
+    }
 
     override fun parseHeader(mandatory: Boolean) {
         super.parseHeader(mandatory)
         check(reader.isMap())
-        map = JbMap().mapReader(reader)
+        if (!this::_map.isInitialized) _map = JbMap()
+        _map.mapReader(reader)
     }
 
     /**
      * Returns the reader for the embedded map.
      * @return The map reader of root.
      */
-    open fun root() : JbMap = map
+    open fun root() : JbMap = _map
 }

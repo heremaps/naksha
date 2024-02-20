@@ -9,7 +9,6 @@ import kotlin.js.JsExport
 class NakshaException(
         val errNo: String,
         val errMsg: String,
-        val op: String? = null,
         val id: String? = null,
         val feature: ByteArray? = null,
         val geo: Any? = null,

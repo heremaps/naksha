@@ -247,11 +247,40 @@ CREATE OR REPLACE FUNCTION tags_to_jsonb(tags bytea) RETURNS jsonb AS $$
   return xyzTags.tagsMap();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION naksha_feature_id(feature bytea) RETURNS text AS $$
+CREATE OR REPLACE FUNCTION feature_id(feature bytea) RETURNS text AS $$
+  let naksha = require("naksha");
+  let session = naksha.NakshaSession.Companion.get();
+  return session.getFeatureId(feature);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION naksha_feature_type(feature bytea) RETURNS text AS $$
+CREATE OR REPLACE FUNCTION feature_type(feature bytea) RETURNS text AS $$
+  let naksha = require("naksha");
+  let session = naksha.NakshaSession.Companion.get();
+  return session.getFeatureType(feature);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION naksha_feature_ptype(feature bytea) RETURNS text AS $$
+CREATE OR REPLACE FUNCTION jsonb_to_feature(feature jsonb) RETURNS bytea AS $$
+  return require("jbon").JbBuilder.Companion.create(1000).buildFeatureFromMap(feature);
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION json_to_feature(feature text) RETURNS bytea AS $$
+  return require("jbon").JbBuilder.Companion.create(1000).buildFeatureFromMap(JSON.parse(feature));
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION feature_to_jsonb(feature bytea) RETURNS jsonb AS $$
+  let jb = require("jbon");
+  let reader = new jb.JbMapFeature();
+  reader.mapBytes(feature);
+  let map = reader.root().toIMap();
+  map["id"] = reader.id();
+  return map;
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION feature_to_json(feature bytea) RETURNS text AS $$
+  let jb = require("jbon");
+  let reader = new jb.JbMapFeature();
+  reader.mapBytes(feature);
+  let map = reader.root().toIMap();
+  map["id"] = reader.id();
+  return JSON.stringify(map);
 $$ LANGUAGE 'plv8' IMMUTABLE;

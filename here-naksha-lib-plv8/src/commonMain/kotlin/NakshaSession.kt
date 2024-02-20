@@ -401,50 +401,113 @@ SET (toast_tuple_target=8160,fillfactor=100
         errMsg = null
         val sql = this.sql
         val table = sql.newTable()
-        val xyzOp = XyzOp()
-        val collection = NakshaCollection()
+        val opReader = XyzOp()
+        val newCollection = NakshaCollection()
+        val oldCollection = NakshaCollection()
         var i = 0
         while (i < op_arr.size) {
             try {
-                xyzOp.mapBytes(op_arr[i])
-                collection.mapBytes(feature_arr[i])
-                var op = xyzOp.op()
-                var uuid = xyzOp.uuid()
-                var id = xyzOp.id()
+                val feature = feature_arr[i]
+                val geo = geo_arr[i]
+                val tags = tags_arr[i]
+                val op = op_arr[i]
+                opReader.mapBytes(op)
+                var xyzOp = opReader.op()
+                var uuid = opReader.uuid()
+                var id = opReader.id()
                 if (id == null) {
-                    id = collection.id()
+                    id = newCollection.id()
                 }
                 if (id == null) {
-                    throw NakshaException(ERR_ID_MISSING, "Missing id", xyzOpName(op), id, feature_arr[i], geo_arr[i], tags_arr[i])
+                    throw NakshaException(ERR_ID_MISSING, "Missing id", id, feature, geo, tags)
                 }
                 val lockId = Static.lockId(id)
                 sql.execute("SELECT pg_advisory_lock($1)", arrayOf(lockId))
                 try {
-                    val rows = asArray(sql.execute("SELECT uid, id, feature, tags, xzy FROM naksha_collections"))
-                    val existing = if (rows.isEmpty()) null else asMap(rows[0])
-                    if (op == XYZ_OP_UPSERT) {
-                        op = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
+                    newCollection.mapBytes(feature_arr[i])
+                    var rows = asArray(sql.execute("SELECT * FROM naksha_collections WHERE id = $1", arrayOf(id)))
+                    val existing : IMap?
+                    if (rows.isEmpty()) {
+                        oldCollection.clear()
+                        existing = null
+                    } else {
+                        existing = asMap(rows[0])
+                        oldCollection.mapBytes(existing[COL_FEATURE])
                     }
-                    if (op == XYZ_OP_CREATE) {
+                    if (xyzOp == XYZ_OP_UPSERT) {
+                        xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
+                    }
+                    if (xyzOp == XYZ_OP_CREATE) {
                         if (existing != null) {
-                            throw NakshaException(ERR_CONFLICT, "Feature exists already", xyzOpName(op), id, feature_arr[i], geo_arr[i], tags_arr[i])
+                            throw NakshaException(ERR_CONFLICT, "Feature exists already", id, feature, geo, tags)
                         }
+                        val query = "INSERT INTO naksha_collections (id, feature, geo, tags) VALUES($1,$2,ST_Force3DZ(ST_GeomFromEWKB($3)),$4) RETURNING xyz"
+                        rows = asArray(sql.execute(query, arrayOf(id, feature_arr[i], geo_arr[i], tags_arr[i])))
+                        // TODO: What is no row is returned?
+                        val xyz : ByteArray = asMap(rows[0])["xyz"]!!
+                        Static.collectionCreate(sql, id, newCollection.pointsOnly(), newCollection.partitionHead())
+                        table.returnOpOk(XYZ_EXECUTED_CREATED, id, xyz, tags, feature, geo)
+                        continue
                     }
-                    // The XYZ namespace is created by the database.
-                    val query = "INSERT INTO naksha_collections (id, feature, geo, tags) VALUES($1,$2,ST_Force3DZ(ST_GeomFromEWKB($3)),$4) RETURNING xyz"
-                    val affectedRows = sql.execute(query, arrayOf(id, feature_arr[i], geo_arr[i], tags_arr[i]))
-                    Static.collectionCreate(sql, id, false, false)
+                    // TODO: Handle update, delete and purge
                 } finally {
                     sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(lockId))
                 }
             } catch (e: NakshaException) {
                 table.returnException(e)
             } catch (e: Exception) {
-                table.returnErr(ERR_FATAL, e.message ?: "Fatal")
+                table.returnOpErr(ERR_FATAL, e.message ?: "Fatal")
             } finally {
                 i++
             }
         }
         return table
+    }
+
+    private lateinit var featureReader : JbMapFeature
+    private lateinit var propertiesReader : JbMap
+
+    /**
+     * Extract the id from the given feature.
+     * @param feature The feature.
+     * @return The id or _null_, if the feature does not have a dedicated id.
+     */
+    fun getFeatureId(feature:ByteArray) : String? {
+        if (!this::featureReader.isInitialized) featureReader = JbMapFeature()
+        val reader = featureReader
+        reader.mapBytes(feature)
+        return reader.id()
+    }
+
+    /**
+     * Extract the type of the feature by checking _properties.featureType_, _momType_ and _type_ properties in
+     * that order. If none of these properties exist, returning _Feature_.
+     * @param feature The feature to search in.
+     * @return The feature type.
+     */
+    fun getFeatureType(feature:ByteArray) : String {
+        if (!this::featureReader.isInitialized) featureReader = JbMapFeature()
+        val reader = featureReader
+        reader.mapBytes(feature)
+        val root = reader.root()
+        if (root.selectKey("properties")) {
+            val value = root.value()
+            if (value.isMap()) {
+                if (!this::propertiesReader.isInitialized) propertiesReader = JbMap()
+                val properties = propertiesReader
+                properties.mapReader(value)
+                if (properties.selectKey("featureType")) {
+                    val v = properties.value()
+                    if (v.isText()) return v.readText()
+                    if (v.isString()) return v.readString()
+                }
+            }
+        }
+        if (root.selectKey("momType") || root.selectKey("type")) {
+            val value = root.value()
+            if (value.isText()) return value.readText()
+            if (value.isString()) return value.readString()
+        }
+        return "Feature"
     }
 }

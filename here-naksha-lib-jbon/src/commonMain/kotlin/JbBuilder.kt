@@ -4,6 +4,7 @@ package com.here.naksha.lib.jbon;
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmStatic
 import kotlin.math.floor
 
 /**
@@ -16,6 +17,16 @@ open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         val wordUnicode = BooleanArray(128) {
             (it >= 'a'.code && it <= 'z'.code) || (it >= 'A'.code && it <= 'Z'.code) || it == ':'.code
         }
+
+        /**
+         * Create a new builder with a buffer of the given size.
+         * @param size The buffer size to use.
+         * @param global The global dictionary to use for the builder; if any.
+         * @return The builder.
+         */
+        @JvmStatic
+        fun create(size: Int = 1000, global: JbDict? = null): JbBuilder =
+                JbBuilder(Jb.env.newDataView(ByteArray(size)), global)
     }
 
     /**
@@ -376,7 +387,7 @@ open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
         var i = 0
         var wordStart = -1
         val stringReader = JbString()
-        char_loop@while (i < string.length) {
+        char_loop@ while (i < string.length) {
             val hi = string[i++]
             var unicode: Int
             if (i < string.length && hi.isHighSurrogate()) {
@@ -757,20 +768,19 @@ open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
      */
     fun buildFeatureFromMap(map: IMap): ByteArray {
+        reset()
         val id: String? = map["id"]
         xyz = null
         val start = startMap()
         for (entry in map) {
             val key = entry.key
             val value = entry.value
-            // TODO: Remember geometry to encode it later
             if ("id" == key || "geometry" == key) continue
             writeKey(entry.key)
             if ("properties" == key) {
-                check(value is IMap)
-                writeMap(value, true)
+                writeMap(asMap(value), true)
             } else {
-                writeValue(value)
+                if (isMap(value)) writeValue(asMap(value)) else writeValue(value)
             }
         }
         endMap(start)
