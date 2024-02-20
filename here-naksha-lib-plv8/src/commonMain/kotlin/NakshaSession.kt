@@ -49,7 +49,11 @@ class NakshaSession(
     val txnSeqOid: Int
 
     init {
-        sql.execute("SET SESSION search_path TO " + sql.quoteIdent(schema) + ", public, topology;")
+        val quotedSchema = sql.quoteIdent(schema)
+        val initQuery = """SET SESSION search_path TO $quotedSchema, public, topology;
+SET SESSION enable_seqscan = OFF;
+"""
+        sql.execute(initQuery)
         schemaOid = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
         txnSeqOid = asMap(asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = 'naksha_txn_seq' and relnamespace = $1", arrayOf(schemaOid)))[0])["oid"]!!
     }

@@ -5,7 +5,6 @@ import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -115,7 +114,7 @@ class Plv8Test : Plv8TestContainer() {
 
     @Order(9)
     @Test
-    fun createTestCollection() {
+    fun testInternalCollectionCreation() {
         val session = NakshaSession.get()
         Static.collectionCreate(session.sql,"foo", spGist = false, partition = false)
         Static.collectionAttachTriggers(session.sql, "foo", session.schema, session.schemaOid)
@@ -166,5 +165,11 @@ class Plv8Test : Plv8TestContainer() {
         val uuid = xyzNs.uuid()
         assertEquals("${session.storageId}:foo:${txn.year}:${txn.month}:${txn.day}:10", uuid)
         session.sql.execute("COMMIT")
+    }
+
+    @Order(10)
+    @Test
+    fun testWriteCollections() {
+        val session = NakshaSession.get()
     }
 }
