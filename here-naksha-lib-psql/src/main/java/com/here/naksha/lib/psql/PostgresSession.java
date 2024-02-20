@@ -586,18 +586,33 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
-          "SELECT r_op, r_id, r_uuid, r_type, r_ptype, r_feature, r_geometry, r_err FROM naksha_write_collections(?);\n");
-      try (final Json json = Json.get()) {
+          "SELECT op, id, xyz, tags, feature, ST_AsEWKB(geo), err_no, err_msg FROM naksha_write_collections(?,?,?,?);\n");
+      // op text, id text, xyz bytea, tags bytea, feature bytea, geo geometry, err_no text, err_msg text
+      /**
+       *   ops bytea[], -- XyzOp (op, id, uuid)
+       *   features bytea[], -- JbFeature (without XZY namespace)
+       *   geometries bytea[], -- WKB
+       *   tags bytea[] -- XyzTags
+       */
+      try {
         final List<@NotNull CODEC> features = writeRequest.features;
         final int SIZE = writeRequest.features.size();
-        final String[] write_ops_json = new String[SIZE];
-        final PostgresWriteOp out = new PostgresWriteOp();
+        final byte[][] reqOps = new byte[SIZE][];
+        final byte[][] reqFeatures = new byte[SIZE][];
+        final byte[][] reqGeo = new byte[SIZE][];
+        final byte[][] reqTags = new byte[SIZE][];
         for (int i = 0; i < SIZE; i++) {
           final CODEC codec = features.get(i);
-          out.decode(codec);
-          write_ops_json[i] = json.writer().writeValueAsString(out);
+          codec.decodeParts(false);
+          reqOps[i] = codec.getXyzOp();
+          reqFeatures[i] = codec.getFeatureJbon();
+          reqGeo[i] = new byte[] {}; // codec.getWkb();
+          reqTags[i] = codec.getTagsJbon();
         }
-        stmt.setArray(1, psqlConnection.createArrayOf("jsonb", write_ops_json));
+        stmt.setArray(1, psqlConnection.createArrayOf("bytea", reqOps));
+        stmt.setArray(2, psqlConnection.createArrayOf("bytea", reqFeatures));
+        stmt.setArray(3, psqlConnection.createArrayOf("bytea", reqGeo));
+        stmt.setArray(4, psqlConnection.createArrayOf("bytea", reqTags));
         final ResultSet rs = stmt.executeQuery();
         return new PsqlSuccess(new PsqlCursor<>(XyzCollectionCodecFactory.get(), this, stmt, rs), null);
       } catch (Throwable e) {
@@ -620,10 +635,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       //      } else {
       //        partition_id = -1;
       //      }
-      final PreparedStatement stmt = prepareStatement(
-          "SELECT r_op, r_id, r_uuid, r_type, r_ptype, r_feature, ST_AsEWKB(r_geometry), r_err\n"
-              + "FROM nk_write_features(?,?,?,?,?,?,?,?,?);");
-      // nk_write_features(col_id, part_id, ops, ids, uuids, features, geometries, min_result, errors_only
+      final PreparedStatement stmt =
+          prepareStatement("SELECT op, id, xyz, tags, feature, ST_AsEWKB(geo), err_no, err_msg\n"
+              + "FROM naksha_write_features(?,?,?,?,?);");
       try (final Json json = Json.get()) {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
@@ -636,32 +650,24 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         final int SIZE = writeRequest.features.size();
         final String collection_id = writeFeatures.getCollectionId();
         // partition_id
-        final String[] op_arr = new String[SIZE];
-        final String[] id_arr = new String[SIZE];
-        final String[] uuid_arr = new String[SIZE];
+        final byte[][] op_arr = new byte[SIZE][];
         final byte[][] feature_arr = new byte[SIZE][];
         final byte[][] geo_arr = new byte[SIZE][];
-        final boolean min_result = writeFeatures.minResults;
-        final boolean err_only = false;
+        final byte[][] tags_arr = new byte[SIZE][];
 
         final PostgresWriteOp out = new PostgresWriteOp();
         for (int i = 0; i < SIZE; i++) {
           final CODEC codec = features.get(i);
-          op_arr[i] = codec.getOp();
-          id_arr[i] = codec.getId();
-          uuid_arr[i] = codec.getUuid();
+          op_arr[i] = codec.getXyzOp();
           feature_arr[i] = codec.getFeatureJbon();
           geo_arr[i] = codec.getWkb();
+          tags_arr[i] = codec.getTagsJbon();
         }
         stmt.setString(1, collection_id);
-        stmt.setInt(2, partition_id);
-        stmt.setArray(3, psqlConnection.createArrayOf("text", op_arr));
-        stmt.setArray(4, psqlConnection.createArrayOf("text", id_arr));
-        stmt.setArray(5, psqlConnection.createArrayOf("text", uuid_arr));
-        stmt.setArray(6, psqlConnection.createArrayOf("jsonb", feature_arr));
-        stmt.setArray(7, psqlConnection.createArrayOf("bytea", geo_arr));
-        stmt.setBoolean(8, min_result);
-        stmt.setBoolean(9, err_only);
+        stmt.setArray(2, psqlConnection.createArrayOf("bytea", op_arr));
+        stmt.setArray(3, psqlConnection.createArrayOf("bytea", feature_arr));
+        stmt.setArray(4, psqlConnection.createArrayOf("bytea", geo_arr));
+        stmt.setArray(5, psqlConnection.createArrayOf("bytea", tags_arr));
         final ResultSet rs = stmt.executeQuery();
         final PsqlCursor<FEATURE, CODEC> cursor =
             new PsqlCursor<>(writeRequest.getCodecFactory(), this, stmt, rs);

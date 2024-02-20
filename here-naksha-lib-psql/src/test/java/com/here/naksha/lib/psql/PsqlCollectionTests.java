@@ -28,6 +28,11 @@ import org.junit.jupiter.api.condition.EnabledIf;
 @TestMethodOrder(OrderAnnotation.class)
 abstract class PsqlCollectionTests extends PsqlTests{
 
+  @Override
+  protected PsqlStorage.Params getParams() {
+    return super.getParams().pg_plv8(true);
+  }
+
   @Test
   @Order(30)
   @EnabledIf("runTest")
