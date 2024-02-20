@@ -37,7 +37,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * The properties stored as value for the {@link XyzProperties#XYZ_NAMESPACE @ns:com:here:xyz} key in the {@link XyzProperties properties}
- * of features managed by Naksha. Except for the {@code tags} and {@code crid} all these values are read-only.
+ * of features managed by Naksha. Except for the {@code tags} all these values are read-only.
  */
 @SuppressWarnings("unused")
 public class XyzNamespace extends JsonObject {
@@ -208,18 +208,6 @@ public class XyzNamespace extends JsonObject {
   @JsonProperty(TAGS)
   @JsonInclude(Include.NON_EMPTY)
   private List<@NotNull String> tags;
-
-  /**
-   * The name of the crid property.
-   */
-  public static final String CRID = "crid";
-
-  /**
-   * The customer reference identifier.
-   */
-  @JsonProperty(CRID)
-  @JsonInclude(Include.NON_EMPTY)
-  private String crid;
 
   /**
    * The name of the grid property.
@@ -842,7 +830,7 @@ public class XyzNamespace extends JsonObject {
   }
 
   @AvailableSince(NakshaVersion.v2_0_13)
-  public String getCrid() {
-    return crid;
+  public void setGrid(String grid) {
+    this.grid = grid;
   }
 }

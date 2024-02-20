@@ -618,7 +618,7 @@ open class JbReader {
             readString()
         } else if (isBool()) {
             readBoolean()
-        } else if (isFloat64()) {
+        } else if (isFloat64() || isFloat32()) {
             readFloat64()
         } else if (isNull()) {
             null

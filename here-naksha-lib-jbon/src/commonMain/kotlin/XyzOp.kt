@@ -12,7 +12,6 @@ class XyzOp : XyzSpecial<XyzOp>() {
     private var op: Int = 0
     private var id: String? = null
     private var uuid: String? = null
-    private var crid: String? = null
 
     override fun parseHeader(mandatory: Boolean) {
         super.parseHeader(mandatory)
@@ -23,8 +22,6 @@ class XyzOp : XyzSpecial<XyzOp>() {
         id = if (reader.isString()) reader.readString() else null
         check(reader.nextUnit())
         uuid = if (reader.isString()) reader.readString() else null
-        check(reader.nextUnit())
-        crid = if (reader.isString()) reader.readString() else null
 
         noContent()
     }
@@ -32,5 +29,4 @@ class XyzOp : XyzSpecial<XyzOp>() {
     fun op(): Int = op
     fun id(): String? = id
     fun uuid(): String? = uuid
-    fun crid(): String? = crid
 }

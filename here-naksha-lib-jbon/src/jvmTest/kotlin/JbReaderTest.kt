@@ -49,7 +49,7 @@ class JbReaderTest : JbAbstractTest() {
         assertEquals(3402823466385288600000000000000000000001111.000000, properties["double"])
         assertEquals(2147483647000L, (properties["int64"] as BigInt64).toLong())
         assertEquals(123, properties["int32"])
-        assertEquals(10.0f, properties["float"])
+        assertEquals(10.0, properties["float"])
     }
 
     @Test

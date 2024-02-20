@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import static com.here.naksha.lib.jbon.BigInt64Kt.BigInt64;
 import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
 import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_CREATE;
 import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_DELETE;
@@ -42,6 +41,7 @@ import com.here.naksha.lib.jbon.XyzBuilder;
 import com.here.naksha.lib.jbon.XyzNs;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -79,38 +79,29 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     }
     wkb = null;
 
-    IMap featureAsMap = JvmEnv.get().convert(feature, JvmMap.class);
     // TODO global dict
     // TODO what about features that need more than 64KB of buffer? newDataView should handle it?
     JbDict globalDict = null;
+    decodeXyzOp(globalDict);
+    decodeTags(xyz.getTags(), globalDict);
+
+    // we don't need xyzNamespace in feature bytea
+    feature.getProperties().setXyzNamespace(new XyzNamespace());
+
+    IMap featureAsMap = JvmEnv.get().convert(feature, JvmMap.class);
     JbBuilder builder = new JbBuilder(newDataView(65536), globalDict);
     featureJbon = builder.buildFeatureFromMap(featureAsMap);
 
+    feature.getProperties().setXyzNamespace(xyz);
     feature.setGeometry(xyzGeometry);
-
-    decodeXyzNamespace(xyz, globalDict);
-    decodeTags(xyz.getTags(), globalDict);
 
     isDecoded = true;
     return self();
   }
 
-  public void decodeXyzNamespace(@NotNull XyzNamespace xyz, @Nullable JbDict globalDict) {
+  public void decodeXyzOp(@Nullable JbDict globalDict) {
     XyzBuilder xyzBuilder = new XyzBuilder(newDataView(1024), globalDict);
-    xyzNsJbon = xyzBuilder.buildXyzNs(
-        BigInt64(xyz.getCreatedAt()),
-        BigInt64(xyz.getUpdatedAt()),
-        BigInt64(xyz.getTxn()),
-        mapAction(xyz.getAction()),
-        Math.toIntExact(xyz.getVersion()),
-        BigInt64(xyz.getAuthorTime()),
-        BigInt64(xyz.getExtend()),
-        xyz.getPuuid(),
-        xyz.getUuid(),
-        xyz.getAppId(),
-        xyz.getAuthor(),
-        xyz.getCrid(),
-        xyz.getGrid());
+    xyzOp = xyzBuilder.buildXyzOp(mapOperationToPerform(op), id, uuid);
   }
 
   private void decodeTags(@Nullable List<@NotNull String> tags, @Nullable JbDict globalDict) {
@@ -125,15 +116,13 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     }
   }
 
-  private Integer mapAction(EXyzAction action) {
-    if (action == EXyzAction.CREATE) {
+  private int mapOperationToPerform(String action) {
+    if (Objects.equals(EXyzAction.CREATE.value(), action)) {
       return ACTION_CREATE;
-    } else if (action == EXyzAction.UPDATE) {
+    } else if (Objects.equals(EXyzAction.UPDATE.value(), action)) {
       return ACTION_UPDATE;
-    } else if (action == EXyzAction.DELETE) {
+    } else if (Objects.equals(EXyzAction.DELETE.value(), action)) {
       return ACTION_DELETE;
-    } else if (action == null || action.isNull()) {
-      return null;
     }
     throw new UnsupportedOperationException(String.format("Action type %s is not supported", action));
   }
@@ -186,6 +175,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     retNs.setRealTimeUpdatedAt(toLong(xyzNs.updatedAt()));
     retNs.setVersion(xyzNs.version());
     retNs.setTags(getXyzTagsFromJbon(), false);
+    retNs.setGrid(xyzNs.grid());
 
     return retNs;
   }

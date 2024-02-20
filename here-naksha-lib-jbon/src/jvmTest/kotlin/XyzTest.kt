@@ -57,12 +57,11 @@ class XyzTest : JbAbstractTest() {
     fun testXyzOp() {
         val view = env.newDataView(ByteArray(1024))
         val builder = XyzBuilder(view)
-        val xyzOp = builder.buildXyzOp(XYZ_OP_CREATE, "foo", "uuid", "crid")
+        val xyzOp = builder.buildXyzOp(XYZ_OP_CREATE, "foo", "uuid")
         val reader = XyzOp().mapBytes(xyzOp)
         assertEquals(XYZ_OP_CREATE, reader.op())
         assertEquals("foo", reader.id())
         assertEquals("uuid", reader.uuid())
-        assertEquals("crid", reader.crid())
     }
 
     @Order(3)
@@ -77,7 +76,7 @@ class XyzTest : JbAbstractTest() {
                 ACTION_CREATE, 1, createdTs + 20,
                 BigInt64(0), null, "test-uuid",
                 "test-app", "test-author",
-                null, "1234567")
+                "1234567")
         val featureView = JbSession.get().newDataView(xyz)
         val reader = XyzNs()
         reader.mapView(featureView)
@@ -93,7 +92,6 @@ class XyzTest : JbAbstractTest() {
         assertEquals("test-uuid", reader.uuid())
         assertEquals("test-app", reader.appId())
         assertEquals("test-author", reader.author())
-        assertNull(reader.crid())
         assertEquals("1234567", reader.grid())
 
         // Convert to namespace.

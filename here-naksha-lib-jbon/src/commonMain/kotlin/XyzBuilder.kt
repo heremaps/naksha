@@ -91,7 +91,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * @param crid The customer-reference-id to be set, if any.
      * @return The JBON encoded XYZ operation.
      */
-    fun buildXyzOp(op: Int, id: String?, uuid: String?, crid: String?): ByteArray {
+    fun buildXyzOp(op: Int, id: String?, uuid: String?): ByteArray {
         reset()
         val view = this.view
         view.setInt8(end++, TYPE_XYZ.toByte())
@@ -99,7 +99,6 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
         writeInt32(op)
         if (id == null) writeNull() else writeString(id)
         if (uuid == null) writeNull() else writeString(uuid)
-        if (crid == null) writeNull() else writeString(crid)
         return view.getByteArray().copyOf(end)
     }
 
@@ -111,16 +110,15 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
             createdAt: BigInt64,
             updatedAt: BigInt64,
             txn: BigInt64,
-            action: Int?,
+            action: Int,
             version: Int,
             authorTs: BigInt64,
             extend: BigInt64,
             puuid: String?,
-            uuid: String?,
-            appId: String?,
-            author: String?,
-            crid: String?,
-            grid: String?
+            uuid: String,
+            appId: String,
+            author: String,
+            grid: String
     ): ByteArray {
         reset()
         val view = this.view
@@ -129,16 +127,15 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
         writeTimestamp(createdAt)
         if (createdAt == updatedAt) writeNull() else writeTimestamp(updatedAt)
         writeInt64(txn)
-        if (action == null) writeNull() else writeInt32(action)
+        writeInt32(action)
         writeInt32(version)
         writeTimestamp(authorTs)
         writeInt64(extend)
         if (puuid == null) writeNull() else writeString(puuid)
-        if (uuid == null) writeNull() else writeString(uuid)
-        if (appId == null) writeNull() else writeString(appId)
-        if (author == null) writeNull() else writeString(author)
-        if (crid == null) writeNull() else writeString(crid)
-        if (grid == null) writeNull() else writeString(grid)
+        writeString(uuid)
+        writeString(appId)
+        writeString(author)
+        writeString(grid)
         return view.getByteArray().copyOf(end)
     }
 

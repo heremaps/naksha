@@ -180,6 +180,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     return self();
   }
 
+  // common params
   /**
    * If the feature was decoded.
    */
@@ -209,30 +210,41 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    * The {@code uuid} of the feature.
    */
   protected @Nullable String uuid;
+
   /**
    * The <link href="https://libgeos.org/specifications/wkb/">Extended WKB</b> encoded geometry.
    */
   protected byte @Nullable [] wkb;
+
   /**
    * The JTS geometry build from the {@link #wkb}.
    */
   protected @Nullable Geometry geometry;
-  /**
-   * The JSON of the error.
-   */
-  protected @Nullable String errorJson;
+
   /**
    * The JBON of the feature.
    */
   protected byte[] featureJbon;
-  /**
-   * XyzOp jbon.
-   */
-  protected byte[] xyzNsJbon;
+
+  // DB - request params
   /**
    * tags
    */
   protected byte[] tagsJbon;
+  /**
+   * XyzOp jbon we send to DB, we do not get it back from DB.
+   */
+  protected byte[] xyzOp;
+
+  // DB - response params
+  /**
+   * XyzNamespace jbon, returned from DB, we do not pass it in DB request.
+   */
+  protected byte[] xyzNsJbon;
+  /**
+   * The JSON of the error.
+   */
+  protected @Nullable String errorJson;
 
   /**
    * Sets the given geometry and clears the WKB.
@@ -439,6 +451,15 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    */
   public void setFeatureJbon(byte[] featureJbon) {
     this.featureJbon = featureJbon;
+  }
+
+  /**
+   * Returns XyzOp as jbon byte array.
+   *
+   * @return
+   */
+  public byte[] getXyzOp() {
+    return xyzOp;
   }
 
   /**
