@@ -201,7 +201,6 @@ class NakshaSession(
                 txn().newFeatureUuid(storageId, collectionId, newUid(collectionId)).toString(),
                 appId,
                 author ?: appId,
-                null,
                 Static.grid(sql, featureId, geo)
         )
     }

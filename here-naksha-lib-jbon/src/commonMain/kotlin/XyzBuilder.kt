@@ -88,10 +88,9 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * @param uuid The state in which the feature must exist for the operation to perform. This is for atomic
      *             [UPDATE](XYZ_OP_UPDATE), [DELETE](XYZ_OP_DELETE) or [PURGE](XYZ_OP_PURGE). Has no effect for
      *             [CREATE](XYZ_OP_CREATE) and only impacts the **update** part of the [UPSERT](XYZ_OP_UPSERT).
-     * @param crid The customer-reference-id to be set, if any.
      * @return The JBON encoded XYZ operation.
      */
-    fun buildXyzOp(op: Int, id: String?, uuid: String?, crid: String?): ByteArray {
+    fun buildXyzOp(op: Int, id: String?, uuid: String?): ByteArray {
         reset()
         val view = this.view
         view.setInt8(end++, TYPE_XYZ.toByte())
