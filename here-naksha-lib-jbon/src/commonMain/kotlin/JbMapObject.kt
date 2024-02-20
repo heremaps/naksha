@@ -1,7 +1,7 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-import com.here.naksha.lib.jbon.JbFeature
-import com.here.naksha.lib.jbon.JbMap
+package com.here.naksha.lib.jbon
+
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

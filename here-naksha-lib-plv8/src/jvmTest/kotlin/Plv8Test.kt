@@ -116,6 +116,7 @@ class Plv8Test : Plv8TestContainer() {
     fun createTestCollection() {
         val session = NakshaSession.get()
         Static.collectionCreate(session.sql,"foo", spGist = false, partition = false)
+        Static.collectionAttachTriggers(session.sql, "foo", session.schema, session.schemaOid)
         session.sql.execute("COMMIT")
     }
 }

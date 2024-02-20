@@ -330,7 +330,7 @@ SET (toast_tuple_target=8160"""
     @JvmStatic
     fun collectionAttachTriggers(sql: IPlv8Sql, id: String, schema: String, schemaOid: Int) {
         var triggerName = id + "_before"
-        var rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $2 AND tgrelid = $1", arrayOf(triggerName, schemaOid)))
+        var rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid)))
         if (rows.isEmpty()) {
             val schemaQuoted = sql.quoteIdent(schema)
             val tableNameQuoted = sql.quoteIdent(id)
@@ -340,7 +340,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_before();""")
         }
 
         triggerName = id + "_after"
-        rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $2 AND tgrelid = $1", arrayOf(triggerName, schemaOid)))
+        rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid)))
         if (rows.isEmpty()) {
             val schemaQuoted = sql.quoteIdent(schema)
             val tableNameQuoted = sql.quoteIdent(id)

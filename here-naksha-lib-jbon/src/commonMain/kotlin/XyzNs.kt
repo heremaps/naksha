@@ -117,8 +117,6 @@ class XyzNs : XyzSpecial<XyzNs>() {
         return value
     }
 
-    fun mrid() : String = grid()
-
     /**
      * Convert this XYZ namespace into a map. Beware that the transaction-number (txn) will be exposed as string.
      * @param storageId The storage-identifier, this is necessary to expose the transaction-number in a form readable by Javascript clients.

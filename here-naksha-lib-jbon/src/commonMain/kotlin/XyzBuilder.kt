@@ -91,7 +91,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * @param crid The customer-reference-id to be set, if any.
      * @return The JBON encoded XYZ operation.
      */
-    fun buildXyzOp(op: Int, id: String?, uuid: String?): ByteArray {
+    fun buildXyzOp(op: Int, id: String?, uuid: String?, crid: String?): ByteArray {
         reset()
         val view = this.view
         view.setInt8(end++, TYPE_XYZ.toByte())

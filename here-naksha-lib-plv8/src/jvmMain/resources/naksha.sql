@@ -58,9 +58,13 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
   // TODO: Clarify if TG_RELID is double or bigint!
   let naksha = require("naksha");
-  let asMap = require("jbon").Jb.map.asMap;
-  let t = new naksha.PgTrigger(TG_OP, TG_NAME, TG_WHEN, TG_LEVEL, TG_RELID, TG_TABLE_NAME, TG_TABLE_SCHEMA, asMap(NEW), asMap(OLD));
   let session = naksha.NakshaSession.Companion.get();
+  let mapi = require("jbon").Jb.map;
+  let t = new naksha.PgTrigger(
+    TG_OP, TG_NAME, TG_WHEN, TG_LEVEL, TG_RELID, TG_TABLE_NAME, TG_TABLE_SCHEMA,
+    mapi.isMap(NEW) ? mapi.asMap(NEW) : null,
+    mapi.isMap(OLD) ? mapi.asMap(OLD) : null
+  );
   session.triggerBefore(t);
   if (TG_OP == "INSERT" || TG_OP == "UPDATE") {
     return NEW
@@ -71,9 +75,13 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 CREATE OR REPLACE FUNCTION naksha_trigger_after() RETURNS trigger AS $$
   // TODO: Clarify if TG_RELID is double or bigint!
   let naksha = require("naksha");
-  let asMap = require("jbon").Jb.map.asMap;
-  let t = new naksha.PgTrigger(TG_OP, TG_NAME, TG_WHEN, TG_LEVEL, TG_RELID, TG_TABLE_NAME, TG_TABLE_SCHEMA, asMap(NEW), asMap(OLD));
   let session = naksha.NakshaSession.Companion.get();
+  let mapi = require("jbon").Jb.map;
+  let t = new naksha.PgTrigger(
+    TG_OP, TG_NAME, TG_WHEN, TG_LEVEL, TG_RELID, TG_TABLE_NAME, TG_TABLE_SCHEMA,
+    mapi.isMap(NEW) ? mapi.asMap(NEW) : null,
+    mapi.isMap(OLD) ? mapi.asMap(OLD) : null
+  );
   session.triggerAfter(t);
   if (TG_OP == "INSERT" || TG_OP == "UPDATE") {
     return NEW
@@ -139,7 +147,7 @@ CREATE OR REPLACE FUNCTION xyz_updated_at(xyz bytea) RETURNS int8 AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_txn(xyz bytea) RETURNS int8 AS $$
-  let xyzNs = new require("jbon").XyzNs();
+  let xyzNs = new (require("jbon").XyzNs)();
   xyzNs.mapBytes(xyz);
   return xyzNs.txn().value;
 $$ LANGUAGE 'plv8' IMMUTABLE;

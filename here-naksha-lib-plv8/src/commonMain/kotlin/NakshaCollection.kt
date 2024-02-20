@@ -2,9 +2,9 @@
 
 package com.here.naksha.lib.plv8
 
-import JbMapObject
 import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.JbMapObject
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
