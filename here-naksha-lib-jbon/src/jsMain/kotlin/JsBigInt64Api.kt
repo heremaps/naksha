@@ -5,6 +5,8 @@ class JsBigInt64Api : BigInt64Api {
     override fun MAX_VALUE(): BigInt64 = js("BigInt.MAX_VALUE_64")
     override fun MIN_VALUE(): BigInt64 = js("BigInt.MIN_VALUE_64")
     override fun ZERO(): BigInt64 = js("BigInt.ZERO")
+    override fun MINUS_ONE(): BigInt64 = js("BigInt.MINUS_ONE")
+
     override fun intToBigInt64(value: Int): BigInt64 = js("BigInt(value)")
     override fun bigInt64ToInt(value: BigInt64): Int = js("Number(value)")
     override fun eq(t: BigInt64, o: BigInt64): Boolean = js("t == o")

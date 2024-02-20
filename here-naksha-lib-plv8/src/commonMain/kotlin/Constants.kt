@@ -2,14 +2,12 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.*
-
 const val ERR_FATAL = "N0000"
 const val ERR_ID_MISSING = "N1001"
 const val ERR_CONFLICT = "N1002"
 
-const val C_PARTITION = "partitionHead"
-const val C_POINTS_ONLY = "pointsOnly"
-
-inline fun partition(feature: IMap) : Boolean? = feature[C_PARTITION]
-inline fun pointsOnly(feature: IMap) : Boolean? = feature[C_POINTS_ONLY]
+internal const val NKC_PARTITION = "partitionHead"
+internal const val NKC_POINTS_ONLY = "pointsOnly"
+internal const val NKC_DISABLE_HISTORY = "disableHistory"
+internal const val NKC_MAX_AGE = "maxAge"
+internal const val NKC_ESTIMATED_FEATURE_COUNT = "estimatedFeatureCount"

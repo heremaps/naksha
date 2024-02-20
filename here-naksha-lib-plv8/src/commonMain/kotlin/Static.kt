@@ -16,8 +16,8 @@ import kotlin.jvm.JvmStatic
 @JsExport
 object Static {
     @JvmStatic
-    fun initStorage(sql: IPlv8Sql, schema:String) {
-        val schemaOid : Int = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
+    fun initStorage(sql: IPlv8Sql, schema: String) {
+        val schemaOid: Int = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
         val schemaQuoted = sql.quoteIdent(schema)
         val query = """
 SET SESSION search_path TO $schemaQuoted, public, topology;
@@ -82,8 +82,8 @@ $$ LANGUAGE 'plv8';
      * Array to create a pseudo GeoHash, which is BASE-32 encoded.
      */
     @JvmStatic
-    private val BASE32 = arrayOf('0','1','2','3','4','5','6','7','8','9','b','c','d','e','f','g',
-            'h','j','k','m','n','p','q','r','s','t','u','v','w','x','y','z')
+    private val BASE32 = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
+            'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
 
     /**
      * Returns the lock-id for the given name.
@@ -124,7 +124,7 @@ $$ LANGUAGE 'plv8';
      * @return The GRID (7 character long string).
      */
     @JvmStatic
-    fun grid(sql: IPlv8Sql, id:String, geo: ByteArray?) : String {
+    fun grid(sql: IPlv8Sql, id: String, geo: ByteArray?): String {
         if (geo == null) {
             val sb = StringBuilder()
             var hash = Fnv1a64.string(Fnv1a64.start(), id)
@@ -148,7 +148,7 @@ $$ LANGUAGE 'plv8';
      * @return _true_ if a table with this name exists; _false_ otherwise.
      */
     @JvmStatic
-    fun tableExists(sql: IPlv8Sql, name: String, schemaOid:Int): Boolean {
+    fun tableExists(sql: IPlv8Sql, name: String, schemaOid: Int): Boolean {
         val rows = asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = $1 AND relnamespace = $2", arrayOf(name, schemaOid)))
         return rows.isNotEmpty()
     }
@@ -232,12 +232,6 @@ SET (toast_tuple_target=8160"""
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
 (xyz_grid(xyz) COLLATE "C" DESC, xyz_txn(xyz) DESC, xyz_extend(xyz)) WITH (fillfactor=$fillFactor);
-"""
-
-        // mrid
-        qin = sql.quoteIdent("${tableName}_mrid_idx")
-        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(xyz_mrid(xyz) COLLATE "C" DESC, xyz_txn(xyz) DESC, xyz_extend(xyz)) WITH (fillfactor=$fillFactor);
 """
 
         // app_id
@@ -330,10 +324,30 @@ SET (toast_tuple_target=8160"""
      * Add the before and after triggers.
      * @param sql The SQL API.
      * @param id The collection identifier.
+     * @param schema The schema name.
+     * @param schemaOid The object-id of the schema to look into.
      */
     @JvmStatic
-    fun collectionAttachTriggers(sql: IPlv8Sql, id: String) {
+    fun collectionAttachTriggers(sql: IPlv8Sql, id: String, schema: String, schemaOid: Int) {
+        var triggerName = id + "_before"
+        var rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $2 AND tgrelid = $1", arrayOf(triggerName, schemaOid)))
+        if (rows.isEmpty()) {
+            val schemaQuoted = sql.quoteIdent(schema)
+            val tableNameQuoted = sql.quoteIdent(id)
+            val triggerNameQuoted = sql.quoteIdent(triggerName)
+            sql.execute("""CREATE TRIGGER $triggerNameQuoted BEFORE INSERT OR UPDATE ON ${schemaQuoted}.${tableNameQuoted}
+FOR EACH ROW EXECUTE FUNCTION naksha_trigger_before();""")
+        }
 
+        triggerName = id + "_after"
+        rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $2 AND tgrelid = $1", arrayOf(triggerName, schemaOid)))
+        if (rows.isEmpty()) {
+            val schemaQuoted = sql.quoteIdent(schema)
+            val tableNameQuoted = sql.quoteIdent(id)
+            val triggerNameQuoted = sql.quoteIdent(triggerName)
+            sql.execute("""CREATE TRIGGER $triggerNameQuoted AFTER INSERT OR UPDATE OR DELETE ON ${schemaQuoted}.${tableNameQuoted}
+FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();""")
+        }
     }
 
     /**

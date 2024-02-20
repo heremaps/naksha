@@ -189,7 +189,7 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
     }
 
     /**
-     * Maps the view from the given reader. Verifies that the reader is located at a string and reads the string header to
+     * Maps the view from the given reader. Verifies that the reader is at a lead-in byte and reads the header to
      * detect [encodingStart] and [encodingEnd].
      * @param reader The reader from which to use the view and offset.
      * @return this.

@@ -39,6 +39,7 @@ Object.assign(BigInt, {
     TWO_COMPLEMENT_32: BigInt("4294967296"),
     TWO_COMPLEMENT_64: BigInt("18446744073709551616"),
     ZERO: BigInt(0),
+    MINUS_ONE: BigInt(-1),
     u64: function(t) { return t & BigInt.MASK_64; },
     s64: function(t) { return t > BigInt.MAX_VALUE_64 ? t - BigInt.TWO_COMPLEMENT_64 : t; },
     s32: function(t) { var n=t & BigInt.MASK_LO_32; return Number(n > BigInt.MAX_VALUE_32 ? n - BigInt.TWO_COMPLEMENT_32 : n); },

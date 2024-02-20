@@ -6,25 +6,23 @@ The XYZ-Hub supports namespaces within the `properties` of features. The most na
 
 The XYZ namespace was originally introduced by the XYZ-Hub to store state related information, exclusively managed by the XYZ-Hub. Certain changes have been applied meanwhile to this namespace. Naksha tries to stay compatible with the last version of the namespace that was  used by Map-Creator application (aka UniMap-Editor):
 
-| Property  | Type            | RO   | Meaning                                                                                                 |
-|-----------|-----------------|------|---------------------------------------------------------------------------------------------------------|
-| createdAt | Long            | yes  | The epoch-timestamp in milliseconds when the transaction started, that created the feature originally.  |
-| updatedAt | Long            | yes  | The epoch-timestamp in milliseconds when the transaction started, that created this state.              |
-| txn       | String          | yes  | The transaction-number of the transaction in which this state was created.                              |
-| uuid      | GUID            | yes  | The state identifier.                                                                                   |
-| puuid     | GUID?           | yes  | The previous state identifier.                                                                          |
-| action    | String          | yes  | The action that lead to this state: CREATE, UPDATE, DELETE.                                             |
-| version   | Long            | yes  | The version of this feature (change counter).                                                           |
-| app_id    | String          | yes  | The UPM identifier of the application that created this state.                                          |
-| author    | String          | yes  | The UPM identifier of the author of this state.                                                         |
-| author_ts | Long            | yes  | The epoch timestamp in milliseconds when the author made the last change.                               |
-| tags      | List\<String\>? | no   | The tags.                                                                                               |
-| crid      | String?         | no   | An arbitrary custom reference-id.                                                                       |
-| grid      | String          | yes  | The 7 character long geo-hash reference-id.                                                             |
-| extend    | Long            | yes  | The size of the feature in milliseconds. Points and features without geometry will have a size of zero. |
+| Property  | Type            | RO  | Meaning                                                                                                 |
+|-----------|-----------------|-----|---------------------------------------------------------------------------------------------------------|
+| createdAt | Long            | yes | The epoch-timestamp in milliseconds when the transaction started, that created the feature originally.  |
+| updatedAt | Long            | yes | The epoch-timestamp in milliseconds when the transaction started, that created this state.              |
+| txn       | String          | yes | The transaction-number of the transaction in which this state was created.                              |
+| uuid      | String (GUID)   | yes | The state identifier.                                                                                   |
+| puuid     | String? (GUID)  | yes | The previous state identifier.                                                                          |
+| action    | String          | yes | The action that lead to this state: CREATE, UPDATE, DELETE.                                             |
+| version   | Long            | yes | The version of this feature (change counter).                                                           |
+| app_id    | String          | yes | The UPM identifier of the application that created this state.                                          |
+| author    | String          | yes | The UPM identifier of the author of this state.                                                         |
+| author_ts | Long            | yes | The epoch timestamp in milliseconds when the author made the last change.                               |
+| tags      | List\<String\>? | no  | The tags.                                                                                               |
+| grid      | String          | yes | The GeoHash-Reference-ID (14 characters).                                                               |
+| extend    | Long            | yes | The size of the feature in milliseconds. Points and features without geometry will have a size of zero. |
 
 * The **author** must not be `null` in the namespace, but the client does not need to set an author. In this case, the author of features being updated will stay unchanged. For created features, the author defined in the collection-information will be used, if this is as well `null`, then the **app_id** is used (all features **must** eventually have an author).
-* The **grid** is based upon the mass center of the geometry (`ST_GeoHash(ST_Centroid(geo),7)`). If the feature does not have a geometry, the `id` is used to create a geo-hash replacement.
 
 In the tags Naksha stores:
 
@@ -34,7 +32,7 @@ In the tags Naksha stores:
 * The validation type into: `~:violation_val_type:{val-type}`
 * The status of a violation into: `:violation_state:{violations-status}`
 
-The **grid** is automatically set by the Naksha storage engine at part of the normal triggers.
+**Note**: The **grid** is automatically set by the Naksha storage engine at part of the normal triggers. The **grid** is based upon the mass center of the geometry (`ST_GeoHash(ST_Centroid(geo),14)`). If the feature does not have a geometry, the `id` is used to create a geo-hash replacement. It can be used for work distribution.
 
 ## MOM-Metadata [`@ns:com:here:meta`]
 

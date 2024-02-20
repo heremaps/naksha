@@ -29,6 +29,12 @@ interface BigInt64Api {
      */
     fun ZERO(): BigInt64
 
+    /**
+     * Returns the value _-1_ as 64-bit integer.
+     * @return The value _-1_ as 64-bit integer.
+     */
+    fun MINUS_ONE(): BigInt64
+
     fun eq(t: BigInt64, o: BigInt64): Boolean
     fun eqi(t: BigInt64, o: Int): Boolean
     fun lt(t: BigInt64, o: BigInt64): Boolean

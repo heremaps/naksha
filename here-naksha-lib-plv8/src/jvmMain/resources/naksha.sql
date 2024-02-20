@@ -56,9 +56,9 @@ CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, a
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
+  // TODO: Clarify if TG_RELID is double or bigint!
   let naksha = require("naksha");
   let asMap = require("jbon").Jb.map.asMap;
-  // TODO: Clarify if TG_RELID is double or bigint!
   let t = new naksha.PgTrigger(TG_OP, TG_NAME, TG_WHEN, TG_LEVEL, TG_RELID, TG_TABLE_NAME, TG_TABLE_SCHEMA, asMap(NEW), asMap(OLD));
   let session = naksha.NakshaSession.Companion.get();
   session.triggerBefore(t);
@@ -69,9 +69,9 @@ CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_trigger_after() RETURNS trigger AS $$
+  // TODO: Clarify if TG_RELID is double or bigint!
   let naksha = require("naksha");
   let asMap = require("jbon").Jb.map.asMap;
-  // TODO: Clarify if TG_RELID is double or bigint!
   let t = new naksha.PgTrigger(TG_OP, TG_NAME, TG_WHEN, TG_LEVEL, TG_RELID, TG_TABLE_NAME, TG_TABLE_SCHEMA, asMap(NEW), asMap(OLD));
   let session = naksha.NakshaSession.Companion.get();
   session.triggerAfter(t);
@@ -84,8 +84,8 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 -- Returns always op, id, xyz, optional: geo, feature, tags, err_no and err_msg
 CREATE OR REPLACE FUNCTION naksha_write_features(
   collection_id text,
-  ops bytea[], -- XyzOp (op, id, uuid, crid)
-  features bytea[], -- JbFeature
+  ops bytea[], -- XyzOp (op, id, uuid)
+  features bytea[], -- JbFeature (without XZY namespace)
   geometries bytea[], -- WKB
   tags bytea[] -- XyzTags
 ) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo bytea, err_no text, err_msg text) AS $$
@@ -96,8 +96,8 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 
 -- Returns always op, id, xyz, optional: geo, feature, tags, err_no and err_msg
 CREATE OR REPLACE FUNCTION naksha_write_collections(
-  ops bytea[], -- XyzOp (op, id, uuid, crid)
-  features bytea[], -- JbFeature
+  ops bytea[], -- XyzOp (op, id, uuid)
+  features bytea[], -- JbFeature (without XZY namespace)
   geometries bytea[], -- WKB
   tags bytea[] -- XyzTags
 ) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo bytea, err_no text, err_msg text) AS $$
@@ -210,10 +210,17 @@ CREATE OR REPLACE FUNCTION xyz_mrid(xyz bytea) RETURNS text AS $$
   return xyzNs.mrid();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+-- query like:
+-- where tags_to_jsonb(tags) @? '$.x?(@ starts with "Hello")'
+-- where tags_to_jsonb(tags) @? '$.y?(@ >= 500)'
+-- where tags_to_jsonb(tags) d @? '$.crid?(@ starts with "234")'
+-- where tags_to_jsonb(tags) d @? '$.grid?(@ starts with "234")'
+-- See:
+-- https://www.postgresql.org/docs/16/functions-json.html#FUNCTIONS-SQLJSON-PATH
+-- https://support.smartbear.com/alertsite/docs/monitors/api/endpoint/jsonpath.html
+-- https://goessner.net/articles/JsonPath/
 CREATE OR REPLACE FUNCTION tags_to_jsonb(tags bytea) RETURNS jsonb AS $$
-  let xyzTags = new require("jbon").XyzTags();
-  xyzTags.mapBytes(xyz);
-  return xyzTags.tagsMap();
+  return (new require("jbon").XyzTags()).mapBytes(xyz).tagsMap()
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_feature_id(feature bytea) RETURNS text AS $$

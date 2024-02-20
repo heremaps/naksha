@@ -34,7 +34,7 @@ When a dictionary is mapped, it will lazy load entries into an internal cache, a
 ## Maps (JbMap)
 In JBON the keys of a map must be strings, note that text is not allowed for keys. All key-value pairs are sorted by the binary representation of the key. The reason for this is to guarantee, that two equal maps generate the same hash-code, when their binary representation is hashed.
 
-## Features (JbDocument)
+## Features (JbFeature)
 A JBON feature is basically any unit, but with a local dictionary and an optional identifier of a global dictionary needed to decode it.
 
 ## Strings (JbString, JbText)
@@ -225,7 +225,6 @@ The information that the database manages and what is delivered by the database.
 - **uuid** (string)
 - **app_id** (string)
 - **author** (string)
-- **crid** (string or _null_)
 - **grid** (string) SELECT ST_GeoHash(ST_Centroid(geo),7);
 
 Notes: Tags are now a dedicated map, but when exposed, they are joined by an equal sign, the _null_ is default and causes the equal sign to disappear. So the tag "foo" becomes "tag=null" and when converting back "tag=null" is converted into "tag". Any other value, not being _null_, will be encoded into the tag. We do not allow equal signs otherwise, so only one equal sign is allowed in a tag. We do this, because we add an GIN index on the tags and allows key-value search at low level.

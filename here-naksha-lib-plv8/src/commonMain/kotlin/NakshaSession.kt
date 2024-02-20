@@ -3,7 +3,6 @@
 package com.here.naksha.lib.plv8
 
 import XyzOp
-import XyzTags
 import XyzVersion
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_MIN
@@ -147,9 +146,7 @@ class NakshaSession(
      * @param data The trigger data, allows the modification of [PgTrigger.NEW].
      */
     fun triggerBefore(data: PgTrigger) {
-        val naksha = NakshaSession.get()
-        val sql = naksha.sql
-        // TODO: Implement me!
+        Jb.log.info("Trigger before")
     }
 
     /**
@@ -158,9 +155,7 @@ class NakshaSession(
      * @param data The trigger data, allows the modification of [PgTrigger.NEW].
      */
     fun triggerAfter(data: PgTrigger) {
-        val naksha = NakshaSession.get()
-        val sql = naksha.sql
-        // TODO: Implement me!
+        Jb.log.info("Trigger after")
     }
 
     /**
@@ -298,9 +293,9 @@ SET (toast_tuple_target=8160,fillfactor=100
     fun writeFeatures(
             collectionId: String,
             op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray>,
+            feature_arr: Array<ByteArray?>,
             geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray>
+            tags_arr: Array<ByteArray?>
     ): ITable {
         errNo = null
         errMsg = null
@@ -313,29 +308,26 @@ SET (toast_tuple_target=8160,fillfactor=100
 
     fun writeCollections(
             op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray>,
+            feature_arr: Array<ByteArray?>,
             geo_arr: Array<Any?>,
-            tags_arr: Array<ByteArray>
+            tags_arr: Array<ByteArray?>
     ): ITable {
         errNo = null
         errMsg = null
         val sql = this.sql
         val table = sql.newTable()
         val xyzOp = XyzOp()
-        val feature = JbFeature()
-        val xyzTags = XyzTags()
+        val collection = NakshaCollection()
         var i = 0
         while (i < op_arr.size) {
             try {
                 xyzOp.mapBytes(op_arr[i])
-                feature.mapBytes(feature_arr[i])
-                xyzTags.mapBytes(tags_arr[i])
+                collection.mapBytes(feature_arr[i])
                 var op = xyzOp.op()
                 var uuid = xyzOp.uuid()
-                var crid = xyzOp.crid()
                 var id = xyzOp.id()
                 if (id == null) {
-                    id = feature.id()
+                    id = collection.id()
                 }
                 if (id == null) {
                     throw NakshaException(ERR_ID_MISSING, "Missing id", xyzOpName(op), id, feature_arr[i], geo_arr[i], tags_arr[i])
@@ -353,11 +345,10 @@ SET (toast_tuple_target=8160,fillfactor=100
                             throw NakshaException(ERR_CONFLICT, "Feature exists already", xyzOpName(op), id, feature_arr[i], geo_arr[i], tags_arr[i])
                         }
                     }
-                    // TODO: Fix me!
-                    Static.collectionCreate(sql, id, false, false)
-                    val query = "INSERT INTO naksha_collections (id, feature, ST_Force3DZ(ST_GeomFromEWKB(geo)), tags) VALUES($1,$2,$3,$4)"
+                    // The XYZ namespace is created by the database.
+                    val query = "INSERT INTO naksha_collections (id, feature, geo, tags) VALUES($1,$2,ST_Force3DZ(ST_GeomFromEWKB($3)),$4) RETURNING xyz"
                     val affectedRows = sql.execute(query, arrayOf(id, feature_arr[i], geo_arr[i], tags_arr[i]))
-
+                    Static.collectionCreate(sql, id, false, false)
                 } finally {
                     sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(lockId))
                 }

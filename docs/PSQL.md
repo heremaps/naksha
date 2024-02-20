@@ -107,7 +107,7 @@ The table layout for all tables:
 | tags     | bytea                     |                                        | `xyz->tags`                                                  |
 | xyz      | bytea                     |                                        | `feature->properties->@ns:com:here:xyz`                      |
 
-The **xyz** and **tags** columns contains special information, managed by Naksha. They should be merged into the feature under `feature->properties->@ns:com:here:xyz`.
+The **xyz** namespace is split into parts, to avoid unnecessary work for triggers and functions. Therefore, the **tags** columns contains the tags extracted from the XYZ namespace, while the rest of the XYZ namespace, managed by Naksha, is stored in the **xyz** column. The **txn_next** is as well managed internally and only used for the history, therefore it is an own column (actually, this is the only value that need to be adjusted, when a row is moved into history). All these columns (**uid**, **txn_next**, **tags** and **xyz**) should be merged together into the Geo-JSON feature under `feature->properties->@ns:com:here:xyz`, when downward compatibility with Data-Hub is required. This is left to the client and not part of the database code. Modern code using for example Web-Sockets, should no longer do this. The reason for this design is, that the **xyz** namespace is managed by the database only and must not be modified by the client, while **feature**, **geometry** and **tags** are client only and are not modified by the database. The **tags** are separated, because they need to be stored very efficiently (using an own dictionary) and they are indexed, while the feature itself is normally not read in the database.
 
 ## Collection-Info
 

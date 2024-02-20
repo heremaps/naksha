@@ -2,17 +2,10 @@ package com.here.naksha.lib.jbon
 
 class JvmBigInt64Api : BigInt64Api {
 
-    override fun MAX_VALUE(): BigInt64 {
-        return BigInt64Max;
-    }
-
-    override fun MIN_VALUE(): BigInt64 {
-        return BigInt64Min
-    }
-
-    override fun ZERO(): BigInt64 {
-        return positiveBigInts[0]
-    }
+    override fun MAX_VALUE(): BigInt64 = BigInt64Max;
+    override fun MIN_VALUE(): BigInt64  = BigInt64Min
+    override fun ZERO(): BigInt64  = positiveBigInts[0]
+    override fun MINUS_ONE(): BigInt64 = negativeBigInts[255]
 
     override fun eq(t: BigInt64, o: BigInt64): Boolean {
         check(t is JvmBigInt64 && o is JvmBigInt64)
