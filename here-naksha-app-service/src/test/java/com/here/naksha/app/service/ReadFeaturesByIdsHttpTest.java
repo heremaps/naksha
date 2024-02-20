@@ -19,6 +19,7 @@
 package com.here.naksha.app.service;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
@@ -64,8 +65,11 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
             loadFileOrFail("ReadFeatures/ByIdsHttp/TC0400_ExistingAndMissingIds/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
 
-    UrlPattern endpointPath = urlEqualTo(ENDPOINT + "?" + idsQueryParam);
-    stubFor(get(endpointPath).willReturn(okJson(expectedBodyPart)));
+    UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
+    stubFor(get(endpointPath)
+            .withQueryParam("id" ,havingCommaSeparatedValue("my-custom-id-400-1"))
+            .withQueryParam("id" ,havingCommaSeparatedValue("my-custom-id-400-2"))
+            .willReturn(okJson(expectedBodyPart)));
 
     // When: Get Features request is submitted to NakshaHub Space Storage instance
     HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idsQueryParam, streamId);
@@ -91,7 +95,9 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
-    stubFor(get(endpointPath).withQueryParam("id", equalTo("1000")).willReturn(okJson(expectedBodyPart)));
+    stubFor(get(endpointPath)
+            .withQueryParam("id", havingCommaSeparatedValue("1000"))
+            .willReturn(okJson(expectedBodyPart)));
 
     // When: Get Features request is submitted to NakshaHub Space Storage instance
     HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features" + idsQueryParam, streamId);
@@ -156,5 +162,9 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
 
     // Then: Verify request reached endpoint once
     verify(1, getRequestedFor(endpointPath));
+  }
+
+  private final StringValuePattern havingCommaSeparatedValue(String value){
+    return matching(".*(^|,)"+ value + "(,|$).*");
   }
 }

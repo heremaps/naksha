@@ -19,8 +19,8 @@
 package com.here.naksha.storage.http;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
+import com.here.naksha.lib.core.models.Typed;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
@@ -32,6 +32,7 @@ import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -57,18 +58,13 @@ class HttpStorageReadExecute {
   }
 
   @NotNull
-  Result execute() {
-    try {
-      return switch (readRequest.getReadRequestType()) {
-        case GET_BY_ID -> executeFeatureById();
-        case GET_BY_IDS -> executeFeaturesById();
-        case GET_BY_BBOX -> executeFeatureByBBox();
-        case GET_BY_TILE -> executeFeaturesByTile();
-      };
-    } catch (Exception e) {
-      log.warn("", e);
-      return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
-    }
+  Result execute() throws IOException, InterruptedException {
+    return switch (readRequest.getReadRequestType()) {
+      case GET_BY_ID -> executeFeatureById();
+      case GET_BY_IDS -> executeFeaturesById();
+      case GET_BY_BBOX -> executeFeatureByBBox();
+      case GET_BY_TILE -> executeFeaturesByTile();
+    };
   }
 
   private Result executeFeatureById() throws IOException, InterruptedException {
@@ -76,39 +72,27 @@ class HttpStorageReadExecute {
 
     HttpResponse<String> response = requestSender.sendRequest(String.format("/features/%s", featureId));
 
-    XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
-    if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
-
-    XyzFeature resultFeature = JsonSerializable.deserialize(response.body(), XyzFeature.class);
-    return createHttpResultFromFeatureList(List.of(resultFeature));
+    return prepareResult(response, XyzFeature.class, List::of);
   }
 
   private Result executeFeaturesById() throws IOException, InterruptedException {
     List<String> featureIds = readRequest.getQueryParameter(FEATURE_IDS);
-    String queryParamsString = FEATURE_IDS + "=" + String.join("&" + FEATURE_IDS + "=", featureIds);
+    String queryParamsString = FEATURE_IDS + "=" + String.join(",", featureIds);
 
     HttpResponse<String> response = requestSender.sendRequest(String.format("/features?%s", queryParamsString));
 
-    XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
-    if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
-
-    XyzFeatureCollection resultFeatures = JsonSerializable.deserialize(response.body(), XyzFeatureCollection.class);
-    return createHttpResultFromFeatureList(resultFeatures.getFeatures());
+    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
   private Result executeFeatureByBBox() throws IOException, InterruptedException {
-    String queryParamsString = keysToKeyValuesStrings(WEST, NORTH, EAST, SOUTH, CLIP_GEO, LIMIT);
+    String queryParamsString = keysToKeyValuesStrings(WEST, NORTH, EAST, SOUTH, LIMIT);
 
     warnOnUnsupportedQueryParam(TAGS_OP);
     warnOnUnsupportedQueryParam(PROPERTY_SEARCH_OP);
 
     HttpResponse<String> response = requestSender.sendRequest(String.format("/bbox?%s", queryParamsString));
 
-    XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
-    if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
-
-    XyzFeatureCollection resultFeatures = JsonSerializable.deserialize(response.body(), XyzFeatureCollection.class);
-    return createHttpResultFromFeatureList(resultFeatures.getFeatures());
+    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
   private Result executeFeaturesByTile() throws IOException, InterruptedException {
@@ -124,11 +108,19 @@ class HttpStorageReadExecute {
     HttpResponse<String> response =
         requestSender.sendRequest(String.format("/quadkey/%s?%s", tileId, queryParamsString));
 
-    XyzError error = mapHttpStatusToErrorOrNull(response.statusCode());
-    if (error != null) return new ErrorResult(error, "Response http status code: " + response.statusCode());
+    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+  }
 
-    XyzFeatureCollection resultFeatures = JsonSerializable.deserialize(response.body(), XyzFeatureCollection.class);
-    return createHttpResultFromFeatureList(resultFeatures.getFeatures());
+  private <T extends Typed> Result prepareResult(
+      HttpResponse<String> httpResponse,
+      Class<T> httpResponseType,
+      Function<T, List<XyzFeature>> typedResponseToFeatureList) {
+
+    XyzError error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
+    if (error != null) return new ErrorResult(error, "Response http status code: " + httpResponse.statusCode());
+
+    T resultFeatures = JsonSerializable.deserialize(httpResponse.body(), httpResponseType);
+    return createHttpResultFromFeatureList(typedResponseToFeatureList.apply(resultFeatures));
   }
 
   private void warnOnUnsupportedQueryParam(String tag) {
@@ -177,7 +169,7 @@ class HttpStorageReadExecute {
       case 429 -> XyzError.TOO_MANY_REQUESTS;
       case HttpURLConnection.HTTP_GATEWAY_TIMEOUT -> XyzError.TIMEOUT;
       case HttpURLConnection.HTTP_NOT_FOUND -> XyzError.NOT_FOUND;
-      default -> throw unchecked(new IllegalAccessException());
+      default -> throw new IllegalArgumentException("Not known http error status returned: " + httpStatus);
     };
   }
 }

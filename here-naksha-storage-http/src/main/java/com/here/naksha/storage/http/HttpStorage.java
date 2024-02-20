@@ -47,10 +47,6 @@ public class HttpStorage implements IStorage {
 
   private final HttpStorageProperties properties;
 
-  static {
-    log.info("HttpStorage class initialized");
-  }
-
   public HttpStorage(@NotNull Storage storage) {
     properties = HttpStorage.getProperties(storage);
     httpStorageClient = HttpClient.newBuilder()

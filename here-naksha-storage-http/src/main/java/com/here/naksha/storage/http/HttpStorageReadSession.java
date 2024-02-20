@@ -22,8 +22,6 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -34,9 +32,6 @@ import org.slf4j.LoggerFactory;
 public final class HttpStorageReadSession implements IReadSession {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadSession.class);
-
-  // Temporary for unit tests, before we can test e2e
-  public static final List<String> testLog = new LinkedList<>();
 
   @NotNull
   private final NakshaContext context;
@@ -94,7 +89,7 @@ public final class HttpStorageReadSession implements IReadSession {
     try {
       return new HttpStorageReadExecute((ReadFeaturesProxyWrapper) readRequest, requestSender).execute();
     } catch (Exception e) {
-      log.warn("Exception thrown: ", e);
+      log.warn("Exception thrown.", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
     }
   }
