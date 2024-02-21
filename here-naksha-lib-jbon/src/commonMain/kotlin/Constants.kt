@@ -81,9 +81,7 @@ const val XYZ_OP_UPSERT = 2 // aka PUT
 const val XYZ_OP_DELETE = 3
 const val XYZ_OP_PURGE = 4
 val XYZ_OP_NAME = arrayOf("CREATE", "UPDATE", "UPSERT", "DELETE", "PURGE")
-
-@Suppress("NOTHING_TO_INLINE")
-inline fun xyzOpName(op:Int) = if (op >= 0 && op <= XYZ_OP_NAME.size) XYZ_OP_NAME[op] else "undefined"
+val XYZ_OP_INT = arrayOf(XYZ_OP_CREATE, XYZ_OP_UPDATE, XYZ_OP_UPSERT, XYZ_OP_DELETE, XYZ_OP_PURGE)
 
 const val XYZ_EXECUTED_RETAINED = "RETAINED"
 const val XYZ_EXECUTED_READ = "READ"

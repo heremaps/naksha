@@ -10,7 +10,7 @@ class Plv8JbonTest : Plv8TestContainer() {
     private val builder = JbBuilder(newDataView(16384))
 
     private fun jsonToJbonByteArray(json:String) : ByteArray {
-        builder.reset()
+        builder.clear()
         val raw = env.parse(json)
         return builder.buildFeatureFromMap(asMap(raw))
     }

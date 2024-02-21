@@ -12,6 +12,11 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 object Jb {
+    /**
+     * The default size for builders created using the static _create_ method.
+     */
+    var defaultBuilderSize = 1000
+
     @JvmStatic
     fun isInitialized(): Boolean {
         return this::env.isInitialized

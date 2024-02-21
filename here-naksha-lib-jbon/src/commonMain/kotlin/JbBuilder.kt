@@ -25,8 +25,8 @@ open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
          * @return The builder.
          */
         @JvmStatic
-        fun create(size: Int = 1000, global: JbDict? = null): JbBuilder =
-                JbBuilder(Jb.env.newDataView(ByteArray(size)), global)
+        fun create(size: Int? = null, global: JbDict? = null): JbBuilder =
+                JbBuilder(Jb.env.newDataView(ByteArray(size ?: Jb.defaultBuilderSize)), global)
     }
 
     /**
@@ -70,10 +70,11 @@ open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
     var end: Int = 0
 
     /**
-     * Reset the builder to the start and return the end position that was overridden.
+     * Clear the builder, set end to the first byte and return the end position that was overridden. Clears the
+     * local dictionary.
      * @return The overridden end position.
      */
-    fun reset(): Int {
+    fun clear(): Int {
         val old = end
         end = 0
         localDictByName = null
@@ -83,10 +84,10 @@ open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
     }
 
     /**
-     * Reset the builder to the start and return the end position that was overridden. Leave the local dictionary alone.
+     * Reset the builder to the start and return the end position that was overridden. Leave the local dictionary intact.
      * @return The overridden end position.
      */
-    fun resetView(): Int {
+    fun reset(): Int {
         val old = end
         end = 0
         return old
@@ -768,7 +769,7 @@ open class JbBuilder(val view: IDataView, val global: JbDict? = null) {
      * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
      */
     fun buildFeatureFromMap(map: IMap): ByteArray {
-        reset()
+        clear()
         val id: String? = map["id"]
         xyz = null
         val start = startMap()

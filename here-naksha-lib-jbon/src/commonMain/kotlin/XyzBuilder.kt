@@ -1,17 +1,31 @@
 @file:OptIn(ExperimentalJsExport::class)
+
 package com.here.naksha.lib.jbon
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmStatic
 
 @JsExport
 class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, global) {
+
+    companion object {
+        /**
+         * Create a new builder with a buffer of the given size.
+         * @param size The buffer size to use.
+         * @param global The global dictionary to use for the builder; if any.
+         * @return The builder.
+         */
+        @JvmStatic
+        fun create(size: Int? = null, global: JbDict? = null): XyzBuilder =
+                XyzBuilder(Jb.env.newDataView(ByteArray(size ?: Jb.defaultBuilderSize)), global)
+    }
 
     /**
      * Starts tag building.
      */
     fun startTags() {
-        reset()
+        clear()
         val view = this.view
         view.setInt8(end++, TYPE_XYZ.toByte())
         writeInt32(XYZ_TAGS)
@@ -75,7 +89,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * Finish the tag building and returns the build tag bytes.
      * @return The tag bytes.
      */
-    fun buildTags() : ByteArray {
+    fun buildTags(): ByteArray {
         return view.getByteArray().copyOf(end)
     }
 
@@ -91,7 +105,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * @return The JBON encoded XYZ operation.
      */
     fun buildXyzOp(op: Int, id: String?, uuid: String?): ByteArray {
-        reset()
+        clear()
         val view = this.view
         view.setInt8(end++, TYPE_XYZ.toByte())
         writeInt32(XYZ_OP)
@@ -119,7 +133,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
             author: String,
             grid: String
     ): ByteArray {
-        reset()
+        clear()
         val view = this.view
         view.setInt8(end++, TYPE_XYZ.toByte())
         writeInt32(XYZ_NS)

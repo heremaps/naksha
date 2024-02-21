@@ -98,7 +98,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isNull())
         assertNull(reader.readBoolean())
         assertEquals(1, reader.unitSize())
-        assertEquals(1, builder.reset())
+        assertEquals(1, builder.clear())
     }
 
     @Test
@@ -112,7 +112,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isUndefined())
         assertNull(reader.readBoolean())
         assertEquals(1, reader.unitSize())
-        assertEquals(1, builder.reset())
+        assertEquals(1, builder.clear())
     }
 
     @Test
@@ -126,7 +126,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isBool())
         assertEquals(true, reader.readBoolean())
         assertEquals(1, reader.unitSize())
-        assertEquals(1, builder.reset())
+        assertEquals(1, builder.clear())
 
         builder.writeBool(false)
         assertEquals(TYPE_BOOL_FALSE, view.getInt8(0).toInt())
@@ -134,7 +134,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isBool())
         assertEquals(false, reader.readBoolean())
         assertEquals(1, reader.unitSize())
-        assertEquals(1, builder.reset())
+        assertEquals(1, builder.clear())
     }
 
     @Test
@@ -148,13 +148,13 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isInt())
         assertEquals(-16, reader.readInt32(0))
         assertEquals(1, reader.unitSize())
-        assertEquals(1, builder.reset())
+        assertEquals(1, builder.clear())
 
         builder.writeInt32(15);
         assertTrue(reader.isInt())
         assertEquals(15, reader.readInt32(0))
         assertEquals(1, reader.unitSize())
-        assertEquals(1, builder.reset())
+        assertEquals(1, builder.clear())
 
         // the values below -16 and above 15 should be encoded in two byte
         builder.writeInt32(-17);
@@ -162,14 +162,14 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isInt())
         assertEquals(-17, reader.readInt32(0))
         assertEquals(2, reader.unitSize())
-        assertEquals(2, builder.reset())
+        assertEquals(2, builder.clear())
 
         builder.writeInt32(16);
         assertEquals(16, view.getInt8(1))
         assertTrue(reader.isInt())
         assertEquals(16, reader.readInt32(0))
         assertEquals(2, reader.unitSize())
-        assertEquals(2, builder.reset())
+        assertEquals(2, builder.clear())
 
         // a value less than -128 must be stored in three byte
         builder.writeInt32(-129)
@@ -177,7 +177,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isInt())
         assertEquals(-129, reader.readInt32(0))
         assertEquals(3, reader.unitSize())
-        assertEquals(3, builder.reset())
+        assertEquals(3, builder.clear())
 
         // a value bigger than 127 must be stored in three byte
         builder.writeInt32(128)
@@ -185,7 +185,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isInt())
         assertEquals(128, reader.readInt32(0))
         assertEquals(3, reader.unitSize())
-        assertEquals(3, builder.reset())
+        assertEquals(3, builder.clear())
 
         // a value less than -32768 must be stored in five byte
         builder.writeInt32(-32769)
@@ -193,7 +193,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isInt())
         assertEquals(-32769, reader.readInt32(0))
         assertEquals(5, reader.unitSize())
-        assertEquals(5, builder.reset())
+        assertEquals(5, builder.clear())
 
         // a value bigger than 32767 must be stored in three byte
         builder.writeInt32(32768)
@@ -201,7 +201,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isInt())
         assertEquals(32768, reader.readInt32(0))
         assertEquals(5, reader.unitSize())
-        assertEquals(5, builder.reset())
+        assertEquals(5, builder.clear())
 
         // Test 64-bit integers
         builder.writeInt64(int64.MIN_VALUE())
@@ -210,7 +210,7 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(TYPE_INT64, reader.unitType())
         assertEquals(int64.MIN_VALUE(), reader.readInt64(int64.intToBigInt64(0)))
         assertEquals(9, reader.unitSize())
-        assertEquals(9, builder.reset())
+        assertEquals(9, builder.clear())
 
         builder.writeInt64(int64.MAX_VALUE())
         assertTrue(reader.isInt())
@@ -218,7 +218,7 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(TYPE_INT64, reader.unitType())
         assertEquals(int64.MAX_VALUE(), reader.readInt64(int64.intToBigInt64(0)))
         assertEquals(9, reader.unitSize())
-        assertEquals(9, builder.reset())
+        assertEquals(9, builder.clear())
 
         // This ensures that high and low bits are encoded and decoded correctly in order
         builder.writeInt64(int64.MIN_VALUE() addi 65535)
@@ -227,7 +227,7 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(TYPE_INT64, reader.unitType())
         assertEquals(int64.MIN_VALUE() addi 65535, reader.readInt64(int64.intToBigInt64(0)))
         assertEquals(9, reader.unitSize())
-        assertEquals(9, builder.reset())
+        assertEquals(9, builder.clear())
     }
 
     @Test
@@ -246,7 +246,7 @@ class JbCoreTest : JbAbstractTest() {
             assertEquals(value, reader.readFloat32(-100f))
             assertEquals(value.toDouble(), reader.readFloat64(-100.0))
             assertEquals(1, reader.unitSize())
-            assertEquals(1, builder.reset())
+            assertEquals(1, builder.clear())
         }
         // all other values are encoded in 5 byte
         builder.writeFloat32(1.25f)
@@ -259,7 +259,7 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(1.25, reader.readFloat64(0.0))
         assertEquals(1.25, reader.readFloat64(0.0, true))
         assertEquals(5, reader.unitSize())
-        assertEquals(5, builder.reset())
+        assertEquals(5, builder.clear())
     }
 
     @Test
@@ -278,7 +278,7 @@ class JbCoreTest : JbAbstractTest() {
             assertEquals(value.toFloat(), reader.readFloat32(-100f))
             assertEquals(value, reader.readFloat64(-100.0))
             assertEquals(1, reader.unitSize())
-            assertEquals(1, builder.reset())
+            assertEquals(1, builder.clear())
         }
         // all other values are encoded in 5 byte
         builder.writeFloat64(1.25)
@@ -291,7 +291,7 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(1.25f, reader.readFloat32(0f))
         assertEquals(0.0f, reader.readFloat32(0.0f, true))
         assertEquals(9, reader.unitSize())
-        assertEquals(9, builder.reset())
+        assertEquals(9, builder.clear())
     }
 
     @Test
@@ -331,17 +331,17 @@ class JbCoreTest : JbAbstractTest() {
         // should encode in 1 byte lead-in plus 1 byte character
         builder.writeString("a")
         assertEquals(1 + 1, reader.unitSize())
-        assertEquals(1 + 1, builder.reset())
+        assertEquals(1 + 1, builder.clear())
 
         // a string with up to 12 characters will have a lead-in of only one byte
         builder.writeString("123456789012")
         assertEquals(1 + 12, reader.unitSize())
-        assertEquals(1 + 12, builder.reset())
+        assertEquals(1 + 12, builder.clear())
 
         // a string with 13 characters, will have a two byte lead-in
         builder.writeString("1234567890123")
         assertEquals(2 + 13, reader.unitSize())
-        assertEquals(2 + 13, builder.reset())
+        assertEquals(2 + 13, builder.clear())
 
         // This encodes the sigma character, which is unicode 931 and should therefore be encoded in two byte
         // The lead-in for this short string should be only one byte
@@ -349,7 +349,7 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(1 + 2, reader.unitSize())
         // We should read the value 931, minus the bias of 128, plus the two high bits being 0b10
         assertEquals((931 - 128) xor 0b1000_0000_0000_0000, view.getInt16(1).toInt() and 0xffff)
-        assertEquals(1 + 2, builder.reset())
+        assertEquals(1 + 2, builder.clear())
 
         // This encodes the grinning face emojii, which is unicode 128512 and should therefore be encoded in three byte
         // The lead-in for this short string should still be only one byte
@@ -358,7 +358,7 @@ class JbCoreTest : JbAbstractTest() {
         var unicode = (view.getInt8(1).toInt() and 0b0011_1111) shl 16
         unicode += view.getInt16(2).toInt() and 0xffff
         assertEquals(128512, unicode)
-        assertEquals(1 + 3, builder.reset())
+        assertEquals(1 + 3, builder.clear())
     }
 
     @Test
@@ -410,7 +410,7 @@ class JbCoreTest : JbAbstractTest() {
         assertFalse(reader.isLocalRef())
         assertEquals(-1, reader.readRef())
         assertEquals(1, reader.unitSize())
-        assertEquals(1, builder.reset())
+        assertEquals(1, builder.clear())
 
         // Write zero reference (encoded in one byte).
         builder.writeRef(0, true)
@@ -419,7 +419,7 @@ class JbCoreTest : JbAbstractTest() {
         assertFalse(reader.isLocalRef())
         assertEquals(0, reader.readRef())
         assertEquals(1, reader.unitSize())
-        assertEquals(1, builder.reset())
+        assertEquals(1, builder.clear())
 
         // Write two byte reference.
         builder.writeRef(65535 + 16, false)
@@ -428,7 +428,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isLocalRef())
         assertEquals(65535 + 16, reader.readRef())
         assertEquals(3, reader.unitSize())
-        assertEquals(3, builder.reset())
+        assertEquals(3, builder.clear())
 
         // Write four byte reference.
         builder.writeRef(65536 + 16, false)
@@ -437,7 +437,7 @@ class JbCoreTest : JbAbstractTest() {
         assertTrue(reader.isLocalRef())
         assertEquals(65536 + 16, reader.readRef())
         assertEquals(5, reader.unitSize())
-        assertEquals(5, builder.reset())
+        assertEquals(5, builder.clear())
     }
 
     @Test
@@ -570,7 +570,7 @@ class JbCoreTest : JbAbstractTest() {
         val featureView = JbSession.get().newDataView(featureArray)
 
         // Encode a dictionary.
-        builder.resetView()
+        builder.reset()
         val dictId = "test"
         val dictArray = builder.buildDictionary(dictId)
         val dictView = JbSession.get().newDataView(dictArray)
@@ -757,7 +757,7 @@ class JbCoreTest : JbAbstractTest() {
         val ts = reader.readTimestamp()
         assertEquals(nowLong, ts.toLong())
         assertEquals(7, reader.unitSize())
-        assertEquals(7, builder.reset())
+        assertEquals(7, builder.clear())
     }
 
     @Test
