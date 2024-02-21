@@ -18,6 +18,8 @@
  */
 package com.here.naksha.lib.core.models.geojson.implementation.namespaces;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,6 +47,7 @@ public class XyzActivityLog extends JsonObject {
   private @NotNull Original original;
 
   /** The Difference tag. */
+  @JsonInclude(Include.NON_EMPTY)
   @JsonProperty(DIFF)
   private JsonNode diff;
 

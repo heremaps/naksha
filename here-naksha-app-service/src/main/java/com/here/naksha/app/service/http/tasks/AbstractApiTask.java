@@ -281,6 +281,12 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     }
   }
 
+  private void saveExtension(WriteRequest writeExtensionRequest) {
+    try (final IWriteSession writer = naksha().getAdminStorage().newWriteSession(context(), true)) {
+      Result result = writer.execute(writeExtensionRequest);
+    }
+  }
+
   XyzFeatureCollection emptyFeatureCollection() {
     return new XyzFeatureCollection().withFeatures(emptyList());
   }

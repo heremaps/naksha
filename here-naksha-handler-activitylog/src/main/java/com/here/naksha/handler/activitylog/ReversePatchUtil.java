@@ -18,6 +18,8 @@
  */
 package com.here.naksha.handler.activitylog;
 
+import static java.lang.System.arraycopy;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -38,9 +40,15 @@ class ReversePatchUtil {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
+  private static final String ROOT_PATH = "";
+
   private static final String PATCH_PATH_DELIMITER = "/";
-  private static final String XYZ_NAMESPACE_PATH = patchPath(XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE);
-  private static final String XYZ_NAMESPACE_TAGS_PATH = patchPath(PRef.TAGS_PROP_PATH);
+
+  private static final String ID_PATH = patchPath(ROOT_PATH, XyzFeature.ID);
+
+  private static final String XYZ_NAMESPACE_PATH =
+      patchPath(ROOT_PATH, XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE);
+  private static final String XYZ_NAMESPACE_TAGS_PATH = patchPath(prependRoot(PRef.TAGS_PROP_PATH));
 
   private ReversePatchUtil() {}
 
@@ -57,14 +65,18 @@ class ReversePatchUtil {
     }
   }
 
-  private static ReversePatch fromDifference(Difference difference) {
+  private static @Nullable ReversePatch fromDifference(Difference difference) {
     if (!(difference instanceof MapDiff rootDiff)) {
       throw new IllegalArgumentException("Expected root Difference to be MapDiff, got "
           + difference.getClass().getName() + " instead");
     }
     ReversePatch.Builder diffBuilder = ReversePatch.builder();
-    handleMap(rootDiff, diffBuilder, "");
-    return diffBuilder.build();
+    handleMap(rootDiff, diffBuilder, ROOT_PATH);
+    ReversePatch result = diffBuilder.build();
+    if (result.equals(ReversePatch.EMPTY)) {
+      return null;
+    }
+    return result;
   }
 
   private static void handle(Difference difference, ReversePatch.Builder builder, String currentPath) {
@@ -82,7 +94,7 @@ class ReversePatchUtil {
 
   private static void handleMap(MapDiff mapDiff, ReversePatch.Builder builder, String currentPath) {
     for (Map.Entry<Object, Difference> diffEntry : mapDiff.entrySet()) {
-      handle(diffEntry.getValue(), builder, path(currentPath, diffEntry.getKey()));
+      handle(diffEntry.getValue(), builder, diffPatchPath(currentPath, diffEntry.getKey()));
     }
   }
 
@@ -90,11 +102,7 @@ class ReversePatchUtil {
   private static void handleList(ListDiff listDiff, ReversePatch.Builder builder, String currentPath) {
     for (int i = 0; i < listDiff.size(); i++) {
       Difference diff = listDiff.get(i);
-      if (diff == null) {
-        //        Difference elementRemoved = new RemoveOp()
-      } else {
-        handle(diff, builder, path(currentPath, i));
-      }
+      handle(diff, builder, diffPatchPath(currentPath, i));
     }
   }
 
@@ -114,28 +122,30 @@ class ReversePatchUtil {
     }
   }
 
-  private static void handleRemovedListElement(ReversePatch.Builder builder, String currentPath) {}
-
   private static boolean shouldFilter(String currentPath) {
     return isId(currentPath) || isXyzNamespaceButNotTag(currentPath);
   }
 
   private static boolean isId(String currentPath) {
-    return XyzFeature.ID.equals(currentPath);
+    return ID_PATH.equals(currentPath);
   }
 
   private static boolean isXyzNamespaceButNotTag(String currentPath) {
     return !currentPath.startsWith(XYZ_NAMESPACE_TAGS_PATH) && currentPath.startsWith(XYZ_NAMESPACE_PATH);
   }
 
-  private static String path(String currentPath, Object diffPlacement) {
-    if (currentPath.isEmpty()) {
-      return diffPlacement.toString();
-    }
+  private static String diffPatchPath(String currentPath, Object diffPlacement) {
     return patchPath(currentPath, diffPlacement.toString());
   }
 
   private static String patchPath(String... components) {
-    return String.join(PATCH_PATH_DELIMITER, components);
+    return ROOT_PATH + String.join(PATCH_PATH_DELIMITER, components);
+  }
+
+  private static String[] prependRoot(String... components) {
+    String[] res = new String[components.length + 1];
+    res[0] = ROOT_PATH;
+    arraycopy(components, 0, res, 1, components.length);
+    return res;
   }
 }

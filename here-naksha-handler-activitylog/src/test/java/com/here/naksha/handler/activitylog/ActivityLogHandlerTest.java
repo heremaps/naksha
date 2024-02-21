@@ -1,11 +1,11 @@
 package com.here.naksha.handler.activitylog;
 
-import static com.here.naksha.handler.activitylog.ActivityLogSuccessResultAssertions.assertThat;
+import static com.here.naksha.handler.activitylog.ActivityLogSuccessResultAssertions.assertThatResult;
 import static com.here.naksha.test.common.assertions.POpAssertion.assertThatOperation;
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -19,13 +19,15 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.here.naksha.handler.activitylog.DatahubSamplesUtil.DatahubSample;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
@@ -49,17 +51,15 @@ import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
+import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.test.common.FileUtil;
 import com.here.naksha.test.common.assertions.POpAssertion;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -85,8 +85,7 @@ class ActivityLogHandlerTest {
   void setup() {
     MockitoAnnotations.openMocks(this);
     when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
-    when(eventHandler.getProperties()).thenReturn(new ActivityLogHandlerProperties(SPACE_ID));
-    handler = new ActivityLogHandler(eventHandler, naksha, mock(EventTarget.class));
+    handler = handlerForSpaceId(SPACE_ID);
   }
 
   @ParameterizedTest
@@ -170,7 +169,7 @@ class ActivityLogHandlerTest {
         null,
         EXyzAction.CREATE,
         Map.of(
-            "name", "old feature",
+            "op", "old feature",
             "magicNumber", 123
         )
     );
@@ -180,7 +179,7 @@ class ActivityLogHandlerTest {
         "initial_uuid",
         EXyzAction.UPDATE,
         Map.of(
-            "name", "new feature",
+            "op", "new feature",
             "magicBoolean", true
         )
     );
@@ -193,7 +192,7 @@ class ActivityLogHandlerTest {
     Result result = handler.processEvent(eventWith(request));
 
     // Then:
-    assertThat(result)
+    assertThatResult(result)
         .hasActivityFeatures(
             firstFeature -> firstFeature
                 .hasId(newFeature.getProperties().getXyzNamespace().getUuid())
@@ -201,24 +200,23 @@ class ActivityLogHandlerTest {
                 .hasAction(EXyzAction.UPDATE.toString())
                 .hasReversePatch(jsonNode("""
                     {
-                      "insert": 1,
+                      "add": 1,
                       "remove": 1,
-                      "update": 1,
+                      "replace": 1,
                       "ops": [
                         {
-                          "name": "replace",
-                          "path": "properties/name",
+                          "op": "replace",
+                          "path": "/properties/op",
                           "value": "old feature"
                         },
                         {
-                          "name": "add",
-                          "path": "properties/magicNumber",
+                          "op": "add",
+                          "path": "/properties/magicNumber",
                           "value": 123
                         },
                         {
-                          "name": "remove",
-                          "path": "properties/magicBoolean",
-                          "value": null
+                          "op": "remove",
+                          "path": "/properties/magicBoolean"
                         }
                       ]
                     }
@@ -278,7 +276,7 @@ class ActivityLogHandlerTest {
         );
 
     // And: Handler's result should only contain features from the first response (to client's request)
-    assertThat(result)
+    assertThatResult(result)
         .hasActivityFeatures(
             first -> first
                 .hasId("uuid_2")
@@ -308,7 +306,7 @@ class ActivityLogHandlerTest {
     Result result = handler.processEvent(eventWith(request));
 
     // Then:
-    assertThat(result)
+    assertThatResult(result)
         .hasActivityFeatures(feature -> feature
             .hasAction(EXyzAction.CREATE.toString())
             .hasId("uuid")
@@ -342,7 +340,7 @@ class ActivityLogHandlerTest {
     Result result = handler.processEvent(eventWith(request));
 
     // Then:
-    assertThat(result)
+    assertThatResult(result)
         .hasActivityFeatures(
             first -> first
                 .hasAction(EXyzAction.DELETE.toString())
@@ -357,6 +355,11 @@ class ActivityLogHandlerTest {
         );
   }
 
+  private ActivityLogHandler handlerForSpaceId(String spaceId){
+    when(eventHandler.getProperties()).thenReturn(new ActivityLogHandlerProperties(spaceId));
+    return new ActivityLogHandler(eventHandler, naksha, mock(EventTarget.class));
+  }
+
   private static JsonNode jsonNode(String rawJson) {
     try {
       return new ObjectMapper().readTree(rawJson);
@@ -365,28 +368,32 @@ class ActivityLogHandlerTest {
     }
   }
 
-  //TODO: is it even possible to correctly prepare this test? save for later
-//  @ParameterizedTest
-//  @MethodSource("datahubSamples")
-  void shouldBeAlignedWithDataHubSamples(DatahubSample datahubSample) {
+  @Test
+  void shouldBeAlignedWithDataHubSamples() throws Exception {
     // Given:
+    ActivityLogHandler handlerWithSampleSpace = handlerForSpaceId(DatahubSamplesUtil.SAMPLE_SPACE_ID);
+
+    // And:
+    DatahubSample datahubSample = DatahubSamplesUtil.loadDatahubSample();
+
+    // And:
     ReadFeatures request = new ReadFeatures();
 
     // And:
-    spaceStorageSessionReturningHistoryFeatures(request, datahubSample.historyFeatures);
+    spaceStorageSessionReturningHistoryFeatures(request, datahubSample.historyFeatures());
 
     // And
     IEvent event = eventWith(request);
 
     // When
-    Result result = handler.processEvent(event);
+    Result result = handlerWithSampleSpace.processEvent(event);
 
     // Then
-    assertInstanceOf(ActivityLogSuccessResult.class, result);
+    assertThatResult(result).hasActivityFeaturesIdenticalTo(datahubSample.activityFeatures());
   }
 
   private static XyzFeature xyzFeature(String id, String uuid, String puuid, EXyzAction action) {
-    return xyzFeature(id, uuid, puuid, action, Collections.emptyMap());
+    return xyzFeature(id, uuid, puuid, action, emptyMap());
   }
 
   private static XyzFeature xyzFeature(String id, String uuid, String puuid, EXyzAction action, Map properties) {
@@ -400,11 +407,6 @@ class ActivityLogHandlerTest {
     xyzProperties.setXyzNamespace(xyzNamespace);
     feature.setProperties(xyzProperties);
     return feature;
-  }
-
-  private static Stream<Arguments> datahubSamples() {
-    return Stream.of(1)
-        .map(sampleId -> arguments(DatahubSample.sampleForId(sampleId)));
   }
 
   IReadSession spaceStorageSessionReturningHistoryFeatures(ReadRequest<?> handledRequest, XyzFeature... historyFeatures) {
@@ -447,38 +449,6 @@ class ActivityLogHandlerTest {
           )
           .toList();
       return new ListBasedForwardCursor<>(codecFactory, codecs);
-    }
-  }
-
-  private record DatahubSample(
-      String sampleDir,
-      List<XyzFeature> historyFeatures,
-      List<XyzFeature> activityLogFeatures
-  ) {
-
-    private static final String DATAHUB_SAMPLES_DIR = "src/test/resources/dh_samples";
-    private static final String SAMPLE_HISTORY_JSON = "history_features.json";
-    private static final String SAMPLE_ACTIVITY_LOG_JSON = "activity_log_features.json";
-
-    @Override
-    public String toString() {
-      return "Datahub sample from dir: " + sampleDir;
-    }
-
-    static DatahubSample sampleForId(int sampleId) {
-      String sampleDir = "%s/%d/".formatted(DATAHUB_SAMPLES_DIR, sampleId);
-      String historyJson = FileUtil.loadFileOrFail(sampleDir, SAMPLE_HISTORY_JSON);
-      String activityHistoryJson = FileUtil.loadFileOrFail(sampleDir, SAMPLE_ACTIVITY_LOG_JSON);
-      return new DatahubSample(
-          sampleDir,
-          featuresFromCollectionJson(historyJson),
-          featuresFromCollectionJson(activityHistoryJson)
-      );
-    }
-
-    private static List<XyzFeature> featuresFromCollectionJson(String featuresCollectionJson) {
-      XyzFeatureCollection collection = JsonSerializable.deserialize(featuresCollectionJson, XyzFeatureCollection.class);
-      return collection.getFeatures();
     }
   }
 }

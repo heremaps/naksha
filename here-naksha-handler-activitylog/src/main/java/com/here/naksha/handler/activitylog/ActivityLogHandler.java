@@ -61,16 +61,9 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * TODO
- * 1) fix ListDiff -- probably done, ensure in REST
- * 2) add simple UTs
- * 3) add simple REST API tests
- * 4) add sample-based tests
- */
 public class ActivityLogHandler extends AbstractEventHandler {
 
-  private static final Comparator<XyzFeature> FEATURE_COMPARATOR = featuresDescendingByUpdatedAtAndUuid();
+  private static final Comparator<XyzFeature> FEATURE_COMPARATOR = new ActivityLogComparator();
 
   private final @NotNull Logger logger = LoggerFactory.getLogger(ActivityLogHandler.class);
   private final @NotNull ActivityLogHandlerProperties properties;
@@ -216,6 +209,12 @@ public class ActivityLogHandler extends AbstractEventHandler {
     if (action == null || EXyzAction.CREATE.equals(action) || EXyzAction.DELETE.equals(action)) {
       return null;
     } else if (EXyzAction.UPDATE.equals(action)) {
+      if (featureWithPredecessor.oldFeature == null) {
+        logger.info(
+            "Unable to calculate reversePatch for, missing predecessor for feature with uuid: {}, returning null",
+            uuid(featureWithPredecessor.feature));
+        return null;
+      }
       ReversePatch reversePatch = reversePatch(featureWithPredecessor.oldFeature, featureWithPredecessor.feature);
       return toJsonNode(reversePatch);
     } else {
@@ -236,26 +235,12 @@ public class ActivityLogHandler extends AbstractEventHandler {
     return original;
   }
 
-  private static Comparator<XyzFeature> featuresDescendingByUpdatedAtAndUuid() {
-    return (featureA, featureB) -> {
-      int updateComparison = Long.compare(updatedAt(featureA), updatedAt(featureB));
-      if (updateComparison == 0) {
-        return uuid(featureA).compareTo(uuid(featureB)) * -1;
-      }
-      return updateComparison * -1;
-    };
-  }
-
   private static String uuid(XyzFeature feature) {
     return xyzNamespace(feature).getUuid();
   }
 
   private static String puuid(XyzFeature feature) {
     return xyzNamespace(feature).getPuuid();
-  }
-
-  private static long updatedAt(XyzFeature feature) {
-    return xyzNamespace(feature).getUpdatedAt();
   }
 
   private static XyzNamespace xyzNamespace(XyzFeature feature) {

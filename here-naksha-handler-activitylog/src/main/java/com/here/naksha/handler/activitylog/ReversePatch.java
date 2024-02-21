@@ -18,14 +18,24 @@
  */
 package com.here.naksha.handler.activitylog;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.util.diff.RemoveOp;
 import com.here.naksha.lib.core.util.diff.UpdateOp;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-record ReversePatch(int insert, int remove, int update, List<PatchOp> ops) {
+record ReversePatch(
+    @JsonProperty(PatchOp.ADD) int insert,
+    @JsonProperty(PatchOp.REMOVE) int remove,
+    @JsonProperty(PatchOp.REPLACE) int update,
+    List<PatchOp> ops) {
 
-  record PatchOp(String name, String path, Object value) {
+  static ReversePatch EMPTY = new ReversePatch(0, 0, 0, Collections.emptyList());
+
+  record PatchOp(String op, String path, @JsonInclude(Include.NON_NULL) Object value) {
 
     static final String REMOVE = "remove";
     static final String ADD = "add";
@@ -46,7 +56,7 @@ record ReversePatch(int insert, int remove, int update, List<PatchOp> ops) {
 
     @Override
     public String toString() {
-      return "ReverseOp{" + "name='" + name + '\'' + ", path='" + path + '\'' + ", value=" + value + '}';
+      return "ReverseOp{" + "op='" + op + '\'' + ", path='" + path + '\'' + ", value=" + value + '}';
     }
   }
 

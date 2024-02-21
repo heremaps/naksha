@@ -27,7 +27,7 @@ class ReversePatchUtilTest {
   void shouldConvertDifferenceToReversePatch() {
     // Given: feature representing John some time ago
     XyzFeature before = xyzFeature(Map.of(
-        "name", "John",
+        "op", "John",
         "age", 23,
         "address", Map.of(
             "city", "Funkytown",
@@ -52,7 +52,7 @@ class ReversePatchUtilTest {
 
     // And: feature representing John year later (he moved a couple of blocks away, finished studies, found a job and changed his contact details)
     XyzFeature after = xyzFeature(Map.of(
-        "name", "John",
+        "op", "John",
         "age", 24,
         "address", Map.of(
             "city", "Funkytown",
@@ -77,15 +77,15 @@ class ReversePatchUtilTest {
         .hasUpdateOpsCount(3) // we changed 'age', 'address/number' and phone number ('contactDetails[0]/value')
         .hasAddOpsCount(2) // we removed 'studentDetails' and email ('contactDetails[1]')
         .hasReverseOps(
-            new PatchOp(REPLACE, "properties/age", 23), // previous age was 30
-            new PatchOp(REPLACE, "properties/address/number", 79), // previous address/number was 79
-            new PatchOp(REMOVE, "properties/occupation", null), // previously there was no occupation
-            new PatchOp(ADD, "properties/studentDetails", Map.of( // previously there was some student data
+            new PatchOp(REPLACE, "/properties/age", 23), // previous age was 30
+            new PatchOp(REPLACE, "/properties/address/number", 79), // previous address/number was 79
+            new PatchOp(REMOVE, "/properties/occupation", null), // previously there was no occupation
+            new PatchOp(ADD, "/properties/studentDetails", Map.of( // previously there was some student data
                 "university", "Some fancy school",
                 "studentId", 1234
             )),
-            new PatchOp(REPLACE, "properties/contactDetails/0/value", "123456789"), // previous number was 123456789
-            new PatchOp(ADD, "properties/contactDetails/1", Map.of( // previously there was an email
+            new PatchOp(REPLACE, "/properties/contactDetails/0/value", "123456789"), // previous number was 123456789
+            new PatchOp(ADD, "/properties/contactDetails/1", Map.of( // previously there was an email
                 "type", "email",
                 "value", "john@email.com"
             ))
@@ -128,10 +128,10 @@ class ReversePatchUtilTest {
         .hasAddOpsCount(0) // we did not remove anything ('tags' list got bigger)
         .hasUpdateOpsCount(3) // 'tags' at given ind changed: 'one' => 'two', 'two' => 'three', 'three' => 'four'
         .hasReverseOps(
-            new PatchOp(REPLACE, "properties/@ns:com:here:xyz/tags/0", "one"),
-            new PatchOp(REPLACE, "properties/@ns:com:here:xyz/tags/1", "two"),
-            new PatchOp(REPLACE, "properties/@ns:com:here:xyz/tags/2", "three"),
-            new PatchOp(REMOVE, "properties/@ns:com:here:xyz/tags/3", null)
+            new PatchOp(REPLACE, "/properties/@ns:com:here:xyz/tags/0", "one"),
+            new PatchOp(REPLACE, "/properties/@ns:com:here:xyz/tags/1", "two"),
+            new PatchOp(REPLACE, "/properties/@ns:com:here:xyz/tags/2", "three"),
+            new PatchOp(REMOVE, "/properties/@ns:com:here:xyz/tags/3", null)
         );
   }
 

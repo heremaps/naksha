@@ -25,33 +25,32 @@
         "@ns:com:here:xyz:log": {
           "action": "UPDATE",
           "diff": {
-            "insert": 1,
+            "add": 1,
             "remove": 1,
-            "update": 3,
+            "replace": 3,
             "ops": [
               {
-                "name": "replace",
-                "path": "properties/@ns:com:here:xyz/tags/0",
+                "op": "replace",
+                "path": "/properties/@ns:com:here:xyz/tags/0",
                 "value": "one"
               },
               {
-                "name": "replace",
-                "path": "properties/@ns:com:here:xyz/tags/1",
+                "op": "replace",
+                "path": "/properties/@ns:com:here:xyz/tags/1",
                 "value": "two"
               },
               {
-                "name": "remove",
-                "path": "properties/@ns:com:here:xyz/tags/2",
-                "value": null
+                "op": "remove",
+                "path": "/properties/@ns:com:here:xyz/tags/2"
               },
               {
-                "name": "replace",
-                "path": "properties/speedLimit",
+                "op": "replace",
+                "path": "/properties/speedLimit",
                 "value": "60"
               },
               {
-                "name": "add",
-                "path": "properties/toBeDeleted",
+                "op": "add",
+                "path": "/properties/toBeDeleted",
                 "value": {
                   "foo": "bar"
                 }
