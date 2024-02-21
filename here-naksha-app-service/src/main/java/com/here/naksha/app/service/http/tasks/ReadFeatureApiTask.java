@@ -196,7 +196,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     queryParamsMap.put(EAST, east);
     queryParamsMap.put(SOUTH, south);
     queryParamsMap.put(LIMIT, limit);
-    if (tagsOp != null) queryParamsMap.put(TAGS_OP, tagsOp);
     if (propSearchOp != null) queryParamsMap.put(PROPERTY_SEARCH_OP, propSearchOp);
 
     final ReadFeatures rdRequest = new ReadFeaturesProxyWrapper()
@@ -244,7 +243,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     queryParamsMap.put(LIMIT, limit);
     queryParamsMap.put(TILE_TYPE, tileType);
     queryParamsMap.put(TILE_ID, tileId);
-    if (tagsOp != null) queryParamsMap.put(TAGS_OP, tagsOp);
     if (propSearchOp != null) queryParamsMap.put(PROPERTY_SEARCH_OP, propSearchOp);
 
     final ReadFeatures rdRequest = new ReadFeaturesProxyWrapper()

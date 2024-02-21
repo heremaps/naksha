@@ -33,9 +33,8 @@ import org.jetbrains.annotations.Nullable;
 @AvailableSince(NakshaVersion.v2_0_12)
 public class HttpStorageProperties extends XyzProperties {
 
-  // TODO adamczyk: adjust values
-  public static final Long DEFAULT_CONNECTION_TIMEOUT = 90L;
-  public static final Long DEFAULT_SOCKET_TIMEOUT = 9000L;
+  public static final Long DEF_CONNECTION_TIMEOUT_SEC = 20L;
+  public static final Long DEF_SOCKET_TIMEOUT_SEC = 90L;
   public static final Map<String, String> DEFAULT_HEADERS = Map.of("Content-Type", "application/json");
 
   private static final String URL = "url";
@@ -62,8 +61,8 @@ public class HttpStorageProperties extends XyzProperties {
       @JsonProperty(SOCKET_TIMEOUT) @Nullable Long socketTimeout,
       @JsonProperty(HEADERS) @Nullable Map<String, String> headers) {
     this.url = url;
-    this.connectTimeout = connectTimeout == null ? DEFAULT_CONNECTION_TIMEOUT : connectTimeout;
-    this.socketTimeout = socketTimeout == null ? DEFAULT_SOCKET_TIMEOUT : socketTimeout;
+    this.connectTimeout = connectTimeout == null ? DEF_CONNECTION_TIMEOUT_SEC : connectTimeout;
+    this.socketTimeout = socketTimeout == null ? DEF_SOCKET_TIMEOUT_SEC : socketTimeout;
     this.headers = headers == null ? DEFAULT_HEADERS : headers;
   }
 

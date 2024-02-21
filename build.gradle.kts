@@ -2,6 +2,8 @@
 
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import java.net.URI
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 repositories {
     maven {
@@ -353,7 +355,7 @@ project(":here-naksha-lib-psql") {
 }
 
 project(":here-naksha-storage-http") {
-    description = "Naksha Http Storage Library"
+    description = "Naksha Http Storage Module"
     java {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -478,7 +480,6 @@ project(":here-naksha-lib-handlers") {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
         implementation(project(":here-naksha-lib-view"))
-        implementation(project(":here-naksha-storage-http"))
 
         implementation(commons_lang3)
         implementation(commons_dbutils)
@@ -497,7 +498,6 @@ project(":here-naksha-lib-hub") {
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
-        implementation(project(":here-naksha-storage-http"))
         //implementation(project(":here-naksha-lib-extension"))
         implementation(project(":here-naksha-lib-handlers"))
 

@@ -34,8 +34,8 @@ class HttpStoragePropertiesTest {
         var properties = jsonResourceToPropertiesOrFail("t02_testConvertMissingToNull");
 
         assertEquals("https://example.org", properties.getUrl());
-        assertEquals(HttpStorageProperties.DEFAULT_CONNECTION_TIMEOUT, properties.getConnectTimeout());
-        assertEquals(HttpStorageProperties.DEFAULT_SOCKET_TIMEOUT, properties.getSocketTimeout());
+        assertEquals(HttpStorageProperties.DEF_CONNECTION_TIMEOUT_SEC, properties.getConnectTimeout());
+        assertEquals(HttpStorageProperties.DEF_SOCKET_TIMEOUT_SEC, properties.getSocketTimeout());
 
         assertEquals(HttpStorageProperties.DEFAULT_HEADERS, properties.getHeaders());
     }

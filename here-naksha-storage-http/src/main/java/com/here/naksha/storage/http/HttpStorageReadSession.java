@@ -36,17 +36,20 @@ public final class HttpStorageReadSession implements IReadSession {
   @NotNull
   private final NakshaContext context;
 
-  @NotNull
-  private final HttpStorage.RequestSender requestSender;
+  private final boolean useMaster;
 
-  HttpStorageReadSession(@Nullable NakshaContext context, @NotNull HttpStorage.RequestSender requestSender) {
+  @NotNull
+  private final RequestSender requestSender;
+
+  HttpStorageReadSession(@Nullable NakshaContext context, boolean useMaster, @NotNull RequestSender requestSender) {
     this.context = context == null ? NakshaContext.currentContext() : context;
+    this.useMaster = useMaster;
     this.requestSender = requestSender;
   }
 
   @Override
   public boolean isMasterConnect() {
-    return true;
+    return useMaster;
   }
 
   @Override
@@ -87,7 +90,7 @@ public final class HttpStorageReadSession implements IReadSession {
   @Override
   public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
     try {
-      return new HttpStorageReadExecute((ReadFeaturesProxyWrapper) readRequest, requestSender).execute();
+      return HttpStorageReadExecute.execute((ReadFeaturesProxyWrapper) readRequest, requestSender);
     } catch (Exception e) {
       log.warn("Exception thrown.", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);

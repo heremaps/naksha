@@ -61,9 +61,22 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
     return this;
   }
 
-  //  @Override
-  //  public ReadFeaturesProxyWrapper shallowClone() {
-  //    ReadFeaturesProxyWrapper convertedReadRequest = (ReadFeaturesProxyWrapper) super.shallowClone();
-  //    return convertedReadRequest.withQueryParameters(queryParameters).withReadRequestType(readRequestType);
-  //  }
+  @Override
+  public ReadFeaturesProxyWrapper shallowClone() {
+    ReadFeaturesProxyWrapper clone = new ReadFeaturesProxyWrapper();
+    // ReadFeatures fields
+    clone.setPropertyOp(this.getPropertyOp());
+    clone.setCollections(this.getCollections());
+    clone.setSpatialOp(this.getSpatialOp());
+    clone.limit = this.limit;
+    clone.returnDeleted = this.returnDeleted;
+    clone.withReturnAllVersions(isReturnAllVersions());
+    clone.fetchSize = this.fetchSize;
+
+    // ReadFeaturesProxyWrapper fields
+    clone.withReadRequestType(this.getReadRequestType());
+    clone.withQueryParameters(this.getQueryParameters());
+
+    return clone;
+  }
 }

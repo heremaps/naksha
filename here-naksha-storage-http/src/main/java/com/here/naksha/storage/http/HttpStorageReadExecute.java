@@ -43,31 +43,22 @@ class HttpStorageReadExecute {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadExecute.class);
 
-  private final ReadFeaturesProxyWrapper readRequest;
-  private final HttpStorage.RequestSender requestSender;
-
-  public HttpStorageReadExecute(ReadFeaturesProxyWrapper readRequest, HttpStorage.RequestSender requestSender) {
-    this.readRequest = readRequest;
-    this.requestSender = requestSender;
-
-    String[] splitCollectionName = readRequest.getCollections().get(0).split("/");
-    String environment = splitCollectionName[0];
-    String store = splitCollectionName[1];
-    String featureType = splitCollectionName[2];
-    requestSender.setBaseEndpoint(String.format("/%s/%s/%s", environment, store, featureType));
-  }
-
   @NotNull
-  Result execute() throws IOException, InterruptedException {
-    return switch (readRequest.getReadRequestType()) {
-      case GET_BY_ID -> executeFeatureById();
-      case GET_BY_IDS -> executeFeaturesById();
-      case GET_BY_BBOX -> executeFeatureByBBox();
-      case GET_BY_TILE -> executeFeaturesByTile();
+  static Result execute(ReadFeaturesProxyWrapper request, RequestSender sender)
+      throws IOException, InterruptedException {
+    String baseEndpoint = request.getCollections().get(0);
+    sender.setBaseEndpoint("/" + baseEndpoint);
+
+    return switch (request.getReadRequestType()) {
+      case GET_BY_ID -> executeFeatureById(request, sender);
+      case GET_BY_IDS -> executeFeaturesById(request, sender);
+      case GET_BY_BBOX -> executeFeatureByBBox(request, sender);
+      case GET_BY_TILE -> executeFeaturesByTile(request, sender);
     };
   }
 
-  private Result executeFeatureById() throws IOException, InterruptedException {
+  private static Result executeFeatureById(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender)
+      throws IOException, InterruptedException {
     String featureId = readRequest.getQueryParameter(FEATURE_ID);
 
     HttpResponse<String> response = requestSender.sendRequest(String.format("/features/%s", featureId));
@@ -75,7 +66,8 @@ class HttpStorageReadExecute {
     return prepareResult(response, XyzFeature.class, List::of);
   }
 
-  private Result executeFeaturesById() throws IOException, InterruptedException {
+  private static Result executeFeaturesById(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender)
+      throws IOException, InterruptedException {
     List<String> featureIds = readRequest.getQueryParameter(FEATURE_IDS);
     String queryParamsString = FEATURE_IDS + "=" + String.join(",", featureIds);
 
@@ -84,26 +76,26 @@ class HttpStorageReadExecute {
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
-  private Result executeFeatureByBBox() throws IOException, InterruptedException {
-    String queryParamsString = keysToKeyValuesStrings(WEST, NORTH, EAST, SOUTH, LIMIT);
+  private static Result executeFeatureByBBox(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender)
+      throws IOException, InterruptedException {
+    String queryParamsString = keysToKeyValuesStrings(readRequest, WEST, NORTH, EAST, SOUTH, LIMIT);
 
-    warnOnUnsupportedQueryParam(TAGS_OP);
-    warnOnUnsupportedQueryParam(PROPERTY_SEARCH_OP);
+    warnOnUnsupportedQueryParam(readRequest, PROPERTY_SEARCH_OP);
 
     HttpResponse<String> response = requestSender.sendRequest(String.format("/bbox?%s", queryParamsString));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
-  private Result executeFeaturesByTile() throws IOException, InterruptedException {
-    String queryParamsString = keysToKeyValuesStrings(MARGIN, LIMIT);
+  private static Result executeFeaturesByTile(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender)
+      throws IOException, InterruptedException {
+    String queryParamsString = keysToKeyValuesStrings(readRequest, MARGIN, LIMIT);
     String tileType = readRequest.getQueryParameter(TILE_TYPE);
     String tileId = readRequest.getQueryParameter(TILE_ID);
 
     if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY))
       return new ErrorResult(XyzError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
-    warnOnUnsupportedQueryParam(TAGS_OP);
-    warnOnUnsupportedQueryParam(PROPERTY_SEARCH_OP);
+    warnOnUnsupportedQueryParam(readRequest, PROPERTY_SEARCH_OP);
 
     HttpResponse<String> response =
         requestSender.sendRequest(String.format("/quadkey/%s?%s", tileId, queryParamsString));
@@ -111,7 +103,7 @@ class HttpStorageReadExecute {
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
-  private <T extends Typed> Result prepareResult(
+  private static <T extends Typed> Result prepareResult(
       HttpResponse<String> httpResponse,
       Class<T> httpResponseType,
       Function<T, List<XyzFeature>> typedResponseToFeatureList) {
@@ -123,7 +115,7 @@ class HttpStorageReadExecute {
     return createHttpResultFromFeatureList(typedResponseToFeatureList.apply(resultFeatures));
   }
 
-  private void warnOnUnsupportedQueryParam(String tag) {
+  private static void warnOnUnsupportedQueryParam(ReadFeaturesProxyWrapper readRequest, String tag) {
     if (readRequest.getQueryParameter(tag) != null)
       log.warn("The " + tag + " query param for " + readRequest.getReadRequestType()
           + " is not supported yet and will be ignored.");
@@ -132,7 +124,7 @@ class HttpStorageReadExecute {
   /**
    * Only for keys with string values
    */
-  private String keysToKeyValuesStrings(String... key) {
+  private static String keysToKeyValuesStrings(ReadFeaturesProxyWrapper readRequest, String... key) {
     return Arrays.stream(key)
         .map(k -> k + "=" + readRequest.getQueryParameter(k))
         .collect(Collectors.joining("&"));
@@ -155,8 +147,11 @@ class HttpStorageReadExecute {
     return new HttpSuccessResult<>(cursor);
   }
 
-  private @Nullable XyzError mapHttpStatusToErrorOrNull(final int httpStatus) {
-    if (httpStatus < 400) return null;
+  /**
+   * @return null if http status is success (200-299)
+   */
+  private static @Nullable XyzError mapHttpStatusToErrorOrNull(final int httpStatus) {
+    if (httpStatus >= 200 && httpStatus <= 299) return null;
     return switch (httpStatus) {
       case HttpURLConnection.HTTP_INTERNAL_ERROR -> XyzError.EXCEPTION;
       case HttpURLConnection.HTTP_NOT_IMPLEMENTED -> XyzError.NOT_IMPLEMENTED;
