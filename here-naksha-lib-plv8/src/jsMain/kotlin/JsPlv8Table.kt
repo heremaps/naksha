@@ -8,6 +8,6 @@ import com.here.naksha.lib.jbon.IMap
 class JsPlv8Table : ITable {
 
     override fun returnNext(row: IMap) {
-        js("return_next(row)")
+        js("plv8.return_next(row)")
     }
 }
