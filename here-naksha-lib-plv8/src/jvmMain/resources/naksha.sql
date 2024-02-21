@@ -103,7 +103,7 @@ CREATE OR REPLACE FUNCTION naksha_write_features(
 ) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo bytea, err_no text, err_msg text) AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
-  session.writeFeatures(collection_id, ops, geometries, features, tags);
+  session.writeFeatures(collection_id, ops, features, geometries, tags);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 -- Returns always op, id, xyz, optional: geo, feature, tags, err_no and err_msg
@@ -115,7 +115,7 @@ CREATE OR REPLACE FUNCTION naksha_write_collections(
 ) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo bytea, err_no text, err_msg text) AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
-  session.writeCollections(ops, geometries, features, tags);
+  session.writeCollections(ops, features, geometries, tags);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_err_no() RETURNS text AS $$
