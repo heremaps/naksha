@@ -140,14 +140,14 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION jsonb_to_op(op jsonb) RETURNS bytea AS $$
   let jb = require("jbon");
-  let builder = new jb.XyzBuilder();
+  let builder = jb.XyzBuilder.Companion.create();
   let opCode = jb.XyzOp.Companion.getOpCode(op["op"]);
   return builder.buildXyzOp(opCode, op["id"], op["uuid"]);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION json_to_op(op_json text) RETURNS bytea AS $$
   let jb = require("jbon");
-  let builder = new jb.XyzBuilder();
+  let builder = jb.XyzBuilder.Companion.create();
   let op = jb.Jb.env.parse(op_json);
   let opCode = jb.XyzOp.Companion.getOpCode(op["op"]);
   return builder.buildXyzOp(opCode, op["id"], op["uuid"]);
@@ -157,14 +157,14 @@ CREATE OR REPLACE FUNCTION op_to_jsonb(op bytea) RETURNS jsonb AS $$
   let jb = require("jbon");
   let xyzOp = new jb.XyzOp();
   xyzOp.mapBytes(op);
-  return op.toIMap();
+  return xyzOp.toIMap();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION op_to_json(op bytea) RETURNS text AS $$
   let jb = require("jbon");
   let xyzOp = new jb.XyzOp();
   xyzOp.mapBytes(op);
-  return jb.Jb.env.stringify(op.toIMap());
+  return jb.Jb.env.stringify(xyzOp.toIMap());
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_created_at(xyz bytea) RETURNS int8 AS $$
