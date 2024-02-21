@@ -397,7 +397,7 @@ SET (toast_tuple_target=8160,fillfactor=100
     fun writeCollections(
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?>,
-            geo_arr: Array<Any?>,
+            geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>
     ): ITable {
         errNo = null
@@ -427,7 +427,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                 val lockId = Static.lockId(id)
                 sql.execute("SELECT pg_advisory_lock($1)", arrayOf(lockId))
                 try {
-                    newCollection.mapBytes(feature_arr[i])
+                    newCollection.mapBytes(feature)
                     var rows = asArray(sql.execute("SELECT * FROM naksha_collections WHERE id = $1", arrayOf(id)))
                     val existing : IMap?
                     if (rows.isEmpty()) {
@@ -444,11 +444,17 @@ SET (toast_tuple_target=8160,fillfactor=100
                         if (existing != null) {
                             throw NakshaException(ERR_CONFLICT, "Feature exists already", id, feature, geo, tags)
                         }
-                        val query = "INSERT INTO naksha_collections (id, feature, geo, tags) VALUES($1,$2,ST_Force3DZ(ST_GeomFromEWKB($3)),$4) RETURNING xyz"
-                        rows = asArray(sql.execute(query, arrayOf(id, feature_arr[i], geo_arr[i], tags_arr[i])))
+                        val query : String
+                        if (geo != null) {
+                            query = "INSERT INTO naksha_collections (id, feature, tags, geo) VALUES($1,$2,$3,ST_Force3DZ(ST_GeomFromEWKB($4))) RETURNING xyz"
+                            rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo)))
+                        } else {
+                            query = "INSERT INTO naksha_collections (id, feature, tags) VALUES($1,$2,$3) RETURNING xyz"
+                            rows = asArray(sql.execute(query, arrayOf(id, feature, tags)))
+                        }
                         // TODO: What is no row is returned?
                         val xyz : ByteArray = asMap(rows[0])["xyz"]!!
-                        Static.collectionCreate(sql, id, newCollection.pointsOnly(), newCollection.partitionHead())
+                        Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partitionHead())
                         table.returnOpOk(XYZ_EXECUTED_CREATED, id, xyz, tags, feature, geo)
                         continue
                     }

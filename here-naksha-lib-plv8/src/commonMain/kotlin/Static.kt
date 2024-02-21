@@ -18,9 +18,10 @@ object Static {
     @JvmStatic
     fun initStorage(sql: IPlv8Sql, schema: String) {
         val schemaOid: Int = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
-        val schemaQuoted = sql.quoteIdent(schema)
+        val schemaIdentQuoted = sql.quoteIdent(schema)
+        val schemaJsQuoted = Jb.env.stringify(schema)
         val query = """
-SET SESSION search_path TO $schemaQuoted, public, topology;
+SET SESSION search_path TO $schemaIdentQuoted, public, topology;
 CREATE TABLE IF NOT EXISTS naksha_global (
     id          text        PRIMARY KEY NOT NULL,
     data        bytea       NOT NULL
@@ -56,8 +57,8 @@ do $$
     let naksha = require("naksha");
     naksha.JsPlv8Env.Companion.initialize();
     let sql = new naksha.JsPlv8Sql();
-    if (!naksha.Static.tableExists(sql, 'naksha_collections', $schemaOid)) {
-        naksha.Static.collectionCreate(sql, 'naksha_collections', false, false);
+    if (!naksha.Static.tableExists(sql, "naksha_collections", $schemaOid)) {
+        naksha.Static.collectionCreate(sql, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false);
     }
 $$ LANGUAGE 'plv8';
 """
@@ -144,7 +145,7 @@ $$ LANGUAGE 'plv8';
      * Calculates the extent, the size of the feature in milliseconds.
      */
     @JvmStatic
-    fun extent(sql: IPlv8Sql, geo: ByteArray?) : BigInt64 = Jb.int64.ZERO()
+    fun extent(sql: IPlv8Sql, geo: ByteArray?): BigInt64 = Jb.int64.ZERO()
     // TODO: Implement me!
 
     /**
@@ -167,7 +168,7 @@ $$ LANGUAGE 'plv8';
      * @param history If _true_, then optimized for historic data; otherwise a volatile HEAD table.
      */
     @JvmStatic
-    fun collectionOptimizeTable(sql: IPlv8Sql, tableName: String, history: Boolean) {
+    private fun collectionOptimizeTable(sql: IPlv8Sql, tableName: String, history: Boolean) {
         val quotedTableName = sql.quoteIdent(tableName)
         var query = """ALTER TABLE $quotedTableName
 ALTER COLUMN feature SET STORAGE MAIN,
@@ -197,7 +198,7 @@ SET (toast_tuple_target=8160"""
      * @param history If _true_, then optimized for historic data; otherwise a volatile HEAD table.
      */
     @JvmStatic
-    fun collectionAddIndices(sql: IPlv8Sql, tableName: String, spGist: Boolean, history: Boolean) {
+    private fun collectionAddIndices(sql: IPlv8Sql, tableName: String, spGist: Boolean, history: Boolean) {
         val fillFactor = if (history) "100" else "50"
         // https://www.postgresql.org/docs/current/gin-tips.html
         val geoIndexType = if (spGist) "sp-gist" else "gist"
@@ -258,12 +259,14 @@ SET (toast_tuple_target=8160"""
     /**
      * Low level function to create a (optionally partitioned) collection table set.
      * @param sql The SQL API.
+     * @param schema The schema name.
+     * @param schemaOid The object-id of the schema to look into.
      * @param id The collection identifier.
      * @param spGist If SP-GIST index should be used, which is better only for point geometry.
      * @param partition If the collection should be partitioned.
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, id: String, spGist: Boolean, partition: Boolean) {
+    fun collectionCreate(sql: IPlv8Sql, schema: String, schemaOid: Int, id: String, spGist: Boolean, partition: Boolean) {
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         val CREATE_TABLE = """CREATE TABLE {table} (
     uid         int8 NOT NULL,
@@ -301,7 +304,7 @@ SET (toast_tuple_target=8160"""
         }
 
         // Create sequence.
-        val sequenceName = id+"_uid_seq";
+        val sequenceName = id + "_uid_seq";
         val sequenceNameQuoted = sql.quoteIdent(sequenceName)
         query = "CREATE SEQUENCE IF NOT EXISTS $sequenceNameQuoted AS int8 START WITH 1 CACHE 100 OWNED BY ${headNameQuoted}.uid"
         sql.execute(query)
@@ -331,7 +334,9 @@ SET (toast_tuple_target=8160"""
         query = query.replace("{condition}", "> 0")
         query += "PARTITION BY RANGE (txn_next)"
         sql.execute(query)
+
         // Optimizations are done on the history partitions!
+        collectionAttachTriggers(sql, id, schema, schemaOid)
     }
 
     /**
@@ -342,7 +347,7 @@ SET (toast_tuple_target=8160"""
      * @param schemaOid The object-id of the schema to look into.
      */
     @JvmStatic
-    fun collectionAttachTriggers(sql: IPlv8Sql, id: String, schema: String, schemaOid: Int) {
+    private fun collectionAttachTriggers(sql: IPlv8Sql, id: String, schema: String, schemaOid: Int) {
         var triggerName = id + "_before"
         var rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid)))
         if (rows.isEmpty()) {

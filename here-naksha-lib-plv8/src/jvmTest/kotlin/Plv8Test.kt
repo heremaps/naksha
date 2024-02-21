@@ -3,8 +3,7 @@ import com.here.naksha.lib.plv8.*
 import com.here.naksha.lib.plv8.TG_OP_INSERT
 import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
 import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -116,8 +115,7 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
-        Static.collectionCreate(session.sql,"foo", spGist = false, partition = false)
-        Static.collectionAttachTriggers(session.sql, "foo", session.schema, session.schemaOid)
+        Static.collectionCreate(session.sql,session.schema, session.schemaOid, "foo", spGist = false, partition = false)
         session.prefetchUids("foo", 1, 10)
         assertEquals(BigInt64(1), session.newUid("foo"))
         assertEquals(BigInt64(2), session.newUid("foo"))
@@ -174,6 +172,16 @@ class Plv8Test : Plv8TestContainer() {
         val collectionJson = """{"id":"bar","type":"NakshaCollection","minAge":3560,"unlogged":false,"partition":false,"pointsOnly":false,"properties":{},"disableHistory":false,"partitionCount":-1,"estimatedFeatureCount": -1,"estimatedDeletedFeatures":-1}"""
         val collectionMap = asMap(env.parse(collectionJson))
         val builder = XyzBuilder.create()
-        //session.writeCollections()
+        builder.clear()
+        builder.startTags()
+        builder.writeTag("age:=23")
+        builder.writeTag("featureType=NakshaCollection")
+        val tagsBytes = builder.buildTags()
+        val collectionBytes = builder.buildFeatureFromMap(collectionMap)
+        val opBytes = builder.buildXyzOp(XYZ_OP_CREATE, "bar", null)
+        val table = session.writeCollections(arrayOf(opBytes), arrayOf(collectionBytes), arrayOf(null), arrayOf(tagsBytes))
+        val result = assertInstanceOf(JvmPlv8Table::class.java, table)
+        assertEquals(1, result.rows.size)
+        session.sql.execute("COMMIT")
     }
 }
