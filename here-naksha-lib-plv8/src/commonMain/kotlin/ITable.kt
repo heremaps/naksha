@@ -35,10 +35,10 @@ interface ITable {
         map["id"] = id
         map["xyz"] = xyz
         map["tags"] = tags
-        map["feature"] = feature
         map["geo"] = geo
-        map["errNo"] = null
-        map["errMsg"] = null
+        map["feature"] = feature
+        map["err_no"] = null
+        map["err_msg"] = null
         returnNext(map)
     }
 
@@ -58,10 +58,10 @@ interface ITable {
         map["id"] = id
         map["xyz"] = xyz
         map["tags"] = tags
-        map["feature"] = feature
         map["geo"] = geo
-        map["errNo"] = errNo
-        map["errMsg"] = errMsg
+        map["feature"] = feature
+        map["err_no"] = errNo
+        map["err_msg"] = errMsg
         val session = NakshaSession.get()
         session.errNo = errNo
         session.errMsg = errMsg
