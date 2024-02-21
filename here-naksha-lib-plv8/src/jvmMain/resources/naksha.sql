@@ -55,6 +55,12 @@ CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, a
   }
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION naksha_prepare_bulk_load(collectionId text, amount int4) RETURNS void AS $$
+  let naksha = require("naksha");
+  let session = naksha.NakshaSession.Companion.get();
+  session.prefetchUids(collectionId, amount, amount);
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
@@ -130,6 +136,35 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
   return require("naksha").Naksha.partitionId(id);
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION jsonb_to_op(op jsonb) RETURNS bytea AS $$
+  let jb = require("jbon");
+  let builder = new jb.XyzBuilder();
+  let opCode = jb.XyzOp.Companion.getOpCode(op["op"]);
+  return builder.buildXyzOp(opCode, op["id"], op["uuid"]);
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION json_to_op(op_json text) RETURNS bytea AS $$
+  let jb = require("jbon");
+  let builder = new jb.XyzBuilder();
+  let op = jb.Jb.env.parse(op_json);
+  let opCode = jb.XyzOp.Companion.getOpCode(op["op"]);
+  return builder.buildXyzOp(opCode, op["id"], op["uuid"]);
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION op_to_jsonb(op bytea) RETURNS jsonb AS $$
+  let jb = require("jbon");
+  let xyzOp = new jb.XyzOp();
+  xyzOp.mapBytes(op);
+  return op.toIMap();
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION op_to_json(op bytea) RETURNS text AS $$
+  let jb = require("jbon");
+  let xyzOp = new jb.XyzOp();
+  xyzOp.mapBytes(op);
+  return jb.Jb.env.stringify(op.toIMap());
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_created_at(xyz bytea) RETURNS int8 AS $$

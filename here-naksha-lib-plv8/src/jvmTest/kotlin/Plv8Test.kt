@@ -114,7 +114,7 @@ class Plv8Test : Plv8TestContainer() {
 
     @Order(9)
     @Test
-    fun testInternalCollectionCreation() {
+    fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
         Static.collectionCreate(session.sql,"foo", spGist = false, partition = false)
         Static.collectionAttachTriggers(session.sql, "foo", session.schema, session.schemaOid)
@@ -169,7 +169,11 @@ class Plv8Test : Plv8TestContainer() {
 
     @Order(10)
     @Test
-    fun testWriteCollections() {
+    fun testWriteCollectionsOfBar() {
         val session = NakshaSession.get()
+        val collectionJson = """{"id":"bar","type":"NakshaCollection","minAge":3560,"unlogged":false,"partition":false,"pointsOnly":false,"properties":{},"disableHistory":false,"partitionCount":-1,"estimatedFeatureCount": -1,"estimatedDeletedFeatures":-1}"""
+        val collectionMap = asMap(env.parse(collectionJson))
+        val builder = XyzBuilder.create()
+        //session.writeCollections()
     }
 }

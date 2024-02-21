@@ -236,7 +236,6 @@ SET SESSION enable_seqscan = OFF;
             TODO("Implement me!")
         }
         // We should not be called for delete, in that case do nothing.
-        Jb.log.info("Trigger before DONE: "+Jb.env.stringify(data, true))
     }
 
     /**
@@ -245,7 +244,7 @@ SET SESSION enable_seqscan = OFF;
      * @param data The trigger data, allows the modification of [PgTrigger.NEW].
      */
     fun triggerAfter(data: PgTrigger) {
-        Jb.log.info("Trigger after")
+        //Jb.log.info("Trigger after")
     }
 
     /**
