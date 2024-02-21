@@ -97,15 +97,16 @@ As the PostgresQL code switched to [JBON](./JBON.md) encoding, a table for the g
 
 The table layout for all tables:
 
-| Column   | Type                      | Modifiers                              | Description                                                  |
-|----------|---------------------------|----------------------------------------|--------------------------------------------------------------|
-| uid      | int8                      | PRIMARY KEY NOT NULL                   | `xyz->uid` - Primary row identifier                          |
-| txn_next | int8                      | NOT NULL                               | `xyz->txn_next` - Only needed in history                     |
-| id       | text                      |                                        | The **id** of the feature.                                   |
-| feature  | bytea                     |                                        | The Geo-JSON feature in JBON, except for what was extracted. |
-| geo      | geometry(GeometryZ, 4326) |                                        | `geometry` - The geometry of the features.                   |
-| tags     | bytea                     |                                        | `xyz->tags`                                                  |
-| xyz      | bytea                     |                                        | `feature->properties->@ns:com:here:xyz`                      |
+| Column   | Type  | Modifiers                              | Description                                                  |
+|----------|-------|----------------------------------------|--------------------------------------------------------------|
+| uid      | int8  | PRIMARY KEY NOT NULL                   | `xyz->uid` - Primary row identifier                          |
+| txn_next | int8  | NOT NULL                               | `xyz->txn_next` - Only needed in history                     |
+| geo_type | int2  |                                        | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).   |
+| id       | text  |                                        | The **id** of the feature.                                   |
+| feature  | bytea |                                        | The Geo-JSON feature in JBON, except for what was extracted. |
+| geo      | bytea |                                        | `geometry` - The geometry of the features.                   |
+| tags     | bytea |                                        | `xyz->tags`                                                  |
+| xyz      | bytea |                                        | `feature->properties->@ns:com:here:xyz`                      |
 
 The **xyz** namespace is split into parts, to avoid unnecessary work for triggers and functions. Therefore, the **tags** columns contains the tags extracted from the XYZ namespace, while the rest of the XYZ namespace, managed by Naksha, is stored in the **xyz** column. The **txn_next** is as well managed internally and only used for the history, therefore it is an own column (actually, this is the only value that need to be adjusted, when a row is moved into history). All these columns (**uid**, **txn_next**, **tags** and **xyz**) should be merged together into the Geo-JSON feature under `feature->properties->@ns:com:here:xyz`, when downward compatibility with Data-Hub is required. This is left to the client and not part of the database code. Modern code using for example Web-Sockets, should no longer do this. The reason for this design is, that the **xyz** namespace is managed by the database only and must not be modified by the client, while **feature**, **geometry** and **tags** are client only and are not modified by the database. The **tags** are separated, because they need to be stored very efficiently (using an own dictionary) and they are indexed, while the feature itself is normally not read in the database.
 

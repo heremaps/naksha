@@ -188,17 +188,19 @@ SET SESSION enable_seqscan = OFF;
      * @param collectionId The collection into which a feature is inserted.
      * @param featureId The ID of the feature.
      * @param uid The UID to use.
+     * @param geoType The geometry-type.
      * @param geo The geometry of the feature as EWKB; if any.
      * @return The new XYZ namespace for this feature.
      */
-    internal fun xyzInsert(collectionId: String, featureId: String, uid:BigInt64, geo: ByteArray?): ByteArray {
+    internal fun xyzInsert(collectionId: String, featureId: String, uid: BigInt64, geoType: Short, geo: ByteArray?): ByteArray {
         val env = Jb.env
         val createdAt = env.currentMillis()
         val txn = txn();
         val extent = Static.extent(sql, geo)
         val uuid = txn.newFeatureUuid(storageId, collectionId, uid).toString()
-        val grid = Static.grid(sql, featureId, geo)
-        return xyzBuilder.buildXyzNs(createdAt,createdAt,txn.value,XYZ_OP_CREATE,1,createdAt,extent,null,uuid,appId,author?:appId,grid)
+        val grid = Static.grid(sql, featureId, geoType, geo)
+        return xyzBuilder.buildXyzNs(createdAt, createdAt, txn.value, XYZ_OP_CREATE, 1, createdAt, extent, null, uuid, appId, author
+                ?: appId, grid)
     }
 
     private fun xyzUpdate(): ByteArray {
@@ -224,15 +226,18 @@ SET SESSION enable_seqscan = OFF;
             collectionId = collectionId.substring(0, i)
         }
         if (data.TG_OP == TG_OP_INSERT) {
-            check(data.NEW != null)
+            check(data.NEW != null) { "Missing NEW for INSERT" }
             data.NEW[COL_TXN_NEXT] = Jb.int64.ZERO()
             val uid = newUid(collectionId)
             data.NEW[COL_UID] = uid
-            val id: String = data.NEW[COL_ID] ?: throw NakshaException(ERR_ID_MISSING, "Missing id")
-            data.NEW[COL_XYZ] = xyzInsert(collectionId, id, uid, data.NEW[COL_GEOMETRY])
+            val id: String? = data.NEW[COL_ID]
+            check(id != null) { "Missing id" }
+            val geoType: Short? = data.NEW[COL_GEO_TYPE]
+            check(geoType != null) { "Geometry type must not be null" }
+            data.NEW[COL_XYZ] = xyzInsert(collectionId, id, uid, geoType, data.NEW[COL_GEOMETRY])
         } else if (data.TG_OP == TG_OP_UPDATE) {
-            check(data.NEW != null)
-            check(data.OLD != null)
+            check(data.NEW != null) { "Missing NEW for UPDATE" }
+            check(data.OLD != null) { "Missing OLD for UPDATE" }
             TODO("Implement me!")
         }
         // We should not be called for delete, in that case do nothing.
@@ -397,6 +402,7 @@ SET (toast_tuple_target=8160,fillfactor=100
     fun writeCollections(
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?>,
+            geo_type_arr: Array<Short>,
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>
     ): ITable {
@@ -412,6 +418,7 @@ SET (toast_tuple_target=8160,fillfactor=100
             try {
                 val feature = feature_arr[i]
                 val geo = geo_arr[i]
+                val geo_type = geo_type_arr[i]
                 val tags = tags_arr[i]
                 val op = op_arr[i]
                 opReader.mapBytes(op)
@@ -422,14 +429,14 @@ SET (toast_tuple_target=8160,fillfactor=100
                     id = newCollection.id()
                 }
                 if (id == null) {
-                    throw NakshaException(ERR_ID_MISSING, "Missing id", id, feature, geo, tags)
+                    throw NakshaException(ERR_ID_MISSING, "Missing id", id, feature, geo_type, geo, tags)
                 }
                 val lockId = Static.lockId(id)
                 sql.execute("SELECT pg_advisory_lock($1)", arrayOf(lockId))
                 try {
                     newCollection.mapBytes(feature)
-                    var rows = asArray(sql.execute("SELECT * FROM naksha_collections WHERE id = $1", arrayOf(id)))
-                    val existing : IMap?
+                    var rows = asArray(sql.execute("SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1", arrayOf(id)))
+                    val existing: IMap?
                     if (rows.isEmpty()) {
                         oldCollection.clear()
                         existing = null
@@ -442,20 +449,14 @@ SET (toast_tuple_target=8160,fillfactor=100
                     }
                     if (xyzOp == XYZ_OP_CREATE) {
                         if (existing != null) {
-                            throw NakshaException(ERR_CONFLICT, "Feature exists already", id, feature, geo, tags)
+                            throw NakshaException(ERR_CONFLICT, "Feature exists already", id, feature, geo_type, geo, tags)
                         }
-                        val query : String
-                        if (geo != null) {
-                            query = "INSERT INTO naksha_collections (id, feature, tags, geo) VALUES($1,$2,$3,ST_Force3DZ(ST_GeomFromEWKB($4))) RETURNING xyz"
-                            rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo)))
-                        } else {
-                            query = "INSERT INTO naksha_collections (id, feature, tags) VALUES($1,$2,$3) RETURNING xyz"
-                            rows = asArray(sql.execute(query, arrayOf(id, feature, tags)))
-                        }
+                        val query = "INSERT INTO naksha_collections (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz"
+                        rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo_type, geo)))
                         // TODO: What is no row is returned?
-                        val xyz : ByteArray = asMap(rows[0])["xyz"]!!
+                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
                         Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partitionHead())
-                        table.returnOpOk(XYZ_EXECUTED_CREATED, id, xyz, tags, feature, geo)
+                        table.returnOpOk(XYZ_EXECUTED_CREATED, id, xyz, tags, feature, geo_type, geo)
                         continue
                     }
                     // TODO: Handle update, delete and purge
@@ -463,11 +464,11 @@ SET (toast_tuple_target=8160,fillfactor=100
                     sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(lockId))
                 }
             } catch (e: NakshaException) {
-                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.stackTraceToString())
+                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
                 table.returnException(e)
             } catch (e: Exception) {
-                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.stackTraceToString())
-                table.returnOpErr(ERR_FATAL, e.message ?: "Fatal")
+                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+                table.returnOpErr(ERR_FATAL, e.rootCause().message ?: "Fatal")
             } finally {
                 i++
             }
@@ -475,15 +476,15 @@ SET (toast_tuple_target=8160,fillfactor=100
         return table
     }
 
-    private lateinit var featureReader : JbMapFeature
-    private lateinit var propertiesReader : JbMap
+    private lateinit var featureReader: JbMapFeature
+    private lateinit var propertiesReader: JbMap
 
     /**
      * Extract the id from the given feature.
      * @param feature The feature.
      * @return The id or _null_, if the feature does not have a dedicated id.
      */
-    fun getFeatureId(feature:ByteArray) : String? {
+    fun getFeatureId(feature: ByteArray): String? {
         if (!this::featureReader.isInitialized) featureReader = JbMapFeature()
         val reader = featureReader
         reader.mapBytes(feature)
@@ -496,7 +497,7 @@ SET (toast_tuple_target=8160,fillfactor=100
      * @param feature The feature to search in.
      * @return The feature type.
      */
-    fun getFeatureType(feature:ByteArray) : String {
+    fun getFeatureType(feature: ByteArray): String {
         if (!this::featureReader.isInitialized) featureReader = JbMapFeature()
         val reader = featureReader
         reader.mapBytes(feature)

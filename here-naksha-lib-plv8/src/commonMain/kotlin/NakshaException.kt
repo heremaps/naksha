@@ -11,6 +11,7 @@ class NakshaException(
         val errMsg: String,
         val id: String? = null,
         val feature: ByteArray? = null,
+        val geoType : Short? = null,
         val geo: Any? = null,
         val tags: ByteArray? = null,
         val xyz: ByteArray? = null

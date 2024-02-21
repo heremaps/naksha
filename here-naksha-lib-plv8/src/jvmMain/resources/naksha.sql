@@ -98,24 +98,26 @@ CREATE OR REPLACE FUNCTION naksha_write_features(
   collection_id text,
   ops bytea[], -- XyzOp (op, id, uuid)
   features bytea[], -- JbFeature (without XZY namespace)
-  geometries bytea[], -- WKB
+  geometries_type int2[],
+  geometries_bytes bytea[], -- WKB, EWKB, TWKB
   tags bytea[] -- XyzTags
-) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo bytea, err_no text, err_msg text) AS $$
+) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo_type int2, geo bytea, err_no text, err_msg text) AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
-  session.writeFeatures(collection_id, ops, features, geometries, tags);
+  session.writeFeatures(collection_id, ops, features, geometries_type, geometries_bytes, tags);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 -- Returns always op, id, xyz, optional: geo, feature, tags, err_no and err_msg
 CREATE OR REPLACE FUNCTION naksha_write_collections(
   ops bytea[], -- XyzOp (op, id, uuid)
   features bytea[], -- JbFeature (without XZY namespace)
-  geometries bytea[], -- WKB
+  geometries_type int2[],
+  geometries_bytes bytea[], -- WKB, EWKB, TWKB
   tags bytea[] -- XyzTags
-) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo bytea, err_no text, err_msg text) AS $$
+) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo_type int2, geo bytea, err_no text, err_msg text) AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
-  session.writeCollections(ops, features, geometries, tags);
+  session.writeCollections(ops, features, geometries_type, geometries_bytes, tags);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_set_stack_trace(enable bool) RETURNS void AS $$
@@ -141,6 +143,21 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
   return require("naksha").Naksha.partitionId(id);
 $$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION naksha_geometry(geo_type int2, geo_bytes bytea) RETURNS geometry AS
+$$
+BEGIN
+  IF geo_type = 1 THEN
+    RETURN ST_GeomFromWKB(geo_bytes);
+  ELSIF geo_type = 2 THEN
+    RETURN ST_GeomFromEWKB(geo_bytes);
+  ELSIF geo_type = 3 THEN
+    RETURN ST_GeomFromTWKB(geo_bytes);
+  ELSE
+    RETURN null;
+  END IF;
+END;
+$$ LANGUAGE 'plpgsql' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION jsonb_to_op(op jsonb) RETURNS bytea AS $$
   let jb = require("jbon");
@@ -260,13 +277,6 @@ CREATE OR REPLACE FUNCTION xyz_grid(xyz bytea) RETURNS text AS $$
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.grid();
-$$ LANGUAGE 'plv8' IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION xyz_mrid(xyz bytea) RETURNS text AS $$
-  let jb = require("jbon");
-  let xyzNs = new jb.XyzNs();
-  xyzNs.mapBytes(xyz);
-  return xyzNs.mrid();
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION xyz_to_jsonb(xyz bytea, tags bytea) RETURNS jsonb AS $$

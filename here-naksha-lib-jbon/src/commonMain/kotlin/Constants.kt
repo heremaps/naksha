@@ -110,3 +110,12 @@ inline fun newDataView(size: Int) = Jb.env.newDataView(ByteArray(size))
 
 @Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
 inline fun asArray(any: Any?): Array<Any?> = any as Array<Any?>
+
+fun Exception.rootCause() : Exception {
+    var e = this
+    while (true) {
+        val cause = e.cause
+        if (cause == null || cause == e || !(cause is Exception)) return e
+        e = cause
+    }
+}

@@ -127,11 +127,12 @@ $$ LANGUAGE 'plv8';
      * See [https://www.movable-type.co.uk/scripts/geohash.html](https://www.movable-type.co.uk/scripts/geohash.html)
      * @param sql The SQL API.
      * @param id The feature-id.
+     * @param geoType The geometry type.
      * @param geo The feature geometry; if any.
      * @return The GRID (7 character long string).
      */
     @JvmStatic
-    fun grid(sql: IPlv8Sql, id: String, geo: ByteArray?): String {
+    fun grid(sql: IPlv8Sql, id: String, geoType: Short, geo: ByteArray?): String {
         if (geo == null) {
             val sb = StringBuilder()
             var hash = Fnv1a64.string(Fnv1a64.start(), id)
@@ -144,7 +145,7 @@ $$ LANGUAGE 'plv8';
             }
             return sb.toString()
         }
-        return asMap(asArray(sql.execute("SELECT ST_GeoHash(ST_Centroid(ST_GeomFromEWKB(geo)),14) as geohash"))[0])["geohash"]!!
+        return asMap(asArray(sql.execute("SELECT ST_GeoHash(ST_Centroid(naksha_geometry($1::int2,$2::bytea)),14) as hash", arrayOf(geoType, geo)))[0])["hash"]!!
     }
 
     /**
@@ -233,7 +234,7 @@ SET (toast_tuple_target=8160"""
         // geo
         qin = sql.quoteIdent("${tableName}_geo_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndexType
-(geo, xyz_txn(xyz), xyz_extent(xyz)) WITH (buffering=ON,fillfactor=$fillFactor);
+(naksha_geometry(geo_type,geo), xyz_txn(xyz), xyz_extent(xyz)) WITH (buffering=ON,fillfactor=$fillFactor);
 """
 
         // tags
@@ -273,13 +274,17 @@ SET (toast_tuple_target=8160"""
      */
     @JvmStatic
     fun collectionCreate(sql: IPlv8Sql, schema: String, schemaOid: Int, id: String, spGist: Boolean, partition: Boolean) {
+        // We store geometry as TWKB, see:
+        // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
+        // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
         val CREATE_TABLE = """CREATE TABLE {table} (
     uid         int8 NOT NULL,
     txn_next    int8 NOT NULL CHECK(txn_next {condition}),
-    id          text COMPRESSION lz4 NOT NULL,
+    geo_type    int2 NOT NULL,
+    id          text COMPRESSION lz4 COLLATE "C" NOT NULL,
     feature     bytea COMPRESSION lz4 NOT NULL,
-    geo         geometry(GeometryZ, 4326),
+    geo         bytea COMPRESSION lz4,
     tags        bytea COMPRESSION lz4,
     xyz         bytea COMPRESSION lz4 NOT NULL
 ) """

@@ -51,7 +51,7 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun testGrid() {
         val session = NakshaSession.get()
-        val grid = Static.grid(session.sql, "foo", null)
+        val grid = Static.grid(session.sql, "foo", GEO_TYPE_NULL, null)
         assertNotNull(grid)
         assertEquals(14, grid.length)
         assertEquals("6rcpmez33pmdte", grid)
@@ -105,9 +105,10 @@ class Plv8Test : Plv8TestContainer() {
 
     @Order(8)
     @Test
-    fun dropTestCollectionIfExists() {
+    fun dropTestCollectionsIfExists() {
         val session = NakshaSession.get()
         Static.collectionDrop(session.sql, "foo")
+        Static.collectionDrop(session.sql, "bar")
         session.sql.execute("COMMIT")
     }
 
@@ -131,7 +132,8 @@ class Plv8Test : Plv8TestContainer() {
         pgNew[COL_ID] = "foo"
         pgNew[COL_TXN_NEXT] =null // Should be set by trigger
         pgNew[COL_FEATURE] = null
-        pgNew[COL_GEOMETRY] = null
+        pgNew[COL_GEO_TYPE] = GEO_TYPE_EWKB
+        pgNew[COL_GEOMETRY] = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
         pgNew[COL_TAGS] = null
         pgNew[COL_XYZ] = null // Should be set by trigger
         val pgOld = null
@@ -154,11 +156,11 @@ class Plv8Test : Plv8TestContainer() {
         // Try the XYZ insert directly
         val uid = session.newUid("foo")
         assertEquals(BigInt64(10), uid)
-        val xyzBytes = session.xyzInsert("foo", "bar", uid,null)
+        val xyzBytes = session.xyzInsert("foo", "bar", uid, GEO_TYPE_NULL, null)
         val xyzNs = XyzNs().mapBytes(xyzBytes)
         val txn = session.txn()
         assertEquals(txn, xyzNs.txn())
-        val expectedGrid = Static.grid(session.sql, "bar", null)
+        val expectedGrid = Static.grid(session.sql, "bar", GEO_TYPE_NULL, null)
         assertEquals(expectedGrid, xyzNs.grid())
         val uuid = xyzNs.uuid()
         assertEquals("${session.storageId}:foo:${txn.year}:${txn.month}:${txn.day}:10", uuid)
@@ -169,6 +171,8 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun testWriteCollectionsOfBar() {
         val session = NakshaSession.get()
+        // TODO: We need a test for this case, that is a general issue with empty local dictionaries!
+        //val collectionJson = """{"id":"bar"}"""
         val collectionJson = """{"id":"bar","type":"NakshaCollection","minAge":3560,"unlogged":false,"partition":false,"pointsOnly":false,"properties":{},"disableHistory":false,"partitionCount":-1,"estimatedFeatureCount": -1,"estimatedDeletedFeatures":-1}"""
         val collectionMap = asMap(env.parse(collectionJson))
         val builder = XyzBuilder.create()
@@ -177,11 +181,20 @@ class Plv8Test : Plv8TestContainer() {
         builder.writeTag("age:=23")
         builder.writeTag("featureType=NakshaCollection")
         val tagsBytes = builder.buildTags()
+        val geoBytes = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
         val collectionBytes = builder.buildFeatureFromMap(collectionMap)
         val opBytes = builder.buildXyzOp(XYZ_OP_CREATE, "bar", null)
-        val table = session.writeCollections(arrayOf(opBytes), arrayOf(collectionBytes), arrayOf(null), arrayOf(tagsBytes))
+        val table = session.writeCollections(arrayOf(opBytes), arrayOf(collectionBytes), arrayOf(GEO_TYPE_EWKB), arrayOf(geoBytes), arrayOf(tagsBytes))
         val result = assertInstanceOf(JvmPlv8Table::class.java, table)
         assertEquals(1, result.rows.size)
+        val row = result.rows[0]
+        assertEquals(XYZ_EXECUTED_CREATED, row["op"])
         session.sql.execute("COMMIT")
     }
+}
+
+fun String.decodeHex(): ByteArray {
+    check(length % 2 == 0) { "Must have an even length" }
+    val bytes = chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+    return bytes
 }

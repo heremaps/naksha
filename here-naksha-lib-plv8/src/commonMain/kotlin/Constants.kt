@@ -14,8 +14,14 @@ internal const val NKC_ESTIMATED_FEATURE_COUNT = "estimatedFeatureCount"
 
 internal const val COL_UID = "uid"
 internal const val COL_TXN_NEXT = "txn_next"
+internal const val COL_GEO_TYPE = "geo_type"
 internal const val COL_ID = "id"
 internal const val COL_FEATURE = "feature"
 internal const val COL_GEOMETRY = "geo"
 internal const val COL_TAGS = "tags"
 internal const val COL_XYZ = "xyz"
+
+internal const val GEO_TYPE_NULL : Short = 0
+internal const val GEO_TYPE_WKB : Short = 1
+internal const val GEO_TYPE_EWKB : Short = 2
+internal const val GEO_TYPE_TWKB : Short = 3
