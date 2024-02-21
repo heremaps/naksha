@@ -28,19 +28,21 @@ public class DefaultViewHandlerTest extends ApiTest {
         createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_sfw.json");
         createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_dlb.json");
         createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_delta.json");
-        createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_view_dev.json");
 
         //create handlers
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_sfw.json");
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_mod_dlb.json");
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_mod_delta.json");
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_sourceId_handler.json");
-        createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_view_handler.json");
 
         //create spaces
         createSpace(nakshaClient, "DefaultViewHandler/setup/create_space_sfw.json");
         createSpace(nakshaClient, "DefaultViewHandler/setup/create_space_mod_dlb.json");
         createSpace(nakshaClient, "DefaultViewHandler/setup/create_space_mod_delta.json");
+
+        //view stuff
+        createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_view_dev.json");
+        createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_view_handler.json");
         createSpace(nakshaClient, "DefaultViewHandler/setup/create_view_space.json");
 
         //setup data
