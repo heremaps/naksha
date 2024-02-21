@@ -59,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.postgresql.util.PGobject;
@@ -269,6 +270,50 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     sql.add(')');
   }
 
+  private static void addOp( //
+      @NotNull SQL sql, //
+      @NotNull List<Object> parameter, //
+      final List<@NotNull String> path, //
+      @NotNull OpType opType, //
+      @Nullable Object value //
+  ) {
+    if (value == null) {
+      throw new IllegalArgumentException("Invalid value NULL for op: " + opType);
+    }
+    if (!(opType instanceof POpType)) {
+      throw new IllegalArgumentException("Operation not supported: " + opType);
+    }
+    final POpType op = (POpType) opType;
+    final String opString = op.op();
+    if (opString == null) {
+      throw new IllegalArgumentException("Operation not supported: " + op);
+    }
+    sql.add("nullif(");
+    addJsonPath(sql, path, path.size());
+    sql.add(",'null')");
+    if (value instanceof CharSequence) {
+      sql.add("::text ").add(opString).add(" ?");
+      parameter.add(value);
+    } else if (value instanceof Double) {
+      sql.add("::double precision ").add(opString).add(" ?");
+      parameter.add(value);
+    } else if (value instanceof Float) {
+      sql.add("::double precision ").add(opString).add(" ?");
+      parameter.add(((Number)value).doubleValue());
+    } else if (value instanceof Long) {
+      sql.add("::int8 ").add(opString).add(" ?");
+      parameter.add(value);
+    } else if (value instanceof Number) {
+      sql.add("::int8 ").add(opString).add(" ?");
+      parameter.add(((Number)value).longValue());
+    } else if (value instanceof Boolean) {
+      sql.add("::bool ").add(opString).add(" ?");
+      parameter.add(value);
+    } else {
+      throw new IllegalArgumentException("Unknown value type: " + (value.getClass().getName()));
+    }
+  }
+
   private static void addPropertyQuery(
       @NotNull SQL sql, @NotNull POp propertyOp, @NotNull List<Object> parameter, boolean isHstQuery) {
     final OpType op = propertyOp.op();
@@ -353,36 +398,14 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(")");
       return;
     }
-    addJsonPath(sql, path, path.size());
-    if (op == POpType.EQ) {
-      sql.add(" = ");
-    } else if (op == POpType.GT) {
-      sql.add(" > ");
-    } else if (op == POpType.GTE) {
-      sql.add(" >= ");
-    } else if (op == POpType.LT) {
-      sql.add(" < ");
-    } else if (op == POpType.LTE) {
-      sql.add(" <= ");
-    } else if (op == POpType.CONTAINS) {
-      sql.add(" @> ");
-    } else {
-      throw new IllegalArgumentException("Unknown operation: " + op);
-    }
-    sql.add("?::jsonb");
-    parameter.add(toJsonb(value));
+    addOp(sql, parameter, path, op, value);
   }
 
   private static PGobject toJsonb(Object value) {
     try (final Json jp = Json.get()) {
       final PGobject jsonb = new PGobject();
       jsonb.setType("jsonb");
-      if (value instanceof String && Json.mightBeJson((String) value)) {
-        // it's already a json - .writeValueAsString would add double quoting
-        jsonb.setValue((String) value);
-      } else {
-        jsonb.setValue(jp.writer().writeValueAsString(value));
-      }
+      jsonb.setValue(jp.writer().writeValueAsString(value));
       return jsonb;
     } catch (SQLException | JsonProcessingException e) {
       throw unchecked(e);
@@ -532,8 +555,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     return prepareQuery(historyCollection, spatial_where, hst_props_where.toString(), readFeatures.limit);
   }
 
-  @NotNull
-  <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
+  @NotNull <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
