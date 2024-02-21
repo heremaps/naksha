@@ -463,8 +463,10 @@ SET (toast_tuple_target=8160,fillfactor=100
                     sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(lockId))
                 }
             } catch (e: NakshaException) {
+                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.stackTraceToString())
                 table.returnException(e)
             } catch (e: Exception) {
+                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.stackTraceToString())
                 table.returnOpErr(ERR_FATAL, e.message ?: "Fatal")
             } finally {
                 i++

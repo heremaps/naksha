@@ -66,6 +66,12 @@ $$ LANGUAGE 'plv8';
     }
 
     /**
+     * Can be set to true, to enable stack-trace reporting to _elog(INFO)_.
+     */
+    @JvmStatic
+    var PRINT_STACK_TRACES = false
+
+    /**
      * Array to fasten partition id.
      */
     @JvmStatic

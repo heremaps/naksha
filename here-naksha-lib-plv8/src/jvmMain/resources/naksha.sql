@@ -118,6 +118,10 @@ CREATE OR REPLACE FUNCTION naksha_write_collections(
   session.writeCollections(ops, features, geometries, tags);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION naksha_set_stack_trace(enable bool) RETURNS void AS $$
+  require("naksha").Static.PRINT_STACK_TRACES = enable;
+$$ LANGUAGE 'plv8' VOLATILE;
+
 CREATE OR REPLACE FUNCTION naksha_err_no() RETURNS text AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
@@ -291,6 +295,20 @@ CREATE OR REPLACE FUNCTION tags_to_jsonb(tags bytea) RETURNS jsonb AS $$
   let xyzTags = new jb.XyzTags();
   xyzTags.mapBytes(tags);
   return xyzTags.tagsMap();
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION jsonb_to_tags(tags_json jsonb) RETURNS bytea AS $$
+  // TODO: Fix me!!!
+  let jb = require("jbon");
+  let builder = jb.XyzBuilder.Companion.create();
+  let keys = Object.keys(tags_json);
+  let i = 0;
+  builder.startTags();
+  while (i < keys.length) {
+    builder.writeTag()
+  }
+  let opCode = jb.XyzOp.Companion.getOpCode(op["op"]);
+  return builder.buildXyzOp(opCode, op["id"], op["uuid"]);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION feature_id(feature bytea) RETURNS text AS $$
