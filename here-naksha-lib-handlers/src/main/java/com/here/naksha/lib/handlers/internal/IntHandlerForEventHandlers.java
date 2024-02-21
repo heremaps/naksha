@@ -35,11 +35,10 @@ import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
-import java.util.List;
-import java.util.NoSuchElementException;
-
 import com.here.naksha.lib.handlers.DefaultViewHandler;
 import com.here.naksha.lib.handlers.DefaultViewHandlerProperties;
+import java.util.List;
+import java.util.NoSuchElementException;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -89,50 +88,84 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     Object spaceIdsProperty = eventHandler.getProperties().get(DefaultViewHandlerProperties.SPACE_IDS);
     if (spaceIdsProperty == null) {
       return new ErrorResult(
-              XyzError.ILLEGAL_ARGUMENT,
-              "Mandatory properties parameter %s missing!".formatted(DefaultViewHandlerProperties.SPACE_IDS));
+          XyzError.ILLEGAL_ARGUMENT,
+          "Mandatory properties parameter %s missing!".formatted(DefaultViewHandlerProperties.SPACE_IDS));
     }
 
     if (!(spaceIdsProperty instanceof List<?>)) {
       return new ErrorResult(
-              XyzError.ILLEGAL_ARGUMENT, "Mandatory property parameter %s should be a collection of string"
-              .formatted(DefaultViewHandlerProperties.SPACE_IDS)
-      );
+          XyzError.ILLEGAL_ARGUMENT,
+          "Mandatory property parameter %s should be a collection of string"
+              .formatted(DefaultViewHandlerProperties.SPACE_IDS));
     }
     List<String> spaceIds = (List<String>) spaceIdsProperty;
 
     if (spaceIds.isEmpty()) {
       return new ErrorResult(
-              XyzError.ILLEGAL_ARGUMENT,
-              "Mandatory parameter %s can't be empty/blank!"
-                      .formatted(DefaultViewHandlerProperties.SPACE_IDS));
+          XyzError.ILLEGAL_ARGUMENT,
+          "Mandatory parameter %s can't be empty/blank!".formatted(DefaultViewHandlerProperties.SPACE_IDS));
+    }
+    for (String spaceId : spaceIds) {
+      if (StringUtils.isBlank(spaceId)) {
+        return new ErrorResult(
+            XyzError.ILLEGAL_ARGUMENT,
+            "Mandatory parameter %s contains space which is empty/blank!"
+                .formatted(DefaultViewHandlerProperties.SPACE_IDS));
+      }
     }
 
     return spaceExistenceValidation(spaceIds);
   }
 
   private Result spaceExistenceValidation(List<String> spaceIds) {
-    //search for spaces
-    return null;
+
+    POp[] popQueries = new POp[spaceIds.size()];
+
+    for (int i = 0; i < popQueries.length; i++) {
+      popQueries[i] = POp.eq(PRef.id(), spaceIds.get(i));
+    }
+    final ReadFeatures request = new ReadFeatures(SPACES).withPropertyOp(POp.or(popQueries));
+    try (final IReadSession readSession =
+        nakshaHub().getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
+      final Result readResult = readSession.execute(request);
+
+      try {
+        List<Space> spaces = readFeaturesFromResult(readResult, Space.class);
+
+        if (spaces.size() != spaceIds.size()) {
+          return new ErrorResult(
+              XyzError.ILLEGAL_ARGUMENT,
+              "Mandatory parameter %s contains space which is not created!"
+                  .formatted(DefaultViewHandlerProperties.SPACE_IDS));
+        }
+
+      } catch (NoCursor | NoSuchElementException e) {
+        return new ErrorResult(
+            XyzError.ILLEGAL_ARGUMENT,
+            "Mandatory parameter %s contains space which is not created!"
+                .formatted(DefaultViewHandlerProperties.SPACE_IDS));
+      }
+    }
+    return new SuccessResult();
   }
 
   private boolean handlerClassMatches(@NotNull Class<?> requestedClass, @NotNull EventHandler eventHandler) {
     return requestedClass.getName().equals(eventHandler.getClassName());
   }
 
-  private @NotNull Result storageValidationError(@NotNull EventHandler eventHandler, @NotNull String storagePropertyName) {
+  private @NotNull Result storageValidationError(
+      @NotNull EventHandler eventHandler, @NotNull String storagePropertyName) {
     Object storageIdProp = eventHandler.getProperties().get(storagePropertyName);
     if (storageIdProp == null) {
       return new ErrorResult(
           XyzError.ILLEGAL_ARGUMENT,
-              "Mandatory properties parameter %s missing!".formatted(storagePropertyName));
+          "Mandatory properties parameter %s missing!".formatted(storagePropertyName));
     }
     String storageId = storageIdProp.toString();
     if (StringUtils.isBlank(storageId)) {
       return new ErrorResult(
           XyzError.ILLEGAL_ARGUMENT,
-          "Mandatory parameter %s can't be empty/blank!"
-                  .formatted(storagePropertyName));
+          "Mandatory parameter %s can't be empty/blank!".formatted(storagePropertyName));
     }
     return storageExistenceValidation(storageId);
   }
