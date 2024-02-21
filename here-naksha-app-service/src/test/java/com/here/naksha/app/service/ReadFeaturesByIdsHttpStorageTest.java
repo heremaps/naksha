@@ -40,7 +40,7 @@ import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
  * Tests for GET /hub/spaces/{spaceId}/features/{featureId} against {@link com.here.naksha.storage.http.HttpStorage}
  */
 @WireMockTest(httpPort = 8089)
-class ReadFeaturesByIdsHttpTest extends ApiTest {
+class ReadFeaturesByIdsHttpStorageTest extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
 
@@ -51,7 +51,7 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByIdsHttp/setup");
+    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByIdsHttpStorage/setup");
   }
 
   @Test
@@ -62,7 +62,7 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
     final String idsQueryParam =
             "id=my-custom-id-400-1" + "&id=my-custom-id-400-2" + "&id=missing-id-1" + "&id=missing-id-2";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByIdsHttp/TC0400_ExistingAndMissingIds/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByIdsHttpStorage/TC0400_ExistingAndMissingIds/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
 
     UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
@@ -91,7 +91,7 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
     // Given: Features By Ids request (against configured space)
     final String idsQueryParam = "?id=1000" + "&id=missing-id-1" + "&id=missing-id-2";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByIdsHttp/TC0401_MissingIds/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByIdsHttpStorage/TC0401_MissingIds/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
 
     UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
@@ -119,7 +119,7 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
     // Given: Feature By Id request (against already existing space)
     final String featureId = "1";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByIdsHttp/TC0404_ExistingId/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByIdsHttpStorage/TC0404_ExistingId/feature_response_part.json");
     final String streamId = UUID.randomUUID().toString();
 
     final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT + "/1");
@@ -145,7 +145,7 @@ class ReadFeaturesByIdsHttpTest extends ApiTest {
     // Given: Feature By Id request, against existing space, for missing feature Id
     final String featureId = "missing-id";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByIdsHttp/TC0405_MissingId/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByIdsHttpStorage/TC0405_MissingId/feature_response_part.json");
     final String streamId = UUID.randomUUID().toString();
 
     final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT + "/" + featureId);

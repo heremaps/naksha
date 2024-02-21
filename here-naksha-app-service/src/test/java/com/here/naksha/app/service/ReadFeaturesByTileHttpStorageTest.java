@@ -44,7 +44,7 @@ import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 @WireMockTest(httpPort = 8089)
-class ReadFeaturesByTileHttpTest extends ApiTest {
+class ReadFeaturesByTileHttpStorageTest extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
 
@@ -53,18 +53,31 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByTileHttp/setup");
+    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByTileHttpStorage/setup");
   }
 
   private static Stream<Arguments> standardTestParams() {
     return Stream.of(
+            standardTestSpec(
+                    // for given Tile and limit
+                    "tc0806_testGetByTileWithLimit",
+                    TYPE_QUADKEY,
+                    "1",
+                    List.of(
+                            "limit=2"
+                    ),
+                    "ReadFeatures/ByTileHttpStorage/TC0806_WithLimit/feature_response_part.json",
+                    200,
+                    false,
+                    true
+            ),
             standardTestSpec(
                     // for empty Tile Id
                     "tc0809_testGetByTileWithoutTile",
                     TYPE_QUADKEY,
                     "",
                     null,
-                    "ReadFeatures/ByTileHttp/TC0809_WithoutTile/feature_response_part.json",
+                    "ReadFeatures/ByTileHttpStorage/TC0809_WithoutTile/feature_response_part.json",
                     400,
                     false,
                     false
@@ -75,7 +88,7 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
                     TYPE_QUADKEY,
                     "A",
                     null,
-                    "ReadFeatures/ByTileHttp/TC0810_InvalidTileId/feature_response_part.json",
+                    "ReadFeatures/ByTileHttpStorage/TC0810_InvalidTileId/feature_response_part.json",
                     400,
                     false,
                     false
@@ -88,7 +101,7 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
                     List.of(
                             "margin=20"
                     ),
-                    "ReadFeatures/ByTileHttp/TC0817_TileWithMargin/feature_response_part.json",
+                    "ReadFeatures/ByTileHttpStorage/TC0817_TileWithMargin/feature_response_part.json",
                     200,
                     false,
                     true
@@ -101,7 +114,7 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
                     List.of(
                             "margin=-1"
                     ),
-                    "ReadFeatures/ByTileHttp/TC0818_InvalidMargin/feature_response_part.json",
+                    "ReadFeatures/ByTileHttpStorage/TC0818_InvalidMargin/feature_response_part.json",
                     400,
                     false,
                     false
@@ -112,7 +125,7 @@ class ReadFeaturesByTileHttpTest extends ApiTest {
                     "not_supported_file_type",
                     "120203302030322200",
                     null,
-                    "ReadFeatures/ByTileHttp/TC0818_InvalidMargin/feature_response_part.json",
+                    "ReadFeatures/ByTileHttpStorage/TC0818_InvalidMargin/feature_response_part.json",
                     400, // Http storage returns 501 but at Hub level validation is preformed an 400 thrown
                     false,
                     false

@@ -36,7 +36,7 @@ import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 @WireMockTest(httpPort = 8089)
-class ReadFeaturesByBBoxHttpTest extends ApiTest {
+class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
 
@@ -50,7 +50,7 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
   */
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBoxHttp/setup");
+    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup");
   }
 
   @Test
@@ -61,7 +61,7 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=one";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByBBoxHttp/TC0700_SingleTag/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByBBoxHttpStorage/TC0700_SingleTag/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
 
     final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
@@ -71,11 +71,50 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
             .withQueryParam("east", equalTo("180.0"))
             .withQueryParam("north", equalTo("90.0"))
             .willReturn(okJson(expectedBodyPart)));
-    // Now the tags are not supported and will be ignored. TODO adamczyk: fix when tags will be supported
+    // Now the tags are not supported and will be ignored.
 
     // When: Get Features By BBox request is submitted to NakshaHub
     HttpResponse<String> response = nakshaClient
             .get("hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+
+    // Then: Verify request reached endpoint once
+    verify(1, getRequestedFor(endpointPath));
+  }
+
+  @Test
+  void tc0706_testGetByBBoxWithLimit() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Validate features returned match with given BBox condition and limit
+
+    // Given: Features By BBox request (against configured space)
+    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tagsQueryParam = "tags=one";
+    final String limitQueryParam = "limit=2";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByBBoxHttpStorage/TC0706_WithLimit/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+
+    final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
+    stubFor(get(endpointPath)
+            .withQueryParam("west", equalTo("-180.0"))
+            .withQueryParam("south", equalTo("-90.0"))
+            .withQueryParam("east", equalTo("180.0"))
+            .withQueryParam("north", equalTo("90.0"))
+            .withQueryParam("limit", equalTo("2"))
+            .willReturn(okJson(expectedBodyPart)));
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient
+            .get(
+                    "hub/spaces/" + SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam + "&"
+                            + limitQueryParam,
+                    streamId);
 
     // Then: Perform assertions
     assertThat(response)
@@ -94,7 +133,7 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
     // Given: Features By BBox request (against configured space)
     final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByBBoxHttp/TC0707_BBoxOnly/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByBBoxHttpStorage/TC0707_BBoxOnly/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
 
     final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
@@ -125,7 +164,7 @@ class ReadFeaturesByBBoxHttpTest extends ApiTest {
     // Given: Features By BBox request (against configured space)
     final String bboxQueryParam = "west=-181&south=50.1175&east=8.6729&north=50.1248";
     final String expectedBodyPart =
-            loadFileOrFail("ReadFeatures/ByBBoxHttp/TC0710_InvalidCoordinate/feature_response_part.json");
+            loadFileOrFail("ReadFeatures/ByBBoxHttpStorage/TC0710_InvalidCoordinate/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
