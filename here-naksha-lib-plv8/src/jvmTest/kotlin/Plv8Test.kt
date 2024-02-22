@@ -107,6 +107,7 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun dropTestCollectionsIfExists() {
         val session = NakshaSession.get()
+        session.sql.execute("DELETE FROM naksha_collections WHERE id = ANY($1)", arrayOf(arrayOf("foo","bar")))
         Static.collectionDrop(session.sql, "foo")
         Static.collectionDrop(session.sql, "bar")
         session.sql.execute("COMMIT")

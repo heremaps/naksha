@@ -60,6 +60,22 @@ class JvmPlv8SqlQuery(query: String) {
                 is Double -> stmt.setDouble(index, arg)
                 is String -> stmt.setString(index, arg)
                 is ByteArray -> stmt.setBytes(index, arg)
+                is Array<*> -> {
+                    if (arg.size == 0) throw IllegalArgumentException("Can't detect type of empty array")
+                    val testValue = arg[0]
+                    when (testValue) {
+                        is Boolean -> stmt.setArray(index, stmt.connection.createArrayOf("bool", arg))
+                        is Short -> stmt.setArray(index, stmt.connection.createArrayOf("int2", arg))
+                        is Int -> stmt.setArray(index, stmt.connection.createArrayOf("int4", arg))
+                        is Long -> stmt.setArray(index, stmt.connection.createArrayOf("int8", arg))
+                        is JvmBigInt64 -> stmt.setArray(index, stmt.connection.createArrayOf("int8", arg))
+                        is Float -> stmt.setArray(index, stmt.connection.createArrayOf("real", arg))
+                        is Double -> stmt.setArray(index, stmt.connection.createArrayOf("double precision", arg))
+                        is String -> stmt.setArray(index, stmt.connection.createArrayOf("text", arg))
+                        is ByteArray -> stmt.setArray(index, stmt.connection.createArrayOf("bytea", arg))
+                        else -> throw IllegalArgumentException("Auto detection of array-type failed due to unknown first element")
+                    }
+                }
                 null -> stmt.setNull(index, 0)
                 else -> throw IllegalArgumentException("args[" + (index - 1) + "]")
             }

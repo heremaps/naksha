@@ -93,7 +93,10 @@ CREATE OR REPLACE FUNCTION naksha_trigger_after() RETURNS trigger AS $$
   return OLD;
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
--- Returns always op, id, xyz, optional: geo, feature, tags, err_no and err_msg
+-- TODO: If needed, create a naksha_write_unordered_features!
+-- This function expects that operations are ordered by id to avoid deadlocks
+-- CREATED, UPDATED -> return null for tags, feature, geo_type and geo
+-- DELETED, PURGED, ERROR -> return all data
 CREATE OR REPLACE FUNCTION naksha_write_features(
   collection_id text,
   ops bytea[], -- XyzOp (op, id, uuid)
@@ -107,7 +110,8 @@ CREATE OR REPLACE FUNCTION naksha_write_features(
   session.writeFeatures(collection_id, ops, features, geometries_type, geometries_bytes, tags);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
--- Returns always op, id, xyz, optional: geo, feature, tags, err_no and err_msg
+-- CREATED, UPDATED -> return null for tags, feature, geo_type and geo
+-- DELETED, PURGED, ERROR -> return all data
 CREATE OR REPLACE FUNCTION naksha_write_collections(
   ops bytea[], -- XyzOp (op, id, uuid)
   features bytea[], -- JbFeature (without XZY namespace)
