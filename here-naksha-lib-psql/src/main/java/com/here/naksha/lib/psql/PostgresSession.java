@@ -448,7 +448,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
             + "naksha_feature_type(jsondata),\n"
             + "naksha_feature_ptype(jsondata),\n"
             + "jsondata,\n"
-            + "ST_AsEWKB(geo),\n"
+            + "naksha_geometry(geo_type,geo),\n"
             + "null FROM ")
         .addIdent(collection);
     if (spatial_where.length() > 0 || props_where.length() > 0) {
@@ -587,7 +587,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
-          "SELECT op, id, xyz, tags, feature, geo_type, ST_AsEWKB(geo), err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
+          "SELECT op, id, xyz, tags, feature, geo_type, naksha_geometry(geo_type, geo), err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
       try {
         final List<@NotNull CODEC> features = writeRequest.features;
         final int SIZE = writeRequest.features.size();
@@ -634,8 +634,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       //      } else {
       //        partition_id = -1;
       //      }
-      final PreparedStatement stmt =
-          prepareStatement("SELECT op, id, xyz, tags, feature, ST_AsEWKB(geo), err_no, err_msg\n"
+      final PreparedStatement stmt = prepareStatement(
+          "SELECT op, id, xyz, tags, feature, naksha_geometry(geo_type, geo), err_no, err_msg\n"
               + "FROM naksha_write_features(?,?,?,?,?);");
       try (final Json json = Json.get()) {
         // new array list, so we don't modify original order
