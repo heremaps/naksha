@@ -42,7 +42,7 @@ public class DefaultViewHandlerTest extends ApiTest {
 
         //view stuff
         createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_view_dev.json");
-        createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_view_handler.json");
+        createHandler(nakshaClient, "DefaultViewHandler/setup/create_view_handler.json");
         createSpace(nakshaClient, "DefaultViewHandler/setup/create_view_space.json");
 
         //setup data
@@ -82,6 +82,7 @@ public class DefaultViewHandlerTest extends ApiTest {
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
+
     @Test
     void tc5002_upsertFeatureByViewHandler_featureAvailableInAllLayers() throws Exception {
         // Given: Load data to be sent to view handler. Object with this id is available in all spaces.
@@ -108,6 +109,7 @@ public class DefaultViewHandlerTest extends ApiTest {
                 .hasJsonBody(expectedBodyPart, "Upsert Feature response body doesn't match");
 
     }
+
     @Test
     void tc5003_upsertFeatureByViewHandler_featureAvailableInDlbAndBase() throws Exception {
         // Given: Load data to be sent to view handler. Object with this id is available in DLB and BASE.
@@ -164,7 +166,6 @@ public class DefaultViewHandlerTest extends ApiTest {
                 .hasJsonBody(expectedBodyPart, "Upsert Feature response body doesn't match");
     }
 
-
     @Test
     void tc5010_searchById_GetFromDeltaWhenAvailableAtAllSpaces() throws Exception {
         //given Feature with this id is available in all spaces (delta,dlb,base)
@@ -181,7 +182,6 @@ public class DefaultViewHandlerTest extends ApiTest {
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
-
 
     @Test
     void tc5011_searchById_GetFromDeltaWhenAvailableAtDeltaAndDlb() throws Exception {
@@ -200,7 +200,6 @@ public class DefaultViewHandlerTest extends ApiTest {
                 .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
 
-
     @Test
     void tc5012_searchById_GetFromDeltaWhenAvailableAtDeltaAndBase() throws Exception {
         //given Feature with this id is available in delta and base spaces
@@ -217,7 +216,6 @@ public class DefaultViewHandlerTest extends ApiTest {
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
-
 
     @Test
     void tc5013_searchById_GetFromDlbWhenAvailableAtDlbAndBase() throws Exception {
