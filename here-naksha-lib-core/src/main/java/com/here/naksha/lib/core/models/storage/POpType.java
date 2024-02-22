@@ -28,7 +28,7 @@ public class POpType extends OpType {
   public static final POpType GT = defIgnoreCase(POpType.class, "gt").with(POpType.class, (self) -> self.op = ">");
   public static final POpType GTE = defIgnoreCase(POpType.class, "gte").with(POpType.class, (self) -> self.op = ">=");
   public static final POpType LT = defIgnoreCase(POpType.class, "lt").with(POpType.class, (self) -> self.op = "<");
-  public static final POpType LTE = defIgnoreCase(POpType.class, "lte").with(POpType.class, (self) -> self.op = "=");
+  public static final POpType LTE = defIgnoreCase(POpType.class, "lte").with(POpType.class, (self) -> self.op = "<=");
   public static final POpType NULL = defIgnoreCase(POpType.class, "null");
   public static final POpType NOT_NULL = defIgnoreCase(POpType.class, "notNull");
   public static final POpType CONTAINS =
