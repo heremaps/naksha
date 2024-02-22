@@ -51,7 +51,7 @@ public class PsqlCursorTest extends SessionTest{
     XyzFeatureCodecFactory xyzFeatureCodecFactory = XyzFeatureCodecFactory.get();
 
 
-    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, statement, rs);
+    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, null, statement, rs);
 
     // when
     when(rs.next()).thenReturn(true);
@@ -102,7 +102,7 @@ public class PsqlCursorTest extends SessionTest{
     ResultSet rs = Mockito.mock(ResultSet.class);
     XyzFeatureCodecFactory xyzFeatureCodecFactory = XyzFeatureCodecFactory.get();
 
-    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, statement, rs);
+    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, null, statement, rs);
 
     when(rs.next()).thenReturn(true);
 

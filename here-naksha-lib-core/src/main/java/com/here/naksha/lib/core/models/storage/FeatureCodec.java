@@ -39,6 +39,11 @@ import org.locationtech.jts.io.ParseException;
 public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, SELF>>
     extends FeatureBox<FEATURE, SELF> {
 
+  public static final short GEO_TYPE_NULL = 0;
+  public static final short GEO_TYPE_WKB = 1;
+  public static final short GEO_TYPE_EWKB = 2;
+  public static final short GEO_TYPE_TWKB = 3;
+
   /**
    * Tries to decode (disassemble) a feature set via {@link #setFeature(Object)} or {@link #withFeature(Object)} into its parts. Unless
    * decoding fails (raising an exception), the individual parts should thereafter be readable.
@@ -61,10 +66,11 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    */
   public abstract @NotNull SELF encodeFeature(boolean force);
 
+  protected abstract Short getDefaultWkbType();
+
   /**
-   * Copy all the values from other codec supplied as an argument.
-   * This is useful while iterating through in-memory based codec list, without having to
-   * allocate memory with deep clone.
+   * Copy all the values from other codec supplied as an argument. This is useful while iterating through in-memory based codec list,
+   * without having to allocate memory with deep clone.
    *
    * @param otherCodec The other codec which is to be cloned
    * @return this.
@@ -93,6 +99,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     tagsJbon = otherCodec.tagsJbon;
     featureJbon = otherCodec.featureJbon;
     wkb = otherCodec.wkb;
+    wkbType = otherCodec.wkbType;
     geometry = otherCodec.geometry;
     return self();
   }
@@ -143,6 +150,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     id = null;
     uuid = null;
     wkb = null;
+    wkbType = null;
     geometry = null;
     featureJbon = null;
     xyzNsJbon = null;
@@ -164,6 +172,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     xyzNsJbon = null;
     tagsJbon = null;
     wkb = null;
+    wkbType = null;
     geometry = null;
     return self();
   }
@@ -217,6 +226,11 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   protected byte @Nullable [] wkb;
 
   /**
+   * The wkb type whether it's EWKB, WKB or TWKB.
+   */
+  protected @Nullable Short wkbType = getDefaultWkbType();
+
+  /**
    * The JTS geometry build from the {@link #wkb}.
    */
   protected @Nullable Geometry geometry;
@@ -257,6 +271,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     final Geometry old = getGeometry();
     this.geometry = geometry;
     this.wkb = null;
+    this.wkbType = null;
     return (G) old;
   }
 
@@ -269,6 +284,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   public @NotNull SELF withGeometry(@Nullable Geometry geometry) {
     this.geometry = geometry;
     this.wkb = null;
+    this.wkbType = null;
     return self();
   }
 
@@ -328,10 +344,24 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
       if (geometry != null) {
         try (final Json jp = Json.get()) {
           this.wkb = jp.wkbWriter.write(geometry);
+          this.wkbType = GEO_TYPE_WKB;
         }
       }
     }
     return wkb;
+  }
+
+  /**
+   * Type of binary format.
+   *
+   * @return
+   */
+  public @Nullable Short getWkbType() {
+    return wkbType;
+  }
+
+  public void setWkbType(@Nullable Short wkbType) {
+    this.wkbType = wkbType;
   }
 
   /**
@@ -447,6 +477,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
 
   /**
    * Sets feature as jbon byte array.
+   *
    * @param featureJbon
    */
   public void setFeatureJbon(byte[] featureJbon) {
@@ -464,6 +495,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
 
   /**
    * Sets tags as jbon byte array.
+   *
    * @param tagsJbon
    */
   public void setTagsJbon(byte[] tagsJbon) {
@@ -472,6 +504,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
 
   /**
    * Returns tags as jbon byte array.
+   *
    * @return
    */
   public byte[] getTagsJbon() {
@@ -480,6 +513,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
 
   /**
    * Sets xyz as jbon byte array.
+   *
    * @param xyzNsJbon
    */
   public void setXyzNsJbon(byte[] xyzNsJbon) {
@@ -488,6 +522,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
 
   /**
    * Returns tags as jbon byte array.
+   *
    * @return
    */
   public byte[] getXyzNsJbon() {

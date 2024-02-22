@@ -329,6 +329,7 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
     if (!currentRow.valid) {
       throw new NoSuchElementException();
     }
+    currentRow.codec.encodeFeature(false);
     String uuid = currentRow.codec.getUuid();
     assert uuid != null;
     return uuid;

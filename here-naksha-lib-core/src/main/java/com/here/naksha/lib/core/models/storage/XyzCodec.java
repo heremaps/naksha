@@ -57,6 +57,11 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
 
   private final @NotNull Class<FEATURE> featureClass;
 
+  @Override
+  protected Short getDefaultWkbType() {
+    return GEO_TYPE_WKB;
+  }
+
   @NotNull
   @Override
   public final SELF decodeParts(boolean force) {
@@ -143,7 +148,11 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     }
     feature.setGeometry(JTSHelper.fromGeometry(getGeometry()));
     if (xyzNsJbon != null) {
-      feature.getProperties().setXyzNamespace(getXyzNamespaceFromFromJbon());
+      XyzNamespace xyzNs = getXyzNamespaceFromFromJbon();
+      feature.getProperties().setXyzNamespace(xyzNs);
+      if (uuid == null) {
+        uuid = xyzNs.getUuid();
+      }
     }
     isEncoded = true;
     return self();

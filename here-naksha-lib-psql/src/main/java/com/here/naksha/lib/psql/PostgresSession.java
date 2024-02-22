@@ -551,7 +551,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         }
         final ResultSet rs = stmt.executeQuery();
         final PsqlCursor<XyzFeature, XyzFeatureCodec> cursor =
-            new PsqlCursor<>(XyzFeatureCodecFactory.get(), this, stmt, rs);
+            new PsqlCursor<>(XyzFeatureCodecFactory.get(), null, this, stmt, rs);
         return new PsqlSuccess(cursor);
       } catch (SQLException e) {
         try {
@@ -586,19 +586,13 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
-          "SELECT op, id, xyz, tags, feature, ST_AsEWKB(geo), err_no, err_msg FROM naksha_write_collections(?,?,?,?);\n");
-      // op text, id text, xyz bytea, tags bytea, feature bytea, geo geometry, err_no text, err_msg text
-      /**
-       *   ops bytea[], -- XyzOp (op, id, uuid)
-       *   features bytea[], -- JbFeature (without XZY namespace)
-       *   geometries bytea[], -- WKB
-       *   tags bytea[] -- XyzTags
-       */
+          "SELECT op, id, xyz, tags, feature, geo_type, ST_AsEWKB(geo), err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
       try {
         final List<@NotNull CODEC> features = writeRequest.features;
         final int SIZE = writeRequest.features.size();
         final byte[][] reqOps = new byte[SIZE][];
         final byte[][] reqFeatures = new byte[SIZE][];
+        final Short[] reqGeoType = new Short[SIZE];
         final byte[][] reqGeo = new byte[SIZE][];
         final byte[][] reqTags = new byte[SIZE][];
         for (int i = 0; i < SIZE; i++) {
@@ -606,15 +600,19 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           codec.decodeParts(false);
           reqOps[i] = codec.getXyzOp();
           reqFeatures[i] = codec.getFeatureJbon();
-          reqGeo[i] = new byte[] {}; // codec.getWkb();
+          reqGeo[i] = codec.getWkb();
+          reqGeoType[i] = codec.getWkbType(); // codec has to dec
           reqTags[i] = codec.getTagsJbon();
         }
         stmt.setArray(1, psqlConnection.createArrayOf("bytea", reqOps));
         stmt.setArray(2, psqlConnection.createArrayOf("bytea", reqFeatures));
-        stmt.setArray(3, psqlConnection.createArrayOf("bytea", reqGeo));
-        stmt.setArray(4, psqlConnection.createArrayOf("bytea", reqTags));
+        stmt.setArray(3, psqlConnection.createArrayOf("int2", reqGeoType));
+        stmt.setArray(4, psqlConnection.createArrayOf("bytea", reqGeo));
+        stmt.setArray(5, psqlConnection.createArrayOf("bytea", reqTags));
         final ResultSet rs = stmt.executeQuery();
-        return new PsqlSuccess(new PsqlCursor<>(XyzCollectionCodecFactory.get(), this, stmt, rs), null);
+        RequestedParams requestedParams = new RequestedParams(reqFeatures, reqTags, reqGeo);
+        return new PsqlSuccess(
+            new PsqlCursor<>(XyzCollectionCodecFactory.get(), requestedParams, this, stmt, rs), null);
       } catch (Throwable e) {
         try {
           stmt.close();
@@ -669,8 +667,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         stmt.setArray(4, psqlConnection.createArrayOf("bytea", geo_arr));
         stmt.setArray(5, psqlConnection.createArrayOf("bytea", tags_arr));
         final ResultSet rs = stmt.executeQuery();
+        RequestedParams requestedParams = new RequestedParams(feature_arr, tags_arr, geo_arr);
         final PsqlCursor<FEATURE, CODEC> cursor =
-            new PsqlCursor<>(writeRequest.getCodecFactory(), this, stmt, rs);
+            new PsqlCursor<>(writeRequest.getCodecFactory(), requestedParams, this, stmt, rs);
         try (final PreparedStatement err_stmt = prepareStatement("SELECT naksha_err_no(), naksha_err_msg();")) {
           final ResultSet err_rs = err_stmt.executeQuery();
           err_rs.next();
