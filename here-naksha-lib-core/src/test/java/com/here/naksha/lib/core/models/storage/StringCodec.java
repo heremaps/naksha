@@ -28,6 +28,10 @@ import org.jetbrains.annotations.NotNull;
 
 class StringCodec extends FeatureCodec<String, StringCodec> {
 
+  @Override
+  protected Short getDefaultWkbType() {
+    return GEO_TYPE_WKB;
+  }
 
   @Override
   public @NotNull StringCodec decodeParts(boolean force) {

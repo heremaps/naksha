@@ -344,7 +344,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
       if (geometry != null) {
         try (final Json jp = Json.get()) {
           this.wkb = jp.wkbWriter.write(geometry);
-          this.wkbType = GEO_TYPE_WKB;
+          this.wkbType = GEO_TYPE_TWKB;
         }
       }
     }

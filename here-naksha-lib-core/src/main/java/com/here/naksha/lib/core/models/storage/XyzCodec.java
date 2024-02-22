@@ -59,7 +59,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
 
   @Override
   protected Short getDefaultWkbType() {
-    return GEO_TYPE_WKB;
+    return GEO_TYPE_TWKB;
   }
 
   @NotNull
