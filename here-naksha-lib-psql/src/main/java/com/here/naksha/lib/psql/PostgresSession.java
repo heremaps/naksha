@@ -287,7 +287,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       final List<@NotNull String> path, //
       @NotNull OpType opType, //
       @Nullable Object value //
-      ) {
+  ) {
     if (value == null) {
       throw new IllegalArgumentException("Invalid value NULL for op: " + opType);
     }
@@ -407,7 +407,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add("(");
       addJsonPath(sql, path, path.size(), false, true);
       sql.add("::int8 <= ?");
-      if (!(value instanceof Number)) throw new IllegalArgumentException("Value must be a number");
+      if (!(value instanceof Number)) {
+        throw new IllegalArgumentException("Value must be a number");
+      }
       final Long txn = ((Number) value).longValue();
       parameter.add(txn);
       if (isHstQuery) {
@@ -424,7 +426,13 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     try (final Json jp = Json.get()) {
       final PGobject jsonb = new PGobject();
       jsonb.setType("jsonb");
-      jsonb.setValue(jp.writer().writeValueAsString(value));
+      // TODO: Remove this, we do not want to guess!
+      if (value instanceof String && Json.mightBeJson((String) value)) {
+        // it's already a json - .writeValueAsString would add double quoting
+        jsonb.setValue((String) value);
+      } else {
+        jsonb.setValue(jp.writer().writeValueAsString(value));
+      }
       return jsonb;
     } catch (SQLException | JsonProcessingException e) {
       throw unchecked(e);
@@ -574,8 +582,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     return prepareQuery(historyCollection, spatial_where, hst_props_where.toString(), readFeatures.limit);
   }
 
-  @NotNull
-  <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
+  @NotNull <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
