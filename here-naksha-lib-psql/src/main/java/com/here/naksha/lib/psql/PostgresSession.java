@@ -274,7 +274,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     }
     sql.add(')');
     if (text) {
-      sql.add("  COLLATE \"C\" ");
+      sql.add(" COLLATE \"C\" ");
     }
     if (nullif) {
       sql.add(",'null')");
@@ -304,27 +304,27 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(" ").add(opString).add(" ?::jsonb");
       parameter.add(toJsonb(value));
     } else if (value instanceof CharSequence) {
-      addJsonPath(sql, path, path.size(), true, true);
+      addJsonPath(sql, path, path.size(), true, false);
       sql.add("::text ").add(opString).add(" ?");
       parameter.add(value);
     } else if (value instanceof Double) {
-      addJsonPath(sql, path, path.size(), false, true);
+      addJsonPath(sql, path, path.size(), false, false);
       sql.add("::double precision ").add(opString).add(" ?");
       parameter.add(value);
     } else if (value instanceof Float) {
-      addJsonPath(sql, path, path.size(), false, true);
+      addJsonPath(sql, path, path.size(), false, false);
       sql.add("::double precision ").add(opString).add(" ?");
       parameter.add(((Number) value).doubleValue());
     } else if (value instanceof Long) {
-      addJsonPath(sql, path, path.size(), false, true);
+      addJsonPath(sql, path, path.size(), false, false);
       sql.add("::int8 ").add(opString).add(" ?");
       parameter.add(value);
     } else if (value instanceof Number) {
-      addJsonPath(sql, path, path.size(), false, true);
+      addJsonPath(sql, path, path.size(), false, false);
       sql.add("::int8 ").add(opString).add(" ?");
       parameter.add(((Number) value).longValue());
     } else if (value instanceof Boolean) {
-      addJsonPath(sql, path, path.size(), false, true);
+      addJsonPath(sql, path, path.size(), false, false);
       sql.add("::bool ").add(opString).add(" ?");
       parameter.add(value);
     } else {
