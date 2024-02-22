@@ -35,29 +35,22 @@ import org.slf4j.LoggerFactory;
 
 public class HttpStorage implements IStorage {
 
-  private final HttpClient httpStorageClient;
-
   private static final Logger log = LoggerFactory.getLogger(HttpStorage.class);
 
-  private final HttpStorageProperties properties;
+  private final RequestSender requestSender;
 
   public HttpStorage(@NotNull Storage storage) {
-    properties = HttpStorage.getProperties(storage);
-    httpStorageClient = HttpClient.newBuilder()
+    HttpStorageProperties properties = HttpStorage.getProperties(storage);
+    HttpClient httpStorageClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(properties.getConnectTimeout()))
         .build();
+    requestSender = new RequestSender(
+        properties.getUrl(), properties.getHeaders(), httpStorageClient, properties.getSocketTimeout());
   }
 
   @Override
   public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new HttpStorageReadSession(
-        context,
-        useMaster,
-        new RequestSender(
-            properties.getUrl(),
-            properties.getHeaders(),
-            httpStorageClient,
-            Duration.ofSeconds(properties.getSocketTimeout())));
+    return new HttpStorageReadSession(context, useMaster, requestSender);
   }
 
   @Override

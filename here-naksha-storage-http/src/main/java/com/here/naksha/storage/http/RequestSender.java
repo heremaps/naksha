@@ -18,15 +18,19 @@
  */
 package com.here.naksha.storage.http;
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.net.http.HttpRequest.newBuilder;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,46 +41,58 @@ class RequestSender {
 
   private final HttpClient httpClient;
 
-  public HttpRequest.Builder getBuilder() {
-    return builder;
-  }
+  // Do not modify after constructor because RequestSender is shared among multiple requests.
+  private final HttpRequest.Builder baseBuilder;
+  private final long socketTimeoutSec;
 
-  private final HttpRequest.Builder builder;
-
-  public RequestSender(String hostUrl, Map<String, String> headers, HttpClient httpClient, Duration socketTimeout) {
+  public RequestSender(
+      String hostUrl, Map<String, String> defaultHeaders, HttpClient httpClient, long socketTimeoutSec) {
     this.hostUrl = hostUrl;
-    this.builder = newBuilder();
     this.httpClient = httpClient;
 
-    builder.timeout(socketTimeout);
-    headers.forEach(builder::header);
+    this.baseBuilder = newBuilder().timeout(Duration.ofSeconds(socketTimeoutSec));
+    this.socketTimeoutSec = socketTimeoutSec;
+    defaultHeaders.forEach(baseBuilder::header);
   }
-
-  private String baseEndpoint;
 
   /**
    * Send a request configured based on enclosing {@link HttpStorage}.
    *
    * @param endpoint does not contain host:port part, starts with "/".
    */
-  HttpResponse<String> sendRequest(String endpoint) throws IOException, InterruptedException {
-    String uri = hostUrl + baseEndpoint + endpoint;
-    HttpRequest request = builder.uri(URI.create(uri)).build();
-
-    long startTime = System.currentTimeMillis();
-    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-    long executionTime = System.currentTimeMillis() - startTime;
-    log.info("Request to {} took {}ms", request.uri(), executionTime);
-
-    return response;
+  HttpResponse<String> sendRequest(String endpoint) {
+    return sendRequest(endpoint, null, null, null);
   }
 
-  /**
-   * Set base endpoint path that is always appended to HttpStorage specific target host:port
-   *
-   * @param baseEndpoint does not contain host:port part, starts with "/", does not end with "/".
-   */
-  public void setBaseEndpoint(String baseEndpoint) {
-    this.baseEndpoint = baseEndpoint;
+  HttpResponse<String> sendRequest(
+      @NotNull String endpoint,
+      @Nullable Map<String, String> headers,
+      @Nullable String httpMethod,
+      @Nullable String body) {
+    URI uri = URI.create(hostUrl + endpoint);
+    HttpRequest.Builder specificBuilder = baseBuilder.copy().uri(uri);
+
+    if (headers != null) headers.forEach(specificBuilder::header);
+
+    HttpRequest.BodyPublisher bodyPublisher =
+        body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body);
+    if (httpMethod != null) specificBuilder.method(httpMethod, bodyPublisher);
+    HttpRequest specificRequest = specificBuilder.build();
+
+    return sendRequest(specificRequest);
+  }
+
+  private HttpResponse<String> sendRequest(HttpRequest specificRequest) {
+    try {
+      long startTime = System.currentTimeMillis();
+      CompletableFuture<HttpResponse<String>> futureResponse =
+          httpClient.sendAsync(specificRequest, HttpResponse.BodyHandlers.ofString());
+      HttpResponse<String> response = futureResponse.get(socketTimeoutSec, TimeUnit.SECONDS);
+      long executionTime = System.currentTimeMillis() - startTime;
+      log.info("Request to {} took {}ms", specificRequest.uri(), executionTime);
+      return response;
+    } catch (Exception e) {
+      throw unchecked(e);
+    }
   }
 }

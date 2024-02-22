@@ -46,8 +46,6 @@ class HttpStorageReadExecute {
   @NotNull
   static Result execute(ReadFeaturesProxyWrapper request, RequestSender sender)
       throws IOException, InterruptedException {
-    String baseEndpoint = request.getCollections().get(0);
-    sender.setBaseEndpoint("/" + baseEndpoint);
 
     return switch (request.getReadRequestType()) {
       case GET_BY_ID -> executeFeatureById(request, sender);
@@ -61,7 +59,8 @@ class HttpStorageReadExecute {
       throws IOException, InterruptedException {
     String featureId = readRequest.getQueryParameter(FEATURE_ID);
 
-    HttpResponse<String> response = requestSender.sendRequest(String.format("/features/%s", featureId));
+    HttpResponse<String> response =
+        requestSender.sendRequest(String.format("/%s/features/%s", baseEndpoint(readRequest), featureId));
 
     return prepareResult(response, XyzFeature.class, List::of);
   }
@@ -71,7 +70,8 @@ class HttpStorageReadExecute {
     List<String> featureIds = readRequest.getQueryParameter(FEATURE_IDS);
     String queryParamsString = FEATURE_IDS + "=" + String.join(",", featureIds);
 
-    HttpResponse<String> response = requestSender.sendRequest(String.format("/features?%s", queryParamsString));
+    HttpResponse<String> response = requestSender.sendRequest(
+        String.format("/%s/features?%s", baseEndpoint(readRequest), queryParamsString));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
@@ -82,7 +82,8 @@ class HttpStorageReadExecute {
 
     warnOnUnsupportedQueryParam(readRequest, PROPERTY_SEARCH_OP);
 
-    HttpResponse<String> response = requestSender.sendRequest(String.format("/bbox?%s", queryParamsString));
+    HttpResponse<String> response =
+        requestSender.sendRequest(String.format("/%s/bbox?%s", baseEndpoint(readRequest), queryParamsString));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
@@ -97,8 +98,8 @@ class HttpStorageReadExecute {
       return new ErrorResult(XyzError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
     warnOnUnsupportedQueryParam(readRequest, PROPERTY_SEARCH_OP);
 
-    HttpResponse<String> response =
-        requestSender.sendRequest(String.format("/quadkey/%s?%s", tileId, queryParamsString));
+    HttpResponse<String> response = requestSender.sendRequest(
+        String.format("/%s/quadkey/%s?%s", baseEndpoint(readRequest), tileId, queryParamsString));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
@@ -115,9 +116,9 @@ class HttpStorageReadExecute {
     return createHttpResultFromFeatureList(typedResponseToFeatureList.apply(resultFeatures));
   }
 
-  private static void warnOnUnsupportedQueryParam(ReadFeaturesProxyWrapper readRequest, String tag) {
-    if (readRequest.getQueryParameter(tag) != null)
-      log.warn("The " + tag + " query param for " + readRequest.getReadRequestType()
+  private static void warnOnUnsupportedQueryParam(ReadFeaturesProxyWrapper readRequest, String key) {
+    if (readRequest.getQueryParameter(key) != null)
+      log.warn("The " + key + " query param for " + readRequest.getReadRequestType()
           + " is not supported yet and will be ignored.");
   }
 
@@ -166,5 +167,9 @@ class HttpStorageReadExecute {
       case HttpURLConnection.HTTP_NOT_FOUND -> XyzError.NOT_FOUND;
       default -> throw new IllegalArgumentException("Not known http error status returned: " + httpStatus);
     };
+  }
+
+  private static String baseEndpoint(ReadFeaturesProxyWrapper request) {
+    return request.getCollections().get(0);
   }
 }
