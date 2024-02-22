@@ -1,0 +1,48 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "id": "my-custom-id-800-6",
+      "type": "Feature",
+      "properties": {
+        "speedLimit": "60",
+        "@ns:com:here:xyz": {
+          "tags": [ "one", "two", "three", "four", "five", "six" ]
+        }
+      },
+      "geometry": {
+        "type":"Point",
+        "coordinates":[ 8.65723, 50.1234, 0.0 ]
+      }
+    },
+    {
+      "id": "my-custom-id-800-7",
+      "type": "Feature",
+      "properties": {
+        "speedLimit": "70",
+        "length": 50,
+        "@ns:com:here:xyz": {
+          "tags": [ "non-matching-tag", "@ThRee" ]
+        }
+      },
+      "geometry": {
+        "type":"LineString",
+        "coordinates":[[8.6579, 50.1245, 0.0],[8.6583, 50.1235, 0.0]]
+      }
+    },
+    {
+      "id": "my-custom-id-800-8",
+      "type": "Feature",
+      "properties": {
+        "speedLimit": "80",
+        "@ns:com:here:xyz": {
+          "tags": [ "non-matching-tag", "@ThRee", "same-tags-as-7-but-within-tile-margin-20" ]
+        }
+      },
+      "geometry": {
+        "type":"Point",
+        "coordinates":[ 8.65713, 50.1234, 0.0 ]
+      }
+    }
+  ]
+}

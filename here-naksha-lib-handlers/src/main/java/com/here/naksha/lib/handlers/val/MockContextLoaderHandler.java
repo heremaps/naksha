@@ -18,15 +18,26 @@
  */
 package com.here.naksha.lib.handlers.val;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventHandlerProperties;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
+import com.here.naksha.lib.core.models.storage.EWriteOp;
+import com.here.naksha.lib.core.models.storage.ErrorResult;
+import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import com.here.naksha.lib.core.models.storage.Request;
+import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
@@ -39,7 +50,7 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
   private static final Logger logger = LoggerFactory.getLogger(MockContextLoaderHandler.class);
   protected @NotNull EventHandler eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
-  protected @NotNull EventHandlerProperties properties;
+  protected @NotNull XyzProperties properties;
 
   public MockContextLoaderHandler(
       final @NotNull EventHandler eventHandler,
@@ -48,7 +59,19 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), EventHandlerProperties.class);
+    this.properties = JsonSerializable.convert(eventHandler.getProperties(), XyzProperties.class);
+  }
+
+  @Override
+  protected EventProcessingStrategy processingStrategyFor(IEvent event) {
+    final Request<?> request = event.getRequest();
+    if (request instanceof WriteFeatures<?, ?, ?>) {
+      return PROCESS;
+    }
+    if (request instanceof ReadFeatures) {
+      return SUCCEED_WITHOUT_PROCESSING;
+    }
+    return SEND_UPSTREAM_WITHOUT_PROCESSING;
   }
 
   /**
@@ -58,7 +81,7 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
    * @return the result.
    */
   @Override
-  public @NotNull Result processEvent(@NotNull IEvent event) {
+  public @NotNull Result process(@NotNull IEvent event) {
     final Request<?> request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
@@ -80,8 +103,9 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
     // prepare ContextWriteFeatures request
     final ContextWriteXyzFeatures contextWriteFeatures = new ContextWriteXyzFeatures(wf.getCollectionId());
     // Add features in the request
-    if (wf.features.isEmpty())
+    if (wf.features.isEmpty()) {
       throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "No features supplied for validation");
+    }
     for (final FeatureCodec<?, ?> codec : wf.features) {
       if (!EWriteOp.PUT.toString().equals(codec.getOp())) {
         throw new XyzErrorException(

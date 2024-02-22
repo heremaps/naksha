@@ -19,6 +19,7 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.STORAGE_ID;
+import static com.here.naksha.app.service.http.ops.PasswordMaskingUtil.removePasswordFromProps;
 import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -85,21 +86,28 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
         case GET_STORAGE_BY_ID -> executeGetStorageById();
         case CREATE_STORAGE -> executeCreateStorage();
         case UPDATE_STORAGE -> executeUpdateStorage();
+        case DELETE_STORAGE -> executeDeleteStorage();
         default -> executeUnsupported();
       };
-    } catch (XyzErrorException ex) {
-      return verticle.sendErrorResponse(routingContext, ex.xyzError, ex.getMessage());
     } catch (Exception ex) {
-      // unexpected exception
-      return verticle.sendErrorResponse(
-          routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
+      if (ex instanceof XyzErrorException xyz) {
+        logger.warn("Known exception while processing request. ", ex);
+        return verticle.sendErrorResponse(routingContext, xyz.xyzError, xyz.getMessage());
+      } else {
+        logger.error("Unexpected error while processing request. ", ex);
+        return verticle.sendErrorResponse(
+            routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
+      }
     }
   }
 
   private @NotNull XyzResponse executeGetStorages() {
     final ReadFeatures request = new ReadFeatures(STORAGES);
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(rdResult, Storage.class);
+      return transformReadResultToXyzCollectionResponse(rdResult, Storage.class, f -> {
+        removePasswordFromProps(f.getProperties());
+        return f;
+      });
     }
   }
 
@@ -107,7 +115,10 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final ReadFeatures request = new ReadFeatures(STORAGES).withPropertyOp(POp.eq(PRef.id(), storageId));
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzFeatureResponse(rdResult, Storage.class);
+      return transformReadResultToXyzFeatureResponse(rdResult, Storage.class, f -> {
+        removePasswordFromProps(f.getProperties());
+        return f;
+      });
     }
   }
 
@@ -115,7 +126,10 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
     final Storage newStorage = storageFromRequestBody();
     final WriteXyzFeatures wrRequest = RequestHelper.createFeatureRequest(STORAGES, newStorage, false);
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class);
+      return transformWriteResultToXyzFeatureResponse(wrResult, Storage.class, f -> {
+        removePasswordFromProps(f.getProperties());
+        return f;
+      });
     }
   }
 
@@ -128,8 +142,22 @@ public class StorageApiTask<T extends XyzResponse> extends AbstractApiTask<XyzRe
     } else {
       final WriteXyzFeatures updateStorageReq = RequestHelper.updateFeatureRequest(STORAGES, storageFromBody);
       try (Result updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq)) {
-        return transformWriteResultToXyzFeatureResponse(updateStorageResult, Storage.class);
+        return transformWriteResultToXyzFeatureResponse(updateStorageResult, Storage.class, f -> {
+          removePasswordFromProps(f.getProperties());
+          return f;
+        });
       }
+    }
+  }
+
+  private @NotNull XyzResponse executeDeleteStorage() {
+    final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
+    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
+    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
+      return transformDeleteResultToXyzFeatureResponse(wrResult, Storage.class, f -> {
+        removePasswordFromProps(f.getProperties());
+        return f;
+      });
     }
   }
 

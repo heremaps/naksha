@@ -169,7 +169,6 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     retNs.setTxn(toLong(xyzNs.txn().getValue()));
     retNs.setCreatedAt(toLong(xyzNs.createdAt()));
     retNs.setUpdatedAt(toLong(xyzNs.updatedAt()));
-    retNs.setExtend(toLong(xyzNs.extend()));
     retNs.setAppId(xyzNs.appId());
     retNs.setAuthorTime(toLong(xyzNs.authorTs()));
     retNs.setRealTimeUpdatedAt(toLong(xyzNs.updatedAt()));

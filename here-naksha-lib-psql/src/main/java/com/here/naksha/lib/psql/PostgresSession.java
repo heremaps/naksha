@@ -19,6 +19,7 @@
 package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.psql.sql.SqlGeometryTransformationResolver.addTransformation;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -49,8 +50,6 @@ import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.util.ClosableChildResource;
 import com.here.naksha.lib.core.util.IndexHelper;
 import com.here.naksha.lib.core.util.json.Json;
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.Geometry;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -60,6 +59,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
 import org.postgresql.util.PGobject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -247,7 +249,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       if (geometry == null) {
         throw new IllegalArgumentException("Missing geometry");
       }
-      sql.add(" ST_Intersects(geo, ST_Force3D(?))");
+      SQL variableTransformed = addTransformation(spatialOp.getTransformation(), "ST_Force3D(?)");
+      sql.add(" ST_Intersects(geo, ").add(variableTransformed).add(")");
       try (final Json jp = Json.get()) {
         final byte[] wkb = jp.wkbWriter.write(geometry);
         wkbs.add(wkb);
@@ -257,17 +260,81 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     }
   }
 
-  private static void addJsonPath(@NotNull SQL sql, @NotNull List<@NotNull String> path, int end) {
+  private static void addJsonPath(
+      @NotNull SQL sql, @NotNull List<@NotNull String> path, int end, boolean text, boolean nullif) {
+    if (nullif) {
+      sql.add("nullif(");
+    }
     sql.add("(jsondata");
+    final int last = end - 1;
     for (int i = 0; i < end; i++) {
       final String pname = path.get(i);
-      sql.add("->");
+      sql.add(i == last && text ? "->>" : "->");
       sql.addLiteral(pname);
     }
     sql.add(')');
+    if (text) {
+      sql.add(" COLLATE \"C\" ");
+    }
+    if (nullif) {
+      sql.add(",'null')");
+    }
   }
 
-  private static void addPropertyQuery(@NotNull SQL sql, @NotNull POp propertyOp, @NotNull List<Object> parameter) {
+  private static void addOp( //
+      @NotNull SQL sql, //
+      @NotNull List<Object> parameter, //
+      final List<@NotNull String> path, //
+      @NotNull OpType opType, //
+      @Nullable Object value //
+  ) {
+    if (value == null) {
+      throw new IllegalArgumentException("Invalid value NULL for op: " + opType);
+    }
+    if (!(opType instanceof POpType)) {
+      throw new IllegalArgumentException("Operation not supported: " + opType);
+    }
+    final POpType op = (POpType) opType;
+    final String opString = op.op();
+    if (opString == null) {
+      throw new IllegalArgumentException("Operation not supported: " + op);
+    }
+    if (op == POpType.CONTAINS) {
+      addJsonPath(sql, path, path.size(), false, false);
+      sql.add(" ").add(opString).add(" ?::jsonb");
+      parameter.add(toJsonb(value));
+    } else if (value instanceof CharSequence) {
+      addJsonPath(sql, path, path.size(), true, false);
+      sql.add("::text ").add(opString).add(" ?");
+      parameter.add(value);
+    } else if (value instanceof Double) {
+      addJsonPath(sql, path, path.size(), false, false);
+      sql.add("::double precision ").add(opString).add(" ?");
+      parameter.add(value);
+    } else if (value instanceof Float) {
+      addJsonPath(sql, path, path.size(), false, false);
+      sql.add("::double precision ").add(opString).add(" ?");
+      parameter.add(((Number) value).doubleValue());
+    } else if (value instanceof Long) {
+      addJsonPath(sql, path, path.size(), false, false);
+      sql.add("::int8 ").add(opString).add(" ?");
+      parameter.add(value);
+    } else if (value instanceof Number) {
+      addJsonPath(sql, path, path.size(), false, false);
+      sql.add("::int8 ").add(opString).add(" ?");
+      parameter.add(((Number) value).longValue());
+    } else if (value instanceof Boolean) {
+      addJsonPath(sql, path, path.size(), false, false);
+      sql.add("::bool ").add(opString).add(" ?");
+      parameter.add(value);
+    } else {
+      throw new IllegalArgumentException(
+          "Unknown value type: " + (value.getClass().getName()));
+    }
+  }
+
+  private static void addPropertyQuery(
+      @NotNull SQL sql, @NotNull POp propertyOp, @NotNull List<Object> parameter, boolean isHstQuery) {
     final OpType op = propertyOp.op();
     if (POpType.AND == op || POpType.OR == op || POpType.NOT == op) {
       final List<@NotNull POp> children = propertyOp.children();
@@ -291,7 +358,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         } else {
           sql.add(op_literal);
         }
-        addPropertyQuery(sql, child, parameter);
+        addPropertyQuery(sql, child, parameter, isHstQuery);
       }
       sql.add(")");
       return;
@@ -304,24 +371,24 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       if (op != POpType.EXISTS) {
         throw new IllegalArgumentException("Tags do only support EXISTS operation, not " + op);
       }
-      addJsonPath(sql, path, path.size());
+      addJsonPath(sql, path, path.size(), false, false);
       sql.add(" ?? ?");
       parameter.add(pref.getTagName());
       return;
     }
     if (op == POpType.EXISTS) {
-      addJsonPath(sql, path, path.size() - 1);
+      addJsonPath(sql, path, path.size() - 1, false, false);
       sql.add(" ?? ?");
       parameter.add(path.get(path.size() - 1));
       return;
     }
     if (op == POpType.NULL) {
-      addJsonPath(sql, path, path.size());
+      addJsonPath(sql, path, path.size(), false, false);
       sql.add(" = 'null'");
       return;
     }
     if (op == POpType.NOT_NULL) {
-      addJsonPath(sql, path, path.size());
+      addJsonPath(sql, path, path.size(), false, false);
       sql.add(" != 'null'");
       return;
     }
@@ -329,52 +396,117 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     if (op == POpType.STARTS_WITH) {
       if (value instanceof String) {
         String text = (String) value;
-        sql.add("(");
-        addJsonPath(sql, path, path.size());
-        sql.add("::text) LIKE ?");
+        addJsonPath(sql, path, path.size(), true, false);
+        sql.add(" LIKE ?");
         parameter.add(text + '%');
         return;
       }
       throw new IllegalArgumentException("STARTS_WITH operator requires a string as value");
     }
-    if (op == POpType.CONTAINS) {
-      addJsonPath(sql, path, path.size());
-      sql.add(" @> ");
-      sql.add("?::jsonb");
-      if (value instanceof String) {
-        parameter.add(value);
-      } else {
-        parameter.add(toJsonb(value));
+    if (op == POpType.EQ && pref == PRef.txn()) {
+      sql.add("(");
+      addJsonPath(sql, path, path.size(), false, true);
+      sql.add("::int8 <= ?");
+      if (!(value instanceof Number)) {
+        throw new IllegalArgumentException("Value must be a number");
       }
+      final Long txn = ((Number) value).longValue();
+      parameter.add(txn);
+      if (isHstQuery) {
+        sql.add(" AND ");
+        addPropertyQuery(sql, POp.gt(PRef.txn_next(), txn), parameter, true);
+      }
+      sql.add(")");
       return;
     }
-    addJsonPath(sql, path, path.size());
-    if (op == POpType.EQ) {
-      sql.add(" = ");
-    } else if (op == POpType.GT) {
-      sql.add(" > ");
-    } else if (op == POpType.GTE) {
-      sql.add(" >= ");
-    } else if (op == POpType.LT) {
-      sql.add(" < ");
-    } else if (op == POpType.LTE) {
-      sql.add(" <= ");
-    } else {
-      throw new IllegalArgumentException("Unknown operation: " + op);
-    }
-    sql.add("?::jsonb");
-    parameter.add(toJsonb(value));
+    addOp(sql, parameter, path, op, value);
   }
 
   private static PGobject toJsonb(Object value) {
     try (final Json jp = Json.get()) {
       final PGobject jsonb = new PGobject();
       jsonb.setType("jsonb");
-      jsonb.setValue(jp.writer().writeValueAsString(value));
+      // TODO: Remove this, we do not want to guess!
+      if (value instanceof String && Json.mightBeJson((String) value)) {
+        // it's already a json - .writeValueAsString would add double quoting
+        jsonb.setValue((String) value);
+      } else {
+        jsonb.setValue(jp.writer().writeValueAsString(value));
+      }
       return jsonb;
     } catch (SQLException | JsonProcessingException e) {
       throw unchecked(e);
     }
+  }
+
+  private SQL prepareQuery(String collection, String spatial_where, String props_where, Long limit) {
+    final SQL query = new SQL();
+    // r_op text, r_id text, r_uuid text, r_type text, r_ptype text, r_feature jsonb, r_geometry geometry,
+    // r_err jsonb
+    query.add("(SELECT 'READ',\n" + "naksha_feature_id(jsondata),\n"
+            + "naksha_feature_uuid(jsondata),\n"
+            + "naksha_feature_type(jsondata),\n"
+            + "naksha_feature_ptype(jsondata),\n"
+            + "jsondata,\n"
+            + "ST_AsEWKB(geo),\n"
+            + "null FROM ")
+        .addIdent(collection);
+    if (spatial_where.length() > 0 || props_where.length() > 0) {
+      query.add(" WHERE");
+      if (spatial_where.length() > 0) {
+        query.add(spatial_where);
+        if (props_where.length() > 0) {
+          query.add(" AND");
+        }
+      }
+      if (props_where.length() > 0) {
+        query.add(props_where);
+      }
+      if (limit != null) {
+        query.add(" LIMIT ").add(limit);
+      }
+    }
+    query.add(")");
+    return query;
+  }
+
+  private int fillStatementWithParams(
+      @NotNull PreparedStatement stmt,
+      @NotNull List<byte[]> wkbs,
+      @NotNull List<Object> parameters,
+      int startParamIdx,
+      int repeatCount)
+      throws SQLException {
+    int i = startParamIdx;
+    for (int repetition = 1; repetition <= repeatCount; repetition++) {
+      for (final byte[] wkb : wkbs) {
+        stmt.setBytes(i++, wkb);
+      }
+      for (final Object value : parameters) {
+        if (value == null) {
+          stmt.setString(i++, null);
+        } else if (value instanceof PGobject) {
+          stmt.setObject(i++, value);
+        } else if (value instanceof String) {
+          stmt.setString(i++, (String) value);
+        } else if (value instanceof Double) {
+          stmt.setDouble(i++, (Double) value);
+        } else if (value instanceof Float) {
+          stmt.setFloat(i++, (Float) value);
+        } else if (value instanceof Long) {
+          stmt.setLong(i++, (Long) value);
+        } else if (value instanceof Integer) {
+          stmt.setInt(i++, (Integer) value);
+        } else if (value instanceof Short) {
+          stmt.setShort(i++, (Short) value);
+        } else if (value instanceof Boolean) {
+          stmt.setBoolean(i++, (Boolean) value);
+        } else {
+          throw new IllegalArgumentException("Invalid value at index " + i + ": " + value);
+        }
+      }
+    }
+    return i;
   }
 
   @NotNull
@@ -388,6 +520,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       final SQL sql = sql();
       final ArrayList<byte[]> wkbs = new ArrayList<>();
       final ArrayList<Object> parameters = new ArrayList<>();
+      final ArrayList<Object> parametersHst = new ArrayList<>();
       SOp spatialOp = readFeatures.getSpatialOp();
       if (spatialOp != null) {
         addSpatialQuery(sql, spatialOp, wkbs);
@@ -396,66 +529,25 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.setLength(0);
       POp propertyOp = readFeatures.getPropertyOp();
       if (propertyOp != null) {
-        addPropertyQuery(sql, propertyOp, parameters);
+        addPropertyQuery(sql, propertyOp, parameters, false);
       }
       final String props_where = sql.toString();
       sql.setLength(0);
       for (final String collection : collections) {
-        // r_op text, r_id text, r_uuid text, r_type text, r_ptype text, r_feature jsonb, r_geometry geometry,
-        // r_err jsonb
-        sql.add("SELECT 'READ',\n" + "naksha_feature_id(jsondata),\n"
-                + "naksha_feature_uuid(jsondata),\n"
-                + "naksha_feature_type(jsondata),\n"
-                + "naksha_feature_ptype(jsondata),\n"
-                + "jsondata,\n"
-                + "ST_AsEWKB(geo),\n"
-                + "null FROM ")
-            .addIdent(collection);
-        if (spatial_where.length() > 0 || props_where.length() > 0) {
-          sql.add(" WHERE");
-          if (spatial_where.length() > 0) {
-            sql.add(spatial_where);
-            if (props_where.length() > 0) {
-              sql.add(" AND");
-            }
-          }
-          if (props_where.length() > 0) {
-            sql.add(props_where);
-          }
-          if (readRequest.limit != null) {
-            sql.add(" LIMIT ").add(readRequest.limit);
-          }
+        SQL headQuery = prepareQuery(collection, spatial_where, props_where, readFeatures.limit);
+        sql.add(headQuery);
+        if (readFeatures.isReturnAllVersions()) {
+          sql.add(" UNION ALL ");
+          SQL hstSql = prepareHstSql(collection, propertyOp, parametersHst, spatial_where, readFeatures);
+          sql.add(hstSql);
         }
       }
       final String query = sql.toString();
       final PreparedStatement stmt = prepareStatement(query);
       try {
-        int i = 1;
-        for (final byte[] wkb : wkbs) {
-          stmt.setBytes(i++, wkb);
-        }
-        for (final Object value : parameters) {
-          if (value == null) {
-            stmt.setString(i++, null);
-          } else if (value instanceof PGobject) {
-            stmt.setObject(i++, value);
-          } else if (value instanceof String) {
-            stmt.setString(i++, (String) value);
-          } else if (value instanceof Double) {
-            stmt.setDouble(i++, (Double) value);
-          } else if (value instanceof Float) {
-            stmt.setFloat(i++, (Float) value);
-          } else if (value instanceof Long) {
-            stmt.setLong(i++, (Long) value);
-          } else if (value instanceof Integer) {
-            stmt.setInt(i++, (Integer) value);
-          } else if (value instanceof Short) {
-            stmt.setShort(i++, (Short) value);
-          } else if (value instanceof Boolean) {
-            stmt.setBoolean(i++, (Boolean) value);
-          } else {
-            throw new IllegalArgumentException("Invalid value at index " + i + ": " + value);
-          }
+        int lastParamIdx = fillStatementWithParams(stmt, wkbs, parameters, 1, collections.size());
+        if (readFeatures.isReturnAllVersions()) {
+          fillStatementWithParams(stmt, wkbs, parametersHst, lastParamIdx, 1);
         }
         final ResultSet rs = stmt.executeQuery();
         final PsqlCursor<XyzFeature, XyzFeatureCodec> cursor =
@@ -476,8 +568,21 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     return new ErrorResult(XyzError.NOT_IMPLEMENTED, "executeRead");
   }
 
-  @NotNull
-  <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
+  private SQL prepareHstSql(
+      String collection,
+      POp propertyOp,
+      ArrayList<Object> parametersHst,
+      String spatial_where,
+      ReadFeatures readFeatures) {
+    String historyCollection = collection + "_hst";
+    SQL hst_props_where = new SQL();
+    if (propertyOp != null) {
+      addPropertyQuery(hst_props_where, propertyOp, parametersHst, true);
+    }
+    return prepareQuery(historyCollection, spatial_where, hst_props_where.toString(), readFeatures.limit);
+  }
+
+  @NotNull <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(

@@ -21,11 +21,11 @@ package com.here.naksha.lib.core.models.geojson;
 import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.declaration.ILonLat;
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.prep.PreparedGeometry;
-import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.prep.PreparedGeometry;
+import org.locationtech.jts.geom.prep.PreparedGeometryFactory;
 
 /**
  * A class that represents a Web Mercator Tile with additional helper methods to perform
@@ -510,7 +510,12 @@ public class WebMercatorTile {
    */
   public BBox getExtendedBBox(int buffer) {
     if (eBbox != null && eBuffer == buffer) {
-      return bbox;
+      return eBbox;
+    }
+    if (buffer == 0) {
+      eBuffer = buffer;
+      eBbox = getBBox(false);
+      return eBbox;
     }
 
     long TILE_SIZE_IN_PIXEL = TileSizeInPixel;

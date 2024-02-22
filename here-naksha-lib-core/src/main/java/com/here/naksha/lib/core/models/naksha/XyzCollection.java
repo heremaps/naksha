@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.NakshaVersion;
+import java.util.Objects;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
@@ -50,6 +51,9 @@ public class XyzCollection extends NakshaFeature {
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String DISABLE_HISTORY = "disableHistory";
+
+  @AvailableSince(NakshaVersion.v2_0_11)
+  public static final String AUTO_PURGE = "autoPurge";
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String MIN_AGE = "minAge";
@@ -112,6 +116,14 @@ public class XyzCollection extends NakshaFeature {
   @JsonProperty(DISABLE_HISTORY)
   @JsonInclude(Include.NON_EMPTY)
   private boolean disableHistory;
+
+  /**
+   * Toggle if the auto-purge is enabled.
+   */
+  @AvailableSince(NakshaVersion.v2_0_11)
+  @JsonProperty(AUTO_PURGE)
+  @JsonInclude(Include.NON_EMPTY)
+  private boolean autoPurge;
 
   /**
    * Returns {@code true} if this collection is partitioned.
@@ -245,6 +257,43 @@ public class XyzCollection extends NakshaFeature {
   }
 
   /**
+   * Returns true if the auto-purge is currently enabled; false otherwise.
+   * Auto-purge decides whether features will be written to _del table on DELETE operation (auto-purge: false) or not (auto-purge: true).
+   *
+   * @return true if the auto-purge is currently enabled; false otherwise.
+   */
+  @JsonIgnore
+  public boolean isAutoPurge() {
+    return autoPurge;
+  }
+
+  /**
+   * Enable or disable the auto-purge (inserts to _del).
+   *
+   * @param autoPurge true to enable the auto-purge; false to disable it.
+   */
+  @JsonIgnore
+  public void setAutoPurge(boolean autoPurge) {
+    this.autoPurge = autoPurge;
+  }
+
+  /**
+   * Enable auto-purge.
+   */
+  @JsonIgnore
+  public void enableAutoPurge() {
+    autoPurge = true;
+  }
+
+  /**
+   * Disable auto-purge.
+   */
+  @JsonIgnore
+  public void disableAutoPurge() {
+    autoPurge = false;
+  }
+
+  /**
    * Returns the amount of partitions, which is a necessary information for the bulk loader. This returns zero, if the collection is not
    * partitioned. This information can only be obtained from the storage itself when reading a collection or as result of creating a
    * collection.
@@ -291,4 +340,38 @@ public class XyzCollection extends NakshaFeature {
   @JsonProperty(ESTIMATED_DELETED_FEATURED)
   @JsonInclude(Include.NON_EMPTY)
   private long estimatedDeletedFeatures;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    XyzCollection that = (XyzCollection) o;
+    return minAge == that.minAge
+        && disableHistory == that.disableHistory
+        && autoPurge == that.autoPurge
+        && partition == that.partition
+        && pointsOnly == that.pointsOnly
+        && unlogged == that.unlogged
+        && partitionCount == that.partitionCount
+        && estimatedFeatureCount == that.estimatedFeatureCount
+        && estimatedDeletedFeatures == that.estimatedDeletedFeatures;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+        minAge,
+        disableHistory,
+        autoPurge,
+        partition,
+        pointsOnly,
+        unlogged,
+        partitionCount,
+        estimatedFeatureCount,
+        estimatedDeletedFeatures);
+  }
 }

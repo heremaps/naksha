@@ -12,6 +12,7 @@ repositories {
 plugins {
     java
     `java-library`
+    `java-test-fixtures`
     `maven-publish`
     // https://github.com/diffplug/spotless
     // gradle spotlessApply
@@ -20,7 +21,8 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
     //kotlin("multiplatform") version "1.9.21"
     // overall code coverage
-    jacoco
+    //jacoco
+    id("jacoco-report-aggregation")
 }
 
 group = "com.here.naksha"
@@ -67,8 +69,8 @@ val aws_lambda_core = "com.amazonaws:aws-lambda-java-core:1.2.2"
 val aws_lambda_log4j = "com.amazonaws:aws-lambda-java-log4j2:1.5.1"
 val amazon_sns = "software.amazon.awssdk:sns:2.20.69"
 
-val vividsolutions_jts_core = "com.vividsolutions:jts-core:1.14.0"
-val vividsolutions_jts_io = "com.vividsolutions:jts-io:1.14.0"
+val jts_core = "org.locationtech.jts:jts-core:1.19.0"
+val jts_io = "org.locationtech.jts:jts-io:1.19.0"
 val gt_api = "org.geotools:gt-api:19.1"
 val gt_referencing = "org.geotools:gt-referencing:19.1"
 val gt_epsg_hsql = "org.geotools:gt-epsg-hsql:19.1"
@@ -139,6 +141,12 @@ subprojects {
     // All subprojects should be in the naksha group (for artifactory) and have the same version!
     group = rootProject.group
     version = rootProject.version
+
+    apply(plugin = "java")
+    apply(plugin = "com.diffplug.spotless")
+    apply(plugin = "java-library")
+    apply(plugin = "java-test-fixtures")
+    apply(plugin = "jacoco")
 
     repositories {
         maven(uri("https://repo.osgeo.org/repository/release/"))
@@ -279,8 +287,12 @@ subprojects {
         }
     }
     dependencies {
+        testImplementation(log4j_slf4j)
+        testImplementation(log4j_api)
+        testImplementation(log4j_core)
         testImplementation(junit_jupiter)
         testImplementation(junit_params)
+        testFixturesApi(junit_jupiter)
     }
 }
 
@@ -301,7 +313,7 @@ project(":here-naksha-lib-core") {
         // Can we get rid of this?
         implementation(google_guava)
         implementation(commons_lang3)
-        implementation(vividsolutions_jts_core)
+        implementation(jts_core)
         implementation(google_flatbuffers)
         implementation(project(":here-naksha-lib-jbon"))
         testImplementation(mockito)
@@ -319,7 +331,7 @@ project(":here-naksha-lib-heapcache") {
     dependencies {
         api(project(":here-naksha-lib-core"))
         testImplementation(mockito)
-        implementation(vividsolutions_jts_core)
+        implementation(jts_core)
     }
     setOverallCoverage(0.5) // only increasing allowed!
 }
@@ -341,7 +353,7 @@ project(":here-naksha-lib-psql") {
         implementation(postgres)
         //implementation(zaxxer_hikari)
         implementation(commons_dbutils)
-        implementation(vividsolutions_jts_core)
+        implementation(jts_core)
 
         testImplementation(mockito)
         testImplementation(spatial4j)
@@ -364,7 +376,7 @@ project(":here-naksha-lib-view") {
         implementation(commons_lang3)
         testImplementation(mockito)
         testImplementation(project(":here-naksha-lib-psql"))
-        testImplementation(vividsolutions_jts_core)
+        testImplementation(jts_core)
     }
     setOverallCoverage(0.0) // only increasing allowed!
 }
@@ -409,7 +421,7 @@ project(":here-naksha-handler-http") {
         implementation(project(":here-naksha-lib-core"))
         testImplementation(project(":here-naksha-lib-extension"))
 
-        implementation(vividsolutions_jts_core)
+        implementation(jts_core)
 
         testImplementation(jayway_jsonpath)
     }
@@ -425,7 +437,7 @@ project(":here-naksha-handler-psql") {
 
         implementation(commons_lang3)
         implementation(commons_dbutils)
-        implementation(vividsolutions_jts_core)
+        implementation(jts_core)
         implementation(aws_kms)
         implementation(mchange_commons)
         implementation(mchange_c3p0)
@@ -455,9 +467,16 @@ project(":here-naksha-lib-handlers") {
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-lib-view"))
 
         implementation(commons_lang3)
         implementation(commons_dbutils)
+
+        testImplementation(mockito)
+        testImplementation(json_assert)
+        testImplementation(testFixtures(project(":here-naksha-lib-core")))
+
+        setOverallCoverage(0.0)
     }
 }
 
@@ -471,7 +490,7 @@ project(":here-naksha-lib-hub") {
         implementation(project(":here-naksha-lib-handlers"))
 
         implementation(commons_lang3)
-        implementation(vividsolutions_jts_core)
+        implementation(jts_core)
         implementation(postgres)
 
         testImplementation(json_assert)
@@ -497,7 +516,7 @@ project(":here-naksha-app-service") {
         implementation(log4j_core)
         implementation(otel)
         implementation(commons_lang3)
-        implementation(vividsolutions_jts_core)
+        implementation(jts_core)
         implementation(postgres)
         implementation(vertx_core)
         implementation(vertx_auth_jwt)
@@ -508,6 +527,7 @@ project(":here-naksha-app-service") {
         testImplementation(json_assert)
         testImplementation(resillience4j_retry)
         testImplementation(test_containers)
+        testImplementation(testFixtures(project(":here-naksha-lib-core")))
     }
     setOverallCoverage(0.25) // only increasing allowed!
 }

@@ -20,6 +20,7 @@ package com.here.naksha.lib.core.util.storage;
 
 import static com.here.naksha.lib.core.models.storage.POp.eq;
 import static com.here.naksha.lib.core.models.storage.POp.or;
+import static com.here.naksha.lib.core.models.storage.PRef.PATH_TO_PREF_MAPPING;
 import static com.here.naksha.lib.core.models.storage.PRef.id;
 
 import com.here.naksha.lib.core.NakshaVersion;
@@ -28,17 +29,14 @@ import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates
 import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.IfConflict;
-import com.here.naksha.lib.core.models.storage.IfExists;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.vividsolutions.jts.geom.Geometry;
+import com.here.naksha.lib.core.models.storage.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.locationtech.jts.geom.Geometry;
 
 @AvailableSince(NakshaVersion.v2_0_7)
 public class RequestHelper {
@@ -122,6 +120,23 @@ public class RequestHelper {
   }
 
   /**
+   * Helper method to create WriteFeatures request for updating multiple features.
+   *
+   * @param collectionName name of the storage collection
+   * @param features       feature object array to be updated
+   * @param <FEATURE>      any object extending XyzFeature
+   * @return WriteFeatures request that can be used against IStorage methods
+   */
+  public static @NotNull <FEATURE extends XyzFeature> WriteXyzFeatures updateFeaturesRequest(
+      final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
+    for (FEATURE feature : features) {
+      request.update(feature);
+    }
+    return request;
+  }
+
+  /**
    * Helper method to create WriteFeatures request for upserting multiple features.
    *
    * @param collectionName name of the storage collection
@@ -164,7 +179,7 @@ public class RequestHelper {
   public static @NotNull WriteXyzFeatures deleteFeatureByIdRequest(
       final @NotNull String collectionName, final @NotNull String id) {
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
-    return request.delete(new XyzFeature(id));
+    return request.delete(id, null);
   }
 
   /**
@@ -247,11 +262,15 @@ public class RequestHelper {
     return request;
   }
 
+  public static @NotNull WriteXyzCollections createWriteCollectionsRequest(final @NotNull XyzCollection collection) {
+    return createWriteCollectionsRequest(List.of(collection));
+  }
+
   public static @NotNull WriteXyzCollections createWriteCollectionsRequest(
-      final @NotNull List<@NotNull String> collectionNames) {
+      final @NotNull List<@NotNull XyzCollection> collections) {
     final WriteXyzCollections writeXyzCollections = new WriteXyzCollections();
-    for (final String collectionId : collectionNames) {
-      writeXyzCollections.add(EWriteOp.CREATE, new XyzCollection(collectionId));
+    for (final XyzCollection collection : collections) {
+      writeXyzCollections.add(EWriteOp.CREATE, collection);
     }
     return writeXyzCollections;
   }
@@ -272,5 +291,47 @@ public class RequestHelper {
     multiPoint.add(new PointCoordinates(west, south));
     multiPoint.add(new PointCoordinates(east, north));
     return JTSHelper.toMultiPoint(multiPoint).getEnvelope();
+  }
+
+  /**
+   * Helper function that returns instance of PRef or NonIndexedPRef depending on
+   * whether the propPath provided matches with standard (indexed) property search or not.
+   *
+   * @param propPath the JSON path to be used for property search
+   * @return PRef instance of PRef or NonIndexedPRef
+   */
+  public static @NotNull PRef pRefFromPropPath(final @NotNull String[] propPath) {
+    // check if we can use standard PRef (on indexed properties)
+    for (final String[] path : PATH_TO_PREF_MAPPING.keySet()) {
+      if (Arrays.equals(path, propPath)) {
+        return PATH_TO_PREF_MAPPING.get(path);
+      }
+    }
+    // fallback to non-standard PRef (non-indexed properties)
+    return new NonIndexedPRef(propPath);
+  }
+
+  public static void combineOperationsForRequestAs(
+      final @NotNull ReadFeatures request, final OpType opType, @Nullable POp... operations) {
+    if (operations == null) return;
+    List<POp> opList = null;
+    for (final POp crtOp : operations) {
+      if (crtOp == null) continue;
+      if (request.getPropertyOp() == null) {
+        request.setPropertyOp(crtOp); // set operation directly if this was the only one operation
+        continue;
+      } else if (opList == null) {
+        opList = new ArrayList<>(); // we have more than one operation
+        opList.add(request.getPropertyOp()); // save previously added operation
+      }
+      opList.add(crtOp); // keep appending every operation that is to be added to the request
+    }
+    if (opList == null) return;
+    // Add combined operations to request
+    if (opType == OpType.AND) {
+      request.setPropertyOp(POp.and(opList.toArray(POp[]::new)));
+    } else {
+      request.setPropertyOp(POp.or(opList.toArray(POp[]::new)));
+    }
   }
 }

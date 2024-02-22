@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
@@ -142,26 +143,6 @@ class StorageApiTest extends ApiTest {
   }
 
   @Test
-  void tc0022_testGetStorageNoPasswords() throws Exception {
-    // Test API : GET /hub/storages/{storageId}
-    // 1. Load test data, create storage
-    final String bodyJson = loadFileOrFail("StorageApi/TC0022_getStorageNoPasswords/create_storage.json");
-    final String streamId = UUID.randomUUID().toString();
-    HttpResponse<String> response = getNakshaClient().post("hub/storages", bodyJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
-    final JsonNode postResponse = new ObjectMapper().readTree(response.body());
-    assertNoPasswords(postResponse);
-
-    // 2. Perform REST API call
-    response = getNakshaClient().get("hub/storages/storage-for-hiding-password-test-0022", streamId);
-
-    // 3. Perform assertions
-    assertThat(response).hasStatus(200).hasStreamIdHeader(streamId);
-    final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
-    assertNoPasswords(jsonNode);
-  }
-
-  @Test
   void tc0040_testGetStorages() throws Exception {
     // Given: created storages
     List<String> expectedStorageIds = List.of("tc_040_storage_1", "tc_040_storage_2");
@@ -183,26 +164,15 @@ class StorageApiTest extends ApiTest {
     List<String> storageIds =
         returnedXyzFeatures.stream().map(XyzFeature::getId).toList();
     Assertions.assertTrue(storageIds.containsAll(expectedStorageIds));
-  }
-
-  @Test
-  void tc0041_testGetStoragesNoPasswords() throws Exception {
-    // Test API : GET /hub/storages
-    // 1. Load test data, create storage
-    final String bodyJson = loadFileOrFail("StorageApi/TC0041_getStoragesNoPasswords/create_storage.json");
-    final String streamId = UUID.randomUUID().toString();
-    HttpResponse<String> response = getNakshaClient().post("hub/storages", bodyJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
-
-    // 2. Perform REST API call
-    response = getNakshaClient().get("hub/storages", streamId);
-
-    // 3. Perform assertions
-    assertThat(response).hasStatus(200).hasStreamIdHeader(streamId);
     final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
     for (JsonNode storage : jsonNode.get("features")) {
-      if (Objects.equals(storage.get("id").toString(),"storage-for-hiding-password-test")) {
-        assertNoPasswords(storage);
+      for (String storageId : storageIds) {
+        if (Objects.equals(storage.get("id").toString(),storageId)) {
+          assertEquals("xxxxxx",storage.get("properties").get("master").get("password").toString());
+          for (JsonNode node : storage.get("properties").get("reader")) {
+            assertEquals("xxxxxx",node.get("password").toString());
+          }
+        }
       }
     }
   }
@@ -264,7 +234,7 @@ class StorageApiTest extends ApiTest {
   }
 
   @Test
-  void tc0063_testUpdateStorageWithWithMismatchingId() throws Exception {
+  void tc0063_testUpdateStorageWithMismatchingId() throws Exception {
     // Test API : PUT /hub/storages/{storageId}
     // Given:
     final String bodyWithDifferentStorageId =
@@ -282,10 +252,66 @@ class StorageApiTest extends ApiTest {
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID));
   }
 
-  private void assertNoPasswords(JsonNode response) {
-    assertFalse(response.get("properties").get("master").has("password"));
-    for (JsonNode node : response.get("properties").get("reader")) {
-      assertFalse(node.has("password"));
-    }
+  @Test
+  void tc0080_testDeleteStorage() throws Exception {
+    // Test API : DELETE /hub/storages/{storageId}
+    // Given: send request to create a storage
+    final String streamId = UUID.randomUUID().toString();
+    CommonApiTestSetup.createStorage(getNakshaClient(),"StorageApi/TC0080_deleteStorage/create_storage.json");
+    // When: send request to delete the storage
+    final HttpResponse<String> response =
+            getNakshaClient().delete("hub/storages/storage-to-delete", streamId);
+
+    // Then: the delete request is successful
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+    // and the storage does not exist anymore
+    final HttpResponse<String> getResponse =
+            getNakshaClient().get("hub/storages/storage-to-delete", streamId);
+    assertThat(getResponse)
+            .hasStatus(404)
+            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+  }
+
+  @Test
+  void tc0081_testDeleteStorageInUse() throws Exception {
+    // Test API : DELETE /hub/storages/{storageId}
+    // Given: create a storage, and an event handler bound to this storage
+    final String streamId = UUID.randomUUID().toString();
+    CommonApiTestSetup.createStorage(getNakshaClient(),"StorageApi/TC0081_deleteStorageInUse/create_storage.json");
+    CommonApiTestSetup.createHandler(getNakshaClient(),"StorageApi/TC0081_deleteStorageInUse/create_handler.json");
+    // When: send the request to delete the storage
+    final HttpResponse<String> response =
+            getNakshaClient().delete("hub/storages/storage-still-with-handlers", streamId);
+
+    // Then: the delete request should fail because an event handler is still bound to this storage
+    final String expectedResponse = loadFileOrFail("StorageApi/TC0081_deleteStorageInUse/response.json");
+    assertThat(response)
+            .hasStatus(409)
+            .hasJsonBody(expectedResponse)
+            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+    // and the storage still exists
+    final HttpResponse<String> getResponse =
+            getNakshaClient().get("hub/storages/storage-still-with-handlers", streamId);
+    assertThat(getResponse)
+            .hasStatus(200)
+            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+  }
+
+  @Test
+  void tc0082_testDeleteNonExistingStorage() throws Exception {
+    // Test API : DELETE /hub/storages/{storageId}
+    // Given: no storage
+    final String streamId = UUID.randomUUID().toString();
+
+    // When: send delete request
+    final HttpResponse<String> response =
+            getNakshaClient().delete("hub/storages/unreal-storage-cannot-delete", streamId);
+
+    // Then: the delete request fails because that storage does not exist
+    assertThat(response)
+            .hasStatus(404)
+            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
 }

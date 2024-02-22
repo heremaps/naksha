@@ -87,7 +87,7 @@ public class XyzNamespace extends JsonObject {
    * The transaction number of this feature state.
    */
   @JsonProperty(TXN)
-  @JsonInclude(Include.NON_EMPTY)
+  @JsonInclude(Include.NON_DEFAULT)
   private long txn;
 
   /**
@@ -99,7 +99,7 @@ public class XyzNamespace extends JsonObject {
    * The transaction number of the next version of this feature. This is zero, if this is currently the latest version.
    */
   @JsonProperty(TXN_NEXT)
-  @JsonInclude(Include.NON_EMPTY)
+  @JsonInclude(Include.NON_DEFAULT)
   private long txn_next;
 
   /**
@@ -124,6 +124,7 @@ public class XyzNamespace extends JsonObject {
    * the uuid is read and used to identify the base state that was modified.
    */
   @JsonProperty(UUID)
+  @JsonInclude(Include.NON_EMPTY)
   private String uuid;
 
   /**
@@ -194,7 +195,7 @@ public class XyzNamespace extends JsonObject {
    * The epoch timestamp in milliseconds when the author did the last edit.
    */
   @JsonProperty(AUTHOR_TS)
-  @JsonInclude(Include.NON_EMPTY)
+  @JsonInclude(Include.NON_DEFAULT)
   private long author_ts;
 
   /**
@@ -235,7 +236,7 @@ public class XyzNamespace extends JsonObject {
    * returned (only useful in combination with bounding box queries).
    */
   @JsonProperty(EXTEND)
-  @JsonInclude(Include.NON_EMPTY)
+  @JsonInclude(Include.NON_DEFAULT)
   private long extend;
 
   /**
@@ -705,6 +706,39 @@ public class XyzNamespace extends JsonObject {
   }
 
   /**
+   * Removes tags starting with prefix
+   *
+   * @param prefix string prefix.
+   * @return this.
+   */
+  @AvailableSince(NakshaVersion.v2_0_11)
+  public @NotNull XyzNamespace removeTagsWithPrefix(final String prefix) {
+    final List<@NotNull String> thisTags = getTags();
+    if (thisTags == null || thisTags.isEmpty() || prefix == null) {
+      return this;
+    }
+
+    thisTags.removeIf(tag -> tag.startsWith(prefix));
+    return this;
+  }
+
+  /**
+   * Removes tags starting with given list of prefixes
+   *
+   * @param prefixes list of tag prefixes
+   * @return this.
+   */
+  @AvailableSince(NakshaVersion.v2_0_13)
+  public @NotNull XyzNamespace removeTagsWithPrefixes(final @Nullable List<String> prefixes) {
+    if (prefixes != null) {
+      for (final @Nullable String prefix : prefixes) {
+        if (prefix != null) removeTagsWithPrefix(prefix);
+      }
+    }
+    return this;
+  }
+
+  /**
    * Tests whether this state refers to a deleted feature.
    *
    * @return {@code true} if the feature is in the deleted state; {@code false} otherwise.
@@ -761,6 +795,7 @@ public class XyzNamespace extends JsonObject {
    * @return epoch time in milliseconds when the feature was modified by the author.
    */
   @AvailableSince(NakshaVersion.v2_0_8)
+  @JsonInclude(Include.NON_DEFAULT)
   public long getAuthorTime() {
     return author_ts;
   }
