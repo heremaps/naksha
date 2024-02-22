@@ -1,5 +1,6 @@
-package com.here.naksha.handler.activitylog;
+package com.here.naksha.handler.activitylog.util;
 
+import com.here.naksha.handler.activitylog.ActivityLogComparator;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
@@ -10,14 +11,14 @@ import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
 import java.util.List;
 
-class DatahubSamplesUtil {
+public class DatahubSamplesUtil {
 
-  static final String SAMPLE_SPACE_ID = "SDNujm7h";
+  public static final String SAMPLE_SPACE_ID = "SDNujm7h";
 
-  private static final String SAMPLES_DIR = "src/test/resources/dh_samples/PropSearchForFeatureId/";
-  private static final String SAMPLES_FILE = "original_source.json";
+  private static final String SAMPLES_DIR = "src/test/resources/dh_samples/";
+  private static final String SAMPLES_FILE = "PropSearchForFeatureId.json";
 
-  static DatahubSample loadDatahubSample() {
+  public static DatahubSample loadDatahubSample() {
     String sampleJson = loadDatahubSampleJson();
     return new DatahubSample(
         historyFeatures(sampleJson),

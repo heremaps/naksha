@@ -1,9 +1,10 @@
-package com.here.naksha.handler.activitylog;
+package com.here.naksha.handler.activitylog.assertions;
 
-import static com.here.naksha.handler.activitylog.ActivityLogFeatureAssertions.assertThatActivityLogFeature;
+import static com.here.naksha.handler.activitylog.assertions.ActivityLogFeatureAssertions.assertThatActivityLogFeature;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import com.here.naksha.handler.activitylog.ActivityLogSuccessResult;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.storage.ResultHelper;
@@ -19,14 +20,14 @@ public class ActivityLogSuccessResultAssertions {
     this.subject = subject;
   }
 
-  static ActivityLogSuccessResultAssertions assertThatResult(Result result) {
+  public static ActivityLogSuccessResultAssertions assertThatResult(Result result) {
     assertNotNull(result);
     assertInstanceOf(ActivityLogSuccessResult.class, result);
     return new ActivityLogSuccessResultAssertions((ActivityLogSuccessResult) result);
   }
 
   @SafeVarargs
-  final ActivityLogSuccessResultAssertions hasActivityFeatures(Consumer<ActivityLogFeatureAssertions>... featuresAssertions)
+  public final ActivityLogSuccessResultAssertions hasActivityFeatures(Consumer<ActivityLogFeatureAssertions>... featuresAssertions)
       throws Exception {
     List<XyzFeature> features = ResultHelper.readFeaturesFromResult(subject, XyzFeature.class);
     Assertions.assertEquals(featuresAssertions.length, features.size());
@@ -36,7 +37,7 @@ public class ActivityLogSuccessResultAssertions {
     return this;
   }
 
-  final ActivityLogSuccessResultAssertions hasActivityFeaturesIdenticalTo(List<XyzFeature> otherFeatures)
+  public final ActivityLogSuccessResultAssertions hasActivityFeaturesIdenticalTo(List<XyzFeature> otherFeatures)
       throws Exception {
     List<XyzFeature> features = ResultHelper.readFeaturesFromResult(subject, XyzFeature.class);
     Assertions.assertEquals(otherFeatures.size(), features.size());

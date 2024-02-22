@@ -1,8 +1,9 @@
-package com.here.naksha.handler.activitylog;
+package com.here.naksha.handler.activitylog.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.here.naksha.handler.activitylog.ReversePatch;
 import com.here.naksha.handler.activitylog.ReversePatch.PatchOp;
 
 public class ReversePatchAssertions {
@@ -12,31 +13,31 @@ public class ReversePatchAssertions {
     this.subject = subject;
   }
 
-  static ReversePatchAssertions assertThat(ReversePatch reversePatch){
+  public static ReversePatchAssertions assertThat(ReversePatch reversePatch){
     return new ReversePatchAssertions(reversePatch);
   }
 
-  ReversePatchAssertions hasAddOpsCount(int expectedAddOps){
+  public ReversePatchAssertions hasAddOpsCount(int expectedAddOps){
     assertEquals(expectedAddOps, subject.insert());
     return this;
   }
 
-  ReversePatchAssertions hasUpdateOpsCount(int expectedUpdateOps){
+  public ReversePatchAssertions hasUpdateOpsCount(int expectedUpdateOps){
     assertEquals(expectedUpdateOps, subject.update());
     return this;
   }
 
-  ReversePatchAssertions hasRemoveOpsCount(int expectedRemoveOps){
+  public ReversePatchAssertions hasRemoveOpsCount(int expectedRemoveOps){
     assertEquals(expectedRemoveOps, subject.remove());
     return this;
   }
 
-  ReversePatchAssertions hasReverseOp(PatchOp reverseOp){
+  public ReversePatchAssertions hasReverseOp(PatchOp reverseOp){
     assertTrue(subject.ops().contains(reverseOp), "Missing op: %s\nActual ops: %s".formatted(reverseOp, subject.ops()));
     return this;
   }
 
-  ReversePatchAssertions hasReverseOps(PatchOp... reverseOps){
+  public ReversePatchAssertions hasReverseOps(PatchOp... reverseOps){
     for(PatchOp op: reverseOps){
       hasReverseOp(op);
     }

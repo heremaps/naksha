@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-record ReversePatch(
+public record ReversePatch(
     @JsonProperty(PatchOp.ADD) int insert,
     @JsonProperty(PatchOp.REMOVE) int remove,
     @JsonProperty(PatchOp.REPLACE) int update,
@@ -35,7 +35,7 @@ record ReversePatch(
 
   static ReversePatch EMPTY = new ReversePatch(0, 0, 0, Collections.emptyList());
 
-  record PatchOp(String op, String path, @JsonInclude(Include.NON_NULL) Object value) {
+  public record PatchOp(String op, String path, @JsonInclude(Include.NON_NULL) Object value) {
 
     static final String REMOVE = "remove";
     static final String ADD = "add";

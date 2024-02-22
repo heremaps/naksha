@@ -3,7 +3,7 @@ package com.here.naksha.handler.activitylog;
 import static com.here.naksha.handler.activitylog.ReversePatch.PatchOp.ADD;
 import static com.here.naksha.handler.activitylog.ReversePatch.PatchOp.REMOVE;
 import static com.here.naksha.handler.activitylog.ReversePatch.PatchOp.REPLACE;
-import static com.here.naksha.handler.activitylog.ReversePatchAssertions.assertThat;
+import static com.here.naksha.handler.activitylog.assertions.ReversePatchAssertions.assertThat;
 
 import com.here.naksha.handler.activitylog.ReversePatch.PatchOp;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -139,7 +139,6 @@ class ReversePatchUtilTest {
     XyzFeature feature = new XyzFeature();
     XyzProperties properties = new XyzProperties();
     properties.setXyzNamespace(xyzNamespace);
-    ;
     feature.setProperties(properties);
     return feature;
   }
