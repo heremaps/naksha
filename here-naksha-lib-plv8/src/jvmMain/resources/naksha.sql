@@ -358,3 +358,7 @@ CREATE OR REPLACE FUNCTION feature_to_json(feature bytea) RETURNS text AS $$
   map["id"] = reader.id();
   return JSON.stringify(map);
 $$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION nk_lock_id(_name text) RETURNS int8 LANGUAGE 'plpgsql' STRICT IMMUTABLE AS $$ BEGIN
+  RETURN ('x'||substr(md5(_name),1,16))::bit(64)::int8;
+END $$;
