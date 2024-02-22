@@ -32,6 +32,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
+import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
@@ -85,26 +86,22 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       return storageValidation;
     }
 
-    Object spaceIdsProperty = eventHandler.getProperties().get(DefaultViewHandlerProperties.SPACE_IDS);
-    if (spaceIdsProperty == null) {
+    DefaultViewHandlerProperties viewHandlerProperties = JsonSerializable.convert(eventHandler.getProperties(),
+            DefaultViewHandlerProperties.class);
+
+    List<String> spaceIds = viewHandlerProperties.getSpaceIds();
+    if (spaceIds == null) {
       return new ErrorResult(
           XyzError.ILLEGAL_ARGUMENT,
           "Mandatory properties parameter %s missing!".formatted(DefaultViewHandlerProperties.SPACE_IDS));
     }
-
-    if (!(spaceIdsProperty instanceof List<?>)) {
-      return new ErrorResult(
-          XyzError.ILLEGAL_ARGUMENT,
-          "Mandatory property parameter %s should be a collection of string"
-              .formatted(DefaultViewHandlerProperties.SPACE_IDS));
-    }
-    List<String> spaceIds = (List<String>) spaceIdsProperty;
 
     if (spaceIds.isEmpty()) {
       return new ErrorResult(
           XyzError.ILLEGAL_ARGUMENT,
           "Mandatory parameter %s can't be empty/blank!".formatted(DefaultViewHandlerProperties.SPACE_IDS));
     }
+
     for (String spaceId : spaceIds) {
       if (StringUtils.isBlank(spaceId)) {
         return new ErrorResult(
@@ -119,15 +116,12 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
 
   private Result spaceExistenceValidation(List<String> spaceIds) {
 
-    POp[] popQueries = new POp[spaceIds.size()];
+    ReadFeatures readFeaturesRequest = RequestHelper.readFeaturesByIdsRequest(SPACES, spaceIds);
 
-    for (int i = 0; i < popQueries.length; i++) {
-      popQueries[i] = POp.eq(PRef.id(), spaceIds.get(i));
-    }
-    final ReadFeatures request = new ReadFeatures(SPACES).withPropertyOp(POp.or(popQueries));
     try (final IReadSession readSession =
         nakshaHub().getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
-      final Result readResult = readSession.execute(request);
+
+      final Result readResult = readSession.execute(readFeaturesRequest);
 
       try {
         List<Space> spaces = readFeaturesFromResult(readResult, Space.class);
