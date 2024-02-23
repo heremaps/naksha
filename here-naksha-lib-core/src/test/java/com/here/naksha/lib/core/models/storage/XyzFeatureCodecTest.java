@@ -14,21 +14,14 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
-import com.here.naksha.lib.jbon.BigInt64;
-import com.here.naksha.lib.jbon.BigInt64Kt;
-import com.here.naksha.lib.jbon.JbArray;
 import com.here.naksha.lib.jbon.JbFeature;
 import com.here.naksha.lib.jbon.JbMap;
-import com.here.naksha.lib.jbon.JbReader;
-import com.here.naksha.lib.jbon.JbSession;
-import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.XyzBuilder;
 import com.here.naksha.lib.jbon.XyzOp;
 import com.here.naksha.lib.jbon.XyzTags;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 public class XyzFeatureCodecTest extends SessionTest {
@@ -67,9 +60,9 @@ public class XyzFeatureCodecTest extends SessionTest {
     XyzFeatureCodec decoder = new XyzFeatureCodec();
 
     // when
-    decoder.setFeatureJbon(encoder.getFeatureJbon());
-    decoder.setXyzNsJbon(jbonNs);
-    decoder.setWkb(encoder.getWkb());
+    decoder.setFeatureBytes(encoder.getFeatureBytes());
+    decoder.setXyzNsBytes(jbonNs);
+    decoder.setGeometryBytes(encoder.getGeometryBytes());
     decoder.encodeFeature(true);
 
     // then
@@ -110,18 +103,18 @@ public class XyzFeatureCodecTest extends SessionTest {
     codec.decodeParts(true);
 
     // then
-    XyzTags jbTags = new XyzTags().mapBytes(codec.getTagsJbon(), 0, codec.getTagsJbon().length);
+    XyzTags jbTags = new XyzTags().mapBytes(codec.getTagsBytes(), 0, codec.getTagsBytes().length);
     Object[] tags = jbTags.tagsArray();
     assertArrayEquals(requestedTags.toArray(), tags);
 
-    JbFeature jbFeature = new JbFeature().mapBytes(codec.getFeatureJbon(), 0, codec.getFeatureJbon().length);
+    JbFeature jbFeature = new JbFeature().mapBytes(codec.getFeatureBytes(), 0, codec.getFeatureBytes().length);
     Map<String, Object> featureSentToDb = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
 
     // empty geometry
     assertNull(featureSentToDb.get("geometry"));
     // empty xyz
     assertEquals(null, ((Map<String, Object>) featureSentToDb.get("properties")).get(XYZ_NAMESPACE));
-    assertNotNull(codec.getWkb());
+    assertNotNull(codec.getGeometryBytes());
 
     // verify operations
     XyzOp xyzOp = new XyzOp().mapBytes(codec.xyzOp, 0, codec.xyzOp.length);

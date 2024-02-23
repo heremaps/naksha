@@ -29,19 +29,19 @@ import org.jetbrains.annotations.NotNull;
 class StringCodec extends FeatureCodec<String, StringCodec> {
 
   @Override
-  protected Short getDefaultWkbType() {
+  protected Short getDefaultGeometryEncoding() {
     return GEO_TYPE_WKB;
   }
 
   @Override
   public @NotNull StringCodec decodeParts(boolean force) {
-    featureJbon = JsonUtil.jsonToJbonByte(feature);
+    featureBytes = JsonUtil.jsonToJbonByte(feature);
     return this;
   }
 
   @Override
   public @NotNull StringCodec encodeFeature(boolean force) {
-    JbFeature jbFeature = new JbFeature().mapBytes(featureJbon, 0, featureJbon.length);
+    JbFeature jbFeature = new JbFeature().mapBytes(featureBytes, 0, featureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
     try {
       feature = Json.get().writer().writeValueAsString(featureAsMap);

@@ -465,7 +465,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
             + "feature,\n"
             + "xyz,\n"
             + "tags,\n"
-            + "naksha_geometry(geo_type,geo),\n"
+            + "get_type,\n"
+            + "geo,\n"
             + "null FROM ")
         .addIdent(collection);
     if (spatial_where.length() > 0 || props_where.length() > 0) {
@@ -604,7 +605,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
-          "SELECT op, id, xyz, tags, feature, geo_type, naksha_geometry(geo_type, geo), err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
+          "SELECT op, id, xyz, tags, feature, geo_type, geo, err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
       try {
         final List<@NotNull CODEC> features = writeRequest.features;
         final int SIZE = writeRequest.features.size();
@@ -617,10 +618,10 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           final CODEC codec = features.get(i);
           codec.decodeParts(false);
           reqOps[i] = codec.getXyzOp();
-          reqFeatures[i] = codec.getFeatureJbon();
-          reqGeo[i] = codec.getWkb();
-          reqGeoType[i] = codec.getWkbType(); // codec has to dec
-          reqTags[i] = codec.getTagsJbon();
+          reqFeatures[i] = codec.getFeatureBytes();
+          reqGeo[i] = codec.getGeometryBytes();
+          reqGeoType[i] = codec.getGeometryEncoding(); // codec has to dec
+          reqTags[i] = codec.getTagsBytes();
         }
         stmt.setArray(1, psqlConnection.createArrayOf("bytea", reqOps));
         stmt.setArray(2, psqlConnection.createArrayOf("bytea", reqFeatures));
@@ -651,8 +652,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       //      } else {
       //        partition_id = -1;
       //      }
-      final PreparedStatement stmt = prepareStatement(
-          "SELECT op, id, xyz, tags, feature, naksha_geometry(geo_type, geo), err_no, err_msg\n"
+      final PreparedStatement stmt =
+          prepareStatement("SELECT op, id, xyz, tags, feature, geo_type, geo, err_no, err_msg\n"
               + "FROM naksha_write_features(?,?,?,?,?,?);");
       try {
         // new array list, so we don't modify original order
@@ -675,10 +676,10 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         for (int i = 0; i < SIZE; i++) {
           final CODEC codec = features.get(i);
           op_arr[i] = codec.getXyzOp();
-          feature_arr[i] = codec.getFeatureJbon();
-          geo_type_arr[i] = codec.getWkbType();
-          geo_arr[i] = codec.getWkb();
-          tags_arr[i] = codec.getTagsJbon();
+          feature_arr[i] = codec.getFeatureBytes();
+          geo_type_arr[i] = codec.getGeometryEncoding();
+          geo_arr[i] = codec.getGeometryBytes();
+          tags_arr[i] = codec.getTagsBytes();
         }
         stmt.setString(1, collection_id);
         stmt.setArray(2, psqlConnection.createArrayOf("bytea", op_arr));

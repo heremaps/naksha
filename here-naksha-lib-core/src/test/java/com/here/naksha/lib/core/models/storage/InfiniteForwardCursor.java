@@ -43,8 +43,8 @@ public class InfiniteForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, 
     row.codec.setOp("CREATED");
     row.codec.setId("id:" + lastId);
     row.codec.setUuid(UUID.randomUUID().toString());
-    row.codec.setWkb(null);
-    row.codec.setFeatureJbon(JsonUtil.jsonToJbonByte(json));
+    row.codec.setGeometryBytes(null);
+    row.codec.setFeatureBytes(JsonUtil.jsonToJbonByte(json));
     row.codec.setRawError(null);
     row.codec.setErr(null);
     row.valid = true;
