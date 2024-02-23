@@ -26,7 +26,6 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
@@ -45,7 +44,7 @@ class HttpStorageReadExecute {
 
   @NotNull
   static Result execute(ReadFeaturesProxyWrapper request, RequestSender sender)
-      throws IOException, InterruptedException {
+      {
 
     return switch (request.getReadRequestType()) {
       case GET_BY_ID -> executeFeatureById(request, sender);
@@ -55,8 +54,7 @@ class HttpStorageReadExecute {
     };
   }
 
-  private static Result executeFeatureById(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender)
-      throws IOException, InterruptedException {
+  private static Result executeFeatureById(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String featureId = readRequest.getQueryParameter(FEATURE_ID);
 
     HttpResponse<String> response =
@@ -65,8 +63,7 @@ class HttpStorageReadExecute {
     return prepareResult(response, XyzFeature.class, List::of);
   }
 
-  private static Result executeFeaturesById(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender)
-      throws IOException, InterruptedException {
+  private static Result executeFeaturesById(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     List<String> featureIds = readRequest.getQueryParameter(FEATURE_IDS);
     String queryParamsString = FEATURE_IDS + "=" + String.join(",", featureIds);
 
@@ -76,8 +73,7 @@ class HttpStorageReadExecute {
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
-  private static Result executeFeatureByBBox(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender)
-      throws IOException, InterruptedException {
+  private static Result executeFeatureByBBox(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String queryParamsString = keysToKeyValuesStrings(readRequest, WEST, NORTH, EAST, SOUTH, LIMIT);
 
     warnOnUnsupportedQueryParam(readRequest, PROPERTY_SEARCH_OP);
@@ -88,8 +84,7 @@ class HttpStorageReadExecute {
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
-  private static Result executeFeaturesByTile(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender)
-      throws IOException, InterruptedException {
+  private static Result executeFeaturesByTile(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String queryParamsString = keysToKeyValuesStrings(readRequest, MARGIN, LIMIT);
     String tileType = readRequest.getQueryParameter(TILE_TYPE);
     String tileId = readRequest.getQueryParameter(TILE_ID);
