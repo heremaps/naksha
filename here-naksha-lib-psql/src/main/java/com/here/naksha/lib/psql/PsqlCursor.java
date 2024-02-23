@@ -19,7 +19,6 @@
 package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.CodecError;
@@ -81,11 +80,11 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
 
         row.codec.setOp(r_op);
         row.codec.setId(r_id);
-        row.codec.setXyzNsJbon(defaultIfNull(r_xyz, reqParams.tags[idx]));
-        row.codec.setTagsJbon(r_tags);
-        row.codec.setWkb(defaultIfNull(r_geo, reqParams.geo[idx]));
+        row.codec.setXyzNsJbon(r_xyz);
+        row.codec.setTagsJbon(defaultIfNull(r_tags, reqParams.tags, idx));
+        row.codec.setWkb(defaultIfNull(r_geo, reqParams.geo, idx));
         row.codec.setWkbType(r_geo_type);
-        row.codec.setFeatureJbon(defaultIfNull(r_feature, reqParams.features[idx]));
+        row.codec.setFeatureJbon(defaultIfNull(r_feature, reqParams.features, idx));
         row.codec.setRawError(r_err);
         row.codec.setErr(mapToCodecError(r_err_no, r_err));
         row.valid = true;
@@ -96,6 +95,13 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
     } catch (SQLException e) {
       throw unchecked(e);
     }
+  }
+
+  private byte[] defaultIfNull(byte[] value, byte[][] alt, int altIdx) {
+    if (value == null && alt != null) {
+      return alt[altIdx];
+    }
+    return value;
   }
 
   @Override
