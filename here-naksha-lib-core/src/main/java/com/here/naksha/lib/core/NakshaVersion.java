@@ -58,16 +58,40 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   private final int major;
   private final int minor;
   private final int revision;
+  private final PreReleaseTag preReleaseTag;
+  private final Byte preReleaseVersion;
+
+  public enum PreReleaseTag {
+    none((byte) 0),
+    alpha((byte) 1);
+
+    final byte enc;
+
+    PreReleaseTag(byte enc) {
+      this.enc = enc;
+    }
+
+    public static PreReleaseTag valueOf(byte enc) {
+      for (PreReleaseTag tag : values()) {
+        if (tag.enc == enc) {
+          return tag;
+        }
+      }
+      throw new IllegalArgumentException("Unknown pre-release tag: " + enc);
+    }
+  }
 
   /**
    * @param major    the major version (0-65535).
    * @param minor    the minor version (0-65535).
    * @param revision the revision (0-65535).
    */
-  public NakshaVersion(int major, int minor, int revision) {
+  public NakshaVersion(int major, int minor, int revision, PreReleaseTag preReleaseTag, Byte preReleaseVersion) {
     this.major = major;
     this.minor = minor;
     this.revision = revision;
+    this.preReleaseTag = preReleaseTag;
+    this.preReleaseVersion = preReleaseVersion;
   }
 
   /**
@@ -81,15 +105,31 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   public static @NotNull NakshaVersion of(@NotNull String version) throws NumberFormatException {
     final int majorEnd = version.indexOf('.');
     final int minorEnd = version.indexOf('.', majorEnd + 1);
-    return new NakshaVersion(
-        Integer.parseInt(version.substring(0, majorEnd)),
-        Integer.parseInt(version.substring(majorEnd + 1, minorEnd)),
-        Integer.parseInt(version.substring(minorEnd + 1)));
+    final int revisionEnd = version.indexOf('-', minorEnd + 1);
+    final int preReleaseTagEnd = revisionEnd == -1 ? -1 : version.indexOf('.', revisionEnd + 1);
+    final int major = Integer.parseInt(version.substring(0, majorEnd));
+    final int minor = Integer.parseInt(version.substring(majorEnd + 1, minorEnd));
+    final int revision = revisionEnd == -1
+        ? Integer.parseInt(version.substring(minorEnd + 1))
+        : Integer.parseInt(version.substring(minorEnd + 1, revisionEnd));
+    final String preReleaseTagString =
+        revisionEnd == -1 ? null : version.substring(revisionEnd + 1, preReleaseTagEnd);
+    final PreReleaseTag preReleaseTag =
+        preReleaseTagString == null ? null : PreReleaseTag.valueOf(preReleaseTagString);
+    final Byte preReleaseVersion =
+        preReleaseTagEnd == -1 ? null : Byte.parseByte(version.substring(preReleaseTagEnd + 1));
+
+    return new NakshaVersion(major, minor, revision, preReleaseTag, preReleaseVersion);
   }
 
   @AvailableSince(v2_0_3)
   public NakshaVersion(long value) {
-    this((int) ((value >>> 32) & 0xffff), (int) ((value >>> 16) & 0xffff), (int) (value & 0xffff));
+    this(
+        (int) ((value >>> 32) & 0xffff),
+        (int) ((value >>> 16) & 0xffff),
+        (int) (value & 0xffff),
+        (byte) ((value >>> 48) & 0xff) == 0 ? null : PreReleaseTag.valueOf((byte) ((value >>> 48) & 0xff)),
+        (byte) ((value >>> 48) & 0xff) == 0 ? null : (byte) ((value >>> 56) & 0xff));
   }
 
   @AvailableSince(v2_0_3)
@@ -107,9 +147,23 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
     return revision;
   }
 
+  @AvailableSince(v3_0_0_alpha_0)
+  public PreReleaseTag getPreReleaseTag() {
+    return preReleaseTag;
+  }
+
+  @AvailableSince(v3_0_0_alpha_0)
+  public Byte getReleaseVersion() {
+    return preReleaseVersion;
+  }
+
   @AvailableSince(v2_0_3)
   public long toLong() {
-    return ((major & 0xffffL) << 32) | ((minor & 0xffffL) << 16) | (revision & 0xffffL);
+    return (preReleaseVersion == null ? 0 : (preReleaseVersion & 0xffL) << 56)
+        | (preReleaseTag == null ? 0 : (preReleaseTag.enc & 0xffL) << 48)
+        | ((major & 0xffffL) << 32)
+        | ((minor & 0xffffL) << 16)
+        | (revision & 0xffffL);
   }
 
   @Override
@@ -137,6 +191,7 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
 
   @Override
   public @NotNull String toString() {
-    return "" + major + '.' + minor + '.' + revision;
+    return "" + major + '.' + minor + '.' + revision
+        + (preReleaseTag == null ? "" : "-" + preReleaseTag + '.' + preReleaseVersion);
   }
 }
