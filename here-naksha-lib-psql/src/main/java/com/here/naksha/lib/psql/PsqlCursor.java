@@ -25,12 +25,11 @@ import com.here.naksha.lib.core.models.storage.CodecError;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.util.json.Json;
-import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,13 +45,20 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
 
   PsqlCursor(
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
+      @Nullable RequestedParams reqParams,
       @NotNull PostgresSession session,
       @NotNull Statement stmt,
       @NotNull ResultSet rs) {
     super(codecFactory);
+    if (reqParams == null) {
+      this.reqParams = new RequestedParams();
+    } else {
+      this.reqParams = reqParams;
+    }
     cursor = new PostgresCursor(this, session, stmt, rs);
   }
 
+  private final @NotNull RequestedParams reqParams;
   private final @NotNull PostgresCursor cursor;
 
   @Override
@@ -64,19 +70,23 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
         final String r_id = rs.getString(2);
         final byte[] r_xyz = rs.getBytes(3);
         final byte[] r_tags = rs.getBytes(4);
-        final byte[] r_geo = rs.getBytes(5);
-        final byte[] r_feature = rs.getBytes(6);
-        // final Integer r_no = rs.getInt(7);
-        final String r_err = rs.getString(8);
+        final byte[] r_feature = rs.getBytes(5);
+        final Short r_geo_type = rs.getShort(6);
+        final byte[] r_geo = rs.getBytes(7);
+        final String r_err_no = rs.getString(8);
+        final String r_err = rs.getString(9);
+
+        int idx = rs.getRow() - 1;
 
         row.codec.setOp(r_op);
         row.codec.setId(r_id);
-        row.codec.setXyzNsJbon(r_xyz);
-        row.codec.setTagsJbon(r_tags);
-        row.codec.setWkb(r_geo);
-        row.codec.setFeatureJbon(r_feature);
+        row.codec.setXyzNsBytes(r_xyz);
+        row.codec.setTagsBytes(defaultIfNull(r_tags, reqParams.tags, idx));
+        row.codec.setGeometryBytes(defaultIfNull(r_geo, reqParams.geo, idx));
+        row.codec.setGeometryEncoding(r_geo_type);
+        row.codec.setFeatureBytes(defaultIfNull(r_feature, reqParams.features, idx));
         row.codec.setRawError(r_err);
-        row.codec.setErr(mapToCodecError(r_err));
+        row.codec.setErr(mapToCodecError(r_err_no, r_err));
         row.valid = true;
         return true;
       }
@@ -87,22 +97,23 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
     }
   }
 
+  private byte[] defaultIfNull(byte[] value, byte[][] alt, int altIdx) {
+    if (value == null && alt != null) {
+      return alt[altIdx];
+    }
+    return value;
+  }
+
   @Override
   public void close() {
     cursor.close();
   }
 
-  private CodecError mapToCodecError(String r_err) {
+  private CodecError mapToCodecError(String r_err_no, String r_err) {
     CodecError codecError = null;
-    if (r_err != null) {
-      try (final Json jp = Json.get()) {
-        final CodecError decodedError = jp.reader().readValue(r_err, CodecError.class);
-        final XyzError xyzError = XyzErrorMapper.psqlCodeToXyzError(
-            decodedError.err.value().toString());
-        codecError = new CodecError(xyzError, decodedError.msg);
-      } catch (IOException e) {
-        throw unchecked(e);
-      }
+    if (r_err_no != null) {
+      final XyzError xyzError = XyzErrorMapper.psqlCodeToXyzError(r_err_no);
+      codecError = new CodecError(xyzError, r_err);
     }
     return codecError;
   }

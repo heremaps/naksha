@@ -47,7 +47,7 @@ class PostgresWriteOp {
     this.op = codec.getOp();
     this.id = codec.getId();
     this.uuid = codec.getUuid();
-    this.feature = codec.getFeatureJbon();
+    this.feature = codec.getFeatureBytes();
     return this;
   }
 }

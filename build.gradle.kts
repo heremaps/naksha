@@ -70,7 +70,7 @@ val aws_lambda_log4j = "com.amazonaws:aws-lambda-java-log4j2:1.5.1"
 val amazon_sns = "software.amazon.awssdk:sns:2.20.69"
 
 val jts_core = "org.locationtech.jts:jts-core:1.19.0"
-val jts_io = "org.locationtech.jts:jts-io:1.19.0"
+val jts_io_common = "org.locationtech.jts.io:jts-io-common:1.19.0"
 val gt_api = "org.geotools:gt-api:19.1"
 val gt_referencing = "org.geotools:gt-referencing:19.1"
 val gt_epsg_hsql = "org.geotools:gt-epsg-hsql:19.1"
@@ -314,6 +314,7 @@ project(":here-naksha-lib-core") {
         implementation(google_guava)
         implementation(commons_lang3)
         implementation(jts_core)
+        implementation(jts_io_common)
         implementation(google_flatbuffers)
         implementation(project(":here-naksha-lib-jbon"))
         testImplementation(mockito)
@@ -354,6 +355,7 @@ project(":here-naksha-lib-psql") {
         //implementation(zaxxer_hikari)
         implementation(commons_dbutils)
         implementation(jts_core)
+        implementation(jts_io_common)
 
         testImplementation(mockito)
         testImplementation(spatial4j)

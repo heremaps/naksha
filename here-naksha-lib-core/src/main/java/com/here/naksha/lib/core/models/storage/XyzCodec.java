@@ -57,6 +57,11 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
 
   private final @NotNull Class<FEATURE> featureClass;
 
+  @Override
+  protected Short getDefaultGeometryEncoding() {
+    return GEO_TYPE_TWKB;
+  }
+
   @NotNull
   @Override
   public final SELF decodeParts(boolean force) {
@@ -77,7 +82,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     } else {
       geometry = null;
     }
-    wkb = null;
+    geometryBytes = null;
 
     // TODO global dict
     // TODO what about features that need more than 64KB of buffer? newDataView should handle it?
@@ -90,7 +95,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
 
     IMap featureAsMap = JvmEnv.get().convert(feature, JvmMap.class);
     JbBuilder builder = new JbBuilder(newDataView(65536), globalDict);
-    featureJbon = builder.buildFeatureFromMap(featureAsMap);
+    featureBytes = builder.buildFeatureFromMap(featureAsMap);
 
     feature.getProperties().setXyzNamespace(xyz);
     feature.setGeometry(xyzGeometry);
@@ -106,13 +111,13 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
 
   private void decodeTags(@Nullable List<@NotNull String> tags, @Nullable JbDict globalDict) {
     XyzBuilder xyzBuilder = new XyzBuilder(newDataView(512), globalDict);
-    tagsJbon = null;
+    tagsBytes = null;
     if (tags != null && !tags.isEmpty()) {
       xyzBuilder.startTags();
       for (String tag : tags) {
         xyzBuilder.writeTag(tag);
       }
-      tagsJbon = xyzBuilder.buildTags();
+      tagsBytes = xyzBuilder.buildTags();
     }
   }
 
@@ -132,7 +137,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     if (!force && isEncoded) {
       return self();
     }
-    if (featureJbon == null) {
+    if (featureBytes == null) {
       return self();
     }
     feature = null;
@@ -142,8 +147,12 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
       feature.setId(id);
     }
     feature.setGeometry(JTSHelper.fromGeometry(getGeometry()));
-    if (xyzNsJbon != null) {
-      feature.getProperties().setXyzNamespace(getXyzNamespaceFromFromJbon());
+    if (xyzNsBytes != null) {
+      XyzNamespace xyzNs = getXyzNamespaceFromFromJbon();
+      feature.getProperties().setXyzNamespace(xyzNs);
+      if (uuid == null) {
+        uuid = xyzNs.getUuid();
+      }
     }
     isEncoded = true;
     return self();
@@ -151,7 +160,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
 
   @SuppressWarnings("unchecked")
   private FEATURE getFeatureFromJbon() {
-    JbFeature jbFeature = new JbFeature().mapBytes(featureJbon, 0, featureJbon.length);
+    JbFeature jbFeature = new JbFeature().mapBytes(featureBytes, 0, featureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>)
         new JbMap().mapReader(jbFeature.getReader()).toIMap();
     return JvmEnv.get().convert(featureAsMap, featureClass);
@@ -159,7 +168,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
 
   private XyzNamespace getXyzNamespaceFromFromJbon() {
     XyzNs xyzNs = new XyzNs();
-    xyzNs.mapBytes(xyzNsJbon, 0, xyzNsJbon.length);
+    xyzNs.mapBytes(xyzNsBytes, 0, xyzNsBytes.length);
 
     XyzNamespace retNs = new XyzNamespace();
     retNs.setUuid(xyzNs.uuid());
@@ -180,11 +189,11 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
   }
 
   private XyzTags getXyzTagsFromJbon() {
-    if (tagsJbon == null) {
+    if (tagsBytes == null) {
       return null;
     }
     com.here.naksha.lib.jbon.XyzTags xyzTags =
-        new com.here.naksha.lib.jbon.XyzTags().mapBytes(tagsJbon, 0, tagsJbon.length);
+        new com.here.naksha.lib.jbon.XyzTags().mapBytes(tagsBytes, 0, tagsBytes.length);
     XyzTags tags = new XyzTags();
     tags.addAll(List.of(xyzTags.tagsArray()));
     return tags;
