@@ -86,8 +86,8 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       return storageValidation;
     }
 
-    DefaultViewHandlerProperties viewHandlerProperties = JsonSerializable.convert(eventHandler.getProperties(),
-            DefaultViewHandlerProperties.class);
+    DefaultViewHandlerProperties viewHandlerProperties =
+        JsonSerializable.convert(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
 
     List<String> spaceIds = viewHandlerProperties.getSpaceIds();
     if (spaceIds == null) {

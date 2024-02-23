@@ -2,17 +2,23 @@ package com.here.naksha.app.service;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.*;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static org.junit.jupiter.api.Named.named;
 
 public class DefaultViewHandlerTest extends ApiTest {
 
@@ -430,5 +436,66 @@ public class DefaultViewHandlerTest extends ApiTest {
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Feature response body doesn't match");
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("updateHandlerWithInvalidRequest")
+    void updateHandlerWithInvalidData(Pair<String, String> testData) throws Exception {
+        //given : prepare broken request
+        final String bodyJson = loadFileOrFail(testData.getKey());
+        String streamId = UUID.randomUUID().toString();
+        String expectedResultPart = "{\"errorMessage\": \"%s\"}".formatted(testData.getValue());
+
+        // when: update handler with wrong request
+
+        HttpResponse<String> viewResponse = getNakshaClient().post("hub/handlers", bodyJson, streamId);
+
+        //then
+        assertThat(viewResponse)
+                .hasStatus(400)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedResultPart);
+
+    }
+
+    @ParameterizedTest
+    @MethodSource("createHandlerWithInvalidRequest")
+    void createHandlerWithInvalidData(Pair<String, String> testData) throws Exception {
+        //given : prepare broken request
+        final String bodyJson = loadFileOrFail(testData.getKey());
+        String streamId = UUID.randomUUID().toString();
+        String expectedResultPart = "{\"errorMessage\": \"%s\"}".formatted(testData.getValue());
+
+        // when: update handler with wrong request
+
+        HttpResponse<String> viewResponse = getNakshaClient().post("hub/handlers", bodyJson, streamId);
+
+        //then
+        assertThat(viewResponse)
+                .hasStatus(400)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedResultPart);
+
+    }
+
+    static Stream<Named<Pair<String, String>>> createHandlerWithInvalidRequest() {
+        String location = "DefaultViewHandler/setup/invalid/create_view_handler_";
+        return Stream.of(
+                named("Missing 'storage' property", Pair.of(location + "no_storage.json", "Mandatory properties parameter storageId missing!")),
+                named("Missing 'spaceIds' property", Pair.of(location + "no_spaceIds.json", "Mandatory properties parameter spaceIds missing!")),
+                named("Empty 'spaceIds' property", Pair.of(location + "empty_spaceIds.json", "Mandatory parameter spaceIds can't be empty/blank!")),
+                named("Non existing space", Pair.of(location + "non_existing_space.json", "Mandatory parameter spaceIds contains space which is not created!"))
+        );
+    }
+
+    static Stream<Named<Pair<String, String>>> updateHandlerWithInvalidRequest() {
+        String location = "DefaultViewHandler/setup/invalid/update_view_handler_";
+        return Stream.of(
+                named("Missing 'storage' property", Pair.of(location + "no_storage.json", "Mandatory properties parameter storageId missing!")),
+                named("Missing 'spaceIds' property", Pair.of(location + "no_spaceIds.json", "Mandatory properties parameter spaceIds missing!")),
+                named("Empty 'spaceIds' property", Pair.of(location + "empty_spaceIds.json", "Mandatory parameter spaceIds can't be empty/blank!")),
+                named("Non existing space", Pair.of(location + "non_existing_space.json", "Mandatory parameter spaceIds contains space which is not created!"))
+        );
     }
 }
