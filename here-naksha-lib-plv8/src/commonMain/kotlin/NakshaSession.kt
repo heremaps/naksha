@@ -449,7 +449,8 @@ SET (toast_tuple_target=8160,fillfactor=100
                     }
                     if (xyzOp == XYZ_OP_CREATE) {
                         if (existing != null) {
-                            throw NakshaException(ERR_CONFLICT, "Feature exists already", id, feature, geo_type, geo, tags)
+                            val existingXyz: ByteArray = existing["xyz"]!!
+                            throw NakshaException(ERR_CONFLICT, "Feature exists already", id, feature, geo_type, geo, tags, existingXyz)
                         }
                         val query = "INSERT INTO naksha_collections (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz"
                         rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo_type, geo)))

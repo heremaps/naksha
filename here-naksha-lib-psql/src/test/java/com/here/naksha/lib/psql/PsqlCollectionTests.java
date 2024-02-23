@@ -16,6 +16,8 @@ import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
+import com.here.naksha.lib.jbon.JvmBigInt64Api;
+import com.here.naksha.lib.plv8.Static;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -99,9 +101,9 @@ abstract class PsqlCollectionTests extends PsqlTests{
 
   private boolean isLockReleased(PsqlWriteSession session, String collectionId) throws SQLException {
     final PostgresSession pgSession = session.session();
-    final SQL sql = pgSession.sql().add("select count(*) from pg_locks where locktype = 'advisory' and ((classid::bigint << 32) | objid::bigint) = nk_lock_id(?)  ;");
+    final SQL sql = pgSession.sql().add("select count(*) from pg_locks where locktype = 'advisory' and ((classid::bigint << 32) | objid::bigint) = ?;");
     try (PreparedStatement stmt = pgSession.prepareStatement(sql)) {
-      stmt.setString(1, collectionId);
+      stmt.setLong(1, new JvmBigInt64Api().toLong(Static.lockId(collectionId)));
       ResultSet resultSet = stmt.executeQuery();
       resultSet.next();
       return resultSet.getInt(1) == 0;
