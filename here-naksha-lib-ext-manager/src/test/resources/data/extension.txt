@@ -1,0 +1,16 @@
+[
+  {
+    "id":"child_extension_1",
+    "key":"childExtension/naksha-ext-child1-1.0-SNAPSHOT-shaded.jar",
+    "extensionName":"childjar1",
+    "version": "1.0",
+    "type":"Extensions"
+  },
+ {
+     "id":"child_extension_2",
+     "key":"childExtension/naksha-ext-child1-2.0-SNAPSHOT-shaded.jar",
+     "extensionName":"childjar2",
+     "version": "2.0",
+     "type":"Extensions"
+   }
+]

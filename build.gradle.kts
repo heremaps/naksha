@@ -114,6 +114,8 @@ val resillience4j_retry = "io.github.resilience4j:resilience4j-retry:2.0.0"
 
 val otel = "io.opentelemetry:opentelemetry-api:1.28.0"
 
+val cytodynamics = "com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
+
 val mavenUrl = getRequiredPropertyFromRootProject("mavenUrl")
 val mavenUser = getRequiredPropertyFromRootProject("mavenUser")
 val mavenPassword = getRequiredPropertyFromRootProject("mavenPassword")
@@ -491,6 +493,20 @@ project(":here-naksha-lib-hub") {
 }
 //} catch (ignore: UnknownProjectException) {
 //}
+
+project(":here-naksha-lib-ext-manager") {
+    description = "Naksha Extension Manager Library"
+    dependencies {
+        api(project(":here-naksha-lib-core"))
+
+        implementation(aws_s3)
+        implementation(cytodynamics)
+        testImplementation(mockito)
+        testImplementation(project(":here-naksha-lib-hub"))
+        testImplementation(project(":here-naksha-lib-psql"))
+    }
+    setOverallCoverage(0.0) // only increasing allowed!
+}
 
 //try {
 project(":here-naksha-app-service") {
