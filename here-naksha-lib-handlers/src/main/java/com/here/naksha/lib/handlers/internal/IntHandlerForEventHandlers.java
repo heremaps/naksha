@@ -90,16 +90,10 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
         JsonSerializable.convert(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
 
     List<String> spaceIds = viewHandlerProperties.getSpaceIds();
-    if (spaceIds == null) {
+    if (spaceIds == null || spaceIds.isEmpty()) {
       return new ErrorResult(
           XyzError.ILLEGAL_ARGUMENT,
-          "Mandatory properties parameter %s missing!".formatted(DefaultViewHandlerProperties.SPACE_IDS));
-    }
-
-    if (spaceIds.isEmpty()) {
-      return new ErrorResult(
-          XyzError.ILLEGAL_ARGUMENT,
-          "Mandatory parameter %s can't be empty/blank!".formatted(DefaultViewHandlerProperties.SPACE_IDS));
+          "Mandatory properties parameter %s empty/blank!".formatted(DefaultViewHandlerProperties.SPACE_IDS));
     }
 
     for (String spaceId : spaceIds) {

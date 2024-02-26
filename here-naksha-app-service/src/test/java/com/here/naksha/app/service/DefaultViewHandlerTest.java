@@ -441,11 +441,11 @@ public class DefaultViewHandlerTest extends ApiTest {
 
     @ParameterizedTest
     @MethodSource("updateHandlerWithInvalidRequest")
-    void updateHandlerWithInvalidData(Pair<String, String> testData) throws Exception {
+    void tc5040_invalid_handler_update(String filePath) throws Exception {
         //given : prepare broken request
-        final String bodyJson = loadFileOrFail(testData.getKey());
+        final String bodyJson = loadFileOrFail(filePath);
         String streamId = UUID.randomUUID().toString();
-        String expectedResultPart = "{\"errorMessage\": \"%s\"}".formatted(testData.getValue());
+        String expectedResultPart = loadFileOrFail("DefaultViewHandler/TC5040_invalid_handler_update/error_response_part.json");
 
         // when: update handler with wrong request
 
@@ -461,11 +461,11 @@ public class DefaultViewHandlerTest extends ApiTest {
 
     @ParameterizedTest
     @MethodSource("createHandlerWithInvalidRequest")
-    void createHandlerWithInvalidData(Pair<String, String> testData) throws Exception {
+    void tc5041_invalid_handler_create(String filePath) throws Exception {
         //given : prepare broken request
-        final String bodyJson = loadFileOrFail(testData.getKey());
+        final String bodyJson = loadFileOrFail(filePath);
         String streamId = UUID.randomUUID().toString();
-        String expectedResultPart = "{\"errorMessage\": \"%s\"}".formatted(testData.getValue());
+        String expectedResultPart = loadFileOrFail("DefaultViewHandler/TC5041_invalid_handler_create/error_response_part.json");
 
         // when: update handler with wrong request
 
@@ -479,23 +479,23 @@ public class DefaultViewHandlerTest extends ApiTest {
 
     }
 
-    static Stream<Named<Pair<String, String>>> createHandlerWithInvalidRequest() {
+    static Stream<Named<String>> createHandlerWithInvalidRequest() {
         String location = "DefaultViewHandler/setup/invalid/create_view_handler_";
         return Stream.of(
-                named("Missing 'storage' property", Pair.of(location + "no_storage.json", "Mandatory properties parameter storageId missing!")),
-                named("Missing 'spaceIds' property", Pair.of(location + "no_spaceIds.json", "Mandatory properties parameter spaceIds missing!")),
-                named("Empty 'spaceIds' property", Pair.of(location + "empty_spaceIds.json", "Mandatory parameter spaceIds can't be empty/blank!")),
-                named("Non existing space", Pair.of(location + "non_existing_space.json", "Mandatory parameter spaceIds contains space which is not created!"))
+                named("Missing 'storage' property", location + "no_storage.json"),
+                named("Missing 'spaceIds' property", location + "no_spaceIds.json"),
+                named("Empty 'spaceIds' property", location + "empty_spaceIds.json"),
+                named("Non existing space", location + "non_existing_space.json")
         );
     }
 
-    static Stream<Named<Pair<String, String>>> updateHandlerWithInvalidRequest() {
+    static Stream<Named<String>> updateHandlerWithInvalidRequest() {
         String location = "DefaultViewHandler/setup/invalid/update_view_handler_";
         return Stream.of(
-                named("Missing 'storage' property", Pair.of(location + "no_storage.json", "Mandatory properties parameter storageId missing!")),
-                named("Missing 'spaceIds' property", Pair.of(location + "no_spaceIds.json", "Mandatory properties parameter spaceIds missing!")),
-                named("Empty 'spaceIds' property", Pair.of(location + "empty_spaceIds.json", "Mandatory parameter spaceIds can't be empty/blank!")),
-                named("Non existing space", Pair.of(location + "non_existing_space.json", "Mandatory parameter spaceIds contains space which is not created!"))
+                named("Missing 'storage' property", location + "no_storage.json"),
+                named("Missing 'spaceIds' property", location + "no_spaceIds.json"),
+                named("Empty 'spaceIds' property", location + "empty_spaceIds.json"),
+                named("Non existing space", location + "non_existing_space.json")
         );
     }
 }
