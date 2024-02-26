@@ -25,10 +25,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * Starts tag building.
      */
     fun startTags() {
-        clear()
-        val view = this.view
-        view.setInt8(end++, TYPE_XYZ.toByte())
-        writeInt32(XYZ_TAGS)
+        clearAndReserveHeader()
         val global = this.global
         if (global == null) writeNull() else writeString(global.id()!!)
     }
@@ -90,7 +87,34 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * @return The tag bytes.
      */
     fun buildTags(): ByteArray {
-        return view.getByteArray().copyOf(end)
+        return finish(XYZ_TAGS) // Variant
+    }
+
+    private fun clearAndReserveHeader() {
+        clear()
+        // Reserve 7 bytes to prefix with:
+        // lead-in (1 byte)
+        // size (1 to 5 byte)
+        // variant (1 byte)
+        end = 7
+    }
+
+    private fun finish(variant: Int) : ByteArray {
+        val endIndex = end
+        val size = end - 7
+        val sizeSize = JbReader.sizeOfIntEncoding(size)
+        // We reserved 7 byte. We need:
+        // lead-in (1 byte)
+        // size (size-size)
+        // variant (1 byte)
+        // So, the start is only 0, if the size need to be stored in 5 byte.
+        val startIndex = 5 - sizeSize
+        end = startIndex
+        view.setInt8(end++, TYPE_XYZ.toByte())
+        writeInt32(size)
+        writeInt32(variant)
+        end = endIndex
+        return view.getByteArray().copyOfRange(startIndex, endIndex)
     }
 
     /**
@@ -105,14 +129,11 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * @return The JBON encoded XYZ operation.
      */
     fun buildXyzOp(op: Int, id: String?, uuid: String?): ByteArray {
-        clear()
-        val view = this.view
-        view.setInt8(end++, TYPE_XYZ.toByte())
-        writeInt32(XYZ_OP)
+        clearAndReserveHeader()
         writeInt32(op)
         if (id == null) writeNull() else writeString(id)
         if (uuid == null) writeNull() else writeString(uuid)
-        return view.getByteArray().copyOf(end)
+        return finish(XYZ_OP)
     }
 
     /**
@@ -133,10 +154,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
             author: String,
             grid: String
     ): ByteArray {
-        clear()
-        val view = this.view
-        view.setInt8(end++, TYPE_XYZ.toByte())
-        writeInt32(XYZ_NS)
+        clearAndReserveHeader()
         writeTimestamp(createdAt)
         if (createdAt == updatedAt) writeNull() else writeTimestamp(updatedAt)
         writeInt64(txn)
@@ -149,7 +167,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
         writeString(appId)
         writeString(author)
         writeString(grid)
-        return view.getByteArray().copyOf(end)
+        return finish(XYZ_NS)
     }
 
 }

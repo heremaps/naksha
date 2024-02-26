@@ -17,33 +17,10 @@ class JbText : JbUnicodeMapper<JbText>() {
 
     override fun parseHeader(mandatory: Boolean) {
         if (mandatory) {
-            val view = reader.useView()
-            check(reader.unitType() == TYPE_CONTAINER)
-            val param = reader.unitTypeParam()
-            check(param and 0b0000_1100 == TYPE_CONTAINER_TEXT)
-            val sizeIndicator = param and 0b0000_0011
-            val size: Int
-            when (sizeIndicator) {
-                1 -> {
-                    size = 1 + view.getInt8(reader.offset + 1).toInt() and 0xff
-                    reader.offset += 2
-                }
-
-                2 -> {
-                    size = 3 + view.getInt16(reader.offset + 1).toInt() and 0xffff
-                    reader.offset += 3
-                }
-
-                3 -> {
-                    size = 5 + view.getInt32(reader.offset + 1)
-                    reader.offset += 5
-                }
-
-                else -> {
-                    size = 0
-                }
-            }
-            setContentSize(size)
+            check(reader.unitType() == TYPE_TEXT)
+            val unitSize = reader.unitSize()
+            check(reader.enterUnit())
+            setContentSize(unitSize)
         }
         string = null
     }

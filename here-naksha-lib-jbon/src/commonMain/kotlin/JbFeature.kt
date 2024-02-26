@@ -9,7 +9,7 @@ import kotlin.js.JsExport
  * A mapper that allows reading a feature. After mapping the [reader] can be used to access the content of the feature.
  */
 @JsExport
-open class JbFeature : JbObjectMapper<JbFeature>() {
+open class JbFeature : JbStructMapper<JbFeature>() {
     private var id: String? = null
     private var featureType: Int = -1
 
@@ -23,11 +23,8 @@ open class JbFeature : JbObjectMapper<JbFeature>() {
     override fun parseHeader(mandatory: Boolean) {
         // Header parsing is always mandatory for features!
         check(reader.unitType() == TYPE_FEATURE)
-        // Total size of feature.
-        reader.addOffset(1)
-        check(reader.isInt())
-        val size = reader.readInt32()
-        check(reader.nextUnit())
+        val unitSize = reader.unitSize()
+        check(reader.enterUnit())
         // The id of global dictionary (optional).
         if (reader.isString()) {
             val globalDictId = reader.readString()
@@ -52,7 +49,7 @@ open class JbFeature : JbObjectMapper<JbFeature>() {
         check(reader.nextUnit())
         featureType = reader.unitType()
         // Content.
-        setContentSize(size)
+        setContentSize(unitSize)
     }
 
     /**

@@ -9,8 +9,11 @@ const val TYPE_STRING_CODE_POINT = 0b0001_0000_0000 // 256
 const val TYPE_TEXT_REF = 0b0001_0000_0001 // 257
 const val TYPE_CONTAINER = 0b1101_0000
 const val TYPE_CONTAINER_MAP = 0b0000_0000
+const val TYPE_MAP = TYPE_CONTAINER or TYPE_CONTAINER_MAP
 const val TYPE_CONTAINER_ARRAY = 0b0000_0100
+const val TYPE_ARRAY = TYPE_CONTAINER or TYPE_CONTAINER_ARRAY
 const val TYPE_CONTAINER_TEXT = 0b0000_1100
+const val TYPE_TEXT = TYPE_CONTAINER or TYPE_CONTAINER_TEXT
 const val TYPE_TINY_LOCAL_REF = 0b1110_0000
 const val TYPE_TINY_GLOBAL_REF = 0b1111_0000
 
@@ -27,8 +30,8 @@ const val TYPE_BOOL_FALSE = 3
 const val TYPE_FLOAT32 = 4
 const val TYPE_FLOAT64 = 5
 const val TYPE_TIMESTAMP = 6 // UTC epoch in milliseconds
-
 // 7 = Reserved
+
 const val TYPE_INT8 = 8
 const val TYPE_INT16 = 9
 const val TYPE_INT32 = 10
@@ -111,7 +114,7 @@ inline fun newDataView(size: Int) = Jb.env.newDataView(ByteArray(size))
 @Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
 inline fun asArray(any: Any?): Array<Any?> = any as Array<Any?>
 
-fun Exception.rootCause() : Exception {
+fun Exception.rootCause(): Exception {
     var e = this
     while (true) {
         val cause = e.cause

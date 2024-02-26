@@ -22,24 +22,43 @@ import kotlin.js.JsExport
 interface ITable {
     /**
      * Returns a new row.
-     * @param row The native map of the row.
+     * @param ret The return row.
      */
-    fun returnNext(row: IMap)
+    fun returnNext(ret: IMap)
 
     /**
      * Returns a Naksha default row for a successful operation.
      */
-    fun returnOpOk(op: String, id: String, xyz: ByteArray, tags: ByteArray?, feature: ByteArray? = null, geoType:Short, geo: Any? = null) {
+    fun returnOk(op: String, id: String, xyz: ByteArray, tags: ByteArray?, feature: ByteArray? = null, geoType: Short? = null, geo: Any? = null) {
         val map = Jb.map.newMap()
-        map["op"] = op
-        map["id"] = id
-        map["xyz"] = xyz
-        map["tags"] = tags
-        map["geo_type"] = geoType
-        map["geo"] = geo
-        map["feature"] = feature
-        map["err_no"] = null
-        map["err_msg"] = null
+        map[RET_OP] = op
+        map[RET_ID] = id
+        map[RET_XYZ] = xyz
+        map[RET_TAGS] = tags
+        map[RET_GEO_TYPE] = geoType
+        map[RET_GEOMETRY] = geo
+        map[RET_FEATURE] = feature
+        map[RET_ERR_NO] = null
+        map[RET_ERR_MSG] = null
+        returnNext(map)
+    }
+
+    /**
+     * Returns a Naksha default row for a successful operation.
+     * @param op The executed operation.
+     * @param row The database row to return, will be mapped to the return row.
+     */
+    fun returnRow(op: String, row:IMap) {
+        val map = Jb.map.newMap()
+        map[RET_OP] = op
+        map[RET_ID] = row[COL_ID]
+        map[RET_XYZ] = row[COL_XYZ]
+        map[RET_TAGS] = row[COL_TAGS]
+        map[RET_GEO_TYPE] = row[COL_GEO_TYPE]
+        map[RET_GEOMETRY] = row[COL_GEOMETRY]
+        map[RET_FEATURE] = row[COL_FEATURE]
+        map[RET_ERR_NO] = null
+        map[RET_ERR_MSG] = null
         returnNext(map)
     }
 
@@ -47,13 +66,13 @@ interface ITable {
      * Returns a Naksha default row for a failure.
      */
     fun returnException(e: NakshaException) {
-        returnOpErr(e.errNo, e.errMsg, e.id, e.xyz, e.tags, e.feature, e.geoType, e.geo)
+        returnErr(e.errNo, e.errMsg, e.id, e.xyz, e.tags, e.feature, e.geoType, e.geo)
     }
 
     /**
      * Returns a Naksha default row for a failure.
      */
-    fun returnOpErr(errNo: String, errMsg: String, id: String? = null, xyz: ByteArray? = null, tags: ByteArray? = null, feature: ByteArray? = null, geoType:Short?=null, geo: Any? = null) {
+    fun returnErr(errNo: String, errMsg: String, id: String? = null, xyz: ByteArray? = null, tags: ByteArray? = null, feature: ByteArray? = null, geoType: Short? = null, geo: Any? = null) {
         val map = Jb.map.newMap()
         map["op"] = XYZ_EXECUTED_ERROR
         map["id"] = id

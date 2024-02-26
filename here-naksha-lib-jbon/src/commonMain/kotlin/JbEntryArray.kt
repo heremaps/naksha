@@ -10,7 +10,7 @@ import kotlin.js.JsExport
  */
 @Suppress("UNCHECKED_CAST")
 @JsExport
-abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbObjectMapper<SELF>() {
+abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructMapper<SELF>() {
     /**
      * The current index in the entry list.
      */

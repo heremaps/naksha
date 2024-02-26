@@ -170,7 +170,7 @@ class Plv8Test : Plv8TestContainer() {
 
     @Order(10)
     @Test
-    fun testWriteCollectionsOfBar() {
+    fun testCreateBarCollection() {
         val session = NakshaSession.get()
         // TODO: We need a test for this case, that is a general issue with empty local dictionaries!
         //val collectionJson = """{"id":"bar"}"""
@@ -192,6 +192,32 @@ class Plv8Test : Plv8TestContainer() {
         assertEquals(XYZ_EXECUTED_CREATED, row["op"])
         session.sql.execute("COMMIT")
     }
+
+//    @Order(11)
+//    @Test
+//    fun testUpdateBarCollection() {
+//        val session = NakshaSession.get()
+//        // TODO: We need a test for this case, that is a general issue with empty local dictionaries!
+//        //val collectionJson = """{"id":"bar"}"""
+//        val collectionJson = """{"id":"bar","type":"NakshaCollection","minAge":3560,"unlogged":false,"partition":false,"pointsOnly":false,"properties":{},"disableHistory":false,"partitionCount":-1,"estimatedFeatureCount": -1,"estimatedDeletedFeatures":-1}"""
+//        val collectionMap = asMap(env.parse(collectionJson))
+//        val builder = XyzBuilder.create()
+//        builder.clear()
+//        builder.startTags()
+//        builder.writeTag("age:=23")
+//        builder.writeTag("featureType=NakshaCollection")
+//        val tagsBytes = builder.buildTags()
+//        val geoBytes = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
+//        val collectionBytes = builder.buildFeatureFromMap(collectionMap)
+//        val opBytes = builder.buildXyzOp(XYZ_OP_CREATE, "bar", null)
+//        val table = session.writeCollections(arrayOf(opBytes), arrayOf(collectionBytes), arrayOf(GEO_TYPE_EWKB), arrayOf(geoBytes), arrayOf(tagsBytes))
+//        val result = assertInstanceOf(JvmPlv8Table::class.java, table)
+//        assertEquals(1, result.rows.size)
+//        val row = result.rows[0]
+//        assertEquals(XYZ_EXECUTED_CREATED, row["op"])
+//        session.sql.execute("COMMIT")
+//
+//    }
 }
 
 fun String.decodeHex(): ByteArray {

@@ -30,7 +30,7 @@ import kotlin.jvm.JvmStatic
  * @param author The UPM identifier of the user (for audit).
  * @constructor Create a new session.
  */
-@Suppress("UNUSED_PARAMETER", "unused", "LocalVariableName", "MemberVisibilityCanBePrivate")
+@Suppress("UNUSED_PARAMETER", "unused", "LocalVariableName", "MemberVisibilityCanBePrivate", "DuplicatedCode")
 @JsExport
 class NakshaSession(
         val sql: IPlv8Sql,
@@ -412,7 +412,6 @@ SET (toast_tuple_target=8160,fillfactor=100
         val table = sql.newTable()
         val opReader = XyzOp()
         val newCollection = NakshaCollection()
-        val oldCollection = NakshaCollection()
         var i = 0
         while (i < op_arr.size) {
             try {
@@ -423,43 +422,83 @@ SET (toast_tuple_target=8160,fillfactor=100
                 val op = op_arr[i]
                 opReader.mapBytes(op)
                 var xyzOp = opReader.op()
-                var uuid = opReader.uuid()
+                val uuid = opReader.uuid()
                 var id = opReader.id()
                 if (id == null) {
                     id = newCollection.id()
                 }
-                if (id == null) {
-                    throw NakshaException(ERR_ID_MISSING, "Missing id", id, feature, geo_type, geo, tags)
-                }
+                if (id == null) throw NakshaException(ERR_INVALID_PARAMETER_VALUE, "Missing id", id, feature, geo_type, geo, tags)
                 val lockId = Static.lockId(id)
                 sql.execute("SELECT pg_advisory_lock($1)", arrayOf(lockId))
                 try {
                     newCollection.mapBytes(feature)
-                    var rows = asArray(sql.execute("SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1", arrayOf(id)))
-                    val existing: IMap?
-                    if (rows.isEmpty()) {
-                        oldCollection.clear()
-                        existing = null
-                    } else {
-                        existing = asMap(rows[0])
-                        oldCollection.mapBytes(existing[COL_FEATURE])
-                    }
-                    if (xyzOp == XYZ_OP_UPSERT) {
-                        xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
-                    }
+                    if (id != newCollection.id()) throw NakshaException(ERR_INVALID_PARAMETER_VALUE, "ID in op does not match real feature id: $id != "+newCollection.id(), id, feature, geo_type, geo, tags)
+                    var query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
+                    var rows = asArray(sql.execute(query, arrayOf(id)))
+                    var existing : IMap? = if (rows.isNotEmpty()) asMap(rows[0]) else null
+                    query = "SELECT oid FROM pg_class WHERE relname = $1 AND relkind = ANY(array['r','p']) AND relnamespace = $2"
+                    rows = asArray(sql.execute(query, arrayOf(id, schemaOid)))
+                    val tableExists = rows.isNotEmpty()
+                    if (xyzOp == XYZ_OP_UPSERT) xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
                     if (xyzOp == XYZ_OP_CREATE) {
-                        if (existing != null) {
-                            throw NakshaException(ERR_CONFLICT, "Feature exists already", id, feature, geo_type, geo, tags)
-                        }
-                        val query = "INSERT INTO naksha_collections (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz"
+                        if (existing != null) throw NakshaException(ERR_COLLECTION_EXISTS, "Collection exists already", id, feature, geo_type, geo, tags)
+                        query = "INSERT INTO naksha_collections (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz"
                         rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo_type, geo)))
-                        // TODO: What is no row is returned?
+                        if (rows.isEmpty()) throw NakshaException(ERR_NO_DATA, "Failed to create collection for unknown reason", id, feature, geo_type, geo, tags)
                         val xyz: ByteArray = asMap(rows[0])["xyz"]!!
-                        Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partitionHead())
-                        table.returnOpOk(XYZ_EXECUTED_CREATED, id, xyz, tags, feature, geo_type, geo)
+                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition())
+                        table.returnOk(XYZ_EXECUTED_CREATED, id, xyz, null, null, null, null)
                         continue
                     }
-                    // TODO: Handle update, delete and purge
+                    if (xyzOp == XYZ_OP_UPDATE) {
+                        if (existing == null) throw NakshaException(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id, feature, geo_type, geo, tags)
+                        if (uuid == null) {
+                            // Override (not atomic) update.
+                            query = "UPDATE naksha_collections SET feature=$1, tags=$2, geo_type=$3, geo=$4 WHERE id = $5 RETURNING xyz"
+                            rows = asArray(sql.execute(query, arrayOf(feature, tags, geo_type, geo, id)))
+                            if (rows.isEmpty()) throw NakshaException(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id, feature, geo_type, geo, tags)
+                        } else {
+                            // Atomic update.
+                            query = "UPDATE naksha_collections SET feature=$1, tags=$2, geo_type=$3, geo=$4 WHERE id = $5 AND xyz_uuid(xyz) = $6 RETURNING xyz"
+                            rows = asArray(sql.execute(query, arrayOf(feature, tags, geo_type, geo, id, uuid)))
+                            if (rows.isEmpty()) {
+                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
+                                rows = asArray(sql.execute(query, arrayOf(id)))
+                                existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
+                                if (existing != null) throw NakshaException.fromRow(ERR_CONFLICT, "Collection is in different state", existing)
+                                throw NakshaException(ERR_COLLECTION_NOT_EXISTS, "Collection $id does not exist")
+                            }
+                        }
+                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
+                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition())
+                        table.returnOk(XYZ_EXECUTED_UPDATED, id, xyz, null, null, null, null)
+                        continue
+                    }
+                    if (xyzOp == XYZ_OP_DELETE) {
+                        if (existing == null) throw NakshaException(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id, feature, geo_type, geo, tags)
+                        if (uuid == null) {
+                            // Override (not atomic) update.
+                            query = "DELETE FROM naksha_collections WHERE id = $5 RETURNING id,feature,geo_type,geo,tags,xyz"
+                            rows = asArray(sql.execute(query, arrayOf(id)))
+                            if (rows.isEmpty()) throw NakshaException(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id, feature, geo_type, geo, tags)
+                        } else {
+                            // Atomic update.
+                            query = "DELETE FROM naksha_collections WHERE id = $5 AND xyz_uuid(xyz) = $6 RETURNING id,feature,geo_type,geo,tags,xyz"
+                            rows = asArray(sql.execute(query, arrayOf(id, uuid)))
+                            if (rows.isEmpty()) {
+                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
+                                rows = asArray(sql.execute(query, arrayOf(id)))
+                                existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
+                                if (existing != null) throw NakshaException.fromRow(ERR_CONFLICT, "Collection is in different state", existing)
+                                throw NakshaException(ERR_COLLECTION_NOT_EXISTS, "Collection $id does not exist")
+                            }
+                        }
+                        existing = asMap(rows[0])
+                        Static.collectionDrop(sql, id)
+                        table.returnRow(XYZ_EXECUTED_DELETED, existing)
+                        continue
+                    }
+                    throw NakshaException(ERR_INVALID_PARAMETER_VALUE, "Operation for collection $id not supported: "+XyzOp.getOpName(xyzOp))
                 } finally {
                     sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(lockId))
                 }
@@ -468,7 +507,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                 table.returnException(e)
             } catch (e: Exception) {
                 if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-                table.returnOpErr(ERR_FATAL, e.rootCause().message ?: "Fatal")
+                table.returnErr(ERR_FATAL, e.rootCause().message ?: "Fatal")
             } finally {
                 i++
             }

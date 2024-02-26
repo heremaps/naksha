@@ -3,14 +3,16 @@
 ## Introduction
 JBON is a shortcut for Java Binary Object Notation. In this binary format all values are stored as objects in a tree like structure that can be navigated quickly, but is at the same time very small.
 
-As the format name indicates, this format is object-oriented. All JBON elements are encoded using **units**. All **units** always starts with a type-byte. It identifies the type of the unit and therefore allows to identify the binary size and other attributes. Each unit can contain subunits, for example, a string contains unicode code-points, a map contains map-entries aso..
+As the format name indicates, this format is object-oriented. All JBON elements are encoded using **units**. All **units** always start with a **lead-in** byte. The lead-in byte identifies the type of the unit and therefore allows to identify the implicit size and other attributes. Each unit can contain subunits, for example, a string contains unicode code-points, a map contains map-entries aso.
 
-The top most two bit of the type-byte selects the type-encoding itself:
+## Lead-in (type byte)
+
+The top most two bit of the lead-in byte selects the type-encoding itself:
 
 - `1ttt_vvvv`: One of the eight primary parameter types with a 4-bit value parameter.
 - `01tt_vvvv`: One of the four extended parameter types with a 4-bit value parameter.
 - `001?_????`: Reserved (32 types).
-- `0001_tttt`: One of the 32 standard types without value-parameter. The first 16 are scalars, the last 16 are complex objects.
+- `0001_tttt`: One of the 32 standard types without value-parameter. The first 16 are scalars, the last 16 are structures.
 
 Therefore, the type-byte allows 12 **parameter-types** with a 4-bit parameter, 32 **standard-types**, and reserves up to 32 types for future extension.
 
@@ -20,11 +22,17 @@ JBON values are always copy-on-write, that means, every modification requires to
 When this document mentions an **index**, it refers to the position in a dictionary. When this document refers to an **offset**, then it refers to the byte-offset in a JBON binary (basically a relative pointer in the JBON).
 
 ## Size vs Length
-In this document the term `size` refers to an amount of bytes, so a byte-size, while the term `length` refers to a number of units. For example the map-length is the amount of map-entries while the map-size is the amount of byte it requires.
+In this document the term `size` refers to an amount of bytes, so a byte-size, while the term `length` refers to a number of subunits. For example the map-length is the amount of map-entries while the map-size is the amount of byte it requires.
 
-The size is normally used to skip over units, while the length is used logically. For this purpose, the size does not store the size of itself nor the size of the previously located lead-in byte, therefore to skip over the unit the size plus lead-in, plus the size of the size field itself has to be used.
+The size is normally used to skip over units, while the length is used logically.
 
-In a nutshell, the size stores the amount of bytes needed to skip a unit, after reading its size and when the offset is located behind the size field.
+There are three general types of units:
+
+- Fixed-Size: Units being structures with a fixed size that is implicit due to the type. For example `null` has a size of 1, because it is only the lead-in byte.
+- Flexible-Size: Units being structures with a flexible size, but the size is still implicit for the type, so can be extracted from the lead-in byte. For example, a `character` of a string is a unit where the first byte of the character (the lead-in) implicit signals the total size, so the amount of byte belonging to the character. The same belong for example to `float4` or `uint4`.
+- Variable-Size: Units that have an explicit size field following directly after the lead-in byte. They can be encoded in basically any kind of size. **The size field stores the amount of byte following the size field and belonging to the unit**.
+
+In other words, the size stores the amount of bytes needed to skip a unit.
 
 ## Dictionaries (JbDict)
 To compress the data, JBON uses dictionaries. A dictionary is simply a list of units. The first 16 entries in the dictionary can be referred using tiny-references (1 byte encoding), the rest of the entries require full references (2 to 5 byte encoding). Therefore, it is recommended to use the first 16 units for those values that are most often used and maybe are only small, to compress often used, but small objects.
@@ -155,8 +163,8 @@ The lower 4-bit of the position encode if the position is absolute or relative a
 ### (2) Reserved
 ### (3) Reserved
 
-## Standard-Types (6-bit)
-The first 16 standard types are scalars, the others are objects.
+## Scalars
+The first 16 standard types are scalars. They have a fixed size.
 
 ### (0) null
 ### (1) undefined (unsupported)
@@ -177,7 +185,16 @@ Unix epoch timestamp (UTC) in milliseconds, stored in big-endian encoding as 6-b
 The next 1 to 8 byte store the signed integer value.
 ### (12-15) reserved
 Reserved to support other variants, maybe int128 or uint8 to uint64.
-### (16) global dictionary - JbDict
+
+## Structures
+Structures that have an explicit size field following the lead-in byte. All structures share this header:
+
+- Lead-In byte.
+- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
+  - The amount of byte following the size field itself.
+  - To skip the structure, skip over lead-in (1 byte), the size (1 to 9 byte) plus the size stored in the size field.
+
+### (16) JbDict- global dictionary 
 A global dictionary is a special container used to compress JBON features. A dictionary must not store any references. The encoding of the dictionary is:
 
 - Lead-In byte.
@@ -186,7 +203,7 @@ A global dictionary is a special container used to compress JBON features. A dic
 - The content, a sequence of **string**s.
 
 After the header, the content follows. The content is simply a sequence of **string**s. From an encoder perspective this is all. However, the decoder will have to load all the objects into memory to index the content for faster access.
-### (17) local dictionary - JbDict
+### (17) JbDict - local dictionary
 A local dictionary is exactly the same as the global dictionary, except that it does not come with an **id**, so:
  
 - Lead-In byte.
@@ -204,10 +221,11 @@ A JBON feature is a container for a JBON object of any type. The format looks li
 - The embedded JBON object (the root object).
 
 A feature can't create references to other features, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
-### (19) XYZ-Specials
+### (19) XyzSpecial
 This type is reserved for XYZ interactions. It is a flat object, optimized to be very small, with the following layout:
 
 - Lead-In byte.
+- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
 - variant as **integer** (either **uint4**, **int8**, **int16** or **int32**).
 - ... content dependent on the variant
 
@@ -249,12 +267,12 @@ Tags do not support integers directly, but as floating pointer numbers support u
 
 **Note**: Externally _tags_ are only arrays of strings, therefore to convert external to internal representation the equal sign is used to split individual tag-strings. If a colon is set in-front of the equal sign, a value conversion is done, so _"foo=12"_ results in the value being a string "12", while _"foo:=12"_ results in a value being a floating point number _12_. Please read more about tags in the [documentation](../docs/TAGS.md).
 
-#### (3) XyzTxDetails (TDB)
+#### (3) XyzTxDetails (draft)
 Details about a transaction:
 
 - **collections** - A map where the key is the collection identifier and the value is an integer bit-mask with what happened. 
 
-### (20) JbLz4Compressed
+### (20) JbLz4Compressed (draft-only)
 Some LZ4 compressed payload, requires decompression. The format is:
 
 - Lead-In byte.

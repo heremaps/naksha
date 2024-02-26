@@ -10,7 +10,7 @@ import kotlin.js.JsExport
  */
 @Suppress("DuplicatedCode")
 @JsExport
-class JbDict : JbObjectMapper<JbDict>() {
+class JbDict : JbStructMapper<JbDict>() {
     /**
      * Cached ID of the dictionary, if any.
      */
@@ -43,16 +43,16 @@ class JbDict : JbObjectMapper<JbDict>() {
         if (mandatory) {
             val type = reader.unitType()
             check(type == TYPE_GLOBAL_DICTIONARY || type == TYPE_LOCAL_DICTIONARY)
-            reader.addOffset(1)
-            check(reader.isInt())
-            val size = reader.readInt32()
-            check(reader.nextUnit())
+            val unitSize = reader.unitSize()
+            check(reader.enterUnit())
             if (type == TYPE_GLOBAL_DICTIONARY) {
+                // A global dictionary stores its ID in-front of the content.
                 check(reader.isString())
                 id = reader.readString()
+                // We expect that global dictionaries are not empty!
                 check(reader.nextUnit())
             }
-            setContentSize(size)
+            setContentSize(unitSize)
         }
     }
 

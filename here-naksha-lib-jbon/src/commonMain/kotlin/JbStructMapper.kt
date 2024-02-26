@@ -6,11 +6,11 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * The base class for all object mapper.
+ * The base class for all structure mappers (JBON structure types).
  */
-@Suppress("UNCHECKED_CAST", "MemberVisibilityCanBePrivate", "PropertyName")
+@Suppress("UNCHECKED_CAST", "MemberVisibilityCanBePrivate")
 @JsExport
-abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
+abstract class JbStructMapper<SELF : JbStructMapper<SELF>> {
     /**
      * The reader used to read from the mapped view. This makes multiple readers from the same underlying view
      * independent, but they share the local dictionary.
@@ -47,16 +47,17 @@ abstract class JbObjectMapper<SELF : JbObjectMapper<SELF>> {
 
     /**
      * Can be invoked by [parseHeader] after the header is parsed and when the [reader] is located at the end of the header
-     * and at the start of the content. Providing the object size as parameter (like read from the header), this method
-     * calculates the [encodingStart] and [encodingEnd].
-     * @param size The size as read from the object header.
+     * and at the start of the content. Providing the total unit size as parameter (most likely read from the header), this
+     * method calculates the [encodingStart] and [encodingEnd].
+     *
+     * @param unitSize The unit size of structure.
      */
-    protected fun setContentSize(size: Int) {
-        val headerStart = start
+    protected fun setContentSize(unitSize: Int) {
         val headerEnd = reader.offset
-        val headerSize = headerEnd - headerStart
+        val headerSize = (headerEnd - start)
         encodingStart = headerEnd
-        encodingEnd = headerEnd + (size - headerSize)
+        encodingEnd = headerEnd + (unitSize - headerSize)
+        check(encodingStart >= reader.offset && encodingEnd >= encodingStart && encodingEnd == start + unitSize)
     }
 
     /**

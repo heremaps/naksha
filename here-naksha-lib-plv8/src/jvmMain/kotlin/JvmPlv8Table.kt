@@ -11,7 +11,7 @@ class JvmPlv8Table : ITable {
      */
     val rows = ArrayList<IMap>()
 
-    override fun returnNext(row: IMap) {
-        rows.add(row)
+    override fun returnNext(ret: IMap) {
+        rows.add(ret)
     }
 }

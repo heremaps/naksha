@@ -13,7 +13,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 class NakshaCollection : JbMapFeature() {
-    private var _partitionHead = false
+    private var _partition = false
     private var _pointsOnly = false
     private var _disableHistory = false
     private var _maxAge : BigInt64? = null
@@ -21,7 +21,7 @@ class NakshaCollection : JbMapFeature() {
 
     override fun clear(): NakshaCollection {
         super.clear()
-        _partitionHead = false
+        _partition = false
         _pointsOnly = false
         _disableHistory = false
         _maxAge = null
@@ -36,7 +36,7 @@ class NakshaCollection : JbMapFeature() {
             val key = map.key()
             val value = map.value()
             when (key) {
-                NKC_PARTITION -> if (value.isBool()) _partitionHead = value.readBoolean() ?: false
+                NKC_PARTITION -> if (value.isBool()) _partition = value.readBoolean() ?: false
                 NKC_POINTS_ONLY -> if (value.isBool()) _pointsOnly = value.readBoolean() ?: false
                 NKC_DISABLE_HISTORY -> if (value.isBool()) _disableHistory = value.readBoolean() ?: false
                 NKC_MAX_AGE -> if (value.isInt()) _maxAge = value.readInt64()
@@ -46,7 +46,7 @@ class NakshaCollection : JbMapFeature() {
         }
     }
 
-    fun partitionHead() : Boolean = _partitionHead
+    fun partition() : Boolean = _partition
     fun pointsOnly() : Boolean = _pointsOnly
     fun disableHistory() : Boolean = _disableHistory
     fun maxAge() : BigInt64 = _maxAge ?: Jb.int64.MAX_VALUE()

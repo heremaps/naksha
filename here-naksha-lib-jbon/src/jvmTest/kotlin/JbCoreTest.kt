@@ -597,7 +597,7 @@ class JbCoreTest : JbAbstractTest() {
 
         // Use the feature reader.
         val feature = JbFeature().mapView(featureView, 0)
-        assertEquals(TYPE_CONTAINER, feature.reader.unitType())
+        assertEquals(TYPE_TEXT, feature.reader.unitType())
         assertTrue(feature.reader.isText())
         val text = JbText().mapReader(feature.reader)
         val topologyRestored = text.toString()
@@ -691,15 +691,33 @@ class JbCoreTest : JbAbstractTest() {
         reader.addOffset(1)
         // We expect the size being:
         // 1 byte lead-in
-        // 1 byte size
+        // 1 byte size (4)
         // 1 byte foo reference
         // 1 byte int
         // 1 byte bar reference
         // 1 byte int
-        // = 6 byte total size, 4 byte content size
+        // = 6 byte total size, 2 byte header, 4 byte content, unitSize = 5
         assertEquals(4, view.getInt8(reader.offset).toInt() and 0xff)
 
+        // Now, we have a 6-byte map that we want to wrap into a feature.
+        // We need to embed the local dictionary, which should be:
+        // 1 byte lead-in
+        // 1 byte size (8)
+        // 1 byte lead-in of first string (with embedded size of 3)
+        // 3 byte string (foo)
+        // 1 byte lead-in of second string (with embedded size of 3)
+        // 3 byte string (bar)
+        // = 10 byte total size, 2 byte header, 8 byte content
+        // Eventually, the feature will wrap the local dictionary and the map:
+        // 1 byte lead-in
+        // 2 byte size (19)
+        // 1 byte (null), no global dictionary
+        // 1 byte (null), no id of the feature
+        // 11 byte embedded local dictionary
+        // 6 byte embedded map (content-size)
+        // = 21 byte total, 15-byte header (includes local dict), 6-byte content
         val mapData = builder.buildFeature(null)
+        assertEquals(21, mapData.size)
         val mapView = JbSession.get().newDataView(mapData, 0)
         val feature = JbFeature()
         feature.mapView(mapView, 0)
@@ -774,4 +792,14 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(244, ts.millis)
     }
 
+    @Test
+    fun testBuildingCollectionWithOnlyId() {
+        val builder = JbBuilder.create()
+        val featureJson = """{"id":"bar"}"""
+        val featureMap = asMap(env.parse(featureJson))
+        val featureBytes = builder.buildFeatureFromMap(featureMap)
+        val feature = JbFeature()
+        feature.mapBytes(featureBytes)
+        assertEquals("bar", feature.id())
+    }
 }

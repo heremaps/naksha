@@ -30,6 +30,31 @@ open class JbReader {
             }
             return arr
         }
+
+        /**
+         * Calculate the amount of bytes needed to store the given integer value.
+         * @param value The value to store.
+         * @return The amount of byte that are needed to encode this integer.
+         */
+        fun sizeOfIntEncoding(value: Int): Int {
+            return when (value) {
+                in -16..15 -> 1
+                in -128..127 -> 2
+                in -32768..-32767 -> 5
+                else -> 9
+            }
+        }
+
+        /**
+         * Calculate the amount of bytes needed to store the given integer value.
+         * @param value The value to store.
+         * @return The amount of byte that are needed to encode this integer.
+         */
+        fun sizeOfBigIntEncoding(value: BigInt64): Int {
+            if (value.gtei(Int.MAX_VALUE) || value.ltei(Int.MIN_VALUE)) return 9
+            return sizeOfIntEncoding(value.toInt())
+        }
+
     }
 
     /**
@@ -151,9 +176,13 @@ open class JbReader {
         val view = this.view ?: return EOF
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return EOF
-        var type = view.getInt8(offset).toInt() and 0xff
+        val type = view.getInt8(offset).toInt() and 0xff
         if (type and 128 == 128) {
-            type = type and 0xf0
+            // Primary parameter type: 1ttt_pppp
+            // There is one special case, the container, where the top two bit of the
+            // parameter belong to the base-type, and only the lower two bit are parameter.
+            val baseType = type and 0xf0
+            return if (baseType == TYPE_CONTAINER) type and 0b1111_1100 else baseType
         }
         return type
     }
@@ -176,10 +205,10 @@ open class JbReader {
 
     /**
      * Returns the size of the current value in byte including the lead-in byte, therefore the amount of byte to [addOffset], if
-     * wanting to skip the value to the next one. The method return 0, when the position is invalid.
+     * wanting to skip the unit to the next one. The method return 0, when the position is invalid.
      * @return The size of the value in bytes including the lead-in (so between 1 and n), 0 when EOF.
      */
-    open fun unitSize(): Int {
+    fun unitSize(): Int {
         val view = useView()
         val offset = this.offset
         if (offset < 0 || offset >= view.getSize()) return 0
@@ -236,12 +265,12 @@ open class JbReader {
                 }
             }
 
-            TYPE_GLOBAL_DICTIONARY, TYPE_LOCAL_DICTIONARY, TYPE_FEATURE -> {
+            TYPE_GLOBAL_DICTIONARY, TYPE_LOCAL_DICTIONARY, TYPE_FEATURE, TYPE_XYZ -> {
                 this.offset++
                 try {
-                    // We seeked to the size, which it-self is a unit.
-                    // The unit-size of the dictionary or feature is actually:
-                    // lead-in byte (1 byte) + the size of the rest + size of the size unit
+                    // We seeked to the size, which is as well just a unit.
+                    // The unit-size of all structures actually is:
+                    // lead-in byte (1 byte) + the size + size of the size
                     check(isInt())
                     return 1 + readInt32(0) + unitSize()
                 } finally {
@@ -251,6 +280,72 @@ open class JbReader {
 
             else -> 0
         }
+    }
+
+    /**
+     * Move the [offset] into the unit, skipping the lead-in byte and the (optional) size field.
+     * @return _True_ if the unit was entered successfully; _false_ if the current unit can't be entered.
+     */
+    fun enterUnit(): Boolean {
+        val view = useView()
+        val offset = this.offset
+        if (offset < 0 || offset >= view.getSize()) return false
+        val raw = view.getInt8(offset).toInt() and 0xff
+        val type = if (raw and 128 == 128) raw and 0xf0 else raw
+        when (type) {
+            TYPE_NULL,
+            TYPE_UNDEFINED,
+            TYPE_BOOL_TRUE,
+            TYPE_BOOL_FALSE,
+            TYPE_UINT4,
+            TYPE_SINT4,
+            TYPE_TINY_LOCAL_REF,
+            TYPE_TINY_GLOBAL_REF,
+            TYPE_FLOAT4,
+            TYPE_INT8,
+            TYPE_INT16,
+            TYPE_INT32,
+            TYPE_INT64,
+            TYPE_FLOAT32,
+            TYPE_FLOAT64,
+            TYPE_TIMESTAMP,
+            TYPE_REFERENCE -> {
+                return false
+            }
+
+            TYPE_STRING -> {
+                when (raw and 0xf) {
+                    in 0..12 -> this.offset += 1
+                    13 -> this.offset += 2
+                    14 -> this.offset += 3
+                    15 -> this.offset += 5
+                    else -> return false
+                }
+                return true
+            }
+
+            TYPE_CONTAINER -> {
+                when (raw and 3) {
+                    0 -> this.offset += 1 // Empty container
+                    1 -> this.offset += 2
+                    2 -> this.offset += 3
+                    3 -> this.offset += 5
+                    else -> return false
+                }
+                return true
+            }
+
+            TYPE_GLOBAL_DICTIONARY, TYPE_LOCAL_DICTIONARY, TYPE_FEATURE, TYPE_XYZ -> {
+                this.offset++
+                // We seeked to the size, which is as well just a unit.
+                // The unit-size of all structures actually is:
+                // lead-in byte (1 byte) + the size + size of the size
+                check(isInt())
+                this.offset += unitSize()
+                return true
+            }
+        }
+        return false
     }
 
     /**
