@@ -21,9 +21,6 @@ package com.here.naksha.lib.core.util.json;
 import static com.fasterxml.jackson.databind.MapperFeature.DEFAULT_VIEW_INCLUSION;
 import static com.fasterxml.jackson.databind.MapperFeature.SORT_CREATOR_PROPERTIES_FIRST;
 import static com.fasterxml.jackson.databind.MapperFeature.SORT_PROPERTIES_ALPHABETICALLY;
-import static java.nio.ByteOrder.nativeOrder;
-import static org.locationtech.jts.io.ByteOrderValues.BIG_ENDIAN;
-import static org.locationtech.jts.io.ByteOrderValues.LITTLE_ENDIAN;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -41,16 +38,13 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.lang.ref.WeakReference;
-import java.nio.ByteOrder;
 import java.util.Formatter;
 import java.util.HashMap;
 import java.util.Locale;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.PrecisionModel;
-import org.locationtech.jts.io.WKBReader;
-import org.locationtech.jts.io.WKBWriter;
+import org.locationtech.jts.io.twkb.TWKBReader;
+import org.locationtech.jts.io.twkb.TWKBWriter;
 
 /**
  * Thread local JSON handling. To be used like:
@@ -189,8 +183,12 @@ public final class Json implements AutoCloseable {
     // Note: eWKB does encode the endian into the binary, so we can simply use the optimal one for this hardware.
     // - https://postgis.net/docs/ST_AsEWKB.html
     // - https://postgis.net/docs/ST_GeomFromEWKB.html
-    this.wkbReader = new WKBReader(new GeometryFactory(new PrecisionModel(), 4326));
-    this.wkbWriter = new WKBWriter(3, nativeOrder() == ByteOrder.LITTLE_ENDIAN ? LITTLE_ENDIAN : BIG_ENDIAN, true);
+    this.wkbReader = new TWKBReader();
+    this.wkbWriter = new TWKBWriter();
+    this.wkbWriter.setEncodeM(false);
+    this.wkbWriter.setEncodeZ(true);
+    this.wkbWriter.setXYPrecision(7);
+    this.wkbWriter.setZPrecision(3);
     this.simpleReader = mapper.reader();
     this.simpleWriter = mapper.writer();
     this.simpleHashWriter = hashMapper.writer();
@@ -199,12 +197,12 @@ public final class Json implements AutoCloseable {
   /**
    * The WKB reader for PostgresQL.
    */
-  public final @NotNull WKBReader wkbReader;
+  public final @NotNull TWKBReader wkbReader;
 
   /**
    * The WKB writer for PostgresQL.
    */
-  public final @NotNull WKBWriter wkbWriter;
+  public final @NotNull TWKBWriter wkbWriter;
 
   /**
    * The weak reference to this.

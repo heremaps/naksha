@@ -209,7 +209,7 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
       codec.setOp(EExecutedOp.get(EExecutedOp.class, op));
       codec.setId(id);
       codec.setUuid(uuid);
-      codec.setWkb(wkb);
+      codec.setGeometryBytes(wkb);
       return this;
     }
 
@@ -329,6 +329,7 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
     if (!currentRow.valid) {
       throw new NoSuchElementException();
     }
+    currentRow.codec.encodeFeature(false);
     String uuid = currentRow.codec.getUuid();
     assert uuid != null;
     return uuid;
@@ -344,7 +345,7 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
     if (!currentRow.valid) {
       throw new NoSuchElementException();
     }
-    return currentRow.codec.getWkb();
+    return currentRow.codec.getGeometryBytes();
   }
 
   /**
@@ -396,7 +397,7 @@ public abstract class ForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
    * @return
    */
   public @NotNull byte[] getFeatureJbon() {
-    return currentRow.codec.featureJbon;
+    return currentRow.codec.featureBytes;
   }
 
   /**

@@ -260,19 +260,37 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     }
   }
 
-  private static void addJsonPath(
-      @NotNull SQL sql, @NotNull List<@NotNull String> path, int end, boolean text, boolean nullif) {
+  private static void addJsonPath(@NotNull SQL sql, @NotNull PRef pRef, int end, boolean text, boolean nullif) {
     if (nullif) {
       sql.add("nullif(");
     }
-    sql.add("(jsondata");
-    final int last = end - 1;
-    for (int i = 0; i < end; i++) {
-      final String pname = path.get(i);
-      sql.add(i == last && text ? "->>" : "->");
-      sql.addLiteral(pname);
+    // search by indexed function for all supported properties
+    if (pRef.equals(PRef.id())) {
+      sql.add("id");
+    } else if (pRef.equals(PRef.txn())) {
+      sql.add("xyz_txn(xyz)");
+    } else if (pRef.equals(PRef.txn_next())) {
+      sql.add("txn_next");
+    } else if (pRef.equals(PRef.uuid())) {
+      sql.add("uid");
+    } else if (pRef.equals(PRef.app_id())) {
+      sql.add("xyz_author(xyz)");
+    } else if (pRef.equals(PRef.grid())) {
+      sql.add("xyz_grid(xyz)");
+    } else if (pRef.getTagName() != null) {
+      sql.add("tags_to_jsonb(tags)");
+    } else {
+      // not indexed access
+      sql.add("feature_to_jsonb(feature)");
+      List<@NotNull String> path = pRef.getPath();
+      final int last = end - 1;
+      for (int i = 0; i < end; i++) {
+        final String pname = path.get(i);
+        sql.add(i == last && text ? "->>" : "->");
+        sql.addLiteral(pname);
+        sql.add(')');
+      }
     }
-    sql.add(')');
     if (text) {
       sql.add(" COLLATE \"C\" ");
     }
@@ -284,10 +302,10 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   private static void addOp( //
       @NotNull SQL sql, //
       @NotNull List<Object> parameter, //
-      final List<@NotNull String> path, //
+      final @NotNull PRef pRef, //
       @NotNull OpType opType, //
       @Nullable Object value //
-  ) {
+      ) {
     if (value == null) {
       throw new IllegalArgumentException("Invalid value NULL for op: " + opType);
     }
@@ -299,32 +317,33 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     if (opString == null) {
       throw new IllegalArgumentException("Operation not supported: " + op);
     }
+    final int prefPathSize = pRef.getPath().size();
     if (op == POpType.CONTAINS) {
-      addJsonPath(sql, path, path.size(), false, false);
+      addJsonPath(sql, pRef, prefPathSize, false, false);
       sql.add(" ").add(opString).add(" ?::jsonb");
       parameter.add(toJsonb(value));
     } else if (value instanceof CharSequence) {
-      addJsonPath(sql, path, path.size(), true, false);
+      addJsonPath(sql, pRef, prefPathSize, true, false);
       sql.add("::text ").add(opString).add(" ?");
       parameter.add(value);
     } else if (value instanceof Double) {
-      addJsonPath(sql, path, path.size(), false, false);
+      addJsonPath(sql, pRef, prefPathSize, false, false);
       sql.add("::double precision ").add(opString).add(" ?");
       parameter.add(value);
     } else if (value instanceof Float) {
-      addJsonPath(sql, path, path.size(), false, false);
+      addJsonPath(sql, pRef, prefPathSize, false, false);
       sql.add("::double precision ").add(opString).add(" ?");
       parameter.add(((Number) value).doubleValue());
     } else if (value instanceof Long) {
-      addJsonPath(sql, path, path.size(), false, false);
+      addJsonPath(sql, pRef, prefPathSize, false, false);
       sql.add("::int8 ").add(opString).add(" ?");
       parameter.add(value);
     } else if (value instanceof Number) {
-      addJsonPath(sql, path, path.size(), false, false);
+      addJsonPath(sql, pRef, prefPathSize, false, false);
       sql.add("::int8 ").add(opString).add(" ?");
       parameter.add(((Number) value).longValue());
     } else if (value instanceof Boolean) {
-      addJsonPath(sql, path, path.size(), false, false);
+      addJsonPath(sql, pRef, prefPathSize, false, false);
       sql.add("::bool ").add(opString).add(" ?");
       parameter.add(value);
     } else {
@@ -371,24 +390,24 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       if (op != POpType.EXISTS) {
         throw new IllegalArgumentException("Tags do only support EXISTS operation, not " + op);
       }
-      addJsonPath(sql, path, path.size(), false, false);
+      addJsonPath(sql, pref, path.size(), false, false);
       sql.add(" ?? ?");
       parameter.add(pref.getTagName());
       return;
     }
     if (op == POpType.EXISTS) {
-      addJsonPath(sql, path, path.size() - 1, false, false);
+      addJsonPath(sql, pref, path.size() - 1, false, false);
       sql.add(" ?? ?");
       parameter.add(path.get(path.size() - 1));
       return;
     }
     if (op == POpType.NULL) {
-      addJsonPath(sql, path, path.size(), false, false);
+      addJsonPath(sql, pref, path.size(), false, false);
       sql.add(" = 'null'");
       return;
     }
     if (op == POpType.NOT_NULL) {
-      addJsonPath(sql, path, path.size(), false, false);
+      addJsonPath(sql, pref, path.size(), false, false);
       sql.add(" != 'null'");
       return;
     }
@@ -396,7 +415,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     if (op == POpType.STARTS_WITH) {
       if (value instanceof String) {
         String text = (String) value;
-        addJsonPath(sql, path, path.size(), true, false);
+        addJsonPath(sql, pref, path.size(), true, false);
         sql.add(" LIKE ?");
         parameter.add(text + '%');
         return;
@@ -405,7 +424,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     }
     if (op == POpType.EQ && pref == PRef.txn()) {
       sql.add("(");
-      addJsonPath(sql, path, path.size(), false, true);
+      addJsonPath(sql, pref, path.size(), false, true);
       sql.add("::int8 <= ?");
       if (!(value instanceof Number)) {
         throw new IllegalArgumentException("Value must be a number");
@@ -419,7 +438,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(")");
       return;
     }
-    addOp(sql, parameter, path, op, value);
+    addOp(sql, parameter, pref, op, value);
   }
 
   private static PGobject toJsonb(Object value) {
@@ -441,14 +460,13 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
 
   private SQL prepareQuery(String collection, String spatial_where, String props_where, Long limit) {
     final SQL query = new SQL();
-    // r_op text, r_id text, r_uuid text, r_type text, r_ptype text, r_feature jsonb, r_geometry geometry,
-    // r_err jsonb
-    query.add("(SELECT 'READ',\n" + "naksha_feature_id(jsondata),\n"
-            + "naksha_feature_uuid(jsondata),\n"
-            + "naksha_feature_type(jsondata),\n"
-            + "naksha_feature_ptype(jsondata),\n"
-            + "jsondata,\n"
-            + "ST_AsEWKB(geo),\n"
+    query.add("(SELECT 'READ',\n" + "id,\n"
+            + "uid,\n"
+            + "feature,\n"
+            + "xyz,\n"
+            + "tags,\n"
+            + "get_type,\n"
+            + "geo,\n"
             + "null FROM ")
         .addIdent(collection);
     if (spatial_where.length() > 0 || props_where.length() > 0) {
@@ -551,7 +569,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         }
         final ResultSet rs = stmt.executeQuery();
         final PsqlCursor<XyzFeature, XyzFeatureCodec> cursor =
-            new PsqlCursor<>(XyzFeatureCodecFactory.get(), this, stmt, rs);
+            new PsqlCursor<>(XyzFeatureCodecFactory.get(), null, this, stmt, rs);
         return new PsqlSuccess(cursor);
       } catch (SQLException e) {
         try {
@@ -582,24 +600,38 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     return prepareQuery(historyCollection, spatial_where, hst_props_where.toString(), readFeatures.limit);
   }
 
-  @NotNull <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
+  @NotNull
+  <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
-          "SELECT r_op, r_id, r_uuid, r_type, r_ptype, r_feature, r_geometry, r_err FROM naksha_write_collections(?);\n");
-      try (final Json json = Json.get()) {
+          "SELECT op, id, xyz, tags, feature, geo_type, geo, err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
+      try {
         final List<@NotNull CODEC> features = writeRequest.features;
         final int SIZE = writeRequest.features.size();
-        final String[] write_ops_json = new String[SIZE];
-        final PostgresWriteOp out = new PostgresWriteOp();
+        final byte[][] reqOps = new byte[SIZE][];
+        final byte[][] reqFeatures = new byte[SIZE][];
+        final Short[] reqGeoType = new Short[SIZE];
+        final byte[][] reqGeo = new byte[SIZE][];
+        final byte[][] reqTags = new byte[SIZE][];
         for (int i = 0; i < SIZE; i++) {
           final CODEC codec = features.get(i);
-          out.decode(codec);
-          write_ops_json[i] = json.writer().writeValueAsString(out);
+          codec.decodeParts(false);
+          reqOps[i] = codec.getXyzOp();
+          reqFeatures[i] = codec.getFeatureBytes();
+          reqGeo[i] = codec.getGeometryBytes();
+          reqGeoType[i] = codec.getGeometryEncoding(); // codec has to dec
+          reqTags[i] = codec.getTagsBytes();
         }
-        stmt.setArray(1, psqlConnection.createArrayOf("jsonb", write_ops_json));
+        stmt.setArray(1, psqlConnection.createArrayOf("bytea", reqOps));
+        stmt.setArray(2, psqlConnection.createArrayOf("bytea", reqFeatures));
+        stmt.setArray(3, psqlConnection.createArrayOf("int2", reqGeoType));
+        stmt.setArray(4, psqlConnection.createArrayOf("bytea", reqGeo));
+        stmt.setArray(5, psqlConnection.createArrayOf("bytea", reqTags));
         final ResultSet rs = stmt.executeQuery();
-        return new PsqlSuccess(new PsqlCursor<>(XyzCollectionCodecFactory.get(), this, stmt, rs), null);
+        RequestedParams requestedParams = new RequestedParams(reqFeatures, reqTags, reqGeo);
+        return new PsqlSuccess(
+            new PsqlCursor<>(XyzCollectionCodecFactory.get(), requestedParams, this, stmt, rs), null);
       } catch (Throwable e) {
         try {
           stmt.close();
@@ -620,11 +652,10 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       //      } else {
       //        partition_id = -1;
       //      }
-      final PreparedStatement stmt = prepareStatement(
-          "SELECT r_op, r_id, r_uuid, r_type, r_ptype, r_feature, ST_AsEWKB(r_geometry), r_err\n"
-              + "FROM nk_write_features(?,?,?,?,?,?,?,?,?);");
-      // nk_write_features(col_id, part_id, ops, ids, uuids, features, geometries, min_result, errors_only
-      try (final Json json = Json.get()) {
+      final PreparedStatement stmt =
+          prepareStatement("SELECT op, id, xyz, tags, feature, geo_type, geo, err_no, err_msg\n"
+              + "FROM naksha_write_features(?,?,?,?,?,?);");
+      try {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
         features.forEach(codec -> codec.decodeParts(false));
@@ -636,35 +667,30 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         final int SIZE = writeRequest.features.size();
         final String collection_id = writeFeatures.getCollectionId();
         // partition_id
-        final String[] op_arr = new String[SIZE];
-        final String[] id_arr = new String[SIZE];
-        final String[] uuid_arr = new String[SIZE];
+        final byte[][] op_arr = new byte[SIZE][];
         final byte[][] feature_arr = new byte[SIZE][];
+        final Short[] geo_type_arr = new Short[SIZE];
         final byte[][] geo_arr = new byte[SIZE][];
-        final boolean min_result = writeFeatures.minResults;
-        final boolean err_only = false;
+        final byte[][] tags_arr = new byte[SIZE][];
 
-        final PostgresWriteOp out = new PostgresWriteOp();
         for (int i = 0; i < SIZE; i++) {
           final CODEC codec = features.get(i);
-          op_arr[i] = codec.getOp();
-          id_arr[i] = codec.getId();
-          uuid_arr[i] = codec.getUuid();
-          feature_arr[i] = codec.getFeatureJbon();
-          geo_arr[i] = codec.getWkb();
+          op_arr[i] = codec.getXyzOp();
+          feature_arr[i] = codec.getFeatureBytes();
+          geo_type_arr[i] = codec.getGeometryEncoding();
+          geo_arr[i] = codec.getGeometryBytes();
+          tags_arr[i] = codec.getTagsBytes();
         }
         stmt.setString(1, collection_id);
-        stmt.setInt(2, partition_id);
-        stmt.setArray(3, psqlConnection.createArrayOf("text", op_arr));
-        stmt.setArray(4, psqlConnection.createArrayOf("text", id_arr));
-        stmt.setArray(5, psqlConnection.createArrayOf("text", uuid_arr));
-        stmt.setArray(6, psqlConnection.createArrayOf("jsonb", feature_arr));
-        stmt.setArray(7, psqlConnection.createArrayOf("bytea", geo_arr));
-        stmt.setBoolean(8, min_result);
-        stmt.setBoolean(9, err_only);
+        stmt.setArray(2, psqlConnection.createArrayOf("bytea", op_arr));
+        stmt.setArray(3, psqlConnection.createArrayOf("bytea", feature_arr));
+        stmt.setArray(4, psqlConnection.createArrayOf("int2", geo_type_arr));
+        stmt.setArray(5, psqlConnection.createArrayOf("bytea", geo_arr));
+        stmt.setArray(6, psqlConnection.createArrayOf("bytea", tags_arr));
         final ResultSet rs = stmt.executeQuery();
+        RequestedParams requestedParams = new RequestedParams(feature_arr, tags_arr, geo_arr);
         final PsqlCursor<FEATURE, CODEC> cursor =
-            new PsqlCursor<>(writeRequest.getCodecFactory(), this, stmt, rs);
+            new PsqlCursor<>(writeRequest.getCodecFactory(), requestedParams, this, stmt, rs);
         try (final PreparedStatement err_stmt = prepareStatement("SELECT naksha_err_no(), naksha_err_msg();")) {
           final ResultSet err_rs = err_stmt.executeQuery();
           err_rs.next();

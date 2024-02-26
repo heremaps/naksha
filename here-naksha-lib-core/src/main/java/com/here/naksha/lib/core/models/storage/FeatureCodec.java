@@ -39,6 +39,11 @@ import org.locationtech.jts.io.ParseException;
 public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, SELF>>
     extends FeatureBox<FEATURE, SELF> {
 
+  public static final short GEO_TYPE_NULL = 0;
+  public static final short GEO_TYPE_WKB = 1;
+  public static final short GEO_TYPE_EWKB = 2;
+  public static final short GEO_TYPE_TWKB = 3;
+
   /**
    * Tries to decode (disassemble) a feature set via {@link #setFeature(Object)} or {@link #withFeature(Object)} into its parts. Unless
    * decoding fails (raising an exception), the individual parts should thereafter be readable.
@@ -61,10 +66,11 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    */
   public abstract @NotNull SELF encodeFeature(boolean force);
 
+  protected abstract Short getDefaultGeometryEncoding();
+
   /**
-   * Copy all the values from other codec supplied as an argument.
-   * This is useful while iterating through in-memory based codec list, without having to
-   * allocate memory with deep clone.
+   * Copy all the values from other codec supplied as an argument. This is useful while iterating through in-memory based codec list,
+   * without having to allocate memory with deep clone.
    *
    * @param otherCodec The other codec which is to be cloned
    * @return this.
@@ -89,10 +95,11 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     op = otherCodec.op;
     id = otherCodec.id;
     uuid = otherCodec.uuid;
-    xyzNsJbon = otherCodec.xyzNsJbon;
-    tagsJbon = otherCodec.tagsJbon;
-    featureJbon = otherCodec.featureJbon;
-    wkb = otherCodec.wkb;
+    xyzNsBytes = otherCodec.xyzNsBytes;
+    tagsBytes = otherCodec.tagsBytes;
+    featureBytes = otherCodec.featureBytes;
+    geometryBytes = otherCodec.geometryBytes;
+    geometryEncoding = otherCodec.geometryEncoding;
     geometry = otherCodec.geometry;
     return self();
   }
@@ -142,11 +149,12 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     feature = null;
     id = null;
     uuid = null;
-    wkb = null;
+    geometryBytes = null;
+    geometryEncoding = null;
     geometry = null;
-    featureJbon = null;
-    xyzNsJbon = null;
-    tagsJbon = null;
+    featureBytes = null;
+    xyzNsBytes = null;
+    tagsBytes = null;
     return self();
   }
 
@@ -160,10 +168,11 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     err = null;
     id = null;
     uuid = null;
-    featureJbon = null;
-    xyzNsJbon = null;
-    tagsJbon = null;
-    wkb = null;
+    featureBytes = null;
+    xyzNsBytes = null;
+    tagsBytes = null;
+    geometryBytes = null;
+    geometryEncoding = null;
     geometry = null;
     return self();
   }
@@ -214,23 +223,28 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   /**
    * The <link href="https://libgeos.org/specifications/wkb/">Extended WKB</b> encoded geometry.
    */
-  protected byte @Nullable [] wkb;
+  protected byte @Nullable [] geometryBytes;
 
   /**
-   * The JTS geometry build from the {@link #wkb}.
+   * The wkb type whether it's EWKB, WKB or TWKB.
+   */
+  protected @Nullable Short geometryEncoding = getDefaultGeometryEncoding();
+
+  /**
+   * The JTS geometry build from the {@link #geometryBytes}.
    */
   protected @Nullable Geometry geometry;
 
   /**
    * The JBON of the feature.
    */
-  protected byte[] featureJbon;
+  protected byte[] featureBytes;
 
   // DB - request params
   /**
    * tags
    */
-  protected byte[] tagsJbon;
+  protected byte[] tagsBytes;
   /**
    * XyzOp jbon we send to DB, we do not get it back from DB.
    */
@@ -240,7 +254,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   /**
    * XyzNamespace jbon, returned from DB, we do not pass it in DB request.
    */
-  protected byte[] xyzNsJbon;
+  protected byte[] xyzNsBytes;
   /**
    * The JSON of the error.
    */
@@ -256,7 +270,8 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   public <G extends Geometry> @Nullable G setGeometry(@Nullable Geometry geometry) {
     final Geometry old = getGeometry();
     this.geometry = geometry;
-    this.wkb = null;
+    this.geometryBytes = null;
+    this.geometryEncoding = null;
     return (G) old;
   }
 
@@ -268,7 +283,8 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    */
   public @NotNull SELF withGeometry(@Nullable Geometry geometry) {
     this.geometry = geometry;
-    this.wkb = null;
+    this.geometryBytes = null;
+    this.geometryEncoding = null;
     return self();
   }
 
@@ -281,7 +297,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   @SuppressWarnings("unchecked")
   public <G extends Geometry> @Nullable G getGeometry() {
     if (geometry == null) {
-      final byte[] wkb = this.wkb;
+      final byte[] wkb = this.geometryBytes;
       if (wkb != null && wkb.length > 0) {
         try (final Json jp = Json.get()) {
           this.geometry = jp.wkbReader.read(wkb);
@@ -299,10 +315,10 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    * @param wkb The <link href="https://libgeos.org/specifications/wkb/">Extended WKB</b> encoded geometry.
    * @return The previously set WKB.
    */
-  public byte @Nullable [] setWkb(byte @Nullable [] wkb) {
-    final byte[] old = this.wkb;
+  public byte @Nullable [] setGeometryBytes(byte @Nullable [] wkb) {
+    final byte[] old = this.geometryBytes;
     this.geometry = null;
-    this.wkb = wkb;
+    this.geometryBytes = wkb;
     return old;
   }
 
@@ -312,8 +328,8 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    * @param wkb The <link href="https://libgeos.org/specifications/wkb/">Extended WKB</b> encoded geometry.
    * @return this.
    */
-  public @NotNull SELF withWkb(byte @Nullable [] wkb) {
-    setWkb(wkb);
+  public @NotNull SELF withGeometryBytes(byte @Nullable [] wkb) {
+    setGeometryBytes(wkb);
     return self();
   }
 
@@ -322,16 +338,30 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    *
    * @return The <link href="https://libgeos.org/specifications/wkb/">Extended WKB</b> encoded geometry.
    */
-  public byte @Nullable [] getWkb() {
-    if (wkb == null) {
+  public byte @Nullable [] getGeometryBytes() {
+    if (geometryBytes == null) {
       final Geometry geometry = getGeometry();
       if (geometry != null) {
         try (final Json jp = Json.get()) {
-          this.wkb = jp.wkbWriter.write(geometry);
+          this.geometryBytes = jp.wkbWriter.write(geometry);
+          this.geometryEncoding = GEO_TYPE_TWKB;
         }
       }
     }
-    return wkb;
+    return geometryBytes;
+  }
+
+  /**
+   * Type of binary format.
+   *
+   * @return
+   */
+  public @Nullable Short getGeometryEncoding() {
+    return geometryEncoding;
+  }
+
+  public void setGeometryEncoding(@Nullable Short geometryEncoding) {
+    this.geometryEncoding = geometryEncoding;
   }
 
   /**
@@ -441,16 +471,17 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    *
    * @return
    */
-  public byte[] getFeatureJbon() {
-    return featureJbon;
+  public byte[] getFeatureBytes() {
+    return featureBytes;
   }
 
   /**
    * Sets feature as jbon byte array.
-   * @param featureJbon
+   *
+   * @param featureBytes
    */
-  public void setFeatureJbon(byte[] featureJbon) {
-    this.featureJbon = featureJbon;
+  public void setFeatureBytes(byte[] featureBytes) {
+    this.featureBytes = featureBytes;
   }
 
   /**
@@ -464,34 +495,38 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
 
   /**
    * Sets tags as jbon byte array.
-   * @param tagsJbon
+   *
+   * @param tagsBytes
    */
-  public void setTagsJbon(byte[] tagsJbon) {
-    this.tagsJbon = tagsJbon;
+  public void setTagsBytes(byte[] tagsBytes) {
+    this.tagsBytes = tagsBytes;
   }
 
   /**
    * Returns tags as jbon byte array.
+   *
    * @return
    */
-  public byte[] getTagsJbon() {
-    return tagsJbon;
+  public byte[] getTagsBytes() {
+    return tagsBytes;
   }
 
   /**
    * Sets xyz as jbon byte array.
-   * @param xyzNsJbon
+   *
+   * @param xyzNsBytes
    */
-  public void setXyzNsJbon(byte[] xyzNsJbon) {
-    this.xyzNsJbon = xyzNsJbon;
+  public void setXyzNsBytes(byte[] xyzNsBytes) {
+    this.xyzNsBytes = xyzNsBytes;
   }
 
   /**
    * Returns tags as jbon byte array.
+   *
    * @return
    */
-  public byte[] getXyzNsJbon() {
-    return xyzNsJbon;
+  public byte[] getXyzNsBytes() {
+    return xyzNsBytes;
   }
 
   @Override

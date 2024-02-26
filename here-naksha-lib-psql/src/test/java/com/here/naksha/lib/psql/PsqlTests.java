@@ -29,6 +29,8 @@ import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
+import com.here.naksha.lib.jbon.JbSession;
+import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.psql.PsqlStorage.Params;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -116,6 +118,7 @@ abstract class PsqlTests {
   static @Nullable NakshaContext nakshaContext;
   static @Nullable PsqlWriteSession session;
   static @NotNull PsqlFeatureGenerator fg;
+  JvmEnv env = JvmEnv.get();
 
   /**
    * Prints an arbitrary prefix, followed by the calculation of the features/second.
@@ -237,6 +240,13 @@ abstract class PsqlTests {
   void startWriteSession() {
     assertNotNull(storage);
     session = storage.newWriteSession(nakshaContext, true);
+    JbSession jbSession = new JbSession(
+        nakshaContext.getAppId(),
+        nakshaContext.getStreamId(),
+        nakshaContext.getAppId(),
+        nakshaContext.getAuthor()
+    );
+    JbSession.Companion.getThreadLocal().set(jbSession);
     assertNotNull(session);
   }
 

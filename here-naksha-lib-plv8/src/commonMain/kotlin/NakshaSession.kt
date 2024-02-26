@@ -441,7 +441,10 @@ SET (toast_tuple_target=8160,fillfactor=100
                     val tableExists = rows.isNotEmpty()
                     if (xyzOp == XYZ_OP_UPSERT) xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
                     if (xyzOp == XYZ_OP_CREATE) {
-                        if (existing != null) throw NakshaException(ERR_COLLECTION_EXISTS, "Collection exists already", id, feature, geo_type, geo, tags)
+                        if (existing != null) {
+                            val existingXyz: ByteArray = existing["xyz"]!!
+                            throw NakshaException(ERR_CONFLICT, "Feature exists already", id, feature, geo_type, geo, tags, existingXyz)
+                        }
                         query = "INSERT INTO naksha_collections (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz"
                         rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo_type, geo)))
                         if (rows.isEmpty()) throw NakshaException(ERR_NO_DATA, "Failed to create collection for unknown reason", id, feature, geo_type, geo, tags)

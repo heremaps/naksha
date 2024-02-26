@@ -51,13 +51,14 @@ public class PsqlCursorTest extends SessionTest{
     XyzFeatureCodecFactory xyzFeatureCodecFactory = XyzFeatureCodecFactory.get();
 
 
-    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, statement, rs);
+    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, null, statement, rs);
 
     // when
     when(rs.next()).thenReturn(true);
+    when(rs.getRow()).thenReturn(1);
 
     when(rs.getString(intThat(i -> i < 6))).thenReturn("id");
-    when(rs.getBytes(6)).thenReturn(new byte[]{});
+    when(rs.getBytes(5)).thenReturn(new byte[]{});
     when(rs.getString(8)).thenReturn(null);
     ForwardCursor<String, StringCodec> forwardCursor = cursor.withCodecFactory(stringCodecFactory, true);
 
@@ -70,11 +71,8 @@ public class PsqlCursorTest extends SessionTest{
   @ParameterizedTest
   @MethodSource("psqlErrorValues")
   void testPsqlError(String psqlError, XyzError expected) throws SQLException {
-    // given
-    String responseJson = "{\"err\": \"" + psqlError + "\", \"msg\": \"Error Message\"}";
-
     // when
-    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = createCursorWithMockedError(responseJson);
+    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = createCursorWithMockedError(psqlError, "Error Message");
 
     // expect
     assertTrue(cursor.next());
@@ -97,19 +95,23 @@ public class PsqlCursorTest extends SessionTest{
         Arguments.of("UNKNOWN_CODE", XyzError.get("UNKNOWN_CODE")));
   }
 
-  private PsqlCursor<XyzFeature, XyzFeatureCodec> createCursorWithMockedError(String errJson) throws SQLException {
+  private PsqlCursor<XyzFeature, XyzFeatureCodec> createCursorWithMockedError(String errNo, String errMsg) throws SQLException {
     Statement statement = Mockito.mock(Statement.class);
     ResultSet rs = Mockito.mock(ResultSet.class);
     XyzFeatureCodecFactory xyzFeatureCodecFactory = XyzFeatureCodecFactory.get();
 
-    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, statement, rs);
+    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, null, statement, rs);
 
     when(rs.next()).thenReturn(true);
+    when(rs.getRow()).thenReturn(1);
 
     when(rs.getString(intThat(i -> i < 6))).thenReturn("id");
-    when(rs.getBytes(6)).thenReturn(new byte[] {});
-    when(rs.getString(8)).thenReturn(errJson);
+    when(rs.getBytes(4)).thenReturn(new byte[] {});
+    when(rs.getBytes(5)).thenReturn(new byte[] {});
+    when(rs.getString(8)).thenReturn(errNo);
+    when(rs.getString(9)).thenReturn(errMsg);
 
     return cursor;
   }
+
 }
