@@ -55,9 +55,11 @@
           }
         ]
       },
-      "invalidatedAt": 0,
       "original": {
-        "space": "regular_space_ah"
+        "space": "regular_space_ah",
+        "puuid": "${puuid}",
+        "createdAt": "${createdAt}",
+        "updatedAt": "${updatedAt}"
       }
     },
     "speedLimit": "80"

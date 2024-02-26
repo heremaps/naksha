@@ -4,7 +4,6 @@ import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
 import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
-import static java.lang.String.join;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -18,6 +17,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzName
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.net.URLEncoder;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,9 +33,9 @@ class ActivityLogApiTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws Exception {
-    setupSpaceAndRelatedResources(nakshaClient, "ActivityLog/setup/activityLogSpace");
-    createHandler(nakshaClient, "ActivityLog/setup/regularSpace/create_event_handler.json");
-    createSpace(nakshaClient, "ActivityLog/setup/regularSpace/create_space.json");
+    setupSpaceAndRelatedResources(nakshaClient, "ActivityLog/setup/regularSpace");
+    createHandler(nakshaClient, "ActivityLog/setup/activityLogSpace/create_event_handler.json");
+    createSpace(nakshaClient, "ActivityLog/setup/activityLogSpace/create_space.json");
   }
 
   @Test
@@ -48,10 +48,10 @@ class ActivityLogApiTest extends ApiTest {
     // When: New feature is created
     HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createFeatureJson, streamId);
     assertThat(createResp).hasStatus(200);
-    String featureUuid = singleUuidFromCollectionResponse(createResp.body());
+    FeatureMetadata createdFeature = featureMetadataFromCollectionResp(createResp.body());
 
     // And: Client queries activity log space for this feature
-    HttpResponse<String> getActivityResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features/" + featureUuid,
+    HttpResponse<String> getActivityResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features/" + createdFeature.uuid,
         streamId);
 
     // Then: Activity response is valid and conveys expected data
@@ -59,8 +59,10 @@ class ActivityLogApiTest extends ApiTest {
         .hasStreamIdHeader(streamId)
         .hasStatus(200)
         .hasJsonBody(formattedJson(expectedGetResponse, Map.of(
-            "${id}", featureUuid,
-            "${activityLogId}", "TC1300_feature"
+            "${id}", createdFeature.uuid,
+            "${activityLogId}", "TC1300_feature",
+            "\"${createdAt}\"", createdFeature.createdAt,
+            "\"${updatedAt}\"", createdFeature.updatedAt
         )));
   }
 
@@ -75,7 +77,7 @@ class ActivityLogApiTest extends ApiTest {
     // When: New feature is created
     HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createFeatureJson, streamId);
     assertThat(createResp).hasStatus(200);
-    String featureUuid = singleUuidFromCollectionResponse(createResp.body());
+    FeatureMetadata createdFeature = featureMetadataFromCollectionResp(createResp.body());
 
     // And: Client queries activity log space for this feature
     String featureIdNamespaceQuery = urlEncoded("p.@ns:com:here:xyz:log.id") + "=" + featureId;
@@ -87,8 +89,10 @@ class ActivityLogApiTest extends ApiTest {
         .hasStreamIdHeader(streamId)
         .hasStatus(200)
         .hasJsonBody(formattedJson(expectedGetResponse, Map.of(
-            "${id}", featureUuid,
-            "${activityLogId}", featureId
+            "${id}", createdFeature.uuid,
+            "${activityLogId}", featureId,
+            "\"${createdAt}\"", createdFeature.createdAt,
+            "\"${updatedAt}\"", createdFeature.updatedAt
         )));
   }
 
@@ -103,24 +107,28 @@ class ActivityLogApiTest extends ApiTest {
 
     // When: New feature is created
     HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createFeatureJson, streamId);
+    FeatureMetadata createdFeature = featureMetadataFromCollectionResp(createResp.body());
     assertThat(createResp).hasStatus(200);
 
     // And: This feature is updated
     HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson,
         streamId);
     assertThat(updateResp).hasStatus(200);
-    String updatedFeatureUuid = uuidFromFeatureResponse(updateResp.body());
+    FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
 
     // And: Client queries activity log space for this feature
-    HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features/" + updatedFeatureUuid, streamId);
+    HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features/" + updatedFeature.uuid, streamId);
 
     // Then: Expected ActivityLog response matches the response
     assertThat(getResp)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(formattedJson(expectedActivityResp, Map.of(
-            "${id}", updatedFeatureUuid,
-            "${activityLogId}", featureId
+            "${id}", updatedFeature.uuid,
+            "${activityLogId}", featureId,
+            "${puuid}", createdFeature.uuid,
+            "\"${createdAt}\"", updatedFeature.createdAt,
+            "\"${updatedAt}\"", updatedFeature.updatedAt
         )));
   }
 
@@ -136,13 +144,13 @@ class ActivityLogApiTest extends ApiTest {
     // When: New feature is created
     HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createFeatureJson, streamId);
     assertThat(createResp).hasStatus(200);
-    String createdFeatureUuid = singleUuidFromCollectionResponse(createResp.body());
+    FeatureMetadata createdFeature = featureMetadataFromCollectionResp(createResp.body());
 
     // And: This feature is updated
     HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson,
         streamId);
     assertThat(updateResp).hasStatus(200);
-    String updatedFeatureUuid = uuidFromFeatureResponse(updateResp.body());
+    FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
 
     // And: Client queries activity log space for this feature
     String featureIdNamespaceQuery = urlEncoded("p.@ns:com:here:xyz:log.id") + "=" + featureId;
@@ -153,9 +161,14 @@ class ActivityLogApiTest extends ApiTest {
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(formattedJson(expectedActivityResp, Map.of(
-            "${firstId}", updatedFeatureUuid,
-            "${secondId}", createdFeatureUuid,
-            "${activityLogId}", featureId
+            "${firstId}", updatedFeature.uuid,
+            "${firstPuuid}", createdFeature.uuid,
+            "\"${firstCreatedAt}\"", updatedFeature.createdAt,
+            "\"${firstUpdatedAt}\"", updatedFeature.updatedAt,
+            "${secondId}", createdFeature.uuid,
+            "${activityLogId}", featureId,
+            "\"${secondCreatedAt}\"", createdFeature.createdAt,
+            "\"${secondUpdatedAt}\"", createdFeature.updatedAt
         )));
   }
 
@@ -176,22 +189,26 @@ class ActivityLogApiTest extends ApiTest {
     HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson,
         streamId);
     assertThat(updateResp).hasStatus(200);
+    FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
 
     // And: This feature is deleted
     HttpResponse<String> deleteResp = nakshaClient.delete("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, streamId);
     assertThat(updateResp).hasStatus(200);
-    String deletedFeatureUuid = uuidFromFeatureResponse(deleteResp.body());
+    FeatureMetadata deletedFeature = featureMetadataFromFeatureResp(deleteResp.body());
 
     // And: Client queries activity log space for this feature
-    HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features/" + deletedFeatureUuid, streamId);
+    HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features/" + deletedFeature.uuid, streamId);
 
     // Then: Expected ActivityLog response matches the response
     assertThat(getResp)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(formattedJson(expectedActivityResp, Map.of(
-            "${id}", deletedFeatureUuid,
-            "${activityLogId}", featureId
+            "${id}", deletedFeature.uuid,
+            "${activityLogId}", featureId,
+            "${puuid}", updatedFeature.uuid,
+            "\"${createdAt}\"", deletedFeature.createdAt,
+            "\"${updatedAt}\"", deletedFeature.updatedAt
         )));
   }
 
@@ -207,18 +224,18 @@ class ActivityLogApiTest extends ApiTest {
     // When: New feature is created
     HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createFeatureJson, streamId);
     assertThat(createResp).hasStatus(200);
-    String createdFeatureUuid = singleUuidFromCollectionResponse(createResp.body());
+    FeatureMetadata createdFeature = featureMetadataFromCollectionResp(createResp.body());
 
     // And: This feature is updated
     HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson,
         streamId);
     assertThat(updateResp).hasStatus(200);
-    String updatedFeatureUuid = uuidFromFeatureResponse(updateResp.body());
+    FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
 
     // And: This feature is deleted
     HttpResponse<String> deleteResp = nakshaClient.delete("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, streamId);
     assertThat(updateResp).hasStatus(200);
-    String deletedFeatureUuid = uuidFromFeatureResponse(deleteResp.body());
+    FeatureMetadata deletedFeature = featureMetadataFromFeatureResp(deleteResp.body());
 
     // And: Client queries activity log space for this feature
     String featureIdNamespaceQuery = urlEncoded("p.@ns:com:here:xyz:log.id") + "=" + featureId;
@@ -228,42 +245,68 @@ class ActivityLogApiTest extends ApiTest {
     assertThat(getResp)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(formattedJson(expectedActivityResp, Map.of(
-            "${firstId}", deletedFeatureUuid,
-            "${secondId}", updatedFeatureUuid,
-            "${thirdId}", createdFeatureUuid,
+        .hasJsonBody(formattedJson(expectedActivityResp, mapOf(
+            "${firstId}", deletedFeature.uuid,
+            "${firstPuuid}", updatedFeature.uuid,
+            "\"${firstCreatedAt}\"", deletedFeature.createdAt,
+            "\"${firstUpdatedAt}\"", deletedFeature.updatedAt,
+            "${secondId}", updatedFeature.uuid,
+            "${secondPuuid}", createdFeature.uuid,
+            "\"${secondCreatedAt}\"", updatedFeature.createdAt,
+            "\"${secondUpdatedAt}\"", updatedFeature.updatedAt,
+            "${thirdId}", createdFeature.uuid,
+            "\"${thirdCreatedAt}\"", createdFeature.createdAt,
+            "\"${thirdUpdatedAt}\"", createdFeature.updatedAt,
             "${activityLogId}", featureId
         )));
   }
 
-  private String formattedJson(String json, Map<String, Object> propsToOverride){
+  private String formattedJson(String json, Map<String, Object> propsToOverride) {
     for (Entry<String, Object> entry : propsToOverride.entrySet()) {
       json = json.replace(entry.getKey(), entry.getValue().toString());
     }
     return json;
   }
 
-  private String uuidFromFeatureResponse(String featureResponse) {
+  private FeatureMetadata featureMetadataFromFeatureResp(String featureResponse) {
     XyzFeature feature = JsonSerializable.deserialize(featureResponse, XyzFeature.class);
-    return feature.getProperties().getXyzNamespace().getUuid();
+    return FeatureMetadata.from(feature.getProperties().getXyzNamespace());
   }
 
-  private String singleUuidFromCollectionResponse(String featureCollectionResponseJson) {
-    List<String> uuids = uuidsFromCollectionResponse(featureCollectionResponseJson);
-    assertEquals(1, uuids.size(), "Expected single uuid but response contained 0/multiple features (uuids: " + join(", ", uuids) + ")");
-    return uuids.get(0);
+  private FeatureMetadata featureMetadataFromCollectionResp(String featureCollectionResponseJson) {
+    List<FeatureMetadata> featuresMetadata = featuresMetadata(featureCollectionResponseJson);
+    assertEquals(1, featuresMetadata.size(), "Expected single contained 0/multiple features");
+    return featuresMetadata.get(0);
   }
 
-  private List<String> uuidsFromCollectionResponse(String featureCollectionResponseJson) {
+  private List<FeatureMetadata> featuresMetadata(String featureCollectionResponseJson) {
     return JsonSerializable.deserialize(featureCollectionResponseJson, XyzFeatureCollection.class)
         .getFeatures().stream()
         .map(XyzFeature::getProperties)
         .map(XyzProperties::getXyzNamespace)
-        .map(XyzNamespace::getUuid)
+        .map(FeatureMetadata::from)
         .toList();
   }
 
   private static String urlEncoded(String text) {
     return URLEncoder.encode(text, UTF_8);
+  }
+
+  private static Map mapOf(Object... args) {
+    if (args.length % 2 != 0) {
+      throw new IllegalArgumentException("Expected even number of args (key-value pairs!)");
+    }
+    Map map = new HashMap();
+    for (int i = 0; i < args.length; i += 2) {
+      map.put(args[i], args[i + 1]);
+    }
+    return map;
+  }
+
+  private record FeatureMetadata(String uuid, long createdAt, long updatedAt) {
+
+    static FeatureMetadata from(XyzNamespace xyzNamespace) {
+      return new FeatureMetadata(xyzNamespace.getUuid(), xyzNamespace.getCreatedAt(), xyzNamespace.getUpdatedAt());
+    }
   }
 }

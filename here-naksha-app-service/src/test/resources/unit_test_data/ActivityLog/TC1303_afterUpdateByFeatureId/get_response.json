@@ -58,9 +58,11 @@
             ]
           },
           "id": "${activityLogId}",
-          "invalidatedAt": 0,
           "original": {
-            "space": "regular_space_ah"
+            "space": "regular_space_ah",
+            "puuid": "${firstPuuid}",
+            "createdAt": "${firstCreatedAt}",
+            "updatedAt": "${firstUpdatedAt}"
           }
         },
         "speedLimit": "80"
@@ -90,7 +92,9 @@
           "action": "CREATE",
           "id": "${activityLogId}",
           "original": {
-            "space": "regular_space_ah"
+            "space": "regular_space_ah",
+            "createdAt": "${secondCreatedAt}",
+            "updatedAt": "${secondUpdatedAt}"
           }
         },
         "toBeDeleted": {

@@ -16,12 +16,12 @@
     "@ns:com:here:xyz:log": {
       "action": "CREATE",
       "id": "${activityLogId}",
-      "invalidatedAt": 0,
       "original": {
-        "space": "regular_space_ah"
+        "space": "regular_space_ah",
+        "createdAt": "${createdAt}",
+        "updatedAt": "${updatedAt}"
       }
     },
     "speedLimit": "60"
   }
-}
 }

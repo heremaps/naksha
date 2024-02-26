@@ -25,9 +25,11 @@
         "@ns:com:here:xyz:log": {
           "id": "${activityLogId}",
           "action": "DELETE",
-          "invalidatedAt": 0,
           "original": {
-            "space": "regular_space_ah"
+            "space": "regular_space_ah",
+            "puuid": "${firstPuuid}",
+            "createdAt": "${firstCreatedAt}",
+            "updatedAt": "${firstUpdatedAt}"
           }
         },
         "speedLimit": "80"
@@ -90,9 +92,11 @@
             ]
           },
           "id": "${activityLogId}",
-          "invalidatedAt": 0,
           "original": {
-            "space": "regular_space_ah"
+            "space": "regular_space_ah",
+            "puuid": "${secondPuuid}",
+            "createdAt": "${secondCreatedAt}",
+            "updatedAt": "${secondUpdatedAt}"
           }
         },
         "speedLimit": "80"
@@ -122,7 +126,9 @@
           "action": "CREATE",
           "id": "${activityLogId}",
           "original": {
-            "space": "regular_space_ah"
+            "space": "regular_space_ah",
+            "createdAt": "${thirdCreatedAt}",
+            "updatedAt": "${thirdUpdatedAt}"
           }
         },
         "toBeDeleted": {

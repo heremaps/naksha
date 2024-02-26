@@ -25,17 +25,17 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
-@AvailableSince(NakshaVersion.v2_0_12)
+@AvailableSince(NakshaVersion.v2_0_14)
 public class ActivityLogHandlerProperties extends XyzProperties {
 
-  @AvailableSince(NakshaVersion.v2_0_12)
+  @AvailableSince(NakshaVersion.v2_0_14)
   public static final String SPACE_ID = "spaceId";
 
-  @AvailableSince(NakshaVersion.v2_0_12)
+  @AvailableSince(NakshaVersion.v2_0_14)
   @JsonProperty(SPACE_ID)
   private final @NotNull String spaceId;
 
-  @AvailableSince(NakshaVersion.v2_0_12)
+  @AvailableSince(NakshaVersion.v2_0_14)
   @JsonCreator
   public ActivityLogHandlerProperties(@JsonProperty(SPACE_ID) @NotNull String spaceId) {
     this.spaceId = spaceId;

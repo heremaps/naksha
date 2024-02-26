@@ -23,7 +23,7 @@ import static com.here.naksha.handler.activitylog.ReversePatchUtil.toJsonNode;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
@@ -32,6 +32,7 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
+import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
@@ -39,6 +40,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActi
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
+import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
@@ -82,17 +84,21 @@ public class ActivityLogHandler extends AbstractEventHandler {
       return PROCESS;
     }
     if (request instanceof WriteCollections<?, ?, ?>) {
-      return SEND_UPSTREAM_WITHOUT_PROCESSING;
+      return SUCCEED_WITHOUT_PROCESSING;
     }
     return NOT_IMPLEMENTED;
   }
 
   @Override
   protected @NotNull Result process(@NotNull IEvent event) {
+    final ErrorResult validationError = propertiesValidationError();
+    if (validationError != null) {
+      return validationError;
+    }
     final NakshaContext ctx = NakshaContext.currentContext();
     final ReadFeatures request = transformRequest(event.getRequest());
-    List<XyzFeature> activityHistoryFeatures = activityHistoryFeatures(request, ctx);
-    return ActivityLogSuccessResult.forFeatures(activityHistoryFeatures);
+    List<XyzFeature> activityLogFeatures = activityLogFeatures(request, ctx);
+    return ActivityLogSuccessResult.forFeatures(activityLogFeatures);
   }
 
   private @NotNull ReadFeatures transformRequest(Request<?> request) {
@@ -103,15 +109,24 @@ public class ActivityLogHandler extends AbstractEventHandler {
     return readFeatures;
   }
 
-  private List<XyzFeature> activityHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
+  private @Nullable ErrorResult propertiesValidationError() {
+    if (nullOrEmpty(properties.getSpaceId())) {
+      return new ErrorResult(
+          XyzError.ILLEGAL_ARGUMENT, "Missing required property: " + ActivityLogHandlerProperties.SPACE_ID);
+    }
+    return null;
+  }
+
+  private List<XyzFeature> activityLogFeatures(ReadFeatures readFeatures, NakshaContext context) {
     List<XyzFeature> historyFeatures = fetchHistoryFeatures(readFeatures, context);
     return featuresEnhancedWithActivity(historyFeatures, context);
   }
 
   private List<XyzFeature> fetchHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
     try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(context, true)) {
-      Result result = readSession.execute(readFeatures);
-      return readFeaturesFromResult(result, XyzFeature.class);
+      try (Result result = readSession.execute(readFeatures)) {
+        return readFeaturesFromResult(result, XyzFeature.class);
+      }
     } catch (NoCursor | NoSuchElementException e) {
       return Collections.emptyList();
     }
@@ -210,7 +225,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
       return null;
     } else if (EXyzAction.UPDATE.equals(action)) {
       if (featureWithPredecessor.oldFeature == null) {
-        logger.info(
+        logger.warn(
             "Unable to calculate reversePatch for, missing predecessor for feature with uuid: {}, returning null",
             uuid(featureWithPredecessor.feature));
         return null;
@@ -233,6 +248,10 @@ public class ActivityLogHandler extends AbstractEventHandler {
       original.setSpace(spaceId);
     }
     return original;
+  }
+
+  private static boolean nullOrEmpty(String value) {
+    return value == null || value.isBlank();
   }
 
   private static String uuid(XyzFeature feature) {

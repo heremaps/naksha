@@ -1,5 +1,6 @@
 package com.here.naksha.handler.activitylog;
 
+import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PREF_ACTIVITY_LOG_ID;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static com.here.naksha.test.common.assertions.POpAssertion.assertThatOperation;
 import static java.util.Collections.emptyMap;
@@ -11,6 +12,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -58,6 +60,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -86,12 +89,26 @@ class ActivityLogHandlerTest {
   }
 
   @ParameterizedTest
+  @NullAndEmptySource
+  void shouldFailWhenSpaceIdIsMissing(String missingSpaceId) {
+    // Given: handler with empty spaceId (null, empty string)
+    ActivityLogHandler handlerWithoutSpace = handlerForSpaceId(missingSpaceId);
+
+    // When: handling some red features request
+    Result result = handlerWithoutSpace.process(eventWith(new ReadFeatures()));
+
+    // Then: error that indicates Illegal Argument is returned
+    assertInstanceOf(ErrorResult.class, result);
+    assertEquals(XyzError.ILLEGAL_ARGUMENT, ((ErrorResult) result).reason);
+  }
+
+  @ParameterizedTest
   @MethodSource("unhandledRequests")
-  void shouldFailOnNonReadFeaturesRequests(Request<?> unhandledRequest) {
-    // Given:
+  void shouldFailOnUnhandledRequests(Request<?> unhandledRequest) {
+    // Given: event bearing some unhandler request
     IEvent event = eventWith(unhandledRequest);
 
-    // When:
+    // When: handler tries to process such event
     Result result = handler.processEvent(event);
 
     // Then: Storage was not used at all
@@ -103,28 +120,35 @@ class ActivityLogHandlerTest {
   }
 
   @Test
-  void shouldImmediatelySendWriteCollectionUpstream() {
-    // Given:
+  void shouldImmediatelySucceedOnWriteCollection() {
+    // Given: event bearing some WriteCollections request
     IEvent event = eventWith(new WriteXyzCollections().delete(new XyzCollection("some_collection")));
 
-    // When:
-    handler.processEvent(event);
+    // When: handler tries to process such event
+    Result result = handler.processEvent(event);
 
-    // Then: Storage was not used at all
-    verify(event).sendUpstream();
+    // Then: storage was not used at all
+    verifyNoInteractions(spaceStorage);
+
+    // And: event was not sent upstream
+    verify(event, never()).sendUpstream();
+    verify(event, never()).sendUpstream(any());
+
+    // And: result is successful
+    assertInstanceOf(SuccessResult.class, result);
   }
 
   @Test
-  void shouldTransformReadRequest() throws Exception {
+  void shouldTransformReadRequest() {
     // Given: Original read request
+    String featureUuid = "featureUuid";
     String featureId = "featureId";
-    String activityLogId = "activityLogId";
     ReadFeatures originalReadFeatures = new ReadFeatures("not_the_space_id")
         .withReturnAllVersions(false)
         .withPropertyOp(
             POp.or(
-                POp.eq(PRef.id(), featureId),
-                POp.eq(PRef.activityLogId(), activityLogId)
+                POp.eq(PRef.id(), featureUuid),
+                POp.eq(PREF_ACTIVITY_LOG_ID, featureId)
             )
         );
 
@@ -149,16 +173,18 @@ class ActivityLogHandlerTest {
         .hasChildrenThat(
             first -> first
                 .hasType(POpType.EQ)
-                .hasPRef(PRef.uuid()),
+                .hasPRef(PRef.uuid())
+                .hasValue(featureUuid),
             second -> second
                 .hasType(POpType.EQ)
                 .hasPRef(PRef.id())
+                .hasValue(featureId)
         );
   }
 
   @Test
   void shouldComposeActivityFeatures() throws Exception {
-    // Given
+    // Given: old version of feature
     String featureId = "featureId";
     XyzFeature oldFeature = xyzFeature(
         featureId,
@@ -170,6 +196,8 @@ class ActivityLogHandlerTest {
             "magicNumber", 123
         )
     );
+
+    // And: new version of feature
     XyzFeature newFeature = xyzFeature(
         featureId,
         "new_uuid",
@@ -181,14 +209,14 @@ class ActivityLogHandlerTest {
         )
     );
 
-    // And
+    // And: space storage that returns these features for some ReadFeatures request
     ReadFeatures request = new ReadFeatures();
     spaceStorageSessionReturningHistoryFeatures(request, oldFeature, newFeature);
 
-    // When
+    // When: handler processes given request
     Result result = handler.processEvent(eventWith(request));
 
-    // Then:
+    // Then: result contains activity log calculated on basis of these features
     assertThatResult(result)
         .hasActivityFeatures(
             firstFeature -> firstFeature
@@ -288,10 +316,10 @@ class ActivityLogHandlerTest {
 
   @Test
   void shouldNotCalculateReversePatchAfterCreation() throws Exception {
-    // Given:
+    // Given: ReadFeatures request
     ReadFeatures request = new ReadFeatures();
 
-    // And
+    // And: space storage that returns some feature with 'CREATE' action for given request
     spaceStorageSessionReturningHistoryFeatures(request, xyzFeature(
         "featureId",
         "uuid",
@@ -299,10 +327,10 @@ class ActivityLogHandlerTest {
         EXyzAction.CREATE
     ));
 
-    // When:
+    // When: handler processes event bearing such request
     Result result = handler.processEvent(eventWith(request));
 
-    // Then:
+    // Then: result does not bear any reverse patch
     assertThatResult(result)
         .hasActivityFeatures(feature -> feature
             .hasAction(EXyzAction.CREATE.toString())
@@ -314,10 +342,10 @@ class ActivityLogHandlerTest {
 
   @Test
   void shouldNotCalculateDiffAfterDeletion() throws Exception {
-    // Given:
+    // Given: ReadFeatures request
     ReadFeatures request = new ReadFeatures();
 
-    // And
+    // And: space storage that returns features with 'DELETE' and `CREATE` actions for given request
     spaceStorageSessionReturningHistoryFeatures(request,
         xyzFeature(
             "featureId",
@@ -333,10 +361,10 @@ class ActivityLogHandlerTest {
         )
     );
 
-    // When:
+    // When: handler processes event bearing such request
     Result result = handler.processEvent(eventWith(request));
 
-    // Then:
+    // Then: there is no reverse patch for any fo these features
     assertThatResult(result)
         .hasActivityFeatures(
             first -> first
@@ -352,7 +380,7 @@ class ActivityLogHandlerTest {
         );
   }
 
-  private ActivityLogHandler handlerForSpaceId(String spaceId){
+  private ActivityLogHandler handlerForSpaceId(String spaceId) {
     when(eventHandler.getProperties()).thenReturn(new ActivityLogHandlerProperties(spaceId));
     return new ActivityLogHandler(eventHandler, naksha, mock(EventTarget.class));
   }

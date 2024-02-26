@@ -18,6 +18,11 @@
  */
 package com.here.naksha.handler.activitylog;
 
+import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.ID;
+import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.PROPERTIES;
+import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_ACTIVITY_LOG_NS;
+
+import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.POpType;
 import com.here.naksha.lib.core.models.storage.PRef;
@@ -30,6 +35,9 @@ import org.jetbrains.annotations.Nullable;
 
 class ActivityLogRequestTranslationUtil {
 
+  private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {PROPERTIES, XYZ_ACTIVITY_LOG_NS, ID};
+  static final PRef PREF_ACTIVITY_LOG_ID = new NonIndexedPRef(ACTIVITY_LOG_ID_PATH);
+
   private ActivityLogRequestTranslationUtil() {}
 
   /**
@@ -40,7 +48,7 @@ class ActivityLogRequestTranslationUtil {
    * Translation applies to given source-target pairs:
    * <ul>
    * <li>'id' ({{@link PRef#id()}} => 'properties.@ns:com:here:xyz.uuid' ({{@link PRef#uuid()}})</li>
-   * <li>'properties.@ns:com:here:xyz:log.id' ({{@link PRef#activityLogId()}}) => 'id' ({{@link PRef#id()}})</li>
+   * <li>'properties.@ns:com:here:xyz:log.id' ({{@link #PREF_ACTIVITY_LOG_ID}}) => 'id' ({{@link PRef#id()}})</li>
    * </ul>
    * Translation is required because the ReadRequest that reach {{@link ActivityLogHandler}} are being delegated to HistoryHandler
    *
@@ -79,7 +87,7 @@ class ActivityLogRequestTranslationUtil {
   }
 
   private static boolean isSingleActivityLogIdEqualityQuery(POp pOp) {
-    return pOp.op().equals(POpType.EQ) && sameRefs(PRef.activityLogId(), pOp.getPropertyRef());
+    return pOp.op().equals(POpType.EQ) && sameRefs(PREF_ACTIVITY_LOG_ID, pOp.getPropertyRef());
   }
 
   private static boolean sameRefs(@NotNull PRef expected, @Nullable PRef actual) {

@@ -20,7 +20,6 @@ package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.ID;
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.PROPERTIES;
-import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_ACTIVITY_LOG_NS;
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_NAMESPACE;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.APP_ID;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.AUTHOR;
@@ -67,8 +66,6 @@ public class PRef {
   public static final String[] TXN_NEXT_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TXN_NEXT};
   public static final String[] TAGS_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TAGS};
 
-  public static final String[] ACTIVITY_LOG_ID_PATH = new String[] {PROPERTIES, XYZ_ACTIVITY_LOG_NS, ID};
-
   static final PRef PREF_ID = new PRef(ID_PROP_PATH);
   static final PRef PREF_APP_ID = new PRef(APP_ID_PROP_PATH);
   static final PRef PREF_AUTHOR = new PRef(AUTHOR_PROP_PATH);
@@ -78,8 +75,6 @@ public class PRef {
   static final PRef PREF_TXN = new PRef(TXN_PROP_PATH);
   static final PRef PREF_TXN_NEXT = new PRef(TXN_NEXT_PROP_PATH);
   static final PRef PREF_TAGS = new PRef(TAGS_PROP_PATH);
-
-  static final PRef PREF_ACTIVITY_LOG_ID = new PRef(ACTIVITY_LOG_ID_PATH);
 
   // Mapping of JSON Prop path to PRef object
   public static final Map<String[], PRef> PATH_TO_PREF_MAPPING = new HashMap<>() {};
@@ -200,9 +195,5 @@ public class PRef {
    */
   public static @NotNull PRef txn_next() {
     return PREF_TXN_NEXT;
-  }
-
-  public static @NotNull PRef activityLogId() {
-    return PREF_ACTIVITY_LOG_ID;
   }
 }

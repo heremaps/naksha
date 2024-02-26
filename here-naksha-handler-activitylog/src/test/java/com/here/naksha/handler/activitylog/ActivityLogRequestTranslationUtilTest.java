@@ -1,119 +1,135 @@
 package com.here.naksha.handler.activitylog;
 
-import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtilTest.TranslationExpectation.Builder.query;
-import static com.here.naksha.lib.core.models.storage.POp.and;
-import static com.here.naksha.lib.core.models.storage.POp.eq;
-import static com.here.naksha.lib.core.models.storage.POp.or;
-import static com.here.naksha.lib.core.models.storage.PRef.activityLogId;
-import static com.here.naksha.lib.core.models.storage.PRef.author;
+import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PREF_ACTIVITY_LOG_ID;
 import static com.here.naksha.lib.core.models.storage.PRef.id;
-import static com.here.naksha.lib.core.models.storage.PRef.txn;
 import static com.here.naksha.lib.core.models.storage.PRef.uuid;
-import static java.util.function.Function.identity;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Named.named;
 
 import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.PRef;
+import com.here.naksha.lib.core.models.storage.POpType;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import java.util.stream.Stream;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Named;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+import com.here.naksha.test.common.assertions.POpAssertion;
+import org.junit.jupiter.api.Test;
 
 class ActivityLogRequestTranslationUtilTest {
 
-  @ParameterizedTest
-  @MethodSource("translationSamples")
-  void shouldTranslatePropertyOperation(TranslationExpectation translationExpectation) {
+  @Test
+  void shouldTranslateIdToUuid() {
     // Given:
-    ReadFeatures propertyBasedQuery = new ReadFeatures().withPropertyOp(translationExpectation.originalQuery);
+    String expectedId = "some_id";
+    POp singleIdQuery = POp.eq(id(), expectedId);
+    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(singleIdQuery);
 
-    // When
-    ActivityLogRequestTranslationUtil.translatePropertyOperation(propertyBasedQuery);
+    // When:
+    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
-    // Then
-    assertEquals(translationExpectation.queryAfterTranslation, propertyBasedQuery.getPropertyOp());
+    // Then:
+    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
+        .hasType(POpType.EQ)
+        .hasPRef(uuid())
+        .hasValue(expectedId);
   }
 
-  private static Stream<Named<TranslationExpectation>> translationSamples() {
-    return Stream.of(
-        generateSamples(id(), uuid()),
-        generateSamples(activityLogId(), id()),
-        generateMixedSamples(
-            id(), uuid(),
-            activityLogId(), id()
-        )
-    ).flatMap(identity());
-  }
-
-  private static Stream<Named<TranslationExpectation>> generateSamples(PRef sourceProperty, PRef targetProperty) {
-    String sourcePath = pathString(sourceProperty);
-    String targetPath = pathString(targetProperty);
-    return Stream.of(
-        named("Single query:'%s=sample_id' => '%s=sample_id'".formatted(sourcePath, targetPath),
-            query(eq(sourceProperty, "sample_id"))
-                .shouldBeTranslatedTo(eq(targetProperty, "sample_id"))),
-        named("Multiple query: '%s=id_1,%s=id_2' => '%s=id_1,%s=id_2'".formatted(sourcePath, sourcePath, targetPath, targetPath),
-            query(or(eq(sourceProperty, "id_1"), eq(sourceProperty, "id_2")))
-                .shouldBeTranslatedTo(or(eq(targetProperty, "id_1"), eq(targetProperty, "id_2")))),
-        named(
-            "Single query with additional property: '%s=sample_id&props.ns.author=john_doe' => '%s=sample_id&props.ns.author=john_doe')".formatted(
-                sourcePath, targetProperty),
-            query(and(eq(sourceProperty, "sample_id"), eq(author(), "john_doe")))
-                .shouldBeTranslatedTo(or(eq(targetProperty, "id_1"), eq(author(), "john_doe")))),
-        named(
-            "Multiple query with additional property: '%s=id_1,%s=id_2&props.ns.txn=txn)' => '%s=id_1,%s=id_2&props.ns.txn=txn'".formatted(
-                sourcePath, sourcePath, targetPath, targetProperty),
-            query(and(or(eq(sourceProperty, "id_1"), eq(sourceProperty, "id_2")), eq(txn(), "txn_1")))
-                .shouldBeTranslatedTo(and(or(eq(targetProperty, "id_1"), eq(targetProperty, "id_2")), eq(txn(), "txn_1")))
-        )
+  @Test
+  void shouldTranslateIdsToUuids() {
+    // Given:
+    String firstId = "id_1";
+    String secondId = "id_2";
+    POp idsQuery = POp.or(
+        POp.eq(id(), firstId),
+        POp.eq(id(), secondId)
     );
+    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(idsQuery);
+
+    // When:
+    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
+
+    // Then:
+    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
+        .hasType(POpType.OR)
+        .hasChildrenThat(
+            first -> first
+                .hasType(POpType.EQ)
+                .hasPRef(uuid())
+                .hasValue(firstId),
+            second -> second
+                .hasType(POpType.EQ)
+                .hasPRef(uuid())
+                .hasValue(secondId)
+        );
   }
 
-  private static Stream<Named<TranslationExpectation>> generateMixedSamples(
-      PRef firstSourceProperty, PRef firstTargetProperty,
-      PRef secondSourceProperty, PRef secondTargetProperty
-  ) {
-    return Stream.of(
-        named("Mixed OR query: '%s=foo OR %s=bar' => '%s=foo OR %s=bar'".formatted(
-                pathString(firstSourceProperty), pathString(secondSourceProperty),
-                pathString(firstTargetProperty), pathString(secondTargetProperty)
-            ),
-            query(or(eq(firstSourceProperty, "foo"), eq(secondSourceProperty, "bar")))
-                .shouldBeTranslatedTo(or(eq(firstTargetProperty, "foo"), eq(secondTargetProperty, "bar")))
-        ),
-        named("Mixed AND query: '%s=foo AND %s=bar' => '%s=foo AND %s=bar'".formatted(
-                pathString(firstSourceProperty), pathString(secondSourceProperty),
-                pathString(firstTargetProperty), pathString(secondTargetProperty)
-            ),
-            query(and(eq(firstSourceProperty, "foo"), eq(secondSourceProperty, "bar")))
-                .shouldBeTranslatedTo(and(eq(firstTargetProperty, "foo"), eq(secondTargetProperty, "bar")))
-        )
+  @Test
+  void shouldTranslateActivityLogIdToId() {
+    // Given:
+    String expectedId = "some_id";
+    POp singleActivityLogIdQuery = POp.eq(PREF_ACTIVITY_LOG_ID, expectedId);
+    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(singleActivityLogIdQuery);
+
+    // When:
+    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
+
+    // Then:
+    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
+        .hasType(POpType.EQ)
+        .hasPRef(id())
+        .hasValue(expectedId);
+  }
+
+  @Test
+  void shouldTranslateActivityLogIdsToIds() {
+    // Given:
+    String firstId = "id_1";
+    String secondId = "id_2";
+    POp activityLogIdsQuery = POp.or(
+        POp.eq(PREF_ACTIVITY_LOG_ID, firstId),
+        POp.eq(PREF_ACTIVITY_LOG_ID, secondId)
     );
+    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(activityLogIdsQuery);
+
+    // When:
+    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
+
+    // Then:
+    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
+        .hasType(POpType.OR)
+        .hasChildrenThat(
+            first -> first
+                .hasType(POpType.EQ)
+                .hasPRef(id())
+                .hasValue(firstId),
+            second -> second
+                .hasType(POpType.EQ)
+                .hasPRef(id())
+                .hasValue(secondId)
+        );
   }
 
-  private static String pathString(PRef pRef) {
-    return String.join(".", pRef.getPath());
-  }
+  @Test
+  void shouldApplyMixedTranslations() {
+    // Given:
+    String id = "id";
+    String activityLogId = "activity_log_id";
+    POp mixedQuery = POp.or(
+        POp.eq(id(), id),
+        POp.eq(PREF_ACTIVITY_LOG_ID, activityLogId)
+    );
+    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(mixedQuery);
 
-  record TranslationExpectation(POp originalQuery, POp queryAfterTranslation) {
+    // When:
+    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
-    static class Builder {
-
-      POp originalQuery;
-
-      static Builder query(POp originalQuery) {
-        Builder builder = new Builder();
-        builder.originalQuery = originalQuery;
-        return builder;
-      }
-
-      TranslationExpectation shouldBeTranslatedTo(@NotNull POp queryAfterTranslation) {
-        assert originalQuery != null : "Original query is null, use 'query' method before";
-        return new TranslationExpectation(originalQuery, queryAfterTranslation);
-      }
-    }
+    // Then:
+    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
+        .hasType(POpType.OR)
+        .hasChildrenThat(
+            first -> first
+                .hasType(POpType.EQ)
+                .hasPRef(uuid())
+                .hasValue(id),
+            second -> second
+                .hasType(POpType.EQ)
+                .hasPRef(id())
+                .hasValue(activityLogId)
+        );
   }
 }

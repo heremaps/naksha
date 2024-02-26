@@ -55,11 +55,6 @@ public class XyzActivityLog extends JsonObject {
   @JsonProperty(ID)
   private String id;
 
-  // For Now INVALIDATED_AT is not used
-  /** * * The timestamp, when a feature was created. */
-  @JsonProperty(INVALIDATED_AT)
-  private long invalidatedAt;
-
   /**
    * The operation that lead to the current state of the namespace. Should be a value from {@link
    * EXyzAction}.
@@ -95,14 +90,6 @@ public class XyzActivityLog extends JsonObject {
   public @NotNull XyzActivityLog withAction(@NotNull EXyzAction action) {
     setAction(action);
     return this;
-  }
-
-  public long getInvalidatedAt() {
-    return invalidatedAt;
-  }
-
-  public void setInvalidatedAt(long invalidatedAt) {
-    this.invalidatedAt = invalidatedAt;
   }
 
   public boolean isDeleted() {
