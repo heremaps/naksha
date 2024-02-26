@@ -183,12 +183,12 @@ public final class Json implements AutoCloseable {
     // Note: eWKB does encode the endian into the binary, so we can simply use the optimal one for this hardware.
     // - https://postgis.net/docs/ST_AsEWKB.html
     // - https://postgis.net/docs/ST_GeomFromEWKB.html
-    this.wkbReader = new TWKBReader();
-    this.wkbWriter = new TWKBWriter();
-    this.wkbWriter.setEncodeM(false);
-    this.wkbWriter.setEncodeZ(true);
-    this.wkbWriter.setXYPrecision(7);
-    this.wkbWriter.setZPrecision(3);
+    this.twkbReader = new TWKBReader();
+    this.twkbWriter = new TWKBWriter();
+    this.twkbWriter.setEncodeM(false);
+    this.twkbWriter.setEncodeZ(true);
+    this.twkbWriter.setXYPrecision(7);
+    this.twkbWriter.setZPrecision(3);
     this.simpleReader = mapper.reader();
     this.simpleWriter = mapper.writer();
     this.simpleHashWriter = hashMapper.writer();
@@ -197,12 +197,12 @@ public final class Json implements AutoCloseable {
   /**
    * The WKB reader for PostgresQL.
    */
-  public final @NotNull TWKBReader wkbReader;
+  public final @NotNull TWKBReader twkbReader;
 
   /**
-   * The WKB writer for PostgresQL.
+   * The TWKB writer for PostgresQL.
    */
-  public final @NotNull TWKBWriter wkbWriter;
+  public final @NotNull TWKBWriter twkbWriter;
 
   /**
    * The weak reference to this.

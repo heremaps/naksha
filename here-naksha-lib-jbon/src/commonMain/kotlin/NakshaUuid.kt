@@ -26,7 +26,9 @@ class NakshaUuid(val storageId: String, val collectionId: String, val year: Int,
     override fun hashCode() : Int = toString().hashCode()
 
     override fun toString() : String {
-        if (!this::string.isInitialized) string = "$storageId:$collectionId:$year:$month:$day:$uid"
+        val twoDigitMonth = month.toString().padStart(2, '0')
+        val twoDigitDay = day.toString().padStart(2, '0')
+        if (!this::string.isInitialized) string = "$storageId:$collectionId:$year:$twoDigitMonth:$twoDigitDay:$uid"
         return string
     }
 }

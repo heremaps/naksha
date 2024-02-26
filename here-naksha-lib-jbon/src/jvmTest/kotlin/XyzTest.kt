@@ -106,7 +106,7 @@ class XyzTest : JbAbstractTest() {
         assertEquals("test-app", ns["app_id"])
         assertEquals("test-author", ns["author"])
         assertEquals("1234567", ns["grid"])
-        assertEquals("test_storage:txn:0:0:0:$txn", ns["txn"])
+        assertEquals("test_storage:txn:0:00:00:$txn", ns["txn"])
     }
 
 }

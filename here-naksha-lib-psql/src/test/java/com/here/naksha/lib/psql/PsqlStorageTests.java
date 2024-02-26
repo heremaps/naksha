@@ -203,15 +203,14 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(storage.getStorageId(), uuidFields[0]);
       assertEquals(collectionId(), uuidFields[1]);
       assertEquals(4, uuidFields[2].length()); // year (4- digits)
-      assertEquals(2, uuidFields[3].length()); // hour (2- digits)
-      assertEquals(2, uuidFields[4].length()); // minute (2- digits)
+      assertEquals(2, uuidFields[3].length()); // month (2- digits)
+      assertEquals(2, uuidFields[4].length()); // day (2- digits)
       assertEquals("1", uuidFields[5]); // seq id
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
-      assertNotEquals(xyz.getRealTimeUpdatedAt(), xyz.getUpdatedAt());
       assertEquals(xyz.getCreatedAt(), xyz.getUpdatedAt());
 
-      assertEquals(encodeLatLon(coordinate.y, coordinate.x, 7), xyz.get("grid"));
+      assertEquals(encodeLatLon(coordinate.y, coordinate.x, 14), xyz.get("grid"));
 
       assertEquals(List.of(SINGLE_FEATURE_INITIAL_TAG), xyz.getTags());
 

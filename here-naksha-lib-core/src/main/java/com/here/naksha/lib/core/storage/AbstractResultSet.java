@@ -86,7 +86,7 @@ public abstract class AbstractResultSet<FEATURE extends XyzFeature> implements I
         throw new IllegalArgumentException("Parsing the jsondata returned null");
       }
       if (geo != null) {
-        final Geometry geometry = json.wkbReader.read(WKBReader.hexToBytes(geo));
+        final Geometry geometry = json.twkbReader.read(WKBReader.hexToBytes(geo));
         f.setGeometry(JTSHelper.fromGeometry(geometry));
       }
       return f;
@@ -135,7 +135,7 @@ public abstract class AbstractResultSet<FEATURE extends XyzFeature> implements I
     try {
       final Geometry jtsGeometry = xyzGeometry.getJTSGeometry();
       assure3d(jtsGeometry.getCoordinates());
-      final byte[] geometryBytes = json.wkbWriter.write(jtsGeometry);
+      final byte[] geometryBytes = json.twkbWriter.write(jtsGeometry);
       return WKBWriter.toHex(geometryBytes);
     } finally {
       feature.setGeometry(xyzGeometry);
