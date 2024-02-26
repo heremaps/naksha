@@ -43,8 +43,7 @@ class HttpStorageReadExecute {
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadExecute.class);
 
   @NotNull
-  static Result execute(ReadFeaturesProxyWrapper request, RequestSender sender)
-      {
+  static Result execute(ReadFeaturesProxyWrapper request, RequestSender sender) {
 
     return switch (request.getReadRequestType()) {
       case GET_BY_ID -> executeFeatureById(request, sender);

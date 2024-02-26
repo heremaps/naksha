@@ -6,8 +6,6 @@
   "className": "com.here.naksha.storage.http.HttpStorage",
   "properties": {
     "url" : "http://localhost:8089",
-    "connectTimeout" : 60,
-    "socketTimeout" : 3600,
     "headers" : {
       "Authorization" : "Bearer <token>",
       "Content-Type" :  "application/json"

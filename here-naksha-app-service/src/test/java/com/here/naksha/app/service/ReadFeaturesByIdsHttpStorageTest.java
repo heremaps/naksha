@@ -164,7 +164,7 @@ class ReadFeaturesByIdsHttpStorageTest extends ApiTest {
     verify(1, getRequestedFor(endpointPath));
   }
 
-  private final StringValuePattern havingCommaSeparatedValue(String value){
+  private StringValuePattern havingCommaSeparatedValue(String value){
     return matching(".*(^|,)"+ value + "(,|$).*");
   }
 }

@@ -29,6 +29,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -91,7 +92,12 @@ class RequestSender {
       long executionTime = System.currentTimeMillis() - startTime;
       log.info("Request to {} took {}ms", specificRequest.uri(), executionTime);
       return response;
+    } catch (TimeoutException e) {
+      TimeoutException t = new TimeoutException(this.getClass().getName() + ": request timed out");
+      log.warn("Exception thrown.", t);
+      throw unchecked(t);
     } catch (Exception e) {
+      log.warn("Exception thrown.", e);
       throw unchecked(e);
     }
   }
