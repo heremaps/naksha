@@ -189,7 +189,7 @@ class Plv8Test : Plv8TestContainer() {
         val result = assertInstanceOf(JvmPlv8Table::class.java, table)
         assertEquals(1, result.rows.size)
         val row = result.rows[0]
-        assertEquals(XYZ_EXECUTED_CREATED, row["op"])
+        assertEquals(XYZ_EXEC_CREATED, row["op"])
         session.sql.execute("COMMIT")
     }
 
