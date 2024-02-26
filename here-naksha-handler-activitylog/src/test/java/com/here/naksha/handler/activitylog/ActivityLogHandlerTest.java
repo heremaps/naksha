@@ -56,6 +56,7 @@ import com.here.naksha.test.common.assertions.POpAssertion;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -220,7 +221,7 @@ class ActivityLogHandlerTest {
     assertThatResult(result)
         .hasActivityFeatures(
             firstFeature -> firstFeature
-                .hasId(newFeature.getProperties().getXyzNamespace().getUuid())
+                .hasId(uuid(newFeature))
                 .hasActivityLogId(featureId)
                 .hasAction(EXyzAction.UPDATE.toString())
                 .hasReversePatch(jsonNode("""
@@ -247,7 +248,7 @@ class ActivityLogHandlerTest {
                     }
                     """)),
             secondFeature -> secondFeature
-                .hasId(oldFeature.getProperties().getXyzNamespace().getUuid())
+                .hasId(uuid(oldFeature))
                 .hasActivityLogId(featureId)
                 .hasAction(EXyzAction.CREATE.toString())
                 .hasReversePatch(null)
@@ -415,6 +416,10 @@ class ActivityLogHandlerTest {
 
     // Then
     assertThatResult(result).hasActivityFeaturesIdenticalTo(datahubSample.activityFeatures());
+  }
+
+  private static String uuid(XyzFeature newFeature) {
+    return newFeature.getProperties().getXyzNamespace().getUuid();
   }
 
   private static XyzFeature xyzFeature(String id, String uuid, String puuid, EXyzAction action) {
