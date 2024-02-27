@@ -75,7 +75,7 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
       this.enc = enc;
     }
 
-    public static PreReleaseTag valueOf(byte enc) {
+    public static PreReleaseTag findByValue(int enc) {
       for (PreReleaseTag tag : values()) {
         if (tag.enc == enc) {
           return tag;
@@ -138,9 +138,7 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
         (int) ((value >>> 48) & 0xffff),
         (int) ((value >>> 32) & 0xffff),
         (int) ((value >>> 16) & 0xffff),
-        (int) ((value >>> 8) & 0xff) == PRE_RELEASE_TAG_DEFAULT
-            ? PreReleaseTag.none
-            : PreReleaseTag.valueOf((byte) ((value >>> 8) & 0xff)),
+        PreReleaseTag.findByValue((int) ((value >>> 8) & 0xff)),
         (int) ((value >>> 8) & 0xff) == PRE_RELEASE_TAG_DEFAULT
                 || ((value) & 0xff) == PRE_RELEASE_VERSION_DEFAULT
             ? null
