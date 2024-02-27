@@ -313,9 +313,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1307_testActivityLogByBBox() throws Exception {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBBox/create_features.json");
+    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBbox/create_features.json");
     String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBbox/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBBox/get_response.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBbox/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String featureId = "TC1307_feature";
 
