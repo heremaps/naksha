@@ -232,8 +232,11 @@ SET SESSION enable_seqscan = OFF;
             data.NEW[COL_UID] = uid
             val id: String? = data.NEW[COL_ID]
             check(id != null) { "Missing id" }
-            val geoType: Short? = data.NEW[COL_GEO_TYPE]
-            check(geoType != null) { "Geometry type must not be null" }
+            var geoType: Short? = data.NEW[COL_GEO_TYPE]
+            if (geoType == null) {
+                geoType = GEO_TYPE_NULL
+                data.NEW[COL_GEO_TYPE] = GEO_TYPE_NULL
+            }
             data.NEW[COL_XYZ] = xyzInsert(collectionId, id, uid, geoType, data.NEW[COL_GEOMETRY])
         } else if (data.TG_OP == TG_OP_UPDATE) {
             check(data.NEW != null) { "Missing NEW for UPDATE" }
@@ -477,9 +480,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                 var xyzOp = opReader.op()
                 val uuid = opReader.uuid()
                 id = opReader.id()
-                if (id == null) {
-                    id = newCollection.id()
-                }
+                if (id == null) id = newCollection.id()
                 if (id == null) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Missing id", id)
                 val lockId = Static.lockId(id)
                 sql.execute("SELECT pg_advisory_lock($1)", arrayOf(lockId))
@@ -528,15 +529,18 @@ SET (toast_tuple_target=8160,fillfactor=100
                         continue
                     }
                     if (xyzOp == XYZ_OP_DELETE) {
-                        if (existing == null) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
+                        if (existing == null) {
+                            table.returnRetained(id)
+                            continue
+                        }
                         if (uuid == null) {
                             // Override (not atomic) update.
-                            query = "DELETE FROM naksha_collections WHERE id = $5 RETURNING id,feature,geo_type,geo,tags,xyz"
+                            query = "DELETE FROM naksha_collections WHERE id = $1 RETURNING id,feature,geo_type,geo,tags,xyz"
                             rows = asArray(sql.execute(query, arrayOf(id)))
                             if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         } else {
                             // Atomic update.
-                            query = "DELETE FROM naksha_collections WHERE id = $5 AND xyz_uuid(xyz) = $6 RETURNING id,feature,geo_type,geo,tags,xyz"
+                            query = "DELETE FROM naksha_collections WHERE id = $1 AND xyz_uuid(xyz) = $2 RETURNING id,feature,geo_type,geo,tags,xyz"
                             rows = asArray(sql.execute(query, arrayOf(id, uuid)))
                             if (rows.isEmpty()) {
                                 query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"

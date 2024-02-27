@@ -28,16 +28,17 @@ interface ITable {
 
     /**
      * Returns a success result for an operation, the _errNo_ and _errMsg_ will be always _null_.
+     *
      * @param op The CRUD operation that has been executed, should be [XYZ_EXEC_CREATED], [XYZ_EXEC_READ], [XYZ_EXEC_UPDATED],
      * [XYZ_EXEC_DELETED], [XYZ_EXEC_PURGED] or [XYZ_EXEC_RETAINED].
      * @param id The identifier of the feature that was modified.
-     * @param xyz The new XYZ namespace.
-     * @param tags The new tags; _null_ if the operation was [XYZ_EXEC_CREATED] or [XYZ_EXEC_UPDATED].
-     * @param feature The new feature; _null_ if the operation was [XYZ_EXEC_CREATED] or [XYZ_EXEC_UPDATED].
-     * @param geoType The geometry type; _null_ if the operation was [XYZ_EXEC_CREATED] or [XYZ_EXEC_UPDATED].
-     * @param geo The geometry bytes; _null_ if the operation was [XYZ_EXEC_CREATED] or [XYZ_EXEC_UPDATED].
+     * @param xyz The new XYZ namespace; _null_ if [XYZ_EXEC_RETAINED].
+     * @param tags The new tags; _null_ if the operation was [XYZ_EXEC_CREATED], [XYZ_EXEC_UPDATED] or [XYZ_EXEC_RETAINED].
+     * @param feature The new feature; _null_ if the operation was [XYZ_EXEC_CREATED], [XYZ_EXEC_UPDATED] or [XYZ_EXEC_RETAINED].
+     * @param geoType The geometry type; _null_ if the operation was [XYZ_EXEC_CREATED], [XYZ_EXEC_UPDATED] or [XYZ_EXEC_RETAINED].
+     * @param geo The geometry bytes; _null_ if the operation was [XYZ_EXEC_CREATED], [XYZ_EXEC_UPDATED] or [XYZ_EXEC_RETAINED].
      */
-    fun returnOk(op: String, id: String, xyz: ByteArray, tags: ByteArray? = null, feature: ByteArray? = null, geoType: Short? = null, geo: Any? = null) {
+    fun returnOk(op: String, id: String, xyz: ByteArray?, tags: ByteArray? = null, feature: ByteArray? = null, geoType: Short? = null, geo: Any? = null) {
         val map = Jb.map.newMap()
         map[RET_OP] = op
         map[RET_ID] = id
@@ -82,7 +83,7 @@ interface ITable {
      * @param row The database row that was deleted.
      */
     fun returnDeleted(row: IMap) {
-        returnRow(XYZ_EXEC_READ, row)
+        returnRow(XYZ_EXEC_DELETED, row)
     }
 
     /**
@@ -90,7 +91,16 @@ interface ITable {
      * @param row The database row that was purged.
      */
     fun returnPurged(row: IMap) {
-        returnRow(XYZ_EXEC_READ, row)
+        returnRow(XYZ_EXEC_PURGED, row)
+    }
+
+    /**
+     * Returns that the state of the feature did not change, called for [XYZ_OP_DELETE] or [XYZ_OP_PURGE], when the
+     * feature does not exist.
+     * @param id The identifier of the feature.
+     */
+    fun returnRetained(id: String) {
+        returnOk(XYZ_EXEC_RETAINED, id, null, null, null, null, null)
     }
 
     /**

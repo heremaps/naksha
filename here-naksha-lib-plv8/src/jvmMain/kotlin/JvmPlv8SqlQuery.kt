@@ -87,7 +87,7 @@ class JvmPlv8SqlQuery(query: String) {
         while (i < args.size) {
             val arg = args[i]
             val indices = dollarToIndices[i + 1]
-            check(indices != null)
+            check(indices != null) { "Indices must not be null" }
             setArgument(stmt, arg, indices)
             i++
         }
