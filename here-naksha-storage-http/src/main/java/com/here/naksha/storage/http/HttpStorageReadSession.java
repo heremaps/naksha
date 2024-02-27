@@ -92,7 +92,7 @@ public final class HttpStorageReadSession implements IReadSession {
     try {
       return HttpStorageReadExecute.execute((ReadFeaturesProxyWrapper) readRequest, requestSender);
     } catch (Exception e) {
-      log.warn("Exception thrown.", e);
+      log.warn("We got exception while executing Read request.", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
     }
   }

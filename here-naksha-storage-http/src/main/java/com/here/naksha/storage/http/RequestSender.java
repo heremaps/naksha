@@ -18,8 +18,10 @@
  */
 package com.here.naksha.storage.http;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static java.net.http.HttpRequest.newBuilder;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -29,11 +31,9 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static java.net.http.HttpRequest.newBuilder;
 
 class RequestSender {
 
@@ -47,7 +47,7 @@ class RequestSender {
   private final long socketTimeoutSec;
 
   public RequestSender(
-      String hostUrl, Map<String, String> defaultHeaders, HttpClient httpClient, long socketTimeoutSec) {
+          String hostUrl, Map<String, String> defaultHeaders, HttpClient httpClient, long socketTimeoutSec) {
     this.hostUrl = hostUrl;
     this.httpClient = httpClient;
 
@@ -66,17 +66,17 @@ class RequestSender {
   }
 
   HttpResponse<String> sendRequest(
-      @NotNull String endpoint,
-      @Nullable Map<String, String> headers,
-      @Nullable String httpMethod,
-      @Nullable String body) {
+          @NotNull String endpoint,
+          @Nullable Map<String, String> headers,
+          @Nullable String httpMethod,
+          @Nullable String body) {
     URI uri = URI.create(hostUrl + endpoint);
     HttpRequest.Builder specificBuilder = baseBuilder.copy().uri(uri);
 
     if (headers != null) headers.forEach(specificBuilder::header);
 
     HttpRequest.BodyPublisher bodyPublisher =
-        body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body);
+            body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body);
     if (httpMethod != null) specificBuilder.method(httpMethod, bodyPublisher);
     HttpRequest specificRequest = specificBuilder.build();
 
@@ -87,17 +87,13 @@ class RequestSender {
     try {
       long startTime = System.currentTimeMillis();
       CompletableFuture<HttpResponse<String>> futureResponse =
-          httpClient.sendAsync(specificRequest, HttpResponse.BodyHandlers.ofString());
+              httpClient.sendAsync(specificRequest, HttpResponse.BodyHandlers.ofString());
       HttpResponse<String> response = futureResponse.get(socketTimeoutSec, TimeUnit.SECONDS);
       long executionTime = System.currentTimeMillis() - startTime;
       log.info("Request to {} took {}ms", specificRequest.uri(), executionTime);
       return response;
-    } catch (TimeoutException e) {
-      TimeoutException t = new TimeoutException(this.getClass().getName() + ": request timed out");
-      log.warn("Exception thrown.", t);
-      throw unchecked(t);
     } catch (Exception e) {
-      log.warn("Exception thrown.", e);
+      log.warn("We got exception while executing Http request against remote server.", e);
       throw unchecked(e);
     }
   }

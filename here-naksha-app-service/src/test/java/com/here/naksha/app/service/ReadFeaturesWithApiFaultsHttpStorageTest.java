@@ -26,8 +26,11 @@ import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.assertions.ResponseAssertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
@@ -39,7 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test for Api communication faults in {@link com.here.naksha.storage.http.HttpStorage}.
- * The faults tested are preventing the sane (Success or Error) response.
  * API used: GET /hub/spaces/{spaceId}/features/{featureId}
  */
 @WireMockTest(httpPort = 8089)
@@ -146,4 +148,32 @@ class ReadFeaturesWithApiFaultsHttpStorageTest extends ApiTest {
     verify(1, getRequestedFor(endpointPath));
   }
 
+  @ParameterizedTest
+  @ValueSource(
+          ints = {
+                  HttpURLConnection.HTTP_UNAUTHORIZED,
+                  HttpURLConnection.HTTP_UNAUTHORIZED,
+                  429,
+                  HttpURLConnection.HTTP_INTERNAL_ERROR}
+  )
+  void tc05_testErrorCodes(int errorCode) throws Exception {
+    // Validate behavior on connection reset
+    String streamId = UUID.randomUUID().toString();
+    String featureId = "/tc05_" + errorCode;
+
+    UrlPattern endpointPath = urlPathEqualTo(ENDPOINT + featureId);
+    stubFor(get(endpointPath).willReturn(aResponse().withStatus(errorCode)));
+
+    // When: Get Features request is submitted to NakshaHub Space Storage instance
+    HttpResponse<String> response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features" + featureId, streamId);
+
+    // Then: Perform assertions
+    ResponseAssertions.assertThat(response)
+            .hasStatus(errorCode)
+            .hasStreamIdHeader(streamId);
+
+
+    // Then: Verify request reached endpoint once
+    verify(1, getRequestedFor(endpointPath));
+  }
 }
