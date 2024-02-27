@@ -154,7 +154,7 @@ class ReadFeaturesWithApiFaultsHttpStorageTest extends ApiTest {
                   HttpURLConnection.HTTP_UNAUTHORIZED,
                   HttpURLConnection.HTTP_UNAUTHORIZED,
                   429,
-                  HttpURLConnection.HTTP_INTERNAL_ERROR}
+                  HttpURLConnection.HTTP_NOT_IMPLEMENTED}
   )
   void tc05_testErrorCodes(int errorCode) throws Exception {
     // Validate behavior on connection reset
