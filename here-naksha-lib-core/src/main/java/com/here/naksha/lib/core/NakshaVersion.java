@@ -58,16 +58,20 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   private final int major;
   private final int minor;
   private final int revision;
+
+  @NotNull
   private final PreReleaseTag preReleaseTag;
-  private final Byte preReleaseVersion;
+
+  private final Integer preReleaseVersion;
 
   public enum PreReleaseTag {
-    none((byte) 0),
-    alpha((byte) 1);
+    none(PRE_RELEASE_TAG_DEFAULT),
+    alpha(0),
+    beta(1);
 
-    final byte enc;
+    final int enc;
 
-    PreReleaseTag(byte enc) {
+    PreReleaseTag(int enc) {
       this.enc = enc;
     }
 
@@ -81,12 +85,18 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
     }
   }
 
+  public static final int PRE_RELEASE_TAG_DEFAULT = 255;
+  public static final int PRE_RELEASE_VERSION_DEFAULT = 255;
+
   /**
    * @param major    the major version (0-65535).
    * @param minor    the minor version (0-65535).
    * @param revision the revision (0-65535).
+   * @param preReleaseTag the pre-release tag (alpha, beta, none).
+   * @param preReleaseVersion the pre-release version (0-255 or null).
    */
-  public NakshaVersion(int major, int minor, int revision, PreReleaseTag preReleaseTag, Byte preReleaseVersion) {
+  public NakshaVersion(
+      int major, int minor, int revision, @NotNull PreReleaseTag preReleaseTag, Integer preReleaseVersion) {
     this.major = major;
     this.minor = minor;
     this.revision = revision;
@@ -115,9 +125,9 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
     final String preReleaseTagString =
         revisionEnd == -1 ? null : version.substring(revisionEnd + 1, preReleaseTagEnd);
     final PreReleaseTag preReleaseTag =
-        preReleaseTagString == null ? null : PreReleaseTag.valueOf(preReleaseTagString);
-    final Byte preReleaseVersion =
-        preReleaseTagEnd == -1 ? null : Byte.parseByte(version.substring(preReleaseTagEnd + 1));
+        preReleaseTagString == null ? PreReleaseTag.none : PreReleaseTag.valueOf(preReleaseTagString);
+    final Integer preReleaseVersion =
+        preReleaseTagEnd == -1 ? null : Integer.parseInt(version.substring(preReleaseTagEnd + 1));
 
     return new NakshaVersion(major, minor, revision, preReleaseTag, preReleaseVersion);
   }
@@ -125,11 +135,16 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   @AvailableSince(v2_0_3)
   public NakshaVersion(long value) {
     this(
+        (int) ((value >>> 48) & 0xffff),
         (int) ((value >>> 32) & 0xffff),
         (int) ((value >>> 16) & 0xffff),
-        (int) (value & 0xffff),
-        (byte) ((value >>> 48) & 0xff) == 0 ? null : PreReleaseTag.valueOf((byte) ((value >>> 48) & 0xff)),
-        (byte) ((value >>> 48) & 0xff) == 0 ? null : (byte) ((value >>> 56) & 0xff));
+        (int) ((value >>> 8) & 0xff) == PRE_RELEASE_TAG_DEFAULT
+            ? PreReleaseTag.none
+            : PreReleaseTag.valueOf((byte) ((value >>> 8) & 0xff)),
+        (int) ((value >>> 8) & 0xff) == PRE_RELEASE_TAG_DEFAULT
+                || ((value) & 0xff) == PRE_RELEASE_VERSION_DEFAULT
+            ? null
+            : (int) ((value) & 0xff));
   }
 
   @AvailableSince(v2_0_3)
@@ -148,22 +163,22 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   }
 
   @AvailableSince(v3_0_0_alpha_0)
-  public PreReleaseTag getPreReleaseTag() {
+  public @NotNull PreReleaseTag getPreReleaseTag() {
     return preReleaseTag;
   }
 
   @AvailableSince(v3_0_0_alpha_0)
-  public Byte getReleaseVersion() {
+  public Integer getReleaseVersion() {
     return preReleaseVersion;
   }
 
   @AvailableSince(v2_0_3)
   public long toLong() {
-    return (preReleaseVersion == null ? 0 : (preReleaseVersion & 0xffL) << 56)
-        | (preReleaseTag == null ? 0 : (preReleaseTag.enc & 0xffL) << 48)
-        | ((major & 0xffffL) << 32)
-        | ((minor & 0xffffL) << 16)
-        | (revision & 0xffffL);
+    return ((major & 0xffffL) << 48)
+        | ((minor & 0xffffL) << 32)
+        | ((revision & 0xffffL) << 16)
+        | (preReleaseTag.enc & 0xffL) << 8
+        | (preReleaseVersion == null ? PRE_RELEASE_VERSION_DEFAULT & 0xffL : preReleaseVersion & 0xffL);
   }
 
   @Override
@@ -192,6 +207,6 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   @Override
   public @NotNull String toString() {
     return "" + major + '.' + minor + '.' + revision
-        + (preReleaseTag == null ? "" : "-" + preReleaseTag + '.' + preReleaseVersion);
+        + (preReleaseTag == PreReleaseTag.none ? "" : "-" + preReleaseTag + '.' + preReleaseVersion);
   }
 }

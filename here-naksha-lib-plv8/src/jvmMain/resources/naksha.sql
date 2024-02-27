@@ -20,7 +20,7 @@ SET SESSION search_path TO "${schema}", public, topology;
 
 COMMIT;
 
--- Returns the packed Naksha extension version: 8 bit pre-release number, 8 bit pre-release tag, 16 bit major, 16 bit minor, 16 bit revision.
+-- Returns the packed Naksha extension version: 16 bit major, 16 bit minor, 16 bit revision, 8 bit pre-release tag, 8 bit pre-release version.
 CREATE OR REPLACE FUNCTION naksha_version() RETURNS int8 LANGUAGE 'plpgsql' IMMUTABLE AS $$ BEGIN
   RETURN ${version};
 END $$;
