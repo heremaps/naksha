@@ -85,14 +85,14 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
     }
   }
 
-  public static final int PRE_RELEASE_TAG_DEFAULT = 255;
-  public static final int PRE_RELEASE_VERSION_DEFAULT = 255;
+  private static final int PRE_RELEASE_TAG_DEFAULT = 255;
+  private static final int PRE_RELEASE_VERSION_DEFAULT = 255;
 
   /**
-   * @param major    the major version (0-65535).
-   * @param minor    the minor version (0-65535).
-   * @param revision the revision (0-65535).
-   * @param preReleaseTag the pre-release tag (alpha, beta, none).
+   * @param major             the major version (0-65535).
+   * @param minor             the minor version (0-65535).
+   * @param revision          the revision (0-65535).
+   * @param preReleaseTag     the pre-release tag (alpha, beta, none).
    * @param preReleaseVersion the pre-release version (0-255 or null).
    */
   public NakshaVersion(
