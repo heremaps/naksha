@@ -8,6 +8,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -15,6 +16,8 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollecti
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
@@ -258,6 +261,126 @@ class ActivityLogApiTest extends ApiTest {
             "\"${thirdCreatedAt}\"", createdFeature.createdAt,
             "\"${thirdUpdatedAt}\"", createdFeature.updatedAt,
             "${activityLogId}", featureId
+        )));
+  }
+
+  @Test
+  void tc1306_testActivityLogWithSourceId() throws URISyntaxException, IOException, InterruptedException {
+    // Given: Test files
+    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1306_withSourceId/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1306_withSourceId/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1306_withSourceId/get_response.json");
+    String streamId = UUID.randomUUID().toString();
+    String sourceIdSpace = "source_id_ah_test_space";
+    String activityLogSpace = "activity_history_space_source_id_tests";
+    String featureId = "TC1306_feature";
+
+    // And: space with sourceId handling
+    CommonApiTestSetup.createHandler(nakshaClient, "ActivityLog/TC1306_withSourceId/sourceIdSpace/create_default_handler.json");
+    CommonApiTestSetup.createHandler(nakshaClient, "ActivityLog/TC1306_withSourceId/sourceIdSpace/create_source_id_handler.json");
+    CommonApiTestSetup.createSpace(nakshaClient, "ActivityLog/TC1306_withSourceId/sourceIdSpace/create_space.json");
+
+    // And: space with activity log that is based on sourceId handling space
+    CommonApiTestSetup.createHandler(nakshaClient, "ActivityLog/TC1306_withSourceId/activityLogSpace/create_event_handler.json");
+    CommonApiTestSetup.createSpace(nakshaClient, "ActivityLog/TC1306_withSourceId/activityLogSpace/create_space.json");
+
+    // When: New feature is created
+    HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + sourceIdSpace + "/features", createFeatureJson, streamId);
+    FeatureMetadata createdFeature = featureMetadataFromCollectionResp(createResp.body());
+    assertThat(createResp).hasStatus(200);
+
+    // And: This feature is updated
+    HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + sourceIdSpace + "/features/" + featureId, updateFeatureJson,
+        streamId);
+    assertThat(updateResp).hasStatus(200);
+    FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
+
+    // And: Client queries activity log space for this feature
+    HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + activityLogSpace + "/features/" + updatedFeature.uuid, streamId);
+
+    // Then: Expected ActivityLog response matches the response
+    assertThat(getResp)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(formattedJson(expectedActivityResp, Map.of(
+            "${uuid}", updatedFeature.uuid,
+            "${puuid}", createdFeature.uuid,
+            "\"${createdAt}\"", updatedFeature.createdAt,
+            "\"${updatedAt}\"", updatedFeature.updatedAt
+        )));
+  }
+
+  @Test
+  void tc1307_testActivityLogByBBox() throws Exception {
+    // Given: Test files
+    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBBox/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBbox/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBBox/get_response.json");
+    String streamId = UUID.randomUUID().toString();
+    String featureId = "TC1307_feature";
+
+    // When: New feature is created
+    HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createFeatureJson, streamId);
+    FeatureMetadata createdFeature = featureMetadataFromCollectionResp(createResp.body());
+    assertThat(createResp).hasStatus(200);
+
+    // And: This feature is updated
+    HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson,
+        streamId);
+    assertThat(updateResp).hasStatus(200);
+    FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
+
+    // And: Client queries activity log space against new tags and bbox
+    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String tagsQueryParam = "tags=tc1307+two";
+    HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/bbox?" + tagsQueryParam + "&" + bboxQueryParam,
+        streamId);
+
+    // Then: Expected ActivityLog response matches the response
+    assertThat(getResp)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(formattedJson(expectedActivityResp, Map.of(
+            "${uuid}", updatedFeature.uuid,
+            "${puuid}", createdFeature.uuid,
+            "\"${createdAt}\"", updatedFeature.createdAt,
+            "\"${updatedAt}\"", updatedFeature.updatedAt
+        )));
+  }
+
+  @Test
+  void tc1308_testActivityLogByTile() throws Exception {
+    // Given: Test files
+    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1308_byTile/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1308_byTile/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1308_byTile/get_response.json");
+    String streamId = UUID.randomUUID().toString();
+    String featureId = "TC1308_feature";
+
+    // When: New feature is created
+    HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createFeatureJson, streamId);
+    FeatureMetadata createdFeature = featureMetadataFromCollectionResp(createResp.body());
+    assertThat(createResp).hasStatus(200);
+
+    // And: This feature is updated
+    HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson,
+        streamId);
+    assertThat(updateResp).hasStatus(200);
+    FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
+
+    // And: Client queries activity log space against new tags and bbox
+    final String tagsQueryParam = "tags=tc1308+two";
+    final HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/tile/quadkey/1?"+ tagsQueryParam, streamId);
+
+    // Then: Expected ActivityLog response matches the response
+    assertThat(getResp)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(formattedJson(expectedActivityResp, Map.of(
+            "${uuid}", updatedFeature.uuid,
+            "${puuid}", createdFeature.uuid,
+            "\"${createdAt}\"", updatedFeature.createdAt,
+            "\"${updatedAt}\"", updatedFeature.updatedAt
         )));
   }
 

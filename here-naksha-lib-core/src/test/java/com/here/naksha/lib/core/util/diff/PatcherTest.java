@@ -258,6 +258,14 @@ class PatcherTest {
   private static Stream<Arguments> listDiffSamples(){
     return Stream.of(
         arguments(
+            List.of("one", "two"),
+            List.of("one", "three"),
+            listDiff(
+                null,
+                new UpdateOp("two","three")
+            )
+        ),
+        arguments(
             List.of("one", "two", "three"),
             List.of("three", "four"),
             listDiff(

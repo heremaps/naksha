@@ -98,11 +98,12 @@ class ReversePatchUtil {
     }
   }
 
-  // TODO: fix ListDiff calculation in Patcher (when source.size < target.size)
   private static void handleList(ListDiff listDiff, ReversePatch.Builder builder, String currentPath) {
     for (int i = 0; i < listDiff.size(); i++) {
       Difference diff = listDiff.get(i);
-      handle(diff, builder, diffPatchPath(currentPath, i));
+      if (diff != null) {
+        handle(diff, builder, diffPatchPath(currentPath, i));
+      }
     }
   }
 
