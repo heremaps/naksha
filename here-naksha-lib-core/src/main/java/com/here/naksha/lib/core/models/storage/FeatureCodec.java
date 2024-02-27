@@ -300,7 +300,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
       final byte[] wkb = this.geometryBytes;
       if (wkb != null && wkb.length > 0) {
         try (final Json jp = Json.get()) {
-          this.geometry = jp.wkbReader.read(wkb);
+          this.geometry = jp.twkbReader.read(wkb);
         } catch (ParseException e) {
           throw unchecked(e);
         }
@@ -343,7 +343,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
       final Geometry geometry = getGeometry();
       if (geometry != null) {
         try (final Json jp = Json.get()) {
-          this.geometryBytes = jp.wkbWriter.write(geometry);
+          this.geometryBytes = jp.twkbWriter.write(geometry);
           this.geometryEncoding = GEO_TYPE_TWKB;
         }
       }

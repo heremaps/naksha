@@ -387,6 +387,7 @@ SET (toast_tuple_target=8160,fillfactor=100
             collectionId: String,
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?>,
+            geo_type_arr: Array<Short>,
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>
     ): ITable {
@@ -395,7 +396,59 @@ SET (toast_tuple_target=8160,fillfactor=100
         val naksha = NakshaSession.get()
         val sql = naksha.sql
         val table = sql.newTable()
-        // TODO: Implement me!
+        val opReader = XyzOp()
+        val featureReader = JbFeature()
+        var i = 0
+        while (i < op_arr.size) {
+            try {
+                val feature = feature_arr[i]
+                val geo = geo_arr[i]
+                val geo_type = geo_type_arr[i]
+                val tags = tags_arr[i]
+                val op = op_arr[i]
+                opReader.mapBytes(op)
+                featureReader.mapBytes(feature)
+                var xyzOp = opReader.op()
+                var uuid = opReader.uuid()
+                var id = opReader.id()
+                if (id == null) {
+                    id = featureReader.id()
+                }
+                if (id == null) {
+                    throw NakshaException(ERR_ID_MISSING, "Missing id", id, feature, geo_type, geo, tags)
+                }
+                try {
+
+                    if (xyzOp == XYZ_OP_UPSERT) {
+                        val query = "INSERT INTO $collectionId (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) ON CONFLICT (id) DO UPDATE SET feature=$2, tags=$3, geo_type=$4, geo=$5 RETURNING xyz"
+
+                        val rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo_type, geo)))
+                        // TODO: What if no row is returned?
+                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
+                        // TODO FIXME read actual operation performed
+                        table.returnOpOk(XYZ_EXECUTED_CREATED, id, xyz, tags, feature, geo_type, geo)
+                    }
+                    if (xyzOp == XYZ_OP_CREATE) {
+                        val query = "INSERT INTO $collectionId (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz"
+                        val rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo_type, geo)))
+                        // TODO: What if no row is returned?
+                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
+                        table.returnOpOk(XYZ_EXECUTED_CREATED, id, xyz, tags, feature, geo_type, geo)
+                        continue
+                    }
+                    // TODO: Handle update, delete and purge
+                } finally {
+                }
+            } catch (e: NakshaException) {
+                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+                table.returnException(e)
+            } catch (e: Exception) {
+                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+                table.returnOpErr(ERR_FATAL, e.rootCause().message ?: "Fatal")
+            } finally {
+                i++
+            }
+        }
         return table
     }
 

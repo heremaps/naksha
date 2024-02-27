@@ -19,13 +19,13 @@
 package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
-import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_CREATE;
-import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_DELETE;
-import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_UPDATE;
+import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_CREATE;
+import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_DELETE;
+import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_UPDATE;
+import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_UPSERT;
 import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
@@ -122,12 +122,14 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
   }
 
   private int mapOperationToPerform(String action) {
-    if (Objects.equals(EXyzAction.CREATE.value(), action)) {
-      return ACTION_CREATE;
-    } else if (Objects.equals(EXyzAction.UPDATE.value(), action)) {
-      return ACTION_UPDATE;
-    } else if (Objects.equals(EXyzAction.DELETE.value(), action)) {
-      return ACTION_DELETE;
+    if (Objects.equals(EWriteOp.CREATE.value(), action)) {
+      return XYZ_OP_CREATE;
+    } else if (Objects.equals(EWriteOp.UPDATE.value(), action)) {
+      return XYZ_OP_UPDATE;
+    } else if (Objects.equals(EWriteOp.PUT.value(), action)) {
+      return XYZ_OP_UPSERT;
+    } else if (Objects.equals(EWriteOp.DELETE.value(), action)) {
+      return XYZ_OP_DELETE;
     }
     throw new UnsupportedOperationException(String.format("Action type %s is not supported", action));
   }

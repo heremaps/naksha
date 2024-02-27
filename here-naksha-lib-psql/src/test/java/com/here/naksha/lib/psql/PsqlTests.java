@@ -18,18 +18,11 @@
  */
 package com.here.naksha.lib.psql;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
-import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EExecutedOp;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import com.here.naksha.lib.jbon.JbSession;
 import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.psql.PsqlStorage.Params;
 import org.jetbrains.annotations.NotNull;
@@ -45,12 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
-
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Base class for all PostgresQL tests that require some test database.
@@ -240,13 +227,6 @@ abstract class PsqlTests {
   void startWriteSession() {
     assertNotNull(storage);
     session = storage.newWriteSession(nakshaContext, true);
-    JbSession jbSession = new JbSession(
-        nakshaContext.getAppId(),
-        nakshaContext.getStreamId(),
-        nakshaContext.getAppId(),
-        nakshaContext.getAuthor()
-    );
-    JbSession.Companion.getThreadLocal().set(jbSession);
     assertNotNull(session);
   }
 

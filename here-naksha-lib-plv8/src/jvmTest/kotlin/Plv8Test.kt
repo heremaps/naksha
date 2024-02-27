@@ -117,7 +117,7 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
-        Static.collectionCreate(session.sql,session.schema, session.schemaOid, "foo", spGist = false, partition = false)
+        Static.collectionCreate(session.sql, session.schema, session.schemaOid, "foo", spGist = false, partition = false)
         session.prefetchUids("foo", 1, 10)
         assertEquals(BigInt64(1), session.newUid("foo"))
         assertEquals(BigInt64(2), session.newUid("foo"))
@@ -131,7 +131,7 @@ class Plv8Test : Plv8TestContainer() {
         val pgNew = Jb.map.newMap()
         pgNew[COL_UID] = null // Should be set by trigger
         pgNew[COL_ID] = "foo"
-        pgNew[COL_TXN_NEXT] =null // Should be set by trigger
+        pgNew[COL_TXN_NEXT] = null // Should be set by trigger
         pgNew[COL_FEATURE] = null
         pgNew[COL_GEO_TYPE] = GEO_TYPE_EWKB
         pgNew[COL_GEOMETRY] = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()

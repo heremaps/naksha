@@ -249,10 +249,13 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       if (geometry == null) {
         throw new IllegalArgumentException("Missing geometry");
       }
-      SQL variableTransformed = addTransformation(spatialOp.getTransformation(), "ST_Force3D(?)");
-      sql.add(" ST_Intersects(geo, ").add(variableTransformed).add(")");
+      SQL variableTransformed =
+          addTransformation(spatialOp.getTransformation(), "ST_Force3D(naksha_geometry(3::int2,?))");
+      sql.add(" ST_Intersects(naksha_geometry(geo_type,geo), ")
+          .add(variableTransformed)
+          .add(")");
       try (final Json jp = Json.get()) {
-        final byte[] wkb = jp.wkbWriter.write(geometry);
+        final byte[] wkb = jp.twkbWriter.write(geometry);
         wkbs.add(wkb);
       }
     } else {
@@ -460,13 +463,14 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
 
   private SQL prepareQuery(String collection, String spatial_where, String props_where, Long limit) {
     final SQL query = new SQL();
-    query.add("(SELECT 'READ',\n" + "id,\n"
-            + "uid,\n"
-            + "feature,\n"
+    query.add("(SELECT 'READ',\n"
+            + "id,\n"
             + "xyz,\n"
             + "tags,\n"
-            + "get_type,\n"
+            + "feature,\n"
+            + "geo_type,\n"
             + "geo,\n"
+            + "null,\n"
             + "null FROM ")
         .addIdent(collection);
     if (spatial_where.length() > 0 || props_where.length() > 0) {
