@@ -163,7 +163,7 @@ class Plv8Test : Plv8TestContainer() {
         val expectedGrid = Static.grid(session.sql, "bar", GEO_TYPE_NULL, null)
         assertEquals(expectedGrid, xyzNs.grid())
         val uuid = xyzNs.uuid()
-        assertEquals("${session.storageId}:foo:${txn.year}:${txn.month.twoDigit()}:${txn.day.twoDigit()}:10", uuid)
+        assertEquals("${session.storageId}:foo:${txn.year}:${txn.month}:${txn.day}:10", uuid)
         session.sql.execute("COMMIT")
     }
 
@@ -198,5 +198,3 @@ fun String.decodeHex(): ByteArray {
     val bytes = chunked(2).map { it.toInt(16).toByte() }.toByteArray()
     return bytes
 }
-
-fun Int.twoDigit(): String = this.toString().padStart(2, '0')

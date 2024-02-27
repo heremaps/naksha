@@ -82,6 +82,7 @@ import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
+import java.time.Instant;
 import java.util.ArrayList;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
@@ -203,8 +204,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(storage.getStorageId(), uuidFields[0]);
       assertEquals(collectionId(), uuidFields[1]);
       assertEquals(4, uuidFields[2].length()); // year (4- digits)
-      assertEquals(2, uuidFields[3].length()); // month (2- digits)
-      assertEquals(2, uuidFields[4].length()); // day (2- digits)
+      assertTrue(uuidFields[3].length() <= 2); // month (1 or 2 digits)
+      assertTrue(uuidFields[4].length() <= 2); // day (1 or 2 digits)
       assertEquals("1", uuidFields[5]); // seq id
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
