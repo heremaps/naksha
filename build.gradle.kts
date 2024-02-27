@@ -516,13 +516,12 @@ project(":here-naksha-app-service") {
         implementation(vertx_web)
         implementation(vertx_web_client)
         implementation(vertx_web_openapi)
+        implementation(project(":here-naksha-handler-activitylog"))
 
         testImplementation(json_assert)
         testImplementation(resillience4j_retry)
         testImplementation(test_containers)
         testImplementation(testFixtures(project(":here-naksha-lib-core")))
-
-        testImplementation(project(":here-naksha-handler-activitylog"))
     }
     setOverallCoverage(0.25) // only increasing allowed!
 }
