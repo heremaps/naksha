@@ -402,54 +402,65 @@ SET (toast_tuple_target=8160,fillfactor=100
         val opReader = XyzOp()
         val xyzNs = XyzNs()
         val featureReader = JbFeature()
-        var i = 0
-        while (i < op_arr.size) {
-            var id : String? = null
-            try {
-                val feature = feature_arr[i]
-                val geo = geo_arr[i]
-                val geo_type = geo_type_arr[i]
-                val tags = tags_arr[i]
-                val op = op_arr[i]
-                opReader.mapBytes(op)
-                featureReader.mapBytes(feature)
-                val xyzOp = opReader.op()
-                var uuid = opReader.uuid()
-                id = opReader.id()
-                if (id == null) {
-                    id = featureReader.id()
-                }
-                if (id == null) throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", id)
-                if (xyzOp == XYZ_OP_UPSERT) {
-                    val query = "INSERT INTO $collectionId (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) ON CONFLICT (id) DO UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz"
-                    val rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo_type, geo)))
-                    // TODO: What if no row is returned?
-                    val xyz: ByteArray = asMap(rows[0])["xyz"]!!
-                    xyzNs.mapBytes(xyz)
-                    if (xyzNs.action() == ACTION_CREATE) {
+        val collectionIdQuoted = sql.quoteIdent(collectionId)
+        val upsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted (id,feature,tags,geo_type,geo) 
+VALUES($1,$2,$3,$4,$5)
+ON CONFLICT (id) DO
+UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
+                arrayOf(SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_INT16, SQL_BYTE_ARRAY))
+        var createPlan = sql.prepare("INSERT INTO $collectionIdQuoted (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz",
+                arrayOf(SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_INT16, SQL_BYTE_ARRAY))
+        try {
+            var i = 0
+            while (i < op_arr.size) {
+                var id: String? = null
+                try {
+                    val feature = feature_arr[i]
+                    val geo = geo_arr[i]
+                    val geo_type = geo_type_arr[i]
+                    val tags = tags_arr[i]
+                    val op = op_arr[i]
+                    opReader.mapBytes(op)
+                    val xyzOp = opReader.op()
+                    var uuid = opReader.uuid()
+                    id = opReader.id()
+                    if (id == null) {
+                        featureReader.mapBytes(feature)
+                        id = featureReader.id()
+                    }
+                    if (id == null) throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", id)
+                    if (xyzOp == XYZ_OP_UPSERT) {
+                        val rows = asArray(upsertPlan.execute(arrayOf(id, feature, tags, geo_type, geo)))
+                        // TODO: What if no row is returned?
+                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
+                        xyzNs.mapBytes(xyz)
+                        if (xyzNs.action() == ACTION_CREATE) {
+                            table.returnCreated(id, xyz)
+                        } else {
+                            table.returnUpdated(id, xyz)
+                        }
+                    } else if (xyzOp == XYZ_OP_CREATE) {
+                        val rows = asArray(createPlan.execute(arrayOf(id, feature, tags, geo_type, geo)))
+                        // TODO: What if no row is returned?
+                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
                         table.returnCreated(id, xyz)
                     } else {
-                        table.returnUpdated(id, xyz)
+                        throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Unsupported operation " + XyzOp.getOpName(xyzOp), id)
                     }
-                } else if (xyzOp == XYZ_OP_CREATE) {
-                    val query = "INSERT INTO $collectionId (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz"
-                    val rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo_type, geo)))
-                    // TODO: What if no row is returned?
-                    val xyz: ByteArray = asMap(rows[0])["xyz"]!!
-                    table.returnCreated(id, xyz)
-                } else {
-                    throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Unsupported operation "+XyzOp.getOpName(xyzOp), id)
+                    // TODO: Handle update, delete and purge
+                } catch (e: NakshaException) {
+                    if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+                    table.returnException(e)
+                } catch (e: Exception) {
+                    if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+                    table.returnErr(ERR_FATAL, e.rootCause().message ?: "Fatal", id)
+                } finally {
+                    i++
                 }
-                // TODO: Handle update, delete and purge
-            } catch (e: NakshaException) {
-                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-                table.returnException(e)
-            } catch (e: Exception) {
-                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-                table.returnErr(ERR_FATAL, e.rootCause().message ?: "Fatal", id)
-            } finally {
-                i++
             }
+        } finally {
+            upsertPlan.free()
+            createPlan.free()
         }
         return table
     }

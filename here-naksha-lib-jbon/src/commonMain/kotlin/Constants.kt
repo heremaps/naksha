@@ -60,6 +60,7 @@ internal const val MAX_INT_VALUE_AS_DOUBLE = Int.MAX_VALUE.toDouble()
 
 // The type names to be used in SQL queries.
 const val SQL_BOOLEAN = "boolean"
+const val SQL_INT16 = "int2"
 const val SQL_INT32 = "int4"
 const val SQL_INT64 = "int8"
 const val SQL_FLOAT32 = "real"

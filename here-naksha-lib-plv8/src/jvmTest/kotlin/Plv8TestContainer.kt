@@ -22,6 +22,8 @@ open class Plv8TestContainer {
         @JvmStatic
         @BeforeAll
         fun beforeAll() {
+            // Run docker locally with env parameter: POSTGRES_PASSWORD=password
+            // NAKSHA_TEST_PSQL_DB_URL=jdbc:postgresql://localhost:5400/postgres?user=postgres&password=password&schema=test_schema
             existingUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
             if (existingUrl != null) {
                 url = existingUrl!!

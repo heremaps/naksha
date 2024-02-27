@@ -15,7 +15,6 @@ class Plv8PerfTest : Plv8TestContainer() {
     @Test
     fun insertFeatures() {
         val session = NakshaSession.get()
-        val topology = asMap(env.parse(topologyJson))
         val builder = XyzBuilder.create(65536)
 
         var op = builder.buildXyzOp(XYZ_OP_DELETE, "v2_perf_test", null)
@@ -34,11 +33,15 @@ class Plv8PerfTest : Plv8TestContainer() {
 
         session.sql.execute("commit")
 
+        var topology = asMap(env.parse(topologyJson))
+        //topology = asMap(env.parse("""{"id":"foo","properties":{"name":"test"}}"""))
+        val useBatch = false
         var time = 0L
         val chunkSize = 1000
         val rounds = 10
         var r = 0
         while (r++ < rounds) {
+            val id_arr = Array<String?>(chunkSize) { null }
             val op_arr = Array<ByteArray?>(chunkSize) { null }
             val feature_arr = Array<ByteArray?>(chunkSize) { null }
             val geo_type_arr = Array(chunkSize) { GEO_TYPE_NULL }
@@ -48,19 +51,39 @@ class Plv8PerfTest : Plv8TestContainer() {
             while (i < chunkSize) {
                 val id: String = env.randomString(12)
                 topology["id"] = id
+                id_arr[i] = id
                 op_arr[i] = builder.buildXyzOp(XYZ_OP_CREATE, id, null)
                 feature_arr[i] = builder.buildFeatureFromMap(topology)
                 i++
             }
             val start = env.currentMillis()
-            @Suppress("UNCHECKED_CAST")
-            result = session.writeFeatures("v2_perf_test", op_arr as Array<ByteArray>, feature_arr, geo_type_arr, geo_arr, tags_arr)
-            table = assertInstanceOf(JvmPlv8Table::class.java, result)
-            assertEquals(chunkSize, table.rows.size)
+            if (useBatch) {
+                val jvmSql = session.sql as JvmPlv8Sql
+                val conn = jvmSql.conn
+                check(conn != null)
+                val stmt = conn.prepareStatement("INSERT INTO v2_perf_test (id, feature) VALUES (?, ?)")
+                stmt.use {
+                    i = 0
+                    while (i < chunkSize) {
+                        stmt.setString(1, id_arr[i])
+                        stmt.setBytes(2, feature_arr[i])
+                        stmt.addBatch()
+                        i++
+                    }
+                    stmt.executeBatch()
+                    conn.commit()
+                }
+            } else {
+                @Suppress("UNCHECKED_CAST")
+                result = session.writeFeatures("v2_perf_test", op_arr as Array<ByteArray>, feature_arr, geo_type_arr, geo_arr, tags_arr)
+                table = assertInstanceOf(JvmPlv8Table::class.java, result)
+                assertEquals(chunkSize, table.rows.size)
+                session.sql.execute("commit")
+            }
             val end = env.currentMillis()
             time += (end - start).toLong()
         }
-        val features_per_second = (rounds * chunkSize) / (time / 1000)
+        val features_per_second = (rounds * chunkSize).toDouble() / (time.toDouble() / 1000)
         println("Write $features_per_second features per second, total time: ${time}ms")
     }
 }
