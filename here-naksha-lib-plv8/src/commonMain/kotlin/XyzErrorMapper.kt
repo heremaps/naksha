@@ -3,6 +3,8 @@ package com.here.naksha.lib.plv8
 const val ERR_UNINITIALIZED = "N0000"
 const val ERR_COLLECTION_EXISTS = "N0001"
 const val ERR_COLLECTION_NOT_EXISTS = "N0002"
+const val ERR_FEATURE_EXISTS = "N0003"
+const val ERR_FEATURE_NOT_EXISTS = "N0004"
 const val ERR_CONFLICT = "N0003"
 const val ERR_FATAL = "NX000"
 const val ERR_CHECK_VIOLATION = "23514"
