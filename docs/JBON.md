@@ -253,7 +253,7 @@ The information that clients should send to the database to write features or co
 - **op** (integer) - The requested operation (CREATE, UPDATE, UPSERT, DELETE or PURGE).
 - **id** (string) - The feature-id.
 - **uuid** (string or _null_) - If not _null_, then the operation is atomic and the state must be this one (only UPDATE, DELETE and PURGE).
-- **crid** (string or _null_) - If a custom-reference-id should be used.
+- **grid** (string or _null_) - If the geo-reference-id is calculated by the client.
 
 #### (2) XyzTags
 The tags, basically just a normal JBON map, but the values must only be **null**, **boolean**, **string** or **float64**. The map is preceded by the **id** of the global dictionary to be used, can be **null**, so actually being:

@@ -116,15 +116,15 @@ interface ITable {
      */
     fun returnErr(errNo: String, errMsg: String, id: String? = null, xyz: ByteArray? = null, tags: ByteArray? = null, feature: ByteArray? = null, geoType: Short? = null, geo: Any? = null) {
         val map = Jb.map.newMap()
-        map["op"] = XYZ_EXEC_ERROR
-        map["id"] = id
-        map["xyz"] = xyz
-        map["tags"] = tags
-        map["geo_type"] = geoType ?: GEO_TYPE_NULL
-        map["geo"] = geo
-        map["feature"] = feature
-        map["err_no"] = errNo
-        map["err_msg"] = errMsg
+        map[RET_OP] = XYZ_EXEC_ERROR
+        map[RET_ID] = id
+        map[RET_XYZ] = xyz
+        map[RET_TAGS] = tags
+        map[RET_GEO_TYPE] = geoType ?: GEO_TYPE_NULL
+        map[RET_GEOMETRY] = geo
+        map[RET_FEATURE] = feature
+        map[RET_ERR_NO] = errNo
+        map[RET_ERR_MSG] = errMsg
         val session = NakshaSession.get()
         session.errNo = errNo
         session.errMsg = errMsg
@@ -141,7 +141,7 @@ interface ITable {
         val map = Jb.map.newMap()
         map[RET_OP] = op
         map[RET_ID] = row[COL_ID]
-        map[RET_XYZ] = row[COL_XYZ]
+        map[RET_XYZ] = null // TODO: Fix this, we need to build the XYZ NS
         map[RET_TAGS] = row[COL_TAGS]
         map[RET_GEO_TYPE] = row[COL_GEO_TYPE]
         map[RET_GEOMETRY] = row[COL_GEOMETRY]

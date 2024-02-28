@@ -60,13 +60,6 @@ SET SESSION enable_seqscan = OFF;
 
     companion object {
         /**
-         * Array to create a pseudo GeoHash, which is BASE-32 encoded.
-         */
-        @JvmStatic
-        private val BASE32 = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
-                'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
-
-        /**
          * Returns the current thread local [NakshaSession].
          * @return The current thread local [NakshaSession].
          * @throws IllegalStateException If the current session is no Naksha session.
@@ -102,37 +95,6 @@ SET SESSION enable_seqscan = OFF;
     private lateinit var historyPartitionCache: IMap
 
     /**
-     * The cache for UID.
-     */
-    private lateinit var collectionUidCache: IMap
-
-    /**
-     * Returns a new UID for the given collection.
-     * @param collectionId The ID of the collection for which to return a new _uid_.
-     * @return The new _uid_.
-     */
-    fun newUid(collectionId: String): Int {
-        val uidCache : IMap
-        if (this::collectionUidCache.isInitialized) {
-            uidCache = collectionUidCache
-        } else {
-            uidCache = Jb.map.newMap()
-            collectionUidCache = uidCache
-        }
-        val uid : Int
-        var uidCounter : Int
-        if (uidCache.containsKey(collectionId)) {
-            uidCounter = uidCache[collectionId]!!
-            uid = uidCounter
-            uidCache[collectionId] = ++uidCounter
-        } else {
-            uid = 0
-            uidCache[collectionId] = 1
-        }
-        return uid
-    }
-
-    /**
      * The last error number as SQLState.
      */
     var errNo: String? = null
@@ -149,7 +111,7 @@ SET SESSION enable_seqscan = OFF;
         this._xactId = null
         this.errNo = null
         this.errMsg = null
-        this.collectionUidCache = Jb.map.newMap()
+        this.uid = 0
     }
 
 
@@ -165,7 +127,7 @@ SET SESSION enable_seqscan = OFF;
         }
     }
 
-    private lateinit var gridPlan : IPlv8Plan
+    private lateinit var gridPlan: IPlv8Plan
 
     /**
      * Create a GRID ([GeoHash](https://en.wikipedia.org/wiki/Geohash) Reference ID) from the given geometry.
@@ -179,21 +141,10 @@ SET SESSION enable_seqscan = OFF;
      * @param id The feature-id.
      * @param geoType The geometry type.
      * @param geo The feature geometry; if any.
-     * @return The GRID (7 character long string).
+     * @return The GRID (14 character long string).
      */
     internal fun grid(id: String, geoType: Short, geo: ByteArray?): String {
-        if (geo == null) {
-            val sb = StringBuilder()
-            var hash = Fnv1a64.string(Fnv1a64.start(), id)
-            var i = 0
-            sb.append(BASE32[id[0].code and 31])
-            while (i++ < 13) {
-                val b32 = hash.toInt() and 31
-                sb.append(BASE32[b32])
-                hash = hash ushr 5
-            }
-            return sb.toString()
-        }
+        if (geo == null) return Static.gridFromId(id)
         if (!this::gridPlan.isInitialized) {
             gridPlan = sql.prepare("SELECT ST_GeoHash(ST_Centroid(naksha_geometry($1::int2,$2::bytea)),14) as hash", arrayOf(SQL_INT16, SQL_BYTE_ARRAY))
         }
@@ -209,24 +160,69 @@ SET SESSION enable_seqscan = OFF;
     private val xyzBuilder = XyzBuilder(Jb.env.newDataView(ByteArray(500)))
 
     /**
+     * Convert the given database row into a JBON encoded XYZ namespace.
+     * @param collectionId The collection for which to generate the XYZ namespace.
+     * @param row The database row.
+     * @return The XYZ namespace JBON encoded.
+     */
+    fun xyzNsFromRow(collectionId: String, row: IMap): ByteArray {
+        val txn = NakshaTxn(row[COL_TXN]!!)
+        val uid: Int = row[COL_UID]!!
+        val uuid = txn.newFeatureUuid(storageId, collectionId, uid)
+        return xyzBuilder.buildXyzNs(
+                row[COL_CREATED_AT]!!,
+                row[COL_UPDATE_AT]!!,
+                txn.value,
+                row[COL_ACTION]!!,
+                row[COL_VERSION]!!,
+                row[COL_AUTHOR_TS]!!,
+                Jb.int64.ZERO(),
+                null,
+                uuid.toString(),
+                row[COL_APP_ID]!!,
+                row[COL_AUTHOR]!!,
+                row[COL_GEO_GRID]!!
+        )
+    }
+
+    /**
+     * Session local uid counter.
+     */
+    private var uid = 0
+
+    /**
      * Create the XYZ namespace for an _INSERT_ operation.
      * @param collectionId The collection into which a feature is inserted.
-     * @param featureId The ID of the feature.
-     * @param uid The UID to use.
-     * @param geoType The geometry-type.
-     * @param geo The geometry of the feature as EWKB; if any.
+     * @param NEW The row in which to update the XYZ namespace columns.
      * @return The new XYZ namespace for this feature.
      */
-    internal fun xyzInsert(collectionId: String, featureId: String, uid: Int, geoType: Short, geo: ByteArray?): ByteArray {
-        val env = Jb.env
-        val createdAt = env.currentMillis()
+    internal fun xyzInsert(collectionId: String, NEW: IMap) {
         val txn = txn()
-        val extent = extent(geo)
-        val uuid = txn.newFeatureUuid(storageId, collectionId, uid).toString() // tested, cheap!
-        val grid = grid(featureId, geoType, geo) // tested, very expensive, around 50us!
-        //val grid = "none"
-        return xyzBuilder.buildXyzNs(createdAt, createdAt, txn.value, XYZ_OP_CREATE, 1, createdAt, extent, null, uuid, appId, author
-                ?: appId, grid)
+        val txnTs = txnTs()
+        NEW[COL_TXN] = txn.value
+        NEW[COL_TXN_NEXT] = Jb.int64.ZERO()
+        NEW[COL_UID] = uid++
+        NEW[COL_PTXN] = null
+        NEW[COL_PUID] = null
+        var geoType: Short? = NEW[COL_GEO_TYPE]
+        if (geoType == null) {
+            geoType = GEO_TYPE_NULL
+            NEW[COL_GEO_TYPE] = GEO_TYPE_NULL
+        }
+        val geoGrid: String? = NEW[COL_GEO_GRID]
+        if (geoGrid == null) {
+            // Only calculate geo-grid, if not given by the client.
+            val id: String? = NEW[COL_ID]
+            check(id != null) { "Missing id" }
+            NEW[COL_GEO_GRID] = grid(id, geoType, NEW[COL_GEOMETRY])
+        }
+        NEW[COL_ACTION] = ACTION_CREATE.toShort()
+        NEW[COL_VERSION] = 1
+        NEW[COL_CREATED_AT] = txnTs
+        NEW[COL_UPDATE_AT] = txnTs
+        NEW[COL_AUTHOR] = if (author != null) author else appId
+        NEW[COL_AUTHOR_TS] = txnTs
+        NEW[COL_APP_ID] = appId
     }
 
     internal fun xyzUpdate(): ByteArray {
@@ -253,22 +249,11 @@ SET SESSION enable_seqscan = OFF;
         }
         if (data.TG_OP == TG_OP_INSERT) {
             check(data.NEW != null) { "Missing NEW for INSERT" }
-            data.NEW[COL_TXN] = txn().value
-            data.NEW[COL_TXN_NEXT] = Jb.int64.ZERO()
-            val uid = newUid(collectionId)
-            data.NEW[COL_UID] = uid
-            val id: String? = data.NEW[COL_ID]
-            check(id != null) { "Missing id" }
-            var geoType: Short? = data.NEW[COL_GEO_TYPE]
-            if (geoType == null) {
-                geoType = GEO_TYPE_NULL
-                data.NEW[COL_GEO_TYPE] = GEO_TYPE_NULL
-            }
-            data.NEW[COL_XYZ] = xyzInsert(collectionId, id, uid, geoType, data.NEW[COL_GEOMETRY])
+            xyzInsert(collectionId, data.NEW)
         } else if (data.TG_OP == TG_OP_UPDATE) {
             check(data.NEW != null) { "Missing NEW for UPDATE" }
             check(data.OLD != null) { "Missing OLD for UPDATE" }
-            TODO("Implement me!")
+            // TODO("Implement me!")
         }
         // We should not be called for delete, in that case do nothing.
     }
@@ -404,6 +389,15 @@ SET (toast_tuple_target=8160,fillfactor=100
     }
 
     /**
+     * The start time of the transaction.
+     * @return The start time of the transaction.
+     */
+    fun txnTs(): BigInt64 {
+        txn()
+        return _txts!!
+    }
+
+    /**
      * Returns the PostgresQL transaction number ([xact_id](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-PG-SNAPSHOT).
      * If no transaction number is yet generated, generates a new one.
      * @return The current PostgresQL transaction number.
@@ -462,15 +456,15 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
                         val xyz: ByteArray = asMap(rows[0])["xyz"]!!
                         xyzNs.mapBytes(xyz)
                         if (xyzNs.action() == ACTION_CREATE) {
-                            table.returnCreated(id, xyz)
+                            //table.returnCreated(id, xyz)
                         } else {
-                            table.returnUpdated(id, xyz)
+                            //table.returnUpdated(id, xyz)
                         }
                     } else if (xyzOp == XYZ_OP_CREATE) {
                         val rows = asArray(createPlan.execute(arrayOf(id, feature, tags, geo_type, geo)))
                         // TODO: What if no row is returned?
                         val xyz: ByteArray = asMap(rows[0])["xyz"]!!
-                        table.returnCreated(id, xyz)
+                        //table.returnCreated(id, xyz)
                     } else {
                         throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Unsupported operation " + XyzOp.getOpName(xyzOp), id)
                     }
@@ -507,7 +501,7 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
         val newCollection = NakshaCollection()
         var i = 0
         while (i < op_arr.size) {
-            var id : String? = null
+            var id: String? = null
             try {
                 val feature = feature_arr[i]
                 val geo = geo_arr[i]
@@ -517,6 +511,7 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
                 opReader.mapBytes(op)
                 var xyzOp = opReader.op()
                 val uuid = opReader.uuid()
+                val grid = opReader.grid()
                 id = opReader.id()
                 if (id == null) id = newCollection.id()
                 if (id == null) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Missing id", id)
@@ -524,35 +519,36 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
                 sql.execute("SELECT pg_advisory_lock($1)", arrayOf(lockId))
                 try {
                     newCollection.mapBytes(feature)
-                    if (id != newCollection.id()) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "ID in op does not match real feature id: $id != "+newCollection.id(), id)
-                    var query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
+                    if (id != newCollection.id()) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "ID in op does not match real feature id: $id != " + newCollection.id(), id)
+                    var query = "SELECT $COL_ALL FROM naksha_collections WHERE $COL_ID = $1"
                     var rows = asArray(sql.execute(query, arrayOf(id)))
-                    var existing : IMap? = if (rows.isNotEmpty()) asMap(rows[0]) else null
+                    var existing: IMap? = if (rows.isNotEmpty()) asMap(rows[0]) else null
                     query = "SELECT oid FROM pg_class WHERE relname = $1 AND relkind = ANY(array['r','p']) AND relnamespace = $2"
                     rows = asArray(sql.execute(query, arrayOf(id, schemaOid)))
                     val tableExists = rows.isNotEmpty()
                     if (xyzOp == XYZ_OP_UPSERT) xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
                     if (xyzOp == XYZ_OP_CREATE) {
                         if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Feature exists already", existing)
-                        query = "INSERT INTO naksha_collections (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz"
-                        rows = asArray(sql.execute(query, arrayOf(id, feature, tags, geo_type, geo)))
+                        query = "INSERT INTO naksha_collections ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
+                        rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
-                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
                         if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition())
-                        table.returnCreated(id, xyz)
+                        val row = asMap(rows[0])
+                        table.returnCreated(id, xyzNsFromRow(id, row))
                         continue
                     }
                     if (xyzOp == XYZ_OP_UPDATE) {
                         if (existing == null) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         if (uuid == null) {
                             // Override (not atomic) update.
-                            query = "UPDATE naksha_collections SET feature=$1, tags=$2, geo_type=$3, geo=$4 WHERE id = $5 RETURNING xyz"
-                            rows = asArray(sql.execute(query, arrayOf(feature, tags, geo_type, geo, id)))
+                            query = "UPDATE naksha_collections SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 RETURNING $COL_RETURN"
+                            rows = asArray(sql.execute(query, arrayOf(grid, geo_type, geo, feature, tags, id)))
                             if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         } else {
                             // Atomic update.
-                            query = "UPDATE naksha_collections SET feature=$1, tags=$2, geo_type=$3, geo=$4 WHERE id = $5 AND xyz_uuid(xyz) = $6 RETURNING xyz"
-                            rows = asArray(sql.execute(query, arrayOf(feature, tags, geo_type, geo, id, uuid)))
+                            // TODO: Fix me!
+                            query = "UPDATE naksha_collections SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 AND txn = $7 AND uid = $8 RETURNING $COL_RETURN"
+                            rows = asArray(sql.execute(query, arrayOf(grid, geo_type, geo, feature, tags, id, null, null)))
                             if (rows.isEmpty()) {
                                 query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
@@ -561,9 +557,9 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
                                 throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection $id does not exist", id)
                             }
                         }
-                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
+                        val row = asMap(rows[0])
                         if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition())
-                        table.returnUpdated(id, xyz)
+                        table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }
                     if (xyzOp == XYZ_OP_DELETE) {
@@ -573,13 +569,14 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
                         }
                         if (uuid == null) {
                             // Override (not atomic) update.
-                            query = "DELETE FROM naksha_collections WHERE id = $1 RETURNING id,feature,geo_type,geo,tags,xyz"
+                            query = "DELETE FROM naksha_collections WHERE id = $1 RETURNING $COL_ALL"
                             rows = asArray(sql.execute(query, arrayOf(id)))
                             if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         } else {
                             // Atomic update.
-                            query = "DELETE FROM naksha_collections WHERE id = $1 AND xyz_uuid(xyz) = $2 RETURNING id,feature,geo_type,geo,tags,xyz"
-                            rows = asArray(sql.execute(query, arrayOf(id, uuid)))
+                            // TODO: Fix me!
+                            query = "DELETE FROM naksha_collections WHERE id = $1 AND txn = $2 AND uid = $3 RETURNING $COL_ALL"
+                            rows = asArray(sql.execute(query, arrayOf(id, null, null)))
                             if (rows.isEmpty()) {
                                 query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
@@ -593,7 +590,7 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
                         table.returnDeleted(existing)
                         continue
                     }
-                    throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Operation for collection $id not supported: "+XyzOp.getOpName(xyzOp), id)
+                    throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Operation for collection $id not supported: " + XyzOp.getOpName(xyzOp), id)
                 } finally {
                     sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(lockId))
                 }

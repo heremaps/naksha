@@ -97,17 +97,26 @@ As the PostgresQL code switched to [JBON](./JBON.md) encoding, a table for the g
 
 The table layout for all tables:
 
-| Column   | Type  | Modifiers   | Description                                                  |
-|----------|-------|-------------|--------------------------------------------------------------|
-| txn      | int8  | NOT NULL    | `xyz->txn` - Primary row identifier                          |
-| txn_next | int8  | NOT NULL    | `xyz->txn_next` - Only needed in history                     |
-| uid      | int4  | NOT NULL    | `xyz->uid` - Primary row identifier                          |
-| geo_type | int2  |             | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).   |
-| id       | text  |             | The **id** of the feature.                                   |
-| xyz      | bytea |             | `feature->properties->@ns:com:here:xyz`                      |
-| tags     | bytea |             | `xyz->tags`                                                  |
-| geo      | bytea |             | `geometry` - The geometry of the features.                   |
-| feature  | bytea |             | The Geo-JSON feature in JBON, except for what was extracted. |
+| Column     | Type  | RO  | Modifiers | Description                                                  |
+|------------|-------|-----|-----------|--------------------------------------------------------------|
+| txn_next   | int8  | yes | NOT NULL  | `xyz->txn_next` - Only needed in history                     |
+| txn        | int8  | yes | NOT NULL  | `xyz->txn` - Primary row identifier (uid is added)           |
+| uid        | int4  | yes | NOT NULL  | Primary row identifier                                       |
+| version    | int4  | yes | NOT NULL  |                                                              |
+| created_at | int8  | yes | NOT NULL  |                                                              |
+| updated_at | int8  | yes | NOT NULL  |                                                              |
+| author_ts  | int8  | yes | NOT NULL  |                                                              |
+| action     | int2  | yes | NOT NULL  | The action (0 = CREATE, 1 = UPDATE, 2 = DELETE).             |
+| geo_type   | int2  | no  | NOT NULL  | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).   |
+| puid       | int4  | yes |           |                                                              |
+| ptxn       | int8  | yes |           |                                                              |
+| author     | text  | yes |           |                                                              |
+| app_id     | text  | yes |           |                                                              |
+| geo_grid   | text  | yes | NOT NULL  |                                                              |
+| id         | text  | no  |           | The **id** of the feature.                                   |
+| tags       | bytea | no  |           | `xyz->tags`                                                  |
+| geo        | bytea | no  |           | `geometry` - The geometry of the features.                   |
+| feature    | bytea | no  | NOT NULL  | The Geo-JSON feature in JBON, except for what was extracted. |
 
 The **xyz** namespace is split into parts, to avoid unnecessary work for triggers and functions. Therefore, the **tags** columns contains the tags extracted from the XYZ namespace, while the rest of the XYZ namespace, managed by Naksha, is stored in the **xyz** column. The **txn_next** is as well managed internally and only used for the history, therefore it is an own column (actually, this is the only value that need to be adjusted, when a row is moved into history). All these columns (**uid**, **txn_next**, **tags** and **xyz**) should be merged together into the Geo-JSON feature under `feature->properties->@ns:com:here:xyz`, when downward compatibility with Data-Hub is required. This is left to the client and not part of the database code. Modern code using for example Web-Sockets, should no longer do this. The reason for this design is, that the **xyz** namespace is managed by the database only and must not be modified by the client, while **feature**, **geometry** and **tags** are client only and are not modified by the database. The **tags** are separated, because they need to be stored very efficiently (using an own dictionary) and they are indexed, while the feature itself is normally not read in the database.
 

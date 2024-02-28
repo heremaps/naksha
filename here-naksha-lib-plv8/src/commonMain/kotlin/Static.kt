@@ -66,14 +66,17 @@ $$ LANGUAGE 'plv8';
     }
 
     /**
+     * Array to create a pseudo GeoHash, which is BASE-32 encoded.
+     */
+    @JvmStatic
+    internal val BASE32 = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
+            'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
+
+    /**
      * Can be set to true, to enable stack-trace reporting to _elog(INFO)_.
      */
     @JvmStatic
     var PRINT_STACK_TRACES = false
-
-    // Temporary flag for performance testing.
-    @JvmStatic
-    var PERF_TEST_FEATURE = false
 
     /**
      * Array to fasten partition id.
@@ -96,6 +99,25 @@ $$ LANGUAGE 'plv8';
      */
     @JvmStatic
     fun lockId(name: String): BigInt64 = Fnv1a64.string(Fnv1a64.start(), name)
+
+    /**
+     * Calculate the pseudo geo-reference-id from the given feature id.
+     * @param id The feature id.
+     * @return The pseudo geo-reference-id.
+     */
+    @JvmStatic
+    fun gridFromId(id: String): String {
+        val sb = StringBuilder()
+        var hash = Fnv1a32.string(Fnv1a32.start(), id)
+        var i = 0
+        sb.append(BASE32[id[0].code and 31])
+        while (i++ < 6) {
+            val b32 = hash and 31
+            sb.append(BASE32[b32])
+            hash = hash ushr 5
+        }
+        return sb.toString()
+    }
 
     /**
      * Returns the partition number.
@@ -139,7 +161,10 @@ $$ LANGUAGE 'plv8';
 ALTER COLUMN feature SET STORAGE MAIN,
 ALTER COLUMN geo SET STORAGE MAIN,
 ALTER COLUMN tags SET STORAGE MAIN,
-ALTER COLUMN xyz SET STORAGE MAIN,
+ALTER COLUMN author SET STORAGE PLAIN,
+ALTER COLUMN app_id SET STORAGE PLAIN,
+ALTER COLUMN geo_grid SET STORAGE PLAIN,
+ALTER COLUMN id SET STORAGE PLAIN,
 SET (toast_tuple_target=8160"""
         query += if (history) ",fillfactor=100,autovacuum_enabled=OFF,toast.autovacuum_enabled=OFF"
         else """,fillfactor=50
@@ -174,7 +199,7 @@ SET (toast_tuple_target=8160"""
         // quoted index name
         var qin = sql.quoteIdent("${tableName}_id_idx")
         var query = """CREATE ${unique}INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-((id) COLLATE "C" text_pattern_ops DESC) WITH (fillfactor=$fillFactor);
+(id COLLATE "C" text_pattern_ops DESC) WITH (fillfactor=$fillFactor);
 """
 
         // txn, uid
@@ -198,19 +223,19 @@ SET (toast_tuple_target=8160"""
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(xyz_grid(xyz) COLLATE "C" DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(geo_grid COLLATE "C" DESC, txn DESC) WITH (fillfactor=$fillFactor);
 """
 
         // app_id
         qin = sql.quoteIdent("${tableName}_app_id_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(xyz_app_id(xyz) COLLATE "C" DESC, xyz_updated_at(xyz) DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(app_id COLLATE "C" DESC, updated_at DESC, txn DESC) WITH (fillfactor=$fillFactor);
 """
 
         // author
         qin = sql.quoteIdent("${tableName}_author_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(xyz_author(xyz) COLLATE "C" DESC, xyz_author_ts(xyz) DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(author COLLATE "C" DESC, author_ts DESC, txn DESC) WITH (fillfactor=$fillFactor);
 """
 
         sql.execute(query)
@@ -232,12 +257,21 @@ SET (toast_tuple_target=8160"""
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
         val CREATE_TABLE = """CREATE TABLE {table} (
-    txn         int8 NOT NULL,
     txn_next    int8 NOT NULL CHECK(txn_next {condition}),
+    txn         int8 NOT NULL,
     uid         int4 NOT NULL,
+    version     int4 NOT NULL,
+    created_at  int8 NOT NULL, -- to_timestamp(created_at / 1000)
+    updated_at  int8 NOT NULL, -- to_timestamp(updated_at / 1000)
+    author_ts   int8 NOT NULL, -- to_timestamp(author_ts / 1000)
+    action      int2 NOT NULL,
     geo_type    int2 NOT NULL,
-    id          text COMPRESSION lz4 COLLATE "C" NOT NULL,
-    xyz         bytea COMPRESSION lz4 NOT NULL,
+    puid        int4,
+    ptxn        int8,
+    author      text NOT NULL,
+    app_id      text NOT NULL,
+    geo_grid    text NOT NULL,
+    id          text COLLATE "C" NOT NULL,
     tags        bytea COMPRESSION lz4,
     geo         bytea COMPRESSION lz4,
     feature     bytea COMPRESSION lz4 NOT NULL

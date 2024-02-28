@@ -25,10 +25,8 @@ CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
       return plv8.moduleCache[key];
   };
   require = function(module) {
-      if(plv8.moduleCache[module]) {
-        //plv8.elog(INFO, "Return cached module "+module);
-        return plv8.moduleCache[module];
-      }
+      let m = plv8.moduleCache[module];
+      if(m) return m;
       var rows = plv8.execute(
           "SELECT source FROM commonjs2_modules WHERE module = $1",
           [module]

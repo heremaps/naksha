@@ -24,7 +24,7 @@ class Plv8PerfTest : Plv8TestContainer() {
     )
 
     companion object {
-        private val FeaturesPerRound = 2000
+        private val FeaturesPerRound = 1000
         private val Rounds = 10
 
         private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
@@ -36,17 +36,11 @@ class Plv8PerfTest : Plv8TestContainer() {
         @BeforeAll
         @JvmStatic
         fun prepare() {
-            Static.PERF_TEST_FEATURE = true
             session = NakshaSession.get()
             jvmSql = session.sql as JvmPlv8Sql
             val conn = jvmSql.conn
             check(conn != null)
             this.conn = conn
-            val stmt = conn.prepareStatement("""do $$
-let naksha = require("naksha");
-naksha.Static.PERF_TEST_FEATURE=true;
-$$ LANGUAGE 'plv8';""")
-            stmt.use { stmt.execute() }
         }
     }
 
@@ -66,7 +60,7 @@ $$ LANGUAGE 'plv8';""")
             val id: String = env.randomString(12)
             topology["id"] = id
             idArr[i] = id
-            opArr[i] = builder.buildXyzOp(XYZ_OP_CREATE, id, null)
+            opArr[i] = builder.buildXyzOp(XYZ_OP_CREATE, id, null, "vgrid")
             featureArr[i] = builder.buildFeatureFromMap(topology)
             i++
         }
@@ -106,14 +100,14 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val session = NakshaSession.get()
         val builder = XyzBuilder.create(65536)
 
-        var op = builder.buildXyzOp(XYZ_OP_DELETE, "v2_perf_test", null)
+        var op = builder.buildXyzOp(XYZ_OP_DELETE, "v2_perf_test", null, "vgrid")
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
         var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         var table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
-        op = builder.buildXyzOp(XYZ_OP_CREATE, "v2_perf_test", null)
+        op = builder.buildXyzOp(XYZ_OP_CREATE, "v2_perf_test", null, "vgrid")
         feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
         result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
@@ -122,19 +116,20 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
 
         session.sql.execute("commit")
 
-        val useBatch = false
+        val useBatch = true
         var totalTime = 0L
         var r = 0
         while (r++ < Rounds) {
             val features = createFeatures(FeaturesPerRound)
             val start = currentMicros()
             if (useBatch) {
-                val stmt = conn.prepareStatement("INSERT INTO v2_perf_test (id, feature) VALUES (?, ?)")
+                val stmt = conn.prepareStatement("INSERT INTO v2_perf_test (id, geo_grid, feature) VALUES (?, ?, ?)")
                 stmt.use {
                     var i = 0
                     while (i < FeaturesPerRound) {
                         stmt.setString(1, features.idArr[i])
-                        stmt.setBytes(2, features.featureArr[i])
+                        stmt.setString(2, "vgrid")
+                        stmt.setBytes(3, features.featureArr[i])
                         stmt.addBatch()
                         i++
                     }

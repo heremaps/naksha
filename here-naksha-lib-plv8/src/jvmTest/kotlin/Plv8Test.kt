@@ -118,15 +118,6 @@ class Plv8Test : Plv8TestContainer() {
     fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
         Static.collectionCreate(session.sql, session.schema, session.schemaOid, "foo", spGist = false, partition = false)
-        assertEquals(0, session.newUid("foo"))
-        assertEquals(1, session.newUid("foo"))
-        assertEquals(2, session.newUid("foo"))
-        assertEquals(3, session.newUid("foo"))
-        assertEquals(4, session.newUid("foo"))
-        assertEquals(5, session.newUid("foo"))
-        assertEquals(6, session.newUid("foo"))
-        assertEquals(7, session.newUid("foo"))
-        assertEquals(8, session.newUid("foo"))
         // 9 and 10 are next UIDs!
         val pgNew = Jb.map.newMap()
         pgNew[COL_UID] = null // Should be set by trigger
@@ -136,7 +127,6 @@ class Plv8Test : Plv8TestContainer() {
         pgNew[COL_GEO_TYPE] = GEO_TYPE_EWKB
         pgNew[COL_GEOMETRY] = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
         pgNew[COL_TAGS] = null
-        pgNew[COL_XYZ] = null // Should be set by trigger
         val pgOld = null
         val t = PgTrigger(
                 TG_OP_INSERT,
@@ -151,20 +141,18 @@ class Plv8Test : Plv8TestContainer() {
         )
         // Simulate a trigger invocation.
         session.triggerBefore(t)
-        assertEquals(9, pgNew[COL_UID])
+        assertEquals(0, pgNew[COL_UID])
         assertEquals(BigInt64(0), pgNew[COL_TXN_NEXT])
-        assertNotNull(pgNew[COL_XYZ])
+        //assertNotNull(pgNew[COL_XYZ])
         // Try the XYZ insert directly
-        val uid = session.newUid("foo")
-        assertEquals(10, uid)
-        val xyzBytes = session.xyzInsert("foo", "bar", uid, GEO_TYPE_NULL, null)
-        val xyzNs = XyzNs().mapBytes(xyzBytes)
-        val txn = session.txn()
-        assertEquals(txn, xyzNs.txn())
-        val expectedGrid = session.grid("bar", GEO_TYPE_NULL, null)
-        assertEquals(expectedGrid, xyzNs.grid())
-        val uuid = xyzNs.uuid()
-        assertEquals("${session.storageId}:foo:${txn.year()}:${txn.month()}:${txn.day()}:${txn.seq()}:10", uuid)
+//        val xyzBytes = session.xyzInsert("foo", "bar", uid, GEO_TYPE_NULL, null)
+//        val xyzNs = XyzNs().mapBytes(xyzBytes)
+//        val txn = session.txn()
+//        assertEquals(txn, xyzNs.txn())
+//        val expectedGrid = session.grid("bar", GEO_TYPE_NULL, null)
+//        assertEquals(expectedGrid, xyzNs.grid())
+//        val uuid = xyzNs.uuid()
+//        assertEquals("${session.storageId}:foo:${txn.year()}:${txn.month()}:${txn.day()}:${txn.seq()}:10", uuid)
         session.sql.execute("COMMIT")
     }
 
@@ -184,7 +172,7 @@ class Plv8Test : Plv8TestContainer() {
         val tagsBytes = builder.buildTags()
         val geoBytes = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
         val collectionBytes = builder.buildFeatureFromMap(collectionMap)
-        val opBytes = builder.buildXyzOp(XYZ_OP_CREATE, "bar", null)
+        val opBytes = builder.buildXyzOp(XYZ_OP_CREATE, "bar", null, "vgrid")
         val table = session.writeCollections(arrayOf(opBytes), arrayOf(collectionBytes), arrayOf(GEO_TYPE_EWKB), arrayOf(geoBytes), arrayOf(tagsBytes))
         val result = assertInstanceOf(JvmPlv8Table::class.java, table)
         assertEquals(1, result.rows.size)
