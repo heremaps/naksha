@@ -18,134 +18,191 @@
  */
 package com.here.naksha.lib.extmanager;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-
+import com.amazonaws.SdkClientException;
+import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.SimpleTask;
-import com.here.naksha.lib.extmanager.models.ExtensionMetaData;
+import com.here.naksha.lib.core.models.features.Extension;
+import com.here.naksha.lib.core.models.features.ExtensionConfig;
+import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
+import com.here.naksha.lib.extmanager.helpers.ClassLoaderHelper;
+import com.here.naksha.lib.extmanager.helpers.FileHelper;
+import com.here.naksha.lib.extmanager.models.ExtensionMapper;
 import com.here.naksha.lib.extmanager.models.KVPair;
-import com.here.naksha.lib.extmanager.utils.ClassLoaderHelper;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Class contains registered extensions in naksha. It update/maintain extensions cache over scheduled time.
+ */
 public class ExtensionCache {
   private static final @NotNull Logger logger = LoggerFactory.getLogger(ExtensionCache.class);
-  private static ConcurrentHashMap<String, KVPair<ExtensionMetaData, ClassLoader>> loaderCache =
-      new ConcurrentHashMap<>();
-  private AtomicBoolean mutex = new AtomicBoolean(false);
-  private JarClient jarClient;
+  private static final ConcurrentHashMap<String, ExtensionMapper> loaderCache = new ConcurrentHashMap<>();
+  private final Map<String, JarClient> jarClientMap;
+  private final @NotNull INaksha naksha;
 
-  public ExtensionCache(JarClient jarClient) {
-    this.jarClient = jarClient;
+  public ExtensionCache(@NotNull INaksha naksha) {
+    this.naksha = naksha;
+    jarClientMap = new HashMap<>();
   }
-
   /**
-   * Read extensions from database, download respective jars from S3 and store Extension to ClassLoader mapping
-   * If any mapping already exist for extension version, It will skip that.
+   * Read extensions from database, download respective jars from configured client and store Extension to ClassLoader mapping
+   * If it already have any mapping exist for extension then it simply skip that.
    * Also it removes existing mapping from cache which is not available in config store anymore
    */
-  public void buildExtensionCache(List<ExtensionMetaData> metaDataList, ExtConfig extConfig) {
-    List<Future<KVPair<ExtensionMetaData, File>>> futures = metaDataList.stream()
-        .filter(metaData -> !this.isLoaderMappingExist(metaData))
-        .map(exMetaData -> {
-          SimpleTask<KVPair<ExtensionMetaData, File>> task = new SimpleTask<>();
-          return task.start(() ->
-              downloadJar(jarClient, extConfig.getAwsBucket(), exMetaData, extConfig.getTempPath()));
+  protected void buildExtensionCache(ExtensionConfig extensionConfig) {
+    List<Future<KVPair<Extension, File>>> futures = extensionConfig.getExtensions().stream()
+        .filter(extension -> !this.isLoaderMappingExist(extension))
+        .map(extension -> {
+          SimpleTask<KVPair<Extension, File>> task = new SimpleTask<>();
+          return task.start(() -> downloadJar(extension));
         })
         .collect(Collectors.toList());
 
     futures.stream().forEach(future -> {
-      KVPair<ExtensionMetaData, File> result = null;
+      KVPair<Extension, File> result = null;
       try {
         result = future.get();
       } catch (InterruptedException | ExecutionException e) {
-        e.printStackTrace();
         logger.error("Failed while downloading extension jar", e);
-        // TODO log exception for extension which is not downloaded from s3 bucket
       }
-      if (result != null) {
-        ClassLoader loader = null;
-        try {
-          loader = ClassLoaderHelper.getClassLoader(result.getValue(), extConfig.getDelegatedClassList());
-          if (loader != null)
-            loaderCache.put(
-                result.getKey().getId(),
-                new KVPair<ExtensionMetaData, ClassLoader>(result.getKey(), loader));
-        } catch (Exception e) {
-          e.printStackTrace();
-          // TODO log exception for extension where classloader can not be intantiated.
-        }
-      }
+      publishIntoCache(result, extensionConfig);
     });
 
-    // Removing existing extension which has been removed from the db
-    List<String> extIds =
-        metaDataList.stream().map(ExtensionMetaData::getId).collect(Collectors.toList());
-    for (String key : this.loaderCache.keySet()) {
-      if (!extIds.contains(key)) this.loaderCache.remove(key);
+    // Removing existing extension which has been removed from the configuration
+    List<String> extIds = extensionConfig.getExtensions().stream()
+        .map(Extension::getExtensionId)
+        .collect(Collectors.toList());
+    for (String key : loaderCache.keySet()) {
+      if (!extIds.contains(key)) loaderCache.remove(key);
     }
-
-    System.out.println("Loader cache size " + this.loaderCache.size());
+    System.out.println("Loader cache size " + loaderCache.size());
   }
 
-  private boolean isLoaderMappingExist(ExtensionMetaData metaData) {
-    return loaderCache.containsKey(metaData.getId())
-        && loaderCache.get(metaData.getId()).getKey().getVersion().equals(metaData.getVersion());
+  private void publishIntoCache(KVPair<Extension, File> result, ExtensionConfig extensionConfig) {
+    if (result != null && result.getValue() != null) {
+      ClassLoader loader;
+      try {
+        loader = ClassLoaderHelper.getClassLoader(
+            result.getValue(), extensionConfig.getWhilelistDelegateClass());
+      } catch (Exception e) {
+        logger.error("Failed to load extension jar " + result.getKey().getExtensionId(), e);
+        return;
+      }
+
+      Object object = null;
+      if (result.getKey().getInitClassName() == null
+          || result.getKey().getInitClassName().isEmpty()) {
+        loaderCache.put(result.getKey().getExtensionId(), new ExtensionMapper(result.getKey(), loader, object));
+      } else {
+        try {
+          Class<?> clz = loader.loadClass(result.getKey().getInitClassName());
+          object = clz.getConstructor(INaksha.class, Object.class)
+              .newInstance(naksha, result.getKey().getProperties());
+          loaderCache.put(
+              result.getKey().getExtensionId(), new ExtensionMapper(result.getKey(), loader, object));
+        } catch (ClassNotFoundException
+            | InvocationTargetException
+            | InstantiationException
+            | NoSuchMethodException
+            | IllegalAccessException e) {
+          logger.error(
+              String.format(
+                  "Failed to instantiate class %s for extension %s ",
+                  result.getKey().getInitClassName(),
+                  result.getKey().getExtensionId()),
+              e);
+        }
+      }
+    }
+  }
+
+  private boolean isLoaderMappingExist(Extension extension) {
+    boolean isEqual = loaderCache.containsKey(extension.getExtensionId());
+    if (isEqual) {
+      Extension exExtension = loaderCache.get(extension.getExtensionId()).getExtension();
+      isEqual = exExtension.getUrl().equals(extension.getUrl())
+          && exExtension.getVersion().equals(extension.getVersion())
+          && exExtension.getInitClassName().equals(extension.getInitClassName());
+    }
+    return isEqual;
   }
 
   /**
    * Lamda function which will initiate the downloading for extension jar
    */
-  private KVPair<ExtensionMetaData, File> downloadJar(
-      JarClient s3Client, String bucketName, ExtensionMetaData exMetaData, String jarPath) {
-    logger.info("Downloading jar %s with version %s ", exMetaData.getKey());
+  private KVPair<Extension, File> downloadJar(Extension extension) {
+    logger.info("Downloading jar {} with version {} ", extension.getExtensionId(), extension.getVersion());
+    JarClient client = getJarClient(extension.getUrl());
     File file = null;
     try {
-      file = s3Client.getJar(bucketName, exMetaData.getKey());
-    } catch (IOException e) {
-      logger.error("Failed to download jar %s ", exMetaData.getKey());
-      throw unchecked(e);
+      file = client.getJar(extension.getUrl());
+    } catch (IOException | SdkClientException e) {
+      logger.error("Failed to fetch jar {} ", extension.getUrl());
     }
-    return new KVPair<ExtensionMetaData, File>(exMetaData, file);
+    return new KVPair<Extension, File>(extension, file);
+  }
+
+  // TODO: Can be moved to factory function. Since not used elsewhere placed it inside this class
+  protected JarClient getJarClient(String url) {
+    JarClient jarClient;
+    if (url.startsWith(JarClientType.S3.getType())) {
+      jarClient = jarClientMap.get(JarClientType.S3.getType());
+      if (jarClient == null) {
+        jarClient = new AmazonS3Helper();
+        jarClientMap.put(JarClientType.S3.getType(), jarClient);
+      }
+      return jarClient;
+    } else if (url.startsWith(JarClientType.FILE.getType())) {
+      jarClient = jarClientMap.get(JarClientType.FILE.getType());
+      if (jarClient == null) {
+        jarClient = new FileHelper();
+        jarClientMap.put(JarClientType.FILE.getType(), jarClient);
+      }
+      return jarClient;
+    } else throw new UnsupportedOperationException("Jar client not configured for url " + url);
   }
 
   protected ClassLoader getClassLoaderById(@NotNull String extensionId) {
     if (loaderCache.containsKey(extensionId))
-      return loaderCache.get(extensionId).getValue();
+      return loaderCache.get(extensionId).getClassLoader();
     return null;
-  }
-
-  protected ClassLoader getClassLoaderByName(@NotNull String extensionName) {
-    KVPair<ExtensionMetaData, ClassLoader> mapper = loaderCache.values().stream()
-        .filter(loaderMapper -> loaderMapper.getKey().getExtensionName().contains(extensionName))
-        .findFirst()
-        .orElse(null);
-
-    if (mapper != null) return getClassLoaderById(mapper.getKey().getId());
-    else return null;
   }
 
   public int getCacheLength() {
     return loaderCache.size();
   }
 
+  public List<Extension> getCachedExtensions() {
+    return loaderCache.values().stream().map(ExtensionMapper::getExtension).collect(Collectors.toList());
+  }
+
   public void clear() {
-    this.loaderCache.clear();
+    loaderCache.clear();
   }
 
-  public boolean getLock() {
-    return this.mutex.compareAndSet(false, true);
-  }
+  public enum JarClientType {
+    S3("s3:"),
+    FILE("file:");
 
-  public void unlock() {
-    this.mutex.set(false);
+    private final String type;
+
+    JarClientType(String type) {
+      this.type = type;
+    }
+
+    public String getType() {
+      return this.type;
+    }
   }
 }

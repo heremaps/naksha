@@ -19,103 +19,76 @@
 package com.here.naksha.lib.extmanager;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.here.naksha.lib.core.IExtensionManager;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.extmanager.models.ExtensionMetaData;
-import com.here.naksha.lib.extmanager.utils.AmazonS3Client;
-import com.here.naksha.lib.extmanager.utils.ScheduledTask;
-import java.io.Closeable;
+import com.here.naksha.lib.core.models.features.Extension;
+import com.here.naksha.lib.core.models.features.ExtensionConfig;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 
-public class ExtensionManager implements IExtensionManager, Closeable {
+public class ExtensionManager implements IExtensionManager {
   private final @NotNull INaksha naksha;
-  private final ExtConfig extConfig;
-  private ExtensionCache extensionCache;
-  private ScheduledExecutorService scheduler;
-  private JarClient jarClient;
+  private final ExtensionCache extensionCache;
+  private Thread refreshTask;
 
-  public ExtensionManager(@NotNull INaksha naksha, @NotNull ExtConfig extConfig) {
+  public ExtensionManager(@NotNull INaksha naksha) {
     this.naksha = naksha;
-    this.extConfig = extConfig;
-    this.extensionCache = new ExtensionCache(getS3Client());
+    this.extensionCache = new ExtensionCache(naksha);
     this.buildExtensionMap();
     this.scheduleRefreshCache();
   }
 
-  protected JarClient getS3Client() {
-    if (this.jarClient == null)
-      this.jarClient = new AmazonS3Client(
-          extConfig.getAwsAccessKey(),
-          extConfig.getAwsSecretKey(),
-          extConfig.getAwsRegion(),
-          extConfig.getTempPath());
-    return this.jarClient;
-  }
-
   private void buildExtensionMap() {
-    List<ExtensionMetaData> extMetaData = getExtensions();
-    extensionCache.buildExtensionCache(extMetaData, extConfig);
+    ExtensionConfig extensionConfig = naksha.getExtensionConfig();
+    extensionCache.buildExtensionCache(extensionConfig);
   }
 
+  /**
+   * get Isolation Class loader for given extension Id
+   * @param extensionId
+   * @return
+   */
   @Override
-  public void resetExtensionMap() {
-    this.extensionCache.clear();
-    this.buildExtensionMap();
-  }
-
-  @Override
-  public Optional<ClassLoader> getClassLoaderById(@NotNull String extensionId) {
-    ClassLoader loader = this.extensionCache.getClassLoaderById(extensionId);
-    return loader == null ? Optional.empty() : Optional.of(loader);
-  }
-
-  @Override
-  public Optional<ClassLoader> getClassLoaderByName(@NotNull String extensionName) {
-    ClassLoader loader = this.extensionCache.getClassLoaderByName(extensionName);
-    return loader == null ? Optional.empty() : Optional.of(loader);
+  public ClassLoader getClassLoader(@NotNull String extensionId) {
+    return this.extensionCache.getClassLoaderById(extensionId);
   }
 
   private void scheduleRefreshCache() {
-    scheduler = Executors.newSingleThreadScheduledExecutor();
-    scheduler.scheduleAtFixedRate(
-        new ScheduledTask(this.extensionCache, () -> getExtensions(), this.extConfig),
-        0,
-        extConfig.getRefreshScheduleInSeconds(),
-        TimeUnit.SECONDS);
+    ScheduledTask scheduledTask = new ScheduledTask(this.extensionCache, () -> naksha.getExtensionConfig());
+    refreshTask = new Thread(scheduledTask);
+    refreshTask.start();
+  }
+
+  /**
+   * Fetch registered extensions cached in extension manager
+   * @return List {@link Extension} list of extensions
+   */
+  public List<Extension> getCachedExtensions() {
+    return this.extensionCache.getCachedExtensions();
   }
   /**
    * TODO This method should fetch extensions from admin db.
    * as of now it is fetching extensions from local file.
    * @return
    */
-  private List<ExtensionMetaData> getExtensions() {
+  private ExtensionConfig getExtensions() {
+    //    naksha.getExtensionConfig().getExtensions()
     Path file = new File("src/test/resources/data/extension.txt").toPath();
-    List<ExtensionMetaData> list = new ArrayList<>();
+    ExtensionConfig extensionConfig;
     try {
       String data = Files.readAllLines(file).stream().collect(Collectors.joining());
-      list = new ObjectMapper().readValue(data, new TypeReference<List<ExtensionMetaData>>() {});
+      extensionConfig = new ObjectMapper().readValue(data, ExtensionConfig.class);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    return list;
-  }
-
-  @Override
-  public void close() throws IOException {
-    this.scheduler.shutdown();
+    return extensionConfig;
   }
 }

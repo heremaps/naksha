@@ -1,78 +1,76 @@
 package com.here.naksha.lib.extmanager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.extmanager.utils.AmazonS3Client;
+import com.here.naksha.lib.core.models.features.Extension;
+import com.here.naksha.lib.core.models.features.ExtensionConfig;
 import java.io.File;
 import java.io.IOException;
-import java.util.Optional;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 
 public class ExtensionManagerTest {
-  @Mock
-  INaksha naksha;
+  INaksha naksha=mock(INaksha.class);
+  @BeforeEach
+  public void setup(){
+    when(naksha.getExtensionConfig()).thenReturn(getExtensionConfig());
+  }
 
   @Test
-  public void testGetClassLoaderById() throws IOException {
-    ExtConfig extConfig=setupMockConfig();
-    JarClient jarClient=mock(JarClient.class);
-    when(jarClient.getJar(anyString(),anyString())).thenReturn(mock(File.class));
-
+  public void testGetClassLoaderById()  {
     ClassLoader loader=mock(ClassLoader.class);
     try(MockedConstruction<ExtensionCache> mockExtensionCache=mockConstruction(ExtensionCache.class,(mock,context)->{
       when(mock.getClassLoaderById("AnyString")).thenReturn(loader);
     })) {
-      ExtensionManager extensionManager = spy(new ExtensionManager(naksha, extConfig));
-      when(extensionManager.getS3Client()).thenReturn(jarClient);
+      ExtensionManager extensionManager = spy(new ExtensionManager(naksha));
 
-      Optional<ClassLoader> clsLoader = extensionManager.getClassLoaderById("AnyString");
-      assertEquals(loader, clsLoader.get());
+      ClassLoader clsLoader = extensionManager.getClassLoader("AnyString");
+      assertEquals(loader, clsLoader);
 
-      clsLoader = extensionManager.getClassLoaderById("Nothing");
-      assertTrue(clsLoader.isEmpty());
+      clsLoader = extensionManager.getClassLoader("Nothing");
+      assertNull(clsLoader);
     }
   }
 
   @Test
-  public void testGetClassLoaderByName() throws IOException {
-    ExtConfig extConfig=setupMockConfig();
-    JarClient jarClient=mock(JarClient.class);
-    when(jarClient.getJar(anyString(),anyString())).thenReturn(mock(File.class));
-
-    ClassLoader loader=mock(ClassLoader.class);
+  public void testGetCachedExtensions(){
+    List<Extension> extList=new ArrayList<>();
+    extList.add(new Extension("child_extension_1","url","1.0"));
     try(MockedConstruction<ExtensionCache> mockExtensionCache=mockConstruction(ExtensionCache.class,(mock,context)->{
-      when(mock.getClassLoaderByName("AnyString")).thenReturn(loader);
+      when(mock.getCachedExtensions()).thenReturn(extList);
     })) {
-      ExtensionManager extensionManager = spy(new ExtensionManager(naksha, extConfig));
-      when(extensionManager.getS3Client()).thenReturn(jarClient);
+      ExtensionManager extensionManager = spy(new ExtensionManager(naksha));
 
-      Optional<ClassLoader> clsLoader = extensionManager.getClassLoaderByName("AnyString");
-      assertEquals(loader, clsLoader.get());
-
-      clsLoader = extensionManager.getClassLoaderByName("Nothing");
-      assertTrue(clsLoader.isEmpty());
-
+      List<Extension> extensions = extensionManager.getCachedExtensions();
+      Assertions.assertEquals(extList.size(),extensions.size());
     }
   }
-
-  private ExtConfig setupMockConfig() throws IOException {
-    ExtConfig extConfig=mock(ExtConfig.class);
-    when(extConfig.getAwsAccessKey()).thenReturn("test");
-    when(extConfig.getAwsSecretKey()).thenReturn("test");
-    when(extConfig.getAwsRegion()).thenReturn("test");
-    when(extConfig.getRefreshScheduleInSeconds()).thenReturn(60l);
-    return extConfig;
+  private ExtensionConfig getExtensionConfig() {
+    Path file = new File("src/test/resources/data/extension.txt").toPath();
+    ExtensionConfig extensionConfig=null;
+    try {
+      String data = Files.readAllLines(file).stream().collect(Collectors.joining());
+      extensionConfig = new ObjectMapper().readValue(data, ExtensionConfig.class);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return extensionConfig;
   }
-
-
-
 }

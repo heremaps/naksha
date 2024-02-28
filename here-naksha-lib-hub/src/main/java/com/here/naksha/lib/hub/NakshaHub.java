@@ -31,6 +31,7 @@ import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.features.ExtensionConfig;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
@@ -45,6 +46,7 @@ import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import com.here.naksha.lib.psql.PsqlStorage;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.ApiStatus;
@@ -257,6 +259,16 @@ public class NakshaHub implements INaksha {
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull <T extends XyzFeature> T getConfig() {
     return (T) this.nakshaHubConfig;
+  }
+
+  @Override
+  public @NotNull ExtensionConfig getExtensionConfig() {
+    return new ExtensionConfig(10, new ArrayList<>(), new ArrayList<>());
+  }
+
+  @Override
+  public @NotNull ClassLoader getClassLoader() {
+    return null;
   }
 
   @Override

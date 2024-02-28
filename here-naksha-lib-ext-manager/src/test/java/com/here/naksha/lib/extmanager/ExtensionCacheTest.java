@@ -11,61 +11,105 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.extmanager.models.ExtensionMetaData;
-import com.here.naksha.lib.extmanager.utils.ClassLoaderHelper;
+import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.features.ExtensionConfig;
+import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
+import com.here.naksha.lib.extmanager.helpers.ClassLoaderHelper;
+import com.here.naksha.lib.extmanager.helpers.FileHelper;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
 
 public class ExtensionCacheTest {
 
+  @Mock
+  INaksha naksha;
   @Test
   public void testBuildExtensionCache() throws IOException {
     ClassLoader classLoader=mock(ClassLoader.class);
-    List<ExtensionMetaData> metaDataList=getExtensions();
-    ExtConfig extConfig=setupMockConfig();
-    JarClient jarClient=mock(JarClient.class);
-    when(jarClient.getJar(anyString(),anyString())).thenReturn(mock(File.class));
-
+    ExtensionConfig extensionConfig=getExtensionConfig();
     try(MockedStatic<ClassLoaderHelper> mockedStatic=mockStatic(ClassLoaderHelper.class)) {
       when(ClassLoaderHelper.getClassLoader(any(),anyList())).thenReturn(classLoader);
-      ExtensionCache extensionCache =spy( new ExtensionCache(jarClient));
-      extensionCache.buildExtensionCache(metaDataList, extConfig);
+      ExtensionCache extensionCache =spy( new ExtensionCache(naksha));
+      extensionCache.buildExtensionCache(extensionConfig);
       Assertions.assertEquals(2,extensionCache.getCacheLength());
-      verify(jarClient,times(2)).getJar(anyString(),anyString());
+
+      extensionConfig.getExtensions().remove(0);
+      extensionCache.buildExtensionCache(extensionConfig);
+      Assertions.assertEquals(1,extensionCache.getCacheLength());
     }
-
-  }
-  private ExtConfig setupMockConfig() throws IOException {
-    ExtConfig extConfig=mock(ExtConfig.class);
-    when(extConfig.getAwsAccessKey()).thenReturn("test");
-    when(extConfig.getAwsSecretKey()).thenReturn("test");
-    when(extConfig.getAwsRegion()).thenReturn("test");
-    when(extConfig.getAwsBucket()).thenReturn("test");
-    when(extConfig.getRefreshScheduleInSeconds()).thenReturn(60l);
-    return extConfig;
   }
 
-  private List<ExtensionMetaData> getExtensions() {
+  @Test
+  public void testGetJarClient(){
+    ExtensionCache extensionCache=new ExtensionCache(naksha);
+    JarClient jarClient=extensionCache.getJarClient("s3://bucket/test.jar");
+    Assertions.assertTrue(jarClient instanceof AmazonS3Helper);
+
+    JarClient jarClient1=extensionCache.getJarClient("s3://bucket/test1.jar");
+    Assertions.assertEquals(jarClient,jarClient1);
+
+    jarClient=extensionCache.getJarClient("file://bucket/test.jar");
+    Assertions.assertTrue(jarClient instanceof FileHelper);
+
+    Assertions.assertThrows(UnsupportedOperationException.class,()->extensionCache.getJarClient("error://bucket/test.jar"));
+  }
+
+  @Test
+  public void testGetClassLoaderById(){
+    ClassLoader classLoader=mock(ClassLoader.class);
+    ExtensionConfig extensionConfig=getExtensionConfig();
+    try(MockedStatic<ClassLoaderHelper> mockedStatic=mockStatic(ClassLoaderHelper.class)) {
+      when(ClassLoaderHelper.getClassLoader(any(),anyList())).thenReturn(classLoader);
+      ExtensionCache extensionCache =spy(new ExtensionCache(naksha));
+      extensionCache.buildExtensionCache(extensionConfig);
+      Assertions.assertEquals(2,extensionCache.getCacheLength());
+
+      ClassLoader loader=extensionCache.getClassLoaderById(extensionConfig.getExtensions().get(0).getExtensionId());
+      Assertions.assertNotNull(loader);
+      Assertions.assertEquals(classLoader,loader);
+    }
+  }
+
+  @Test
+  public void testGetCachedExtensions(){
+    ClassLoader classLoader=mock(ClassLoader.class);
+    ExtensionConfig extensionConfig=getExtensionConfig();
+    try(MockedStatic<ClassLoaderHelper> mockedStatic=mockStatic(ClassLoaderHelper.class)) {
+      when(ClassLoaderHelper.getClassLoader(any(),anyList())).thenReturn(classLoader);
+      ExtensionCache extensionCache =spy( new ExtensionCache(naksha));
+      extensionCache.buildExtensionCache(extensionConfig);
+      Assertions.assertEquals(2,extensionCache.getCachedExtensions().size());
+
+
+      extensionConfig.getExtensions().remove(0);
+      extensionCache.buildExtensionCache(extensionConfig);
+      Assertions.assertEquals(1,extensionCache.getCachedExtensions().size());
+      Assertions.assertEquals(extensionConfig.getExtensions().get(0).getExtensionId(),extensionCache.getCachedExtensions().get(0).getExtensionId());
+    }
+  }
+
+
+  private ExtensionConfig getExtensionConfig() {
     Path file = new File("src/test/resources/data/extension.txt").toPath();
-    List<ExtensionMetaData> list = new ArrayList<>();
+    ExtensionConfig extensionConfig=null;
     try {
       String data = Files.readAllLines(file).stream().collect(Collectors.joining());
-      list = new ObjectMapper().readValue(data, new TypeReference<List<ExtensionMetaData>>() {});
+      extensionConfig = new ObjectMapper().readValue(data, ExtensionConfig.class);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    return list;
+    return extensionConfig;
   }
+
 }

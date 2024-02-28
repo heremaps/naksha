@@ -16,12 +16,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.extmanager;
+package com.here.naksha.lib.core;
 
-import java.io.File;
-import java.io.IOException;
+import org.jetbrains.annotations.NotNull;
 
-public interface JarClient {
+/**
+ * API to manage naksha extensions.
+ */
+public interface IExtensionManager {
 
-  public File getJar(String path) throws IOException;
+  /**
+   * get Isolation Class loader for given extension Id
+   * @param extensionId
+   * @return
+   */
+  ClassLoader getClassLoader(@NotNull String extensionId);
 }

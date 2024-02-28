@@ -1,0 +1,61 @@
+/*
+ * Copyright (C) 2017-2023 HERE Europe B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * License-Filename: LICENSE
+ */
+package com.here.naksha.lib.extmanager.helpers;
+
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.AmazonS3URI;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import com.here.naksha.lib.extmanager.JarClient;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import org.jetbrains.annotations.NotNull;
+
+public class AmazonS3Helper implements JarClient {
+  private AmazonS3 s3Client;
+
+  public AmazonS3Helper() {
+    s3Client = AmazonS3ClientBuilder.standard()
+        .withCredentials(new ProfileCredentialsProvider())
+        .build();
+  }
+
+  public File getJar(@NotNull String url) throws IOException {
+    AmazonS3URI fileUri = new AmazonS3URI(url);
+    S3Object s3Object = s3Client.getObject(fileUri.getBucket(), fileUri.getKey());
+    S3ObjectInputStream inputStream = s3Object.getObjectContent();
+    File targetFile = File.createTempFile(fileUri.getBucket(), ".jar");
+    try {
+      FileOutputStream fos = new FileOutputStream(targetFile);
+      byte[] read_buf = new byte[1024];
+      int read_len = 0;
+      while ((read_len = inputStream.read(read_buf)) > 0) {
+        fos.write(read_buf, 0, read_len);
+      }
+      inputStream.close();
+      fos.close();
+    } catch (IOException e) {
+      throw e;
+    }
+    return targetFile;
+  }
+}

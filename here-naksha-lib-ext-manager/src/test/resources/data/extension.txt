@@ -1,16 +1,24 @@
-[
-  {
-    "id":"child_extension_1",
-    "key":"childExtension/naksha-ext-child1-1.0-SNAPSHOT-shaded.jar",
-    "extensionName":"childjar1",
+{
+  "expiry": 6000,
+  "type": "ExtensionConfig",
+  "whitelistDelegateClass":[
+    "java.*",
+    "javax.*",
+    "com.here.samples.*",
+    "org.locationtech.jts.*"
+  ],
+  "extensions" :[{
+    "extensionId":"child_extension_1",
+    "url":"s3://genericadapter/childExtension/naksha-ext-child1-1.0-SNAPSHOT-shaded.jar",
     "version": "1.0",
-    "type":"Extensions"
+    "initClassName" : "",
+    "type":"Extension"
   },
- {
-     "id":"child_extension_2",
-     "key":"childExtension/naksha-ext-child1-2.0-SNAPSHOT-shaded.jar",
-     "extensionName":"childjar2",
+  {
+     "extensionId":"child_extension_2",
+     "url":"s3://genericadapter/childExtension/naksha-ext-child1-2.0-SNAPSHOT-shaded.jar",
      "version": "2.0",
-     "type":"Extensions"
-   }
-]
+     "initClassName" : "",
+     "type":"Extension"
+  }]
+}

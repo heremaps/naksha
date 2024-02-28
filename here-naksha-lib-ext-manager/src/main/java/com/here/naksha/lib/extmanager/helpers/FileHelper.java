@@ -16,12 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.extmanager;
+package com.here.naksha.lib.extmanager.helpers;
 
+import com.here.naksha.lib.extmanager.JarClient;
 import java.io.File;
 import java.io.IOException;
 
-public interface JarClient {
-
-  public File getJar(String path) throws IOException;
+public class FileHelper implements JarClient {
+  @Override
+  public File getJar(String path) throws IOException {
+    return new File(path);
+  }
 }
