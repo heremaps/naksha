@@ -37,15 +37,35 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
          * @param day The day to encode, between 1 and 31.
          * @param seq The sequence in the day, between 0 and 2^42-1.
          */
-        fun of(year:Int, month:Int, day:Int, seq: BigInt64) : NakshaTxn =
+        fun of(year: Int, month: Int, day: Int, seq: BigInt64): NakshaTxn =
                 NakshaTxn((BigInt64(year) shl 51) or (BigInt64(month) shl 47) or (BigInt64(day) shl 42) add seq)
     }
 
-    val year = (value ushr 51).toInt()
-    val month = (value ushr 47).toInt() and 15
-    val day = (value ushr 42).toInt() and 31
-    val seq = value and SEQ_MAX
-    private lateinit var _tablePostfix : String
+    private var _year = -1
+    fun year(): Int {
+        if (_year < 0) _year = (value ushr 51).toInt()
+        return _year
+    }
+
+    private var _month = -1
+    fun month(): Int {
+        if (_month < 0) _month = (value ushr 47).toInt() and 15
+        return _month
+    }
+
+    private var _day = -1
+    fun day(): Int {
+        if (_day < 0) _day = (value ushr 42).toInt() and 31
+        return _day
+    }
+
+    private var _seq: BigInt64? = null
+    fun seq(): BigInt64 {
+        if (_seq == null) _seq = value and SEQ_MAX
+        return _seq!!
+    }
+
+    private lateinit var _tablePostfix: String
     private lateinit var _string: String
     private lateinit var _uuid: NakshaUuid
 
@@ -53,22 +73,22 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
      * Translate the transaction number into a table postfix in the format _yyyy_mm_dd_.
      * @return The table postfix.
      */
-    fun historyPostfix() : String {
+    fun historyPostfix(): String {
         if (!this::_tablePostfix.isInitialized) {
             val sb = StringBuilder()
-            sb.append(year)
+            sb.append(year())
             sb.append('_')
-            if (month < 10) sb.append('0')
-            sb.append(month)
+            if (month() < 10) sb.append('0')
+            sb.append(month())
             sb.append('_')
-            if (day < 10) sb.append('0')
-            sb.append(day)
+            if (day() < 10) sb.append('0')
+            sb.append(day())
             _tablePostfix = sb.toString()
         }
         return _tablePostfix
     }
 
-    override fun equals(other: Any?):Boolean {
+    override fun equals(other: Any?): Boolean {
         if (other is BigInt64) return value eq other
         if (other is NakshaTxn) return value eq other.value
         return false
@@ -79,12 +99,12 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
         return if (diff eqi 0) 0 else if (diff lti 0) -1 else 1
     }
 
-    override fun hashCode() : Int {
+    override fun hashCode(): Int {
         return value.hashCode()
     }
 
-    override fun toString() : String {
-        if (!this::_string.isInitialized) _string = "$year:$month:$day:$seq"
+    override fun toString(): String {
+        if (!this::_string.isInitialized) _string = "" + year() + ":" + month() + ":" + day() + ":" + seq()
         return _string
     }
 
@@ -93,8 +113,8 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
      * @param storageId The storage-identifier where this transaction is stored.
      * @return The transaction number as UUID.
      */
-    fun toUuid(storageId: String) : NakshaUuid {
-        if (!this::_uuid.isInitialized) _uuid = NakshaUuid(storageId, "txn", year, month, day, seq)
+    fun toUuid(storageId: String): NakshaUuid {
+        if (!this::_uuid.isInitialized) _uuid = NakshaUuid(storageId, "txn", year(), month(), day(), seq())
         return _uuid
     }
 
@@ -105,5 +125,5 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
      * @param uid The unique row identifier of the feature.
      * @return The UUID for this new feature state.
      */
-    fun newFeatureUuid(storageId: String, collectionId: String, uid:BigInt64) : NakshaUuid = NakshaUuid(storageId, collectionId, year, month, day, uid)
+    fun newFeatureUuid(storageId: String, collectionId: String, uid: BigInt64): NakshaUuid = NakshaUuid(storageId, collectionId, year(), month(), day(), uid)
 }
