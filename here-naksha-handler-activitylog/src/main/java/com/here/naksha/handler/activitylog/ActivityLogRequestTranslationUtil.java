@@ -21,8 +21,8 @@ package com.here.naksha.handler.activitylog;
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.ID;
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.PROPERTIES;
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_ACTIVITY_LOG_NS;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.pRefFromPropPath;
 
-import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.POpType;
 import com.here.naksha.lib.core.models.storage.PRef;
@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 class ActivityLogRequestTranslationUtil {
 
   private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {PROPERTIES, XYZ_ACTIVITY_LOG_NS, ID};
-  static final PRef PREF_ACTIVITY_LOG_ID = new NonIndexedPRef(ACTIVITY_LOG_ID_PATH);
+  static final PRef PREF_ACTIVITY_LOG_ID = pRefFromPropPath(ACTIVITY_LOG_ID_PATH);
 
   private ActivityLogRequestTranslationUtil() {}
 
