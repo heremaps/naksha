@@ -77,7 +77,7 @@ class ReadFeaturesWithApiFaultsHttpStorageTest extends ApiTest {
             .hasStatus(500)
             .hasStreamIdHeader(streamId);
 
-    assertTrue(response.body().contains("request timed out"));
+    assertTrue(response.body().contains("Timeout"));
 
     // Then: Verify request reached endpoint once
     verify(1, getRequestedFor(endpointPath));
@@ -98,7 +98,7 @@ class ReadFeaturesWithApiFaultsHttpStorageTest extends ApiTest {
             .hasStatus(500)
             .hasStreamIdHeader(streamId);
 
-    assertTrue(response.body().contains("request timed out"));
+    assertTrue(response.body().contains("Timeout"));
 
     // Then: Verify request reached endpoint once
     verify(1, getRequestedFor(endpointPath));
@@ -152,7 +152,7 @@ class ReadFeaturesWithApiFaultsHttpStorageTest extends ApiTest {
   @ValueSource(
           ints = {
                   HttpURLConnection.HTTP_UNAUTHORIZED,
-                  HttpURLConnection.HTTP_UNAUTHORIZED,
+                  HttpURLConnection.HTTP_FORBIDDEN,
                   429,
                   HttpURLConnection.HTTP_NOT_IMPLEMENTED}
   )
