@@ -61,6 +61,12 @@ CREATE OR REPLACE FUNCTION naksha_prepare_bulk_load(collectionId text, amount in
   session.prefetchUids(collectionId, amount, amount);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION naksha_txn() RETURNS int8 AS $$
+  let naksha = require("naksha");
+  let session = naksha.NakshaSession.Companion.get();
+  return session.txn().value;
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION naksha_trigger_before() RETURNS trigger AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
