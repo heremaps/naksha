@@ -118,15 +118,15 @@ class Plv8Test : Plv8TestContainer() {
     fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
         Static.collectionCreate(session.sql, session.schema, session.schemaOid, "foo", spGist = false, partition = false)
-        session.prefetchUids("foo", 1, 10)
-        assertEquals(BigInt64(1), session.newUid("foo"))
-        assertEquals(BigInt64(2), session.newUid("foo"))
-        assertEquals(BigInt64(3), session.newUid("foo"))
-        assertEquals(BigInt64(4), session.newUid("foo"))
-        assertEquals(BigInt64(5), session.newUid("foo"))
-        assertEquals(BigInt64(6), session.newUid("foo"))
-        assertEquals(BigInt64(7), session.newUid("foo"))
-        assertEquals(BigInt64(8), session.newUid("foo"))
+        assertEquals(0, session.newUid("foo"))
+        assertEquals(1, session.newUid("foo"))
+        assertEquals(2, session.newUid("foo"))
+        assertEquals(3, session.newUid("foo"))
+        assertEquals(4, session.newUid("foo"))
+        assertEquals(5, session.newUid("foo"))
+        assertEquals(6, session.newUid("foo"))
+        assertEquals(7, session.newUid("foo"))
+        assertEquals(8, session.newUid("foo"))
         // 9 and 10 are next UIDs!
         val pgNew = Jb.map.newMap()
         pgNew[COL_UID] = null // Should be set by trigger
@@ -151,12 +151,12 @@ class Plv8Test : Plv8TestContainer() {
         )
         // Simulate a trigger invocation.
         session.triggerBefore(t)
-        assertEquals(BigInt64(9), pgNew[COL_UID])
+        assertEquals(9, pgNew[COL_UID])
         assertEquals(BigInt64(0), pgNew[COL_TXN_NEXT])
         assertNotNull(pgNew[COL_XYZ])
         // Try the XYZ insert directly
         val uid = session.newUid("foo")
-        assertEquals(BigInt64(10), uid)
+        assertEquals(10, uid)
         val xyzBytes = session.xyzInsert("foo", "bar", uid, GEO_TYPE_NULL, null)
         val xyzNs = XyzNs().mapBytes(xyzBytes)
         val txn = session.txn()
@@ -164,7 +164,7 @@ class Plv8Test : Plv8TestContainer() {
         val expectedGrid = session.grid("bar", GEO_TYPE_NULL, null)
         assertEquals(expectedGrid, xyzNs.grid())
         val uuid = xyzNs.uuid()
-        assertEquals("${session.storageId}:foo:${txn.year()}:${txn.month()}:${txn.day()}:10", uuid)
+        assertEquals("${session.storageId}:foo:${txn.year()}:${txn.month()}:${txn.day()}:${txn.seq()}:10", uuid)
         session.sql.execute("COMMIT")
     }
 

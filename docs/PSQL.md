@@ -69,7 +69,7 @@ The local **sequence-number** is stored in a sequence named `naksha_txn_seq`. Ev
 
 This concept allows up to 4096 billion transactions per day (between 0 and 2^42-1). It will work up until the year 8191, where it will overflow. Should there be more than 4096 billion transaction in a single day, this will overflow as into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible.
 
-The human-readable (Javascript compatible) representation is as a string in the format `{storageId}:txn:{year}:{month}:{day}:{seq}`.
+The human-readable (Javascript compatible) representation is as a string in the format `{storageId}:txn:{year}:{month}:{day}:{seq}:0`.
 
 Normally, when a new unique identifier is requested, the method `naksha_txn()` will use the next value from the sequence (`naksha_txn_seq`) and verify it, so, if the year, month and day of the current transaction start-time (`transaction_timestamp()`) matches the one stored in the sequence-number. If this is not the case, it will enter an advisory lock and retry the operation, if the sequence-number is still invalid, it will reset the sequence-number to the correct date, with the _sequence_ part being set to `1`, so that the next `naksha_txn()` method that enters the lock or queries the _sequence_, receives a correct number, starting at _sequence_ `1`. The method itself will use the _sequence_ value `0` in the rollover case.
 
@@ -81,7 +81,7 @@ Traditionally XYZ-Hub used UUIDs as state-identifiers, but exposed them as strin
 
 The new format is called GUID (global unique identifier), returning to the roots of the Geo-Space-API. The syntax for a GUID in the PSQL-storage is:
 
-`{storageId}:{collectionId}:{year}:{month}:{day}:{uid}`
+`{storageId}:{collectionId}:{txn.year}:{txn.month}:{txn.day}:{txn.seq}:{uid}`
 
 **Note**: This format holds all information needed for Naksha to know in which storage a feature is located, of which it only has the _GUID_. The PSQL storage knows from this _GUID_ exactly in which database table the features is located, even taking partitioning into account. The reason is, that partitioning is done by transaction start date, which is contained in the _GUID_. Therefore, providing a _GUID_, directly identifies the storage location of a feature, which in itself holds the information to which transaction it belongs to (`txn`). Beware that the transaction-number as well encodes the transaction start time and therefore allows as well to know exactly where the features of a transaction are located (including finding the transaction details itself).
 
@@ -97,16 +97,17 @@ As the PostgresQL code switched to [JBON](./JBON.md) encoding, a table for the g
 
 The table layout for all tables:
 
-| Column   | Type  | Modifiers                              | Description                                                  |
-|----------|-------|----------------------------------------|--------------------------------------------------------------|
-| uid      | int8  | PRIMARY KEY NOT NULL                   | `xyz->uid` - Primary row identifier                          |
-| txn_next | int8  | NOT NULL                               | `xyz->txn_next` - Only needed in history                     |
-| geo_type | int2  |                                        | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).   |
-| id       | text  |                                        | The **id** of the feature.                                   |
-| feature  | bytea |                                        | The Geo-JSON feature in JBON, except for what was extracted. |
-| geo      | bytea |                                        | `geometry` - The geometry of the features.                   |
-| tags     | bytea |                                        | `xyz->tags`                                                  |
-| xyz      | bytea |                                        | `feature->properties->@ns:com:here:xyz`                      |
+| Column   | Type  | Modifiers   | Description                                                  |
+|----------|-------|-------------|--------------------------------------------------------------|
+| txn      | int8  | NOT NULL    | `xyz->txn` - Primary row identifier                          |
+| txn_next | int8  | NOT NULL    | `xyz->txn_next` - Only needed in history                     |
+| uid      | int4  | NOT NULL    | `xyz->uid` - Primary row identifier                          |
+| geo_type | int2  |             | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).   |
+| id       | text  |             | The **id** of the feature.                                   |
+| xyz      | bytea |             | `feature->properties->@ns:com:here:xyz`                      |
+| tags     | bytea |             | `xyz->tags`                                                  |
+| geo      | bytea |             | `geometry` - The geometry of the features.                   |
+| feature  | bytea |             | The Geo-JSON feature in JBON, except for what was extracted. |
 
 The **xyz** namespace is split into parts, to avoid unnecessary work for triggers and functions. Therefore, the **tags** columns contains the tags extracted from the XYZ namespace, while the rest of the XYZ namespace, managed by Naksha, is stored in the **xyz** column. The **txn_next** is as well managed internally and only used for the history, therefore it is an own column (actually, this is the only value that need to be adjusted, when a row is moved into history). All these columns (**uid**, **txn_next**, **tags** and **xyz**) should be merged together into the Geo-JSON feature under `feature->properties->@ns:com:here:xyz`, when downward compatibility with Data-Hub is required. This is left to the client and not part of the database code. Modern code using for example Web-Sockets, should no longer do this. The reason for this design is, that the **xyz** namespace is managed by the database only and must not be modified by the client, while **feature**, **geometry** and **tags** are client only and are not modified by the database. The **tags** are separated, because they need to be stored very efficiently (using an own dictionary) and they are indexed, while the feature itself is normally not read in the database.
 
@@ -114,17 +115,16 @@ The **xyz** namespace is split into parts, to avoid unnecessary work for trigger
 
 All collections do have a comment on the HEAD table, which is a JSON objects with the following setup:
 
-| Property              | Type    | Meaning                                                                                                                           |
-|-----------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------|
-| id                    | String  | The collection name again.                                                                                                        |
-| estimatedFeatureCount | long    | The estimated total amount of features in the collection.                                                                         |
-| byteSize              | long    | The maximum size of the raw JSON of features in this collection.                                                                  |
-| compressedSize        | long    | The maximum compressed size of the JSON of features in this collection.                                                           |
-| maxAge                | long    | The maximum amount of days of history to keep (defaults to 36,500 which means 100 years).                                         |
-| historyEnabled        | bool    | If `true`, history will be written (defaults to _true_).                                                                          |
-| idPrefix              | String? | If not `null` and a feature is inserted, updated or deleted with an **id** that starts with this string, the **id** is truncated. |
-| author                | String? | If not `null` and a feature is inserted without an author, this value will be used.                                               |
-| optimalPartitioning   | bool    | If _true_, then optimal partitioning is enabled (default to _false_).                                                             |
+| Property              | Type    | Meaning                                                                                   |
+|-----------------------|---------|-------------------------------------------------------------------------------------------|
+| id                    | String  | The collection name again.                                                                |
+| estimatedFeatureCount | long    | The estimated total amount of features in the collection.                                 |
+| byteSize              | long    | The maximum size of the raw JSON of features in this collection.                          |
+| compressedSize        | long    | The maximum compressed size of the JSON of features in this collection.                   |
+| maxAge                | long    | The maximum amount of days of history to keep (defaults to 36,500 which means 100 years). |
+| historyEnabled        | bool    | If `true`, history will be written (defaults to _true_).                                  |
+| author                | String? | If not `null` and a feature is inserted without an author, this value will be used.       |
+| optimalPartitioning   | bool    | If _true_, then optimal partitioning is enabled (default to _false_).                     |
 
 ## Optimal Partitioning
 

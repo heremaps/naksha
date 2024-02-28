@@ -177,46 +177,40 @@ SET (toast_tuple_target=8160"""
 ((id) COLLATE "C" text_pattern_ops DESC) WITH (fillfactor=$fillFactor);
 """
 
-        // uid
-        qin = sql.quoteIdent("${tableName}_uid_idx")
+        // txn, uid
+        qin = sql.quoteIdent("${tableName}_txn_uid_idx")
         query += """CREATE UNIQUE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(uid) WITH (fillfactor=$fillFactor);
-"""
-
-        // txn
-        qin = sql.quoteIdent("${tableName}_txn_idx")
-        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(xyz_txn(xyz) DESC) WITH (fillfactor=$fillFactor);
+(txn DESC, uid DESC) WITH (fillfactor=$fillFactor);
 """
 
         // geo
         qin = sql.quoteIdent("${tableName}_geo_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndexType
-(naksha_geometry(geo_type,geo), xyz_txn(xyz), xyz_extent(xyz)) WITH (buffering=ON,fillfactor=$fillFactor);
+(naksha_geometry(geo_type,geo), txn) WITH (buffering=ON,fillfactor=$fillFactor);
 """
 
         // tags
         qin = sql.quoteIdent("${tableName}_tags_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin
-(tags_to_jsonb(tags), xyz_txn(xyz), xyz_extent(xyz)) WITH (fastupdate=ON,gin_pending_list_limit=32768);
+(tags_to_jsonb(tags), txn) WITH (fastupdate=ON,gin_pending_list_limit=32768);
 """
 
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(xyz_grid(xyz) COLLATE "C" DESC, xyz_txn(xyz) DESC, xyz_extent(xyz)) WITH (fillfactor=$fillFactor);
+(xyz_grid(xyz) COLLATE "C" DESC, txn DESC) WITH (fillfactor=$fillFactor);
 """
 
         // app_id
         qin = sql.quoteIdent("${tableName}_app_id_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(xyz_app_id(xyz) COLLATE "C" DESC, xyz_updated_at(xyz) DESC, xyz_txn(xyz) DESC) WITH (fillfactor=$fillFactor);
+(xyz_app_id(xyz) COLLATE "C" DESC, xyz_updated_at(xyz) DESC, txn DESC) WITH (fillfactor=$fillFactor);
 """
 
         // author
         qin = sql.quoteIdent("${tableName}_author_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(xyz_author(xyz) COLLATE "C" DESC, xyz_author_ts(xyz) DESC, xyz_txn(xyz) DESC) WITH (fillfactor=$fillFactor);
+(xyz_author(xyz) COLLATE "C" DESC, xyz_author_ts(xyz) DESC, txn DESC) WITH (fillfactor=$fillFactor);
 """
         sql.execute(query)
     }
@@ -236,15 +230,26 @@ SET (toast_tuple_target=8160"""
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
-        val CREATE_TABLE = """CREATE TABLE {table} (
-    uid         int8 NOT NULL,
+        val CREATE_TABLE = if (PERF_TEST_FEATURE) """CREATE TABLE {table} (
+    txn         int8,
+    txn_next    int8,
+    uid         int4,
+    geo_type    int2,
+    id          text COMPRESSION lz4 COLLATE "C",
+    xyz         bytea COMPRESSION lz4,
+    tags        bytea COMPRESSION lz4,
+    geo         bytea COMPRESSION lz4,
+    feature     bytea COMPRESSION lz4
+) """ else """CREATE TABLE {table} (
+    txn         int8 NOT NULL,
     txn_next    int8 NOT NULL CHECK(txn_next {condition}),
+    uid         int4 NOT NULL,
     geo_type    int2 NOT NULL,
     id          text COMPRESSION lz4 COLLATE "C" NOT NULL,
-    feature     bytea COMPRESSION lz4 NOT NULL,
-    geo         bytea COMPRESSION lz4,
+    xyz         bytea COMPRESSION lz4 NOT NULL,
     tags        bytea COMPRESSION lz4,
-    xyz         bytea COMPRESSION lz4 NOT NULL
+    geo         bytea COMPRESSION lz4,
+    feature     bytea COMPRESSION lz4 NOT NULL
 ) """
         var query: String
 
@@ -305,7 +310,7 @@ SET (toast_tuple_target=8160"""
         sql.execute(query)
 
         // Optimizations are done on the history partitions!
-        collectionAttachTriggers(sql, id, schema, schemaOid)
+        if (!PERF_TEST_FEATURE) collectionAttachTriggers(sql, id, schema, schemaOid)
     }
 
     /**

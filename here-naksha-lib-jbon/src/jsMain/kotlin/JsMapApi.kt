@@ -6,20 +6,13 @@ package com.here.naksha.lib.jbon
 @JsExport
 class JsMapApi : IMapApi {
     val mapTemplate = JsMap()
+    val mapPrototype = js("Object.getPrototypeOf(this.mapTemplate)")
 
-    override fun isMap(any: Any?): Boolean {
-        return js("any !== undefined && any !== null && typeof any === 'object' && !Array.isArray(any)")
-    }
+    override fun isMap(any: Any?): Boolean = js("any && typeof any === 'object' && !Array.isArray(any)")
 
-    override fun asMap(any: Any?): IMap {
-        if (any is JsMap) return any
-        if (!isMap(any)) throw IllegalArgumentException("require object")
-        return js("Object.setPrototypeOf(any,Object.getPrototypeOf(this.mapTemplate))")
-    }
+    override fun asMap(any: Any?): IMap = js("any && !Array.isArray(any) && Object.setPrototypeOf(any,this.mapPrototype) && any")
 
-    override fun newMap(): IMap {
-        return js("{}")
-    }
+    override fun newMap(): IMap = JsMap()
 
     override fun size(map: IMap): Int {
         require(isMap(map))

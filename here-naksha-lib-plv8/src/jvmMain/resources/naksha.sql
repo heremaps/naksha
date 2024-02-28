@@ -55,12 +55,6 @@ CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, a
   }
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION naksha_prepare_bulk_load(collectionId text, amount int4) RETURNS void AS $$
-  let naksha = require("naksha");
-  let session = naksha.NakshaSession.Companion.get();
-  session.prefetchUids(collectionId, amount, amount);
-$$ LANGUAGE 'plv8' IMMUTABLE;
-
 CREATE OR REPLACE FUNCTION naksha_txn() RETURNS int8 AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();

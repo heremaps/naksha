@@ -102,14 +102,35 @@ SET SESSION enable_seqscan = OFF;
     private lateinit var historyPartitionCache: IMap
 
     /**
-     * The cache for the object ids of the collection sequence counters.
-     */
-    private lateinit var collectionSeqOidCache: IMap
-
-    /**
      * The cache for UID.
      */
     private lateinit var collectionUidCache: IMap
+
+    /**
+     * Returns a new UID for the given collection.
+     * @param collectionId The ID of the collection for which to return a new _uid_.
+     * @return The new _uid_.
+     */
+    fun newUid(collectionId: String): Int {
+        val uidCache : IMap
+        if (this::collectionUidCache.isInitialized) {
+            uidCache = collectionUidCache
+        } else {
+            uidCache = Jb.map.newMap()
+            collectionUidCache = uidCache
+        }
+        val uid : Int
+        var uidCounter : Int
+        if (uidCache.containsKey(collectionId)) {
+            uidCounter = uidCache[collectionId]!!
+            uid = uidCounter
+            uidCache[collectionId] = ++uidCounter
+        } else {
+            uid = 0
+            uidCache[collectionId] = 1
+        }
+        return uid
+    }
 
     /**
      * The last error number as SQLState.
@@ -128,6 +149,7 @@ SET SESSION enable_seqscan = OFF;
         this._xactId = null
         this.errNo = null
         this.errMsg = null
+        this.collectionUidCache = Jb.map.newMap()
     }
 
 
@@ -141,51 +163,6 @@ SET SESSION enable_seqscan = OFF;
         if (!historyPartitionCache.containsKey(id)) {
             // TODO: Create the corresponding history partition (txn_next should match txn())
         }
-    }
-
-    /**
-     * Fills the internal UID cache for the given collection with the given amount of UIDs.
-     * @param collectionId The collection identifier.
-     * @param min The minimal amount of UIDs to cache (if that many are still cached, we are okay).
-     * @param max The maximum amount of UIDs to cache (if some need to be fetched, then this many are fetched).
-     */
-    fun prefetchUids(collectionId: String, min: Int, max: Int) {
-        require(min in 0..max) { "min ($min) expected to be within 0 and max ($max)" }
-        if (!this::collectionUidCache.isInitialized) collectionUidCache = Jb.map.newMap()
-        var cached_uids: ArrayList<BigInt64>? = collectionUidCache[collectionId]
-        if (cached_uids == null) {
-            cached_uids = ArrayList()
-            collectionUidCache[collectionId] = cached_uids
-        }
-        if (cached_uids.size >= min) return
-
-        // Fill the cache.
-        if (!this::collectionSeqOidCache.isInitialized) collectionSeqOidCache = Jb.map.newMap()
-        var uidSeqOid: Int? = collectionSeqOidCache[collectionId]
-        if (uidSeqOid == null) {
-            val seqName = collectionId + "_uid_seq"
-            uidSeqOid = asMap(asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = $1 and relnamespace = $2",
-                    arrayOf(seqName, schemaOid)))[0])["oid"]!!
-            collectionSeqOidCache[collectionId] = uidSeqOid
-        }
-
-        val need = max - cached_uids.size
-        val rows = asArray(sql.execute("SELECT nextval($1) as v from generate_series(1,$need);", arrayOf(uidSeqOid)))
-        var i = 0
-        while (i < rows.size) {
-            cached_uids.add(asMap(rows[i])["v"]!!)
-            i++
-        }
-    }
-
-    /**
-     * Returns a new UID for the given collection from the cached UIDs.
-     * @return The new UID.
-     */
-    fun newUid(collectionId: String): BigInt64 {
-        prefetchUids(collectionId, 1, 10)
-        val cached_uids: ArrayList<BigInt64> = collectionUidCache[collectionId]!!
-        return cached_uids.removeFirst()
     }
 
     private lateinit var gridPlan : IPlv8Plan
@@ -240,13 +217,14 @@ SET SESSION enable_seqscan = OFF;
      * @param geo The geometry of the feature as EWKB; if any.
      * @return The new XYZ namespace for this feature.
      */
-    internal fun xyzInsert(collectionId: String, featureId: String, uid: BigInt64, geoType: Short, geo: ByteArray?): ByteArray {
+    internal fun xyzInsert(collectionId: String, featureId: String, uid: Int, geoType: Short, geo: ByteArray?): ByteArray {
         val env = Jb.env
         val createdAt = env.currentMillis()
         val txn = txn()
         val extent = extent(geo)
         val uuid = txn.newFeatureUuid(storageId, collectionId, uid).toString() // tested, cheap!
-        val grid = "none" // grid(featureId, geoType, geo) // tested, very expensive, around 50us!
+        //val grid = if (Static.PERF_TEST_FEATURE) "none" else grid(featureId, geoType, geo) // tested, very expensive, around 50us!
+        val grid = "none"
         return xyzBuilder.buildXyzNs(createdAt, createdAt, txn.value, XYZ_OP_CREATE, 1, createdAt, extent, null, uuid, appId, author
                 ?: appId, grid)
     }
@@ -275,6 +253,7 @@ SET SESSION enable_seqscan = OFF;
         }
         if (data.TG_OP == TG_OP_INSERT) {
             check(data.NEW != null) { "Missing NEW for INSERT" }
+            data.NEW[COL_TXN] = txn().value
             data.NEW[COL_TXN_NEXT] = Jb.int64.ZERO()
             val uid = newUid(collectionId)
             data.NEW[COL_UID] = uid
@@ -458,7 +437,6 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
         val createPlan = sql.prepare("INSERT INTO $collectionIdQuoted (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz",
                 arrayOf(SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_INT16, SQL_BYTE_ARRAY))
         try {
-            prefetchUids(collectionId, op_arr.size, op_arr.size)
             var i = 0
             while (i < op_arr.size) {
                 var id: String? = null

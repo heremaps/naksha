@@ -33,11 +33,17 @@ class Plv8PerfTest : Plv8TestContainer() {
         @BeforeAll
         @JvmStatic
         fun prepare() {
+            Static.PERF_TEST_FEATURE = true
             session = NakshaSession.get()
             jvmSql = session.sql as JvmPlv8Sql
             val conn = jvmSql.conn
             check(conn != null)
             this.conn = conn
+            val stmt = conn.prepareStatement("""do $$
+let naksha = require("naksha");
+naksha.Static.PERF_TEST_FEATURE=true;
+$$ LANGUAGE 'plv8';""")
+            stmt.use { stmt.execute() }
         }
     }
 
@@ -67,13 +73,12 @@ class Plv8PerfTest : Plv8TestContainer() {
     @Order(1)
     @Test
     fun createBaseline() {
-        var stmt = conn.prepareStatement("""DROP TABLE ptest;
+        var stmt = conn.prepareStatement("""DROP TABLE IF EXISTS ptest;
 CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, tags bytea, feature bytea, geo bytea);
 """)
         stmt.use {
             stmt.executeUpdate()
         }
-        conn.commit()
         val features = createFeatures(5000)
         val start = currentMicros()
         stmt = conn.prepareStatement("INSERT INTO ptest (id, feature) VALUES (?, ?)")
@@ -120,8 +125,8 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val rounds = 10
         var r = 0
         while (r++ < rounds) {
-            val features = createFeatures(chunkSize)
             val start = currentMicros()
+            val features = createFeatures(chunkSize)
             val jvmSql = session.sql as JvmPlv8Sql
             val conn = jvmSql.conn
             check(conn != null)
@@ -168,11 +173,10 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val featuresWritten = (rounds * size).toDouble()
         val seconds = us.toDouble() / 1_000_000.0
         val featuresPerSecond = featuresWritten / seconds
-        var microsPerFeature = us.toDouble() / featuresWritten
+        val microsPerFeature = us.toDouble() / featuresWritten
         if (baseLine == 0.0) {
             println("Write $featuresPerSecond features per second, ${microsPerFeature}us per feature, total time: ${seconds}s")
         } else {
-            microsPerFeature -= baseLine
             println("Write $featuresPerSecond features per second, ${microsPerFeature}us per feature (baseline=${baseLine}us), total time: ${seconds}s")
         }
         return microsPerFeature

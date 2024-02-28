@@ -114,7 +114,7 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
      * @return The transaction number as UUID.
      */
     fun toUuid(storageId: String): NakshaUuid {
-        if (!this::_uuid.isInitialized) _uuid = NakshaUuid(storageId, "txn", year(), month(), day(), seq())
+        if (!this::_uuid.isInitialized) _uuid = NakshaUuid(storageId, "txn", year(), month(), day(), seq(), 0)
         return _uuid
     }
 
@@ -125,5 +125,5 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
      * @param uid The unique row identifier of the feature.
      * @return The UUID for this new feature state.
      */
-    fun newFeatureUuid(storageId: String, collectionId: String, uid: BigInt64): NakshaUuid = NakshaUuid(storageId, collectionId, year(), month(), day(), uid)
+    fun newFeatureUuid(storageId: String, collectionId: String, uid: Int): NakshaUuid = NakshaUuid(storageId, collectionId, year(), month(), day(), seq(), uid)
 }
