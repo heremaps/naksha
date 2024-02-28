@@ -38,21 +38,16 @@ class RequestSender {
 
   private static final Logger log = LoggerFactory.getLogger(RequestSender.class);
   private final String hostUrl;
-
+  private final Map<String, String> defaultHeaders;
   private final HttpClient httpClient;
-
-  // Do not modify after constructor because RequestSender is shared among multiple requests.
-  private final HttpRequest.Builder baseBuilder;
   private final long socketTimeoutSec;
 
   public RequestSender(
       String hostUrl, Map<String, String> defaultHeaders, HttpClient httpClient, long socketTimeoutSec) {
-    this.hostUrl = hostUrl;
     this.httpClient = httpClient;
-
-    this.baseBuilder = newBuilder().timeout(Duration.ofSeconds(socketTimeoutSec));
+    this.hostUrl = hostUrl;
+    this.defaultHeaders = defaultHeaders;
     this.socketTimeoutSec = socketTimeoutSec;
-    defaultHeaders.forEach(baseBuilder::header);
   }
 
   /**
@@ -61,35 +56,37 @@ class RequestSender {
    * @param endpoint does not contain host:port part, starts with "/".
    */
   HttpResponse<String> sendRequest(String endpoint) {
-    return sendRequest(endpoint, null, null, null);
+    return sendRequest(endpoint, true, null, null, null);
   }
 
   HttpResponse<String> sendRequest(
       @NotNull String endpoint,
+      boolean keepDefHeaders,
       @Nullable Map<String, String> headers,
       @Nullable String httpMethod,
       @Nullable String body) {
     URI uri = URI.create(hostUrl + endpoint);
-    HttpRequest.Builder specificBuilder = baseBuilder.copy().uri(uri);
+    HttpRequest.Builder builder = newBuilder().uri(uri).timeout(Duration.ofSeconds(socketTimeoutSec));
 
-    if (headers != null) headers.forEach(specificBuilder::header);
+    if (keepDefHeaders) defaultHeaders.forEach(builder::header);
+    if (headers != null) headers.forEach(builder::header);
 
     HttpRequest.BodyPublisher bodyPublisher =
         body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body);
-    if (httpMethod != null) specificBuilder.method(httpMethod, bodyPublisher);
-    HttpRequest specificRequest = specificBuilder.build();
+    if (httpMethod != null) builder.method(httpMethod, bodyPublisher);
+    HttpRequest request = builder.build();
 
-    return sendRequest(specificRequest);
+    return sendRequest(request);
   }
 
-  private HttpResponse<String> sendRequest(HttpRequest specificRequest) {
+  private HttpResponse<String> sendRequest(HttpRequest request) {
     try {
       long startTime = System.currentTimeMillis();
       CompletableFuture<HttpResponse<String>> futureResponse =
-          httpClient.sendAsync(specificRequest, HttpResponse.BodyHandlers.ofString());
+          httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
       HttpResponse<String> response = futureResponse.get(socketTimeoutSec, TimeUnit.SECONDS);
       long executionTime = System.currentTimeMillis() - startTime;
-      log.info("Request to {} took {}ms", specificRequest.uri(), executionTime);
+      log.info("Request to {} took {}ms", request.uri(), executionTime);
       return response;
     } catch (Exception e) {
       log.warn("We got exception while executing Http request against remote server.", e);
