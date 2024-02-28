@@ -24,6 +24,9 @@ class Plv8PerfTest : Plv8TestContainer() {
     )
 
     companion object {
+        private val FeaturesPerRound = 2000
+        private val Rounds = 10
+
         private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
         private lateinit var jvmSql: JvmPlv8Sql
         private lateinit var conn: Connection
@@ -79,7 +82,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         stmt.use {
             stmt.executeUpdate()
         }
-        val features = createFeatures(5000)
+        val features = createFeatures(FeaturesPerRound)
         val start = currentMicros()
         stmt = conn.prepareStatement("INSERT INTO ptest (id, feature) VALUES (?, ?)")
         stmt.use {
@@ -121,20 +124,15 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
 
         val useBatch = true
         var totalTime = 0L
-        val chunkSize = 2000
-        val rounds = 10
         var r = 0
-        while (r++ < rounds) {
+        while (r++ < Rounds) {
+            val features = createFeatures(FeaturesPerRound)
             val start = currentMicros()
-            val features = createFeatures(chunkSize)
-            val jvmSql = session.sql as JvmPlv8Sql
-            val conn = jvmSql.conn
-            check(conn != null)
             if (useBatch) {
                 val stmt = conn.prepareStatement("INSERT INTO v2_perf_test (id, feature) VALUES (?, ?)")
                 stmt.use {
                     var i = 0
-                    while (i < chunkSize) {
+                    while (i < FeaturesPerRound) {
                         stmt.setString(1, features.idArr[i])
                         stmt.setBytes(2, features.featureArr[i])
                         stmt.addBatch()
@@ -159,7 +157,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
             val end = currentMicros()
             totalTime += (end - start)
         }
-        printStatistics(chunkSize, rounds, totalTime, baseLine)
+        printStatistics(FeaturesPerRound, Rounds, totalTime, baseLine)
     }
 
     /**
