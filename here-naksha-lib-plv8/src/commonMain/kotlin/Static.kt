@@ -71,6 +71,10 @@ $$ LANGUAGE 'plv8';
     @JvmStatic
     var PRINT_STACK_TRACES = false
 
+    // Temporary flag for performance testing.
+    @JvmStatic
+    var PERF_TEST_FEATURE = false
+
     /**
      * Array to fasten partition id.
      */
@@ -84,13 +88,6 @@ $$ LANGUAGE 'plv8';
      */
     @JvmStatic
     val TXN_LOCK_ID = lockId("naksha_txn_seq")
-
-    /**
-     * Array to create a pseudo GeoHash, which is BASE-32 encoded.
-     */
-    @JvmStatic
-    private val BASE32 = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
-            'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
 
     /**
      * Returns the lock-id for the given name.
@@ -115,45 +112,6 @@ $$ LANGUAGE 'plv8';
      */
     @JvmStatic
     fun partitionNameForId(id: String): String = PARTITION_ID[partitionNumber(id)]
-
-    /**
-     * Create a GRID ([GeoHash](https://en.wikipedia.org/wiki/Geohash) Reference ID) from the given geometry.
-     * The GRID is used for distributed processing of features. This method uses GeoHash at level 14, which uses
-     * 34 bits for latitude and 36 bits for longitude (70-bit total). The precision is therefore higher than 1mm.
-     *
-     * If the feature does not have a geometry, this method creates a pseudo GRID (GeoHash Reference ID) from the
-     * given feature-id, this is based upon [Geohash](https://en.wikipedia.org/wiki/Geohash#Textual_representation).
-     *
-     * See [https://www.movable-type.co.uk/scripts/geohash.html](https://www.movable-type.co.uk/scripts/geohash.html)
-     * @param sql The SQL API.
-     * @param id The feature-id.
-     * @param geoType The geometry type.
-     * @param geo The feature geometry; if any.
-     * @return The GRID (7 character long string).
-     */
-    @JvmStatic
-    fun grid(sql: IPlv8Sql, id: String, geoType: Short, geo: ByteArray?): String {
-        if (geo == null) {
-            val sb = StringBuilder()
-            var hash = Fnv1a64.string(Fnv1a64.start(), id)
-            var i = 0
-            sb.append(BASE32[id[0].code and 31])
-            while (i++ < 13) {
-                val b32 = hash.toInt() and 31
-                sb.append(BASE32[b32])
-                hash = hash ushr 5
-            }
-            return sb.toString()
-        }
-        return asMap(asArray(sql.execute("SELECT ST_GeoHash(ST_Centroid(naksha_geometry($1::int2,$2::bytea)),14) as hash", arrayOf(geoType, geo)))[0])["hash"]!!
-    }
-
-    /**
-     * Calculates the extent, the size of the feature in milliseconds.
-     */
-    @JvmStatic
-    fun extent(sql: IPlv8Sql, geo: ByteArray?): BigInt64 = Jb.int64.ZERO()
-    // TODO: Implement me!
 
     /**
      * Tests if specific database table (in the Naksha session schema) exists already
@@ -227,7 +185,7 @@ SET (toast_tuple_target=8160"""
 
         // txn
         qin = sql.quoteIdent("${tableName}_txn_idx")
-        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
+        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
 (xyz_txn(xyz) DESC) WITH (fillfactor=$fillFactor);
 """
 
@@ -239,25 +197,25 @@ SET (toast_tuple_target=8160"""
 
         // tags
         qin = sql.quoteIdent("${tableName}_tags_idx")
-        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin 
+        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin
 (tags_to_jsonb(tags), xyz_txn(xyz), xyz_extent(xyz)) WITH (fastupdate=ON,gin_pending_list_limit=32768);
 """
 
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
-        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
+        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
 (xyz_grid(xyz) COLLATE "C" DESC, xyz_txn(xyz) DESC, xyz_extent(xyz)) WITH (fillfactor=$fillFactor);
 """
 
         // app_id
         qin = sql.quoteIdent("${tableName}_app_id_idx")
-        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
+        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
 (xyz_app_id(xyz) COLLATE "C" DESC, xyz_updated_at(xyz) DESC, xyz_txn(xyz) DESC) WITH (fillfactor=$fillFactor);
 """
 
         // author
         qin = sql.quoteIdent("${tableName}_author_idx")
-        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
+        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
 (xyz_author(xyz) COLLATE "C" DESC, xyz_author_ts(xyz) DESC, xyz_txn(xyz) DESC) WITH (fillfactor=$fillFactor);
 """
         sql.execute(query)
@@ -297,7 +255,7 @@ SET (toast_tuple_target=8160"""
         if (!partition) {
             sql.execute(query)
             collectionOptimizeTable(sql, id, false)
-            collectionAddIndices(sql, id, spGist, false)
+            if (!PERF_TEST_FEATURE) collectionAddIndices(sql, id, spGist, false)
         } else {
             query += "PARTITION BY RANGE (naksha_partition_number(id))"
             sql.execute(query)

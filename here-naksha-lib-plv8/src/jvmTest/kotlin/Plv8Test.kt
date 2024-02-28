@@ -51,7 +51,7 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun testGrid() {
         val session = NakshaSession.get()
-        val grid = Static.grid(session.sql, "foo", GEO_TYPE_NULL, null)
+        val grid = session.grid("foo", GEO_TYPE_NULL, null)
         assertNotNull(grid)
         assertEquals(14, grid.length)
         assertEquals("6rcpmez33pmdte", grid)
@@ -161,10 +161,10 @@ class Plv8Test : Plv8TestContainer() {
         val xyzNs = XyzNs().mapBytes(xyzBytes)
         val txn = session.txn()
         assertEquals(txn, xyzNs.txn())
-        val expectedGrid = Static.grid(session.sql, "bar", GEO_TYPE_NULL, null)
+        val expectedGrid = session.grid("bar", GEO_TYPE_NULL, null)
         assertEquals(expectedGrid, xyzNs.grid())
         val uuid = xyzNs.uuid()
-        assertEquals("${session.storageId}:foo:${txn.year}:${txn.month}:${txn.day}:10", uuid)
+        assertEquals("${session.storageId}:foo:${txn.year()}:${txn.month()}:${txn.day()}:10", uuid)
         session.sql.execute("COMMIT")
     }
 

@@ -60,6 +60,13 @@ SET SESSION enable_seqscan = OFF;
 
     companion object {
         /**
+         * Array to create a pseudo GeoHash, which is BASE-32 encoded.
+         */
+        @JvmStatic
+        private val BASE32 = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
+                'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
+
+        /**
          * Returns the current thread local [NakshaSession].
          * @return The current thread local [NakshaSession].
          * @throws IllegalStateException If the current session is no Naksha session.
@@ -143,7 +150,7 @@ SET SESSION enable_seqscan = OFF;
      * @param max The maximum amount of UIDs to cache (if some need to be fetched, then this many are fetched).
      */
     fun prefetchUids(collectionId: String, min: Int, max: Int) {
-        require(min in 1..max)
+        require(min in 0..max) { "min ($min) expected to be within 0 and max ($max)" }
         if (!this::collectionUidCache.isInitialized) collectionUidCache = Jb.map.newMap()
         var cached_uids: ArrayList<BigInt64>? = collectionUidCache[collectionId]
         if (cached_uids == null) {
@@ -181,6 +188,47 @@ SET SESSION enable_seqscan = OFF;
         return cached_uids.removeFirst()
     }
 
+    private lateinit var gridPlan : IPlv8Plan
+
+    /**
+     * Create a GRID ([GeoHash](https://en.wikipedia.org/wiki/Geohash) Reference ID) from the given geometry.
+     * The GRID is used for distributed processing of features. This method uses GeoHash at level 14, which uses
+     * 34 bits for latitude and 36 bits for longitude (70-bit total). The precision is therefore higher than 1mm.
+     *
+     * If the feature does not have a geometry, this method creates a pseudo GRID (GeoHash Reference ID) from the
+     * given feature-id, this is based upon [Geohash](https://en.wikipedia.org/wiki/Geohash#Textual_representation).
+     *
+     * See [https://www.movable-type.co.uk/scripts/geohash.html](https://www.movable-type.co.uk/scripts/geohash.html)
+     * @param id The feature-id.
+     * @param geoType The geometry type.
+     * @param geo The feature geometry; if any.
+     * @return The GRID (7 character long string).
+     */
+    internal fun grid(id: String, geoType: Short, geo: ByteArray?): String {
+        if (geo == null) {
+            val sb = StringBuilder()
+            var hash = Fnv1a64.string(Fnv1a64.start(), id)
+            var i = 0
+            sb.append(BASE32[id[0].code and 31])
+            while (i++ < 13) {
+                val b32 = hash.toInt() and 31
+                sb.append(BASE32[b32])
+                hash = hash ushr 5
+            }
+            return sb.toString()
+        }
+        if (!this::gridPlan.isInitialized) {
+            gridPlan = sql.prepare("SELECT ST_GeoHash(ST_Centroid(naksha_geometry($1::int2,$2::bytea)),14) as hash", arrayOf(SQL_INT16, SQL_BYTE_ARRAY))
+        }
+        return asMap(asArray(gridPlan.execute(arrayOf(geoType, geo)))[0])["hash"]!!
+    }
+
+    /**
+     * Calculates the extent, the size of the feature in milliseconds.
+     */
+    internal fun extent(geo: ByteArray?): BigInt64 = Jb.int64.ZERO()
+    // TODO: Implement me!
+
     private val xyzBuilder = XyzBuilder(Jb.env.newDataView(ByteArray(500)))
 
     /**
@@ -195,10 +243,10 @@ SET SESSION enable_seqscan = OFF;
     internal fun xyzInsert(collectionId: String, featureId: String, uid: BigInt64, geoType: Short, geo: ByteArray?): ByteArray {
         val env = Jb.env
         val createdAt = env.currentMillis()
-        val txn = txn();
-        val extent = Static.extent(sql, geo)
-        val uuid = txn.newFeatureUuid(storageId, collectionId, uid).toString()
-        val grid = Static.grid(sql, featureId, geoType, geo)
+        val txn = txn()
+        val extent = extent(geo)
+        val uuid = txn.newFeatureUuid(storageId, collectionId, uid).toString() // tested, cheap!
+        val grid = "none" // grid(featureId, geoType, geo) // tested, very expensive, around 50us!
         return xyzBuilder.buildXyzNs(createdAt, createdAt, txn.value, XYZ_OP_CREATE, 1, createdAt, extent, null, uuid, appId, author
                 ?: appId, grid)
     }
@@ -330,13 +378,13 @@ SET SESSION enable_seqscan = OFF;
             _txn = txn
             val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
             val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
-            if (txn.year != txDate.year || txn.month != txDate.monthNumber || txn.day != txDate.dayOfMonth) {
+            if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
                 sql.execute("SELECT pg_advisory_lock($1)", arrayOf(Static.TXN_LOCK_ID))
                 try {
                     val raw = asBigInt64(asMap((sql.execute("SELECT nextval($1) as v", arrayOf(txnSeqOid)) as Array<Any>)[0])["v"])
                     txn = NakshaTxn(raw)
                     _txn = txn
-                    if (txn.year != txDate.year || txn.month != txDate.monthNumber || txn.day != txDate.dayOfMonth) {
+                    if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
                         // Rollover, we update sequence of the day.
                         txn = NakshaTxn.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, BigInt64(0))
                         _txn = txn
@@ -348,14 +396,14 @@ SET SESSION enable_seqscan = OFF;
             }
             // If the history partition cache does not exist or is outdated, initialize empty.
             val hst_txn = historyPartitionCacheTxn
-            if (hst_txn == null || hst_txn.year != txn.year || hst_txn.month != txn.month || hst_txn.day != txn.day) {
+            if (hst_txn == null || hst_txn.year() != txn.year() || hst_txn.month() != txn.month() || hst_txn.day() != txn.day()) {
                 historyPartitionCacheTxn = txn
                 historyPartitionCache = Jb.map.newMap()
             }
             val tableName = "naksha_txn_${txn.historyPostfix()}"
             if (!Static.tableExists(sql, tableName, schemaOid)) {
-                val start = NakshaTxn.of(txn.year, txn.month, txn.day, SEQ_MIN)
-                val end = NakshaTxn.of(txn.year, txn.month, txn.day, SEQ_NEXT)
+                val start = NakshaTxn.of(txn.year(), txn.month(), txn.day(), SEQ_MIN)
+                val end = NakshaTxn.of(txn.year(), txn.month(), txn.day(), SEQ_NEXT)
                 val query = """CREATE TABLE $tableName PARTITION OF naksha_txn FOR VALUES FROM (${start.value}) TO (${end.value});
 ALTER TABLE $tableName
 ALTER COLUMN details SET STORAGE MAIN,
@@ -396,8 +444,7 @@ SET (toast_tuple_target=8160,fillfactor=100
     ): ITable {
         errNo = null
         errMsg = null
-        val naksha = NakshaSession.get()
-        val sql = naksha.sql
+        val sql = this.sql
         val table = sql.newTable()
         val opReader = XyzOp()
         val xyzNs = XyzNs()
@@ -408,18 +455,20 @@ VALUES($1,$2,$3,$4,$5)
 ON CONFLICT (id) DO
 UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
                 arrayOf(SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_INT16, SQL_BYTE_ARRAY))
-        var createPlan = sql.prepare("INSERT INTO $collectionIdQuoted (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz",
+        val createPlan = sql.prepare("INSERT INTO $collectionIdQuoted (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz",
                 arrayOf(SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_INT16, SQL_BYTE_ARRAY))
         try {
+            prefetchUids(collectionId, op_arr.size, op_arr.size)
             var i = 0
             while (i < op_arr.size) {
                 var id: String? = null
                 try {
-                    val feature = feature_arr[i]
-                    val geo = geo_arr[i]
-                    val geo_type = geo_type_arr[i]
-                    val tags = tags_arr[i]
                     val op = op_arr[i]
+                    val feature = feature_arr[i]
+                    val geo_type = geo_type_arr[i]
+                    val geo = geo_arr[i]
+                    val tags = tags_arr[i]
+
                     opReader.mapBytes(op)
                     val xyzOp = opReader.op()
                     var uuid = opReader.uuid()

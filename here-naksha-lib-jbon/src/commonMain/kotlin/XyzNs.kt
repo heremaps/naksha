@@ -35,7 +35,7 @@ class XyzNs : XyzSpecial<XyzNs>() {
         check(reader.nextUnit())
         version = reader.readInt32()
         check(reader.nextUnit())
-        authorTs = if (reader.isNull()) updatedAt else  reader.readTimestamp()
+        authorTs = if (reader.isNull()) updatedAt else reader.readTimestamp()
         check(reader.nextUnit())
         extent = reader.readInt64()
         check(reader.nextUnit())

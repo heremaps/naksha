@@ -4,14 +4,95 @@ import com.here.naksha.lib.plv8.GEO_TYPE_NULL
 import com.here.naksha.lib.plv8.RET_OP
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
+import java.sql.Connection
 import kotlin.test.assertEquals
 
 class Plv8PerfTest : Plv8TestContainer() {
 
-    private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
+    data class Features(
+            val size: Int,
+            val idArr: Array<String?>,
+            val opArr: Array<ByteArray?>,
+            val featureArr: Array<ByteArray?>,
+            val geoTypeArr: Array<Short>,
+            val geoArr: Array<ByteArray?>,
+            val tagsArr: Array<ByteArray?>
+    )
 
+    companion object {
+        private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
+        private lateinit var jvmSql: JvmPlv8Sql
+        private lateinit var conn: Connection
+        private lateinit var session: NakshaSession
+        private var baseLine: Double = 0.0
+
+        @BeforeAll
+        @JvmStatic
+        fun prepare() {
+            session = NakshaSession.get()
+            jvmSql = session.sql as JvmPlv8Sql
+            val conn = jvmSql.conn
+            check(conn != null)
+            this.conn = conn
+        }
+    }
+
+    private fun currentMicros(): Long = System.nanoTime() / 1000
+
+    private fun createFeatures(size: Int = 2000): Features {
+        val builder = XyzBuilder.create(65536)
+        val topology = asMap(env.parse(topologyJson))
+        val idArr = Array<String?>(size) { null }
+        val opArr = Array<ByteArray?>(size) { null }
+        val featureArr = Array<ByteArray?>(size) { null }
+        val geoTypeArr = Array(size) { GEO_TYPE_NULL }
+        val geoArr = Array<ByteArray?>(size) { null }
+        val tagsArr = Array<ByteArray?>(size) { null }
+        var i = 0
+        while (i < size) {
+            val id: String = env.randomString(12)
+            topology["id"] = id
+            idArr[i] = id
+            opArr[i] = builder.buildXyzOp(XYZ_OP_CREATE, id, null)
+            featureArr[i] = builder.buildFeatureFromMap(topology)
+            i++
+        }
+        return Features(size, idArr, opArr, featureArr, geoTypeArr, geoArr, tagsArr)
+    }
+
+    @Order(1)
+    @Test
+    fun createBaseline() {
+        var stmt = conn.prepareStatement("""DROP TABLE ptest;
+CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, tags bytea, feature bytea, geo bytea);
+""")
+        stmt.use {
+            stmt.executeUpdate()
+        }
+        conn.commit()
+        val features = createFeatures(5000)
+        val start = currentMicros()
+        stmt = conn.prepareStatement("INSERT INTO ptest (id, feature) VALUES (?, ?)")
+        stmt.use {
+            var i = 0
+            while (i < features.size) {
+                stmt.setString(1, features.idArr[i])
+                stmt.setBytes(2, features.featureArr[i])
+                stmt.addBatch()
+                i++
+            }
+            stmt.executeBatch()
+        }
+        val end = currentMicros()
+        conn.commit()
+        baseLine = printStatistics(features.size, 1, end - start)
+    }
+
+    @Order(2)
     @Test
     fun insertFeatures() {
         val session = NakshaSession.get()
@@ -33,40 +114,24 @@ class Plv8PerfTest : Plv8TestContainer() {
 
         session.sql.execute("commit")
 
-        var topology = asMap(env.parse(topologyJson))
-        //topology = asMap(env.parse("""{"id":"foo","properties":{"name":"test"}}"""))
-        val useBatch = false
-        var time = 0L
-        val chunkSize = 1000
+        val useBatch = true
+        var totalTime = 0L
+        val chunkSize = 2000
         val rounds = 10
         var r = 0
         while (r++ < rounds) {
-            val id_arr = Array<String?>(chunkSize) { null }
-            val op_arr = Array<ByteArray?>(chunkSize) { null }
-            val feature_arr = Array<ByteArray?>(chunkSize) { null }
-            val geo_type_arr = Array(chunkSize) { GEO_TYPE_NULL }
-            val geo_arr = Array<ByteArray?>(chunkSize) { null }
-            val tags_arr = Array<ByteArray?>(chunkSize) { null }
-            var i = 0
-            while (i < chunkSize) {
-                val id: String = env.randomString(12)
-                topology["id"] = id
-                id_arr[i] = id
-                op_arr[i] = builder.buildXyzOp(XYZ_OP_CREATE, id, null)
-                feature_arr[i] = builder.buildFeatureFromMap(topology)
-                i++
-            }
-            val start = env.currentMillis()
+            val features = createFeatures(chunkSize)
+            val start = currentMicros()
+            val jvmSql = session.sql as JvmPlv8Sql
+            val conn = jvmSql.conn
+            check(conn != null)
             if (useBatch) {
-                val jvmSql = session.sql as JvmPlv8Sql
-                val conn = jvmSql.conn
-                check(conn != null)
                 val stmt = conn.prepareStatement("INSERT INTO v2_perf_test (id, feature) VALUES (?, ?)")
                 stmt.use {
-                    i = 0
+                    var i = 0
                     while (i < chunkSize) {
-                        stmt.setString(1, id_arr[i])
-                        stmt.setBytes(2, feature_arr[i])
+                        stmt.setString(1, features.idArr[i])
+                        stmt.setBytes(2, features.featureArr[i])
                         stmt.addBatch()
                         i++
                     }
@@ -74,16 +139,42 @@ class Plv8PerfTest : Plv8TestContainer() {
                     conn.commit()
                 }
             } else {
-                @Suppress("UNCHECKED_CAST")
-                result = session.writeFeatures("v2_perf_test", op_arr as Array<ByteArray>, feature_arr, geo_type_arr, geo_arr, tags_arr)
-                table = assertInstanceOf(JvmPlv8Table::class.java, result)
-                assertEquals(chunkSize, table.rows.size)
-                session.sql.execute("commit")
+                val stmt = conn.prepareStatement("SELECT * FROM naksha_write_features(?, ?, ?, ?, ?, ?)")
+                stmt.use {
+                    stmt.setString(1, "v2_perf_test")
+                    stmt.setArray(2, conn.createArrayOf(SQL_BYTE_ARRAY, features.opArr))
+                    stmt.setArray(3, conn.createArrayOf(SQL_BYTE_ARRAY, features.featureArr))
+                    stmt.setArray(4, conn.createArrayOf(SQL_INT16, features.geoTypeArr))
+                    stmt.setArray(5, conn.createArrayOf(SQL_BYTE_ARRAY, features.geoArr))
+                    stmt.setArray(6, conn.createArrayOf(SQL_BYTE_ARRAY, features.tagsArr))
+                    stmt.executeQuery()
+                    conn.commit()
+                }
             }
-            val end = env.currentMillis()
-            time += (end - start).toLong()
+            val end = currentMicros()
+            totalTime += (end - start)
         }
-        val features_per_second = (rounds * chunkSize).toDouble() / (time.toDouble() / 1000)
-        println("Write $features_per_second features per second, total time: ${time}ms")
+        printStatistics(chunkSize, rounds, totalTime, baseLine)
+    }
+
+    /**
+     * Print statistics.
+     * @param size Amount of features per round.
+     * @param rounds Amount of rounds.
+     * @param us Amount of microseconds the test took.
+     * @param baseLine Base-line in microseconds.
+     */
+    private fun printStatistics(size: Int, rounds: Int, us: Long, baseLine: Double = 0.0): Double {
+        val featuresWritten = (rounds * size).toDouble()
+        val seconds = us.toDouble() / 1_000_000.0
+        val featuresPerSecond = featuresWritten / seconds
+        var microsPerFeature = us.toDouble() / featuresWritten
+        if (baseLine == 0.0) {
+            println("Write $featuresPerSecond features per second, ${microsPerFeature}us per feature, total time: ${seconds}s")
+        } else {
+            microsPerFeature -= baseLine
+            println("Write $featuresPerSecond features per second, ${microsPerFeature}us per feature (baseline=${baseLine}us), total time: ${seconds}s")
+        }
+        return microsPerFeature
     }
 }
