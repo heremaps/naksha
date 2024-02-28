@@ -223,17 +223,17 @@ SET SESSION enable_seqscan = OFF;
         val txn = txn()
         val extent = extent(geo)
         val uuid = txn.newFeatureUuid(storageId, collectionId, uid).toString() // tested, cheap!
-        //val grid = if (Static.PERF_TEST_FEATURE) "none" else grid(featureId, geoType, geo) // tested, very expensive, around 50us!
-        val grid = "none"
+        val grid = grid(featureId, geoType, geo) // tested, very expensive, around 50us!
+        //val grid = "none"
         return xyzBuilder.buildXyzNs(createdAt, createdAt, txn.value, XYZ_OP_CREATE, 1, createdAt, extent, null, uuid, appId, author
                 ?: appId, grid)
     }
 
-    private fun xyzUpdate(): ByteArray {
+    internal fun xyzUpdate(): ByteArray {
         TODO("Implement me!")
     }
 
-    private fun xyzDelete(): ByteArray {
+    internal fun xyzDelete(): ByteArray {
         TODO("Implement me!")
     }
 

@@ -212,6 +212,7 @@ SET (toast_tuple_target=8160"""
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
 (xyz_author(xyz) COLLATE "C" DESC, xyz_author_ts(xyz) DESC, txn DESC) WITH (fillfactor=$fillFactor);
 """
+
         sql.execute(query)
     }
 
@@ -230,17 +231,7 @@ SET (toast_tuple_target=8160"""
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
-        val CREATE_TABLE = if (PERF_TEST_FEATURE) """CREATE TABLE {table} (
-    txn         int8,
-    txn_next    int8,
-    uid         int4,
-    geo_type    int2,
-    id          text COMPRESSION lz4 COLLATE "C",
-    xyz         bytea COMPRESSION lz4,
-    tags        bytea COMPRESSION lz4,
-    geo         bytea COMPRESSION lz4,
-    feature     bytea COMPRESSION lz4
-) """ else """CREATE TABLE {table} (
+        val CREATE_TABLE = """CREATE TABLE {table} (
     txn         int8 NOT NULL,
     txn_next    int8 NOT NULL CHECK(txn_next {condition}),
     uid         int4 NOT NULL,
@@ -260,7 +251,7 @@ SET (toast_tuple_target=8160"""
         if (!partition) {
             sql.execute(query)
             collectionOptimizeTable(sql, id, false)
-            if (!PERF_TEST_FEATURE) collectionAddIndices(sql, id, spGist, false)
+            collectionAddIndices(sql, id, spGist, false)
         } else {
             query += "PARTITION BY RANGE (naksha_partition_number(id))"
             sql.execute(query)
@@ -310,7 +301,7 @@ SET (toast_tuple_target=8160"""
         sql.execute(query)
 
         // Optimizations are done on the history partitions!
-        if (!PERF_TEST_FEATURE) collectionAttachTriggers(sql, id, schema, schemaOid)
+        collectionAttachTriggers(sql, id, schema, schemaOid)
     }
 
     /**

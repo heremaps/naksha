@@ -122,7 +122,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
 
         session.sql.execute("commit")
 
-        val useBatch = true
+        val useBatch = false
         var totalTime = 0L
         var r = 0
         while (r++ < Rounds) {
