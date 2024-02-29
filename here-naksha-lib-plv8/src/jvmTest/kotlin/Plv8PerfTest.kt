@@ -9,8 +9,10 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
 import java.sql.Connection
+import java.sql.DriverManager
 import kotlin.test.assertEquals
 
+@Suppress("ArrayInDataClass")
 class Plv8PerfTest : Plv8TestContainer() {
 
     data class Features(
@@ -26,8 +28,11 @@ class Plv8PerfTest : Plv8TestContainer() {
     companion object {
         private val FeaturesPerRound = 1000
         private val Rounds = 10
+        private val BulkSize = 50_000
+        private val BulkThreads = Runtime.getRuntime().availableProcessors() * 2
 
         private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
+        internal var topologyTemplate : IMap? = null
         private lateinit var jvmSql: JvmPlv8Sql
         private lateinit var conn: Connection
         private lateinit var session: NakshaSession
@@ -116,7 +121,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
 
         session.sql.execute("commit")
 
-        val useBatch = true
+        val useBatch = false
         var totalTime = 0L
         var r = 0
         while (r++ < Rounds) {
@@ -173,5 +178,111 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
             println("Write $featuresPerSecond features per second, ${microsPerFeature}us per feature (baseline=${baseLine}us), total time: ${seconds}s")
         }
         return microsPerFeature
+    }
+
+    data class BulkFeature(
+            val id : String,
+            val partId : Int,
+            val op : ByteArray,
+            val feature : ByteArray,
+            val geoType : Short = GEO_TYPE_NULL,
+            val geometry : ByteArray? = null,
+            val tags : ByteArray? = null
+    )
+
+    private val xyzBuilder = XyzBuilder.create(65536)
+
+    private fun createBulkFeature(id:String = env.randomString(12)) : BulkFeature {
+        var topology = topologyTemplate
+        if (topology == null) {
+            topology = asMap(env.parse(topologyJson))
+            topologyTemplate = topology
+        }
+        topology["id"] = id
+        val partId = Static.partitionNumber(id)
+        val op = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, id, null, "vgrid")
+        val feature = xyzBuilder.buildFeatureFromMap(topology)
+        return BulkFeature(id, partId, op, feature)
+    }
+
+    @Order(3)
+    @Test
+    fun bulkLoadFeatures() {
+        val session = NakshaSession.get()
+        val builder = XyzBuilder.create(65536)
+        val tableName = "v2_bulk_test"
+
+        var op = builder.buildXyzOp(XYZ_OP_DELETE, "$tableName", null, "vgrid")
+        var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
+        var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
+        var table = assertInstanceOf(JvmPlv8Table::class.java, result)
+        assertEquals(1, table.rows.size)
+        assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
+
+        op = builder.buildXyzOp(XYZ_OP_CREATE, "$tableName", null, "vgrid")
+        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName", "partition":true}""")))
+        result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
+        table = assertInstanceOf(JvmPlv8Table::class.java, result)
+        assertEquals(1, table.rows.size)
+        assertTrue(XYZ_EXEC_CREATED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
+
+        session.sql.execute("commit")
+
+        // Run for 8 threads.
+        val features = Array<ArrayList<BulkFeature>>(BulkThreads) { ArrayList() }
+        var i = 0
+        while (i < BulkSize) {
+            val f = createBulkFeature()
+            val p = f.partId % BulkThreads
+            val list = features[p]
+            list.add(f)
+            i++
+        }
+        i = 0
+        while (i < features.size) {
+            println("Features in bulk $i: ${features[i].size}")
+            i++
+        }
+        val threads = Array(BulkThreads) { Thread {
+            val threadId = it
+            val list = features[it]
+            val conn = DriverManager.getConnection(url)
+            conn.use {
+                val env = JvmPlv8Env.get()
+                env.startSession(
+                        conn,
+                        schema,
+                        "plv8_${threadId}_thread",
+                        env.randomString(),
+                        "plv8_${threadId}_app",
+                        "plv8_${threadId}_author"
+                )
+                conn.commit()
+                val stmt = conn.prepareStatement("INSERT INTO $tableName (id, geo_grid, feature) VALUES (?, ?, ?)")
+                stmt.use {
+                    var j = 0
+                    while (j < list.size) {
+                        val f = list[j++]
+                        stmt.setString(1, f.id)
+                        stmt.setString(2, "vgrid")
+                        stmt.setBytes(3, f.feature)
+                        stmt.addBatch()
+                    }
+                    stmt.executeBatch()
+                    conn.commit()
+                }
+            }
+        } }
+        val start = currentMicros()
+        i = 0
+        while (i < threads.size) {
+            threads[i++].start()
+        }
+        i = 0
+        while (i < threads.size) {
+            threads[i++].join()
+        }
+        val end = currentMicros()
+        printStatistics(BulkSize, 1, (end - start), baseLine)
     }
 }

@@ -41,16 +41,19 @@ class JvmPlv8Env : JvmEnv() {
      * to the given SQL connection, so that all other session methods work the same way they would normally behave
      * inside the Postgres database (so, when executed in PLV8 engine).
      * @param conn The connection to bind to the [NakshaSession].
+     * @param schema The schema to use.
      * @param appName The name of this application (arbitrary string, seen in SQL connections).
      * @param streamId The logging stream-id, can be found in transaction logs for error search.
      * @param appId The UPM application identifier.
      * @param author The UPM user identifier that uses this session.
      */
-    fun startSession(conn: Connection, appName: String, streamId: String, appId: String, author: String?) {
+    fun startSession(conn: Connection, schema: String, appName: String, streamId: String, appId: String, author: String?) {
         // Prepare the connection, need to load the module system.
         conn.autoCommit = false
         val sql = JvmPlv8Sql(conn)
-        sql.execute("SELECT naksha_start_session($1, $2, $3, $4);", arrayOf(appName, streamId, appId, author))
+        val schemaQuoted = sql.quoteIdent(schema)
+        sql.execute("SET SESSION search_path TO $schemaQuoted, public, topology; SELECT naksha_start_session($1, $2, $3, $4);",
+                arrayOf(appName, streamId, appId, author))
         conn.commit()
         // Create our self.
         get()

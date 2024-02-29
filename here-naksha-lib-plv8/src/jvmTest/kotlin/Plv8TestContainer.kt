@@ -18,6 +18,7 @@ open class Plv8TestContainer {
         private lateinit var postgreSQLContainer: PostgreSQLContainer<*>
         private var existingUrl: String? = null
         lateinit var url: String
+        lateinit var schema: String
 
         @JvmStatic
         @BeforeAll
@@ -25,8 +26,10 @@ open class Plv8TestContainer {
             // Run docker locally with env parameter: POSTGRES_PASSWORD=password
             // NAKSHA_TEST_PSQL_DB_URL=jdbc:postgresql://localhost:5400/postgres?user=postgres&password=password&schema=test_schema
             existingUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+            schema = "test_schema"
             if (existingUrl != null) {
                 url = existingUrl!!
+                // TODO: Parse the url to extract the schema!
             } else {
                 val image = DockerImageName.parse("greenoag/postgres-plv8-postgis:15.2-3.1.5-3.3")
                         .asCompatibleSubstituteFor("postgres")
@@ -50,9 +53,10 @@ open class Plv8TestContainer {
             val env = JvmPlv8Env.get()
             val conn = DriverManager.getConnection(url)
             // TODO: Parse the url to extract the schema!
-            env.install(conn, 0, "test_schema", "test_storage")
+            env.install(conn, 0, schema, "test_storage")
             env.startSession(
                     conn,
+                    schema,
                     "plv8_test",
                     env.randomString(),
                     "plv8_test_app",

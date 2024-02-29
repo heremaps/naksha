@@ -67,4 +67,5 @@ kotlin {
 
 tasks.jvmTest {
     useJUnitPlatform()
+    maxHeapSize = "4g"
 }
