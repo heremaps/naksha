@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.CommonApiTestSetup;
+import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -45,6 +46,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class SpaceApiTest extends ApiTest {
+
+  private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
 
   @Test
   void tc0200_testCreateSpace() throws Exception {
@@ -144,16 +147,18 @@ class SpaceApiTest extends ApiTest {
   @Test
   void tc0260_testUpdateSpace() throws Exception {
     // Test API : PUT /hub/spaces/{spaceId}
+    createStorage(nakshaClient,"SpaceApi/setup/create_storage.json");
+    createHandler(nakshaClient,"SpaceApi/setup/create_handler.json");
     // Given: registered space
-    final String createStorageJson = loadFileOrFail("SpaceApi/TC0260_updateSpace/create_space.json");
-    final String updateStorageJson = loadFileOrFail("SpaceApi/TC0260_updateSpace/update_space.json");
+    final String createSpaceJson = loadFileOrFail("SpaceApi/TC0260_updateSpace/create_space.json");
+    final String updateSpaceJson = loadFileOrFail("SpaceApi/TC0260_updateSpace/update_space.json");
     final String expectedRespBody = loadFileOrFail("SpaceApi/TC0260_updateSpace/response.json");
     final String streamId = UUID.randomUUID().toString();
-    getNakshaClient().post("hub/spaces", createStorageJson, streamId);
+    getNakshaClient().post("hub/spaces", createSpaceJson, streamId);
 
     // When: updating existing space
     final HttpResponse<String> response =
-        getNakshaClient().put("hub/spaces/tc_260_test_space", updateStorageJson, streamId);
+        getNakshaClient().put("hub/spaces/tc_260_test_space", updateSpaceJson, streamId);
 
     // Then: space got updated
     assertThat(response)

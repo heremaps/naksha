@@ -158,7 +158,6 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   private @NotNull Result executeUpdateSpace(@NotNull WriteFeatures<?, ?, ?> updateSpaceEntryReq) {
-    //    String spaceId = updateSpaceEntryReq.features.get(0).getId();
     final Space space = ((Space) updateSpaceEntryReq.features.get(0).getFeature());
     final SpaceProperties spaceProperties = JsonSerializable.convert(space.getProperties(), SpaceProperties.class);
     XyzCollection collection = spaceProperties.getXyzCollection();
