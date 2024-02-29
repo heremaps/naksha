@@ -141,11 +141,11 @@ CREATE OR REPLACE FUNCTION naksha_err_msg() RETURNS text AS $$
 $$ LANGUAGE 'plv8' VOLATILE;
 
 CREATE OR REPLACE FUNCTION naksha_partition_number(id text) RETURNS int4 AS $$
-  return require("naksha").Naksha.partitionNumber(id);
+  return require("naksha").Static.partitionNumber(id);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
-  return require("naksha").Naksha.partitionId(id);
+  return require("naksha").Static.partitionNameForId(id);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_geometry(geo_type int2, geo_bytes bytea) RETURNS geometry AS
