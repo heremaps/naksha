@@ -25,8 +25,11 @@ import com.here.naksha.lib.core.util.json.Json;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.locationtech.jts.algorithm.Centroid;
+import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.io.ParseException;
+import org.locationtech.spatial4j.io.GeohashUtils;
 
 /**
  * A codec that is able to encode a feature from its parts and to decode a feature into its parts. The implementation is not thread safe.
@@ -534,5 +537,13 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     clearFeature();
     isEncoded = true;
     return super.setFeature(feature);
+  }
+
+  protected @Nullable String calculateGrid() {
+    if (geometry != null) {
+      Coordinate centroid = Centroid.getCentroid(geometry);
+      return GeohashUtils.encodeLatLon(centroid.y, centroid.x, 14);
+    }
+    return null;
   }
 }

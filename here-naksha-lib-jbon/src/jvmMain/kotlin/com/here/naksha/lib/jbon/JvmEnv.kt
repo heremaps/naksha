@@ -80,7 +80,7 @@ open class JvmEnv : IEnv {
         }
     }
 
-    override fun stringify(any: Any, pretty: Boolean): String {
+    override fun stringify(any: Any?, pretty: Boolean): String {
         val writer = objectMapper.get().writer()
         return (if (pretty) writer.withDefaultPrettyPrinter() else writer).writeValueAsString(any)
     }

@@ -463,15 +463,10 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
 
   private SQL prepareQuery(String collection, String spatial_where, String props_where, Long limit) {
     final SQL query = new SQL();
-    query.add("(SELECT 'READ',\n"
-            + "id,\n"
-            + "xyz,\n"
-            + "tags,\n"
-            + "feature,\n"
-            + "geo_type,\n"
-            + "geo,\n"
-            + "null,\n"
-            + "null FROM ")
+    query.add("(SELECT 'READ',\n" + "id,\n")
+        .add("row_to_ns(created_at,updated_at,txn,action,version,author_ts,uid,app_id,author,geo_grid,")
+        .addLiteral(collection)
+        .add("::text),\n" + "tags,\n" + "feature,\n" + "geo_type,\n" + "geo,\n" + "null,\n" + "null FROM ")
         .addIdent(collection);
     if (spatial_where.length() > 0 || props_where.length() > 0) {
       query.add(" WHERE");

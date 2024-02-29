@@ -26,7 +26,7 @@ class JsMapApi : IMapApi {
 
     override fun get(map: IMap, key: String): Any? {
         require(isMap(map))
-        return js("Object.hasOwn(map, key) && map[key] || null")
+        return js("Object.hasOwn(map, key) ? map[key] : null")
     }
 
     override fun put(map: IMap, key: String, value: Any?): Any? {

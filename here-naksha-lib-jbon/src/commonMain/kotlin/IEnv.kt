@@ -69,7 +69,7 @@ interface IEnv {
      * @param pretty If the result should be pretty-printed.
      * @return The JSON text.
      */
-    fun stringify(any: Any, pretty: Boolean = false): String
+    fun stringify(any: Any?, pretty: Boolean = false): String
 
     /**
      * Parse the given JSON into an object.

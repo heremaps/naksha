@@ -106,7 +106,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
 
   public void decodeXyzOp(@Nullable JbDict globalDict) {
     XyzBuilder xyzBuilder = new XyzBuilder(newDataView(1024), globalDict);
-    xyzOp = xyzBuilder.buildXyzOp(mapOperationToPerform(op), id, uuid);
+    xyzOp = xyzBuilder.buildXyzOp(mapOperationToPerform(op), id, uuid, calculateGrid());
   }
 
   private void decodeTags(@Nullable List<@NotNull String> tags, @Nullable JbDict globalDict) {

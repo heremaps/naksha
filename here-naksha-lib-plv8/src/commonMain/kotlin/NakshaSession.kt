@@ -420,16 +420,20 @@ SET (toast_tuple_target=8160,fillfactor=100
         val sql = this.sql
         val table = sql.newTable()
         val opReader = XyzOp()
-        val xyzNs = XyzNs()
         val featureReader = JbFeature()
         val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val upsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted (id,feature,tags,geo_type,geo) 
-VALUES($1,$2,$3,$4,$5)
-ON CONFLICT (id) DO
-UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
-                arrayOf(SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_INT16, SQL_BYTE_ARRAY))
-        val createPlan = sql.prepare("INSERT INTO $collectionIdQuoted (id,feature,tags,geo_type,geo) VALUES($1,$2,$3,$4,$5) RETURNING xyz",
-                arrayOf(SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_INT16, SQL_BYTE_ARRAY))
+        val updatePlan = sql.prepare("""UPDATE $collectionIdQuoted
+                        SET geo_grid=$2,geo_type=$3,geo=$4,tags=$5,feature=$6,action=$ACTION_UPDATE
+                        RETURNING $COL_RETURN""",
+                arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
+        val upsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6)
+                        ON CONFLICT (id) DO
+                        UPDATE SET geo_grid=$2,geo_type=$3,geo=$4,tags=$5,feature=$6,action=$ACTION_UPDATE
+                        RETURNING $COL_RETURN""",
+                arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
+
+        val createPlan = sql.prepare("INSERT INTO $collectionIdQuoted ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN",
+                arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
         try {
             var i = 0
             while (i < op_arr.size) {
@@ -444,6 +448,7 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
                     opReader.mapBytes(op)
                     val xyzOp = opReader.op()
                     var uuid = opReader.uuid()
+                    var grid = opReader.grid()
                     id = opReader.id()
                     if (id == null) {
                         featureReader.mapBytes(feature)
@@ -451,20 +456,25 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
                     }
                     if (id == null) throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", id)
                     if (xyzOp == XYZ_OP_UPSERT) {
-                        val rows = asArray(upsertPlan.execute(arrayOf(id, feature, tags, geo_type, geo)))
+                        val rows = asArray(upsertPlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
                         // TODO: What if no row is returned?
-                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
-                        xyzNs.mapBytes(xyz)
-                        if (xyzNs.action() == ACTION_CREATE) {
-                            //table.returnCreated(id, xyz)
+                        val cols = asMap(rows[0])
+                        val xyz = xyzNsFromRow(collectionId, cols)
+                        if (ACTION_CREATE == cols[COL_ACTION]!!) {
+                            table.returnCreated(id, xyz)
                         } else {
-                            //table.returnUpdated(id, xyz)
+                            table.returnUpdated(id, xyz)
                         }
                     } else if (xyzOp == XYZ_OP_CREATE) {
-                        val rows = asArray(createPlan.execute(arrayOf(id, feature, tags, geo_type, geo)))
+                        val rows = asArray(createPlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
                         // TODO: What if no row is returned?
-                        val xyz: ByteArray = asMap(rows[0])["xyz"]!!
-                        //table.returnCreated(id, xyz)
+                        val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
+                        table.returnCreated(id, xyz)
+                    } else if (xyzOp == XYZ_OP_UPDATE) {
+                        val rows = asArray(updatePlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
+                        // TODO: What if no row is returned?
+                        val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
+                        table.returnUpdated(id, xyz)
                     } else {
                         throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Unsupported operation " + XyzOp.getOpName(xyzOp), id)
                     }
@@ -481,6 +491,7 @@ UPDATE SET feature=$2,tags=$3,geo_type=$4,geo=$5 RETURNING xyz""",
             }
         } finally {
             upsertPlan.free()
+            updatePlan.free()
             createPlan.free()
         }
         return table

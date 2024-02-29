@@ -362,3 +362,22 @@ CREATE OR REPLACE FUNCTION feature_to_json(feature bytea) RETURNS text AS $$
   map["id"] = reader.id();
   return JSON.stringify(map);
 $$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION row_to_ns(created_at int8, updated_at int8, txn int8, action int2, version int4, author_ts int8,
+ uid int4, app_id text, author text, geo_grid text, collection_id text) RETURNS bytea AS $$
+  let naksha = require("naksha");
+  let session = naksha.NakshaSession.Companion.get();
+  let mapi = require("jbon").Jb.map;
+  let map = mapi.newMap();
+  map["created_at"] = created_at;
+  map["updated_at"] = updated_at;
+  map["txn"] = txn;
+  map["action"] = action;
+  map["version"] = version;
+  map["author_ts"] = author_ts;
+  map["uid"] = uid;
+  map["app_id"] = app_id;
+  map["author"] = author;
+  map["geo_grid"] = geo_grid;
+  return session.xyzNsFromRow(collection_id, map)
+$$ LANGUAGE 'plv8' IMMUTABLE;

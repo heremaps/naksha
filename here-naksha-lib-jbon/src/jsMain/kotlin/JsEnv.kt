@@ -98,7 +98,7 @@ Object.assign(JSON, {
         private var convertView: IDataView? = null
     }
 
-    override fun stringify(any: Any, pretty: Boolean): String {
+    override fun stringify(any: Any?, pretty: Boolean): String {
         return js("JSON.stringify(any, JSON.naksha_replacer, pretty?3:null)")
     }
 

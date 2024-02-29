@@ -29,7 +29,6 @@ import static com.here.naksha.lib.core.models.storage.transformation.BufferTrans
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createBBoxEnvelope;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.deleteFeatureByIdRequest;
-import static com.spatial4j.core.io.GeohashUtils.encodeLatLon;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,18 +36,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.locationtech.spatial4j.io.GeohashUtils.encodeLatLon;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
 import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates;
 import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
@@ -82,31 +79,25 @@ import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
-import java.time.Instant;
-import java.util.ArrayList;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.operation.buffer.BufferOp;
-import com.spatial4j.core.context.jts.JtsSpatialContext;
-import com.spatial4j.core.distance.DistanceUtils;
-import com.spatial4j.core.distance.GeodesicSphereDistCalc;
-import com.spatial4j.core.shape.jts.JtsPoint;
-
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
-
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.operation.buffer.BufferOp;
+import org.locationtech.spatial4j.distance.DistanceUtils;
 import org.postgresql.util.PSQLException;
 
 @SuppressWarnings({"unused"})
@@ -206,7 +197,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(4, uuidFields[2].length()); // year (4- digits)
       assertTrue(uuidFields[3].length() <= 2); // month (1 or 2 digits)
       assertTrue(uuidFields[4].length() <= 2); // day (1 or 2 digits)
-      assertEquals("1", uuidFields[5]); // seq id
+      assertEquals("0", uuidFields[5]); // seq id
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
       assertEquals(xyz.getCreatedAt(), xyz.getUpdatedAt());
