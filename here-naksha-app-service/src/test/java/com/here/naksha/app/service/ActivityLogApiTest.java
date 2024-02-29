@@ -196,7 +196,7 @@ class ActivityLogApiTest extends ApiTest {
 
     // And: This feature is deleted
     HttpResponse<String> deleteResp = nakshaClient.delete("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, streamId);
-    assertThat(updateResp).hasStatus(200);
+    assertThat(deleteResp).hasStatus(200);
     FeatureMetadata deletedFeature = featureMetadataFromFeatureResp(deleteResp.body());
 
     // And: Client queries activity log space for this feature
