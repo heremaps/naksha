@@ -57,7 +57,7 @@ class XyzTest : JbAbstractTest() {
     fun testXyzOp() {
         val view = env.newDataView(ByteArray(1024))
         val builder = XyzBuilder(view)
-        val xyzOp = builder.buildXyzOp(XYZ_OP_CREATE, "foo", "uuid")
+        val xyzOp = builder.buildXyzOp(XYZ_OP_CREATE, "foo", "uuid", null)
         val reader = XyzOp().mapBytes(xyzOp)
         assertEquals(XYZ_OP_CREATE, reader.op())
         assertEquals("foo", reader.id())
@@ -73,7 +73,7 @@ class XyzTest : JbAbstractTest() {
         val txn = createdTs + 10
         val xyz = builder.buildXyzNs(
                 createdTs, createdTs, txn,
-                ACTION_CREATE, 1, createdTs + 20,
+                ACTION_CREATE.toShort(), 1, createdTs + 20,
                 BigInt64(0), null, "test-uuid",
                 "test-app", "test-author",
                 "1234567")

@@ -42,7 +42,8 @@ abstract class PsqlCollectionTests extends PsqlTests{
     assertNotNull(storage);
     assertNotNull(session);
     final WriteXyzCollections request = new WriteXyzCollections();
-    request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partition(), false, true));
+    request.create(new XyzCollection(collectionId(), partition(), false, true));
+    request.create(new XyzCollection("admin", true, false, false));
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
         session.execute(request).getXyzCollectionCursor()) {
       assertNotNull(cursor);
