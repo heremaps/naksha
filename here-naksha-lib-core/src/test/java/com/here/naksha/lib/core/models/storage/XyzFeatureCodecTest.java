@@ -46,7 +46,7 @@ public class XyzFeatureCodecTest extends SessionTest {
         BigInt64(now.toEpochMilli()),
         BigInt64(now.toEpochMilli()),
         BigInt64(2),
-        0,
+        (short) 0,
         1,
         BigInt64(now.toEpochMilli()),
         BigInt64(3),
