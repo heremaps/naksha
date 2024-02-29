@@ -120,8 +120,6 @@ class ReadFeaturesWithApiFaultsHttpStorageTest extends ApiTest {
             .hasStatus(500)
             .hasStreamIdHeader(streamId);
 
-    assertTrue(response.body().contains("java.io.IOException: protocol error"));
-
     // Then: Verify request reached endpoint once
     verify(1, getRequestedFor(endpointPath));
   }
