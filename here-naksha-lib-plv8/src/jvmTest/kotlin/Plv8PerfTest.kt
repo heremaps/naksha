@@ -112,7 +112,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
-        op = builder.buildXyzOp(XYZ_OP_CREATE, "v2_perf_test", null, "vgrid")
+        op = builder.buildXyzOp(XYZ_OP_UPSERT, "v2_perf_test", null, "vgrid")
         feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
         result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
@@ -142,7 +142,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
                     conn.commit()
                 }
             } else {
-                val stmt = conn.prepareStatement("SELECT * FROM naksha_write_features(?, ?, ?, ?, ?, ?)")
+                var stmt = conn.prepareStatement("SELECT * FROM naksha_write_features(?, ?, ?, ?, ?, ?)")
                 stmt.use {
                     stmt.setString(1, "v2_perf_test")
                     stmt.setArray(2, conn.createArrayOf(SQL_BYTE_ARRAY, features.opArr))

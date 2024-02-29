@@ -331,7 +331,8 @@ SET (toast_tuple_target=8160"""
         val hstNameQuoted = sql.quoteIdent(hstName)
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
         query = query.replace("{condition}", "> 0")
-        query += "PARTITION BY RANGE (txn_next)"
+        // FIXME TODO enable partitioning once creation of partition table for _hst is ready
+//        query += "PARTITION BY RANGE (txn_next)"
         sql.execute(query)
 
         // Optimizations are done on the history partitions!

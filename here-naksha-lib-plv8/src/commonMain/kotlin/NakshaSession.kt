@@ -95,6 +95,12 @@ SET SESSION enable_seqscan = OFF;
     private lateinit var historyPartitionCache: IMap
 
     /**
+     * A cache to remember which collection configuration i.e. whether _hst is enabled or not
+     * and the value is just _true_.
+     */
+    private lateinit var collectionConfiguration: IMap
+
+    /**
      * The last error number as SQLState.
      */
     var errNo: String? = null
@@ -225,8 +231,31 @@ SET SESSION enable_seqscan = OFF;
         NEW[COL_APP_ID] = appId
     }
 
-    internal fun xyzUpdate(): ByteArray {
-        TODO("Implement me!")
+    /**
+     *  Prepares XyzNamespace columns for head table.
+     */
+    internal fun xyzUpdateHead(collectionId: String, NEW: IMap, OLD: IMap) {
+        xyzInsert(collectionId, NEW)
+        NEW[COL_ACTION] = ACTION_UPDATE.toShort()
+        NEW[COL_CREATED_AT] = OLD[COL_CREATED_AT]
+        val oldVersion: Int = OLD[COL_VERSION]!!
+        NEW[COL_VERSION] = oldVersion + 1
+        NEW[COL_PTXN] = OLD[COL_TXN]
+        NEW[COL_PUID] = OLD[COL_UID]
+    }
+
+    /**
+     *  Updates XyzNamespace columns of OLD feature version, and moves it to _hst.
+     */
+    internal fun xyzUpdateHst(collectionId: String, NEW: IMap, OLD: IMap) {
+        OLD[COL_TXN_NEXT] = NEW[COL_TXN]
+        val isHstEnabled = true
+        if (isHstEnabled) {
+            // TODO move it outside and run it once
+            val collectionIdQuoted = sql.quoteIdent("${collectionId}_hst")
+            val hstInsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)""", COL_ALL_TYPES)
+            hstInsertPlan.execute(arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE]))
+        }
     }
 
     internal fun xyzDelete(): ByteArray {
@@ -253,7 +282,7 @@ SET SESSION enable_seqscan = OFF;
         } else if (data.TG_OP == TG_OP_UPDATE) {
             check(data.NEW != null) { "Missing NEW for UPDATE" }
             check(data.OLD != null) { "Missing OLD for UPDATE" }
-            // TODO("Implement me!")
+            xyzUpdateHead(collectionId, data.NEW, data.OLD)
         }
         // We should not be called for delete, in that case do nothing.
     }
@@ -264,7 +293,12 @@ SET SESSION enable_seqscan = OFF;
      * @param data The trigger data, allows the modification of [PgTrigger.NEW].
      */
     fun triggerAfter(data: PgTrigger) {
-        //Jb.log.info("Trigger after")
+        var collectionId = data.TG_TABLE_NAME
+        if (data.TG_OP == TG_OP_UPDATE) {
+            check(data.NEW != null) { "Missing NEW for UPDATE" }
+            check(data.OLD != null) { "Missing OLD for UPDATE" }
+            xyzUpdateHst(collectionId, data.NEW, data.OLD)
+        }
     }
 
     /**

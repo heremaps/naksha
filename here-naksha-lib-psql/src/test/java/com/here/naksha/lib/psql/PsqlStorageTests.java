@@ -370,7 +370,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   private static final int GUID_YEAR = 2;
   private static final int GUID_MONTH = 3;
   private static final int GUID_DAY = 4;
-  private static final int GUID_ID = 5;
+  private static final int GUID_SEQ = 5;
+  private static final int GUID_ID = 6;
 
   @Test
   @Order(56)
@@ -407,8 +408,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(storage.getStorageId(), uuidFields[GUID_STORAGE_ID]);
       assertEquals(collectionId(), uuidFields[GUID_COLLECTION_ID]);
       assertEquals(4, uuidFields[GUID_YEAR].length()); // year (4- digits)
-      assertEquals(2, uuidFields[GUID_MONTH].length()); // hour (2- digits)
-      assertEquals(2, uuidFields[GUID_DAY].length()); // minute (2- digits)
+      assertTrue(uuidFields[GUID_MONTH].length() <= 2); // month (1 or 2 digits)
+      assertTrue(uuidFields[GUID_DAY].length() <= 2); // day (1 or 2 digits)
       // Note: We know that the "id" is actually the sequence number of the storage (so "i").
       // - We created a feature (0)
       // - We updated via upsert (2), this created a history entry (1)
