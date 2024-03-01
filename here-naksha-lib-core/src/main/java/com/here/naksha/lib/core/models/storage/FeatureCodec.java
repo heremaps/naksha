@@ -557,7 +557,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   }
 
   protected @Nullable String calculateGrid() {
-    if (geometry != null) {
+    if (geometry != null && !geometry.isEmpty()) {
       Coordinate centroid = Centroid.getCentroid(geometry);
       return GeohashUtils.encodeLatLon(centroid.y, centroid.x, 14);
     }
