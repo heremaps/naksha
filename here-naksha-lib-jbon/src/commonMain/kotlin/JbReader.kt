@@ -40,7 +40,7 @@ open class JbReader {
             return when (value) {
                 in -16..15 -> 1
                 in -128..127 -> 2
-                in -32768..-32767 -> 5
+                in -32768..32767 -> 5
                 else -> 9
             }
         }
