@@ -365,7 +365,7 @@ public class DefaultViewHandlerTest extends ApiTest {
         HttpResponse<String> viewResponse = nakshaClient
                 .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
 
-        //then Feature from delta is returned as gathered by ID in second internal call.
+        //then Feature from dlb is returned as gathered by ID in second internal call.
         assertThat(viewResponse)
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
