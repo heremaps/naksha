@@ -35,12 +35,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 class HttpStorageReadExecute {
-
-  private static final Logger log = LoggerFactory.getLogger(HttpStorageReadExecute.class);
 
   @NotNull
   static Result execute(ReadFeaturesProxyWrapper request, RequestSender sender) {
@@ -75,10 +71,8 @@ class HttpStorageReadExecute {
   private static Result executeFeatureByBBox(ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String queryParamsString = keysToKeyValuesStrings(readRequest, WEST, NORTH, EAST, SOUTH, LIMIT);
 
-    warnOnUnsupportedQueryParam(readRequest, PROPERTY_SEARCH_OP);
-
-    HttpResponse<String> response =
-        requestSender.sendRequest(String.format("/%s/bbox?%s", baseEndpoint(readRequest), queryParamsString));
+    HttpResponse<String> response = requestSender.sendRequest(
+        String.format("/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQuery(readRequest)));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
@@ -90,10 +84,12 @@ class HttpStorageReadExecute {
 
     if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY))
       return new ErrorResult(XyzError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
-    warnOnUnsupportedQueryParam(readRequest, PROPERTY_SEARCH_OP);
+
+    POp pop = readRequest.getQueryParameter(PROPERTY_SEARCH_OP);
+    String popQuery = "&" + POpToQuery.getQueryFromPop(pop);
 
     HttpResponse<String> response = requestSender.sendRequest(
-        String.format("/%s/quadkey/%s?%s", baseEndpoint(readRequest), tileId, queryParamsString));
+        String.format("/%s/quadkey/%s?%s%s", baseEndpoint(readRequest), tileId, queryParamsString, popQuery));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
@@ -110,10 +106,12 @@ class HttpStorageReadExecute {
     return createHttpResultFromFeatureList(typedResponseToFeatureList.apply(resultFeatures));
   }
 
-  private static void warnOnUnsupportedQueryParam(ReadFeaturesProxyWrapper readRequest, String key) {
-    if (readRequest.getQueryParameter(key) != null)
-      log.warn("The " + key + " query param for " + readRequest.getReadRequestType()
-          + " is not supported yet and will be ignored.");
+  /**
+   * @return either POp query string starting with "&" or an empty string if the POp is null
+   */
+  private static String getPOpQuery(ReadFeaturesProxyWrapper readRequest) {
+    POp pop = readRequest.getQueryParameter(PROPERTY_SEARCH_OP);
+    return pop == null ? "" : "&" + POpToQuery.getQueryFromPop(pop);
   }
 
   /**

@@ -179,4 +179,52 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
     // Then: Verify request did not reach endpoint
     verify(0, getRequestedFor(urlPathEqualTo(ENDPOINT)));
   }
+
+  @Test
+  void propsearch() throws Exception {
+    final String bboxQueryParam = "west=-180.0&north=90.0&east=180.0&south=-90.0&limit=30000";
+    final String propSearch = "properties.prop_2!=value_2,value_22" +
+            "&properties.prop_3=.null,value_33" +
+            "&properties.prop_4!=.null,value_44" +
+            "&properties.prop_5=gte=5.5,55" +
+            "&properties.prop_5_1=cs=%7B%22id%22%3A%22123%22%7D,%5B%7B%22id%22%3A%22123%22%7D%5D" +
+            "&properties.prop_5_2!=%7B%22id%22%3A%22123%22%7D,%7B%22id%22%3A%22456%22%7D,.null" +
+            "&properties.prop_6=lte=6,66" +
+            "&properties.prop_7=gt=7,77" +
+            "&properties.prop_8=lt=8,88" +
+            "&properties.array_1=cs=%40element_1,element_2" +
+            "&properties.prop_10=gte=555,5555" +
+            "&properties.prop_11=lte=666,6666" +
+            "&properties.prop_12=gt=777,7777" +
+            "&properties.prop_13=lt=888,8888" +
+            "&properties.@ns:com:here:xyz.tags=cs=%7B%22id%22%3A%22123%22%7D,%5B%7B%22id%22%3A%22123%22%7D%5D,element_4" +
+            "&properties.@ns:com:here:xyz.tags=cs=element_5";
+
+    String streamId = UUID.randomUUID().toString();
+
+    final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propSearch, streamId);
+
+
+    verify(1, getRequestedFor(endpointPath)
+            .withQueryParam("properties.prop_2!", equalTo("value_2,value_22"))
+            .withQueryParam("properties.prop_3", equalTo(".null,value_33"))
+            .withQueryParam("properties.prop_4!", equalTo(".null,value_44"))
+            .withQueryParam("properties.prop_5", equalTo("gte=5.5,55"))
+            // The parameters reaching the endpoint are url-encoded but wiremock expects decoded strings in equalTo()
+            .withQueryParam("properties.prop_5_1", equalTo("cs={\"id\":\"123\"},[{\"id\":\"123\"}],[{\"id\":\"123\"}]"))
+            .withQueryParam("properties.prop_5_2!", equalTo("{\"id\":\"123\"},{\"id\":\"456\"},.null"))
+            .withQueryParam("properties.prop_6", equalTo("lte=6,66"))
+            .withQueryParam("properties.prop_7", equalTo("gt=7,77"))
+            .withQueryParam("properties.prop_8", equalTo("lt=8,88"))
+            .withQueryParam("properties.array_1", equalTo("cs=@element_1,element_2"))
+            .withQueryParam("properties.prop_10", equalTo("gte=555,5555"))
+            .withQueryParam("properties.prop_11", equalTo("lte=666,6666"))
+            .withQueryParam("properties.prop_12", equalTo("gt=777,7777"))
+            .withQueryParam("properties.prop_13", equalTo("lt=888,8888"))
+    );
+  }
 }
