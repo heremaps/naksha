@@ -58,7 +58,7 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
     // Set up (standard) Psql Storage based Space
     setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/psql_storage_space");
     // Set up View Space over Psql and Http Storage based spaces
-    createHandler(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/view_space/create_sourceid_handler.json");
+    createHandler(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/view_space/create_sourceId_handler.json");
     setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/view_space");
     // Load some test data in PsqlStorage based Space
     final String initialFeaturesJson = loadFileOrFail("ReadFeatures/ByBBoxHttpStorage/setup/psql_storage_space/create_features.json");
