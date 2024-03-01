@@ -134,7 +134,7 @@ class HttpStorageReadExecute {
       final XyzFeatureCodec codec = codecFactory.newInstance();
       codec.setOp(EExecutedOp.READ);
       codec.setFeature(feature);
-      codec.decodeParts(true);
+      codec.setId(feature.getId());
       codecs.add(codec);
     }
 
