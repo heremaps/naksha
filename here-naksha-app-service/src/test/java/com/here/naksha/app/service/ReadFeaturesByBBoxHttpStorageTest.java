@@ -36,7 +36,7 @@ import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelated
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
-@WireMockTest(httpPort = 8089)
+@WireMockTest(httpPort = 9090)
 class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
