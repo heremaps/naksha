@@ -271,15 +271,15 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     if (pRef.equals(PRef.id())) {
       sql.add("id");
     } else if (pRef.equals(PRef.txn())) {
-      sql.add("xyz_txn(xyz)");
+      sql.add("txn");
     } else if (pRef.equals(PRef.txn_next())) {
       sql.add("txn_next");
     } else if (pRef.equals(PRef.uuid())) {
       sql.add("uid");
     } else if (pRef.equals(PRef.app_id())) {
-      sql.add("xyz_author(xyz)");
+      sql.add("author");
     } else if (pRef.equals(PRef.grid())) {
-      sql.add("xyz_grid(xyz)");
+      sql.add("grid");
     } else if (pRef.getTagName() != null) {
       sql.add("tags_to_jsonb(tags)");
     } else {
@@ -298,7 +298,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(" COLLATE \"C\" ");
     }
     if (nullif) {
-      sql.add(",'null')");
+      sql.add(",null)");
     }
   }
 
@@ -464,7 +464,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   private SQL prepareQuery(String collection, String spatial_where, String props_where, Long limit) {
     final SQL query = new SQL();
     query.add("(SELECT 'READ',\n" + "id,\n")
-        .add("row_to_ns(created_at,updated_at,txn,action,version,author_ts,uid,app_id,author,geo_grid,")
+        .add(
+            "row_to_ns(created_at,updated_at,txn,action,version,author_ts,uid,app_id,author,geo_grid,puid,ptxn,")
         .addLiteral(collection)
         .add("::text),\n" + "tags,\n" + "feature,\n" + "geo_type,\n" + "geo,\n" + "null,\n" + "null FROM ")
         .addIdent(collection);

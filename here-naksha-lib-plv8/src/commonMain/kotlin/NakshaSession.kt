@@ -175,6 +175,13 @@ SET SESSION enable_seqscan = OFF;
         val txn = NakshaTxn(row[COL_TXN]!!)
         val uid: Int = row[COL_UID]!!
         val uuid = txn.newFeatureUuid(storageId, collectionId, uid)
+        val ptxn: BigInt64? = row[COL_PTXN]
+        val puid: Int? = row[COL_PUID]
+        val puuid = if (ptxn != null && puid != null) {
+            NakshaTxn(ptxn).newFeatureUuid(storageId, collectionId, puid).toString()
+        } else {
+            null
+        }
         return xyzBuilder.buildXyzNs(
                 row[COL_CREATED_AT]!!,
                 row[COL_UPDATE_AT]!!,
@@ -183,7 +190,7 @@ SET SESSION enable_seqscan = OFF;
                 row[COL_VERSION]!!,
                 row[COL_AUTHOR_TS]!!,
                 Jb.int64.ZERO(),
-                null,
+                puuid,
                 uuid.toString(),
                 row[COL_APP_ID]!!,
                 row[COL_AUTHOR]!!,
@@ -573,7 +580,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                     val tableExists = rows.isNotEmpty()
                     if (xyzOp == XYZ_OP_UPSERT) xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
                     if (xyzOp == XYZ_OP_CREATE) {
-                        if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Feature exists already", existing)
+                        if (existing != null) throw NakshaException.forRow(ERR_COLLECTION_EXISTS, "Feature exists already", existing, xyzNsFromRow(id, existing))
                         query = "INSERT INTO naksha_collections ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
@@ -598,7 +605,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                                 query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
                                 existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
-                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing)
+                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
                                 throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection $id does not exist", id)
                             }
                         }
@@ -626,7 +633,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                                 query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
                                 existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
-                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing)
+                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
                                 throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection $id does not exist", id)
                             }
                         }

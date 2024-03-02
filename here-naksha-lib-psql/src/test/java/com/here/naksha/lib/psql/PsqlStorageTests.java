@@ -79,6 +79,8 @@ import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.here.naksha.lib.jbon.BigInt64Kt;
+import com.here.naksha.lib.jbon.NakshaTxn;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -421,15 +423,17 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       // - Upsert the single feature (2) <- commit
       // - Update the single feature (3) <- commit
       if (dropInitially()) {
-        final long txnFromUuid = Long.parseLong(
-            uuidFields[GUID_YEAR] + uuidFields[GUID_MONTH] + uuidFields[GUID_DAY] + "00000000003");
-        assertEquals(txnFromUuid, xyz.getTxn()); // seq id
+        NakshaTxn nakshaTxn = new NakshaTxn(BigInt64Kt.BigInt64(xyz.getTxn()));
+        assertEquals(uuidFields[GUID_YEAR], "" + nakshaTxn.year());
+        assertEquals(uuidFields[GUID_MONTH], "" + nakshaTxn.month());
+        assertEquals(uuidFields[GUID_DAY], "" + nakshaTxn.day());
+        assertEquals(uuidFields[GUID_SEQ], "" + nakshaTxn.seq());
       }
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
 
       Point centroid = geometry.getJTSGeometry().getCentroid();
-      assertEquals(encodeLatLon(centroid.getY(), centroid.getX(), 7), xyz.get("grid"));
+      assertEquals(encodeLatLon(centroid.getY(), centroid.getX(), 14), xyz.get("grid"));
       assertFalse(cursor.hasNext());
     }
   }
