@@ -111,10 +111,11 @@ class XyzTest : JbAbstractTest() {
 
     @Test
     fun testXyzNsOverflow() {
+        val uuid = "11222222222222222222"
         val view = env.newDataView(ByteArray(700))
         val builder = XyzBuilder(view)
 
-        builder.buildXyzNs(
+        val nsBytes = builder.buildXyzNs(
                 BigInt64(1709296198085L),
                 BigInt64(1709296198085L),
                 BigInt64(4558069433410519040L),
@@ -122,12 +123,18 @@ class XyzTest : JbAbstractTest() {
                 1,
                 BigInt64(1709296198085L),
                 BigInt64(1709296198085L),
-                "11222222222222222222",
-                "11222222222222222222",
+                uuid,
+                uuid,
                 "zcxvzxcvzcvzxc",
                 "11222222222222222211",
                 "sdfasdasdasdad1"
         )
+
+        val xyzNs = XyzNs().mapBytes(nsBytes, 0, nsBytes.size)
+
+        assertEquals(3, xyzNs.action())
+        assertEquals(uuid, xyzNs.uuid())
+        assertEquals(uuid, xyzNs.puuid())
     }
 
 }
