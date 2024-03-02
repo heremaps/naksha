@@ -30,6 +30,7 @@ import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -59,6 +60,10 @@ class HttpStorageReadExecute {
     HttpResponse<String> response =
         requestSender.sendRequest(String.format("/%s/features/%s", baseEndpoint(readRequest), featureId));
 
+    if (response.statusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+      // For Error 404 (not found) on single feature GetById request, we need to return empty result
+      return createHttpResultFromFeatureList(Collections.emptyList());
+    }
     return prepareResult(response, XyzFeature.class, List::of);
   }
 
