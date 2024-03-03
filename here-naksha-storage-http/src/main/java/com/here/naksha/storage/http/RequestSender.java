@@ -61,8 +61,8 @@ class RequestSender {
    *
    * @param endpoint does not contain host:port part, starts with "/".
    */
-  HttpResponse<String> sendRequest(String endpoint) {
-    return sendRequest(endpoint, true, null, null, null);
+  HttpResponse<String> sendRequest(@NotNull String endpoint, @Nullable Map<String, String> headers) {
+    return sendRequest(endpoint, true, headers, null, null);
   }
 
   HttpResponse<String> sendRequest(
