@@ -567,7 +567,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     // make sure feature hasn't been updated (has old geometry).
     final ReadFeatures readRequest = RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
+             session.execute(readRequest).getXyzFeatureCursor()) {
       assertTrue(cursor.next());
       assertEquals(
           new Coordinate(5d, 6d, 2d),

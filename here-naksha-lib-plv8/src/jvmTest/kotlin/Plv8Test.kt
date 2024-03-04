@@ -160,7 +160,7 @@ class Plv8Test : Plv8TestContainer() {
     }
 
     @Order(10)
-//    @Test
+    @Test
     fun testCreateBarCollection() {
         val session = NakshaSession.get()
         // TODO: We need a test for this case, that is a general issue with empty local dictionaries!

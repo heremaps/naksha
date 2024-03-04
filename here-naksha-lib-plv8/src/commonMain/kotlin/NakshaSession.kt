@@ -479,6 +479,7 @@ SET (toast_tuple_target=8160,fillfactor=100
             var i = 0
             while (i < op_arr.size) {
                 var id: String? = null
+                var xyzOp: Int? = null
                 try {
                     val op = op_arr[i]
                     val feature = feature_arr[i]
@@ -487,7 +488,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                     val tags = tags_arr[i]
 
                     opReader.mapBytes(op)
-                    val xyzOp = opReader.op()
+                    xyzOp = opReader.op()
                     var uuid = opReader.uuid()
                     var grid = opReader.grid()
                     id = opReader.id()
@@ -523,9 +524,8 @@ SET (toast_tuple_target=8160,fillfactor=100
                 } catch (e: NakshaException) {
                     if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
                     table.returnException(e)
-                } catch (e: Exception) {
-                    if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-                    table.returnErr(ERR_FATAL, e.rootCause().message ?: "Fatal", id)
+                } catch (e: Throwable) {
+                    handleFeatureException(e, table, id, xyzOp)
                 } finally {
                     i++
                 }
@@ -536,6 +536,27 @@ SET (toast_tuple_target=8160,fillfactor=100
             createPlan.free()
         }
         return table
+    }
+
+    private fun handleFeatureException(e: Throwable, table: ITable, id: String?, op: Int?) {
+        val err = asMap(e)
+        // available fields: sqlerrcode, schema_name, table_name, column_name, datatype_name, constraint_name, detail, hint, context, internalquery, code
+        val errCode: String? = err["sqlerrcode"]
+        val tableName: String? = err["table_name"]
+        when {
+            errCode == ERR_UNIQUE_VIOLATION && op == XYZ_OP_CREATE -> {
+                val existingFeature = asArray(sql.execute("SELECT * FROM $tableName WHERE id=$1", arrayOf(id)))[0]
+                val featureAsMap = asMap(existingFeature)
+                val nakshaException = NakshaException.forRow(ERR_UNIQUE_VIOLATION, "The feature with the id '$id' does exist already", featureAsMap, xyzNsFromRow(tableName!!, featureAsMap))
+                table.returnException(nakshaException)
+            }
+
+            else -> {
+                if (Static.PRINT_STACK_TRACES)
+                    Jb.log.info(e.cause?.message!!)
+                table.returnErr(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}", id)
+            }
+        }
     }
 
     fun writeCollections(

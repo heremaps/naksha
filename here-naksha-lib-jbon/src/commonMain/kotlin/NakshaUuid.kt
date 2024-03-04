@@ -13,7 +13,17 @@ class NakshaUuid(val storageId: String, val collectionId: String, val year: Int,
     private lateinit var string : String
     companion object {
         fun fromString(s:String) : NakshaUuid {
-            TODO("Parse the string")
+            val values = s.split(':')
+            check(values.size == 7) { "invalid naksha uuid $s" }
+            return NakshaUuid(
+                    values[0],
+                    values[1],
+                    values[2].toInt(),
+                    values[3].toInt(),
+                    values[4].toInt(),
+                    BigInt64( values[5].toLong()),
+                    values[6].toInt(),
+            )
         }
     }
 
