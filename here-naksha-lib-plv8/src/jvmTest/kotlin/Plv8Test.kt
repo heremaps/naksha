@@ -196,7 +196,7 @@ class Plv8Test : Plv8TestContainer() {
         pgNew[COL_UID] = null // Should be set by trigger
         pgNew[COL_ID] = "F1"
         pgNew[COL_TXN_NEXT] = null // Should be set by trigger
-        pgNew[COL_FEATURE] =builderFeature.buildFeatureFromMap(topology)
+        pgNew[COL_FEATURE] = builderFeature.buildFeatureFromMap(topology)
         pgNew[COL_GEO_TYPE] = GEO_TYPE_EWKB
         pgNew[COL_GEOMETRY] = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
         pgNew[COL_TAGS] = null
@@ -216,6 +216,10 @@ class Plv8Test : Plv8TestContainer() {
         session.triggerBefore(t)
         session.triggerAfter(t)
         session.sql.execute("commit;")
+
+        val oldTxnNext: BigInt64? = pgOld[COL_TXN]
+        val newTxn: BigInt64? = pgNew[COL_TXN_NEXT]
+        assertEquals(oldTxnNext, newTxn)
 
     }
 //    @Order(11)
