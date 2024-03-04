@@ -29,7 +29,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -38,22 +37,23 @@ import org.slf4j.LoggerFactory;
 class RequestSender {
 
   private static final Logger log = LoggerFactory.getLogger(RequestSender.class);
+  private final String name;
   private final String hostUrl;
-
+  private final Map<String, String> defaultHeaders;
   private final HttpClient httpClient;
-
-  // Do not modify after constructor because RequestSender is shared among multiple requests.
-  private final HttpRequest.Builder baseBuilder;
   private final long socketTimeoutSec;
 
   public RequestSender(
-      String hostUrl, Map<String, String> defaultHeaders, HttpClient httpClient, long socketTimeoutSec) {
-    this.hostUrl = hostUrl;
+      final String name,
+      String hostUrl,
+      Map<String, String> defaultHeaders,
+      HttpClient httpClient,
+      long socketTimeoutSec) {
+    this.name = name;
     this.httpClient = httpClient;
-
-    this.baseBuilder = newBuilder().timeout(Duration.ofSeconds(socketTimeoutSec));
+    this.hostUrl = hostUrl;
+    this.defaultHeaders = defaultHeaders;
     this.socketTimeoutSec = socketTimeoutSec;
-    defaultHeaders.forEach(baseBuilder::header);
   }
 
   /**
@@ -61,44 +61,53 @@ class RequestSender {
    *
    * @param endpoint does not contain host:port part, starts with "/".
    */
-  HttpResponse<String> sendRequest(String endpoint) {
-    return sendRequest(endpoint, null, null, null);
+  HttpResponse<String> sendRequest(@NotNull String endpoint, @Nullable Map<String, String> headers) {
+    return sendRequest(endpoint, true, headers, null, null);
   }
 
   HttpResponse<String> sendRequest(
       @NotNull String endpoint,
+      boolean keepDefHeaders,
       @Nullable Map<String, String> headers,
       @Nullable String httpMethod,
       @Nullable String body) {
     URI uri = URI.create(hostUrl + endpoint);
-    HttpRequest.Builder specificBuilder = baseBuilder.copy().uri(uri);
+    HttpRequest.Builder builder = newBuilder().uri(uri).timeout(Duration.ofSeconds(socketTimeoutSec));
 
-    if (headers != null) headers.forEach(specificBuilder::header);
+    if (keepDefHeaders) defaultHeaders.forEach(builder::header);
+    if (headers != null) headers.forEach(builder::header);
 
     HttpRequest.BodyPublisher bodyPublisher =
         body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body);
-    if (httpMethod != null) specificBuilder.method(httpMethod, bodyPublisher);
-    HttpRequest specificRequest = specificBuilder.build();
+    if (httpMethod != null) builder.method(httpMethod, bodyPublisher);
+    HttpRequest request = builder.build();
 
-    return sendRequest(specificRequest);
+    return sendRequest(request);
   }
 
-  private HttpResponse<String> sendRequest(HttpRequest specificRequest) {
+  private HttpResponse<String> sendRequest(HttpRequest request) {
+    long startTime = System.currentTimeMillis();
+    HttpResponse<String> response = null;
     try {
-      long startTime = System.currentTimeMillis();
       CompletableFuture<HttpResponse<String>> futureResponse =
-          httpClient.sendAsync(specificRequest, HttpResponse.BodyHandlers.ofString());
-      HttpResponse<String> response = futureResponse.get(socketTimeoutSec, TimeUnit.SECONDS);
-      long executionTime = System.currentTimeMillis() - startTime;
-      log.info("Request to {} took {}ms", specificRequest.uri(), executionTime);
+          httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+      response = futureResponse.get(socketTimeoutSec, TimeUnit.SECONDS);
       return response;
-    } catch (TimeoutException e) {
-      TimeoutException t = new TimeoutException(this.getClass().getName() + ": request timed out");
-      log.warn("Exception thrown.", t);
-      throw unchecked(t);
     } catch (Exception e) {
-      log.warn("Exception thrown.", e);
+      log.warn("We got exception while executing Http request against remote server.", e);
       throw unchecked(e);
+    } finally {
+      long executionTime = System.currentTimeMillis() - startTime;
+      log.info(
+          "[Storage API stats => type,storageId,host,method,path,status,timeTakenMs,resSize] - StorageAPIStats {} {} {} {} {} {} {} {}",
+          "HttpStorage",
+          this.name,
+          this.hostUrl,
+          request.method(),
+          request.uri(),
+          (response == null) ? "-" : response.statusCode(),
+          executionTime,
+          (response == null) ? 0 : response.body().length());
     }
   }
 }
