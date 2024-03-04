@@ -26,6 +26,7 @@ import com.here.naksha.lib.core.models.storage.POpType;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 
@@ -74,26 +75,22 @@ public class POpToQuery {
 
   private static String orWithNotEqSign(List<POp> children) {
     String path = getPath(children.get(0));
-    String values = children.stream()
-        .map(child -> {
-          if (isNotNullOp(child)) return ".null";
-          else if (isNotEqOp(child)) return getValue(child.children().get(0));
-          else throw new UnsupportedOperationException("op not compat with !=");
-        })
-        .collect(Collectors.joining(","));
+    String values = mapToCommaSeparatedValues(children, child -> {
+      if (isNotNullOp(child)) return ".null";
+      else if (isNotEqOp(child)) return getValue(child.children().get(0));
+      else throw new UnsupportedOperationException("op not compat with !=");
+    });
 
     return path + "!=" + values;
   }
 
   private static String orWithEqSign(List<POp> children) {
     String path = getPath(children.get(0));
-    String values = children.stream()
-        .map(child -> {
-          if (isANullOp(child)) return ".null";
-          else if (isEqOp(child)) return getValue(child);
-          else throw new UnsupportedOperationException("op not compat with =");
-        })
-        .collect(Collectors.joining(","));
+    String values = mapToCommaSeparatedValues(children, child -> {
+      if (isANullOp(child)) return ".null";
+      else if (isEqOp(child)) return getValue(child);
+      else throw new UnsupportedOperationException("op not compat with =");
+    });
 
     return path + "=" + values;
   }
@@ -101,19 +98,15 @@ public class POpToQuery {
   private static String orWithContainsSign(List<POp> children) {
     POp firstChild = children.get(0);
     String expectedPath = getPath(firstChild);
-    String values = children.stream()
-        .map(child -> {
-          if (child.op() == OR)
-            return child.children().stream()
-                .map(grandchild -> {
-                  if (grandchild.op() != CONTAINS) throw new UnsupportedOperationException();
-                  return getValue(grandchild);
-                })
-                .collect(Collectors.joining(","));
-          else if (child.op() == CONTAINS) return getValue(child);
-          else throw new UnsupportedOperationException();
-        })
-        .collect(Collectors.joining(","));
+    String values = mapToCommaSeparatedValues(children, child -> {
+      if (child.op() == OR)
+        return mapToCommaSeparatedValues(child.children(), grandchild -> {
+          if (grandchild.op() != CONTAINS) throw new UnsupportedOperationException();
+          return getValue(grandchild);
+        });
+      else if (child.op() == CONTAINS) return getValue(child);
+      else throw new UnsupportedOperationException();
+    });
     return expectedPath + "=cs=" + values;
   }
 
@@ -123,16 +116,18 @@ public class POpToQuery {
     OpType expectedOperation = firstChild.op();
     if (expectedOperation instanceof POpType pOpType) {
       String operator = getOperator(pOpType);
-      String values = children.stream()
-          .map(child -> {
-            if (child.op() != expectedOperation)
-              throw new UnsupportedOperationException("op not compat with " + operator);
-            return getValue(child);
-          })
-          .collect(Collectors.joining(","));
+      String values = mapToCommaSeparatedValues(children, child -> {
+        if (child.op() != expectedOperation)
+          throw new UnsupportedOperationException("op not compat with " + operator);
+        return getValue(child);
+      });
       return expectedPath + operator + values;
     }
     throw new UnsupportedOperationException();
+  }
+
+  private static String mapToCommaSeparatedValues(List<POp> pOps, Function<POp, String> mapFun) {
+    return pOps.stream().map(mapFun).collect(Collectors.joining(","));
   }
 
   private static String getOperator(POpType pOpType) {
@@ -153,6 +148,6 @@ public class POpToQuery {
     List<String> propRef = (pop.op() == NOT || pop.op() == OR)
         ? pop.children().get(0).getPropertyRef().getPath()
         : pop.getPropertyRef().getPath();
-    return String.join(".", propRef);
+    return URLEncoder.encode(String.join(".", propRef), StandardCharsets.UTF_8);
   }
 }

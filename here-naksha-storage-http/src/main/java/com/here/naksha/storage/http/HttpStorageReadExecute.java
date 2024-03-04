@@ -85,11 +85,8 @@ class HttpStorageReadExecute {
     if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY))
       return new ErrorResult(XyzError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
 
-    POp pop = readRequest.getQueryParameter(PROPERTY_SEARCH_OP);
-    String popQuery = "&" + POpToQuery.getQueryFromPop(pop);
-
-    HttpResponse<String> response = requestSender.sendRequest(
-        String.format("/%s/quadkey/%s?%s%s", baseEndpoint(readRequest), tileId, queryParamsString, popQuery));
+    HttpResponse<String> response = requestSender.sendRequest(String.format(
+        "/%s/quadkey/%s?%s%s", baseEndpoint(readRequest), tileId, queryParamsString, getPOpQuery(readRequest)));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }

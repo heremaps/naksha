@@ -19,20 +19,26 @@
 package com.here.naksha.app.service;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 @WireMockTest(httpPort = 8089)
@@ -180,25 +186,10 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
     verify(0, getRequestedFor(urlPathEqualTo(ENDPOINT)));
   }
 
-  @Test
-  void propsearch() throws Exception {
+  @ParameterizedTest
+  @MethodSource("queryParams")
+  void tc800_testPropertySearch(String inputQueryString, String outputQueryString) throws Exception {
     final String bboxQueryParam = "west=-180.0&north=90.0&east=180.0&south=-90.0&limit=30000";
-    final String propSearch = "properties.prop_2!=value_2,value_22" +
-            "&properties.prop_3=.null,value_33" +
-            "&properties.prop_4!=.null,value_44" +
-            "&properties.prop_5=gte=5.5,55" +
-            "&properties.prop_5_1=cs=%7B%22id%22%3A%22123%22%7D,%5B%7B%22id%22%3A%22123%22%7D%5D" +
-            "&properties.prop_5_2!=%7B%22id%22%3A%22123%22%7D,%7B%22id%22%3A%22456%22%7D,.null" +
-            "&properties.prop_6=lte=6,66" +
-            "&properties.prop_7=gt=7,77" +
-            "&properties.prop_8=lt=8,88" +
-            "&properties.array_1=cs=%40element_1,element_2" +
-            "&properties.prop_10=gte=555,5555" +
-            "&properties.prop_11=lte=666,6666" +
-            "&properties.prop_12=gt=777,7777" +
-            "&properties.prop_13=lt=888,8888" +
-            "&properties.@ns:com:here:xyz.tags=cs=%7B%22id%22%3A%22123%22%7D,%5B%7B%22id%22%3A%22123%22%7D%5D,element_4" +
-            "&properties.@ns:com:here:xyz.tags=cs=element_5";
 
     String streamId = UUID.randomUUID().toString();
 
@@ -206,25 +197,72 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
 
     // When: Get Features By BBox request is submitted to NakshaHub
     HttpResponse<String> response = nakshaClient
-            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propSearch, streamId);
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + inputQueryString, streamId);
 
+    stubFor(any(anyUrl()));
 
-    verify(1, getRequestedFor(endpointPath)
-            .withQueryParam("properties.prop_2!", equalTo("value_2,value_22"))
-            .withQueryParam("properties.prop_3", equalTo(".null,value_33"))
-            .withQueryParam("properties.prop_4!", equalTo(".null,value_44"))
-            .withQueryParam("properties.prop_5", equalTo("gte=5.5,55"))
-            // The parameters reaching the endpoint are url-encoded but wiremock expects decoded strings in equalTo()
-            .withQueryParam("properties.prop_5_1", equalTo("cs={\"id\":\"123\"},[{\"id\":\"123\"}],[{\"id\":\"123\"}]"))
-            .withQueryParam("properties.prop_5_2!", equalTo("{\"id\":\"123\"},{\"id\":\"456\"},.null"))
-            .withQueryParam("properties.prop_6", equalTo("lte=6,66"))
-            .withQueryParam("properties.prop_7", equalTo("gt=7,77"))
-            .withQueryParam("properties.prop_8", equalTo("lt=8,88"))
-            .withQueryParam("properties.array_1", equalTo("cs=@element_1,element_2"))
-            .withQueryParam("properties.prop_10", equalTo("gte=555,5555"))
-            .withQueryParam("properties.prop_11", equalTo("lte=666,6666"))
-            .withQueryParam("properties.prop_12", equalTo("gt=777,7777"))
-            .withQueryParam("properties.prop_13", equalTo("lt=888,8888"))
+    RequestPatternBuilder requestedFor = getRequestedFor(endpointPath);
+    for (String s : outputQueryString.split("&")) {
+      String[] split = s.trim().split("=", 2);
+      requestedFor.withQueryParam(split[0],equalTo(split[1]));
+    }
+    verify(1, requestedFor);
+  }
+
+  private static Stream<Arguments> queryParams() {
+    return Stream.of(
+            Arguments.of("properties.alone_prop=1","properties.alone_prop=1"),
+            Arguments.of("properties.alone_prop=1,2,3,4","properties.alone_prop=1,2,3,4"),
+            Arguments.of(
+                    "properties.json_prop="+urlEncoded("{\"arr1\":[1,2],\"arr2\":[]}"),
+                    "properties.json_prop={\"arr1\":[1,2],\"arr2\":[]}"
+            ),
+            Arguments.of("properties.long_or=1,2,3,4,4,4,3,2,1,true,false","properties.long_or=1,2,3,4,4,4,3,2,1,true,false"),
+            Arguments.of("properties.very.very.very.nested.even.more=1","properties.very.very.very.nested.even.more=1"),
+            Arguments.of(
+                    // Naksha does not interpret encoded %3E (">" sign) as a gt operation and passes it as properties.prop_> path with "=" operation
+                    "properties.prop%3E=value_2,value_22",
+                    // Http storege actually sends request with ">" reencoded to %3E, but Wiremock expects decoded string in verify matcher
+                    "properties.prop>=value_2,value_22"
+            ),
+            Arguments.of("properties.prop=lte=1","properties.prop=lte=1"),
+            Arguments.of("properties.prop=.null","properties.prop=.null"),
+            Arguments.of("properties.prop=null","properties.prop=null"),
+            Arguments.of("properties.prop!=.null","properties.prop!=.null"),
+            Arguments.of("""
+                            properties.prop_2!=value_2,value_22
+                            &properties.prop_3=.null,value_33
+                            &properties.prop_4!=.null,value_44
+                            &properties.prop_5=gte=5.5,55
+                            &properties.prop_5_1=cs=%7B%22id%22%3A%22123%22%7D,%5B%7B%22id%22%3A%22123%22%7D%5D
+                            &properties.prop_5_2!=%7B%22id%22%3A%22123%22%7D,%7B%22id%22%3A%22456%22%7D,.null
+                            &properties.prop_6=lte=6,66
+                            &properties.prop_7=gt=7,77
+                            &properties.prop_8=lt=8,88
+                            &properties.array_1=cs=%40element_1,element_2
+                            &properties.prop_10=gte=555,5555
+                            &properties.prop_11=lte=666,6666
+                            &properties.prop_12=gt=777,7777
+                            &properties.prop_13=lt=888,8888
+                            &properties.@ns:com:here:xyz.tags=cs=%7B%22id%22%3A%22123%22%7D,%5B%7B%22id%22%3A%22123%22%7D%5D,element_4
+                            &properties.@ns:com:here:xyz.tags=cs=element_5""".replace(System.lineSeparator(),"")
+                    ,
+                    """
+                            properties.prop_2!=value_2,value_22
+                            &properties.prop_3=.null,value_33
+                            &properties.prop_4!=.null,value_44
+                            &properties.prop_5=gte=5.5,55
+                            &properties.prop_5_1=cs={\"id\":\"123\"},[{\"id\":\"123\"}],[{\"id\":\"123\"}]
+                            &properties.prop_5_2!={\"id\":\"123\"},{\"id\":\"456\"},.null
+                            &properties.prop_6=lte=6,66
+                            &properties.prop_7=gt=7,77
+                            &properties.prop_8=lt=8,88
+                            &properties.array_1=cs=@element_1,element_2
+                            &properties.prop_10=gte=555,5555
+                            &properties.prop_11=lte=666,6666
+                            &properties.prop_12=gt=777,7777
+                            &properties.prop_13=lt=888,8888""".replace(System.lineSeparator(),"")
+            )
     );
   }
 }
