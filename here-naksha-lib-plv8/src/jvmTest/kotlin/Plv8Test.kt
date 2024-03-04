@@ -4,11 +4,14 @@ import com.here.naksha.lib.plv8.TG_OP_INSERT
 import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
+import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 class Plv8Test : Plv8TestContainer() {
+    private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
+
     @Order(1)
     @Test
     fun selectJbonModule() {
@@ -181,6 +184,44 @@ class Plv8Test : Plv8TestContainer() {
         session.sql.execute("COMMIT")
     }
 
+    @Order(11)
+    @Test
+    fun triggerAfter() {
+        val session = NakshaSession.get()
+
+        val builderFeature = XyzBuilder.create(65536)
+        val topology = asMap(env.parse(topologyJson))
+
+        val pgNew = Jb.map.newMap()
+        pgNew[COL_UID] = null // Should be set by trigger
+        pgNew[COL_ID] = "F1"
+        pgNew[COL_TXN_NEXT] = null // Should be set by trigger
+        pgNew[COL_FEATURE] = builderFeature.buildFeatureFromMap(topology)
+        pgNew[COL_GEO_TYPE] = GEO_TYPE_EWKB
+        pgNew[COL_GEOMETRY] = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
+        pgNew[COL_TAGS] = null
+        val pgOld = pgNew
+
+        val t = PgTrigger(
+                TG_OP_UPDATE,
+                "naksha_trigger_before",
+                TG_WHEN_BEFORE,
+                TG_LEVEL_ROW,
+                0,
+                "foo",
+                session.schema,
+                pgNew,
+                pgOld
+        )
+        session.triggerBefore(t)
+        session.triggerAfter(t)
+        session.sql.execute("commit;")
+
+        val oldTxnNext: BigInt64? = pgOld[COL_TXN]
+        val newTxn: BigInt64? = pgNew[COL_TXN_NEXT]
+        assertEquals(oldTxnNext, newTxn)
+
+    }
 //    @Order(11)
 //    @Test
 //    fun testUpdateBarCollection() {

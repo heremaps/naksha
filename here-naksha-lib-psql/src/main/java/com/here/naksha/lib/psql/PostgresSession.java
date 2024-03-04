@@ -50,6 +50,7 @@ import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.util.ClosableChildResource;
 import com.here.naksha.lib.core.util.IndexHelper;
 import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.jbon.NakshaUuid;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -271,15 +272,15 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     if (pRef.equals(PRef.id())) {
       sql.add("id");
     } else if (pRef.equals(PRef.txn())) {
-      sql.add("xyz_txn(xyz)");
+      sql.add("txn");
     } else if (pRef.equals(PRef.txn_next())) {
       sql.add("txn_next");
     } else if (pRef.equals(PRef.uuid())) {
       sql.add("uid");
     } else if (pRef.equals(PRef.app_id())) {
-      sql.add("xyz_author(xyz)");
+      sql.add("author");
     } else if (pRef.equals(PRef.grid())) {
-      sql.add("xyz_grid(xyz)");
+      sql.add("grid");
     } else if (pRef.getTagName() != null) {
       sql.add("tags_to_jsonb(tags)");
     } else {
@@ -298,7 +299,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(" COLLATE \"C\" ");
     }
     if (nullif) {
-      sql.add(",'null')");
+      sql.add(",null)");
     }
   }
 
@@ -414,10 +415,10 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(" != 'null'");
       return;
     }
-    final Object value = propertyOp.getValue();
+    final Object finalValue = getFinalValue(propertyOp);
     if (op == POpType.STARTS_WITH) {
-      if (value instanceof String) {
-        String text = (String) value;
+      if (finalValue instanceof String) {
+        String text = (String) finalValue;
         addJsonPath(sql, pref, path.size(), true, false);
         sql.add(" LIKE ?");
         parameter.add(text + '%');
@@ -429,10 +430,10 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add("(");
       addJsonPath(sql, pref, path.size(), false, true);
       sql.add("::int8 <= ?");
-      if (!(value instanceof Number)) {
+      if (!(finalValue instanceof Number)) {
         throw new IllegalArgumentException("Value must be a number");
       }
-      final Long txn = ((Number) value).longValue();
+      final Long txn = ((Number) finalValue).longValue();
       parameter.add(txn);
       if (isHstQuery) {
         sql.add(" AND ");
@@ -441,7 +442,16 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(")");
       return;
     }
-    addOp(sql, parameter, pref, op, value);
+    addOp(sql, parameter, pref, op, finalValue);
+  }
+
+  private static Object getFinalValue(POp propertyOp) {
+    if (PRef.uuid() == propertyOp.getPropertyRef()) {
+      assert propertyOp.getValue() != null;
+      return NakshaUuid.Companion.fromString(propertyOp.getValue().toString())
+          .getUid();
+    }
+    return propertyOp.getValue();
   }
 
   private static PGobject toJsonb(Object value) {
@@ -464,8 +474,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   private SQL prepareQuery(String collection, String spatial_where, String props_where, Long limit) {
     final SQL query = new SQL();
     query.add("(SELECT 'READ',\n" + "id,\n")
-        .add("row_to_ns(created_at,updated_at,txn,action,version,author_ts,uid,app_id,author,geo_grid,")
-        .addLiteral(collection)
+        .add(
+            "row_to_ns(created_at,updated_at,txn,action,version,author_ts,uid,app_id,author,geo_grid,puid,ptxn,")
+        .addLiteral(collection.replaceFirst("_hst", "")) // uuid should not to refer to _hst table
         .add("::text),\n" + "tags,\n" + "feature,\n" + "geo_type,\n" + "geo,\n" + "null,\n" + "null FROM ")
         .addIdent(collection);
     if (spatial_where.length() > 0 || props_where.length() > 0) {

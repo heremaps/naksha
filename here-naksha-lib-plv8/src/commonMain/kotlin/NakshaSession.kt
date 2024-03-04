@@ -95,6 +95,12 @@ SET SESSION enable_seqscan = OFF;
     private lateinit var historyPartitionCache: IMap
 
     /**
+     * A cache to remember which collection configuration i.e. whether _hst is enabled or not
+     * and the value is just _true_.
+     */
+    private lateinit var collectionConfiguration: IMap
+
+    /**
      * The last error number as SQLState.
      */
     var errNo: String? = null
@@ -169,6 +175,13 @@ SET SESSION enable_seqscan = OFF;
         val txn = NakshaTxn(row[COL_TXN]!!)
         val uid: Int = row[COL_UID]!!
         val uuid = txn.newFeatureUuid(storageId, collectionId, uid)
+        val ptxn: BigInt64? = row[COL_PTXN]
+        val puid: Int? = row[COL_PUID]
+        val puuid = if (ptxn != null && puid != null) {
+            NakshaTxn(ptxn).newFeatureUuid(storageId, collectionId, puid).toString()
+        } else {
+            null
+        }
         return xyzBuilder.buildXyzNs(
                 row[COL_CREATED_AT]!!,
                 row[COL_UPDATE_AT]!!,
@@ -177,7 +190,7 @@ SET SESSION enable_seqscan = OFF;
                 row[COL_VERSION]!!,
                 row[COL_AUTHOR_TS]!!,
                 Jb.int64.ZERO(),
-                null,
+                puuid,
                 uuid.toString(),
                 row[COL_APP_ID]!!,
                 row[COL_AUTHOR]!!,
@@ -225,8 +238,31 @@ SET SESSION enable_seqscan = OFF;
         NEW[COL_APP_ID] = appId
     }
 
-    internal fun xyzUpdate(): ByteArray {
-        TODO("Implement me!")
+    /**
+     *  Prepares XyzNamespace columns for head table.
+     */
+    internal fun xyzUpdateHead(collectionId: String, NEW: IMap, OLD: IMap) {
+        xyzInsert(collectionId, NEW)
+        NEW[COL_ACTION] = ACTION_UPDATE.toShort()
+        NEW[COL_CREATED_AT] = OLD[COL_CREATED_AT]
+        val oldVersion: Int = OLD[COL_VERSION]!!
+        NEW[COL_VERSION] = oldVersion + 1
+        NEW[COL_PTXN] = OLD[COL_TXN]
+        NEW[COL_PUID] = OLD[COL_UID]
+    }
+
+    /**
+     *  Updates XyzNamespace columns of OLD feature version, and moves it to _hst.
+     */
+    internal fun xyzUpdateHst(collectionId: String, NEW: IMap, OLD: IMap) {
+        OLD[COL_TXN_NEXT] = NEW[COL_TXN]
+        val isHstEnabled = true
+        if (isHstEnabled) {
+            // TODO move it outside and run it once
+            val collectionIdQuoted = sql.quoteIdent("${collectionId}_hst")
+            val hstInsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)""", COL_ALL_TYPES)
+            hstInsertPlan.execute(arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE]))
+        }
     }
 
     internal fun xyzDelete(): ByteArray {
@@ -253,7 +289,7 @@ SET SESSION enable_seqscan = OFF;
         } else if (data.TG_OP == TG_OP_UPDATE) {
             check(data.NEW != null) { "Missing NEW for UPDATE" }
             check(data.OLD != null) { "Missing OLD for UPDATE" }
-            // TODO("Implement me!")
+            xyzUpdateHead(collectionId, data.NEW, data.OLD)
         }
         // We should not be called for delete, in that case do nothing.
     }
@@ -264,7 +300,12 @@ SET SESSION enable_seqscan = OFF;
      * @param data The trigger data, allows the modification of [PgTrigger.NEW].
      */
     fun triggerAfter(data: PgTrigger) {
-        //Jb.log.info("Trigger after")
+        var collectionId = data.TG_TABLE_NAME
+        if (data.TG_OP == TG_OP_UPDATE) {
+            check(data.NEW != null) { "Missing NEW for UPDATE" }
+            check(data.OLD != null) { "Missing OLD for UPDATE" }
+            xyzUpdateHst(collectionId, data.NEW, data.OLD)
+        }
     }
 
     /**
@@ -438,6 +479,7 @@ SET (toast_tuple_target=8160,fillfactor=100
             var i = 0
             while (i < op_arr.size) {
                 var id: String? = null
+                var xyzOp: Int? = null
                 try {
                     val op = op_arr[i]
                     val feature = feature_arr[i]
@@ -446,7 +488,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                     val tags = tags_arr[i]
 
                     opReader.mapBytes(op)
-                    val xyzOp = opReader.op()
+                    xyzOp = opReader.op()
                     var uuid = opReader.uuid()
                     var grid = opReader.grid()
                     id = opReader.id()
@@ -482,9 +524,8 @@ SET (toast_tuple_target=8160,fillfactor=100
                 } catch (e: NakshaException) {
                     if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
                     table.returnException(e)
-                } catch (e: Exception) {
-                    if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-                    table.returnErr(ERR_FATAL, e.rootCause().message ?: "Fatal", id)
+                } catch (e: Throwable) {
+                    handleFeatureException(e, table, id, xyzOp)
                 } finally {
                     i++
                 }
@@ -495,6 +536,27 @@ SET (toast_tuple_target=8160,fillfactor=100
             createPlan.free()
         }
         return table
+    }
+
+    private fun handleFeatureException(e: Throwable, table: ITable, id: String?, op: Int?) {
+        val err = asMap(e)
+        // available fields: sqlerrcode, schema_name, table_name, column_name, datatype_name, constraint_name, detail, hint, context, internalquery, code
+        val errCode: String? = err["sqlerrcode"]
+        val tableName: String? = err["table_name"]
+        when {
+            errCode == ERR_UNIQUE_VIOLATION && op == XYZ_OP_CREATE -> {
+                val existingFeature = asArray(sql.execute("SELECT * FROM $tableName WHERE id=$1", arrayOf(id)))[0]
+                val featureAsMap = asMap(existingFeature)
+                val nakshaException = NakshaException.forRow(ERR_UNIQUE_VIOLATION, "The feature with the id '$id' does exist already", featureAsMap, xyzNsFromRow(tableName!!, featureAsMap))
+                table.returnException(nakshaException)
+            }
+
+            else -> {
+                if (Static.PRINT_STACK_TRACES)
+                    Jb.log.info(e.cause?.message!!)
+                table.returnErr(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}", id)
+            }
+        }
     }
 
     fun writeCollections(
@@ -539,7 +601,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                     val tableExists = rows.isNotEmpty()
                     if (xyzOp == XYZ_OP_UPSERT) xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
                     if (xyzOp == XYZ_OP_CREATE) {
-                        if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Feature exists already", existing)
+                        if (existing != null) throw NakshaException.forRow(ERR_COLLECTION_EXISTS, "Feature exists already", existing, xyzNsFromRow(id, existing))
                         query = "INSERT INTO naksha_collections ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
@@ -564,7 +626,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                                 query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
                                 existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
-                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing)
+                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
                                 throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection $id does not exist", id)
                             }
                         }
@@ -592,7 +654,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                                 query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
                                 existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
-                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing)
+                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
                                 throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection $id does not exist", id)
                             }
                         }

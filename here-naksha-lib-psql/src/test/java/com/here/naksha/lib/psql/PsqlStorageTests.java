@@ -79,6 +79,8 @@ import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.here.naksha.lib.jbon.BigInt64Kt;
+import com.here.naksha.lib.jbon.NakshaTxn;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -370,7 +372,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   private static final int GUID_YEAR = 2;
   private static final int GUID_MONTH = 3;
   private static final int GUID_DAY = 4;
-  private static final int GUID_ID = 5;
+  private static final int GUID_SEQ = 5;
+  private static final int GUID_ID = 6;
 
   @Test
   @Order(56)
@@ -407,8 +410,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(storage.getStorageId(), uuidFields[GUID_STORAGE_ID]);
       assertEquals(collectionId(), uuidFields[GUID_COLLECTION_ID]);
       assertEquals(4, uuidFields[GUID_YEAR].length()); // year (4- digits)
-      assertEquals(2, uuidFields[GUID_MONTH].length()); // hour (2- digits)
-      assertEquals(2, uuidFields[GUID_DAY].length()); // minute (2- digits)
+      assertTrue(uuidFields[GUID_MONTH].length() <= 2); // month (1 or 2 digits)
+      assertTrue(uuidFields[GUID_DAY].length() <= 2); // day (1 or 2 digits)
       // Note: We know that the "id" is actually the sequence number of the storage (so "i").
       // - We created a feature (0)
       // - We updated via upsert (2), this created a history entry (1)
@@ -420,15 +423,17 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       // - Upsert the single feature (2) <- commit
       // - Update the single feature (3) <- commit
       if (dropInitially()) {
-        final long txnFromUuid = Long.parseLong(
-            uuidFields[GUID_YEAR] + uuidFields[GUID_MONTH] + uuidFields[GUID_DAY] + "00000000003");
-        assertEquals(txnFromUuid, xyz.getTxn()); // seq id
+        NakshaTxn nakshaTxn = new NakshaTxn(BigInt64Kt.BigInt64(xyz.getTxn()));
+        assertEquals(uuidFields[GUID_YEAR], "" + nakshaTxn.year());
+        assertEquals(uuidFields[GUID_MONTH], "" + nakshaTxn.month());
+        assertEquals(uuidFields[GUID_DAY], "" + nakshaTxn.day());
+        assertEquals(uuidFields[GUID_SEQ], "" + nakshaTxn.seq());
       }
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
 
       Point centroid = geometry.getJTSGeometry().getCentroid();
-      assertEquals(encodeLatLon(centroid.getY(), centroid.getX(), 7), xyz.get("grid"));
+      assertEquals(encodeLatLon(centroid.getY(), centroid.getX(), 14), xyz.get("grid"));
       assertFalse(cursor.hasNext());
     }
   }
@@ -562,7 +567,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     // make sure feature hasn't been updated (has old geometry).
     final ReadFeatures readRequest = RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
+             session.execute(readRequest).getXyzFeatureCursor()) {
       assertTrue(cursor.next());
       assertEquals(
           new Coordinate(5d, 6d, 2d),
