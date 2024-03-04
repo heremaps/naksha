@@ -13,12 +13,10 @@ import java.net.http.HttpResponse;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @WireMockTest(httpPort = 9094)
 public class PatchOnViewWithHttpStorageTest extends ApiTest {
@@ -59,7 +57,7 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
                 loadFileOrFail("PatchOnViewWithHttpStorage/TC01_patchFeatureOnlyInBase/base_mock_response.json");
         final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
         stubFor(get(endpointPath)
-                .withQueryParam("id" , matching("my-custom-id-04"))
+                .withQueryParam("id" , equalTo("my-custom-id-04"))
                 .willReturn(okJson(baseMockResponse)));
 
         // When: Patch request is submitted on a View space to NakshaHub
@@ -71,6 +69,8 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Patch Feature response body doesn't match");
+
+        verify(1, getRequestedFor(endpointPath));
     }
 
     @Test
@@ -90,7 +90,7 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
                 loadFileOrFail("PatchOnViewWithHttpStorage/TC02_patchFeatureOnlyInDelta/base_mock_response.json");
         final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
         stubFor(get(endpointPath)
-                .withQueryParam("id" , matching(featureId))
+                .withQueryParam("id" , equalTo(featureId))
                 .willReturn(okJson(baseMockResponse)));
 
         // When: Patch request is submitted on a View space to NakshaHub
