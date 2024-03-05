@@ -2,18 +2,18 @@ package com.here.naksha.lib.extmanager;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.features.ExtensionConfig;
+import com.here.naksha.lib.core.models.ExtensionConfig;
+import com.here.naksha.lib.core.models.features.Extension;
 import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
 import com.here.naksha.lib.extmanager.helpers.ClassLoaderHelper;
 import com.here.naksha.lib.extmanager.helpers.FileHelper;
@@ -22,13 +22,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 
-public class ExtensionCacheTest {
+public class ExtensionCacheTest extends BaseSetup {
 
   @Mock
   INaksha naksha;
@@ -51,14 +53,14 @@ public class ExtensionCacheTest {
   @Test
   public void testGetJarClient(){
     ExtensionCache extensionCache=new ExtensionCache(naksha);
-    JarClient jarClient=extensionCache.getJarClient("s3://bucket/test.jar");
-    Assertions.assertTrue(jarClient instanceof AmazonS3Helper);
+    FileClient fileClient =extensionCache.getJarClient("s3://bucket/test.jar");
+    Assertions.assertTrue(fileClient instanceof AmazonS3Helper);
 
-    JarClient jarClient1=extensionCache.getJarClient("s3://bucket/test1.jar");
-    Assertions.assertEquals(jarClient,jarClient1);
+    FileClient fileClient1 =extensionCache.getJarClient("s3://bucket/test1.jar");
+    Assertions.assertEquals(fileClient, fileClient1);
 
-    jarClient=extensionCache.getJarClient("file://bucket/test.jar");
-    Assertions.assertTrue(jarClient instanceof FileHelper);
+    fileClient =extensionCache.getJarClient("file://bucket/test.jar");
+    Assertions.assertTrue(fileClient instanceof FileHelper);
 
     Assertions.assertThrows(UnsupportedOperationException.class,()->extensionCache.getJarClient("error://bucket/test.jar"));
   }
@@ -96,20 +98,4 @@ public class ExtensionCacheTest {
       Assertions.assertEquals(extensionConfig.getExtensions().get(0).getExtensionId(),extensionCache.getCachedExtensions().get(0).getExtensionId());
     }
   }
-
-
-  private ExtensionConfig getExtensionConfig() {
-    Path file = new File("src/test/resources/data/extension.txt").toPath();
-    ExtensionConfig extensionConfig=null;
-    try {
-      String data = Files.readAllLines(file).stream().collect(Collectors.joining());
-      extensionConfig = new ObjectMapper().readValue(data, ExtensionConfig.class);
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return extensionConfig;
-  }
-
 }

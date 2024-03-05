@@ -473,18 +473,31 @@ project(":here-naksha-lib-handlers") {
     }
 }
 
+project(":here-naksha-lib-ext-manager") {
+    description = "Naksha Extension Manager Library"
+    dependencies {
+        api(project(":here-naksha-lib-core"))
+
+        implementation(aws_s3)
+        implementation(cytodynamics)
+        testImplementation(mockito)
+    }
+    setOverallCoverage(0.0) // only increasing allowed!
+}
+
 //try {
 project(":here-naksha-lib-hub") {
     description = "NakshaHub library"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
-        //implementation(project(":here-naksha-lib-extension"))
         implementation(project(":here-naksha-lib-handlers"))
+        implementation(project(":here-naksha-lib-ext-manager"))
 
         implementation(commons_lang3)
         implementation(jts_core)
         implementation(postgres)
+        implementation(aws_s3)
 
         testImplementation(json_assert)
         testImplementation(mockito)
@@ -494,19 +507,6 @@ project(":here-naksha-lib-hub") {
 //} catch (ignore: UnknownProjectException) {
 //}
 
-project(":here-naksha-lib-ext-manager") {
-    description = "Naksha Extension Manager Library"
-    dependencies {
-        api(project(":here-naksha-lib-core"))
-
-        implementation(aws_s3)
-        implementation(cytodynamics)
-        testImplementation(mockito)
-        testImplementation(project(":here-naksha-lib-hub"))
-        testImplementation(project(":here-naksha-lib-psql"))
-    }
-    setOverallCoverage(0.0) // only increasing allowed!
-}
 
 //try {
 project(":here-naksha-app-service") {

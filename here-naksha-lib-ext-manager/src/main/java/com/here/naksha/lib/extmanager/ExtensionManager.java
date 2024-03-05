@@ -18,18 +18,10 @@
  */
 package com.here.naksha.lib.extmanager;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.core.IExtensionManager;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.features.Extension;
-import com.here.naksha.lib.core.models.features.ExtensionConfig;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 
 public class ExtensionManager implements IExtensionManager {
@@ -71,24 +63,5 @@ public class ExtensionManager implements IExtensionManager {
    */
   public List<Extension> getCachedExtensions() {
     return this.extensionCache.getCachedExtensions();
-  }
-  /**
-   * TODO This method should fetch extensions from admin db.
-   * as of now it is fetching extensions from local file.
-   * @return
-   */
-  private ExtensionConfig getExtensions() {
-    //    naksha.getExtensionConfig().getExtensions()
-    Path file = new File("src/test/resources/data/extension.txt").toPath();
-    ExtensionConfig extensionConfig;
-    try {
-      String data = Files.readAllLines(file).stream().collect(Collectors.joining());
-      extensionConfig = new ObjectMapper().readValue(data, ExtensionConfig.class);
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return extensionConfig;
   }
 }

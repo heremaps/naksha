@@ -20,7 +20,7 @@ package com.here.naksha.lib.extmanager;
 
 import com.here.naksha.lib.core.lambdas.Fe;
 import com.here.naksha.lib.core.lambdas.Fe0;
-import com.here.naksha.lib.core.models.features.ExtensionConfig;
+import com.here.naksha.lib.core.models.ExtensionConfig;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;

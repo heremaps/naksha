@@ -16,24 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.extmanager.helpers;
+package com.here.naksha.lib.extmanager;
 
-import com.here.naksha.lib.extmanager.FileClient;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.stream.Collectors;
 
-public class FileHelper implements FileClient {
-  @Override
-  public File getFile(String path) throws IOException {
-    return new File(path);
-  }
+public interface FileClient {
 
-  @Override
-  public String getFileContent(String path) throws IOException {
-    Path file = new File(path).toPath();
-    return Files.readAllLines(file).stream().collect(Collectors.joining());
-  }
+  public File getFile(String path) throws IOException;
+
+  public String getFileContent(String path) throws IOException;
 }

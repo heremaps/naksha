@@ -37,7 +37,6 @@ public class Extension extends XyzFeature {
   public static final String URL = "url";
   public static final String VERSION = "version";
   public static final String INIT_CLASS_NAME = "initClassName";
-  //  public static final String PROPERTIES = "properties";
 
   @JsonProperty(EXTENSION_ID)
   String extensionId;
@@ -50,9 +49,6 @@ public class Extension extends XyzFeature {
 
   @JsonProperty(INIT_CLASS_NAME)
   String initClassName;
-
-  //  @JsonProperty(PROPERTIES)
-  //  Object properties;
 
   @AvailableSince(NakshaVersion.v2_0_3)
   //  @JsonCreator

@@ -22,15 +22,20 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.AmazonS3URI;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.here.naksha.lib.extmanager.JarClient;
+import com.here.naksha.lib.extmanager.FileClient;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
-public class AmazonS3Helper implements JarClient {
+public class AmazonS3Helper implements FileClient {
   private AmazonS3 s3Client;
 
   public AmazonS3Helper() {
@@ -39,13 +44,13 @@ public class AmazonS3Helper implements JarClient {
         .build();
   }
 
-  public File getJar(@NotNull String url) throws IOException {
+  public File getFile(@NotNull String url) throws IOException {
+    String extension = url.substring(url.lastIndexOf("."));
     AmazonS3URI fileUri = new AmazonS3URI(url);
     S3Object s3Object = s3Client.getObject(fileUri.getBucket(), fileUri.getKey());
     S3ObjectInputStream inputStream = s3Object.getObjectContent();
-    File targetFile = File.createTempFile(fileUri.getBucket(), ".jar");
-    try {
-      FileOutputStream fos = new FileOutputStream(targetFile);
+    File targetFile = File.createTempFile(fileUri.getBucket(), extension);
+    try (FileOutputStream fos = new FileOutputStream(targetFile)) {
       byte[] read_buf = new byte[1024];
       int read_len = 0;
       while ((read_len = inputStream.read(read_buf)) > 0) {
@@ -57,5 +62,45 @@ public class AmazonS3Helper implements JarClient {
       throw e;
     }
     return targetFile;
+  }
+
+  @Override
+  public String getFileContent(String url) throws IOException {
+    AmazonS3URI fileUri = new AmazonS3URI(url);
+    S3Object s3Object = s3Client.getObject(fileUri.getBucket(), fileUri.getKey());
+
+    // Read the text input stream one line at a time.
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent()))) {
+      StringBuilder stringBuilder = new StringBuilder("");
+      String line;
+      while ((line = reader.readLine()) != null) {
+        stringBuilder.append(line);
+      }
+      return stringBuilder.toString();
+    }
+  }
+
+  public List<String> listKeysInBucket(String url) {
+    Boolean isTopLevel = false;
+    AmazonS3URI fileUri = new AmazonS3URI(url);
+
+    String delimiter = "/";
+    if (fileUri.getKey() == "" || fileUri.getKey() == "/") {
+      isTopLevel = true;
+    }
+
+    ListObjectsV2Request listObjectsRequest = null;
+    if (isTopLevel) {
+      listObjectsRequest = new ListObjectsV2Request()
+          .withBucketName(fileUri.getBucket())
+          .withDelimiter(delimiter);
+    } else {
+      listObjectsRequest = new ListObjectsV2Request()
+          .withBucketName(fileUri.getBucket())
+          .withPrefix(fileUri.getKey())
+          .withDelimiter(delimiter);
+    }
+    ListObjectsV2Result objects = s3Client.listObjectsV2(listObjectsRequest);
+    return objects.getCommonPrefixes();
   }
 }
