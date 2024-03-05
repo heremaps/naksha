@@ -107,6 +107,7 @@ val junit_jupiter = "org.junit.jupiter:junit-jupiter:5.9.2"
 val junit_params = "org.junit.jupiter:junit-jupiter-params:5.9.2"
 val mockito = "org.mockito:mockito-core:5.8.0"
 val test_containers = "org.testcontainers:testcontainers:1.19.3"
+val wiremock =  "org.wiremock:wiremock:3.3.1"
 
 val flipkart_zjsonpatch = "com.flipkart.zjsonpatch:zjsonpatch:0.4.13"
 val json_assert = "org.skyscreamer:jsonassert:1.5.1"
@@ -355,6 +356,26 @@ project(":here-naksha-lib-psql") {
     setOverallCoverage(0.0) // only increasing allowed!
 }
 
+project(":here-naksha-storage-http") {
+    description = "Naksha Http Storage Module"
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        withJavadocJar()
+        withSourcesJar()
+
+    }
+    dependencies {
+        implementation(project(":here-naksha-lib-core"))
+        implementation(project(":here-naksha-common-http"))
+
+        implementation(commons_lang3)
+    }
+    setOverallCoverage(0.0) // only increasing allowed!
+
+}
+
+
 project(":here-naksha-lib-view") {
     description = "Naksha View Library"
     java {
@@ -384,19 +405,21 @@ project(":here-naksha-lib-extension") {
 }
 */
 
-/*
 project(":here-naksha-handler-activitylog") {
     description = "Naksha Activity Log Handler"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-lib-handlers"))
 
         implementation(flipkart_zjsonpatch)
         testImplementation(jayway_jsonpath)
+        testImplementation(mockito)
+        testImplementation(json_assert)
+        testImplementation(testFixtures(project(":here-naksha-lib-core")))
     }
     setOverallCoverage(0.4) // only increasing allowed!
 }
-*/
 
 /*
 project(":here-naksha-handler-http") {
@@ -461,6 +484,7 @@ project(":here-naksha-lib-handlers") {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
         implementation(project(":here-naksha-lib-view"))
+        implementation(project(":here-naksha-storage-http"))
 
         implementation(commons_lang3)
         implementation(commons_dbutils)
@@ -514,9 +538,11 @@ project(":here-naksha-app-service") {
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-storage-http"))
         //implementation(project(":here-naksha-lib-extension"))
         //implementation(project(":here-naksha-handler-psql"))
         implementation(project(":here-naksha-lib-hub"))
+        implementation(project(":here-naksha-common-http"))
 
         implementation(log4j_slf4j)
         implementation(log4j_api)
@@ -530,11 +556,13 @@ project(":here-naksha-app-service") {
         implementation(vertx_web)
         implementation(vertx_web_client)
         implementation(vertx_web_openapi)
+        implementation(project(":here-naksha-handler-activitylog"))
 
         testImplementation(json_assert)
         testImplementation(resillience4j_retry)
         testImplementation(test_containers)
         testImplementation(testFixtures(project(":here-naksha-lib-core")))
+        testImplementation(wiremock)
     }
     setOverallCoverage(0.25) // only increasing allowed!
 }

@@ -68,6 +68,7 @@ public class NakshaHub implements INaksha {
    * The NakshaHub config.
    */
   protected final @NotNull NakshaHubConfig nakshaHubConfig;
+
   /**
    * Singleton instance of physical admin storage implementation
    */
