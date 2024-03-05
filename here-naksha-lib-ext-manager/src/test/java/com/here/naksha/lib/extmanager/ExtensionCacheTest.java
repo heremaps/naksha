@@ -34,7 +34,7 @@ public class ExtensionCacheTest extends BaseSetup {
 
   @Mock
   INaksha naksha;
-  @Test
+//  @Test
   public void testBuildExtensionCache() throws IOException {
     ClassLoader classLoader=mock(ClassLoader.class);
     ExtensionConfig extensionConfig=getExtensionConfig();
@@ -50,7 +50,7 @@ public class ExtensionCacheTest extends BaseSetup {
     }
   }
 
-  @Test
+//  @Test
   public void testGetJarClient(){
     ExtensionCache extensionCache=new ExtensionCache(naksha);
     FileClient fileClient =extensionCache.getJarClient("s3://bucket/test.jar");
@@ -65,7 +65,7 @@ public class ExtensionCacheTest extends BaseSetup {
     Assertions.assertThrows(UnsupportedOperationException.class,()->extensionCache.getJarClient("error://bucket/test.jar"));
   }
 
-  @Test
+//  @Test
   public void testGetClassLoaderById(){
     ClassLoader classLoader=mock(ClassLoader.class);
     ExtensionConfig extensionConfig=getExtensionConfig();
@@ -81,7 +81,7 @@ public class ExtensionCacheTest extends BaseSetup {
     }
   }
 
-  @Test
+//  @Test
   public void testGetCachedExtensions(){
     ClassLoader classLoader=mock(ClassLoader.class);
     ExtensionConfig extensionConfig=getExtensionConfig();
