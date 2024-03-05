@@ -12,5 +12,10 @@
   "storageParams": {
     "pg_hint_plan": true,
     "pg_stat_statements": true
+  },
+  "extensionManagerParams": {
+    "whitelistClasses": "",
+    "expiryms": 6000,
+    "extensionsRootPath": ""
   }
 }

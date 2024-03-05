@@ -87,7 +87,8 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
       @JsonProperty("maintenanceInitialDelayInMins") @Nullable Integer maintenanceInitialDelayInMins,
       @JsonProperty("maintenancePoolCoreSize") @Nullable Integer maintenancePoolCoreSize,
       @JsonProperty("maintenancePoolMaxSize") @Nullable Integer maintenancePoolMaxSize,
-      @JsonProperty("storageParams") @Nullable Map<String, Object> storageParams) {
+      @JsonProperty("storageParams") @Nullable Map<String, Object> storageParams,
+      @JsonProperty("extensionManagerParams") @Nullable Map<String, Object> extensionManagerParams) {
     super(id);
     if (httpPort != null && (httpPort < 0 || httpPort > 65535)) {
       logger.atError()
@@ -164,6 +165,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
     this.maintenancePoolMaxSize =
         maintenancePoolMaxSize != null ? maintenancePoolMaxSize : defaultMaintenancePoolMaxSize();
     this.storageParams = storageParams;
+    this.extensionManagerParams = extensionManagerParams;
   }
 
   public static final String HTTP_PORT = "httpPort";
@@ -315,4 +317,8 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
    * Optional storage-specific parameters
    */
   public final Map<String, Object> storageParams;
+  /**
+   * Optional extension-manager parameters
+   */
+  public final Map<String, Object> extensionManagerParams;
 }
