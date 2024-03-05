@@ -126,7 +126,7 @@ class HttpStorageReadExecute {
    */
   private static String getPOpQuery(ReadFeaturesProxyWrapper readRequest) {
     POp pop = readRequest.getQueryParameter(PROPERTY_SEARCH_OP);
-    return pop == null ? "" : "&" + POpToQuery.getQueryFromPop(pop);
+    return pop == null ? "" : "&" + POpToQuery.p0pToQuery(pop);
   }
 
   /**

@@ -18,136 +18,107 @@
  */
 package com.here.naksha.storage.http;
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.storage.POpType.*;
 
-import com.here.naksha.lib.core.models.storage.OpType;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.POpType;
+import com.here.naksha.lib.core.models.storage.PRef;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.function.Function;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class POpToQuery {
-  static String getQueryFromPop(@NotNull POp pop) {
-    if (pop.op().equals(AND)) return and(pop.children());
-    else if (pop.op().equals(OR)) return or(pop.children());
-    else return or(List.of(pop));
+
+  static String p0pToQuery(POp pOp) {
+    if (pOp.op() == AND)
+      return pOp.children().stream().map(POpToQuery::p0pToQuery).collect(Collectors.joining("&"));
+    else return pOpToTrop(pOp).resolve();
   }
 
-  private static String and(List<POp> children) {
-    return children.stream().map(POpToQuery::getQueryFromPop).collect(Collectors.joining("&"));
+  static Trop pOpToTrop(POp pOp) {
+    if (pOp.op() == AND) throw unchecked(new UnsupportedOperationException());
+    if (pOp.op() == OR) return or(pOp);
+    if (pOp.op() == NOT) return not(pOp);
+    if (pOp.op() == EXISTS) return exists(pOp);
+    return simpleLeafOperator(pOp);
   }
 
-  private static String or(List<POp> children) {
-    POp firstChild = children.get(0);
-    if (isNotEqOp(firstChild) || isNotNullOp(firstChild)) return orWithNotEqSign(children);
-    else if (isEqOp(firstChild) || isANullOp(firstChild)) return orWithEqSign(children);
-    else if (firstChild.op() == OR || firstChild.op() == CONTAINS) return orWithContainsSign(children);
-    else return orWithOtherSigns(children);
+  static Trop or(POp pOp) {
+    validateChildrenCountAtLeastOne(pOp);
+    return pOp.children().stream()
+        .map(POpToQuery::pOpToTrop)
+        .reduce((l, r) -> {
+          if (!Objects.equals(l.operator, r.operator))
+            throw unsupportedOperator(l.operator + "combined with" + r.operator);
+          if (!Objects.equals(l.path, r.path) || Objects.isNull(l.path))
+            throw unchecked(new UnsupportedOperationException("Path refs have to be equal for OR"));
+          return new Trop(l.operator, l.path, String.join(",", l.valuesToString, r.valuesToString));
+        })
+        .get();
   }
 
-  private static boolean isNotEqOp(POp pOp) {
-    try {
-      return pOp.op() == OpType.NOT && pOp.children().get(0).op() == EQ;
-    } catch (Exception e) {
-      return false;
+  static Trop not(POp pOp) {
+    validateChildrenCount(pOp, 1);
+    Trop trop = pOpToTrop(pOp.children().get(0));
+    String newOperator =
+        switch (trop.operator) {
+          case "=" -> "!=";
+          case "!=" -> "=";
+          default -> throw unsupportedOperator(trop.operator);
+        };
+    return new Trop(newOperator, trop.path, trop.valuesToString);
+  }
+
+  //
+  // Leaf operators
+  //
+  static Trop exists(POp pOp) {
+    validateChildrenCount(pOp, 0);
+    return new Trop("!=", pOp.getPropertyRef(), ".null");
+  }
+
+  static Trop simpleLeafOperator(POp pOp) {
+    String operator = simpleLeafOperators.get(pOp.op());
+    if (operator == null) throw unchecked(new UnsupportedOperationException(pOp.op() + " not supported"));
+    validateChildrenCount(pOp, 0);
+    return new Trop(operator, pOp.getPropertyRef(), pOp.getValue().toString());
+  }
+
+  private static final Map<POpType, String> simpleLeafOperators = Map.of(
+      EQ, "=",
+      GT, "=gt=",
+      GTE, "=gte=",
+      LT, "=lt=",
+      LTE, "=lte=",
+      CONTAINS, "=cs=");
+
+  private static void validateChildrenCount(POp pOp, int count) {
+    List<@NotNull POp> children = pOp.children();
+    if (children == null && count == 0) return;
+    if (children != null && children.size() == count) return;
+    throw unchecked(new UnsupportedOperationException());
+  }
+
+  private static void validateChildrenCountAtLeastOne(POp pOp) {
+    if (pOp.children() == null || pOp.children().isEmpty()) throw unchecked(new UnsupportedOperationException());
+  }
+
+  private static RuntimeException unsupportedOperator(@Nullable String sign) {
+    return unchecked(new UnsupportedOperationException(sign + " not supported in the operation"));
+  }
+
+  private record Trop(@NotNull String operator, @Nullable PRef path, @NotNull String valuesToString) {
+    public String resolve() {
+      if (path == null) throw new UnsupportedOperationException();
+      String pathEncoded = URLEncoder.encode(String.join(".", path.getPath()), StandardCharsets.UTF_8);
+      String valueEncoded = URLEncoder.encode(String.join(",", valuesToString), StandardCharsets.UTF_8);
+      return pathEncoded + operator + valueEncoded;
     }
-  }
-
-  private static boolean isNotNullOp(POp pOp) {
-    return pOp.op() == EXISTS;
-  }
-
-  private static boolean isEqOp(POp pOp) {
-    return pOp.op() == EQ;
-  }
-
-  private static boolean isANullOp(POp pOp) {
-    try {
-      return pOp.op() == OpType.NOT && pOp.children().get(0).op() == EXISTS;
-    } catch (Exception e) {
-      return false;
-    }
-  }
-
-  private static String orWithNotEqSign(List<POp> children) {
-    String path = getPath(children.get(0));
-    String values = mapToCommaSeparatedValues(children, child -> {
-      if (isNotNullOp(child)) return ".null";
-      else if (isNotEqOp(child)) return getValue(child.children().get(0));
-      else throw new UnsupportedOperationException("op not compat with !=");
-    });
-
-    return path + "!=" + values;
-  }
-
-  private static String orWithEqSign(List<POp> children) {
-    String path = getPath(children.get(0));
-    String values = mapToCommaSeparatedValues(children, child -> {
-      if (isANullOp(child)) return ".null";
-      else if (isEqOp(child)) return getValue(child);
-      else throw new UnsupportedOperationException("op not compat with =");
-    });
-
-    return path + "=" + values;
-  }
-
-  private static String orWithContainsSign(List<POp> children) {
-    POp firstChild = children.get(0);
-    String expectedPath = getPath(firstChild);
-    String values = mapToCommaSeparatedValues(children, child -> {
-      if (child.op() == OR)
-        return mapToCommaSeparatedValues(child.children(), grandchild -> {
-          if (grandchild.op() != CONTAINS) throw new UnsupportedOperationException();
-          return getValue(grandchild);
-        });
-      else if (child.op() == CONTAINS) return getValue(child);
-      else throw new UnsupportedOperationException();
-    });
-    return expectedPath + "=cs=" + values;
-  }
-
-  private static String orWithOtherSigns(List<POp> children) {
-    POp firstChild = children.get(0);
-    String expectedPath = getPath(firstChild);
-    OpType expectedOperation = firstChild.op();
-    if (expectedOperation instanceof POpType pOpType) {
-      String operator = getOperator(pOpType);
-      String values = mapToCommaSeparatedValues(children, child -> {
-        if (child.op() != expectedOperation)
-          throw new UnsupportedOperationException("op not compat with " + operator);
-        return getValue(child);
-      });
-      return expectedPath + operator + values;
-    }
-    throw new UnsupportedOperationException();
-  }
-
-  private static String mapToCommaSeparatedValues(List<POp> pOps, Function<POp, String> mapFun) {
-    return pOps.stream().map(mapFun).collect(Collectors.joining(","));
-  }
-
-  private static String getOperator(POpType pOpType) {
-    String abbrev;
-    if (pOpType == GT) abbrev = GT.toString();
-    else if (pOpType == GTE) abbrev = GTE.toString();
-    else if (pOpType == LT) abbrev = LT.toString();
-    else if (pOpType == LTE) abbrev = LTE.toString();
-    else throw new UnsupportedOperationException();
-    return "=" + abbrev + "=";
-  }
-
-  private static String getValue(POp pop) {
-    return URLEncoder.encode(pop.getValue().toString(), StandardCharsets.UTF_8);
-  }
-
-  private static String getPath(POp pop) {
-    List<String> propRef = (pop.op() == NOT || pop.op() == OR)
-        ? pop.children().get(0).getPropertyRef().getPath()
-        : pop.getPropertyRef().getPath();
-    return URLEncoder.encode(String.join(".", propRef), StandardCharsets.UTF_8);
   }
 }

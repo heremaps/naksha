@@ -19,7 +19,7 @@ class POpToQueryTest {
             + "&p.prop_3=.null,value_33"
             + "&p.prop_4!=.null,value_44"
             + "&p.prop_5>=5.5,55"
-            + "&p.prop_5_1@>" + urlEncoded("{\"id\":\"123\"}")
+            + "&p.prop_5_1@>" + urlEncoded("{\"id\":\"123\"}") + ",.null"
             + "&p.prop_5_2!=" + urlEncoded("{\"id\":\"123\"}") + "," + urlEncoded("{\"id\":\"456\"}") + "," + ".null"
             + "&west=-180"
             + "&p.prop_6<=6,66"
@@ -36,7 +36,7 @@ class POpToQueryTest {
     );
 
     POp pOp = PropertySearchUtil.buildOperationForPropertySearchParams(params);
-    String queryFromPop = POpToQuery.getQueryFromPop(pOp);
+    String queryFromPop = POpToQuery.p0pToQuery(pOp);
     String prettyQueryFromPop = URLDecoder.decode(queryFromPop).replace("&","\n&");
 
     String prettyExpectedQuery = """
@@ -44,7 +44,7 @@ class POpToQueryTest {
             &properties.prop_3=.null,value_33
             &properties.prop_4!=.null,value_44
             &properties.prop_5=gte=5.5,55
-            &properties.prop_5_1=cs={"id":"123"},[{"id":"123"}]
+            &properties.prop_5_1=cs={"id":"123"},[{"id":"123"}],.null
             &properties.prop_5_2!={"id":"123"},{"id":"456"},.null
             &properties.prop_6=lte=6,66
             &properties.prop_7=gt=7,77
