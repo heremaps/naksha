@@ -282,7 +282,6 @@ public class NakshaHub implements INaksha {
     long expiryms = Long.parseLong("" + nakshaHubConfig.getOrDefault("expiryms", "300000"));
     List<String> whiteListClasses = Arrays.asList(
         ("" + nakshaHubConfig.getOrDefault("whitelistClasses", "java.*,javax.*,com.here.naksha.*")).split(","));
-    String env = ""; // TODO fetch from config
 
     ExtensionConfig extensionConfig = new ExtensionConfig(expiryms, extensionsRootPath);
     extensionConfig.setWhilelistDelegateClass(whiteListClasses);
@@ -291,8 +290,8 @@ public class NakshaHub implements INaksha {
 
     List<String> list = s3Helper.listKeysInBucket(extensionsRootPath);
     list.stream().forEach(extensionPath -> {
-      String filePath =
-          "s3://" + bucketUri.getBucket() + "/" + extensionPath + "latest-" + env.toLowerCase() + ".txt";
+      String filePath = "s3://" + bucketUri.getBucket() + "/" + extensionPath + "latest-"
+          + nakshaHubConfig.env.toLowerCase() + ".txt";
       String version;
       try {
         version = s3Helper.getFileContent(filePath);
@@ -305,7 +304,7 @@ public class NakshaHub implements INaksha {
       String extensionId = bits[bits.length - 1];
 
       filePath = "s3://" + bucketUri.getBucket() + "/" + extensionPath + extensionId + "-" + version + "."
-          + env.toLowerCase() + ".json";
+          + nakshaHubConfig.env.toLowerCase().toLowerCase() + ".json";
       String exJson;
       try {
         exJson = s3Helper.getFileContent(filePath);
