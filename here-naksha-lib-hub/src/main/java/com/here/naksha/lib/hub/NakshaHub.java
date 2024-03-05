@@ -326,8 +326,8 @@ public class NakshaHub implements INaksha {
   }
 
   @Override
-  public @NotNull ClassLoader getClassLoader() {
-    return null;
+  public @NotNull ClassLoader getClassLoader(@NotNull String extensionId) {
+    return this.extensionManager.getClassLoader(extensionId);
   }
 
   @Override

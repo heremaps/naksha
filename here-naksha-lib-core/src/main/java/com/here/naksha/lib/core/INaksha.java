@@ -64,5 +64,5 @@ public interface INaksha {
   ExtensionConfig getExtensionConfig();
 
   @NotNull
-  ClassLoader getClassLoader();
+  ClassLoader getClassLoader(@NotNull String extensionId);
 }

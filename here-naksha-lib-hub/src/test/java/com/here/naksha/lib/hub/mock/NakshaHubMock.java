@@ -161,7 +161,7 @@ public class NakshaHubMock implements INaksha {
   }
 
   @Override
-  public @NotNull ClassLoader getClassLoader() {
+  public @NotNull ClassLoader getClassLoader(@NotNull String extensionId) {
     return null;
   }
 }
