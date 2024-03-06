@@ -1234,7 +1234,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
 
   private ResultSet getFeatureFromTable(PsqlReadSession session, String table, String featureId) throws SQLException {
     final PostgresSession pgSession = session.session();
-    final SQL sql = pgSession.sql().add("SELECT * from ").addIdent(table).add(" WHERE jsondata->>'id' = ? ;");
+    final SQL sql = pgSession.sql().add("SELECT * from ").addIdent(table).add(" WHERE id = ? ;");
     final PreparedStatement stmt = pgSession.prepareStatement(sql);
     stmt.setString(1, featureId);
     return stmt.executeQuery();
