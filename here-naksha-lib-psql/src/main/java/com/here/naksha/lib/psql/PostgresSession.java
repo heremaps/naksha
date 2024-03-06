@@ -285,6 +285,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add("tags_to_jsonb(tags)");
     } else {
       // not indexed access
+      sql.add("(");
       sql.add("feature_to_jsonb(feature)");
       List<@NotNull String> path = pRef.getPath();
       final int last = end - 1;
@@ -292,8 +293,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         final String pname = path.get(i);
         sql.add(i == last && text ? "->>" : "->");
         sql.addLiteral(pname);
-        sql.add(')');
       }
+      sql.add(')');
     }
     if (text) {
       sql.add(" COLLATE \"C\" ");
