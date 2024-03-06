@@ -23,102 +23,156 @@ import static com.here.naksha.lib.core.models.storage.POpType.*;
 
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.POpType;
-import com.here.naksha.lib.core.models.storage.PRef;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class POpToQuery {
 
+  public static final String EQ_OPERATOR = "=";
+  public static final String NOT_EQ_OPERATOR = "!=";
+  public static final String NULL = ".null";
+  public static final String AND_DELIMITER = "&";
+
+  public static final String OR_DELIMITER = ",";
+  public static final String PATH_SEGMENT_DELIMITER = ".";
+
   static String p0pToQuery(POp pOp) {
-    if (pOp.op() == AND)
-      return pOp.children().stream().map(POpToQuery::p0pToQuery).collect(Collectors.joining("&"));
-    else return pOpToTrop(pOp).resolve();
+    if (pOp.op() == AND) return and(pOp);
+    else return pOpToMultiValueComparison(pOp).resolve();
   }
 
-  static Trop pOpToTrop(POp pOp) {
-    if (pOp.op() == AND) throw unchecked(new UnsupportedOperationException());
+  private static String and(POp pOp) {
+    assertHasAtLeastOneChildren(pOp);
+    return pOp.children().stream().map(POpToQuery::p0pToQuery).collect(Collectors.joining(AND_DELIMITER));
+  }
+
+  //
+  // MultiValueComparison operations
+  //
+  private static MultiValueComparison pOpToMultiValueComparison(POp pOp) {
+    if (pOp.op() == AND) throw unsupportedOperation("AND can be only a top level operation");
     if (pOp.op() == OR) return or(pOp);
     if (pOp.op() == NOT) return not(pOp);
     if (pOp.op() == EXISTS) return exists(pOp);
     return simpleLeafOperator(pOp);
   }
 
-  static Trop or(POp pOp) {
-    validateChildrenCountAtLeastOne(pOp);
+  private static MultiValueComparison or(POp pOp) {
+    assertHasAtLeastOneChildren(pOp);
+
     return pOp.children().stream()
-        .map(POpToQuery::pOpToTrop)
+        .map(POpToQuery::pOpToMultiValueComparison)
         .reduce((l, r) -> {
           if (!Objects.equals(l.operator, r.operator))
-            throw unsupportedOperator(l.operator + "combined with" + r.operator);
-          if (!Objects.equals(l.path, r.path) || Objects.isNull(l.path))
-            throw unchecked(new UnsupportedOperationException("Path refs have to be equal for OR"));
-          return new Trop(l.operator, l.path, String.join(",", l.valuesToString, r.valuesToString));
+            throw unsupportedOperation(
+                "Operators " + l.operator + " and " + r.operator + " combined in one OR");
+          if (!Objects.equals(l.path, r.path)) throw unsupportedOperation("Paths in OR are not equal");
+          return new MultiValueComparison(l.operator, l.path, ArrayUtils.addAll(l.values, r.values));
         })
         .get();
   }
 
-  static Trop not(POp pOp) {
-    validateChildrenCount(pOp, 1);
-    Trop trop = pOpToTrop(pOp.children().get(0));
+  private static MultiValueComparison not(POp pOp) {
+    assertHasNChildren(pOp, 1);
+    MultiValueComparison multiValueComparison =
+        pOpToMultiValueComparison(pOp.children().get(0));
     String newOperator =
-        switch (trop.operator) {
-          case "=" -> "!=";
-          case "!=" -> "=";
-          default -> throw unsupportedOperator(trop.operator);
+        switch (multiValueComparison.operator) {
+          case EQ_OPERATOR -> NOT_EQ_OPERATOR;
+          case NOT_EQ_OPERATOR -> EQ_OPERATOR;
+          default -> throw unsupportedOperation(multiValueComparison.operator);
         };
-    return new Trop(newOperator, trop.path, trop.valuesToString);
+    return new MultiValueComparison(newOperator, multiValueComparison.path, multiValueComparison.values);
   }
 
   //
   // Leaf operators
   //
-  static Trop exists(POp pOp) {
-    validateChildrenCount(pOp, 0);
-    return new Trop("!=", pOp.getPropertyRef(), ".null");
+  private static MultiValueComparison exists(POp pOp) {
+    assertHasNChildren(pOp, 0);
+    assertHasPathSet(pOp);
+
+    return new MultiValueComparison(NOT_EQ_OPERATOR, pOp.getPropertyRef().getPath(), NULL);
   }
 
-  static Trop simpleLeafOperator(POp pOp) {
+  private static MultiValueComparison simpleLeafOperator(POp pOp) {
+    assertHasNChildren(pOp, 0);
+    assertHasPathSet(pOp);
+    assertHasValueSet(pOp);
+
     String operator = simpleLeafOperators.get(pOp.op());
-    if (operator == null) throw unchecked(new UnsupportedOperationException(pOp.op() + " not supported"));
-    validateChildrenCount(pOp, 0);
-    return new Trop(operator, pOp.getPropertyRef(), pOp.getValue().toString());
+    if (operator == null) throw unsupportedOperation(pOp.op() + " not supported");
+    return new MultiValueComparison(
+        operator, pOp.getPropertyRef().getPath(), pOp.getValue().toString());
   }
 
   private static final Map<POpType, String> simpleLeafOperators = Map.of(
-      EQ, "=",
+      EQ, EQ_OPERATOR,
       GT, "=gt=",
       GTE, "=gte=",
       LT, "=lt=",
       LTE, "=lte=",
       CONTAINS, "=cs=");
 
-  private static void validateChildrenCount(POp pOp, int count) {
+  //
+  // Validation
+  //
+  private static void assertHasNChildren(POp pOp, int count) {
     List<@NotNull POp> children = pOp.children();
     if (children == null && count == 0) return;
     if (children != null && children.size() == count) return;
-    throw unchecked(new UnsupportedOperationException());
+    throw unsupportedOperation("Operation must have exactly" + count + "children");
   }
 
-  private static void validateChildrenCountAtLeastOne(POp pOp) {
-    if (pOp.children() == null || pOp.children().isEmpty()) throw unchecked(new UnsupportedOperationException());
+  private static void assertHasAtLeastOneChildren(POp pOp) {
+    if (pOp.children() == null || pOp.children().isEmpty())
+      throw unsupportedOperation("Operation must have at least one children");
   }
 
-  private static RuntimeException unsupportedOperator(@Nullable String sign) {
-    return unchecked(new UnsupportedOperationException(sign + " not supported in the operation"));
+  private static void assertHasPathSet(POp pOp) {
+    if (pOp.getPropertyRef() == null
+        || pOp.getPropertyRef().getPath() == null
+        || pOp.getPropertyRef().getPath().isEmpty())
+      throw unsupportedOperation("PropertyRef Path is not present");
   }
 
-  private record Trop(@NotNull String operator, @Nullable PRef path, @NotNull String valuesToString) {
+  private static void assertHasValueSet(POp pOp) {
+    if (pOp.getValue() == null || pOp.getValue().toString().isEmpty())
+      throw unsupportedOperation("Value is not present");
+  }
+
+  private static RuntimeException unsupportedOperation(String msg) {
+    return unchecked(new POpToQueryConversionException(msg));
+  }
+
+  //
+  // Record
+  //
+  private record MultiValueComparison(
+      @NotNull String operator, @NotNull List<String> path, @NotNull String... values) {
+
     public String resolve() {
-      if (path == null) throw new UnsupportedOperationException();
-      String pathEncoded = URLEncoder.encode(String.join(".", path.getPath()), StandardCharsets.UTF_8);
-      String valueEncoded = URLEncoder.encode(String.join(",", valuesToString), StandardCharsets.UTF_8);
+      String pathEncoded = encodeAndJoin(PATH_SEGMENT_DELIMITER, path);
+      String valueEncoded = encodeAndJoin(OR_DELIMITER, List.of(values));
       return pathEncoded + operator + valueEncoded;
+    }
+
+    private static String encodeAndJoin(String delimiter, List<String> strings) {
+      return strings.stream()
+          .map(s -> URLEncoder.encode(s, StandardCharsets.UTF_8))
+          .collect(Collectors.joining(delimiter));
+    }
+  }
+
+  static class POpToQueryConversionException extends UnsupportedOperationException {
+    public POpToQueryConversionException(String message) {
+      super(message);
     }
   }
 }
