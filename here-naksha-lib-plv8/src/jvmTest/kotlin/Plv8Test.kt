@@ -186,6 +186,27 @@ class Plv8Test : Plv8TestContainer() {
 
     @Order(11)
     @Test
+    fun testCreateAndRestoreNakshaCollection() {
+        // given
+        val collectionJson = """{"id":"bar","type":"NakshaCollection","maxAge":3560,"unlogged":false,"partition":true,"pointsOnly":true,"properties":{},"disableHistory":true,"partitionCount":256,"estimatedFeatureCount": 50,"estimatedDeletedFeatures":100}"""
+        val collectionMap = asMap(env.parse(collectionJson))
+        val collectionBytes = XyzBuilder.create().buildFeatureFromMap(collectionMap)
+
+        // when
+        val restoredCollection = NakshaCollection()
+        restoredCollection.mapBytes(collectionBytes)
+
+        // then
+        assertTrue(restoredCollection.partition())
+        assertTrue(restoredCollection.disableHistory())
+        assertTrue(restoredCollection.pointsOnly())
+        assertEquals("bar", restoredCollection.id())
+        assertEquals(3560, restoredCollection.maxAge().toInt())
+        assertEquals(50, restoredCollection.estimatedFeatureCount().toInt())
+    }
+
+    @Order(11)
+    @Test
     fun triggerAfter() {
         val session = NakshaSession.get()
 

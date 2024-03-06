@@ -32,7 +32,7 @@ class NakshaCollection : JbMapFeature() {
     override fun parseHeader(mandatory: Boolean) {
         super.parseHeader(mandatory)
         val map = root()
-        while (map.ok()) {
+        while (map.next() && map.ok()) {
             val key = map.key()
             val value = map.value()
             when (key) {
@@ -42,7 +42,6 @@ class NakshaCollection : JbMapFeature() {
                 NKC_MAX_AGE -> if (value.isInt()) _maxAge = value.readInt64()
                 NKC_ESTIMATED_FEATURE_COUNT -> if (value.isInt()) _estimatedFeatureCount = value.readInt64()
             }
-            map.next()
         }
     }
 
