@@ -236,82 +236,17 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
   }
 
   @ParameterizedTest
-  @MethodSource("queryParams")
-  void tc800_testPropertySearch(String inputQueryString, String outputQueryString) throws Exception {
+  @MethodSource("com.here.naksha.app.service.PropSearchTestUtil#queryParams")
+  void tc800_testPropertySearch(String inputQueryString, RequestPatternBuilder outputQueryPattern) throws Exception {
     final String bboxQueryParam = "west=-180.0&north=90.0&east=180.0&south=-90.0&limit=30000";
 
     String streamId = UUID.randomUUID().toString();
 
-    final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
-
     // When: Get Features By BBox request is submitted to NakshaHub
-    HttpResponse<String> response = nakshaClient
-            .get("hub/spaces/" + HTTP_SPACE_ID + "/bbox?" + bboxQueryParam + "&" + inputQueryString, streamId);
+    nakshaClient.get("hub/spaces/" + HTTP_SPACE_ID + "/bbox?" + bboxQueryParam + "&" + inputQueryString, streamId);
 
     stubFor(any(anyUrl()));
 
-    RequestPatternBuilder requestedFor = getRequestedFor(endpointPath);
-    for (String s : outputQueryString.split("&")) {
-      String[] split = s.trim().split("=", 2);
-      requestedFor.withQueryParam(split[0],equalTo(split[1]));
-    }
-    verify(1, requestedFor);
-  }
-
-  private static Stream<Arguments> queryParams() {
-    return Stream.of(
-            Arguments.of("properties.alone_prop=1","properties.alone_prop=1"),
-            Arguments.of("properties.alone_prop=1,2,3,4","properties.alone_prop=1,2,3,4"),
-            Arguments.of(
-                    "properties.json_prop="+urlEncoded("{\"arr1\":[1,2],\"arr2\":[]}"),
-                    "properties.json_prop={\"arr1\":[1,2],\"arr2\":[]}"
-            ),
-            Arguments.of("properties.long_or=1,2,3,4,4,4,3,2,1,true,false","properties.long_or=1,2,3,4,4,4,3,2,1,true,false"),
-            Arguments.of("properties.very.very.very.nested.even.more=1","properties.very.very.very.nested.even.more=1"),
-            Arguments.of(
-                    // Naksha does not interpret encoded %3E (">" sign) as a gt operation and passes it as properties.prop_> path with "=" operation
-                    "properties.prop%3E=value_2,value_22",
-                    // Http storege actually sends request with ">" reencoded to %3E, but Wiremock expects decoded string in verify matcher
-                    "properties.prop>=value_2,value_22"
-            ),
-            Arguments.of("properties.prop=lte=1","properties.prop=lte=1"),
-            Arguments.of("properties.prop=.null","properties.prop=.null"),
-            Arguments.of("properties.prop=null","properties.prop=null"),
-            Arguments.of("properties.prop!=.null","properties.prop!=.null"),
-            Arguments.of("""
-                            properties.prop_2!=value_2,value_22
-                            &properties.prop_3=.null,value_33
-                            &properties.prop_4!=.null,value_44
-                            &properties.prop_5=gte=5.5,55
-                            &properties.prop_5_1=cs=%7B%22id%22%3A%22123%22%7D,%5B%7B%22id%22%3A%22123%22%7D%5D
-                            &properties.prop_5_2!=%7B%22id%22%3A%22123%22%7D,%7B%22id%22%3A%22456%22%7D,.null
-                            &properties.prop_6=lte=6,66
-                            &properties.prop_7=gt=7,77
-                            &properties.prop_8=lt=8,88
-                            &properties.array_1=cs=%40element_1,element_2
-                            &properties.prop_10=gte=555,5555
-                            &properties.prop_11=lte=666,6666
-                            &properties.prop_12=gt=777,7777
-                            &properties.prop_13=lt=888,8888
-                            &properties.@ns:com:here:xyz.tags=cs=%7B%22id%22%3A%22123%22%7D,%5B%7B%22id%22%3A%22123%22%7D%5D,element_4
-                            &properties.@ns:com:here:xyz.tags=cs=element_5""".replace(System.lineSeparator(),"")
-                    ,
-                    """
-                            properties.prop_2!=value_2,value_22
-                            &properties.prop_3=.null,value_33
-                            &properties.prop_4!=.null,value_44
-                            &properties.prop_5=gte=5.5,55
-                            &properties.prop_5_1=cs={\"id\":\"123\"},[{\"id\":\"123\"}],[{\"id\":\"123\"}]
-                            &properties.prop_5_2!={\"id\":\"123\"},{\"id\":\"456\"},.null
-                            &properties.prop_6=lte=6,66
-                            &properties.prop_7=gt=7,77
-                            &properties.prop_8=lt=8,88
-                            &properties.array_1=cs=@element_1,element_2
-                            &properties.prop_10=gte=555,5555
-                            &properties.prop_11=lte=666,6666
-                            &properties.prop_12=gt=777,7777
-                            &properties.prop_13=lt=888,8888""".replace(System.lineSeparator(),"")
-            )
-    );
+    verify(1, outputQueryPattern);
   }
 }

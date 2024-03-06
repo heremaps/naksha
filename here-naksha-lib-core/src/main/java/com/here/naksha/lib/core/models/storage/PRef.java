@@ -33,7 +33,6 @@ import static com.here.naksha.lib.core.util.StringCache.string;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -196,19 +195,5 @@ public class PRef {
    */
   public static @NotNull PRef txn_next() {
     return PREF_TXN_NEXT;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-
-    if (o == null || getClass() != o.getClass()) return false;
-
-    PRef pRef = (PRef) o;
-
-    return new EqualsBuilder()
-        .append(tagName, pRef.tagName)
-        .append(propertyPath, pRef.propertyPath)
-        .isEquals();
   }
 }

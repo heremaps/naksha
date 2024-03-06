@@ -75,7 +75,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
   @Test
   void tc0701_testGetByBBoxWithTagOrCondition() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/bbox
-        // Validate features returned match with given BBox condition and Tag OR condition
+    // Validate features returned match with given BBox condition and Tag OR condition
     // Given: Features By BBox request (against configured space)
     final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
     final String tagsQueryParam = "tags=two,three";

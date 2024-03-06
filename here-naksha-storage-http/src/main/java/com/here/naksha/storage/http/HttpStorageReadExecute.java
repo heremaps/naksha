@@ -85,7 +85,8 @@ class HttpStorageReadExecute {
     String queryParamsString = keysToKeyValuesStrings(readRequest, WEST, NORTH, EAST, SOUTH, LIMIT);
 
     HttpResponse<String> response = requestSender.sendRequest(
-        String.format("/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQuery(readRequest)),
+        String.format(
+            "/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
@@ -103,7 +104,7 @@ class HttpStorageReadExecute {
     HttpResponse<String> response = requestSender.sendRequest(
         String.format(
             "/%s/quadkey/%s?%s%s",
-            baseEndpoint(readRequest), tileId, queryParamsString, getPOpQuery(readRequest)),
+            baseEndpoint(readRequest), tileId, queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
@@ -124,9 +125,9 @@ class HttpStorageReadExecute {
   /**
    * @return either POp query string starting with "&" or an empty string if the POp is null
    */
-  private static String getPOpQuery(ReadFeaturesProxyWrapper readRequest) {
-    POp pop = readRequest.getQueryParameter(PROPERTY_SEARCH_OP);
-    return pop == null ? "" : "&" + POpToQuery.p0pToQuery(pop);
+  private static String getPOpQueryOrEmpty(ReadFeaturesProxyWrapper readRequest) {
+    POp pOp = readRequest.getQueryParameter(PROPERTY_SEARCH_OP);
+    return pOp == null ? "" : "&" + POpToQuery.p0pToQuery(pOp);
   }
 
   /**
