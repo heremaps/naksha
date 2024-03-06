@@ -2,6 +2,8 @@ package com.here.naksha.lib.extmanager;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
@@ -26,6 +28,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -34,13 +37,24 @@ public class ExtensionCacheTest extends BaseSetup {
 
   @Mock
   INaksha naksha;
-//  @Test
+  @BeforeAll
+  public static void setup(){
+    System.setProperty("aws.accessKeyId", "test");
+    System.setProperty("aws.secretKey", "test");
+    System.setProperty("aws.region", "eu-west-1");
+  }
+  @Test
   public void testBuildExtensionCache() throws IOException {
     ClassLoader classLoader=mock(ClassLoader.class);
     ExtensionConfig extensionConfig=getExtensionConfig();
+    AmazonS3Helper s3Helper=mock(AmazonS3Helper.class);
+    when(s3Helper.getFile(anyString())).thenReturn(new File(""));
+
     try(MockedStatic<ClassLoaderHelper> mockedStatic=mockStatic(ClassLoaderHelper.class)) {
       when(ClassLoaderHelper.getClassLoader(any(),anyList())).thenReturn(classLoader);
       ExtensionCache extensionCache =spy( new ExtensionCache(naksha));
+      doReturn(s3Helper).when(extensionCache).getJarClient(anyString());
+
       extensionCache.buildExtensionCache(extensionConfig);
       Assertions.assertEquals(2,extensionCache.getCacheLength());
 
@@ -50,7 +64,7 @@ public class ExtensionCacheTest extends BaseSetup {
     }
   }
 
-//  @Test
+  @Test
   public void testGetJarClient(){
     ExtensionCache extensionCache=new ExtensionCache(naksha);
     FileClient fileClient =extensionCache.getJarClient("s3://bucket/test.jar");
@@ -65,13 +79,18 @@ public class ExtensionCacheTest extends BaseSetup {
     Assertions.assertThrows(UnsupportedOperationException.class,()->extensionCache.getJarClient("error://bucket/test.jar"));
   }
 
-//  @Test
-  public void testGetClassLoaderById(){
+  @Test
+  public void testGetClassLoaderById() throws IOException {
     ClassLoader classLoader=mock(ClassLoader.class);
     ExtensionConfig extensionConfig=getExtensionConfig();
+    AmazonS3Helper s3Helper=mock(AmazonS3Helper.class);
+    when(s3Helper.getFile(anyString())).thenReturn(new File(""));
+
     try(MockedStatic<ClassLoaderHelper> mockedStatic=mockStatic(ClassLoaderHelper.class)) {
       when(ClassLoaderHelper.getClassLoader(any(),anyList())).thenReturn(classLoader);
       ExtensionCache extensionCache =spy(new ExtensionCache(naksha));
+      doReturn(s3Helper).when(extensionCache).getJarClient(anyString());
+
       extensionCache.buildExtensionCache(extensionConfig);
       Assertions.assertEquals(2,extensionCache.getCacheLength());
 
@@ -81,13 +100,18 @@ public class ExtensionCacheTest extends BaseSetup {
     }
   }
 
-//  @Test
-  public void testGetCachedExtensions(){
+  @Test
+  public void testGetCachedExtensions() throws IOException {
     ClassLoader classLoader=mock(ClassLoader.class);
     ExtensionConfig extensionConfig=getExtensionConfig();
+    AmazonS3Helper s3Helper=mock(AmazonS3Helper.class);
+    when(s3Helper.getFile(anyString())).thenReturn(new File(""));
+
     try(MockedStatic<ClassLoaderHelper> mockedStatic=mockStatic(ClassLoaderHelper.class)) {
       when(ClassLoaderHelper.getClassLoader(any(),anyList())).thenReturn(classLoader);
       ExtensionCache extensionCache =spy( new ExtensionCache(naksha));
+      doReturn(s3Helper).when(extensionCache).getJarClient(anyString());
+
       extensionCache.buildExtensionCache(extensionConfig);
       Assertions.assertEquals(2,extensionCache.getCachedExtensions().size());
 
