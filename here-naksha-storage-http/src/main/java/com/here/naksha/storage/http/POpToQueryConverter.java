@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 
-public class POpToQuery {
+public class POpToQueryConverter {
 
   public static final String EQ_OPERATOR = "=";
   public static final String NOT_EQ_OPERATOR = "!=";
@@ -42,6 +42,16 @@ public class POpToQuery {
   public static final String OR_DELIMITER = ",";
   public static final String PATH_SEGMENT_DELIMITER = ".";
 
+  private static final Map<POpType, String> SIMPLE_LEAF_OPERATORS = Map.of(
+      EQ, EQ_OPERATOR,
+      GT, "=gt=",
+      GTE, "=gte=",
+      LT, "=lt=",
+      LTE, "=lte=",
+      CONTAINS, "=cs=");
+
+  private POpToQueryConverter() {}
+
   static String p0pToQuery(POp pOp) {
     if (pOp.op() == AND) return and(pOp);
     else return pOpToMultiValueComparison(pOp).resolve();
@@ -49,12 +59,9 @@ public class POpToQuery {
 
   private static String and(POp pOp) {
     assertHasAtLeastOneChildren(pOp);
-    return pOp.children().stream().map(POpToQuery::p0pToQuery).collect(Collectors.joining(AND_DELIMITER));
+    return pOp.children().stream().map(POpToQueryConverter::p0pToQuery).collect(Collectors.joining(AND_DELIMITER));
   }
 
-  //
-  // MultiValueComparison operations
-  //
   private static MultiValueComparison pOpToMultiValueComparison(POp pOp) {
     if (pOp.op() == AND) throw unsupportedOperation("AND can be only a top level operation");
     if (pOp.op() == OR) return or(pOp);
@@ -67,7 +74,7 @@ public class POpToQuery {
     assertHasAtLeastOneChildren(pOp);
 
     return pOp.children().stream()
-        .map(POpToQuery::pOpToMultiValueComparison)
+        .map(POpToQueryConverter::pOpToMultiValueComparison)
         .reduce((l, r) -> {
           if (!Objects.equals(l.operator, r.operator))
             throw unsupportedOperation(
@@ -75,7 +82,7 @@ public class POpToQuery {
           if (!Objects.equals(l.path, r.path)) throw unsupportedOperation("Paths in OR are not equal");
           return new MultiValueComparison(l.operator, l.path, ArrayUtils.addAll(l.values, r.values));
         })
-        .get();
+        .orElseThrow(() -> new AssertionError("Should not reach here."));
   }
 
   private static MultiValueComparison not(POp pOp) {
@@ -91,9 +98,6 @@ public class POpToQuery {
     return new MultiValueComparison(newOperator, multiValueComparison.path, multiValueComparison.values);
   }
 
-  //
-  // Leaf operators
-  //
   private static MultiValueComparison exists(POp pOp) {
     assertHasNChildren(pOp, 0);
     assertHasPathSet(pOp);
@@ -106,23 +110,12 @@ public class POpToQuery {
     assertHasPathSet(pOp);
     assertHasValueSet(pOp);
 
-    String operator = simpleLeafOperators.get(pOp.op());
+    String operator = SIMPLE_LEAF_OPERATORS.get(pOp.op());
     if (operator == null) throw unsupportedOperation(pOp.op() + " not supported");
     return new MultiValueComparison(
         operator, pOp.getPropertyRef().getPath(), pOp.getValue().toString());
   }
 
-  private static final Map<POpType, String> simpleLeafOperators = Map.of(
-      EQ, EQ_OPERATOR,
-      GT, "=gt=",
-      GTE, "=gte=",
-      LT, "=lt=",
-      LTE, "=lte=",
-      CONTAINS, "=cs=");
-
-  //
-  // Validation
-  //
   private static void assertHasNChildren(POp pOp, int count) {
     List<@NotNull POp> children = pOp.children();
     if (children == null && count == 0) return;
@@ -151,9 +144,12 @@ public class POpToQuery {
     return unchecked(new POpToQueryConversionException(msg));
   }
 
-  //
-  // Record
-  //
+  static class POpToQueryConversionException extends UnsupportedOperationException {
+    public POpToQueryConversionException(String message) {
+      super(message);
+    }
+  }
+
   private record MultiValueComparison(
       @NotNull String operator, @NotNull List<String> path, @NotNull String... values) {
 
@@ -167,12 +163,6 @@ public class POpToQuery {
       return strings.stream()
           .map(s -> URLEncoder.encode(s, StandardCharsets.UTF_8))
           .collect(Collectors.joining(delimiter));
-    }
-  }
-
-  static class POpToQueryConversionException extends UnsupportedOperationException {
-    public POpToQueryConversionException(String message) {
-      super(message);
     }
   }
 }

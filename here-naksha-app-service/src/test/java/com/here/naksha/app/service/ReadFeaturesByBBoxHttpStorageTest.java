@@ -39,8 +39,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static com.here.naksha.app.common.TestUtil.urlEncoded;
-
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 @WireMockTest(httpPort = 9090)
@@ -236,7 +234,7 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
   }
 
   @ParameterizedTest
-  @MethodSource("com.here.naksha.app.service.PropSearchTestUtil#queryParams")
+  @MethodSource("propSearchTestParams")
   void tc800_testPropertySearch(String inputQueryString, RequestPatternBuilder outputQueryPattern) throws Exception {
     final String bboxQueryParam = "west=-180.0&north=90.0&east=180.0&south=-90.0&limit=30000";
 
@@ -248,5 +246,9 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
     stubFor(any(anyUrl()));
 
     verify(1, outputQueryPattern);
+  }
+
+  private static Stream<Arguments> propSearchTestParams(){
+    return PropertySearchSamples.queryParams();
   }
 }

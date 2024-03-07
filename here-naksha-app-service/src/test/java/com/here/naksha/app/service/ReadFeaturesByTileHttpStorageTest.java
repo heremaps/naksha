@@ -200,7 +200,7 @@ class ReadFeaturesByTileHttpStorageTest extends ApiTest {
   }
 
   @ParameterizedTest
-  @MethodSource("com.here.naksha.app.service.PropSearchTestUtil#queryParams")
+  @MethodSource("propSearchTestParams")
   void tc900_testPropertySearch(String inputQueryString, RequestPatternBuilder outputQueryPattern) throws Exception {
 
     String streamId = UUID.randomUUID().toString();
@@ -211,5 +211,9 @@ class ReadFeaturesByTileHttpStorageTest extends ApiTest {
     stubFor(any(anyUrl()));
 
     verify(1, outputQueryPattern);
+  }
+
+  private static Stream<Arguments> propSearchTestParams(){
+    return PropertySearchSamples.queryParams();
   }
 }

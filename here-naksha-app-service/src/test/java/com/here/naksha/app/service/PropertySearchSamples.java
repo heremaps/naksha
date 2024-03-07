@@ -10,9 +10,9 @@ import java.util.stream.Stream;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
 
-public class PropSearchTestUtil {
+public class PropertySearchSamples {
 
-  private static Stream<Arguments> queryParams() {
+  static Stream<Arguments> queryParams() {
     return Stream.of(
             Pair.of("properties.alone_prop=1", "properties.alone_prop=1"),
             Pair.of("properties.alone_prop=1,2,3,4", "properties.alone_prop=1,2,3,4"),
