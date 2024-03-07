@@ -82,7 +82,7 @@ public class POpToQueryConverter {
           if (!Objects.equals(l.path, r.path)) throw unsupportedOperation("Paths in OR are not equal");
           return new MultiValueComparison(l.operator, l.path, ArrayUtils.addAll(l.values, r.values));
         })
-        .orElseThrow(() -> new AssertionError("Should not reach here."));
+        .orElseThrow(() -> new IllegalStateException("Should not reach here."));
   }
 
   private static MultiValueComparison not(POp pOp) {
