@@ -478,9 +478,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         }
         try {
             // FIXME history partition creation should be moved to some kind of job that runs it once a day.
-            if (collectionId != NKC_TABLE) {
-                ensureHistoryPartition(collectionId)
-            }
+            ensureHistoryPartition(collectionId)
 
             var i = 0
             while (i < op_arr.size) {
