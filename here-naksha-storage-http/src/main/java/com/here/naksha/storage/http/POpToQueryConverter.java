@@ -159,7 +159,7 @@ public class POpToQueryConverter {
   private record MultiValueComparison(
       @NotNull String operator, @NotNull List<String> path, @NotNull String... values) {
 
-    public String resolve() {
+    String resolve() {
       String pathEncoded = encodeAndJoin(PATH_SEGMENT_DELIMITER, path);
       String pathTranslated = translatePathSpecialCases(pathEncoded);
       String valueEncoded = encodeAndJoin(OR_DELIMITER, List.of(values));
