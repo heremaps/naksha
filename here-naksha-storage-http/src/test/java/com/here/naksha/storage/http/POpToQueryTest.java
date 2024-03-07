@@ -17,7 +17,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class POpToQueryTest {
+class POpToQueryConverterTest {
 
   @Test
   void andSingle() {
@@ -232,6 +232,16 @@ class POpToQueryTest {
             isNull(prop1Ref),
             isNotNull(prop1Ref),
     };
+  }
+
+  @Test
+  void translateIdProp() {
+    POp pOp = and(
+            eq(RequestHelper.pRefFromPropPath(new String[]{"f","id"}), "1")
+    );
+    String query = p0pToQuery(pOp);
+
+    assertEquals(query, "f.id=1");
   }
 
   public static String urlEncoded(String text) {

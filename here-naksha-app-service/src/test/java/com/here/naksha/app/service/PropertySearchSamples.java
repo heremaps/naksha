@@ -32,8 +32,11 @@ public class PropertySearchSamples {
             Pair.of("properties.prop=.null", "properties.prop=.null"),
             Pair.of("properties.prop=null", "properties.prop=null"),
             Pair.of("properties.prop!=.null", "properties.prop!=.null"),
+            Pair.of("f.id=1", "f.id=1"),
+            Pair.of("f.specProp=1", "properties.@ns:com:here:xyz.specProp=1"),
             Pair.of("""
-                            properties.prop_2!=value_2,value_22
+                            f.id!=1
+                            &properties.prop_2!=value_2,value_22
                             &properties.prop_3=.null,value_33
                             &properties.prop_4!=.null,value_44
                             &properties.prop_5=gte=5.5,55
@@ -51,7 +54,8 @@ public class PropertySearchSamples {
                             &properties.@ns:com:here:xyz.tags=cs=element_5""".replace(System.lineSeparator(), "")
                     ,
                     """
-                            properties.prop_2!=value_2,value_22
+                            f.id!=1
+                            &properties.prop_2!=value_2,value_22
                             &properties.prop_3=.null,value_33
                             &properties.prop_4!=.null,value_44
                             &properties.prop_5=gte=5.5,55

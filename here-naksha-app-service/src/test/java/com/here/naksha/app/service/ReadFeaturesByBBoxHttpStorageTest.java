@@ -243,7 +243,7 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
     // When: Get Features By BBox request is submitted to NakshaHub
     nakshaClient.get("hub/spaces/" + HTTP_SPACE_ID + "/bbox?" + bboxQueryParam + "&" + inputQueryString, streamId);
 
-    stubFor(any(anyUrl()));
+    stubFor(any(anyUrl()).willReturn(ok()));
 
     verify(1, outputQueryPattern);
   }

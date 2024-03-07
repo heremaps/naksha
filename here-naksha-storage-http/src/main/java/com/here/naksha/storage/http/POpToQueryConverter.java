@@ -150,13 +150,20 @@ public class POpToQueryConverter {
     }
   }
 
+  private static String translatePathSpecialCases(String path) {
+    // f.id in Naksha service is translated to "id" and needs to be translated back
+    if (path.equals("id")) return "f.id";
+    else return path;
+  }
+
   private record MultiValueComparison(
       @NotNull String operator, @NotNull List<String> path, @NotNull String... values) {
 
     public String resolve() {
       String pathEncoded = encodeAndJoin(PATH_SEGMENT_DELIMITER, path);
+      String pathTranslated = translatePathSpecialCases(pathEncoded);
       String valueEncoded = encodeAndJoin(OR_DELIMITER, List.of(values));
-      return pathEncoded + operator + valueEncoded;
+      return pathTranslated + operator + valueEncoded;
     }
 
     private static String encodeAndJoin(String delimiter, List<String> strings) {
