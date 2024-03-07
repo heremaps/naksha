@@ -148,6 +148,10 @@ CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
   return require("naksha").Static.partitionNameForId(id);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION naksha_hst_partition_id(id text, txn_next int8) RETURNS int4 AS $$
+  return require("naksha").Static.hstPartitionNameForId(id, txn_next);
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION naksha_geometry(geo_type int2, geo_bytes bytea) RETURNS geometry AS
 $$
 BEGIN

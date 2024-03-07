@@ -357,8 +357,7 @@ SET (toast_tuple_target=8160"""
         val hstNameQuoted = sql.quoteIdent(hstName)
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
         query = query.replace("{condition}", "> 0")
-        // FIXME TODO enable partitioning once creation of partition table for _hst is ready
-//        query += "PARTITION BY RANGE (txn_next)"
+        query += "PARTITION BY RANGE (txn_next)"
         sql.execute(query)
     }
 
@@ -409,4 +408,41 @@ DROP TABLE IF EXISTS $delName CASCADE;
 DROP TABLE IF EXISTS $metaName CASCADE;
 DROP TABLE IF EXISTS $hstName CASCADE;""")
     }
+
+    /**
+     *
+     * @param collectionId has to be pure (without _hst suffix).
+     */
+    @JvmStatic
+    fun createHstPartition(sql: IPlv8Sql, collectionId: String, txnNext: NakshaTxn, spGist: Boolean): String {
+        val hstPartName = hstPartitionNameForId(collectionId, txnNext)
+        val partNameQuoted = sql.quoteIdent(hstPartName)
+        val headNameQuoted = sql.quoteIdent(hstHeadNameForId(collectionId))
+        val start = NakshaTxn.of(txnNext.year(), txnNext.month(), txnNext.day(), NakshaTxn.SEQ_MIN).value
+        val end = NakshaTxn.of(txnNext.year(), txnNext.month(), txnNext.day(), NakshaTxn.SEQ_MAX).value
+
+        val query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end);"
+        sql.execute(query)
+        collectionOptimizeTable(sql, hstPartName, true)
+        collectionAddIndices(sql, hstPartName, spGist, true)
+
+        return hstPartName
+    }
+
+    /**
+     * Returns full history partition name i.e. `foo_hst_2023_02_12` for given `foo`.
+     *
+     * @param collectionId head collectionId i.e `topology`
+     * @param txnNext txn to retrieve suffix from
+     */
+    @JvmStatic
+    fun hstPartitionNameForId(collectionId: String, txnNext: NakshaTxn): String = "${hstHeadNameForId(collectionId)}_${txnNext.historyPostfix()}"
+
+    /**
+     * Returns full history head name i.e. `foo_hst`.
+     *
+     * @param collectionId head collectionId i.e `topology`
+     */
+    @JvmStatic
+    fun hstHeadNameForId(collectionId: String): String = "${collectionId}_hst"
 }

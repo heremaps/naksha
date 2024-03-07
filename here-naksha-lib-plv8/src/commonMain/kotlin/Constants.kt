@@ -4,6 +4,7 @@ package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
 
+internal const val NKC_TABLE = "naksha_collections"
 internal const val NKC_PARTITION = "partition"
 internal const val NKC_POINTS_ONLY = "pointsOnly"
 internal const val NKC_DISABLE_HISTORY = "disableHistory"
