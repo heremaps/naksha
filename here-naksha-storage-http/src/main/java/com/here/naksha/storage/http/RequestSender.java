@@ -37,23 +37,36 @@ import org.slf4j.LoggerFactory;
 class RequestSender {
 
   private static final Logger log = LoggerFactory.getLogger(RequestSender.class);
+
+  @NotNull
   private final String name;
+
+  @NotNull
   private final String hostUrl;
+
+  @NotNull
   private final Map<String, String> defaultHeaders;
-  private final HttpClient httpClient;
+
   private final long socketTimeoutSec;
+  private final long connectTimeoutSec;
+
+  @NotNull
+  private final HttpClient httpClient;
 
   public RequestSender(
-      final String name,
-      String hostUrl,
-      Map<String, String> defaultHeaders,
-      HttpClient httpClient,
+      @NotNull final String name,
+      @NotNull String hostUrl,
+      @NotNull Map<String, String> defaultHeaders,
+      long connectionTimeoutSec,
       long socketTimeoutSec) {
     this.name = name;
-    this.httpClient = httpClient;
     this.hostUrl = hostUrl;
     this.defaultHeaders = defaultHeaders;
     this.socketTimeoutSec = socketTimeoutSec;
+    this.connectTimeoutSec = connectionTimeoutSec;
+    httpClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(connectionTimeoutSec))
+        .build();
   }
 
   /**
@@ -109,5 +122,15 @@ class RequestSender {
           executionTime,
           (response == null) ? 0 : response.body().length());
     }
+  }
+
+  // TODO adam consistent names and javadoc (and record?)
+  public boolean propertiesEquals(
+      String id, String url, Map<String, String> headers, Long connectTimeout, Long socketTimeout) {
+    return this.name.equals(id)
+        && this.hostUrl.equals(url)
+        && this.defaultHeaders.equals(headers)
+        && this.connectTimeoutSec == connectTimeout
+        && this.socketTimeoutSec == socketTimeout;
   }
 }

@@ -24,8 +24,6 @@ import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.net.http.HttpClient;
-import java.time.Duration;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import org.jetbrains.annotations.NotNull;
@@ -39,16 +37,13 @@ public class HttpStorage implements IStorage {
 
   private final RequestSender requestSender;
 
-  public HttpStorage(@NotNull Storage storage) {
+  public HttpStorage(@NotNull Storage storage) { // here check hashcode
     HttpStorageProperties properties = HttpStorage.getProperties(storage);
-    HttpClient httpStorageClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(properties.getConnectTimeout()))
-        .build();
-    requestSender = new RequestSender(
+    requestSender = RequestSenderCache.get(
         storage.getId(),
         properties.getUrl(),
         properties.getHeaders(),
-        httpStorageClient,
+        properties.getConnectTimeout(),
         properties.getSocketTimeout());
   }
 
