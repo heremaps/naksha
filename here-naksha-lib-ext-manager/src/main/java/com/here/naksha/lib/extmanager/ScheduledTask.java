@@ -39,7 +39,7 @@ public class ScheduledTask implements Runnable {
   @Override
   public void run() {
     while (true) {
-      System.out.println("Refreshing loader cache task starts");
+      logger.info("Extension cache refresh job started");
       ExtensionConfig extensionConfig = null;
       try {
         if (lambda instanceof Fe0) {
@@ -49,10 +49,10 @@ public class ScheduledTask implements Runnable {
       } catch (Exception e) {
         logger.error("Failed to refresh extension cache.", e);
       } finally {
-        logger.info("Refresh loader task completed");
+        logger.info("Extension cache refresh job completed");
       }
       try {
-        System.out.println("Going to sleep for " + extensionConfig.getExpiry() + " Seconds");
+        logger.info("Extension cache refresh job sleeps for " + extensionConfig.getExpiry() + " millisecond");
         Thread.sleep(extensionConfig.getExpiry());
       } catch (InterruptedException e) {
         logger.error("Refresh task is interrupted");
