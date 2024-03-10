@@ -19,7 +19,7 @@ import org.mockito.MockedConstruction;
 public class ExtensionManagerTest extends BaseSetup {
   INaksha naksha=mock(INaksha.class);
   @BeforeEach
-  public void setup(){
+  public void init(){
     when(naksha.getExtensionConfig()).thenReturn(getExtensionConfig());
   }
 

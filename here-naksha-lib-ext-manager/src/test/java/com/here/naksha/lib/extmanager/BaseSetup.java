@@ -12,8 +12,15 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.BeforeAll;
 
 public class BaseSetup {
+  @BeforeAll
+  public static void setup(){
+    System.setProperty("aws.accessKeyId", "test");
+    System.setProperty("aws.secretKey", "test");
+    System.setProperty("aws.region", "eu-west-1");
+  }
   public ExtensionConfig getExtensionConfig() {
     List<String> whitelistUrls= Arrays.asList(( "java.*,javax.*,com.here.naksha.*").split(","));
     ExtensionConfig extensionConfig=new ExtensionConfig(6000,"");

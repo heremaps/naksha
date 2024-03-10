@@ -57,7 +57,6 @@ public class AmazonS3Helper implements FileClient {
         fos.write(read_buf, 0, read_len);
       }
       inputStream.close();
-      fos.close();
     } catch (IOException e) {
       throw e;
     }

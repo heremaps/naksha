@@ -37,12 +37,6 @@ public class ExtensionCacheTest extends BaseSetup {
 
   @Mock
   INaksha naksha;
-  @BeforeAll
-  public static void setup(){
-    System.setProperty("aws.accessKeyId", "test");
-    System.setProperty("aws.secretKey", "test");
-    System.setProperty("aws.region", "eu-west-1");
-  }
   @Test
   public void testBuildExtensionCache() throws IOException {
     ClassLoader classLoader=mock(ClassLoader.class);
