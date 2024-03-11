@@ -18,10 +18,12 @@
  */
 package com.here.naksha.storage.http;
 
+import static com.here.naksha.storage.http.RequestSender.*;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,27 +32,20 @@ public class RequestSenderCache {
 
   private static final Map<String, RequestSender> requestSenders = new HashMap<>();
 
-  private static final ScheduledExecutorService cleaner = Executors.newScheduledThreadPool(1);
+  private static final ScheduledFuture<?> cleaner =
+      Executors
+              .newScheduledThreadPool(1)
+              .scheduleAtFixedRate(requestSenders::clear, 0, 8, TimeUnit.HOURS);
 
-  static {
-    cleaner.scheduleAtFixedRate(requestSenders::clear, 0, 8, TimeUnit.HOURS);
-  }
-
-  static RequestSender get(
-      String id, String url, Map<String, String> headers, Long connectTimeout, Long socketTimeout) {
+  static RequestSender getSenderWith(KeyProperties keyProperties) {
     return requestSenders.compute(
-        id, (__, cachedSender) -> get(cachedSender, id, url, headers, connectTimeout, socketTimeout));
+        keyProperties.name(), (__, cachedSender) -> getSenderWith(cachedSender, keyProperties));
   }
 
-  private static @NotNull RequestSender get(
-      @Nullable RequestSender cachedSender,
-      String id,
-      String url,
-      Map<String, String> headers,
-      Long connectTimeout,
-      Long socketTimeout) {
-    if (cachedSender == null || !cachedSender.propertiesEquals(id, url, headers, connectTimeout, socketTimeout))
-      return new RequestSender(id, url, headers, connectTimeout, socketTimeout);
+  private static @NotNull RequestSender getSenderWith(
+      @Nullable RequestSender cachedSender, @NotNull KeyProperties keyProperties) {
+    if (cachedSender == null || !cachedSender.propertiesEquals(keyProperties))
+      return new RequestSender(keyProperties);
     else return cachedSender;
   }
 }

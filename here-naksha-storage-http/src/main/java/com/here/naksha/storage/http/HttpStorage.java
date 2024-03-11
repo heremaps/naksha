@@ -18,6 +18,8 @@
  */
 package com.here.naksha.storage.http;
 
+import static com.here.naksha.storage.http.RequestSender.KeyProperties;
+
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
@@ -39,12 +41,12 @@ public class HttpStorage implements IStorage {
 
   public HttpStorage(@NotNull Storage storage) { // here check hashcode
     HttpStorageProperties properties = HttpStorage.getProperties(storage);
-    requestSender = RequestSenderCache.get(
+    requestSender = RequestSenderCache.getSenderWith(new KeyProperties(
         storage.getId(),
         properties.getUrl(),
         properties.getHeaders(),
         properties.getConnectTimeout(),
-        properties.getSocketTimeout());
+        properties.getSocketTimeout()));
   }
 
   @Override

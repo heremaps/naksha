@@ -39,19 +39,17 @@ class RequestSender {
   private static final Logger log = LoggerFactory.getLogger(RequestSender.class);
 
   @NotNull
-  private final String name;
-
-  @NotNull
-  private final String hostUrl;
-
-  @NotNull
-  private final Map<String, String> defaultHeaders;
-
-  private final long socketTimeoutSec;
-  private final long connectTimeoutSec;
-
-  @NotNull
   private final HttpClient httpClient;
+
+  @NotNull
+  private final RequestSender.KeyProperties p;
+
+  public RequestSender(@NotNull RequestSender.KeyProperties p) {
+    this.p = p;
+    httpClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(p.connectionTimeoutSec))
+        .build();
+  }
 
   public RequestSender(
       @NotNull final String name,
@@ -59,14 +57,7 @@ class RequestSender {
       @NotNull Map<String, String> defaultHeaders,
       long connectionTimeoutSec,
       long socketTimeoutSec) {
-    this.name = name;
-    this.hostUrl = hostUrl;
-    this.defaultHeaders = defaultHeaders;
-    this.socketTimeoutSec = socketTimeoutSec;
-    this.connectTimeoutSec = connectionTimeoutSec;
-    httpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(connectionTimeoutSec))
-        .build();
+    this(new KeyProperties(name, hostUrl, defaultHeaders, connectionTimeoutSec, socketTimeoutSec));
   }
 
   /**
@@ -84,10 +75,10 @@ class RequestSender {
       @Nullable Map<String, String> headers,
       @Nullable String httpMethod,
       @Nullable String body) {
-    URI uri = URI.create(hostUrl + endpoint);
-    HttpRequest.Builder builder = newBuilder().uri(uri).timeout(Duration.ofSeconds(socketTimeoutSec));
+    URI uri = URI.create(p.hostUrl + endpoint);
+    HttpRequest.Builder builder = newBuilder().uri(uri).timeout(Duration.ofSeconds(p.socketTimeoutSec));
 
-    if (keepDefHeaders) defaultHeaders.forEach(builder::header);
+    if (keepDefHeaders) p.defaultHeaders.forEach(builder::header);
     if (headers != null) headers.forEach(builder::header);
 
     HttpRequest.BodyPublisher bodyPublisher =
@@ -104,7 +95,7 @@ class RequestSender {
     try {
       CompletableFuture<HttpResponse<String>> futureResponse =
           httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
-      response = futureResponse.get(socketTimeoutSec, TimeUnit.SECONDS);
+      response = futureResponse.get(p.socketTimeoutSec, TimeUnit.SECONDS);
       return response;
     } catch (Exception e) {
       log.warn("We got exception while executing Http request against remote server.", e);
@@ -114,8 +105,8 @@ class RequestSender {
       log.info(
           "[Storage API stats => type,storageId,host,method,path,status,timeTakenMs,resSize] - StorageAPIStats {} {} {} {} {} {} {} {}",
           "HttpStorage",
-          this.name,
-          this.hostUrl,
+          p.name,
+          p.hostUrl,
           request.method(),
           request.uri(),
           (response == null) ? "-" : response.statusCode(),
@@ -124,13 +115,19 @@ class RequestSender {
     }
   }
 
-  // TODO adam consistent names and javadoc (and record?)
-  public boolean propertiesEquals(
-      String id, String url, Map<String, String> headers, Long connectTimeout, Long socketTimeout) {
-    return this.name.equals(id)
-        && this.hostUrl.equals(url)
-        && this.defaultHeaders.equals(headers)
-        && this.connectTimeoutSec == connectTimeout
-        && this.socketTimeoutSec == socketTimeout;
+  public boolean propertiesEquals(KeyProperties thatProperties) {
+    return this.p.equals(thatProperties);
   }
+
+  /**
+   * Set of properties that are just enough to construct the sender
+   * and distinguish unambiguously between objects
+   * in terms of their effective configuration
+   */
+  record KeyProperties(
+      @NotNull String name,
+      @NotNull String hostUrl,
+      @NotNull Map<String, String> defaultHeaders,
+      long connectionTimeoutSec,
+      long socketTimeoutSec) {}
 }
