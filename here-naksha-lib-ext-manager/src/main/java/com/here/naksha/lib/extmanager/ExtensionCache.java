@@ -84,7 +84,13 @@ public class ExtensionCache {
         .map(Extension::getExtensionId)
         .collect(Collectors.toList());
     for (String key : loaderCache.keySet()) {
-      if (!extIds.contains(key)) loaderCache.remove(key);
+      if (!extIds.contains(key)) {
+        KVPair<Extension, ClassLoader> prevValue = loaderCache.remove(key);
+        if (prevValue != null) {
+          ClassLoader prevLoader = prevValue.getValue();
+          prevLoader = null;
+        }
+      }
     }
     logger.info("Extension cache size " + loaderCache.size());
   }
@@ -101,16 +107,17 @@ public class ExtensionCache {
       }
 
       Object object = null;
+      KVPair<Extension, ClassLoader> prevValue = null;
       if (result.getKey().getInitClassName() == null
           || result.getKey().getInitClassName().isEmpty()) {
-        loaderCache.put(
+        prevValue = loaderCache.put(
             result.getKey().getExtensionId(), new KVPair<Extension, ClassLoader>(result.getKey(), loader));
       } else {
         try {
           Class<?> clz = loader.loadClass(result.getKey().getInitClassName());
           object = clz.getConstructor(INaksha.class, Object.class)
               .newInstance(naksha, result.getKey().getProperties());
-          loaderCache.put(
+          prevValue = loaderCache.put(
               result.getKey().getExtensionId(),
               new KVPair<Extension, ClassLoader>(result.getKey(), loader));
         } catch (ClassNotFoundException
@@ -125,6 +132,10 @@ public class ExtensionCache {
                   result.getKey().getExtensionId()),
               e);
         }
+      }
+      if (prevValue != null) {
+        ClassLoader prevLoader = prevValue.getValue();
+        prevLoader = null;
       }
     }
   }
