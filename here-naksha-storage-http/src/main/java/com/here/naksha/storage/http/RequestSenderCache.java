@@ -18,33 +18,51 @@
  */
 package com.here.naksha.storage.http;
 
-import static com.here.naksha.storage.http.RequestSender.*;
+import static com.here.naksha.storage.http.RequestSender.KeyProperties;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 
 public class RequestSenderCache {
 
-  private static final Map<String, RequestSender> requestSenders = new HashMap<>();
   public static final int CLEANER_PERIOD_HOURS = 8;
+  private final ConcurrentMap<String, RequestSender> requestSenders;
+  private final ScheduledFuture<?> cleaner;
 
-  private static final ScheduledFuture<?> cleaner = Executors.newScheduledThreadPool(1)
-      .scheduleAtFixedRate(requestSenders::clear, 0, CLEANER_PERIOD_HOURS, TimeUnit.HOURS);
-
-  static RequestSender getSenderWith(KeyProperties keyProperties) {
-    return requestSenders.compute(
-        keyProperties.name(), (__, cachedSender) -> getSenderWith(cachedSender, keyProperties));
+  private RequestSenderCache() {
+    this(new ConcurrentHashMap<>(), CLEANER_PERIOD_HOURS, TimeUnit.HOURS);
   }
 
-  private static @NotNull RequestSender getSenderWith(
+  /**
+   * Only for unit tests.
+   */
+  @TestOnly
+  RequestSenderCache(ConcurrentMap<String, RequestSender> requestSenders, int cleanPeriod, TimeUnit cleanPeriodUnit) {
+    this.requestSenders = requestSenders;
+    this.cleaner = Executors.newSingleThreadScheduledExecutor()
+        .scheduleAtFixedRate(requestSenders::clear, cleanPeriod, cleanPeriod, cleanPeriodUnit);
+  }
+
+  @NotNull
+  static RequestSenderCache getInstance() {
+    return InstanceHolder.instance;
+  }
+
+  @NotNull
+  RequestSender getSenderWith(KeyProperties keyProperties) {
+    return requestSenders.compute(
+        keyProperties.name(), (__, cachedSender) -> getUpdated(cachedSender, keyProperties));
+  }
+
+  private @NotNull RequestSender getUpdated(
       @Nullable RequestSender cachedSender, @NotNull KeyProperties keyProperties) {
-    if (cachedSender == null || !cachedSender.propertiesEquals(keyProperties))
-      return new RequestSender(keyProperties);
-    else return cachedSender;
+    if (cachedSender != null && cachedSender.hasKeyProps(keyProperties)) return cachedSender;
+    else return new RequestSender(keyProperties);
+  }
+
+  private static final class InstanceHolder {
+    private static final RequestSenderCache instance = new RequestSenderCache();
   }
 }

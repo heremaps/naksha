@@ -115,7 +115,7 @@ class RequestSender {
     }
   }
 
-  public boolean propertiesEquals(KeyProperties thatProperties) {
+  public boolean hasKeyProps(KeyProperties thatProperties) {
     return this.p.equals(thatProperties);
   }
 

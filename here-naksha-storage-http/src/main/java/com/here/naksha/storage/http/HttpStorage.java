@@ -41,12 +41,13 @@ public class HttpStorage implements IStorage {
 
   public HttpStorage(@NotNull Storage storage) {
     HttpStorageProperties properties = HttpStorage.getProperties(storage);
-    requestSender = RequestSenderCache.getSenderWith(new KeyProperties(
-        storage.getId(),
-        properties.getUrl(),
-        properties.getHeaders(),
-        properties.getConnectTimeout(),
-        properties.getSocketTimeout()));
+    requestSender = RequestSenderCache.getInstance()
+        .getSenderWith(new KeyProperties(
+            storage.getId(),
+            properties.getUrl(),
+            properties.getHeaders(),
+            properties.getConnectTimeout(),
+            properties.getSocketTimeout()));
   }
 
   @Override
