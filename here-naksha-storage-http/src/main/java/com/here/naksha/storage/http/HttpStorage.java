@@ -39,7 +39,7 @@ public class HttpStorage implements IStorage {
 
   private final RequestSender requestSender;
 
-  public HttpStorage(@NotNull Storage storage) { // here check hashcode
+  public HttpStorage(@NotNull Storage storage) {
     HttpStorageProperties properties = HttpStorage.getProperties(storage);
     requestSender = RequestSenderCache.getSenderWith(new KeyProperties(
         storage.getId(),

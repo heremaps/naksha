@@ -31,11 +31,10 @@ import org.jetbrains.annotations.Nullable;
 public class RequestSenderCache {
 
   private static final Map<String, RequestSender> requestSenders = new HashMap<>();
+  public static final int CLEANER_PERIOD_HOURS = 8;
 
-  private static final ScheduledFuture<?> cleaner =
-      Executors
-              .newScheduledThreadPool(1)
-              .scheduleAtFixedRate(requestSenders::clear, 0, 8, TimeUnit.HOURS);
+  private static final ScheduledFuture<?> cleaner = Executors.newScheduledThreadPool(1)
+      .scheduleAtFixedRate(requestSenders::clear, 0, CLEANER_PERIOD_HOURS, TimeUnit.HOURS);
 
   static RequestSender getSenderWith(KeyProperties keyProperties) {
     return requestSenders.compute(
