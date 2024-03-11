@@ -266,3 +266,27 @@ Psql Error Codes are specific to `lib-naksha-psql` library and should be mapped 
 | 23505     | CONFLICT             | Requested feature CREATE but feature already exists |
 | 02000     | NOT_FOUND            | Requested feature UPDATE but feature doesn't exist  |
 | ?ANY?     | ?ANY?                | Any other code will map to XyzError with that code  |
+
+## Parallel Append
+
+Here are parameters you have to consider for parallel append on partitioned table.
+
+- SHOW max_worker_processes; - The number of all workers available in db
+
+- show max_parallel_workers; - Default 8. the pool of parallel workers.
+
+- show max_parallel_workers_per_gather; - The number of workers available for single "gather"
+- show effective_io_concurrency; - Default 1, the number of concurrent disk I/O operations that one single session can have (affects only bitmap heap scans)
+- show enable_parallel_append; - Enable or disable parallel append. Default is "on"
+- show parallel_setup_cost; - Default 1000. Sets the planner's estimate of the cost of launching parallel worker processes
+   Setting it to 0 increase the chance to parallel append
+- show parallel_tuple_cost; - Sets the planner's estimate of the cost of transferring one tuple from a parallel worker process to another process. The default is 0.1
+- show force_parallel_mode; - We should not use it, as it gives always only 1 worker
+   https://www.enterprisedb.com/postgres-tutorials/using-forceparallelmode-correctly-postgresql
+- enable_partitionwise_aggregate - Enables or disables the query planner's use of partitionwise grouping or aggregation, which allows grouping or aggregation on partitioned tables to be performed separately for each partition. If the GROUP BY clause does not include the partition keys, only partial aggregation can be performed on a per-partition basis, and finalization must be performed later. Because partitionwise grouping or aggregation can use significantly more CPU time and memory during planning, the default is off.
+- min_parallel_index_scan_size - Sets the minimum amount of index data that must be scanned in order for a parallel scan to be considered.
+    The default is 512 kilobytes (512kB).
+- min_parallel_table_scan_size - Sets the minimum amount of index data that must be scanned in order for a parallel scan to be considered.
+    The default is 512 kilobytes (512kB).
+- parallel_leader_participation - Allows the leader process to execute the query plan under Gather and Gather Merge nodes instead of waiting for worker processes. The default is on. Setting this value to off reduces the likelihood that workers will become blocked because the leader is not reading tuples fast enough, but requires the leader process to wait for worker processes to start up before the first tuples can be produced. The degree to which the leader can help or hinder performance depends on the plan type, number of workers and query duration.
+- enable_seqscan (boolean) - Enables or disables the query planner's use of sequential scan plan types. It is impossible to suppress sequential scans entirely, but turning this variable off discourages the planner from using one if there are other methods available. The default is on

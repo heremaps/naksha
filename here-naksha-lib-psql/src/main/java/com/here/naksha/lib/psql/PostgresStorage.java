@@ -344,7 +344,6 @@ final class PostgresStorage extends ClosableRootResource {
       sql.add(");\n");
     }
     sql.add("SET SESSION work_mem TO '256 MB';\n");
-    sql.add("SET SESSION enable_seqscan TO OFF;\n");
     sql.add("SET SESSION statement_timeout TO ").add(stmtTimeout).add(";\n");
     sql.add("SET SESSION lock_timeout TO ").add(lockTimeout).add(";\n");
   }

@@ -254,6 +254,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           addTransformation(spatialOp.getTransformation(), "ST_Force3D(naksha_geometry(3::int2,?))");
       sql.add(" ST_Intersects(naksha_geometry(geo_type,geo), ")
           .add(variableTransformed)
+          .add("::geometry ")
           .add(")");
       try (final Json jp = Json.get()) {
         final byte[] wkb = jp.twkbWriter.write(geometry);

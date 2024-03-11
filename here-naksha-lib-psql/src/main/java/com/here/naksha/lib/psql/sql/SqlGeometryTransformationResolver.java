@@ -45,7 +45,7 @@ public class SqlGeometryTransformationResolver {
           .add(bufferT.getDistance())
           .add(",")
           .addLiteral(bufferT.getProperties())
-          .add(") ");
+          .add(")");
     } else if (transformation instanceof GeographyTransformation) {
       sql.add(variableSql).add("::geography ");
     } else {

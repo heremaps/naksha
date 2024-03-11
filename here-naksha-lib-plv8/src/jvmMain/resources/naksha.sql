@@ -21,17 +21,17 @@ SET SESSION search_path TO "${schema}", public, topology;
 COMMIT;
 
 -- Returns the packed Naksha extension version: 16 bit reserved, 16 bit major, 16 bit minor, 16 bit revision.
-CREATE OR REPLACE FUNCTION naksha_version() RETURNS int8 LANGUAGE 'plpgsql' IMMUTABLE AS $$ BEGIN
+CREATE OR REPLACE FUNCTION naksha_version() RETURNS int8 LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE AS $$ BEGIN
   RETURN ${version};
 END $$;
 
 -- Returns the storage-id of this storage, this is created when the Naksha extension is installed and never changes.
-CREATE OR REPLACE FUNCTION naksha_storage_id() RETURNS text LANGUAGE 'plpgsql' IMMUTABLE AS $$ BEGIN
+CREATE OR REPLACE FUNCTION naksha_storage_id() RETURNS text LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE AS $$ BEGIN
   RETURN '${storage_id}';
 END $$;
 
 -- Returns the schema of this storage, this is created when the Naksha extension is installed and never changes.
-CREATE OR REPLACE FUNCTION naksha_schema() RETURNS text LANGUAGE 'plpgsql' IMMUTABLE AS $$ BEGIN
+CREATE OR REPLACE FUNCTION naksha_schema() RETURNS text LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE AS $$ BEGIN
   RETURN '${schema}';
 END $$;
 
@@ -142,33 +142,33 @@ $$ LANGUAGE 'plv8' VOLATILE;
 
 CREATE OR REPLACE FUNCTION naksha_partition_number(id text) RETURNS int4 AS $$
   return require("naksha").Static.partitionNumber(id);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
   return require("naksha").Static.partitionNameForId(id);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION naksha_geometry(geo_type int2, geo_bytes bytea) RETURNS geometry AS
 $$
 BEGIN
   IF geo_type = 1 THEN
-    RETURN ST_GeomFromWKB(geo_bytes);
+    RETURN ST_GeomFromWKB(geo_bytes, 4326);
   ELSIF geo_type = 2 THEN
-    RETURN ST_GeomFromEWKB(geo_bytes);
+    RETURN ST_GeomFromEWKB(geo_bytes, 4326);
   ELSIF geo_type = 3 THEN
-    RETURN ST_GeomFromTWKB(geo_bytes);
+    RETURN ST_SetSRID(ST_GeomFromTWKB(geo_bytes), 4326);
   ELSE
     RETURN null;
   END IF;
 END;
-$$ LANGUAGE 'plpgsql' IMMUTABLE;
+$$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION jsonb_to_op(op jsonb) RETURNS bytea AS $$
   let jb = require("jbon");
   let builder = jb.XyzBuilder.Companion.create();
   let opCode = jb.XyzOp.Companion.getOpCode(op["op"]);
   return builder.buildXyzOp(opCode, op["id"], op["uuid"]);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION json_to_op(op_json text) RETURNS bytea AS $$
   let jb = require("jbon");
@@ -176,112 +176,112 @@ CREATE OR REPLACE FUNCTION json_to_op(op_json text) RETURNS bytea AS $$
   let op = jb.Jb.env.parse(op_json);
   let opCode = jb.XyzOp.Companion.getOpCode(op["op"]);
   return builder.buildXyzOp(opCode, op["id"], op["uuid"]);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION op_to_jsonb(op bytea) RETURNS jsonb AS $$
   let jb = require("jbon");
   let xyzOp = new jb.XyzOp();
   xyzOp.mapBytes(op);
   return xyzOp.toIMap();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION op_to_json(op bytea) RETURNS text AS $$
   let jb = require("jbon");
   let xyzOp = new jb.XyzOp();
   xyzOp.mapBytes(op);
   return jb.Jb.env.stringify(xyzOp.toIMap());
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_created_at(xyz bytea) RETURNS int8 AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.createdAt();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_updated_at(xyz bytea) RETURNS int8 AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.updatedAt();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_txn(xyz bytea) RETURNS int8 AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.txn().value;
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_version(xyz bytea) RETURNS int4 AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.version();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_extent(xyz bytea) RETURNS int8 AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.extent();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_author(xyz bytea) RETURNS text AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.author();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_author_ts(xyz bytea) RETURNS int8 AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.authorTs();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_app_id(xyz bytea) RETURNS text AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.appId();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_uuid(xyz bytea) RETURNS text AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.uuid();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_puuid(xyz bytea) RETURNS text AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.puuid();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_action(xyz bytea) RETURNS text AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.actionAsString();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_crid(xyz bytea) RETURNS text AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.crid();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_grid(xyz bytea) RETURNS text AS $$
   let jb = require("jbon");
   let xyzNs = new jb.XyzNs();
   xyzNs.mapBytes(xyz);
   return xyzNs.grid();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION xyz_to_jsonb(xyz bytea, tags bytea) RETURNS jsonb AS $$
   let naksha = require("naksha");
@@ -292,7 +292,7 @@ CREATE OR REPLACE FUNCTION xyz_to_jsonb(xyz bytea, tags bytea) RETURNS jsonb AS 
   let xyzTags = new jb.XyzTags();
   xyzTags.mapBytes(tags);
   return xyzNs.toIMap(session.storageId, xyzTags.isMapped()?xyzTags.tagsArray():null);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 -- query like:
 -- where tags_to_jsonb(tags) @? '$.x?(@ starts with "Hello")'
@@ -309,7 +309,7 @@ CREATE OR REPLACE FUNCTION tags_to_jsonb(tags bytea) RETURNS jsonb AS $$
   let xyzTags = new jb.XyzTags();
   xyzTags.mapBytes(tags);
   return xyzTags.tagsMap();
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION jsonb_to_tags(tags_json jsonb) RETURNS bytea AS $$
   // TODO: Fix me!!!
@@ -323,27 +323,27 @@ CREATE OR REPLACE FUNCTION jsonb_to_tags(tags_json jsonb) RETURNS bytea AS $$
   }
   let opCode = jb.XyzOp.Companion.getOpCode(op["op"]);
   return builder.buildXyzOp(opCode, op["id"], op["uuid"]);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION feature_id(feature bytea) RETURNS text AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
   return session.getFeatureId(feature);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION feature_type(feature bytea) RETURNS text AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
   return session.getFeatureType(feature);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION jsonb_to_feature(feature jsonb) RETURNS bytea AS $$
   return require("jbon").JbBuilder.Companion.create(1000).buildFeatureFromMap(feature);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION json_to_feature(feature text) RETURNS bytea AS $$
   return require("jbon").JbBuilder.Companion.create(1000).buildFeatureFromMap(JSON.parse(feature));
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION feature_to_jsonb(feature bytea) RETURNS jsonb AS $$
   let jb = require("jbon");
@@ -352,7 +352,7 @@ CREATE OR REPLACE FUNCTION feature_to_jsonb(feature bytea) RETURNS jsonb AS $$
   let map = reader.root().toIMap();
   map["id"] = reader.id();
   return map;
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION feature_to_json(feature bytea) RETURNS text AS $$
   let jb = require("jbon");
@@ -361,7 +361,7 @@ CREATE OR REPLACE FUNCTION feature_to_json(feature bytea) RETURNS text AS $$
   let map = reader.root().toIMap();
   map["id"] = reader.id();
   return JSON.stringify(map);
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION row_to_ns(created_at int8, updated_at int8, txn int8, action int2, version int4, author_ts int8,
  uid int4, app_id text, author text, geo_grid text, puid int4, ptxn int8, collection_id text) RETURNS bytea AS $$
@@ -382,4 +382,4 @@ CREATE OR REPLACE FUNCTION row_to_ns(created_at int8, updated_at int8, txn int8,
   map["author"] = author;
   map["geo_grid"] = geo_grid;
   return session.xyzNsFromRow(collection_id, map)
-$$ LANGUAGE 'plv8' IMMUTABLE;
+$$ LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE;
