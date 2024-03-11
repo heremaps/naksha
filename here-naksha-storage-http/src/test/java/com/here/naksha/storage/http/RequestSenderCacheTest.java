@@ -174,11 +174,12 @@ class RequestSenderCacheTest {
   @Test
   void testCleanup() throws InterruptedException {
     // Setup
+    int cleanPeriodMs = 1000;
     ConcurrentMap<String, RequestSender> senders = new ConcurrentHashMap<>();
     RequestSenderCache cache = new RequestSenderCache(
             senders,
-            1,
-            TimeUnit.SECONDS
+            cleanPeriodMs,
+            TimeUnit.MILLISECONDS
     );
 
     // Tests
@@ -187,7 +188,7 @@ class RequestSenderCacheTest {
     cache.getSenderWith(PROP_ID_2);
     cache.getSenderWith(PROP_ID_3);
     assertEquals(3, senders.size());
-    Thread.sleep(1100);
+    Thread.sleep(cleanPeriodMs + 100);
     assertEquals(0, senders.size());
     cache.getSenderWith(PROP_ID_1);
     assertEquals(1, senders.size());
@@ -197,10 +198,11 @@ class RequestSenderCacheTest {
   @RepeatedTest(10)
   void testCleanupConcurrency() throws InterruptedException {
     // Setup
+    int cleanPeriodMs = 1;
     ConcurrentMap<String, RequestSender> senders = new ConcurrentHashMap<>();
     RequestSenderCache cache = new RequestSenderCache(
             senders,
-            1,
+            cleanPeriodMs,
             TimeUnit.MILLISECONDS
     );
 
@@ -210,7 +212,7 @@ class RequestSenderCacheTest {
     assertTrue(cache.getSenderWith(PROP_ID_1).hasKeyProps(PROP_ID_1));
     assertTrue(cache.getSenderWith(PROP_ID_2).hasKeyProps(PROP_ID_2));
     assertTrue(cache.getSenderWith(PROP_ID_3).hasKeyProps(PROP_ID_3));
-    Thread.sleep(2);
+    Thread.sleep(cleanPeriodMs + 100);
     assertEquals(0, senders.size());
   }
 
