@@ -107,7 +107,7 @@ class POpToQueryConverterTest {
   }
 
   @Test
-  void orDiffOperator_throw() {
+  void orIncompatibleOps_throw() {
     POp pOp = or(
             eq(propRef("prop_1"), 1),
             gt(propRef("prop_2"), 2)
@@ -129,6 +129,18 @@ class POpToQueryConverterTest {
     String query = p0pToQuery(pOp);
 
     assertEquals(query, "property.prop_1=1,2,3,4,5");
+  }
+
+  @Test
+  void nullOrValue() {
+    POp pOp = or(
+            eq(propRef("prop_1"), 1),
+            not(exists(propRef("prop_1")))
+    );
+
+    String query = p0pToQuery(pOp);
+
+    assertEquals(query, "property.prop_1=1,.null");
   }
 
   @Test

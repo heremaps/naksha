@@ -34,6 +34,8 @@ public class PropertySearchSamples {
             Pair.of("properties.prop!=.null", "properties.prop!=.null"),
             Pair.of("f.id=1", "f.id=1"),
             Pair.of("f.specProp=1", "properties.@ns:com:here:xyz.specProp=1"),
+            Pair.of("properties.%40ns%3Acom%3Ahere%3Axyz.specProp=1", "properties.@ns:com:here:xyz.specProp=1"),
+            Pair.of("p.propWithShortPrefix=1", "properties.propWithShortPrefix=1"),
             Pair.of("""
                             f.id!=1
                             &properties.prop_2!=value_2,value_22
@@ -50,8 +52,12 @@ public class PropertySearchSamples {
                             &properties.prop_11=lte=666,6666
                             &properties.prop_12=gt=777,7777
                             &properties.prop_13=lt=888,8888
+                            &p.prop_14=lt=999,9999
+                            &f.prop_15=lt=111,1111
+                            &properties.%40ns%3Acom%3Ahere%3Axyz.prop_16=lt=222,2222
                             &properties.@ns:com:here:xyz.tags=cs=%7B%22id%22%3A%22123%22%7D,%5B%7B%22id%22%3A%22123%22%7D%5D,element_4
-                            &properties.@ns:com:here:xyz.tags=cs=element_5""".replace(System.lineSeparator(), "")
+                            &properties.@ns:com:here:xyz.tags=cs=element_5"""
+                            .replace(System.lineSeparator(), "")
                     ,
                     """
                             f.id!=1
@@ -68,7 +74,11 @@ public class PropertySearchSamples {
                             &properties.prop_10=gte=555,5555
                             &properties.prop_11=lte=666,6666
                             &properties.prop_12=gt=777,7777
-                            &properties.prop_13=lt=888,8888""".replace(System.lineSeparator(), "")
+                            &properties.prop_13=lt=888,8888
+                            &properties.prop_14=lt=999,9999
+                            &properties.@ns:com:here:xyz.prop_15=lt=111,1111
+                            &properties.@ns:com:here:xyz.prop_16=lt=222,2222
+                            """.replace(System.lineSeparator(), "")
             )
     ).map(pair -> {
       RequestPatternBuilder builder = queryToPatternBuilder(pair.getRight());
