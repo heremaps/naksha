@@ -29,8 +29,8 @@ class NakshaCollection : JbMapFeature() {
         return this
     }
 
-    override fun parseHeader(mandatory: Boolean) {
-        super.parseHeader(mandatory)
+    override fun parseHeader() {
+        super.parseHeader()
         val map = root()
         while (map.next() && map.ok()) {
             val key = map.key()

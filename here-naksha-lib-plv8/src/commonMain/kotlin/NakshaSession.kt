@@ -189,7 +189,6 @@ SET SESSION enable_seqscan = OFF;
                 row[COL_ACTION]!!,
                 row[COL_VERSION]!!,
                 row[COL_AUTHOR_TS]!!,
-                Jb.int64.ZERO(),
                 puuid,
                 uuid.toString(),
                 row[COL_APP_ID]!!,
@@ -714,14 +713,12 @@ SET (toast_tuple_target=8160,fillfactor=100
                 properties.mapReader(value)
                 if (properties.selectKey("featureType")) {
                     val v = properties.value()
-                    if (v.isText()) return v.readText()
                     if (v.isString()) return v.readString()
                 }
             }
         }
         if (root.selectKey("momType") || root.selectKey("type")) {
             val value = root.value()
-            if (value.isText()) return value.readText()
             if (value.isString()) return value.readString()
         }
         return "Feature"

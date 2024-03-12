@@ -20,7 +20,7 @@ open class JbMapFeature : JbFeature() {
 
     override fun parseHeader() {
         super.parseHeader()
-        check(reader.isMap())
+        check(reader.isMap()) {"Failed to parse feature payload, expected map, but found ${JbReader.unitTypeName(reader.unitType())}"}
         if (!this::_map.isInitialized) _map = JbMap()
         _map.mapReader(reader)
     }
