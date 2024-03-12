@@ -223,7 +223,7 @@ SET (toast_tuple_target=8160"""
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(geo_grid COLLATE "C" DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(geo_grid COLLATE "C" text_pattern_ops DESC, txn DESC) WITH (fillfactor=$fillFactor);
 """
 
         // app_id
