@@ -108,8 +108,8 @@ The table layout for all tables:
 | author_ts  | int8  | yes | NOT NULL  | `f.p.xyz->authorTs`                                                |
 | action     | int2  | yes | NOT NULL  | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2)             |
 | geo_type   | int2  | no  | NOT NULL  | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).         |
-| puid       | int4  | yes |           | `f.p.xyz->puuid`                                                   |
-| ptxn       | int8  | yes |           | `f.p.xyz->uuid`                                                    |
+| puid       | int4  | yes |           | `f.p.xyz->puuid` - Row identifier                                  |
+| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Row identifier                                  |
 | author     | text  | yes |           | `f.p.xyz->author`                                                  |
 | app_id     | text  | yes |           | `f.p.xyz->app_id`                                                  |
 | geo_grid   | text  | yes | NOT NULL  | `f.p.xyz->grid`                                                    |
@@ -213,19 +213,24 @@ Therefore, the union of all the query returns only exactly one feature, the sear
 
 The transaction logs are stored in the `naksha_txn` table. Each transaction persists out of **signals**, grouped by the transaction-number (`tnx`). Note that there is a `naksha_txn_uid_seq` encoded into the `txn`. The table layout is:
 
-| Column     | Type        | Modifiers            | Description                                                                                |
-|------------|-------------|----------------------|--------------------------------------------------------------------------------------------|
-| uid        | int8        | PRIMARY KEY NOT NULL | Primary unique signal identifier.                                                          |
-| txn        | int8        | NOT NULL             | The transaction-number.                                                                    |
-| ts         | timestamptz | NOT NULL             | The time when the transaction started (`transaction_timestamp()`).                         |
-| xact_id    | int8        | NOT NULL             | The PostgresQL transaction id. Can be used to detect consistency (`pg_current_xact_id()`). |
-| app_id     | text        |                      | The application identifier used for the transaction.                                       |
-| author     | text        |                      | The author used for the transaction.                                                       |
-| details    | bytea       |                      | The details of what happened as part of this transaction (`XyzTxDetails`).                 |
-| seq_id     | int8        |                      | The sequencing identifier, set by the sequencer of `lib-naksha-psql`.                      |
-| seq_ts     | timestamptz |                      | The sequencing time, set by the sequencer of `lib-naksha-psql`.                            |
-| version    | int8        |                      | An arbitrary version tag that can be set.                                                  |
-| attachment | bytea       |                      | An arbitrary attachment as JBON feature.                                                   |
+| Column        | Type        | RO  | Modifiers            | Description                                                                |
+|---------------|-------------|-----|----------------------|----------------------------------------------------------------------------|
+| txn           | int8        | yes | PRIMARY KEY NOT NULL | The transaction-number.                                                    |
+| ts            | timestamptz | yes | NOT NULL             | The time when the transaction started (`transaction_timestamp()`).         |
+| xact_id       | int8        | yes | NOT NULL             | The PostgresQL transaction id (`txid_current()`).                          |
+| version       | int8        | no  |                      | An arbitrary version tag that can be set.                                  |
+| seq_id        | int8        | yes |                      | The sequencing identifier, set by the sequencer .                          |
+| seq_ts        | timestamptz | yes |                      | The sequencing time, set by the sequencer .                                |
+| feature_count | int4        | yes |                      | The amount of features impacted by this transaction, set by the sequencer. |
+| app_id        | text        | yes | NOT NULL             | The application identifier used for the transaction.                       |
+| author        | text        | yes |                      | The author used for the transaction.                                       |
+| stream_id     | text        | yes |                      | The stream-identifier for debugging.                                       |
+| details       | bytea       | yes |                      | The details of what happened as part of this transaction (`XyzTxDetails`). |
+| comment       | text        | no  |                      | Some arbitrary comment.                                                    |
+| tags          | bytea       | no  |                      | Tags to be added to the transaction.                                       |
+| attachment    | bytea       | no  |                      | An arbitrary attachment as JBON feature.                                   |
+
+Columns being flagged as read-only (`RO`) can't be modified by the client, they are only modified internally by the PostgresQL code.
 
 **Note**: The transaction table itself is partitioned by `txn`, **not by** `txn_next`, but except for this the same way the history of the collections is partitioned (`naksha_txn_YYYY_MM_DD`). This is mainly helpful to purge transaction-logs and to improve the access speed.
 

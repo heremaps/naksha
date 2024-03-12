@@ -74,7 +74,7 @@ class XyzTest : JbAbstractTest() {
         val xyz = builder.buildXyzNs(
                 createdTs, createdTs, txn,
                 ACTION_CREATE.toShort(), 1, createdTs + 20,
-                BigInt64(0), null, "test-uuid",
+                null, "test-uuid",
                 "test-app", "test-author",
                 "1234567")
         val featureView = JbSession.get().newDataView(xyz)
@@ -86,7 +86,6 @@ class XyzTest : JbAbstractTest() {
         assertEquals(ACTION_CREATE, reader.action())
         assertEquals(1, reader.version())
         assertEquals(createdTs + 20, reader.authorTs())
-        assertEquals(BigInt64(0), reader.extent())
 
         assertNull(reader.puuid())
         assertEquals("test-uuid", reader.uuid())
@@ -98,7 +97,7 @@ class XyzTest : JbAbstractTest() {
         val tagBytes = createTags()
         val tagReader = XyzTags().mapBytes(tagBytes)
         val ns = reader.toIMap("test_storage", tagReader.tagsArray())
-        assertEquals(12, ns.size())
+        assertEquals(11, ns.size())
         assertEquals(createdTs.toDouble(), ns["createdAt"])
         assertEquals(createdTs.toDouble(), ns["updatedAt"])
         assertFalse(ns.containsKey("puuid"))
@@ -121,7 +120,6 @@ class XyzTest : JbAbstractTest() {
                 BigInt64(4558069433410519040L),
                 3,
                 1,
-                BigInt64(1709296198085L),
                 BigInt64(1709296198085L),
                 uuid,
                 uuid,

@@ -8,40 +8,35 @@ import kotlin.js.JsExport
 @Suppress("DuplicatedCode")
 @JsExport
 class JbMap : JbEntryArray<JbMap>() {
-    override fun parseHeader(mandatory: Boolean) {
-        if (mandatory) {
-            check(reader.unitType() == TYPE_MAP)
-            val unitSize = reader.unitSize()
-            check(reader.enterUnit())
-            setContentSize(unitSize)
-        }
-        valueReader.mapView(reader.view, reader.offset, reader.localDict, reader.globalDict)
+    override fun parseHeader() {
+        check(unitType == TYPE_MAP) { "Mapped structure is no map, but ${JbReader.unitTypeName(unitType)}" }
+        valueReader.mapReader(reader)
         index = -1
         key = null
-        length = if (contentSize() == 0) 0 else Int.MAX_VALUE
+        length = if (bodySize() == 0) 0 else Int.MAX_VALUE
     }
 
     override fun nextEntry(): Boolean {
-        if (reader.offset < encodingEnd) {
+        if (reader.offset() < end) {
             // Seek over key and value.
             reader.nextUnit()
             reader.nextUnit()
-            return reader.offset < encodingEnd
+            return reader.offset() < end
         }
         return false
     }
 
     override fun loadEntry() {
         val reader = this.reader
-        if (reader.offset != cachedOffset) {
+        if (reader.offset() != cachedOffset) {
             val vr = this.valueReader
-            vr.setOffset(reader.offset)
-            check(vr.isRef())
+            vr.setOffset(reader.offset())
+            check(vr.isRef()) { "Key in map at offset ${reader.offset()} is no string-reference" }
             val index = vr.readRef()
             val dict = if (vr.isGlobalRef()) vr.globalDict else vr.localDict
-            check(dict != null)
+            check(dict != null) { (if (vr.isGlobalRef()) "Global" else "Local") + "-Dictionary in map is null, but referred to at index ${reader.offset()}" }
             key = dict.get(index)
-            vr.nextUnit()
+            check(vr.nextUnit()) {"Failed to seek to value of key $key"}
             // We're now positioned at the value.
         }
     }
@@ -85,14 +80,14 @@ class JbMap : JbEntryArray<JbMap>() {
      * @param key The key to search for.
      */
     fun selectKey(key: String): Boolean {
-        val backup = reader.offset
+        val backup = reader.offset()
         if (first()) {
             if (key == key()) return true
             while (next()) {
                 if (key == key()) return true
             }
         }
-        reader.offset = backup
+        reader.setOffset(backup)
         return false
     }
 
@@ -100,7 +95,7 @@ class JbMap : JbEntryArray<JbMap>() {
      * Returns this map as [IMap].
      * @return This binary as [IMap].
      */
-    fun toIMap() : IMap {
+    fun toIMap(): IMap {
         return JbReader.readMap(this)
     }
 }

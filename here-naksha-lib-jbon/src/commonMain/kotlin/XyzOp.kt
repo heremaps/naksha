@@ -9,7 +9,7 @@ import kotlin.jvm.JvmStatic
  * The operation to be executed.
  */
 @JsExport
-class XyzOp : XyzSpecial<XyzOp>() {
+class XyzOp : XyzStruct<XyzOp>() {
     private var op: Int = 0
     private var id: String? = null
     private var uuid: String? = null
@@ -32,9 +32,8 @@ class XyzOp : XyzSpecial<XyzOp>() {
         }
     }
 
-    override fun parseHeader(mandatory: Boolean) {
-        super.parseHeader(mandatory)
-        check(variant == XYZ_OP)
+    override fun parseHeader() {
+        super.parseXyzHeader(XYZ_OPS_VARIANT)
 
         op = reader.readInt32()
         check(reader.nextUnit())
@@ -43,8 +42,7 @@ class XyzOp : XyzSpecial<XyzOp>() {
         uuid = if (reader.isString()) reader.readString() else null
         check(reader.nextUnit())
         grid = if (reader.isString()) reader.readString() else null
-
-        noContent()
+        reader.nextUnit()
     }
 
     fun op(): Int = op

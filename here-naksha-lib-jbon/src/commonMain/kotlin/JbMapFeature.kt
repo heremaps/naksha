@@ -18,8 +18,8 @@ open class JbMapFeature : JbFeature() {
         return this
     }
 
-    override fun parseHeader(mandatory: Boolean) {
-        super.parseHeader(mandatory)
+    override fun parseHeader() {
+        super.parseHeader()
         check(reader.isMap())
         if (!this::_map.isInitialized) _map = JbMap()
         _map.mapReader(reader)

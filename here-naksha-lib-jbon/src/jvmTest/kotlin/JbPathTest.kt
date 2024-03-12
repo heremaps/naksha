@@ -22,7 +22,7 @@ class JbPathTest : JbAbstractTest() {
         check(feature is IMap)
         val builder = JbSession.get().newBuilder()
         val bytes = builder.buildFeatureFromMap(feature)
-        assertEquals(223, bytes.size)
+        assertEquals(216, bytes.size)
         bytes
     }
 

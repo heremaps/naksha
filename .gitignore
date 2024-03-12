@@ -18,6 +18,7 @@ release.properties
 *.log
 *.jfr
 .kotlintest
+.DS_Store
 # To be added later
 /here-naksha-lib-log
 /vault/

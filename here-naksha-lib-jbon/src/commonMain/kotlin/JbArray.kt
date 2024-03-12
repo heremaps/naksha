@@ -10,21 +10,16 @@ import kotlin.js.JsExport
  */
 @JsExport
 class JbArray : JbEntryArray<JbArray>() {
-    override fun parseHeader(mandatory: Boolean) {
-        if (mandatory) {
-            check(reader.unitType() == TYPE_ARRAY)
-            val unitSize = reader.unitSize()
-            check(reader.enterUnit())
-            setContentSize(unitSize)
-        }
+    override fun parseHeader() {
+        check(unitType == TYPE_ARRAY) { "Mapped structure is no array, but ${JbReader.unitTypeName(unitType)}" }
         index = -1
-        length = if (contentSize() == 0) 0 else Int.MAX_VALUE
+        length = if (bodySize() == 0) 0 else Int.MAX_VALUE
     }
 
     override fun nextEntry(): Boolean {
-        if (reader.offset < encodingEnd) {
+        if (reader.offset() < end) {
             reader.nextUnit()
-            return reader.offset < encodingEnd
+            return reader.offset() < end
         }
         return false
     }

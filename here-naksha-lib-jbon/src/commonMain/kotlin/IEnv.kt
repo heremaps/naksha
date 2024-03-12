@@ -31,7 +31,7 @@ interface IEnv {
      * Returns a new thread-local.
      * @return The thread-local.
      */
-    fun newThreadLocal() : IThreadLocal
+    fun newThreadLocal(): IThreadLocal
 
     /**
      * Returns the current epoch milliseconds.
@@ -83,14 +83,14 @@ interface IEnv {
      * @param value The 64-bit floating point number.
      * @return _true_ if the given 64-bit float can be converted into a 32-bit one without losing information; _false_ otherwise.
      */
-    fun canBeFloat32(value: Double) : Boolean
+    fun canBeFloat32(value: Double): Boolean
 
     /**
      * Tests if the given 64-bit floating point number can be converted into a 32-bit integer without losing information.
      * @param value The 64-bit floating point number.
      * @return _true_ if the given 64-bit float can be converted into a 32-bit integer without losing information; _false_ otherwise.
      */
-    fun canBeInt32(value: Double) : Boolean {
+    fun canBeInt32(value: Double): Boolean {
         val rounded = round(value)
         return rounded == value && (rounded in MIN_INT_VALUE_AS_DOUBLE..MAX_INT_VALUE_AS_DOUBLE)
     }

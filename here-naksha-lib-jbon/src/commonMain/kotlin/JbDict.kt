@@ -10,7 +10,7 @@ import kotlin.js.JsExport
  */
 @Suppress("DuplicatedCode")
 @JsExport
-class JbDict : JbStructMapper<JbDict>() {
+class JbDict : JbStruct<JbDict>() {
     /**
      * Cached ID of the dictionary, if any.
      */
@@ -35,25 +35,11 @@ class JbDict : JbStructMapper<JbDict>() {
      * Returns the identifier of the dictionary.
      * @return The identifier of the dictionary, if any.
      */
-    fun id(): String? {
-        return id
-    }
+    fun id(): String? = id
 
-    override fun parseHeader(mandatory: Boolean) {
-        if (mandatory) {
-            val type = reader.unitType()
-            check(type == TYPE_GLOBAL_DICTIONARY || type == TYPE_LOCAL_DICTIONARY)
-            val unitSize = reader.unitSize()
-            check(reader.enterUnit())
-            if (type == TYPE_GLOBAL_DICTIONARY) {
-                // A global dictionary stores its ID in-front of the content.
-                check(reader.isString())
-                id = reader.readString()
-                // We expect that global dictionaries are not empty!
-                check(reader.nextUnit())
-            }
-            setContentSize(unitSize)
-        }
+    override fun parseHeader() {
+        id = if (reader.isString()) reader.readString() else null
+        reader.nextUnit()
     }
 
     override fun clear(): JbDict {
@@ -94,7 +80,7 @@ class JbDict : JbStructMapper<JbDict>() {
             while (length <= index && reader.isString()) {
                 val string = reader.readString()
                 content.add(string)
-                indexToOffset.add(reader.offset)
+                indexToOffset.add(reader.offset())
                 length++
                 reader.nextUnit()
             }

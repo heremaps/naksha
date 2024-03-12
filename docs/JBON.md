@@ -3,77 +3,107 @@
 ## Introduction
 JBON is a shortcut for Java Binary Object Notation. In this binary format all values are stored as objects in a tree like structure that can be navigated quickly, but is at the same time very small.
 
-As the format name indicates, this format is object-oriented. All JBON elements are encoded using **units**. All **units** always start with a **lead-in** byte. The lead-in byte identifies the type of the unit and therefore allows to identify the implicit size and other attributes. Each unit can contain subunits, for example, a string contains unicode code-points, a map contains map-entries aso.
+As the format name indicates, this format is object-oriented. All JBON elements are encoded using **units**. All **units** always start with a **header**. The header encodes the type of the unit. There are three general types:
 
-## Lead-in (type byte)
+- Scalars: All units that encode a fixed size value (integer, timestamp, ...)
+- Strings: A special units that encodes UNICODE code points
+- Structs: A unit that has subunits (map, array, ...)
 
-The top most two bit of the lead-in byte selects the type-encoding itself:
+All **scalars** and **strings** can only be read at ones. The **structs** can be entered, therefore their header has an explicit size and can be skipped to enter the structure. It does not make sense to skip the header of any scalar value and therefore should not be possible.
 
-- `1ttt_vvvv`: One of the eight primary parameter types with a 4-bit value parameter.
-- `01tt_vvvv`: One of the four extended parameter types with a 4-bit value parameter.
-- `001?_????`: Reserved (32 types).
-- `0001_tttt`: One of the 32 standard types without value-parameter. The first 16 are scalars, the last 16 are structures.
+The header of all unites start with the **lead-in** byte, which identifies the type of the unit. If **lead-in** byte signals a structure, then it is followed by an optional unsigned integer encoded in 1, 2 or 4 byte (big-endian), storing the size of the payload of the structure. After the size, an optional variant is encoded as 1, 2 or 4 byte integer (big-endian), which allows up to 4 billion subtypes. Following the variant, the payload of the structure follows. Only structures do have a dedicated header size, all other units have always a header size of 1.
 
-Therefore, the type-byte allows 12 **parameter-types** with a 4-bit parameter, 32 **standard-types**, and reserves up to 32 types for future extension.
-
-JBON values are always copy-on-write, that means, every modification requires to copy the object. Therefore, all JBONs are immutable. Reading in a JBON requires a cursor that can be used to move through JBON tree.
-
-## Index vs Offset
+### Index vs Offset
 When this document mentions an **index**, it refers to the position in a dictionary. When this document refers to an **offset**, then it refers to the byte-offset in a JBON binary (basically a relative pointer in the JBON).
 
-## Size vs Length
+### Size vs Length
 In this document the term `size` refers to an amount of bytes, so a byte-size, while the term `length` refers to a number of subunits. For example the map-length is the amount of map-entries while the map-size is the amount of byte it requires.
 
 The size is normally used to skip over units, while the length is used logically.
 
-There are three general types of units:
+## Header
+The header of all units is in the following format:
 
-- Fixed-Size: Units being structures with a fixed size that is implicit due to the type. For example `null` has a size of 1, because it is only the lead-in byte.
-- Flexible-Size: Units being structures with a flexible size, but the size is still implicit for the type, so can be extracted from the lead-in byte. For example, a `character` of a string is a unit where the first byte of the character (the lead-in) implicit signals the total size, so the amount of byte belonging to the character. The same belong for example to `float4` or `uint4`.
-- Variable-Size: Units that have an explicit size field following directly after the lead-in byte. They can be encoded in basically any kind of size. **The size field stores the amount of byte following the size field and belonging to the unit**.
+- lead-in byte
+- optional: size as 1, 2 or 4 byte unsigned integer
+- optional: variant as 1, 2 or 4 byte integer
 
-In other words, the size stores the amount of bytes needed to skip a unit.
+Generally, all units there have a **unit-size**, which is the total size of the unit and therefore the amount of byte to seek forward, if the unit need to be skipped. Additionally, there is the **payload-size**, which is the amount of byte that store the value of the unit and the **header-size**, which is the lead-in byte, plus the optional size, plus the optional variant. In a nutshell:
 
-## Dictionaries (JbDict)
-To compress the data, JBON uses dictionaries. A dictionary is simply a list of units. The first 16 entries in the dictionary can be referred using tiny-references (1 byte encoding), the rest of the entries require full references (2 to 5 byte encoding). Therefore, it is recommended to use the first 16 units for those values that are most often used and maybe are only small, to compress often used, but small objects.
+- **unitContentSize**: The amount of byte that store the payload (0 to n).
+- **unitHeaderSize**: The amount of byte that store the header, so lead-in byte, plus size, plus variant (1 to n).
+- **unitSize**: The total outer size of the unit, bytes to seek forward to skip the unit, **unitHeaderSize** plus **unitContentSize**. 
 
-When a dictionary is mapped, it will lazy load entries into an internal cache, as long as only accessed using index. The dictionary can be queried as well by FNV1b hash, in that case it will load all values into the internal cache. Note that the hash causes collisions, therefore a search can find possible multiple entries and in all cases a binary compare must be performed.
+### Lead-in byte
+All units start with a **lead-in** byte, which describes the type of the unit. This **lead-in** byte is optionally followed by 1, 2 or 4 bytes to store the unit size, optionally followed by the payload of the unit (some units do not have a payload). The following lead-in bytes are defined:
 
-## Maps (JbMap)
-In JBON the keys of a map must be strings, note that text is not allowed for keys. All key-value pairs are sorted by the binary representation of the key. The reason for this is to guarantee, that two equal maps generate the same hash-code, when their binary representation is hashed.
+- `00`: tiny-value
+  - `0000_vvvv`: Integer, **int5** (0 to 15)
+  - `0001_vvvv`: Integer, **int5** (-16 to -1)
+  - `0010_vvvv`: Float, **float5** (0.0 to 15.0)
+  - `0011_vvvv`: Float, **float5** (-16.0 to -1.0)
+- `01`: mixed
+  - `0100_vvvv`: Tiny Local-Reference, **ref5** (0 to 15)
+  - `0101_vvvv`: Tiny Global-Reference, **ref5** (0 to 15)
+  - `0110_bgvv`: Reference (biased by 16)
+    - vv=0: **null**
+    - vv=1: **ref8** + 1 byte payload
+    - vv=2: **ref16** + 2 byte BE payload
+    - vv=3: **ref32** + 4 byte BE payload
+  - `0111_0000`: Integer, **int8** + 1 byte
+  - `0111_0001`: Integer, **int16** + 2 byte BE payload
+  - `0111_0010`: Integer, **int32** + 4 byte BE payload
+  - `0111_0011`: Integer, **int64** + 8 byte BE payload
+  - `0111_0100`: Float, **float16** + 2 byte BE payload
+  - `0111_0101`: Float, **float32** + 4 byte BE payload
+  - `0111_0110`: Float, **float64** + 8 byte BE payload
+  - `0111_0111`: Float, **float128** + 16 byte BE payload
+  - `0111_1000` = Timestamp + 6 byte BE unsigned integer payload
+    - Unix epoch timestamp (UTC) in milliseconds, stored in big-endian encoding as 6-byte value. We choose 48-bit, because a year has 31,536,000,000 milliseconds, therefore 36-bit are enough for only 2 years, 40-bit for only 34 years, but 48-bit are already sufficient for 8925 years.
+  - `0111_1001` = reserved1
+  - `0111_1010` = reserved2
+  - `0111_1011` = reserved3
+  - `0111_1100`: **null**
+  - `0111_1101`: **undefined**
+  - `0111_1110`: Boolean, **false**
+  - `0111_1111`: Boolean, **true**
+- `10`: string
+  - `10vv_vvvv`: String (vv_vvvv; size 0-60, 61=uint8, 62=uint16, 63=uint32)
+    - If the size is not embedded (61-63), then followed by 1, 2 or 4 byte unsigned biased integer (biased by 60), big-endian encoded.
+- `11`: struct
+  - `11ss_vvtt` = Struct (ss: 0=empty, 1=uint8, 2=uint16, 3=uint32)
+    - Followed by one byte, two byte or four byte unsigned content size, big-endian encoded.
+    - If standard structure (vv=0, variant=null)
+      - `0`: Array
+      - `1`: Map
+      - `2`: Dictionary
+      - `3`: Reserved
+    - If variant structure (vv: 1=byte, 2=short, 3=int)
+      - Followed by one byte, two byte or four byte integer storing the variant, big-endian encoded.
+      - `0`: Feature
+      - `1`: XYZ
+      - `2`: Custom
+      - `3`: Reserved
 
-## Features (JbFeature)
-A JBON feature is basically any unit, but with a local dictionary and an optional identifier of a global dictionary needed to decode it.
+JBON values are always copy-on-write, that means, every modification requires to copy the object. Therefore, all JBONs are immutable. Reading in a JBON requires a cursor that can be used to move through JBON tree. As every unit stores it outer size, every unit (including all subunits) can be skipped over or entered, by moving the cursor behind the header. Note that only **strings** or **structs** can be entered, all other values are scalars.
 
-## Strings (JbString, JbText)
-JBON strings (and texts) are not encoded using UTF-8, but a special encoding that is smaller, and allows dictionary lookups. The leading bytes of every byte in a JBON string/text signal the following:
+### Test the lead-in byte
+The lead-in encodes the unit-type. Testing the lead-in byte is done in three levels:
 
-- `0vvv_vvvv`: The value encodes the code point value. Allows values between 0 and 127 (ASCII).
-- `10_vvvvvv`: The value should be AND masks `0011_1111`, then shift-left by 8, the value of the next byte should be added using OR, and finally 128 should be added. Allows values between 128 and 16511 (2^14+128-1).
-- `110_vvvvv`: The value should be AND masks `0001_1111`, then shift-left by 16, and eventually the value of the next two byte (read big-endian) should be added using OR. Allows values between 0 and 2097151 (2^21-1).
-- `111_ssgvv`: The value is a **string-reference**. The three lower bits (`gvv`) have the same meaning as for a **reference**, but must not refer to anything but a string, not even to a text. The `ss`-bits (bit number 4 and 5) signal if a special character should be added behind the referred string. The following values are defined:
-  - `00`: Do not encode any additional character.
-  - `01`: Add a space behind the string.
-  - `10`: Add an underscore (`_`) behind the string.
-  - `11`: Add a colon (`:`) behind the string.
+- Test top most two bit (unsigned shift right 6) to detect the base-type, being **tiny-value** (0), **mixed** (1), **string** (2) or **struct** (3)
+- For **mixed** (1), test again the top four bit to detect final type.
+  - If top four bits are `0111`, a switch against the full lead-in can be done.
+  - Otherwise, reference.
 
-**Note**: The `ss`-bits improve the compression greatly, because the encoder will split strings by default at a space or underscore. Exactly where these splits happen, we do not need to encode the separator characters. The reason to cut at these two characters is that most often street-names or other human text uses the space as separator, while for constants in programming most often the underscore is used as separator (TYPE_A, TYPE_B, ...). Additionally, we have room for one more split characters to be defined by experience in the future.
+## Scalars and fixed size
+As described in the **lead-in** section, scalars and fixed size encodings are simple, no further explanation is given.
 
-## Primary Parameter-Types (3-bit)
+## References
+There two general types of references, back-references and dictionary-references. All references have one thing in common: The referred unit must not contain further references. This means automatically, that dictionaries them self must not store references.
 
-### (0) uint4
-The lower 4-bit hold the positive (unsigned) value between `0..15`.
+The first 16 entries in a dictionary can be referred by tiny-references. All other entries in a dictionary are referred always by full references. Therefore, logically, full-references are always biased by 16, so a value of 0 means index 16. A reference has a **lead-in** byte in the format: `0111_bgvv`.
 
-### (1) sint4
-The lower 4-bit hold the negative (signed) value between `-1..-16`.
-
-### (2) float4
-The lower 4-bit hold the biased (signed) value. The value is stored minus 8, so `0..15` represents `-8..7`.
-
-### (3) reference
-The full reference encoding. All indices being bigger than 15 are encoded as full references with a bias of 16, so that a value of 0 means index 16. Note that null-references are an exception, as they do not have any value. The value is used as a bit-field with the syntax `bgvv`:
-
-If the `b`-bit is zero, then this is a reference into a global or local dictionary. The lower 3-bits are: `0gvv`
+If the `b`-bit is zero, then this is a reference into a dictionary. The lower 3-bits are: `0gvv`
 
 - `g`: If this bit is set, refers to the global dictionary, otherwise to the local dictionary.
 - `vv`: Signals the size of the reference:
@@ -81,54 +111,135 @@ If the `b`-bit is zero, then this is a reference into a global or local dictiona
   - `01b`: 8-bit unsigned index (+1 byte)
   - `10b`: 16-bit unsigned index (+2 byte)
   - `11b`: 32-bit unsigned index (+4 byte)
- 
-If the `b`-bit is set, then this is a **back-reference**. The index is turned into a relative or absolute offset: `1avv`
+
+If the `b`-bit is set (**currently not supported**), then this is a **back-reference**. The index is turned into a relative or absolute offset: `1avv`
 
 - `a`: If this bit is set, the offset is unsigned and absolute. Otherwise, the offset is relative and signed.
 - `vv`: Signals the size of the reference:
   - `00b`: null-reference
   - `01b`: 8-bit unsigned/signed offset (+1 byte)
   - `10b`: 16-bit unsigned/signed offset (+2 byte)
-  - `11b`: 32-bit signed offset (+4 byte)
+  - `11b`: 32-bit unsigned/signed offset (+4 byte)
 
 **Note**: References must not refer to references!
 
-### (4) string - JbString
-A string that must not contain any references. The lower 4-bit are the size indicator. A value between 0 and 12 represent the size of the string. The values 13 to 15 signal:
+## Strings
+JBON strings are not encoded using UTF-8, but a special encoding that is smaller, and allows dictionary lookups. The **lead-in** for a string is `10vv_vvvv`. The values (vv_vvvv) stores the size of the code-points in byte:
 
-- `13`: The next byte stores the unsigned size, (0 to 255).
-- `14`: The next two byte store the unsigned size, big-endian (0 to 65535).
-- `15`: The next four byte store the unsigned size, big-endian (0 to 2^32-1).
+- `0-60`: The embedded size of the string in byte (0-60).
+- `61`: The size is stored biased by 61 in the next byte (61 - 316).
+- `62`: The size is stored in the next two byte (unsigned short), big-endian encoded.
+- `63`: The size is stored in the next four byte (unsigned integer), big-endian encoded.
 
-### (5) container - JbMap, JbArray or JbText
-A map, array, map-entry or array-entry. The two high bits of the value parameter are used to select the type, the lower 2-bit are always the size indicator of the byte-size of the collection or entry. This indicates the amount of byte to skip, to jump over the map or entry.
+The code-points are variable encoded. The leading byte of every code-point signal the following:
 
-The types are:
+- `0vvv_vvvv`: The value encodes the code point value. Allows values between 0 and 127 (ASCII).
+- `10_vvvvvv`: The value should be AND masks `0011_1111`, then shift-left by 8, the value of the next byte should be added using OR, and finally 128 should be added. Allows values between 128 and 16511 (2^14+128-1).
+- `110_vvvvv`: The value should be AND masks `0001_1111`, then shift-left by 16, and eventually the value of the next two byte (read big-endian) should be added using OR. Allows values between 0 and 2097151 (2^21-1).
+- `111_ssgvv`: The value is a **string-reference**. The three lower bits (`gvv`) have the same meaning as for a **reference**, but must not refer to anything but a string. The `ss`-bits (bit number 4 and 5) signal if a special character should be added behind the referred string. The following values are defined:
+  - `00`: Do not encode any additional character.
+  - `01`: Add a space behind the string.
+  - `10`: Add an underscore (`_`) behind the string.
+  - `11`: Add a colon (`:`) behind the string.
 
-- `00b`: JbMap
-- `01b`: JbArray
-- `10b`: Reserved
-- `11b`: JbText (string that may contain references)
+**Note**: The `ss`-bits improve the compression greatly, because the encoder will split strings by default at a space or underscore. Exactly where these splits happen, we do not need to encode the separator characters. The reason to cut at these two characters is that most often street-names or other human text uses the space as separator, while for constants in programming most often the underscore is used as separator (TYPE_A, TYPE_B, ...). Additionally, we have room for one more split characters to be defined by experience in the future.
 
-The size meanings is:
+## Structures
+All other special types are structures. The header stores the outer size of the structure, so the bytes following the **header**.
 
-- `00b`: Empty map/array/text (size and length are implicit zero).
-- `01b`: The size is stored in one byte (0 to 255).
-- `10b`: The size is stored in two byte, big-endian (0 to 65535).
-- `11b`: The size is stored in four byte, big-endian (0 to 2^32-1).
+Note that there are two basic kind of structures. Those with a subtype (variant) and those without. The first 8 structure types are without variant, the last 8 are with variant. The variant is encoded as integer directly after the structure header. The variant is used to define subtypes for structures to relax the namespace, because there are actually only 16 generic structure types available.
 
-After the lead-in the size is encoded, except being empty. Eventually the content follows, ((key,value),...) for maps, (value,...) for arrays and (uni-code, ...) for strings using the corresponding encoding.
+For this reason the JBON specification defines one custom variant, that is shared by all users of JBON, and should be used to encode arbitrary (application specific) structures. This allows applications to define their own structures and allows to define up to 2 billion own custom structure.
 
-**Note**: The keys for a map are always references to strings. The values for map and array may only hold scalar values or references, therefore it is not allowed to embed strings.
+### Array (0)
+The array is just a sequence of units encoded.
 
-### (6) tiny-local-reference
-### (7) tiny-global-reference
-A local or global reference with embedded index. The lower 4-bit encode the index. This allows to encode the first 16 entries in the dictionary with the strings used most often and therefore compress them the most (they are only referred by a single byte).
+### Maps (1)
+In JBON the keys of a map must be strings. All key-value pairs are sorted by the binary representation of the key. The key must be a string. The reason for this is to guarantee, that two equal maps generate the same hash-code, when their binary representation is hashed. Note that the key must always be a **string-reference**, either into the local or global dictionary. The values are embedded, even while they may be references.
 
-## Extended Parameter-Types (2-bit)
+### Dictionary (2)
+To compress the data, JBON uses dictionaries. A dictionary is simply a list of units. The first 16 entries in the dictionary can be referred using tiny-references (1 byte encoding), the rest of the entries require full references (2 to 5 byte encoding). Therefore, it is recommended to use the first 16 units for those values that are most often used and maybe are only small, to compress often used, but small objects.
 
-### (0) JbPosition (draft-only)
-A GeoJSON position. This is a complex value that persists out of longitude, latitude and an optional altitude.
+When a dictionary is mapped, it will lazy load entries into an internal cache, as long as only accessed using index. The dictionary can be queried as well by FNV1b hash, in that case it will load all values into the internal cache. Note that the hash causes collisions, therefore a search can find possible multiple entries and in all cases a binary compare must be performed.
+
+A dictionary must not store any references and strings in a dictionary must not store references. The encoding of the dictionary (after the struct-header) is:
+
+- The **id** of the dictionary as **string** or _null_, if this is a local dictionary.
+- The content.
+
+After the header, the content follows. The content is simply a sequence of units. From an encoder perspective this is all. However, the decoder will have to load all the objects into memory to index the content for faster access.
+
+### Reserved (3)
+
+### Feature (0+variant)
+A JBON feature is a container for any other JBON unit. It is mainly used to link the embedded unit to a dedicated global and local dictionary. The format looks like:
+
+- The **id** of the global dictionary to be used (**string**), can be _null_.
+- The **id** of the feature, **string**, **text** or _null_.
+- The embedded local dictionary.
+- The embedded JBON object (the root object).
+
+A feature can't create references to other features, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
+
+### Xyz (1+variant)
+This type is reserved for XYZ interactions. It is a flat object, optimized to be very small, with the following layout:
+
+- Variant as **integer** (either **int5**, **int8**, **int16** or **int32**).
+- ... content dependent on the variant
+
+#### XyzNs (variant:0)
+The information that the database manages and what is delivered by the database.
+
+- **createdAt** (timestamp)
+- **updatedAt** (timestamp) - _null_, if being the same as **createdAt**
+- **txn** (BigInt64)
+- **action** (integer), constants for CREATE (0), UPDATE (1) and DELETE (2)
+- **version** (integer)
+- **author_ts** (timestamp) - _null_, if being the same as **updatedAt**, which can be the same as **createdAt**
+- **extend** (double)
+- **puuid** (string or _null_)
+- **uuid** (string)
+- **app_id** (string)
+- **author** (string)
+- **grid** (string) SELECT ST_GeoHash(ST_Centroid(geo),7);
+
+Notes: Tags are now a dedicated map, but when exposed, they are joined by an equal sign, the _null_ is default and causes the equal sign to disappear. So the tag "foo" becomes "tag=null" and when converting back "tag=null" is converted into "tag". Any other value, not being _null_, will be encoded into the tag. We do not allow equal signs otherwise, so only one equal sign is allowed in a tag. We do this, because we add an GIN index on the tags and allows key-value search at low level.
+
+#### XyzOp (variant:1)
+The information that clients should send to the database to write features or collections. This has to be provided together with a new feature.
+
+- **op** (integer) - The requested operation (CREATE, UPDATE, UPSERT, DELETE or PURGE).
+- **id** (string) - The feature-id.
+- **uuid** (string or _null_) - If not _null_, then the operation is atomic and the state must be this one (only UPDATE, DELETE and PURGE).
+- **grid** (string or _null_) - If the geo-reference-id is calculated by the client.
+
+#### XyzTags (variant:2)
+The tags, basically just a normal JBON map, but the values must only be **null**, **boolean**, **string** or **float64**. The map is preceded by the **id** of the global dictionary to be used, can be **null**, so actually being:
+
+- **id** (string or _null_) of the global dictionary to use.
+- Now the tags follow, split into a key and value part:
+  - **string** or **string-reference** - The key or reference to the key to index.
+  - **null**, **boolean**, **string**, **string-reference**, **integer** or **float**. If an integer is stored, it must be exposed as floating point number.
+
+Tags do not support integers directly, but as floating pointer numbers support up to 53-bit precision with integer values, a limited amount of integer support is available.
+
+**Note**: Externally _tags_ are only arrays of strings, therefore to convert external to internal representation the equal sign is used to split individual tag-strings. If a colon is set in-front of the equal sign, a value conversion is done, so _"foo=12"_ results in the value being a string "12", while _"foo:=12"_ results in a value being a floating point number _12_. Please read more about tags in the [documentation](../docs/TAGS.md).
+
+#### XyzTxDetails (variant:3, draft)
+Details about a transaction:
+
+- **collections** - A map where the key is the collection identifier and the value is an integer bit-mask with what happened.
+
+### Custom-Variant (2+variant)
+An undefined type that any application can use for internal binary encodings. It is a flat object, optimized to be very small, with the following layout:
+
+- Variant as **integer** (either **int5**, **int8**, **int16** or **int32**).
+- ... content dependent on the variant
+
+### Reserved (3+variant)
+
+## Extended Proposals
+Encoding a GeoJSON position. This is a proposal for a complex value that persists out of longitude, latitude and an optional altitude.
 
 This is a binary encoding of a GeoJSON position and can be an absolute or a relative position. A relative position is only allowed in a list of positions.
 
@@ -158,144 +269,6 @@ The lower 4-bit of the position encode if the position is absolute or relative a
 - 13: The position is absolute with 8-bit altitude (10-byte).
 - 14: The position is absolute with 16-bit altitude (11-byte).
 - 15: The position is absolute with 24-bit altitude (12-byte).
-
-### (1) Reserved
-### (2) Reserved
-### (3) Reserved
-
-## Scalars
-The first 16 standard types are scalars. They have a fixed size.
-
-### (0) null
-### (1) undefined (unsupported)
-If set as key in a map, the key-value pair is removed. In such a case no value will follow.
-### (2) bool1 {true}
-### (3) bool1 {false}
-### (4) float32
-The next four byte store the value, big-endian.
-### (5) float64
-The next eight byte store the value, big-endian.
-### (6) time48 - Unix Timestamp in Milliseconds
-Unix epoch timestamp (UTC) in milliseconds, stored in big-endian encoding as 6-byte value. We choose 48-bit, because a year has 31,536,000,000 milliseconds, therefore 36-bit are enough for only 2 years, 40-bit for only 34 years, but 48-bit are already sufficient for 8925 years. I do not believe this format will still exist in that year, so we choose 48-bit.
-### (7) reserved
-### (8) int8
-### (9) int16
-### (10) int32
-### (11) int64
-The next 1 to 8 byte store the signed integer value.
-### (12-15) reserved
-Reserved to support other variants, maybe int128 or uint8 to uint64.
-
-## Structures
-Structures that have an explicit size field following the lead-in byte. All structures share this header:
-
-- Lead-In byte.
-- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
-  - The amount of byte following the size field itself.
-  - To skip the structure, skip over lead-in (1 byte), the size (1 to 9 byte) plus the size stored in the size field.
-
-### (16) JbDict- global dictionary 
-A global dictionary is a special container used to compress JBON features. A dictionary must not store any references. The encoding of the dictionary is:
-
-- Lead-In byte.
-- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
-- The **id** of the document as **string**.
-- The content, a sequence of **string**s.
-
-After the header, the content follows. The content is simply a sequence of **string**s. From an encoder perspective this is all. However, the decoder will have to load all the objects into memory to index the content for faster access.
-### (17) JbDict - local dictionary
-A local dictionary is exactly the same as the global dictionary, except that it does not come with an **id**, so:
- 
-- Lead-In byte.
-- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
-- The content, a sequence of **string**s.
-
-### (18) JbFeature
-A JBON feature is a container for a JBON object of any type. The format looks like:
-
-- Lead-In byte.
-- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
-- The **id** of the global dictionary to be used (**string**), can be _null_.
-- The **id** of the feature, **string**, **text** or _null_.
-- The embedded local dictionary.
-- The embedded JBON object (the root object).
-
-A feature can't create references to other features, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
-### (19) XyzSpecial
-This type is reserved for XYZ interactions. It is a flat object, optimized to be very small, with the following layout:
-
-- Lead-In byte.
-- The size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
-- variant as **integer** (either **uint4**, **int8**, **int16** or **int32**).
-- ... content dependent on the variant
-
-#### (0) XyzNs
-The information that the database manages and what is delivered by the database.
-
-- **createdAt** (timestamp)
-- **updatedAt** (timestamp) - _null_, if being the same as **createdAt**
-- **txn** (BigInt64)
-- **action** (integer), constants for CREATE (0), UPDATE (1) and DELETE (2)
-- **version** (integer)
-- **author_ts** (timestamp) - _null_, if being the same as **updatedAt**, which can be the same as **createdAt**
-- **extend** (double)
-- **puuid** (string or _null_)
-- **uuid** (string)
-- **app_id** (string)
-- **author** (string)
-- **grid** (string) SELECT ST_GeoHash(ST_Centroid(geo),7);
-
-Notes: Tags are now a dedicated map, but when exposed, they are joined by an equal sign, the _null_ is default and causes the equal sign to disappear. So the tag "foo" becomes "tag=null" and when converting back "tag=null" is converted into "tag". Any other value, not being _null_, will be encoded into the tag. We do not allow equal signs otherwise, so only one equal sign is allowed in a tag. We do this, because we add an GIN index on the tags and allows key-value search at low level.
-
-#### (1) XyzOp
-The information that clients should send to the database to write features or collections. This has to be provided together with a new feature.
-
-- **op** (integer) - The requested operation (CREATE, UPDATE, UPSERT, DELETE or PURGE).
-- **id** (string) - The feature-id.
-- **uuid** (string or _null_) - If not _null_, then the operation is atomic and the state must be this one (only UPDATE, DELETE and PURGE).
-- **grid** (string or _null_) - If the geo-reference-id is calculated by the client.
-
-#### (2) XyzTags
-The tags, basically just a normal JBON map, but the values must only be **null**, **boolean**, **string** or **float64**. The map is preceded by the **id** of the global dictionary to be used, can be **null**, so actually being:
-
-- **id** (string or _null_) of the global dictionary to use.
-- Now the tags follow, split into a key and value part:
-  - **string** or **string-reference** - The key or reference to the key to index.
-  - **null**, **boolean**, **string**, **string-reference**, **integer** or **float**. If an integer is stored, it must be exposed as floating point number.
-
-Tags do not support integers directly, but as floating pointer numbers support up to 53-bit precision with integer values, a limited amount of integer support is available.
-
-**Note**: Externally _tags_ are only arrays of strings, therefore to convert external to internal representation the equal sign is used to split individual tag-strings. If a colon is set in-front of the equal sign, a value conversion is done, so _"foo=12"_ results in the value being a string "12", while _"foo:=12"_ results in a value being a floating point number _12_. Please read more about tags in the [documentation](../docs/TAGS.md).
-
-#### (3) XyzTxDetails (draft)
-Details about a transaction:
-
-- **collections** - A map where the key is the collection identifier and the value is an integer bit-mask with what happened. 
-
-### (20) JbLz4Compressed (draft-only)
-Some LZ4 compressed payload, requires decompression. The format is:
-
-- Lead-In byte.
-- Compressed size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
-- Decompressed size as **integer** (either **uint4**, **int8**, **int16** or **int32**).
-- The compressed bytes. The **compressed-size** amount of bytes, should inflate to **compressed-size**.
-
-### (21) Reserved.
-### (22) Reserved.
-### (23) Point (draft-only)
-A GeoJSON Point, followed by a single position.
-### (24) MultiPoint (draft-only)
-A GeoJSON MultiPoint, followed by an array of positions (position[]).
-### (25) LineString (draft-only)
-A GeoJSON LineString, followed by an array of positions (position[]).
-### (26) MultiLineString (draft-only)
-A GeoJSON MultiLineString, followed by an array of position arrays (position[][]).
-### (27) Polygon (draft-only)
-A GeoJSON Polygon, following by an array of position arrays (position[][]).
-### (28) MultiPolygon (draft-only)
-A GeoJSON Multi-Polygon, following by an array of position array arrays (position[][][]).
-### (29-31) Reserved
-Reserved for further objects.
 
 ## Why not CBOR
 This section explains why [CBOR](https://www.rfc-editor.org/rfc/rfc8949.html) was not selected. The formats are similar in many points, when you read the two specification. So, why do something new? The major two difference between them are:
