@@ -37,36 +37,36 @@ Generally, all units there have a **unit-size**, which is the total size of the 
 ### Lead-in byte
 All units start with a **lead-in** byte, which describes the type of the unit. This **lead-in** byte is optionally followed by 1, 2 or 4 bytes to store the unit size, optionally followed by the payload of the unit (some units do not have a payload). The following lead-in bytes are defined:
 
-- `00`: tiny-value
-  - `0000_vvvv`: Integer, **int5** (0 to 15)
-  - `0001_vvvv`: Integer, **int5** (-16 to -1)
-  - `0010_vvvv`: Float, **float5** (0.0 to 15.0)
-  - `0011_vvvv`: Float, **float5** (-16.0 to -1.0)
-- `01`: mixed
-  - `0100_vvvv`: Tiny Local-Reference, **ref5** (0 to 15)
-  - `0101_vvvv`: Tiny Global-Reference, **ref5** (0 to 15)
-  - `0110_bgvv`: Reference (biased by 16)
+- `00`: mixed
+  - `0000_0000`: **undefined**
+  - `0000_0001`: **null**
+  - `0000_0010`: Boolean, **false**
+  - `0000_0011`: Boolean, **true**
+  - `0000_0100`: Integer, **int8** + 1 byte
+  - `0000_0101`: Integer, **int16** + 2 byte BE payload
+  - `0000_0110`: Integer, **int32** + 4 byte BE payload
+  - `0000_0111`: Integer, **int64** + 8 byte BE payload
+  - `0000_1000`: Float, **float16** + 2 byte BE payload
+  - `0000_1001`: Float, **float32** + 4 byte BE payload
+  - `0000_1010`: Float, **float64** + 8 byte BE payload
+  - `0000_1011`: Float, **float128** + 16 byte BE payload
+  - `0000_1100` = Timestamp + 6 byte BE unsigned integer payload
+    - Unix epoch timestamp (UTC) in milliseconds, stored in big-endian encoding as 6-byte value. We choose 48-bit, because a year has 31,536,000,000 milliseconds, therefore 36-bit are enough for only 2 years, 40-bit for only 34 years, but 48-bit are already sufficient for 8925 years.
+  - `0000_1101` = reserved1
+  - `0000_1110` = reserved2
+  - `0000_1111` = reserved3
+  - `0001_vvvv`: Tiny Local-Reference, **ref5** (0 to 15)
+  - `0010_vvvv`: Tiny Global-Reference, **ref5** (0 to 15)
+  - `0011_bgvv`: Reference (biased by 16)
     - vv=0: **null**
     - vv=1: **ref8** + 1 byte payload
     - vv=2: **ref16** + 2 byte BE payload
     - vv=3: **ref32** + 4 byte BE payload
-  - `0111_0000`: Integer, **int8** + 1 byte
-  - `0111_0001`: Integer, **int16** + 2 byte BE payload
-  - `0111_0010`: Integer, **int32** + 4 byte BE payload
-  - `0111_0011`: Integer, **int64** + 8 byte BE payload
-  - `0111_0100`: Float, **float16** + 2 byte BE payload
-  - `0111_0101`: Float, **float32** + 4 byte BE payload
-  - `0111_0110`: Float, **float64** + 8 byte BE payload
-  - `0111_0111`: Float, **float128** + 16 byte BE payload
-  - `0111_1000` = Timestamp + 6 byte BE unsigned integer payload
-    - Unix epoch timestamp (UTC) in milliseconds, stored in big-endian encoding as 6-byte value. We choose 48-bit, because a year has 31,536,000,000 milliseconds, therefore 36-bit are enough for only 2 years, 40-bit for only 34 years, but 48-bit are already sufficient for 8925 years.
-  - `0111_1001` = reserved1
-  - `0111_1010` = reserved2
-  - `0111_1011` = reserved3
-  - `0111_1100`: **null**
-  - `0111_1101`: **undefined**
-  - `0111_1110`: Boolean, **false**
-  - `0111_1111`: Boolean, **true**
+- `01`: tiny-value
+  - `0100_vvvv`: Integer, **int5** (0 to 15)
+  - `0101_vvvv`: Integer, **int5** (-16 to -1)
+  - `0110_vvvv`: Float, **float5** (0.0 to 15.0)
+  - `0111_vvvv`: Float, **float5** (-16.0 to -1.0)
 - `10`: string
   - `10vv_vvvv`: String (vv_vvvv; size 0-60, 61=uint8, 62=uint16, 63=uint32)
     - If the size is not embedded (61-63), then followed by 1, 2 or 4 byte unsigned biased integer (biased by 60), big-endian encoded.

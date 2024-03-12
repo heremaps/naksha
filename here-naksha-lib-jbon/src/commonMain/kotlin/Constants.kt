@@ -2,8 +2,8 @@ package com.here.naksha.lib.jbon
 
 // Encoding constants
 internal const val ENC_MASK = 0b1100_0000
-internal const val ENC_TINY = 0b0000_0000
-internal const val ENC_MIXED = 0b0100_0000
+internal const val ENC_MIXED = 0b0000_0000
+internal const val ENC_TINY = 0b0100_0000
 internal const val ENC_STRING = 0b1000_0000
 internal const val ENC_STRUCT = 0b1100_0000
 
@@ -14,10 +14,10 @@ internal const val ENC_TINY_INT = 0b0_00000
 internal const val ENC_TINY_FLOAT = 0b1_00000
 
 internal const val ENC_MIXED_MASK = 0b1111_0000
-internal const val ENC_MIXED_REF5_LOCAL = 0b0100_0000
-internal const val ENC_MIXED_REF5_GLOBAL = 0b0101_0000
-internal const val ENC_MIXED_REF = 0b0110_0000 // 1, 2 or 4 byte payload
-internal const val ENC_MIXED_CORS = 0b0111_0000 // Constant OR Scalar
+internal const val ENC_MIXED_CORS = 0b0000_0000 // Constant OR Scalar
+internal const val ENC_MIXED_REF5_LOCAL = 0b0001_0000
+internal const val ENC_MIXED_REF5_GLOBAL = 0b0010_0000
+internal const val ENC_MIXED_REF = 0b0011_0000 // 1, 2 or 4 byte payload
 
 // If this is a back-reference: (leadIn and ENC_MIXED_REF_BACK_BIT) == ENC_MIXED_REF_BACK_BIT
 internal const val ENC_MIXED_REF_BACK_BIT = 0b1000
@@ -30,22 +30,22 @@ internal const val ENC_MIXED_REF_INT8 = ENC_MIXED_REF or 0b0001
 internal const val ENC_MIXED_REF_INT16 = ENC_MIXED_REF or 0b0010
 internal const val ENC_MIXED_REF_INT32 = ENC_MIXED_REF or 0b0011
 
-internal const val ENC_MIXED_SCALAR_INT8 = ENC_MIXED_CORS or 0b0000 // 1 byte payload
-internal const val ENC_MIXED_SCALAR_INT16 = ENC_MIXED_CORS or 0b0001 // 2 byte payload
-internal const val ENC_MIXED_SCALAR_INT32 = ENC_MIXED_CORS or 0b0010 // 4 byte payload
-internal const val ENC_MIXED_SCALAR_INT64 = ENC_MIXED_CORS or 0b0011 // 8 byte payload
-internal const val ENC_MIXED_SCALAR_FLOAT16 = ENC_MIXED_CORS or 0b0100 // 2 byte payload
-internal const val ENC_MIXED_SCALAR_FLOAT32 = ENC_MIXED_CORS or 0b0101 // 4 byte payload
-internal const val ENC_MIXED_SCALAR_FLOAT64 = ENC_MIXED_CORS or 0b0110 // 8 byte payload
-internal const val ENC_MIXED_SCALAR_FLOAT128 = ENC_MIXED_CORS or 0b0111 // 16 byte payload
-internal const val ENC_MIXED_SCALAR_TIMESTAMP = ENC_MIXED_CORS or 0b1000 // 6 byte payload
-internal const val ENC_MIXED_RESERVED1 = ENC_MIXED_CORS or 0b1001
-internal const val ENC_MIXED_RESERVED2 = ENC_MIXED_CORS or 0b1010
-internal const val ENC_MIXED_RESERVED3 = ENC_MIXED_CORS or 0b1011
-internal const val ENC_MIXED_CONST_NULL = ENC_MIXED_CORS or 0b1100
-internal const val ENC_MIXED_CONST_UNDEFINED = ENC_MIXED_CORS or 0b1101
-internal const val ENC_MIXED_CONST_FALSE = ENC_MIXED_CORS or 0b1110
-internal const val ENC_MIXED_CONST_TRUE = ENC_MIXED_CORS or 0b1111
+internal const val ENC_MIXED_CONST_UNDEFINED = ENC_MIXED_CORS or 0b0000
+internal const val ENC_MIXED_CONST_NULL = ENC_MIXED_CORS or 0b0001
+internal const val ENC_MIXED_CONST_FALSE = ENC_MIXED_CORS or 0b0010
+internal const val ENC_MIXED_CONST_TRUE = ENC_MIXED_CORS or 0b0011
+internal const val ENC_MIXED_SCALAR_INT8 = ENC_MIXED_CORS or 0b0100 // 1 byte payload
+internal const val ENC_MIXED_SCALAR_INT16 = ENC_MIXED_CORS or 0b0101 // 2 byte payload
+internal const val ENC_MIXED_SCALAR_INT32 = ENC_MIXED_CORS or 0b0110 // 4 byte payload
+internal const val ENC_MIXED_SCALAR_INT64 = ENC_MIXED_CORS or 0b0111 // 8 byte payload
+internal const val ENC_MIXED_SCALAR_FLOAT16 = ENC_MIXED_CORS or 0b1000 // 2 byte payload
+internal const val ENC_MIXED_SCALAR_FLOAT32 = ENC_MIXED_CORS or 0b1001 // 4 byte payload
+internal const val ENC_MIXED_SCALAR_FLOAT64 = ENC_MIXED_CORS or 0b1010 // 8 byte payload
+internal const val ENC_MIXED_SCALAR_FLOAT128 = ENC_MIXED_CORS or 0b1011 // 16 byte payload
+internal const val ENC_MIXED_SCALAR_TIMESTAMP = ENC_MIXED_CORS or 0b1100 // 6 byte payload
+internal const val ENC_MIXED_RESERVED1 = ENC_MIXED_CORS or 0b1101
+internal const val ENC_MIXED_RESERVED2 = ENC_MIXED_CORS or 0b1110
+internal const val ENC_MIXED_RESERVED3 = ENC_MIXED_CORS or 0b1111
 
 internal const val ENC_STRUCT_SIZE_MASK = 0b0011_0000
 internal const val ENC_STRUCT_SIZE0 = 0b00_0000

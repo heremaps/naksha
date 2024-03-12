@@ -333,8 +333,7 @@ class JbCoreTest : JbAbstractTest() {
         reader.addOffset(reader.unitSize())
 
         // We're now behind the last valid byte, all values are zero, therefore they should be integer value 0.
-        assertTrue(reader.isInt())
-        assertEquals(0, reader.readInt32())
+        assertTrue(reader.isUndefined())
         assertEquals(1, reader.unitSize())
 
         // Let's limit the reader to the end of the builder and retry
@@ -467,8 +466,7 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(TYPE_DICTIONARY, dictReader.unitType())
         // size
         dictReader.addOffset(1)
-        assertTrue(dictReader.isInt())
-        assertEquals(13, dictReader.readInt32())
+        assertEquals(13, dictView.getInt8(dictReader.offset()))
 
         // id
         assertTrue(dictReader.nextUnit())

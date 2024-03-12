@@ -249,7 +249,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
         val offset = end;
         when (value) {
             in -16..15 -> {
-                view(1).setInt8(offset, (value and 0x1f).toByte())
+                view(1).setInt8(offset, (ENC_TINY or ENC_TINY_INT or (value and 0x1f)).toByte())
                 end += 1
             }
 
@@ -320,7 +320,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
         val pos = end
         if (value >= -16.0 && value <= 15.0 && value == floor(value)) {
             val i = value.toInt() and 0x1f
-            view(1).setInt8(end++, (ENC_TINY_FLOAT or i).toByte())
+            view(1).setInt8(end++, (ENC_TINY or ENC_TINY_FLOAT or i).toByte())
             return pos
         }
         val view = view(5)
@@ -339,7 +339,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
         val pos = end
         if (value >= -16.0 && value <= 15.0 && value == floor(value)) {
             val i = value.toInt() and 0x1f
-            view(1).setInt8(end++, (ENC_TINY_FLOAT or i).toByte())
+            view(1).setInt8(end++, (ENC_TINY or ENC_TINY_FLOAT or i).toByte())
             return pos
         }
         val view = view(9)
