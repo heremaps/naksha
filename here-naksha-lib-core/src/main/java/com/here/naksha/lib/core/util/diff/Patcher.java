@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core.util.diff;
 
+import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -99,6 +100,11 @@ public class Patcher {
       } else if (sourceNumber.longValue() == targetNumber.longValue()) {
         return null;
       }
+    }
+
+    if (sourceState instanceof JsonSerializable && targetState instanceof JsonSerializable) {
+      return getMapDifference(
+          ((JsonSerializable) sourceState).asMap(), ((JsonSerializable) targetState).asMap(), ignoreKey);
     }
 
     // Treat source and target as scalar values.
