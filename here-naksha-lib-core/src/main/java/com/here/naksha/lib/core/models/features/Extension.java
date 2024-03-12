@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import java.util.Map;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -37,6 +38,7 @@ public class Extension extends XyzFeature {
   public static final String URL = "url";
   public static final String VERSION = "version";
   public static final String INIT_CLASS_NAME = "initClassName";
+  public static final String PROPERTIES = "properties";
 
   @JsonProperty(EXTENSION_ID)
   String extensionId;
@@ -50,17 +52,8 @@ public class Extension extends XyzFeature {
   @JsonProperty(INIT_CLASS_NAME)
   String initClassName;
 
-  @AvailableSince(NakshaVersion.v2_0_3)
-  //  @JsonCreator
-  public Extension(
-      @JsonProperty(EXTENSION_ID) @NotNull String extensionId,
-      @JsonProperty(URL) @NotNull String url,
-      @JsonProperty(VERSION) @NotNull String version) {
-    this.extensionId = extensionId;
-    this.url = url;
-    this.version = version;
-  }
-
+  @JsonProperty(PROPERTIES)
+  Map properties;
   /**
    * Create an extension.
    *
@@ -77,41 +70,27 @@ public class Extension extends XyzFeature {
       @JsonProperty(URL) @NotNull String url,
       @JsonProperty(VERSION) @NotNull String version,
       @JsonProperty(INIT_CLASS_NAME) @Nullable String initClassName,
-      @JsonProperty(PROPERTIES) @Nullable Object properties) {
-    this(extensionId, url, version);
+      @JsonProperty(PROPERTIES) @Nullable Map properties) {
+    this.extensionId = extensionId;
+    this.url = url;
+    this.version = version;
     this.initClassName = initClassName;
-    //    this.properties = properties;
+    this.properties = properties;
   }
 
   public String getExtensionId() {
     return extensionId;
   }
 
-  public void setExtensionId(String extensionId) {
-    this.extensionId = extensionId;
-  }
-
   public String getUrl() {
     return url;
-  }
-
-  public void setUrl(String url) {
-    this.url = url;
   }
 
   public String getVersion() {
     return version;
   }
 
-  public void setVersion(String version) {
-    this.version = version;
-  }
-
   public String getInitClassName() {
     return initClassName;
-  }
-
-  public void setInitClassName(String initClassName) {
-    this.initClassName = initClassName;
   }
 }

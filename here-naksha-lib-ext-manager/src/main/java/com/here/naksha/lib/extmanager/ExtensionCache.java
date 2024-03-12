@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,12 +47,16 @@ public class ExtensionCache {
   private static final @NotNull Logger logger = LoggerFactory.getLogger(ExtensionCache.class);
   private static final ConcurrentHashMap<String, KVPair<Extension, ClassLoader>> loaderCache =
       new ConcurrentHashMap<>();
-  private final Map<String, FileClient> jarClientMap;
+  private static final Map<String, FileClient> jarClientMap = new HashMap<>();
   private final @NotNull INaksha naksha;
+
+  static {
+    jarClientMap.put(JarClientType.S3.getType(), new AmazonS3Helper());
+    jarClientMap.put(JarClientType.FILE.getType(), new FileHelper());
+  }
 
   public ExtensionCache(@NotNull INaksha naksha) {
     this.naksha = naksha;
-    jarClientMap = new HashMap<>();
   }
   /**
    * Read extensions from database, download respective jars from configured client and store Extension to ClassLoader mapping
@@ -67,7 +70,7 @@ public class ExtensionCache {
           SimpleTask<KVPair<Extension, File>> task = new SimpleTask<>();
           return task.start(() -> downloadJar(extension));
         })
-        .collect(Collectors.toList());
+        .toList();
 
     futures.stream().forEach(future -> {
       KVPair<Extension, File> result = null;
@@ -82,7 +85,8 @@ public class ExtensionCache {
     // Removing existing extension which has been removed from the configuration
     List<String> extIds = extensionConfig.getExtensions().stream()
         .map(Extension::getExtensionId)
-        .collect(Collectors.toList());
+        .toList();
+
     for (String key : loaderCache.keySet()) {
       if (!extIds.contains(key)) {
         KVPair<Extension, ClassLoader> prevValue = loaderCache.remove(key);
@@ -97,29 +101,21 @@ public class ExtensionCache {
 
   private void publishIntoCache(KVPair<Extension, File> result, ExtensionConfig extensionConfig) {
     if (result != null && result.getValue() != null) {
+      final Extension extension = result.getKey();
+      final File jarFile = result.getValue();
       ClassLoader loader;
       try {
-        loader = ClassLoaderHelper.getClassLoader(
-            result.getValue(), extensionConfig.getWhilelistDelegateClass());
+        loader = ClassLoaderHelper.getClassLoader(jarFile, extensionConfig.getWhilelistDelegateClass());
       } catch (Exception e) {
-        logger.error("Failed to load extension jar " + result.getKey().getExtensionId(), e);
+        logger.error("Failed to load extension jar " + extension.getExtensionId(), e);
         return;
       }
 
       Object object = null;
-      KVPair<Extension, ClassLoader> prevValue = null;
-      if (result.getKey().getInitClassName() == null
-          || result.getKey().getInitClassName().isEmpty()) {
-        prevValue = loaderCache.put(
-            result.getKey().getExtensionId(), new KVPair<Extension, ClassLoader>(result.getKey(), loader));
-      } else {
+      if (!isNullOrEmpty(extension.getInitClassName())) {
         try {
-          Class<?> clz = loader.loadClass(result.getKey().getInitClassName());
-          object = clz.getConstructor(INaksha.class, Object.class)
-              .newInstance(naksha, result.getKey().getProperties());
-          prevValue = loaderCache.put(
-              result.getKey().getExtensionId(),
-              new KVPair<Extension, ClassLoader>(result.getKey(), loader));
+          Class<?> clz = loader.loadClass(extension.getInitClassName());
+          object = clz.getConstructor(INaksha.class, Extension.class).newInstance(naksha, extension);
         } catch (ClassNotFoundException
             | InvocationTargetException
             | InstantiationException
@@ -128,27 +124,29 @@ public class ExtensionCache {
           logger.error(
               String.format(
                   "Failed to instantiate class %s for extension %s ",
-                  result.getKey().getInitClassName(),
-                  result.getKey().getExtensionId()),
+                  extension.getInitClassName(), extension.getExtensionId()),
               e);
+          return;
         }
       }
-      if (prevValue != null) {
-        ClassLoader prevLoader = prevValue.getValue();
-        prevLoader = null;
-      }
+
+      loaderCache.put(extension.getExtensionId(), new KVPair<Extension, ClassLoader>(extension, loader));
+      logger.info(String.format(
+          "Extension (%s,%s) is successfully loaded into the cache.",
+          extension.getExtensionId(), extension.getVersion()));
+      if (!isNullOrEmpty(extension.getInitClassName()))
+        logger.info("initClassName (%s) initialization done successfully.", extension.getInitClassName());
     }
   }
 
   private boolean isLoaderMappingExist(Extension extension) {
-    boolean isEqual = loaderCache.containsKey(extension.getExtensionId());
-    if (isEqual) {
-      Extension exExtension = loaderCache.get(extension.getExtensionId()).getKey();
-      isEqual = exExtension.getUrl().equals(extension.getUrl())
-          && exExtension.getVersion().equals(extension.getVersion())
-          && exExtension.getInitClassName().equals(extension.getInitClassName());
-    }
-    return isEqual;
+    KVPair<Extension, ClassLoader> existingMapping = loaderCache.get(extension.getExtensionId());
+    if (existingMapping == null) return false;
+
+    final Extension exExtension = existingMapping.getKey();
+    return exExtension.getUrl().equals(extension.getUrl())
+        && exExtension.getVersion().equals(extension.getVersion())
+        && exExtension.getInitClassName().equals(extension.getInitClassName());
   }
 
   /**
@@ -170,26 +168,15 @@ public class ExtensionCache {
   protected FileClient getJarClient(String url) {
     FileClient fileClient;
     if (url.startsWith(JarClientType.S3.getType())) {
-      fileClient = jarClientMap.get(JarClientType.S3.getType());
-      if (fileClient == null) {
-        fileClient = new AmazonS3Helper();
-        jarClientMap.put(JarClientType.S3.getType(), fileClient);
-      }
-      return fileClient;
+      return jarClientMap.get(JarClientType.S3.getType());
     } else if (url.startsWith(JarClientType.FILE.getType())) {
-      fileClient = jarClientMap.get(JarClientType.FILE.getType());
-      if (fileClient == null) {
-        fileClient = new FileHelper();
-        jarClientMap.put(JarClientType.FILE.getType(), fileClient);
-      }
-      return fileClient;
+      return jarClientMap.get(JarClientType.FILE.getType());
     } else throw new UnsupportedOperationException("Jar client not configured for url " + url);
   }
 
   protected ClassLoader getClassLoaderById(@NotNull String extensionId) {
-    if (loaderCache.containsKey(extensionId))
-      return loaderCache.get(extensionId).getValue();
-    return null;
+    KVPair<Extension, ClassLoader> mappedLoader = loaderCache.get(extensionId);
+    return mappedLoader == null ? null : mappedLoader.getValue();
   }
 
   public int getCacheLength() {
@@ -197,7 +184,11 @@ public class ExtensionCache {
   }
 
   public List<Extension> getCachedExtensions() {
-    return loaderCache.values().stream().map(KVPair::getKey).collect(Collectors.toList());
+    return loaderCache.values().stream().map(KVPair::getKey).toList();
+  }
+
+  private boolean isNullOrEmpty(String value) {
+    return value == null || value.isEmpty();
   }
 
   public void clear() {

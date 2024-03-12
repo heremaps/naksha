@@ -18,22 +18,20 @@
  */
 package com.here.naksha.lib.extmanager;
 
-import com.here.naksha.lib.core.lambdas.Fe;
-import com.here.naksha.lib.core.lambdas.Fe0;
+import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ScheduledTask implements Runnable {
   private static final @NotNull Logger logger = LoggerFactory.getLogger(ExtensionCache.class);
   private ExtensionCache extensionCache;
-  protected @Nullable Fe lambda;
+  private INaksha naksha;
 
-  public ScheduledTask(@NotNull ExtensionCache extensionCache, @NotNull Fe0<ExtensionConfig> lambda) {
+  public ScheduledTask(@NotNull ExtensionCache extensionCache, @NotNull INaksha naksha) {
     this.extensionCache = extensionCache;
-    this.lambda = lambda;
+    this.naksha = naksha;
   }
 
   @Override
@@ -41,10 +39,10 @@ public class ScheduledTask implements Runnable {
     while (true) {
       logger.info("Extension cache refresh job started");
       ExtensionConfig extensionConfig = null;
+      long sleepMs = 0;
       try {
-        if (lambda instanceof Fe0) {
-          extensionConfig = ((Fe0<ExtensionConfig>) lambda).call();
-        }
+        extensionConfig = naksha.getExtensionConfig();
+        sleepMs = extensionConfig.getExpiry() - System.currentTimeMillis();
         this.extensionCache.buildExtensionCache(extensionConfig);
       } catch (Exception e) {
         logger.error("Failed to refresh extension cache.", e);
@@ -52,10 +50,10 @@ public class ScheduledTask implements Runnable {
         logger.info("Extension cache refresh job completed");
       }
       try {
-        logger.info("Extension cache refresh job sleeps for " + extensionConfig.getExpiry() + " millisecond");
-        Thread.sleep(extensionConfig.getExpiry());
+        logger.info("Extension cache refresh job sleeps for " + sleepMs + " millisecond");
+        if (sleepMs > 0) Thread.sleep(sleepMs);
       } catch (InterruptedException e) {
-        logger.error("Refresh task is interrupted");
+        logger.warn("Sleep of Extension refresh task got interrupted,", e);
       }
     }
   }

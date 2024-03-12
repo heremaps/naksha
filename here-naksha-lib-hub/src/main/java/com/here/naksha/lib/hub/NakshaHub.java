@@ -47,13 +47,14 @@ import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
+import com.here.naksha.lib.extmanager.ExtensionManager;
 import com.here.naksha.lib.extmanager.IExtensionManager;
 import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import com.here.naksha.lib.psql.PsqlStorage;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.ApiStatus;
@@ -112,8 +113,11 @@ public class NakshaHub implements INaksha {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
     this.nakshaHubConfig = finalCfg;
-    // TODO uncomment below once extension manager need to be initialised
-    //    this.extensionManager = new ExtensionManager(this);
+    if (customCfg.extensionConfigParams != null) {
+      this.extensionManager = ExtensionManager.getInstance(this);
+    } else {
+      logger.warn("ExtensionManager is not initialised due to extensionConfigParams not found.");
+    }
     logger.info("NakshaHub initialization done!");
   }
 
@@ -278,17 +282,25 @@ public class NakshaHub implements INaksha {
 
   @Override
   public @NotNull ExtensionConfig getExtensionConfig() {
-    String extensionsRootPath = "" + nakshaHubConfig.extensionManagerParams.getOrDefault("extensionsRootPath", "");
-    long expiryms = Long.parseLong("" + nakshaHubConfig.getOrDefault("expiryms", "300000"));
-    List<String> whiteListClasses = Arrays.asList(
-        ("" + nakshaHubConfig.getOrDefault("whitelistClasses", "java.*,javax.*,com.here.naksha.*")).split(","));
+    final ExtensionConfigParams extensionConfigParams = nakshaHubConfig.extensionConfigParams;
+    if (!extensionConfigParams.extensionRootPath.startsWith("s3://"))
+      throw new UnsupportedOperationException(
+          "ExtensionRootPath must be a valid s3 bucket url which should be prefixed with s3://");
 
-    ExtensionConfig extensionConfig = new ExtensionConfig(expiryms, extensionsRootPath);
-    extensionConfig.setWhilelistDelegateClass(whiteListClasses);
+    List<Extension> extList = loadExtensionConfigFromS3(extensionConfigParams.getExtensionRootPath());
+    return new ExtensionConfig(
+        System.currentTimeMillis() + extensionConfigParams.getIntervalMs(),
+        extList,
+        extensionConfigParams.getExtensionRootPath(),
+        extensionConfigParams.getWhiteListClasses());
+  }
+
+  private List<Extension> loadExtensionConfigFromS3(String extensionRootPath) {
     AmazonS3Helper s3Helper = new AmazonS3Helper();
-    AmazonS3URI bucketUri = new AmazonS3URI(extensionsRootPath);
+    AmazonS3URI bucketUri = new AmazonS3URI(extensionRootPath);
 
-    List<String> list = s3Helper.listKeysInBucket(extensionsRootPath);
+    List<String> list = s3Helper.listKeysInBucket(extensionRootPath);
+    List<Extension> extList = new ArrayList<>();
     list.stream().forEach(extensionPath -> {
       String filePath = "s3://" + bucketUri.getBucket() + "/" + extensionPath + "latest-"
           + nakshaHubConfig.env.toLowerCase() + ".txt";
@@ -315,13 +327,13 @@ public class NakshaHub implements INaksha {
       Extension extension;
       try {
         extension = new ObjectMapper().readValue(exJson, Extension.class);
-        extensionConfig.getExtensions().add(extension);
+        extList.add(extension);
       } catch (JsonProcessingException e) {
         logger.error("Failed to convert extension meta data to Extension object. " + exJson, e);
         return;
       }
     });
-    return extensionConfig;
+    return extList;
   }
 
   @Override

@@ -19,7 +19,6 @@
 package com.here.naksha.lib.extmanager;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.features.Extension;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -28,17 +27,13 @@ public class ExtensionManager implements IExtensionManager {
   private final @NotNull INaksha naksha;
   private final ExtensionCache extensionCache;
   private Thread refreshTask;
+  private static ExtensionManager instance;
 
-  public ExtensionManager(@NotNull INaksha naksha) {
+  private ExtensionManager(@NotNull INaksha naksha) {
     this.naksha = naksha;
     this.extensionCache = new ExtensionCache(naksha);
-    this.buildExtensionMap();
+    this.extensionCache.buildExtensionCache(naksha.getExtensionConfig());
     this.scheduleRefreshCache();
-  }
-
-  private void buildExtensionMap() {
-    ExtensionConfig extensionConfig = naksha.getExtensionConfig();
-    extensionCache.buildExtensionCache(extensionConfig);
   }
 
   /**
@@ -52,7 +47,7 @@ public class ExtensionManager implements IExtensionManager {
   }
 
   private void scheduleRefreshCache() {
-    ScheduledTask scheduledTask = new ScheduledTask(this.extensionCache, () -> naksha.getExtensionConfig());
+    ScheduledTask scheduledTask = new ScheduledTask(this.extensionCache, naksha);
     refreshTask = new Thread(scheduledTask);
     refreshTask.start();
   }
@@ -63,5 +58,16 @@ public class ExtensionManager implements IExtensionManager {
    */
   public List<Extension> getCachedExtensions() {
     return this.extensionCache.getCachedExtensions();
+  }
+
+  public static ExtensionManager getInstance(INaksha naksha) {
+    if (instance == null) {
+      synchronized (ExtensionManager.class) {
+        if (instance == null) {
+          instance = new ExtensionManager(naksha);
+        }
+      }
+    }
+    return instance;
   }
 }

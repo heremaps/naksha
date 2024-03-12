@@ -18,19 +18,18 @@
  */
 package com.here.naksha.lib.extmanager.helpers;
 
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.AmazonS3URI;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.here.naksha.lib.extmanager.FileClient;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -40,15 +39,13 @@ public class AmazonS3Helper implements FileClient {
 
   public AmazonS3Helper() {
     s3Client = AmazonS3ClientBuilder.standard()
-        .withCredentials(new ProfileCredentialsProvider())
         .build();
   }
 
   public File getFile(@NotNull String url) throws IOException {
     String extension = url.substring(url.lastIndexOf("."));
     AmazonS3URI fileUri = new AmazonS3URI(url);
-    S3Object s3Object = s3Client.getObject(fileUri.getBucket(), fileUri.getKey());
-    S3ObjectInputStream inputStream = s3Object.getObjectContent();
+    InputStream inputStream = getS3Object(fileUri);
     File targetFile = File.createTempFile(fileUri.getBucket(), extension);
     try (FileOutputStream fos = new FileOutputStream(targetFile)) {
       byte[] read_buf = new byte[1024];
@@ -61,6 +58,11 @@ public class AmazonS3Helper implements FileClient {
       throw e;
     }
     return targetFile;
+  }
+
+  public InputStream getS3Object(AmazonS3URI fileUri) {
+    S3Object s3Object = s3Client.getObject(fileUri.getBucket(), fileUri.getKey());
+    return s3Object.getObjectContent();
   }
 
   @Override

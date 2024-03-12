@@ -9,9 +9,5 @@
   "maintenanceIntervalInMins": 720,
   "maintenancePoolCoreSize": 5,
   "maintenancePoolMaxSize": 20,
-  "extensionManagerParams": {
-    "whitelistClasses": "",
-    "expiryms": 6000,
-    "extensionsRootPath": ""
-  }
+  "extensionConfigParams": null
 }

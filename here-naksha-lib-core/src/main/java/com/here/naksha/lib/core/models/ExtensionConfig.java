@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.features.Extension;
-import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -50,20 +49,12 @@ public class ExtensionConfig {
   @JsonCreator
   public ExtensionConfig(
       @JsonProperty(EXPIRY) @NotNull long expiry,
-      @JsonProperty(EXTENSIONS_ROOT_PATH) @NotNull String extensionsRootPath) {
-    this.expiry = expiry;
-    this.extensions = new ArrayList<>();
-    this.extensionsRootPath = extensionsRootPath;
-    this.whitelistDelegateClass = new ArrayList<>();
-  }
-
-  public ExtensionConfig(
-      @JsonProperty(EXPIRY) @NotNull long expiry,
       @JsonProperty(EXTENSIONS) @Nullable List<Extension> extensions,
       @JsonProperty(EXTENSIONS_ROOT_PATH) @NotNull String extensionsRootPath,
       @JsonProperty(WHITELIST_DELEGATE_CLASS) @Nullable List<String> whitelistDelegateClass) {
-    this(expiry, extensionsRootPath);
+    this.expiry = expiry;
     this.extensions = extensions;
+    this.extensionsRootPath = extensionsRootPath;
     this.whitelistDelegateClass = whitelistDelegateClass;
   }
 
@@ -71,31 +62,15 @@ public class ExtensionConfig {
     return expiry;
   }
 
-  public void setExpiry(long expiry) {
-    this.expiry = expiry;
-  }
-
   public List<Extension> getExtensions() {
     return extensions;
-  }
-
-  public void setExtensions(List<Extension> extensions) {
-    this.extensions = extensions;
   }
 
   public List<String> getWhilelistDelegateClass() {
     return whitelistDelegateClass;
   }
 
-  public void setWhilelistDelegateClass(List<String> whitelistDelegateClass) {
-    this.whitelistDelegateClass = whitelistDelegateClass;
-  }
-
   public String getExtensionsRootPath() {
     return extensionsRootPath;
-  }
-
-  public void setExtensionsRootPath(String extensionsRootPath) {
-    this.extensionsRootPath = extensionsRootPath;
   }
 }

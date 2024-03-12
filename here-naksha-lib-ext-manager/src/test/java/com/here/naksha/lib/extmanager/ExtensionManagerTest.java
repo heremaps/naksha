@@ -24,33 +24,25 @@ public class ExtensionManagerTest extends BaseSetup {
   }
 
   @Test
-  public void testGetClassLoaderById()  {
+  public void testGetClassLoaderByIdAndGetCachedExtensions()  {
+    List<Extension> extList=new ArrayList<>();
+    extList.add(new Extension("child_extension_1","url","1.0",null,null));
+
     ClassLoader loader=mock(ClassLoader.class);
     try(MockedConstruction<ExtensionCache> mockExtensionCache=mockConstruction(ExtensionCache.class,(mock,context)->{
       when(mock.getClassLoaderById("AnyString")).thenReturn(loader);
+      when(mock.getCachedExtensions()).thenReturn(extList);
     })) {
-      ExtensionManager extensionManager = spy(new ExtensionManager(naksha));
+      ExtensionManager extensionManager = spy(ExtensionManager.getInstance(naksha));
 
       ClassLoader clsLoader = extensionManager.getClassLoader("AnyString");
       assertEquals(loader, clsLoader);
 
       clsLoader = extensionManager.getClassLoader("Nothing");
       assertNull(clsLoader);
-    }
-  }
-
-  @Test
-  public void testGetCachedExtensions(){
-    List<Extension> extList=new ArrayList<>();
-    extList.add(new Extension("child_extension_1","url","1.0"));
-    try(MockedConstruction<ExtensionCache> mockExtensionCache=mockConstruction(ExtensionCache.class,(mock,context)->{
-      when(mock.getCachedExtensions()).thenReturn(extList);
-    })) {
-      ExtensionManager extensionManager = spy(new ExtensionManager(naksha));
 
       List<Extension> extensions = extensionManager.getCachedExtensions();
       Assertions.assertEquals(extList.size(),extensions.size());
     }
   }
-
 }
