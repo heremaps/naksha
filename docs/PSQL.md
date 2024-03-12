@@ -272,9 +272,7 @@ Psql Error Codes are specific to `lib-naksha-psql` library and should be mapped 
 Here are parameters you have to consider for parallel append on partitioned table.
 
 - SHOW max_worker_processes; - The number of all workers available in db
-
 - show max_parallel_workers; - Default 8. the pool of parallel workers.
-
 - show max_parallel_workers_per_gather; - The number of workers available for single "gather"
 - show effective_io_concurrency; - Default 1, the number of concurrent disk I/O operations that one single session can have (affects only bitmap heap scans)
 - show enable_parallel_append; - Enable or disable parallel append. Default is "on"

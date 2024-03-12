@@ -154,7 +154,7 @@ BEGIN
   IF geo_type = 1 THEN
     RETURN ST_GeomFromWKB(geo_bytes, 4326);
   ELSIF geo_type = 2 THEN
-    RETURN ST_GeomFromEWKB(geo_bytes, 4326);
+    RETURN ST_SetSRID(ST_GeomFromEWKB(geo_bytes), 4326);
   ELSIF geo_type = 3 THEN
     RETURN ST_SetSRID(ST_GeomFromTWKB(geo_bytes), 4326);
   ELSE

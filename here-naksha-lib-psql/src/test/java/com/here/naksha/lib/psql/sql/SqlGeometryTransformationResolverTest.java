@@ -35,7 +35,7 @@ public class SqlGeometryTransformationResolverTest {
     SQL sql = addTransformation(bufferTrans, variablePlaceholder);
 
     // then
-    assertEquals(" ST_Buffer(?,112.21,E'') ", sql.toString());
+    assertEquals(" ST_Buffer(?,112.21,E'')", sql.toString());
   }
 
   @Test
@@ -62,7 +62,7 @@ public class SqlGeometryTransformationResolverTest {
     SQL sql = addTransformation(combinedTransformation, variablePlaceholder);
 
     // then
-    assertEquals(" ST_Buffer(ST_Force3D(?)::geography ,112.21,E'quad_segs=8') ", sql.toString());
+    assertEquals(" ST_Buffer(ST_Force3D(?)::geography ,112.21,E'quad_segs=8')", sql.toString());
   }
 
   @Test
