@@ -149,7 +149,10 @@ CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_hst_partition_id(id text, txn_next int8) RETURNS int4 AS $$
-  return require("naksha").Static.hstPartitionNameForId(id, txn_next);
+  let naksha = require("naksha");
+  let jbon = require("jbon");
+  let session = naksha.NakshaSession.Companion.get();
+  return naksha.Static.hstPartitionNameForId(id, new jbon.NakshaTxn(txn_next));
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_geometry(geo_type int2, geo_bytes bytea) RETURNS geometry AS

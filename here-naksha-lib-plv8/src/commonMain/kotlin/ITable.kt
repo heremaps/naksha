@@ -90,8 +90,9 @@ interface ITable {
     /**
      * Returns a successful purge.
      * @param row The database row that was purged.
+     * @param xyz The new XYZ namespace produced for purged record.
      */
-    fun returnPurged(row: IMap) {
+    fun returnPurged(row: IMap, xyz: ByteArray? = null) {
         returnRow(XYZ_EXEC_PURGED, row)
     }
 
