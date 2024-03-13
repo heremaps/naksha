@@ -498,3 +498,85 @@ Now, in **CBOR** we would have to encode exactly the same thing, it would not be
 However, the best is, that we can ask the reader for this property, and it will return it. When we use the reader, the object will appear as if it is part of the **JBON**. The application does not need to know details, it only needs access to the global dictionaries. Compression optimization is purely done on the encoder side and can be improved for all our use-cases, not having to make old data invalid or have to re-encode it.
 
 Clearly, we could somehow add the dictionaries and text encoding to **CBOR** using [tags](https://www.rfc-editor.org/rfc/rfc8949.html#name-tagging-of-items), but it would be a proprietary extension and therefore anyway force us to do some own implementations. It would eventually make CBOR so incompatible to what the rest of the world does in this format, that there seems to be no advantage in this solution, when compared to creating our own binary encoding.
+
+## Performance insights
+For optimal performance we want to reduce the amount of data being transferred to the database, and at the same time, reduce the amount things the database need to do (CPU load). Technically, this section discusses how we can avoid running any server side code in this case. We still want to have the server side code setup, but mainly to prevent that someone, executing changes using an arbitrary SQL client, breaks the storage state.
+
+Therefore, this document describes what need to be done to have a 100% client side implementation, and what parts need to be installed as server side code, to prevent breaking modifications and protect the store.
+
+### startSession / naksha_start_session
+There are two ways to access the database, but both require a **NakshaSession**. Using the Java client, a new client-side session can be started via:
+
+```kotlin
+val env = JvmPlv8Env.get()
+val session = env.startSession(conn, schema, appName, streamId, appId, author)
+```
+
+When using an arbitrary SQL client, this session need to be started server side via:
+
+```sql
+SELECT naksha_start_session(appName, streamId, appId, author);
+```
+
+Both use-cases do have a session now. For the _Java_ implementation it will disable triggers. This can be done by settings the [session_replication_role](https://www.postgresql.org/docs/16/runtime-config-client.html#GUC-SESSION-REPLICATION-ROLE) to `replica` and later back to `origin`, like `SET session_replication_role = replica;`. The server side session relies upon the triggers to ensure history and other things.
+
+From this point on, all further operations should be executed against the session. In the database there will be SQL functions prefixed with `naksha_`, having the same name as the corresponding counterparts in the **NakshaSession**. For example, there is a `naksha_write_collections` in SQL which actually supports exactly the same as the `session.writeCollections` function call in _Java_.
+
+### writeCollections / naksha_write_collections
+This function is used to create, update and delete collections fulfilling the standard Naksha _IStorage_ contract.
+
+### writeFeatures / naksha_write_features
+This function is used to create, update and delete features fulfilling the standard Naksha _IStorage_ contract.
+
+### bulkWriteFeatures (client-only)
+This function is used to perform bulk operations to create, update or delete features. It fulfills the Naksha _IStorage_ contract, with some minor limitation. The method automatically rollback failed operations and is always atomic. It allows to suppress the success results the same way the default `writeFeatures` does, but it does not support mixed mode, so in an error case it will not return a cursor, but fully fails and automatically rollback.
+
+In the success case, it will return and allow to decide between `commit` and `rollback`, but it is highly recommended to make this decision instant, because meanwhile it will keep locks in the database.
+
+The bulk write will implement these steps:
+
+- Fetch details about the collections into which to write
+  - This provides information, if partitioning is supported
+- Ensure we have a transaction number (`txn`)
+- Disable triggers for this transaction via [session_replication_role](https://www.postgresql.org/docs/16/runtime-config-client.html#GUC-SESSION-REPLICATION-ROLE):
+  - `SET LOCAL session_replication_role = replica;`
+- Autogenerate ids for features not yet having some
+- Sort all features by their id
+- If we have partitions, group the features by the partition to which they belong
+- Update the features so that all column values are set correctly
+  - This requires that we have the expected head state to e.g. set action and/or increment version
+  - This previous state is stored in the XYZ namespace
+  - Therefore, we expect that the client either gives us these values from XYZ namespace
+    - or: If this is a new feature, the client tells us, he wants to insert
+  - The client should remove the XYZ namespace from the feature
+  - The client should remove the geometry from the feature and give it to us as TWKB
+- Create batch statements with order:
+  - (1) delete feature from del-table
+  - (2) insert deleted into del-table
+  - (3) upsert feature in del-table
+  - (4) update feature in head, set txn_next=txn (move the feature into history)
+  - (5) insert deleted into history
+  - (6) insert feature into head
+- If the feature is created, do:
+  - (1) delete feature from del-table (only if del-table enabled)
+  - (6) insert feature into head
+- If the feature is updated, do:
+  - (1) delete feature from del-table (only if del-table enabled)
+  - (4) update feature in head, set txn_next=txn (only if history enabled, move the feature into history)
+  - (6) insert feature into head
+- If the feature is deleted, do:
+  - (4) update feature in head, set txn_next=txn (only if history enabled, move the feature into history)
+  - create deleted version of feature
+  - (3) upsert feature in del-table (only if del-table enabled)
+  - (5) insert deleted into history
+- Execute all batches in order (1-6)
+- Re-enable triggers: `SET LOCAL session_replication_role = origin;`
+
+### Global dictionary training (draft)
+Add support for learning global dictionary by providing example data or even do it in the database?
+
+### Links
+- https://postgresqlco.nf/doc/en/param/session_replication_role/
+- https://www.postgresql.org/docs/16/runtime-config-client.html#GUC-SESSION-REPLICATION-ROLE
+- https://foojay.io/today/a-dissection-of-java-jdbc-to-postgresql-connections-part-2-batching/
+- https://github.com/PgBulkInsert/PgBulkInsert
