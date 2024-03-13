@@ -133,8 +133,41 @@
     },
     "@ns:com:here:xyz:log": {
       "action": "UPDATE",
-      "diff": null,
-      "id": "test_app:topology_delta:2024:02:28:855602",
+      "diff": {
+        "add": 0,
+        "remove": 3,
+        "replace": 3,
+        "ops": [
+          {
+            "op": "replace",
+            "path": "/geometry/coordinates/0/0",
+            "value": -8.1162
+          },
+          {
+            "op": "replace",
+            "path": "/geometry/coordinates/0/1",
+            "value": 37.7847
+          },
+          {
+            "op": "replace",
+            "path": "/geometry/coordinates/0/2",
+            "value": 119.88
+          },
+          {
+            "op": "remove",
+            "path": "/geometry/coordinates/14"
+          },
+          {
+            "op": "remove",
+            "path": "/geometry/coordinates/15"
+          },
+          {
+            "op": "remove",
+            "path": "/geometry/coordinates/16"
+          }
+        ]
+      },
+      "id": "urn:here::here:Topology:80150801",
       "original": {
         "createdAt": 1706017408414,
         "puuid": "test_app:topology_delta:2024:02:28:843606",
