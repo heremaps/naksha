@@ -22,6 +22,7 @@ import com.amazonaws.SdkClientException;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.SimpleTask;
 import com.here.naksha.lib.core.models.ExtensionConfig;
+import com.here.naksha.lib.core.models.PluginCache;
 import com.here.naksha.lib.core.models.features.Extension;
 import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
 import com.here.naksha.lib.extmanager.helpers.ClassLoaderHelper;
@@ -131,6 +132,7 @@ public class ExtensionCache {
       }
 
       loaderCache.put(extension.getExtensionId(), new KVPair<Extension, ClassLoader>(extension, loader));
+      PluginCache.removeExtensionCache(extension.getExtensionId());
       logger.info(String.format(
           "Extension (%s,%s) is successfully loaded into the cache.",
           extension.getExtensionId(), extension.getVersion()));

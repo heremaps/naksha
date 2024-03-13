@@ -123,9 +123,15 @@ public class EventHandler extends Plugin<IEventHandler, EventHandler> {
   @AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull IEventHandler newInstance(@NotNull INaksha naksha, @NotNull EventTarget<?> eventTarget) {
     //noinspection unchecked
-    final Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>> constructor =
-        (Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>>)
-            getEventHandlerConstructor(getClassName(), EventHandler.class, eventTarget.getClass());
+    final Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>> constructor;
+    if (this.extensionId == null || this.extensionId.isEmpty() || "null".equalsIgnoreCase(this.extensionId)) {
+      constructor = (Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>>)
+          getEventHandlerConstructor(getClassName(), EventHandler.class, eventTarget.getClass());
+    } else {
+      ClassLoader extClassLoader = naksha.getClassLoader(this.extensionId);
+      constructor = (Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>>) getEventHandlerConstructor(
+          getClassName(), EventHandler.class, eventTarget.getClass(), extensionId, extClassLoader);
+    }
     try {
       return constructor.call(naksha, this, eventTarget);
     } catch (Exception e) {
