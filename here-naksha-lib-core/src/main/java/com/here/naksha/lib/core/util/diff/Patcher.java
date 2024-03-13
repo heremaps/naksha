@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core.util.diff;
 
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.util.List;
 import java.util.Map;
@@ -28,9 +29,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The class provides methods to extract differences from {@link Map} and {@link List} instances,
- * merge differences and patch objects with such differences. All objects not being either a {@link
- * Map} or {@link List} are treated as primitive values.
+ * The class provides methods to extract differences from {@link Map} and {@link List} instances, merge differences and patch objects with
+ * such differences. All objects not being either a {@link Map} or {@link List} are treated as primitive values.
  */
 @SuppressWarnings({"rawtypes", "UnusedReturnValue"})
 public class Patcher {
@@ -38,11 +38,10 @@ public class Patcher {
   /**
    * Returns the difference of the two entities or null, if both entities are equal.
    *
-   * @param sourceState first object with the source state to be compared against second target
-   *                    state.
+   * @param sourceState first object with the source state to be compared against second target state.
    * @param targetState the target state against which to compare the source state.
-   * @return either null if both objects are equal or the difference that contains what was changed
-   * in the target state compared to the source state.
+   * @return either null if both objects are equal or the difference that contains what was changed in the target state compared to the
+   * source state.
    */
   public static @Nullable Difference getDifference(
       final @Nullable Object sourceState, final @Nullable Object targetState) {
@@ -50,14 +49,12 @@ public class Patcher {
   }
 
   /**
-   * Returns the difference of the two states or null, if both entities are equal. This method will
-   * return {@link InsertOp} if the source state is null, {@link RemoveOp} if the target state is
-   * null, {@link MapDiff} if both states are {@link Map maps} that differ, {@link ListDiff} if both
-   * states are {@link List lists} that differ and {@link UpdateOp} if the two states are different,
-   * but none of them is null and not both of them are {@link Map} or {@link List}.
+   * Returns the difference of the two states or null, if both entities are equal. This method will return {@link InsertOp} if the source
+   * state is null, {@link RemoveOp} if the target state is null, {@link MapDiff} if both states are {@link Map maps} that differ,
+   * {@link ListDiff} if both states are {@link List lists} that differ and {@link UpdateOp} if the two states are different, but none of
+   * them is null and not both of them are {@link Map} or {@link List}.
    *
-   * @param sourceState first object with the source state to be compared against second target
-   *                    state.
+   * @param sourceState first object with the source state to be compared against second target state.
    * @param targetState the target state against which to compare the source state.
    * @param ignoreKey   a method to test for keys to ignore while creating the difference.
    * @return the difference between the two states or null, if both states are equal.
@@ -122,8 +119,7 @@ public class Patcher {
    * @param sourceState first object to be compared against object B.
    * @param targetState the object against which to compare object A.
    * @param ignoreKey   a method to test for keys to ignore while creating the difference.
-   * @return either null if both objects are equal or Difference instance that shows the difference
-   * between object A and object B.
+   * @return either null if both objects are equal or Difference instance that shows the difference between object A and object B.
    * @throws NullPointerException if the sourceState or targetState is null.
    */
   private static MapDiff getMapDifference(
@@ -169,8 +165,7 @@ public class Patcher {
    * @param sourceList first list to be compared against list B.
    * @param targetList the list against which to compare list A.
    * @param ignoreKey  a method to test for keys to ignore while creating the difference.
-   * @return either null if both lists are equal or Difference instance that shows the difference
-   * between list A and list B.
+   * @return either null if both lists are equal or Difference instance that shows the difference between list A and list B.
    * @throws NullPointerException if the sourceList or targetList is null.
    */
   private static ListDiff getListDifference(
@@ -523,11 +518,34 @@ public class Patcher {
         patchList((List) targetMap.get(key), (ListDiff) diff);
       } else if (diff instanceof MapDiff) {
         //noinspection unchecked
+        substituteSerializableEntries(targetMap);
         patchMap((Map) targetMap.get(key), (MapDiff) diff);
       } else {
         throw new IllegalStateException("The given map contains at key '" + key + "' an invalid element");
       }
     }
+  }
+
+  /**
+   * This method replaces all keys of `targetMap that are {@link JsonSerializable} but not {@link Map} with {@link JsonSerializable#asMap()}
+   * We do this because Patcher is able to handle {@link Map} and there are some properties (like {@link XyzFeature#getGeometry()}) that are not maps can be represented as such.
+   * @param targetMap
+   */
+  private static void substituteSerializableEntries(Map<Object, Object> targetMap) {
+    for (Object key : targetMap.keySet()) {
+      Object value = targetMap.get(key);
+      if (value instanceof JsonSerializable && !(value instanceof Map)) {
+        targetMap.remove(key);
+        targetMap.put(key, ((JsonSerializable) value).asMap());
+      }
+    }
+    //    targetMap.replaceAll((__, value) -> {
+    //      if (value instanceof JsonSerializable && !(value instanceof Map)) {
+    //        return ((JsonSerializable) value).asMap();
+    //      } else {
+    //        return value;
+    //      }
+    //    });
   }
 
   /**
