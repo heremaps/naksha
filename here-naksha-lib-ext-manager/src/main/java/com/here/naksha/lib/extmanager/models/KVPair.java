@@ -31,15 +31,7 @@ public class KVPair<KEY, VALUE> {
     return key;
   }
 
-  public void setKey(KEY key) {
-    this.key = key;
-  }
-
   public VALUE getValue() {
     return value;
-  }
-
-  public void setValue(VALUE value) {
-    this.value = value;
   }
 }

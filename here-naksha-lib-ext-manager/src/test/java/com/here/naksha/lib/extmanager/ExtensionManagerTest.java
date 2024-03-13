@@ -26,7 +26,7 @@ public class ExtensionManagerTest extends BaseSetup {
   @Test
   public void testGetClassLoaderByIdAndGetCachedExtensions()  {
     List<Extension> extList=new ArrayList<>();
-    extList.add(new Extension("child_extension_1","url","1.0",null,null));
+    extList.add(new Extension("child_extension_1","url","1.0",null));
 
     ClassLoader loader=mock(ClassLoader.class);
     try(MockedConstruction<ExtensionCache> mockExtensionCache=mockConstruction(ExtensionCache.class,(mock,context)->{

@@ -38,8 +38,7 @@ public class AmazonS3Helper implements FileClient {
   private AmazonS3 s3Client;
 
   public AmazonS3Helper() {
-    s3Client = AmazonS3ClientBuilder.standard()
-        .build();
+    s3Client = AmazonS3ClientBuilder.standard().build();
   }
 
   public File getFile(@NotNull String url) throws IOException {
