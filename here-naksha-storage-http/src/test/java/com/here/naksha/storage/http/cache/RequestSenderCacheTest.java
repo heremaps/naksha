@@ -1,5 +1,6 @@
-package com.here.naksha.storage.http;
+package com.here.naksha.storage.http.cache;
 
+import com.here.naksha.storage.http.RequestSender;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
@@ -244,4 +245,5 @@ class RequestSenderCacheTest {
     assertTrue(senderId1IntChanged.get().hasKeyProps(PROP_ID_1_INT_CHANGED));
     assertTrue(senderId1MapChanged.get().hasKeyProps(PROP_ID_1_MAP_CHANGED));
   }
+
 }

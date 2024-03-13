@@ -16,14 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.storage.http;
+package com.here.naksha.storage.http.cache;
 
 import static com.here.naksha.storage.http.RequestSender.KeyProperties;
 
+import com.here.naksha.storage.http.RequestSender;
 import java.util.concurrent.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.TestOnly;
 
 public class RequestSenderCache {
 
@@ -35,10 +35,6 @@ public class RequestSenderCache {
     this(new ConcurrentHashMap<>(), CLEANER_PERIOD_HOURS, TimeUnit.HOURS);
   }
 
-  /**
-   * Only for unit tests.
-   */
-  @TestOnly
   RequestSenderCache(ConcurrentMap<String, RequestSender> requestSenders, int cleanPeriod, TimeUnit cleanPeriodUnit) {
     this.requestSenders = requestSenders;
     this.cleaner = Executors.newSingleThreadScheduledExecutor()
@@ -46,12 +42,12 @@ public class RequestSenderCache {
   }
 
   @NotNull
-  static RequestSenderCache getInstance() {
+  public static RequestSenderCache getInstance() {
     return InstanceHolder.instance;
   }
 
   @NotNull
-  RequestSender getSenderWith(KeyProperties keyProperties) {
+  public RequestSender getSenderWith(KeyProperties keyProperties) {
     return requestSenders.compute(
         keyProperties.name(), (__, cachedSender) -> getUpdated(cachedSender, keyProperties));
   }

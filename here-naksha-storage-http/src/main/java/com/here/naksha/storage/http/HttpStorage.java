@@ -26,6 +26,7 @@ import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import com.here.naksha.storage.http.cache.RequestSenderCache;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import org.jetbrains.annotations.NotNull;
