@@ -205,7 +205,7 @@ class Plv8Test : Plv8TestContainer() {
         assertEquals(50, restoredCollection.estimatedFeatureCount().toInt())
     }
 
-    @Order(11)
+    @Order(12)
     @Test
     fun triggerAfter() {
         val session = NakshaSession.get()

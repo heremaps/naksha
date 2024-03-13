@@ -172,9 +172,16 @@ SET SESSION enable_seqscan = OFF;
      * @return The XYZ namespace JBON encoded.
      */
     fun xyzNsFromRow(collectionId: String, row: IMap): ByteArray {
-        val txn = NakshaTxn(row[COL_TXN]!!)
-        val uid: Int = row[COL_UID]!!
-        val uuid = txn.newFeatureUuid(storageId, collectionId, uid)
+        val createdAt: BigInt64? = row[COL_CREATED_AT]
+        check(createdAt != null) { "Missing $COL_CREATED_AT in row" }
+        val updatedAt: BigInt64? = row[COL_UPDATE_AT]
+        check(updatedAt != null) { "Missing $COL_UPDATE_AT in row" }
+        val txn: BigInt64? = row[COL_TXN]
+        check(txn != null) { "Missing $COL_TXN in row" }
+        val nakshaTxn = NakshaTxn(txn)
+        val uid: Int? = row[COL_UID]
+        check(uid != null) { "Missing $COL_UID in row" }
+        val uuid = nakshaTxn.newFeatureUuid(storageId, collectionId, uid)
         val ptxn: BigInt64? = row[COL_PTXN]
         val puid: Int? = row[COL_PUID]
         val puuid = if (ptxn != null && puid != null) {
@@ -182,19 +189,19 @@ SET SESSION enable_seqscan = OFF;
         } else {
             null
         }
-        return xyzBuilder.buildXyzNs(
-                row[COL_CREATED_AT]!!,
-                row[COL_UPDATE_AT]!!,
-                txn.value,
-                row[COL_ACTION]!!,
-                row[COL_VERSION]!!,
-                row[COL_AUTHOR_TS]!!,
-                puuid,
-                uuid.toString(),
-                row[COL_APP_ID]!!,
-                row[COL_AUTHOR]!!,
-                row[COL_GEO_GRID]!!
-        )
+        val action: Short? = row[COL_ACTION]
+        check(action != null) { "Missing $COL_ACTION, please invoke naksha_start_session" }
+        val version: Int? = row[COL_VERSION]
+        check(version != null) { "Missing $COL_VERSION, please invoke naksha_start_session" }
+        val authorTs: BigInt64? = row[COL_AUTHOR_TS]
+        check(authorTs != null) { "Missing $COL_AUTHOR_TS, please invoke naksha_start_session" }
+        val author : String? = row[COL_AUTHOR]
+        check(author != null) { "Missing $COL_AUTHOR, please invoke naksha_start_session" }
+        val app_id : String? = row[COL_APP_ID]
+        check(app_id != null) { "Missing $COL_APP_ID, please invoke naksha_start_session" }
+        val geo_grid: String? = row[COL_GEO_GRID]
+        check(geo_grid != null) { "Missing $COL_GEO_GRID, please invoke naksha_start_session" }
+        return xyzBuilder.buildXyzNs(createdAt, updatedAt, txn, action, version, authorTs, puuid, uuid.toString(), app_id, author, geo_grid)
     }
 
     /**
@@ -299,12 +306,12 @@ SET SESSION enable_seqscan = OFF;
      * @param data The trigger data, allows the modification of [PgTrigger.NEW].
      */
     fun triggerAfter(data: PgTrigger) {
-        var collectionId = data.TG_TABLE_NAME
-        if (data.TG_OP == TG_OP_UPDATE) {
-            check(data.NEW != null) { "Missing NEW for UPDATE" }
-            check(data.OLD != null) { "Missing OLD for UPDATE" }
-            xyzUpdateHst(collectionId, data.NEW, data.OLD)
-        }
+//        val collectionId = data.TG_TABLE_NAME
+//        if (data.TG_OP == TG_OP_UPDATE) {
+//            check(data.NEW != null) { "Missing NEW for UPDATE" }
+//            check(data.OLD != null) { "Missing OLD for UPDATE" }
+//            xyzUpdateHst(collectionId, data.NEW, data.OLD)
+//        }
     }
 
     /**

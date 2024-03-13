@@ -1,15 +1,15 @@
-import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
-    id 'org.jetbrains.kotlin.multiplatform' version '1.9.21'
+    kotlin("multiplatform").version("1.9.21")
 }
 
 kotlin {
     jvm {
         jvmToolchain(11)
         withJava()
-        targetCompatibility = JavaVersion.VERSION_11
     }
+
     js(IR) {
         moduleName = "plv8"
         browser {
@@ -20,12 +20,8 @@ kotlin {
         nodejs {
         }
         generateTypeScriptDefinitions()
-        //binaries.library()
         binaries.executable()
     }
-
-    jvmJar.dependsOn(jsBrowserProductionWebpack)
-    jvmProcessResources.dependsOn(jsBrowserProductionWebpack)
 
     sourceSets {
         commonMain {
@@ -35,18 +31,23 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
+        commonMain {
+            dependencies {
+            }
+        }
         jvmMain {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-jbon"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation("org.postgresql:postgresql:42.5.4")
             }
-            resources.srcDirs += "$buildDir/dist/js/productionExecutable/"
+            resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
         jvmTest {
             dependencies {
-                implementation(kotlin('test'))
-                implementation('io.kotlintest:kotlintest-runner-junit5:3.3.2')
+                implementation(kotlin("test"))
+                implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
                 runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
@@ -65,7 +66,33 @@ kotlin {
     }
 }
 
-tasks.jvmTest {
-    useJUnitPlatform()
-    maxHeapSize = "4g"
+configure<JavaPluginExtension> {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+tasks {
+    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack")
+    val browserDistribution = getByName<Task>("jsBrowserDistribution")
+    getByName<Test>("jvmTest") {
+        useJUnitPlatform()
+        maxHeapSize = "8g"
+    }
+    getByName<Jar>("jvmJar") {
+        dependsOn(webpackTask)
+        from({
+            val list = ArrayList<Any>()
+            configurations.runtimeClasspath.get().forEach {
+                val f = if (it.isDirectory()) it else zipTree(it)
+                list.add(f)
+            }
+            list
+        }).duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+    getByName<ProcessResources>("jvmProcessResources") {
+        dependsOn(webpackTask)
+    }
+    getByName<ProcessResources>("jvmTestProcessResources") {
+        dependsOn(webpackTask, browserDistribution)
+    }
 }

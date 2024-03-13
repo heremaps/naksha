@@ -1,7 +1,39 @@
 {
   "type": "Feature",
   "id": "urn:here::here:Topology:58626681",
+  "geometry": {
+    "type": "LineString",
+    "bbox": null,
+    "coordinates": [
+      [
+        21.00856,
+        52.2325,
+        146.68
+      ],
+      [
+        21.00879,
+        52.23255,
+        145.78
+      ],
+      [
+        21.00897,
+        52.23258,
+        144.84
+      ]
+    ]
+  },
   "properties": {
+    "@ns:com:here:xyz": {
+      "space": "SDNujm7h",
+      "createdAt": 1701153255612,
+      "updatedAt": 1701153284892,
+      "uuid": "d742fbc9-69f7-4913-9c7d-8d3f710c8b3c",
+      "puuid": "3579d683-4353-42ac-8da5-007348406ca7",
+      "muuid": null,
+      "tags": [
+        "do_not_endorse"
+      ]
+    },
     "superElevationClass": [
       {
         "range": {

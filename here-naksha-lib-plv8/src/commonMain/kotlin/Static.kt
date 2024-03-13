@@ -73,6 +73,12 @@ $$ LANGUAGE 'plv8';
             'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
 
     /**
+     * Used to debug.
+     */
+    @JvmStatic
+    val DEBUG = false
+
+    /**
      * Can be set to true, to enable stack-trace reporting to _elog(INFO)_.
      */
     @JvmStatic
@@ -256,7 +262,7 @@ SET (toast_tuple_target=8160"""
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
-        val CREATE_TABLE = """CREATE TABLE {table} (
+        val CREATE_TABLE = if (!DEBUG) """CREATE TABLE {table} (
     txn_next    int8 NOT NULL CHECK(txn_next {condition}),
     txn         int8 NOT NULL,
     uid         int4 NOT NULL,
@@ -275,6 +281,25 @@ SET (toast_tuple_target=8160"""
     tags        bytea COMPRESSION lz4,
     geo         bytea COMPRESSION lz4,
     feature     bytea COMPRESSION lz4 NOT NULL
+) """ else """CREATE TABLE {table} (
+    txn_next    int8,
+    txn         int8,
+    uid         int4,
+    version     int4,
+    created_at  int8, -- to_timestamp(created_at / 1000)
+    updated_at  int8, -- to_timestamp(updated_at / 1000)
+    author_ts   int8, -- to_timestamp(author_ts / 1000)
+    action      int2,
+    geo_type    int2,
+    puid        int4,
+    ptxn        int8,
+    author      text,
+    app_id      text,
+    geo_grid    text,
+    id          text COLLATE "C",
+    tags        bytea COMPRESSION lz4,
+    geo         bytea COMPRESSION lz4,
+    feature     bytea COMPRESSION lz4
 ) """
         var query: String
 
@@ -301,6 +326,7 @@ SET (toast_tuple_target=8160"""
                 collectionAddIndices(sql, partName, spGist, false)
             }
         }
+        if (!DEBUG) collectionAttachTriggers(sql, id, schema, schemaOid)
 
         // Create sequence.
         val sequenceName = id + "_uid_seq";
@@ -334,9 +360,6 @@ SET (toast_tuple_target=8160"""
         // FIXME TODO enable partitioning once creation of partition table for _hst is ready
 //        query += "PARTITION BY RANGE (txn_next)"
         sql.execute(query)
-
-        // Optimizations are done on the history partitions!
-        collectionAttachTriggers(sql, id, schema, schemaOid)
     }
 
     /**

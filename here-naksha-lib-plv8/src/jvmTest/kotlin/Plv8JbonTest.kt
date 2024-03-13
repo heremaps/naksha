@@ -1,6 +1,7 @@
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.IPlv8Plan
 import com.here.naksha.lib.plv8.NakshaSession
+import com.here.naksha.lib.plv8.Static
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -193,5 +194,11 @@ class Plv8JbonTest : Plv8TestContainer() {
     }
 }""")))
         assertEquals("Feature", session.getFeatureType(feature))
+    }
+
+    @Test
+    fun testPartitioning() {
+        assertEquals(10, Static.partitionNumber("XD44QgPaxbii"))
+        assertEquals("010", Static.partitionNameForId("XD44QgPaxbii"))
     }
 }
