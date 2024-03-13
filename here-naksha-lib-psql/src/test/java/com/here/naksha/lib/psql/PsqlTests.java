@@ -264,7 +264,9 @@ abstract class PsqlTests {
         storage = null;
       }
     }
-    postgreSQLContainer.stop();
+    if (postgreSQLContainer != null) {
+      postgreSQLContainer.stop();
+    }
   }
 
 }

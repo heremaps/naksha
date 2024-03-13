@@ -22,6 +22,7 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.util.StringCache.string;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_CREATE;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_DELETE;
+import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_PURGE;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_UPDATE;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_UPSERT;
 import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
@@ -581,6 +582,8 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
       return XYZ_OP_UPSERT;
     } else if (Objects.equals(EWriteOp.DELETE.value(), action)) {
       return XYZ_OP_DELETE;
+    } else if (Objects.equals(EWriteOp.PURGE.value(), action)) {
+      return XYZ_OP_PURGE;
     }
     throw new UnsupportedOperationException(String.format("Action type %s is not supported", action));
   }

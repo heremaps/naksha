@@ -65,7 +65,9 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     }
     XyzGeometry xyzGeometry = feature.removeGeometry();
 
-    id = feature.getId();
+    if (id == null) {
+      id = feature.getId();
+    }
     final XyzNamespace xyz = feature.getProperties().getXyzNamespace();
     uuid = xyz.getUuid();
 

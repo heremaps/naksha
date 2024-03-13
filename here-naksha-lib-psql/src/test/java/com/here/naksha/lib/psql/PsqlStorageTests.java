@@ -117,7 +117,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
 
   @Override
   boolean partition() {
-    return false;
+    return true;
   }
 
   static final String SINGLE_FEATURE_ID = "TheFeature";
@@ -1216,9 +1216,9 @@ public class PsqlStorageTests extends PsqlCollectionTests {
 
       // purge
       final WriteXyzCollections purgeRequest = new WriteXyzCollections();
-      deleteRequest.add(EWriteOp.PURGE, deleteCollection);
+      purgeRequest.add(EWriteOp.PURGE, deleteCollection);
       try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursorPurge =
-               session.execute(deleteRequest).getXyzCollectionCursor()) {
+               session.execute(purgeRequest).getXyzCollectionCursor()) {
         session.commit(true);
       }
 

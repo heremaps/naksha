@@ -275,8 +275,11 @@ SET SESSION enable_seqscan = OFF;
         }
     }
 
-    internal fun xyzDelete(): ByteArray {
-        TODO("Implement me!")
+    /**
+     * Updates xyz namespace and copies feature to _del table.
+     */
+    internal fun copyToDel(collectionId: String, OLD: IMap) {
+        OLD[COL_ACTION] = ACTION_DELETE
     }
 
     /**
@@ -304,6 +307,9 @@ SET SESSION enable_seqscan = OFF;
      */
     fun triggerAfter(data: PgTrigger) {
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
+        if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
+            copyToDel(collectionId, data.OLD)
+        }
         if (data.TG_OP == TG_OP_UPDATE) {
             check(data.NEW != null) { "Missing NEW for UPDATE" }
             check(data.OLD != null) { "Missing OLD for UPDATE" }
@@ -476,6 +482,10 @@ SET (toast_tuple_target=8160,fillfactor=100
             sql.prepare("INSERT INTO $collectionIdQuoted ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN",
                     arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
         }
+        val deleteFeaturePlan: IPlv8Plan by lazy {
+            sql.prepare("DELETE FROM $collectionIdQuoted WHERE id=$1 RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING))
+        }
         try {
             // FIXME history partition creation should be moved to some kind of job that runs it once a day.
             ensureHistoryPartition(collectionId)
@@ -527,6 +537,11 @@ SET (toast_tuple_target=8160,fillfactor=100
                         // TODO: What if no row is returned?
                         val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
                         table.returnUpdated(id, xyz)
+                    } else if (xyzOp == XYZ_OP_DELETE) {
+                        val rows = asArray(deleteFeaturePlan.execute(arrayOf(id)))
+                        val row = asMap(rows[0])
+                        val xyz = xyzNsFromRow(collectionId, row)
+                        table.returnDeleted(row, xyz)
                     } else {
                         throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Unsupported operation " + XyzOp.getOpName(xyzOp), id)
                     }
@@ -644,8 +659,11 @@ SET (toast_tuple_target=8160,fillfactor=100
                         table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }
-                    if (xyzOp == XYZ_OP_DELETE) {
+                    if (xyzOp == XYZ_OP_DELETE || xyzOp == XYZ_OP_PURGE) {
                         if (existing == null) {
+                            if (xyzOp == XYZ_OP_PURGE) {
+                                Static.collectionDrop(sql, id)
+                            }
                             table.returnRetained(id)
                             continue
                         }
@@ -668,7 +686,9 @@ SET (toast_tuple_target=8160,fillfactor=100
                             }
                         }
                         existing = asMap(rows[0])
-                        Static.collectionDrop(sql, id)
+                        if (xyzOp == XYZ_OP_PURGE) {
+                            Static.collectionDrop(sql, id)
+                        }
                         table.returnDeleted(existing)
                         continue
                     }
