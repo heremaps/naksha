@@ -41,6 +41,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class EventHandlerApiTest extends ApiTest {
@@ -370,15 +371,20 @@ class EventHandlerApiTest extends ApiTest {
             .hasStreamIdHeader(streamId);
   }
 
-  @Test
-  void tc106_testCreateTagFilterHandlerWithNoTagList() throws URISyntaxException, IOException, InterruptedException {
+  @ParameterizedTest
+  @MethodSource("invalidProperties")
+  void tc106_testCreateTagFilterHandlerValidationError(String handlerProperties, String errorMessage) throws URISyntaxException, IOException, InterruptedException {
     // Given: a default handler without storageId property defined
     final String streamId = UUID.randomUUID().toString();
-    final String createJson = loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerWithNoTagList/create_event_handler.json");
-    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerWithNoTagList/response.json");
+    final String createJson =
+            loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerValidationError/create_event_handler_template.json")
+                    .formatted(handlerProperties);
+    final String expectedResponse =
+            loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerValidationError/response_template.json")
+                    .formatted(errorMessage);
 
     // When: trying to create such handler
-    final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
+    final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson.formatted(""), streamId);
 
     // Then: creating fails due to validation error
     assertThat(response)
@@ -386,4 +392,34 @@ class EventHandlerApiTest extends ApiTest {
             .hasJsonBody(expectedResponse)
             .hasStreamIdHeader(streamId);
   }
+
+  public static Stream<Arguments> invalidProperties() {
+    String blankElementMessage = "The %s parameter contains blank element";
+    return Stream.of(
+            Arguments.of(
+                    "",
+                    "At least one of [add, removeWithPrefixes, contains] lists must be not null and not empty"),
+            Arguments.of("""
+                     "add": [ null, "tag_a_1" ], "contains": [ "tag_c_1" ]
+                    """,
+                    blankElementMessage.formatted("add")),
+            Arguments.of("""
+                     "add": [ "   ", "tag_a_1" ], "contains": [ "tag_c_1" ]
+                    """,
+                    blankElementMessage.formatted("add")),
+            Arguments.of("""
+                     "add": [ "", "tag_a_1" ], "contains": [ "tag_c_1" ]
+                    """,
+                    blankElementMessage.formatted("add")),
+            Arguments.of("""
+                     "add": [ "tag_a_1" ], "contains": [ null, "tag_c_1" ]
+                    """,
+                    blankElementMessage.formatted("contains")),
+            Arguments.of("""
+                     "add": [ "tag_a_1" ], "removeWithPrefixes": [ null, "tag_r_1" ]
+                    """,
+                    blankElementMessage.formatted("removeWithPrefixes"))
+    );
+  }
+
 }

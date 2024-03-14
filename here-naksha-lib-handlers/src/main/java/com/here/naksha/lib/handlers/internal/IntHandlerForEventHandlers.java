@@ -139,7 +139,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
   private Optional<ErrorResult> errorIfpresentButHasBlankElement(@Nullable List<String> list, String listName) {
     if (list != null && list.stream().anyMatch(StringUtils::isBlank))
       return Optional.of(new ErrorResult(
-          XyzError.ILLEGAL_ARGUMENT, "List %s contains element which is blank!".formatted(listName)));
+          XyzError.ILLEGAL_ARGUMENT, "The %s parameter contains blank element".formatted(listName)));
     else return Optional.empty();
   }
 
