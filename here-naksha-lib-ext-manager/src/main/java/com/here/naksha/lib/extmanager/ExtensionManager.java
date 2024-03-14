@@ -38,8 +38,8 @@ public class ExtensionManager implements IExtensionManager {
 
   /**
    * get Isolation Class loader for given extension Id
-   * @param extensionId
-   * @return
+   * @param extensionId extension identifier
+   * @return instance of ClassLoader
    */
   @Override
   public ClassLoader getClassLoader(@NotNull String extensionId) {

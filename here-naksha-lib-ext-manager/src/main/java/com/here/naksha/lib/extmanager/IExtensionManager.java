@@ -27,8 +27,8 @@ public interface IExtensionManager {
 
   /**
    * get Isolation Class loader for given extension Id
-   * @param extensionId
-   * @return
+   * @param extensionId Extension identifier
+   * @return instance of class loader
    */
   ClassLoader getClassLoader(@NotNull String extensionId);
 }

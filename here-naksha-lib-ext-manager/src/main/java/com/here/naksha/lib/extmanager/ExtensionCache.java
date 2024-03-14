@@ -73,7 +73,7 @@ public class ExtensionCache {
         })
         .toList();
 
-    futures.stream().forEach(future -> {
+    futures.forEach(future -> {
       KVPair<Extension, File> result = null;
       try {
         result = future.get();

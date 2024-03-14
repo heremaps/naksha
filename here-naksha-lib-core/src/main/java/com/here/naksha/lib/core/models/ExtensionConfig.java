@@ -44,7 +44,7 @@ public class ExtensionConfig {
 
   @JsonCreator
   public ExtensionConfig(
-      @JsonProperty(EXPIRY) @NotNull long expiry,
+      @JsonProperty(EXPIRY) @NotNull Long expiry,
       @JsonProperty(EXTENSIONS) @Nullable List<Extension> extensions,
       @JsonProperty(WHITELIST_DELEGATE_CLASSES) @Nullable List<String> whitelistDelegateClasses) {
     this.expiry = expiry;

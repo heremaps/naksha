@@ -361,10 +361,9 @@ public final class PluginCache {
    * @param configClass The configuration-type class, for example {@code EventHandler.class}.
    * @param targetClass The target-type class, for example {@code Space.class}.
    * @param extClassLoader Extension class loader
+   * @param extensionId Extension identifier
    * @param <CONFIG>    The config-type.
    * @param <TARGET>    The target-type.
-   * @param extensionId Extension identifier
-   * @param extClassLoader Classloader to load extension class
    * @return the constructor for the event handler.
    * @throws ClassNotFoundException If no such class exists (invalid {@code className}).
    * @throws ClassCastException     If the class does not implement the {@link IEventHandler} interface.

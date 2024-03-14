@@ -1,6 +1,5 @@
 package com.here.naksha.lib.extmanager;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.models.ExtensionConfig;
@@ -9,12 +8,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.BeforeAll;
 
 public class BaseSetup {
 
@@ -24,9 +20,8 @@ public class BaseSetup {
     List<Extension> list;
     try {
       String data = Files.readAllLines(file).stream().collect(Collectors.joining());
-      list = new ObjectMapper().readValue(data, new TypeReference<List<Extension>>() {});
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+      list = new ObjectMapper().readValue(data, new TypeReference<>() {
+      });
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

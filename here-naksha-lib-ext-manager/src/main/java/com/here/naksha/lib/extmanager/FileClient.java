@@ -23,7 +23,7 @@ import java.io.IOException;
 
 public interface FileClient {
 
-  public File getFile(String path) throws IOException;
+  File getFile(String path) throws IOException;
 
-  public String getFileContent(String path) throws IOException;
+  String getFileContent(String path) throws IOException;
 }

@@ -31,19 +31,18 @@ public class ClassLoaderHelper {
 
   /**
    * Load given jar using isolation class loader and return the class loader instance
-   * @param jarFile
-   * @return
+   * @param jarFile File Instance of jar file
+   * @return ClassLoader instance of ClassLoader
    */
   public static ClassLoader getClassLoader(File jarFile, List<String> whitelistedDelegatedClasses) {
     DelegateRelationshipBuilder delegateRelationshipBuilder =
         DelegateRelationshipBuilder.builder().withIsolationLevel(IsolationLevel.FULL);
-    whitelistedDelegatedClasses.stream()
-        .forEach(pkg -> delegateRelationshipBuilder.addDelegatePreferredClassPredicate(new GlobMatcher(pkg)));
-    ClassLoader loader = LoaderBuilder.anIsolatingLoader()
+    whitelistedDelegatedClasses.forEach(
+        pkg -> delegateRelationshipBuilder.addDelegatePreferredClassPredicate(new GlobMatcher(pkg)));
+    return LoaderBuilder.anIsolatingLoader()
         .withOriginRestriction(OriginRestriction.allowByDefault())
         .withClasspath(Collections.singletonList(jarFile.toURI()))
         .withParentRelationship(delegateRelationshipBuilder.build())
         .build();
-    return loader;
   }
 }

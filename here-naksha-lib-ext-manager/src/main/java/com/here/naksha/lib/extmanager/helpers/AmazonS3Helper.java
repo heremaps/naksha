@@ -61,13 +61,11 @@ public class AmazonS3Helper implements FileClient {
     File targetFile = File.createTempFile(fileUri.getBucket(), extension);
     try (FileOutputStream fos = new FileOutputStream(targetFile)) {
       byte[] read_buf = new byte[1024];
-      int read_len = 0;
+      int read_len;
       while ((read_len = inputStream.read(read_buf)) > 0) {
         fos.write(read_buf, 0, read_len);
       }
       inputStream.close();
-    } catch (IOException e) {
-      throw e;
     }
     return targetFile;
   }
@@ -83,7 +81,7 @@ public class AmazonS3Helper implements FileClient {
     InputStream inputStream = getS3Object(fileUri);
     // Read the text input stream one line at a time.
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-      StringBuilder stringBuilder = new StringBuilder("");
+      StringBuilder stringBuilder = new StringBuilder();
       String line;
       while ((line = reader.readLine()) != null) {
         stringBuilder.append(line);
@@ -93,15 +91,15 @@ public class AmazonS3Helper implements FileClient {
   }
 
   public List<String> listKeysInBucket(String url) {
-    Boolean isTopLevel = false;
+    boolean isTopLevel = false;
     AmazonS3URI fileUri = new AmazonS3URI(url);
 
     String delimiter = "/";
-    if (fileUri.getKey() == "" || fileUri.getKey() == "/") {
+    if ("".equals(fileUri.getKey()) || "/".equals(fileUri.getKey())) {
       isTopLevel = true;
     }
 
-    ListObjectsV2Request listObjectsRequest = null;
+    ListObjectsV2Request listObjectsRequest;
     if (isTopLevel) {
       listObjectsRequest = new ListObjectsV2Request()
           .withBucketName(fileUri.getBucket())

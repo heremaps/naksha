@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 public class FileHelper implements FileClient {
   @Override
-  public File getFile(String path) throws IOException {
+  public File getFile(String path) {
     return new File(path);
   }
 

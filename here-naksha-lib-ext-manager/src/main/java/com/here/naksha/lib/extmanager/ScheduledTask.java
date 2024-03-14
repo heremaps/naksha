@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
 
 public class ScheduledTask implements Runnable {
   private static final @NotNull Logger logger = LoggerFactory.getLogger(ExtensionCache.class);
-  private ExtensionCache extensionCache;
-  private INaksha naksha;
+  private final ExtensionCache extensionCache;
+  private final INaksha naksha;
 
   public ScheduledTask(@NotNull ExtensionCache extensionCache, @NotNull INaksha naksha) {
     this.extensionCache = extensionCache;
@@ -38,7 +38,7 @@ public class ScheduledTask implements Runnable {
   public void run() {
     while (true) {
       logger.info("Extension cache refresh job started");
-      ExtensionConfig extensionConfig = null;
+      ExtensionConfig extensionConfig;
       long sleepMs = 0;
       try {
         extensionConfig = naksha.getExtensionConfig();
