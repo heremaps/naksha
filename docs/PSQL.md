@@ -315,10 +315,12 @@ The bulk write will implement these steps:
 
 - Fetch details about the collections into which to write
   - This provides information, if partitioning is supported
-- Ensure we have a transaction number (`txn`)
+- Ensure we have a transaction number (`txn()`)
 - Autogenerate ids for features not yet having some
 - Sort all features by partition-number and id
 - Query for all features using:
+  - Optimization: Do we need action?
+  - Optimization: When we have an author given (not null), we do not need to fetch author, we anyway override
   - `SELECT id, txn, uid, action, version, created_at, author, author_ts FROM table WHERE id = ANY(?) FOR UPDATE NOWAIT`
   - This will acquire row level locks, but does not wait, fail when locking fails
 - Modify UPSERT operations into either INSERT or UPDATE, based upon the result above
@@ -326,6 +328,7 @@ The bulk write will implement these steps:
 - Ensure that all UPDATE and DELETE operations
   - Fail for UPDATE or DELETE operations, when there is no head state.
   - Fail for atomic UPDATE or DELETE operations, where the head state is not the expected one (_ptxn_ and _puid_ match given _txn_ and _uid_)
+- ----------------------------------------------------------------------------------------
 - Create batch statements with order:
   - Note: For each operation we need to calculate all states upfront!
   - (1) delete feature from del-table
@@ -349,7 +352,7 @@ The bulk write will implement these steps:
 - Execute all batches in order (1-6)
 
 ### Global dictionary training (draft)
-Add support for automatic dictionary training. This is done using `pg_cron` and shoudl run ones a day. It will check all collections and update the statistics. Additionally, it will update the `default:feature` and `default:tags` links. These links (in the _meta_ table) refer to the latest dictionary to be used for encoding the _feature_ and _tags_ [JBON](./JBON.md)'s. So, when encoding new features or tags for a collection, the default behavior should be to read the latest version and encode with this.
+Add support for automatic dictionary training. This is done using `pg_cron` and should run ones a day. It will check all collections and update the statistics. Additionally, it will update the `default:feature` and `default:tags` links. These links (in the _meta_ table) refer to the latest dictionary to be used for encoding the _feature_ and _tags_ [JBON](./JBON.md)'s. So, when encoding new features or tags for a collection, the default behavior should be to read the latest version and encode with this.
 
 **Beware**: The ID encoded in the feature must not be `default:{column}`, but the unique identifier it links to. This prevents, that when the default changes, the decoding of feature or tags fail.
 
