@@ -39,6 +39,9 @@ class NakshaSession(
         val storageId: String,
         appName: String, streamId: String, appId: String, author: String? = null
 ) : JbSession(appName, streamId, appId, author) {
+
+    val bulk: NakshaBulkLoader = NakshaBulkLoader(this)
+
     /**
      * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
      */
@@ -214,9 +217,9 @@ SET SESSION enable_seqscan = OFF;
         check(version != null) { "Missing $COL_VERSION, please invoke naksha_start_session" }
         val authorTs: BigInt64? = row[COL_AUTHOR_TS]
         check(authorTs != null) { "Missing $COL_AUTHOR_TS, please invoke naksha_start_session" }
-        val author : String? = row[COL_AUTHOR]
+        val author: String? = row[COL_AUTHOR]
         check(author != null) { "Missing $COL_AUTHOR, please invoke naksha_start_session" }
-        val app_id : String? = row[COL_APP_ID]
+        val app_id: String? = row[COL_APP_ID]
         check(app_id != null) { "Missing $COL_APP_ID, please invoke naksha_start_session" }
         val geo_grid: String? = row[COL_GEO_GRID]
         check(geo_grid != null) { "Missing $COL_GEO_GRID, please invoke naksha_start_session" }
@@ -850,5 +853,20 @@ SET (toast_tuple_target=8160,fillfactor=100
     private fun isHistoryEnabled(collectionId: String): Boolean {
         val isDisabled: Boolean? = getCollectionConfig(collectionId)[NKC_DISABLE_HISTORY]
         return isDisabled != true
+    }
+
+    /**
+     * Single threaded all-or-nothing bulk write operation.
+     * As result there is row with success or error returned.
+     */
+    fun bulkWriteFeatures(
+            collectionId: String,
+            op_arr: Array<ByteArray>,
+            feature_arr: Array<ByteArray?>,
+            geo_type_arr: Array<Short>,
+            geo_arr: Array<ByteArray?>,
+            tags_arr: Array<ByteArray?>
+    ): ITable {
+        return bulk.bulkWriteFeatures(collectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
     }
 }
