@@ -352,4 +352,38 @@ class EventHandlerApiTest extends ApiTest {
             .hasStatus(404)
             .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
+
+  @Test
+  void tc105_testCreateTagFilterHandler() throws URISyntaxException, IOException, InterruptedException {
+    // Given: a default handler without storageId property defined
+    final String streamId = UUID.randomUUID().toString();
+    final String createJson = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/create_event_handler.json");
+    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/response.json");
+
+    // When: trying to create such handler
+    final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
+
+    // Then: creating fails due to validation error
+    assertThat(response)
+            .hasStatus(200)
+            .hasJsonBody(expectedResponse)
+            .hasStreamIdHeader(streamId);
+  }
+
+  @Test
+  void tc106_testCreateTagFilterHandlerWithNoTagList() throws URISyntaxException, IOException, InterruptedException {
+    // Given: a default handler without storageId property defined
+    final String streamId = UUID.randomUUID().toString();
+    final String createJson = loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerWithNoTagList/create_event_handler.json");
+    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerWithNoTagList/response.json");
+
+    // When: trying to create such handler
+    final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
+
+    // Then: creating fails due to validation error
+    assertThat(response)
+            .hasStatus(400)
+            .hasJsonBody(expectedResponse)
+            .hasStreamIdHeader(streamId);
+  }
 }

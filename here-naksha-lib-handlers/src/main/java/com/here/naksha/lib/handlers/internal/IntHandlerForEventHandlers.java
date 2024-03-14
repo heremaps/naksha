@@ -34,14 +34,13 @@ import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
-import com.here.naksha.lib.handlers.DefaultStorageHandler;
-import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
-import com.here.naksha.lib.handlers.DefaultViewHandler;
-import com.here.naksha.lib.handlers.DefaultViewHandlerProperties;
+import com.here.naksha.lib.handlers.*;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHandler> {
 
@@ -57,30 +56,33 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       return noActiveSpaceValidation(codec);
     }
     // For non-DELETE write request
-    Result basicValidation = super.validateFeature(codec);
-    if (basicValidation instanceof ErrorResult) {
-      return basicValidation;
+    Result basicValidationResult = super.validateFeature(codec);
+    if (basicValidationResult instanceof ErrorResult) {
+      return basicValidationResult;
     }
     final EventHandler eventHandler = (EventHandler) codec.getFeature();
-    Result pluginValidation = PluginPropertiesValidator.pluginValidation(eventHandler);
-    if (pluginValidation instanceof ErrorResult) {
-      return pluginValidation;
+    Result pluginValidationResult = PluginPropertiesValidator.pluginValidation(eventHandler);
+    if (pluginValidationResult instanceof ErrorResult) {
+      return pluginValidationResult;
     }
     return defaultHandlerValidation(eventHandler);
   }
 
   private Result defaultHandlerValidation(EventHandler eventHandler) {
     if (handlerClassMatches(DefaultStorageHandler.class, eventHandler)) {
-      return storageValidationError(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+      return storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
     }
     if (handlerClassMatches(DefaultViewHandler.class, eventHandler)) {
-      return propertiesValidationError(eventHandler);
+      return viewHandlerPropertiesValidation(eventHandler);
+    }
+    if (handlerClassMatches(TagFilterHandler.class, eventHandler)) {
+      return tagFilterHandlerPropertiesValidation(eventHandler);
     }
     return new SuccessResult();
   }
 
-  private @NotNull Result propertiesValidationError(EventHandler eventHandler) {
-    Result storageValidation = storageValidationError(eventHandler, DefaultViewHandlerProperties.STORAGE_ID);
+  private @NotNull Result viewHandlerPropertiesValidation(EventHandler eventHandler) {
+    Result storageValidation = storageValidation(eventHandler, DefaultViewHandlerProperties.STORAGE_ID);
 
     if (!(storageValidation instanceof SuccessResult)) {
       return storageValidation;
@@ -106,6 +108,39 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     }
 
     return spaceExistenceValidation(spaceIds);
+  }
+
+  private @NotNull Result tagFilterHandlerPropertiesValidation(EventHandler eventHandler) {
+
+    TagFilterHandlerProperties properties =
+        JsonSerializable.convert(eventHandler.getProperties(), TagFilterHandlerProperties.class);
+
+    List<String> addList = properties.getAdd();
+    List<String> removeWithPrefixesList = properties.getRemoveWithPrefixes();
+    List<String> containsList = properties.getContains();
+    if (addList == null && removeWithPrefixesList == null && containsList == null) {
+      return new ErrorResult(
+          XyzError.ILLEGAL_ARGUMENT,
+          "At least one of [%s, %s, %s] lists must be not null and not empty"
+              .formatted(
+                  TagFilterHandlerProperties.ADD_VALUES,
+                  TagFilterHandlerProperties.REMOVE_W_PREFIXES,
+                  TagFilterHandlerProperties.CONTAINS_VALUES));
+    }
+
+    return errorIfpresentButHasBlankElement(addList, TagFilterHandlerProperties.ADD_VALUES)
+        .or(() -> errorIfpresentButHasBlankElement(
+            removeWithPrefixesList, TagFilterHandlerProperties.REMOVE_W_PREFIXES))
+        .or(() -> errorIfpresentButHasBlankElement(containsList, TagFilterHandlerProperties.CONTAINS_VALUES))
+        .map(Result.class::cast)
+        .orElseGet(SuccessResult::new);
+  }
+
+  private Optional<ErrorResult> errorIfpresentButHasBlankElement(@Nullable List<String> list, String listName) {
+    if (list != null && list.stream().anyMatch(StringUtils::isBlank))
+      return Optional.of(new ErrorResult(
+          XyzError.ILLEGAL_ARGUMENT, "List %s contains element which is blank!".formatted(listName)));
+    else return Optional.empty();
   }
 
   private Result spaceExistenceValidation(List<String> spaceIds) {
@@ -141,8 +176,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     return requestedClass.getName().equals(eventHandler.getClassName());
   }
 
-  private @NotNull Result storageValidationError(
-      @NotNull EventHandler eventHandler, @NotNull String storagePropertyName) {
+  private @NotNull Result storageValidation(@NotNull EventHandler eventHandler, @NotNull String storagePropertyName) {
     Object storageIdProp = eventHandler.getProperties().get(storagePropertyName);
     if (storageIdProp == null) {
       return new ErrorResult(

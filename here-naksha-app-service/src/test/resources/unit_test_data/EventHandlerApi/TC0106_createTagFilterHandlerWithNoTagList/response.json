@@ -1,0 +1,5 @@
+{
+  "type": "ErrorResponse",
+  "error": "IllegalArgument",
+  "errorMessage": "At least one of [add, removeWithPrefixes, contains] lists must be not null and not empty"
+}
