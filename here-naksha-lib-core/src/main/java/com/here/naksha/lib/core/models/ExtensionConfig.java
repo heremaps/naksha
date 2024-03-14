@@ -31,8 +31,7 @@ public class ExtensionConfig {
 
   public static final String EXPIRY = "expiry";
   public static final String EXTENSIONS = "extensions";
-  public static final String WHITELIST_DELEGATE_CLASS = "whitelistDelegateClass";
-  public static final String EXTENSIONS_ROOT_PATH = "extensionsRootPath";
+  public static final String WHITELIST_DELEGATE_CLASSES = "whitelistDelegateClasses";
 
   @JsonProperty(EXPIRY)
   long expiry;
@@ -40,22 +39,17 @@ public class ExtensionConfig {
   @JsonProperty(EXTENSIONS)
   List<Extension> extensions;
 
-  @JsonProperty(WHITELIST_DELEGATE_CLASS)
-  List<String> whitelistDelegateClass;
-
-  @JsonProperty(EXTENSIONS_ROOT_PATH)
-  String extensionsRootPath;
+  @JsonProperty(WHITELIST_DELEGATE_CLASSES)
+  List<String> whitelistDelegateClasses;
 
   @JsonCreator
   public ExtensionConfig(
       @JsonProperty(EXPIRY) @NotNull long expiry,
       @JsonProperty(EXTENSIONS) @Nullable List<Extension> extensions,
-      @JsonProperty(EXTENSIONS_ROOT_PATH) @NotNull String extensionsRootPath,
-      @JsonProperty(WHITELIST_DELEGATE_CLASS) @Nullable List<String> whitelistDelegateClass) {
+      @JsonProperty(WHITELIST_DELEGATE_CLASSES) @Nullable List<String> whitelistDelegateClasses) {
     this.expiry = expiry;
     this.extensions = extensions;
-    this.extensionsRootPath = extensionsRootPath;
-    this.whitelistDelegateClass = whitelistDelegateClass;
+    this.whitelistDelegateClasses = whitelistDelegateClasses;
   }
 
   public long getExpiry() {
@@ -67,10 +61,6 @@ public class ExtensionConfig {
   }
 
   public List<String> getWhilelistDelegateClass() {
-    return whitelistDelegateClass;
-  }
-
-  public String getExtensionsRootPath() {
-    return extensionsRootPath;
+    return whitelistDelegateClasses;
   }
 }

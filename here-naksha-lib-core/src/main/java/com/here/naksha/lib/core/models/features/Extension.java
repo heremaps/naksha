@@ -38,9 +38,6 @@ public class Extension extends XyzFeature {
   public static final String VERSION = "version";
   public static final String INIT_CLASS_NAME = "initClassName";
 
-  @JsonProperty(EXTENSION_ID)
-  String extensionId;
-
   @JsonProperty(URL)
   String url;
 
@@ -65,14 +62,10 @@ public class Extension extends XyzFeature {
       @JsonProperty(URL) @NotNull String url,
       @JsonProperty(VERSION) @NotNull String version,
       @JsonProperty(INIT_CLASS_NAME) @Nullable String initClassName) {
-    this.extensionId = extensionId;
+    super(extensionId);
     this.url = url;
     this.version = version;
     this.initClassName = initClassName;
-  }
-
-  public String getExtensionId() {
-    return extensionId;
   }
 
   public String getUrl() {

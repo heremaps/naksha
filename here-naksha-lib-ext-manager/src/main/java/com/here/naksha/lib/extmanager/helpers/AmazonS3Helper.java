@@ -80,10 +80,9 @@ public class AmazonS3Helper implements FileClient {
   @Override
   public String getFileContent(String url) throws IOException {
     AmazonS3URI fileUri = new AmazonS3URI(url);
-    S3Object s3Object = getS3Client().getObject(fileUri.getBucket(), fileUri.getKey());
-
+    InputStream inputStream = getS3Object(fileUri);
     // Read the text input stream one line at a time.
-    try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent()))) {
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
       StringBuilder stringBuilder = new StringBuilder("");
       String line;
       while ((line = reader.readLine()) != null) {

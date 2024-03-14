@@ -113,7 +113,7 @@ public class NakshaHub implements INaksha {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
     this.nakshaHubConfig = finalCfg;
-    if (customCfg.extensionConfigParams != null) {
+    if (this.nakshaHubConfig.extensionConfigParams != null) {
       this.extensionManager = ExtensionManager.getInstance(this);
     } else {
       logger.warn("ExtensionManager is not initialised due to extensionConfigParams not found.");
@@ -291,7 +291,6 @@ public class NakshaHub implements INaksha {
     return new ExtensionConfig(
         System.currentTimeMillis() + extensionConfigParams.getIntervalMs(),
         extList,
-        extensionConfigParams.getExtensionRootPath(),
         extensionConfigParams.getWhiteListClasses());
   }
 

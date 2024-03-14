@@ -84,18 +84,11 @@ public class ExtensionCache {
     });
 
     // Removing existing extension which has been removed from the configuration
-    List<String> extIds = extensionConfig.getExtensions().stream()
-        .map(Extension::getExtensionId)
-        .toList();
+    List<String> extIds =
+        extensionConfig.getExtensions().stream().map(Extension::getId).toList();
 
     for (String key : loaderCache.keySet()) {
-      if (!extIds.contains(key)) {
-        KVPair<Extension, ClassLoader> prevValue = loaderCache.remove(key);
-        if (prevValue != null) {
-          ClassLoader prevLoader = prevValue.getValue();
-          prevLoader = null;
-        }
-      }
+      if (!extIds.contains(key)) loaderCache.remove(key);
     }
     logger.info("Extension cache size " + loaderCache.size());
   }
@@ -108,41 +101,40 @@ public class ExtensionCache {
       try {
         loader = ClassLoaderHelper.getClassLoader(jarFile, extensionConfig.getWhilelistDelegateClass());
       } catch (Exception e) {
-        logger.error("Failed to load extension jar " + extension.getExtensionId(), e);
+        logger.error("Failed to load extension jar " + extension.getId(), e);
         return;
       }
 
-      Object object = null;
       if (!isNullOrEmpty(extension.getInitClassName())) {
         try {
           Class<?> clz = loader.loadClass(extension.getInitClassName());
-          object = clz.getConstructor(INaksha.class, Extension.class).newInstance(naksha, extension);
+          clz.getConstructor(INaksha.class, Extension.class).newInstance(naksha, extension);
         } catch (ClassNotFoundException
             | InvocationTargetException
             | InstantiationException
             | NoSuchMethodException
             | IllegalAccessException e) {
           logger.error(
-              String.format(
-                  "Failed to instantiate class %s for extension %s ",
-                  extension.getInitClassName(), extension.getExtensionId()),
+              "Failed to instantiate class {} for extension {} ",
+              extension.getInitClassName(),
+              extension.getId(),
               e);
           return;
         }
       }
-
-      loaderCache.put(extension.getExtensionId(), new KVPair<Extension, ClassLoader>(extension, loader));
-      PluginCache.removeExtensionCache(extension.getExtensionId());
-      logger.info(String.format(
-          "Extension (%s,%s) is successfully loaded into the cache.",
-          extension.getExtensionId(), extension.getVersion()));
+      logger.info(
+          "Extension {},{} is successfully loaded into the cache.",
+          extension.getId(),
+          extension.getVersion());
       if (!isNullOrEmpty(extension.getInitClassName()))
-        logger.info("initClassName (%s) initialization done successfully.", extension.getInitClassName());
+        logger.info("initClassName {} initialization done successfully.", extension.getInitClassName());
+      loaderCache.put(extension.getId(), new KVPair<Extension, ClassLoader>(extension, loader));
+      PluginCache.removeExtensionCache(extension.getId());
     }
   }
 
   private boolean isLoaderMappingExist(Extension extension) {
-    KVPair<Extension, ClassLoader> existingMapping = loaderCache.get(extension.getExtensionId());
+    KVPair<Extension, ClassLoader> existingMapping = loaderCache.get(extension.getId());
     if (existingMapping == null) return false;
 
     final Extension exExtension = existingMapping.getKey();
@@ -155,7 +147,7 @@ public class ExtensionCache {
    * Lamda function which will initiate the downloading for extension jar
    */
   private KVPair<Extension, File> downloadJar(Extension extension) {
-    logger.info("Downloading jar {} with version {} ", extension.getExtensionId(), extension.getVersion());
+    logger.info("Downloading jar {} with version {} ", extension.getId(), extension.getVersion());
     FileClient client = getJarClient(extension.getUrl());
     File file = null;
     try {
@@ -168,7 +160,6 @@ public class ExtensionCache {
 
   // TODO: Can be moved to factory function. Since not used elsewhere placed it inside this class
   protected FileClient getJarClient(String url) {
-    FileClient fileClient;
     if (url.startsWith(JarClientType.S3.getType())) {
       return jarClientMap.get(JarClientType.S3.getType());
     } else if (url.startsWith(JarClientType.FILE.getType())) {

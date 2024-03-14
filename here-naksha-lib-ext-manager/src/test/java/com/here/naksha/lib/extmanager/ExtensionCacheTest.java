@@ -76,7 +76,7 @@ public class ExtensionCacheTest extends BaseSetup {
       extensionCache.buildExtensionCache(extensionConfig);
       Assertions.assertEquals(2,extensionCache.getCacheLength());
 
-      ClassLoader loader=extensionCache.getClassLoaderById(extensionConfig.getExtensions().get(0).getExtensionId());
+      ClassLoader loader=extensionCache.getClassLoaderById(extensionConfig.getExtensions().get(0).getId());
       Assertions.assertNotNull(loader);
       Assertions.assertEquals(classLoader,loader);
     }
@@ -101,7 +101,7 @@ public class ExtensionCacheTest extends BaseSetup {
       extensionConfig.getExtensions().remove(0);
       extensionCache.buildExtensionCache(extensionConfig);
       Assertions.assertEquals(1,extensionCache.getCachedExtensions().size());
-      Assertions.assertEquals(extensionConfig.getExtensions().get(0).getExtensionId(),extensionCache.getCachedExtensions().get(0).getExtensionId());
+      Assertions.assertEquals(extensionConfig.getExtensions().get(0).getId(),extensionCache.getCachedExtensions().get(0).getId());
     }
   }
 }
