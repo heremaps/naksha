@@ -19,6 +19,7 @@
 package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
 import static com.here.naksha.lib.psql.sql.SqlGeometryTransformationResolver.addTransformation;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -50,6 +51,7 @@ import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.util.ClosableChildResource;
 import com.here.naksha.lib.core.util.IndexHelper;
 import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.jbon.NakshaTxn;
 import com.here.naksha.lib.jbon.NakshaUuid;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -192,18 +194,26 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   }
 
   void commit(boolean autoCloseCursors) throws SQLException {
-    // TODO: Apply autoCloseCursors
     psqlConnection.commit();
+    clearSession();
   }
 
   void rollback(boolean autoCloseCursors) throws SQLException {
     // TODO: Apply autoCloseCursors
     psqlConnection.rollback();
+    clearSession();
   }
 
   void close(boolean autoCloseCursors) {
     // TODO: Apply autoCloseCursors
     psqlConnection.close();
+  }
+
+  private void clearSession() throws SQLException {
+    try (final Statement stmt = psqlConnection.createStatement()) {
+      stmt.execute("SELECT naksha_clear_session();");
+    }
+    psqlConnection.commit();
   }
 
   private static void assure3d(@NotNull Coordinate @NotNull [] coords) {
@@ -416,10 +426,10 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(" != 'null'");
       return;
     }
-    final Object finalValue = getFinalValue(propertyOp);
+    final Object value = propertyOp.getValue();
     if (op == POpType.STARTS_WITH) {
-      if (finalValue instanceof String) {
-        String text = (String) finalValue;
+      if (value instanceof String) {
+        String text = (String) value;
         addJsonPath(sql, pref, path.size(), true, false);
         sql.add(" LIKE ?");
         parameter.add(text + '%');
@@ -431,10 +441,10 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add("(");
       addJsonPath(sql, pref, path.size(), false, true);
       sql.add("::int8 <= ?");
-      if (!(finalValue instanceof Number)) {
+      if (!(value instanceof Number)) {
         throw new IllegalArgumentException("Value must be a number");
       }
-      final Long txn = ((Number) finalValue).longValue();
+      final Long txn = ((Number) value).longValue();
       parameter.add(txn);
       if (isHstQuery) {
         sql.add(" AND ");
@@ -443,16 +453,19 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(")");
       return;
     }
-    addOp(sql, parameter, pref, op, finalValue);
-  }
-
-  private static Object getFinalValue(POp propertyOp) {
-    if (PRef.uuid() == propertyOp.getPropertyRef()) {
-      assert propertyOp.getValue() != null;
-      return NakshaUuid.Companion.fromString(propertyOp.getValue().toString())
-          .getUid();
+    if (pref == PRef.uuid()) {
+      sql.add("(");
+      NakshaUuid nakshaUuid =
+          NakshaUuid.Companion.fromString(propertyOp.getValue().toString());
+      addOp(sql, parameter, pref, op, nakshaUuid.getUid());
+      sql.add(" AND ");
+      NakshaTxn nakshatxn = NakshaTxn.Companion.of(
+          nakshaUuid.getYear(), nakshaUuid.getMonth(), nakshaUuid.getDay(), nakshaUuid.getSeq());
+      addOp(sql, parameter, PRef.txn(), op, toLong(nakshatxn.getValue()));
+      sql.add(")");
+      return;
     }
-    return propertyOp.getValue();
+    addOp(sql, parameter, pref, op, value);
   }
 
   private static PGobject toJsonb(Object value) {

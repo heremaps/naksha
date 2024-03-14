@@ -55,6 +55,14 @@ CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, a
   }
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION naksha_clear_session() RETURNS void AS $$
+  let jb = require("jbon");
+  let session = jb.JbSession.Companion.threadLocal.get();
+  if (session != null) {
+    session.clear();
+  }
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION naksha_txn() RETURNS int8 AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();

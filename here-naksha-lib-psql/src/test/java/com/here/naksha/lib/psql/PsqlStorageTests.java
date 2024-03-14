@@ -199,7 +199,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(4, uuidFields[2].length()); // year (4- digits)
       assertTrue(uuidFields[3].length() <= 2); // month (1 or 2 digits)
       assertTrue(uuidFields[4].length() <= 2); // day (1 or 2 digits)
-      assertEquals("0", uuidFields[5]); // seq id
+      assertEquals("2", uuidFields[5]); // seq txn (first for create collection, second for create feature
+      assertEquals("0", uuidFields[6]); // uid seq
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
       assertEquals(xyz.getCreatedAt(), xyz.getUpdatedAt());
@@ -412,11 +413,14 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(4, uuidFields[GUID_YEAR].length()); // year (4- digits)
       assertTrue(uuidFields[GUID_MONTH].length() <= 2); // month (1 or 2 digits)
       assertTrue(uuidFields[GUID_DAY].length() <= 2); // day (1 or 2 digits)
-      // Note: We know that the "id" is actually the sequence number of the storage (so "i").
-      // - We created a feature (0)
-      // - We updated via upsert (2), this created a history entry (1)
-      // - Eventually we did an update (4), which again created a history entry (3)
-      assertEquals("4", uuidFields[GUID_ID]);
+      // Note: the txn seq should be 4 as:
+      // 1 - used for create collection
+      // 2 - used for insert feature
+      // 3 - used for upsert
+      // 4 - used for update
+      assertEquals("4", uuidFields[GUID_SEQ]);
+      // Note: for each new txn_seq we reset uid to 0
+      assertEquals("0", uuidFields[GUID_ID]);
       // Note: We know that if the schema was dropped, the transaction number is reset to 0.
       // - Create the collection in parent PsqlTest (0) <- commit
       // - Create the single feature (1) <- commit
@@ -639,16 +643,14 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     request.add(EWriteOp.UPDATE, feature);
 
     // when
-    final Result result = session.execute(request);
-
-    // then
-    assertInstanceOf(ErrorResult.class, result);
-    ErrorResult errorResult = (ErrorResult) result;
-    assertEquals(XyzError.CONFLICT, errorResult.reason);
-    assertTrue(
-        errorResult.message.startsWith("The feature 'TheFeature' uuid 'invalid_UUID' does not match"),
-        errorResult.message);
-    session.commit(true);
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = session.execute(request).getXyzFeatureCursor()) {
+      // then
+      // we don't read uuid from request, so it should get brand new uuid
+      cursor.next();
+      assertNotEquals(feature.xyz().getUuid(), cursor.getUuid());
+    } finally {
+      session.commit(true);
+    }
   }
 
   @Test

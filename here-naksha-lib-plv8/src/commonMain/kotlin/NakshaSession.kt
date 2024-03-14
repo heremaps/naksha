@@ -98,12 +98,12 @@ SET SESSION enable_seqscan = OFF;
     /**
      * Keeps updated(deleted) xyz namespace by after trigger, so we can return it to user.
      */
-    private val deletedFeaturesRowCache: IMap = Jb.map.newMap()
+    private var deletedFeaturesRowCache: IMap = Jb.map.newMap()
 
     /**
      * A cache to remember collections configuration <collectionId, configMap>
      */
-    val collectionConfiguration: IMap = Jb.map.newMap()
+    var collectionConfiguration: IMap = Jb.map.newMap()
 
     /**
      * The last error number as SQLState.
@@ -121,14 +121,19 @@ SET SESSION enable_seqscan = OFF;
 
     override fun reset(appName: String, streamId: String, appId: String, author: String?) {
         super.reset(appName, streamId, appId, author)
+        clear()
+    }
+
+    override fun clear() {
+        super.clear()
         this._txn = null
         this._txts = null
         this._xactId = null
         this.errNo = null
         this.errMsg = null
         this.uid = 0
+        this.deletedFeaturesRowCache = Jb.map.newMap()
     }
-
 
     /**
      * Internally invoked by the triggers before writing into history to ensure that the history partition exists.
