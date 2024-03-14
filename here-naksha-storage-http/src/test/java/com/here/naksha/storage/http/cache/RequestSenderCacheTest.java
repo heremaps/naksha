@@ -227,12 +227,14 @@ class RequestSenderCacheTest {
             TimeUnit.HOURS
     );
     AtomicReference<RequestSender> senderId1 = new AtomicReference<>();
+    AtomicReference<RequestSender> senderId1Copy = new AtomicReference<>();
     AtomicReference<RequestSender> senderId1IntChanged = new AtomicReference<>();
     AtomicReference<RequestSender> senderId1MapChanged = new AtomicReference<>();
 
     // Tests
     List<Thread> threads = List.of(
             new Thread(() -> senderId1.set(cache.getSenderWith(PROP_ID_1))),
+            new Thread(() -> senderId1Copy.set(cache.getSenderWith(PROP_ID_1_COPY))),
             new Thread(() -> senderId1IntChanged.set(cache.getSenderWith(PROP_ID_1_INT_CHANGED))),
             new Thread(() -> senderId1MapChanged.set(cache.getSenderWith(PROP_ID_1_MAP_CHANGED)))
     );
@@ -242,6 +244,7 @@ class RequestSenderCacheTest {
     }
 
     assertTrue(senderId1.get().hasKeyProps(PROP_ID_1));
+    assertTrue(senderId1Copy.get().hasKeyProps(PROP_ID_1_COPY));
     assertTrue(senderId1IntChanged.get().hasKeyProps(PROP_ID_1_INT_CHANGED));
     assertTrue(senderId1MapChanged.get().hasKeyProps(PROP_ID_1_MAP_CHANGED));
   }

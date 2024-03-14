@@ -29,7 +29,6 @@ public class RequestSenderCache {
 
   public static final int CLEANER_PERIOD_HOURS = 8;
   private final ConcurrentMap<String, RequestSender> requestSenders;
-  private final ScheduledFuture<?> cleaner;
 
   private RequestSenderCache() {
     this(new ConcurrentHashMap<>(), CLEANER_PERIOD_HOURS, TimeUnit.HOURS);
@@ -37,7 +36,7 @@ public class RequestSenderCache {
 
   RequestSenderCache(ConcurrentMap<String, RequestSender> requestSenders, int cleanPeriod, TimeUnit cleanPeriodUnit) {
     this.requestSenders = requestSenders;
-    this.cleaner = Executors.newSingleThreadScheduledExecutor()
+    Executors.newSingleThreadScheduledExecutor()
         .scheduleAtFixedRate(requestSenders::clear, cleanPeriod, cleanPeriod, cleanPeriodUnit);
   }
 
