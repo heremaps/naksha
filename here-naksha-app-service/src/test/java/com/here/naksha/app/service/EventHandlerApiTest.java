@@ -33,6 +33,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandler;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -160,6 +161,131 @@ class EventHandlerApiTest extends ApiTest {
         .hasStatus(200)
         .hasJsonBody(expectedResponse)
         .hasStreamIdHeader(streamId);
+  }
+
+  @ParameterizedTest
+  @MethodSource("validTagFilterProperties")
+  void tc105_testCreateTagFilterHandler(String handlerProperties) throws URISyntaxException, IOException, InterruptedException {
+    final String streamId = UUID.randomUUID().toString();
+    final String handlerId = "tag-filter-handler-create-" + Base64.getEncoder().encodeToString(handlerProperties.getBytes());
+    final String createJson = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/create_event_handler_template.json").formatted(handlerId,handlerProperties);
+    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/response_template.json").formatted(handlerId,handlerProperties);
+
+
+    final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
+
+    assertThat(response)
+            .hasStatus(200)
+            .hasJsonBody(expectedResponse)
+            .hasStreamIdHeader(streamId);
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidTagFilterProperties")
+  void tc106_testCreateTagFilterHandlerValidationError(String handlerProperties, String errorMessage) throws URISyntaxException, IOException, InterruptedException {
+    final String streamId = UUID.randomUUID().toString();
+    final String createJson =
+            loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerValidationError/create_event_handler_template.json")
+                    .formatted(handlerProperties);
+    final String expectedResponse =
+            loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerValidationError/response_template.json")
+                    .formatted(errorMessage);
+
+    final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
+
+    assertThat(response)
+            .hasStatus(400)
+            .hasJsonBody(expectedResponse)
+            .hasStreamIdHeader(streamId);
+  }
+
+  @ParameterizedTest
+  @MethodSource("validTagFilterProperties")
+  void tc107_testUpdateTagFilterHandler(String handlerProperties) throws URISyntaxException, IOException, InterruptedException {
+    final String streamId = UUID.randomUUID().toString();
+    final String handlerId = "tag-filter-handler-update-" + Base64.getEncoder().encodeToString(handlerProperties.getBytes());
+    final String createJson = loadFileOrFail("EventHandlerApi/TC0107_updateTagFilterHandler/create_event_handler_template.json").formatted(handlerId);
+    final String updateJson = loadFileOrFail("EventHandlerApi/TC0107_updateTagFilterHandler/update_event_handler_template.json").formatted(handlerId, handlerProperties);
+    final String expectedBody = loadFileOrFail("EventHandlerApi/TC0107_updateTagFilterHandler/response_template.json").formatted(handlerId);
+
+    final HttpResponse<String> createResponse = nakshaClient.post("hub/handlers", createJson, streamId);
+    final HttpResponse<String> updateResponse = nakshaClient.put("hub/handlers/" + handlerId, updateJson, streamId);
+
+    assertThat(createResponse).hasStatus(200);
+    assertThat(updateResponse)
+            .hasStatus(200)
+            .hasJsonBody(expectedBody)
+            .hasStreamIdHeader(streamId);
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidTagFilterProperties")
+  void tc108_testUpdateTagFilterHandlerValidationError(String handlerProperties, String errorMessage) throws URISyntaxException, IOException, InterruptedException {
+    final String streamId = UUID.randomUUID().toString();
+    final String handlerId = "tag-filter-handler-invalid-update-" + Base64.getEncoder().encodeToString(handlerProperties.getBytes());
+    final String createJson = loadFileOrFail("EventHandlerApi/TC0108_updateTagFilterHandlerValidationError/create_event_handler_template.json").formatted(handlerId);
+    final String updateJson = loadFileOrFail("EventHandlerApi/TC0108_updateTagFilterHandlerValidationError/update_event_handler_template.json").formatted(handlerId,handlerProperties);
+    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0108_updateTagFilterHandlerValidationError/response_template.json").formatted(errorMessage);
+
+    final HttpResponse<String> createResponse = nakshaClient.post("hub/handlers", createJson, streamId);
+    final HttpResponse<String> updateResponse = nakshaClient.put("hub/handlers/" + handlerId, updateJson, streamId);
+
+    assertThat(createResponse).hasStatus(200);
+    assertThat(updateResponse)
+            .hasStatus(400)
+            .hasJsonBody(expectedResponse)
+            .hasStreamIdHeader(streamId);
+  }
+
+  public static Stream<Arguments> validTagFilterProperties() {
+    return Stream.of(
+            Arguments.of("""
+                         "add": [ "tag_a_1" ],
+                         "removeWithPrefixes": [ "tag_r_1" ],
+                         "contains": [ "tag_c_1" ]
+                    """),
+            Arguments.of("""
+                         "add": null,
+                         "removeWithPrefixes": null,
+                         "contains": [ "tag_c_1" ]
+                    """),
+            Arguments.of("""
+                         "add": [ "tag_a_1" ]
+                    """)
+    );
+  }
+
+  public static Stream<Arguments> invalidTagFilterProperties() {
+    String blankElementMessage = "The %s parameter contains blank element";
+    return Stream.of(
+            Arguments.of(
+                    "",
+                    "At least one of [add, removeWithPrefixes, contains] parameters must be set"),
+            Arguments.of("""
+                     "add": [ ], "contains": [ "tag_c_1" ]
+                    """,
+                    "The add parameter cannot be an empty list"),
+            Arguments.of("""
+                     "add": [ null, "tag_a_1" ], "contains": [ "tag_c_1" ]
+                    """,
+                    blankElementMessage.formatted("add")),
+            Arguments.of("""
+                     "add": [ "   ", "tag_a_1" ], "contains": [ "tag_c_1" ]
+                    """,
+                    blankElementMessage.formatted("add")),
+            Arguments.of("""
+                     "add": [ "", "tag_a_1" ], "contains": [ "tag_c_1" ]
+                    """,
+                    blankElementMessage.formatted("add")),
+            Arguments.of("""
+                     "add": [ "tag_a_1" ], "contains": [ null, "tag_c_1" ]
+                    """,
+                    blankElementMessage.formatted("contains")),
+            Arguments.of("""
+                     "add": [ "tag_a_1" ], "removeWithPrefixes": [ null, "tag_r_1" ]
+                    """,
+                    blankElementMessage.formatted("removeWithPrefixes"))
+    );
   }
 
   @Test
@@ -353,73 +479,4 @@ class EventHandlerApiTest extends ApiTest {
             .hasStatus(404)
             .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
-
-  @Test
-  void tc105_testCreateTagFilterHandler() throws URISyntaxException, IOException, InterruptedException {
-    // Given: a default handler without storageId property defined
-    final String streamId = UUID.randomUUID().toString();
-    final String createJson = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/create_event_handler.json");
-    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/response.json");
-
-    // When: trying to create such handler
-    final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
-
-    // Then: creating fails due to validation error
-    assertThat(response)
-            .hasStatus(200)
-            .hasJsonBody(expectedResponse)
-            .hasStreamIdHeader(streamId);
-  }
-
-  @ParameterizedTest
-  @MethodSource("invalidProperties")
-  void tc106_testCreateTagFilterHandlerValidationError(String handlerProperties, String errorMessage) throws URISyntaxException, IOException, InterruptedException {
-    // Given: a default handler without storageId property defined
-    final String streamId = UUID.randomUUID().toString();
-    final String createJson =
-            loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerValidationError/create_event_handler_template.json")
-                    .formatted(handlerProperties);
-    final String expectedResponse =
-            loadFileOrFail("EventHandlerApi/TC0106_createTagFilterHandlerValidationError/response_template.json")
-                    .formatted(errorMessage);
-
-    // When: trying to create such handler
-    final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson.formatted(""), streamId);
-
-    // Then: creating fails due to validation error
-    assertThat(response)
-            .hasStatus(400)
-            .hasJsonBody(expectedResponse)
-            .hasStreamIdHeader(streamId);
-  }
-
-  public static Stream<Arguments> invalidProperties() {
-    String blankElementMessage = "The %s parameter contains blank element";
-    return Stream.of(
-            Arguments.of(
-                    "",
-                    "At least one of [add, removeWithPrefixes, contains] lists must be not null and not empty"),
-            Arguments.of("""
-                     "add": [ null, "tag_a_1" ], "contains": [ "tag_c_1" ]
-                    """,
-                    blankElementMessage.formatted("add")),
-            Arguments.of("""
-                     "add": [ "   ", "tag_a_1" ], "contains": [ "tag_c_1" ]
-                    """,
-                    blankElementMessage.formatted("add")),
-            Arguments.of("""
-                     "add": [ "", "tag_a_1" ], "contains": [ "tag_c_1" ]
-                    """,
-                    blankElementMessage.formatted("add")),
-            Arguments.of("""
-                     "add": [ "tag_a_1" ], "contains": [ null, "tag_c_1" ]
-                    """,
-                    blankElementMessage.formatted("contains")),
-            Arguments.of("""
-                     "add": [ "tag_a_1" ], "removeWithPrefixes": [ null, "tag_r_1" ]
-                    """,
-                    blankElementMessage.formatted("removeWithPrefixes"))
-    );
-  }
-
 }

@@ -21,6 +21,7 @@ package com.here.naksha.lib.handlers.internal;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.*;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
@@ -121,26 +122,31 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     if (addList == null && removeWithPrefixesList == null && containsList == null) {
       return new ErrorResult(
           XyzError.ILLEGAL_ARGUMENT,
-          "At least one of [%s, %s, %s] lists must be not null and not empty"
-              .formatted(
-                  TagFilterHandlerProperties.ADD_VALUES,
-                  TagFilterHandlerProperties.REMOVE_W_PREFIXES,
-                  TagFilterHandlerProperties.CONTAINS_VALUES));
+          "At least one of [%s, %s, %s] parameters must be set"
+              .formatted(ADD_VALUES, REMOVE_W_PREFIXES, CONTAINS_VALUES));
     }
 
-    return errorIfpresentButHasBlankElement(addList, TagFilterHandlerProperties.ADD_VALUES)
-        .or(() -> errorIfpresentButHasBlankElement(
-            removeWithPrefixesList, TagFilterHandlerProperties.REMOVE_W_PREFIXES))
-        .or(() -> errorIfpresentButHasBlankElement(containsList, TagFilterHandlerProperties.CONTAINS_VALUES))
+    return errorIfInvalidList(addList, ADD_VALUES)
+        .or(() -> errorIfInvalidList(removeWithPrefixesList, REMOVE_W_PREFIXES))
+        .or(() -> errorIfInvalidList(containsList, CONTAINS_VALUES))
         .map(Result.class::cast)
         .orElseGet(SuccessResult::new);
   }
 
-  private Optional<ErrorResult> errorIfpresentButHasBlankElement(@Nullable List<String> list, String listName) {
-    if (list != null && list.stream().anyMatch(StringUtils::isBlank))
+  /**
+   * @return appropriate {@link ErrorResult} if the list is not null and:
+   * <ul><li>is empty</li>OR<li>contains at least one null/blank element</li></ul>
+   * Otherwise returns {@link Optional#empty()}
+   */
+  private Optional<ErrorResult> errorIfInvalidList(@Nullable List<String> list, String listName) {
+    if (list == null) return Optional.empty();
+    if (list.isEmpty())
+      return Optional.of(new ErrorResult(
+          XyzError.ILLEGAL_ARGUMENT, "The %s parameter cannot be an empty list".formatted(listName)));
+    if (list.stream().anyMatch(StringUtils::isBlank))
       return Optional.of(new ErrorResult(
           XyzError.ILLEGAL_ARGUMENT, "The %s parameter contains blank element".formatted(listName)));
-    else return Optional.empty();
+    return Optional.empty();
   }
 
   private Result spaceExistenceValidation(List<String> spaceIds) {
