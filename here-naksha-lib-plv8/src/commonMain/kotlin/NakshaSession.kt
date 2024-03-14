@@ -298,8 +298,7 @@ SET SESSION enable_seqscan = OFF;
         }
         OLD[COL_UPDATE_AT] = txnTs
         OLD[COL_APP_ID] = appId
-        // FIXME should we change uid?
-        OLD[COL_UID] = uid++
+        OLD[COL_UID] = uid
         val collectionConfig = getCollectionConfig(collectionId)
         val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
         if (autoPurge != true) {
