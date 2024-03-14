@@ -35,10 +35,23 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
 public class AmazonS3Helper implements FileClient {
-  private AmazonS3 s3Client;
+  private static AmazonS3 s3Client;
 
   public AmazonS3Helper() {
-    s3Client = AmazonS3ClientBuilder.standard().build();
+    // NOTE
+    // we avoid upfront initialization of s3Client to avoid exception for executions,
+    // where AWS S3 connectivity is not mandatory.
+  }
+
+  public AmazonS3 getS3Client() {
+    if (s3Client == null) {
+      synchronized (AmazonS3Helper.class) {
+        if (s3Client == null) {
+          s3Client = AmazonS3ClientBuilder.standard().build();
+        }
+      }
+    }
+    return s3Client;
   }
 
   public File getFile(@NotNull String url) throws IOException {
@@ -60,14 +73,14 @@ public class AmazonS3Helper implements FileClient {
   }
 
   public InputStream getS3Object(AmazonS3URI fileUri) {
-    S3Object s3Object = s3Client.getObject(fileUri.getBucket(), fileUri.getKey());
+    S3Object s3Object = getS3Client().getObject(fileUri.getBucket(), fileUri.getKey());
     return s3Object.getObjectContent();
   }
 
   @Override
   public String getFileContent(String url) throws IOException {
     AmazonS3URI fileUri = new AmazonS3URI(url);
-    S3Object s3Object = s3Client.getObject(fileUri.getBucket(), fileUri.getKey());
+    S3Object s3Object = getS3Client().getObject(fileUri.getBucket(), fileUri.getKey());
 
     // Read the text input stream one line at a time.
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent()))) {
@@ -100,7 +113,7 @@ public class AmazonS3Helper implements FileClient {
           .withPrefix(fileUri.getKey())
           .withDelimiter(delimiter);
     }
-    ListObjectsV2Result objects = s3Client.listObjectsV2(listObjectsRequest);
+    ListObjectsV2Result objects = getS3Client().listObjectsV2(listObjectsRequest);
     return objects.getCommonPrefixes();
   }
 }
