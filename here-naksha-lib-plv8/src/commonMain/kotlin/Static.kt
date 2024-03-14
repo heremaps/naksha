@@ -15,6 +15,20 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 object Static {
+
+    /**
+     * Config for naksha_collection
+     */
+    @JvmStatic
+    internal val nakshaCollectionConfig = newMap()
+
+    init {
+        nakshaCollectionConfig.put(NKC_PARTITION, false)
+        nakshaCollectionConfig.put(NKC_AUTO_PURGE, false)
+        nakshaCollectionConfig.put(NKC_POINTS_ONLY, false)
+        nakshaCollectionConfig.put(NKC_DISABLE_HISTORY, false)
+    }
+
     @JvmStatic
     fun initStorage(sql: IPlv8Sql, schema: String) {
         val schemaOid: Int = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
@@ -356,7 +370,7 @@ SET (toast_tuple_target=8160"""
         val hstName = id + "_hst"
         val hstNameQuoted = sql.quoteIdent(hstName)
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
-        query = query.replace("{condition}", "> 0")
+        query = query.replace("{condition}", ">= 0")
         query += "PARTITION BY RANGE (txn_next)"
         sql.execute(query)
     }
@@ -410,7 +424,6 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
     }
 
     /**
-     *
      * @param collectionId has to be pure (without _hst suffix).
      */
     @JvmStatic

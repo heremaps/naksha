@@ -26,7 +26,7 @@ class NakshaSessionTest : Plv8TestContainer() {
         createCollection(session = session, collectionId = collectionId, partition = true, disableHistory = false)
 
         // when
-        session.ensureHistoryPartition(collectionId)
+        session.ensureHistoryPartition(collectionId, session.txn())
 
         // then
         assertTrue(session.collectionConfiguration.contains(collectionId))

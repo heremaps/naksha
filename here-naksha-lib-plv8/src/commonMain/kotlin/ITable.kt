@@ -81,16 +81,18 @@ interface ITable {
     /**
      * Returns a successful deletion.
      * @param row The database row that was deleted.
+     * @param xyz The new XYZ namespace produced for deleted record.
      */
-    fun returnDeleted(row: IMap) {
-        returnRow(XYZ_EXEC_DELETED, row)
+    fun returnDeleted(row: IMap, xyz: ByteArray? = null) {
+        returnRow(XYZ_EXEC_DELETED, row, xyz)
     }
 
     /**
      * Returns a successful purge.
      * @param row The database row that was purged.
+     * @param xyz The new XYZ namespace produced for purged record.
      */
-    fun returnPurged(row: IMap) {
+    fun returnPurged(row: IMap, xyz: ByteArray? = null) {
         returnRow(XYZ_EXEC_PURGED, row)
     }
 
@@ -137,11 +139,11 @@ interface ITable {
      * @param op The executed operation.
      * @param row The database row to return, will be mapped to the return row.
      */
-    fun returnRow(op: String, row: IMap) {
+    fun returnRow(op: String, row: IMap, xyz: ByteArray? = null) {
         val map = Jb.map.newMap()
         map[RET_OP] = op
         map[RET_ID] = row[COL_ID]
-        map[RET_XYZ] = null // TODO: Fix this, we need to build the XYZ NS
+        map[RET_XYZ] = xyz
         map[RET_TAGS] = row[COL_TAGS]
         map[RET_GEO_TYPE] = row[COL_GEO_TYPE]
         map[RET_GEOMETRY] = row[COL_GEOMETRY]

@@ -5,6 +5,7 @@ package com.here.naksha.lib.plv8
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_MIN
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_NEXT
+import com.here.naksha.lib.plv8.Static.nakshaCollectionConfig
 import kotlinx.datetime.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -95,9 +96,14 @@ SET SESSION enable_seqscan = OFF;
     private lateinit var historyPartitionCache: IMap
 
     /**
+     * Keeps updated(deleted) xyz namespace by after trigger, so we can return it to user.
+     */
+    private var deletedFeaturesRowCache: IMap = Jb.map.newMap()
+
+    /**
      * A cache to remember collections configuration <collectionId, configMap>
      */
-    val collectionConfiguration: IMap = Jb.map.newMap()
+    var collectionConfiguration: IMap = Jb.map.newMap()
 
     /**
      * The last error number as SQLState.
@@ -109,26 +115,34 @@ SET SESSION enable_seqscan = OFF;
      */
     var errMsg: String? = null
 
+    init {
+        collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
+    }
+
     override fun reset(appName: String, streamId: String, appId: String, author: String?) {
         super.reset(appName, streamId, appId, author)
+        clear()
+    }
+
+    override fun clear() {
+        super.clear()
         this._txn = null
         this._txts = null
         this._xactId = null
         this.errNo = null
         this.errMsg = null
         this.uid = 0
+        this.deletedFeaturesRowCache = Jb.map.newMap()
     }
-
 
     /**
      * Internally invoked by the triggers before writing into history to ensure that the history partition exists.
      * @param collectionId The collection identifier.
      */
-    fun ensureHistoryPartition(collectionId: String) {
+    fun ensureHistoryPartition(collectionId: String, txn: NakshaTxn) {
         val collectionConfig = getCollectionConfig(collectionId)
         if (isHistoryEnabled(collectionId)) {
             // Query current transaction.
-            val txn = txn()
             val hstPartName = Static.hstPartitionNameForId(collectionId, txn)
             if (!historyPartitionCache.containsKey(hstPartName)) {
                 val spGist: Boolean = collectionConfig[NKC_POINTS_ONLY] ?: false
@@ -263,10 +277,9 @@ SET SESSION enable_seqscan = OFF;
     }
 
     /**
-     *  Updates XyzNamespace columns of OLD feature version, and moves it to _hst.
+     *  Saves OLD in _hst.
      */
-    internal fun xyzUpdateHst(collectionId: String, NEW: IMap, OLD: IMap) {
-        OLD[COL_TXN_NEXT] = NEW[COL_TXN]
+    internal fun saveInHst(collectionId: String, OLD: IMap) {
         if (isHistoryEnabled(collectionId)) {
             // TODO move it outside and run it once
             val collectionIdQuoted = sql.quoteIdent("${collectionId}_hst")
@@ -275,8 +288,28 @@ SET SESSION enable_seqscan = OFF;
         }
     }
 
-    internal fun xyzDelete(): ByteArray {
-        TODO("Implement me!")
+    /**
+     * Updates xyz namespace and copies feature to _del table.
+     */
+    internal fun copyToDel(collectionId: String, OLD: IMap) {
+        val txn = txn()
+        val txnTs = txnTs()
+        OLD[COL_TXN] = txn.value
+        OLD[COL_TXN_NEXT] = Jb.int64.ZERO()
+        OLD[COL_ACTION] = ACTION_DELETE.toShort()
+        OLD[COL_AUTHOR] = author ?: appId
+        if (author != null) {
+            OLD[COL_AUTHOR_TS] = txnTs
+        }
+        OLD[COL_UPDATE_AT] = txnTs
+        OLD[COL_APP_ID] = appId
+        OLD[COL_UID] = uid
+        val collectionConfig = getCollectionConfig(collectionId)
+        val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
+        if (autoPurge != true) {
+            val collectionIdQuoted = sql.quoteIdent("${collectionId}_del")
+            sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE]))
+        }
     }
 
     /**
@@ -304,10 +337,18 @@ SET SESSION enable_seqscan = OFF;
      */
     fun triggerAfter(data: PgTrigger) {
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
+        ensureHistoryPartition(collectionId, txn())
+        if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
+            ensureHistoryPartition(collectionId, NakshaTxn(Jb.int64.ZERO()))
+            copyToDel(collectionId, data.OLD)
+            saveInHst(collectionId, data.OLD)
+            deletedFeaturesRowCache.put(data.OLD[COL_ID]!!, data.OLD)
+        }
         if (data.TG_OP == TG_OP_UPDATE) {
             check(data.NEW != null) { "Missing NEW for UPDATE" }
             check(data.OLD != null) { "Missing OLD for UPDATE" }
-            xyzUpdateHst(collectionId, data.NEW, data.OLD)
+            data.OLD[COL_TXN_NEXT] = data.NEW[COL_TXN]
+            saveInHst(collectionId, data.OLD)
         }
     }
 
@@ -466,6 +507,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         val opReader = XyzOp()
         val featureReader = JbFeature()
         val collectionIdQuoted = sql.quoteIdent(collectionId)
+        val collectionDelQuoted = sql.quoteIdent(collectionId + "_del")
         val updatePlan: IPlv8Plan by lazy {
             sql.prepare("""UPDATE $collectionIdQuoted
                         SET geo_grid=$2,geo_type=$3,geo=$4,tags=$5,feature=$6,action=$ACTION_UPDATE
@@ -476,10 +518,24 @@ SET (toast_tuple_target=8160,fillfactor=100
             sql.prepare("INSERT INTO $collectionIdQuoted ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN",
                     arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
         }
-        try {
-            // FIXME history partition creation should be moved to some kind of job that runs it once a day.
-            ensureHistoryPartition(collectionId)
+        val deleteFeaturePlan: IPlv8Plan by lazy {
+            sql.prepare("DELETE FROM $collectionIdQuoted WHERE id=$1 RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING))
+        }
+        val deleteFeatureUuidPlan: IPlv8Plan by lazy {
+            sql.prepare("DELETE FROM $collectionIdQuoted WHERE id=$1 and uuid=$2 RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING, SQL_INT32))
+        }
+        val purgeFeaturePlan: IPlv8Plan by lazy {
+            sql.prepare("DELETE FROM $collectionDelQuoted WHERE id=$1 RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING))
+        }
+        val purgeFeatureUuidPlan: IPlv8Plan by lazy {
+            sql.prepare("DELETE FROM $collectionDelQuoted WHERE id=$1 and uuid=$2 RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING, SQL_INT32))
+        }
 
+        try {
             var i = 0
             while (i < op_arr.size) {
                 var id: String? = null
@@ -527,6 +583,26 @@ SET (toast_tuple_target=8160,fillfactor=100
                         // TODO: What if no row is returned?
                         val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
                         table.returnUpdated(id, xyz)
+                    } else if (xyzOp == XYZ_OP_DELETE || xyzOp == XYZ_OP_PURGE) {
+                        var rows = if (uuid != null) {
+                            asArray(deleteFeatureUuidPlan.execute(arrayOf(id, uuid)))
+                        } else {
+                            asArray(deleteFeaturePlan.execute(arrayOf(id)))
+                        }
+                        if (xyzOp == XYZ_OP_PURGE) {
+                            rows = if (uuid != null) {
+                                asArray(purgeFeatureUuidPlan.execute(arrayOf(id, uuid)))
+                            } else {
+                                asArray(purgeFeaturePlan.execute(arrayOf(id)))
+                            }
+                            val row = asMap(rows[0])
+                            val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
+                            table.returnPurged(row, xyz)
+                        } else {
+                            val row = asMap(rows[0])
+                            val xyz = xyzNsFromRow(collectionId, deletedFeaturesRowCache[id]!!)
+                            table.returnDeleted(row, xyz)
+                        }
                     } else {
                         throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Unsupported operation " + XyzOp.getOpName(xyzOp), id)
                     }
@@ -644,8 +720,11 @@ SET (toast_tuple_target=8160,fillfactor=100
                         table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }
-                    if (xyzOp == XYZ_OP_DELETE) {
+                    if (xyzOp == XYZ_OP_DELETE || xyzOp == XYZ_OP_PURGE) {
                         if (existing == null) {
+                            if (xyzOp == XYZ_OP_PURGE) {
+                                Static.collectionDrop(sql, id)
+                            }
                             table.returnRetained(id)
                             continue
                         }
@@ -668,7 +747,9 @@ SET (toast_tuple_target=8160,fillfactor=100
                             }
                         }
                         existing = asMap(rows[0])
-                        Static.collectionDrop(sql, id)
+                        if (xyzOp == XYZ_OP_PURGE) {
+                            Static.collectionDrop(sql, id)
+                        }
                         table.returnDeleted(existing)
                         continue
                     }
@@ -756,7 +837,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         } else {
             val collectionsSearchRows = asArray(sql.execute("select $COL_FEATURE from $NKC_TABLE where $COL_ID = $1", arrayOf(collectionId)))
             if (collectionsSearchRows.isEmpty()) {
-                throw RuntimeException("collection $collectionId does not exist")
+                throw RuntimeException("collection $collectionId does not exist in $NKC_TABLE")
             }
             val cols = asMap(collectionsSearchRows[0])
             val jbFeature = JbFeature().mapBytes(cols[COL_FEATURE])

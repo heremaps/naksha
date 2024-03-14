@@ -134,6 +134,7 @@ public abstract class WriteRequest<
     codec.setOp(DELETE);
     codec.setId(id);
     codec.setUuid(uuid);
+    codec.decodeXyzOp(null);
     codec.isDecoded = true;
     features.add(codec);
     return self();

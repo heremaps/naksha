@@ -55,6 +55,14 @@ CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, a
   }
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION naksha_clear_session() RETURNS void AS $$
+  let jb = require("jbon");
+  let session = jb.JbSession.Companion.threadLocal.get();
+  if (session != null) {
+    session.clear();
+  }
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION naksha_txn() RETURNS int8 AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
@@ -149,7 +157,10 @@ CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_hst_partition_id(id text, txn_next int8) RETURNS int4 AS $$
-  return require("naksha").Static.hstPartitionNameForId(id, txn_next);
+  let naksha = require("naksha");
+  let jbon = require("jbon");
+  let session = naksha.NakshaSession.Companion.get();
+  return naksha.Static.hstPartitionNameForId(id, new jbon.NakshaTxn(txn_next));
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_geometry(geo_type int2, geo_bytes bytea) RETURNS geometry AS
