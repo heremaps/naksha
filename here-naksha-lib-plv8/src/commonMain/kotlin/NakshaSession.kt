@@ -5,6 +5,7 @@ package com.here.naksha.lib.plv8
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_MIN
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_NEXT
+import com.here.naksha.lib.plv8.Static.nakshaCollectionConfig
 import kotlinx.datetime.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -95,10 +96,14 @@ SET SESSION enable_seqscan = OFF;
     private lateinit var historyPartitionCache: IMap
 
     /**
-     * A cache to remember which collection configuration i.e. whether _hst is enabled or not
-     * and the value is just _true_.
+     * Keeps updated(deleted) xyz namespace by after trigger, so we can return it to user.
      */
-    private lateinit var collectionConfiguration: IMap
+    private var deletedFeaturesRowCache: IMap = Jb.map.newMap()
+
+    /**
+     * A cache to remember collections configuration <collectionId, configMap>
+     */
+    var collectionConfiguration: IMap = Jb.map.newMap()
 
     /**
      * The last error number as SQLState.
@@ -110,26 +115,40 @@ SET SESSION enable_seqscan = OFF;
      */
     var errMsg: String? = null
 
+    init {
+        collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
+    }
+
     override fun reset(appName: String, streamId: String, appId: String, author: String?) {
         super.reset(appName, streamId, appId, author)
+        clear()
+    }
+
+    override fun clear() {
+        super.clear()
         this._txn = null
         this._txts = null
         this._xactId = null
         this.errNo = null
         this.errMsg = null
         this.uid = 0
+        this.deletedFeaturesRowCache = Jb.map.newMap()
     }
-
 
     /**
      * Internally invoked by the triggers before writing into history to ensure that the history partition exists.
-     * @param id The collection identifier.
+     * @param collectionId The collection identifier.
      */
-    fun ensureHistoryPartition(id: String) {
-        // Query current transaction.
-        val txn = txn()
-        if (!historyPartitionCache.containsKey(id)) {
-            // TODO: Create the corresponding history partition (txn_next should match txn())
+    fun ensureHistoryPartition(collectionId: String, txn: NakshaTxn) {
+        val collectionConfig = getCollectionConfig(collectionId)
+        if (isHistoryEnabled(collectionId)) {
+            // Query current transaction.
+            val hstPartName = Static.hstPartitionNameForId(collectionId, txn)
+            if (!historyPartitionCache.containsKey(hstPartName)) {
+                val spGist: Boolean = collectionConfig[NKC_POINTS_ONLY] ?: false
+                Static.createHstPartition(sql, collectionId, txn, spGist)
+                historyPartitionCache.put(hstPartName, true)
+            }
         }
     }
 
@@ -258,12 +277,10 @@ SET SESSION enable_seqscan = OFF;
     }
 
     /**
-     *  Updates XyzNamespace columns of OLD feature version, and moves it to _hst.
+     *  Saves OLD in _hst.
      */
-    internal fun xyzUpdateHst(collectionId: String, NEW: IMap, OLD: IMap) {
-        OLD[COL_TXN_NEXT] = NEW[COL_TXN]
-        val isHstEnabled = true
-        if (isHstEnabled) {
+    internal fun saveInHst(collectionId: String, OLD: IMap) {
+        if (isHistoryEnabled(collectionId)) {
             // TODO move it outside and run it once
             val collectionIdQuoted = sql.quoteIdent("${collectionId}_hst")
             val hstInsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)""", COL_ALL_TYPES)
@@ -271,8 +288,28 @@ SET SESSION enable_seqscan = OFF;
         }
     }
 
-    internal fun xyzDelete(): ByteArray {
-        TODO("Implement me!")
+    /**
+     * Updates xyz namespace and copies feature to _del table.
+     */
+    internal fun copyToDel(collectionId: String, OLD: IMap) {
+        val txn = txn()
+        val txnTs = txnTs()
+        OLD[COL_TXN] = txn.value
+        OLD[COL_TXN_NEXT] = Jb.int64.ZERO()
+        OLD[COL_ACTION] = ACTION_DELETE.toShort()
+        OLD[COL_AUTHOR] = author ?: appId
+        if (author != null) {
+            OLD[COL_AUTHOR_TS] = txnTs
+        }
+        OLD[COL_UPDATE_AT] = txnTs
+        OLD[COL_APP_ID] = appId
+        OLD[COL_UID] = uid
+        val collectionConfig = getCollectionConfig(collectionId)
+        val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
+        if (autoPurge != true) {
+            val collectionIdQuoted = sql.quoteIdent("${collectionId}_del")
+            sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE]))
+        }
     }
 
     /**
@@ -281,14 +318,7 @@ SET SESSION enable_seqscan = OFF;
      * @param data The trigger data, allows the modification of [PgTrigger.NEW].
      */
     fun triggerBefore(data: PgTrigger) {
-        var collectionId = data.TG_TABLE_NAME
-        // Note: "topology_p000" is a partition, but we need collection-id.
-        //        0123456789012
-        // So, in that case we will find an underscore at index 8, so i = length-4!
-        val i = collectionId.lastIndexOf('_')
-        if (i >= 0 && i == (collectionId.length - 4) && collectionId[i + 1] == 'p') {
-            collectionId = collectionId.substring(0, i)
-        }
+        val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
         if (data.TG_OP == TG_OP_INSERT) {
             check(data.NEW != null) { "Missing NEW for INSERT" }
             xyzInsert(collectionId, data.NEW)
@@ -306,12 +336,20 @@ SET SESSION enable_seqscan = OFF;
      * @param data The trigger data, allows the modification of [PgTrigger.NEW].
      */
     fun triggerAfter(data: PgTrigger) {
-//        val collectionId = data.TG_TABLE_NAME
-//        if (data.TG_OP == TG_OP_UPDATE) {
-//            check(data.NEW != null) { "Missing NEW for UPDATE" }
-//            check(data.OLD != null) { "Missing OLD for UPDATE" }
-//            xyzUpdateHst(collectionId, data.NEW, data.OLD)
-//        }
+        val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
+        ensureHistoryPartition(collectionId, txn())
+        if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
+            ensureHistoryPartition(collectionId, NakshaTxn(Jb.int64.ZERO()))
+            copyToDel(collectionId, data.OLD)
+            saveInHst(collectionId, data.OLD)
+            deletedFeaturesRowCache.put(data.OLD[COL_ID]!!, data.OLD)
+        }
+        if (data.TG_OP == TG_OP_UPDATE) {
+            check(data.NEW != null) { "Missing NEW for UPDATE" }
+            check(data.OLD != null) { "Missing OLD for UPDATE" }
+            data.OLD[COL_TXN_NEXT] = data.NEW[COL_TXN]
+            saveInHst(collectionId, data.OLD)
+        }
     }
 
     /**
@@ -469,18 +507,34 @@ SET (toast_tuple_target=8160,fillfactor=100
         val opReader = XyzOp()
         val featureReader = JbFeature()
         val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val updatePlan = sql.prepare("""UPDATE $collectionIdQuoted
+        val collectionDelQuoted = sql.quoteIdent(collectionId + "_del")
+        val updatePlan: IPlv8Plan by lazy {
+            sql.prepare("""UPDATE $collectionIdQuoted
                         SET geo_grid=$2,geo_type=$3,geo=$4,tags=$5,feature=$6,action=$ACTION_UPDATE
                         RETURNING $COL_RETURN""",
-                arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
-        val upsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6)
-                        ON CONFLICT (id) DO
-                        UPDATE SET geo_grid=$2,geo_type=$3,geo=$4,tags=$5,feature=$6,action=$ACTION_UPDATE
-                        RETURNING $COL_RETURN""",
-                arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
+                    arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
+        }
+        val createPlan: IPlv8Plan by lazy {
+            sql.prepare("INSERT INTO $collectionIdQuoted ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
+        }
+        val deleteFeaturePlan: IPlv8Plan by lazy {
+            sql.prepare("DELETE FROM $collectionIdQuoted WHERE id=$1 RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING))
+        }
+        val deleteFeatureUuidPlan: IPlv8Plan by lazy {
+            sql.prepare("DELETE FROM $collectionIdQuoted WHERE id=$1 and uuid=$2 RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING, SQL_INT32))
+        }
+        val purgeFeaturePlan: IPlv8Plan by lazy {
+            sql.prepare("DELETE FROM $collectionDelQuoted WHERE id=$1 RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING))
+        }
+        val purgeFeatureUuidPlan: IPlv8Plan by lazy {
+            sql.prepare("DELETE FROM $collectionDelQuoted WHERE id=$1 and uuid=$2 RETURNING $COL_RETURN",
+                    arrayOf(SQL_STRING, SQL_INT32))
+        }
 
-        val createPlan = sql.prepare("INSERT INTO $collectionIdQuoted ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN",
-                arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
         try {
             var i = 0
             while (i < op_arr.size) {
@@ -504,14 +558,20 @@ SET (toast_tuple_target=8160,fillfactor=100
                     }
                     if (id == null) throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", id)
                     if (xyzOp == XYZ_OP_UPSERT) {
-                        val rows = asArray(upsertPlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
-                        // TODO: What if no row is returned?
-                        val cols = asMap(rows[0])
-                        val xyz = xyzNsFromRow(collectionId, cols)
-                        if (ACTION_CREATE == cols[COL_ACTION]!!) {
+                        try {
+                            val rows = asArray(createPlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
+                            // TODO: What if no row is returned?
+                            val cols = asMap(rows[0])
+                            val xyz = xyzNsFromRow(collectionId, cols)
                             table.returnCreated(id, xyz)
-                        } else {
-                            table.returnUpdated(id, xyz)
+                        } catch (e: Throwable) {
+                            val err = asMap(e)
+                            val errCode: String? = err["sqlerrcode"]
+                            if (errCode == ERR_UNIQUE_VIOLATION) {
+                                val rows = asArray(updatePlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
+                                val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
+                                table.returnUpdated(id, xyz)
+                            }
                         }
                     } else if (xyzOp == XYZ_OP_CREATE) {
                         val rows = asArray(createPlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
@@ -523,6 +583,26 @@ SET (toast_tuple_target=8160,fillfactor=100
                         // TODO: What if no row is returned?
                         val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
                         table.returnUpdated(id, xyz)
+                    } else if (xyzOp == XYZ_OP_DELETE || xyzOp == XYZ_OP_PURGE) {
+                        var rows = if (uuid != null) {
+                            asArray(deleteFeatureUuidPlan.execute(arrayOf(id, uuid)))
+                        } else {
+                            asArray(deleteFeaturePlan.execute(arrayOf(id)))
+                        }
+                        if (xyzOp == XYZ_OP_PURGE) {
+                            rows = if (uuid != null) {
+                                asArray(purgeFeatureUuidPlan.execute(arrayOf(id, uuid)))
+                            } else {
+                                asArray(purgeFeaturePlan.execute(arrayOf(id)))
+                            }
+                            val row = asMap(rows[0])
+                            val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
+                            table.returnPurged(row, xyz)
+                        } else {
+                            val row = asMap(rows[0])
+                            val xyz = xyzNsFromRow(collectionId, deletedFeaturesRowCache[id]!!)
+                            table.returnDeleted(row, xyz)
+                        }
                     } else {
                         throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Unsupported operation " + XyzOp.getOpName(xyzOp), id)
                     }
@@ -537,7 +617,6 @@ SET (toast_tuple_target=8160,fillfactor=100
                 }
             }
         } finally {
-            upsertPlan.free()
             updatePlan.free()
             createPlan.free()
         }
@@ -599,7 +678,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                 try {
                     newCollection.mapBytes(feature)
                     if (id != newCollection.id()) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "ID in op does not match real feature id: $id != " + newCollection.id(), id)
-                    var query = "SELECT $COL_ALL FROM naksha_collections WHERE $COL_ID = $1"
+                    var query = "SELECT $COL_ALL FROM $NKC_TABLE WHERE $COL_ID = $1"
                     var rows = asArray(sql.execute(query, arrayOf(id)))
                     var existing: IMap? = if (rows.isNotEmpty()) asMap(rows[0]) else null
                     query = "SELECT oid FROM pg_class WHERE relname = $1 AND relkind = ANY(array['r','p']) AND relnamespace = $2"
@@ -608,7 +687,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                     if (xyzOp == XYZ_OP_UPSERT) xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
                     if (xyzOp == XYZ_OP_CREATE) {
                         if (existing != null) throw NakshaException.forRow(ERR_COLLECTION_EXISTS, "Feature exists already", existing, xyzNsFromRow(id, existing))
-                        query = "INSERT INTO naksha_collections ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
+                        query = "INSERT INTO $NKC_TABLE ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
                         if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition())
@@ -620,16 +699,16 @@ SET (toast_tuple_target=8160,fillfactor=100
                         if (existing == null) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         if (uuid == null) {
                             // Override (not atomic) update.
-                            query = "UPDATE naksha_collections SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 RETURNING $COL_RETURN"
+                            query = "UPDATE $NKC_TABLE SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 RETURNING $COL_RETURN"
                             rows = asArray(sql.execute(query, arrayOf(grid, geo_type, geo, feature, tags, id)))
                             if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         } else {
                             // Atomic update.
                             // TODO: Fix me!
-                            query = "UPDATE naksha_collections SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 AND txn = $7 AND uid = $8 RETURNING $COL_RETURN"
+                            query = "UPDATE $NKC_TABLE SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 AND txn = $7 AND uid = $8 RETURNING $COL_RETURN"
                             rows = asArray(sql.execute(query, arrayOf(grid, geo_type, geo, feature, tags, id, null, null)))
                             if (rows.isEmpty()) {
-                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
+                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM $NKC_TABLE WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
                                 existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
                                 if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
@@ -641,23 +720,26 @@ SET (toast_tuple_target=8160,fillfactor=100
                         table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }
-                    if (xyzOp == XYZ_OP_DELETE) {
+                    if (xyzOp == XYZ_OP_DELETE || xyzOp == XYZ_OP_PURGE) {
                         if (existing == null) {
+                            if (xyzOp == XYZ_OP_PURGE) {
+                                Static.collectionDrop(sql, id)
+                            }
                             table.returnRetained(id)
                             continue
                         }
                         if (uuid == null) {
                             // Override (not atomic) update.
-                            query = "DELETE FROM naksha_collections WHERE id = $1 RETURNING $COL_ALL"
+                            query = "DELETE FROM $NKC_TABLE WHERE id = $1 RETURNING $COL_ALL"
                             rows = asArray(sql.execute(query, arrayOf(id)))
                             if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         } else {
                             // Atomic update.
                             // TODO: Fix me!
-                            query = "DELETE FROM naksha_collections WHERE id = $1 AND txn = $2 AND uid = $3 RETURNING $COL_ALL"
+                            query = "DELETE FROM $NKC_TABLE WHERE id = $1 AND txn = $2 AND uid = $3 RETURNING $COL_ALL"
                             rows = asArray(sql.execute(query, arrayOf(id, null, null)))
                             if (rows.isEmpty()) {
-                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM naksha_collections WHERE id = $1"
+                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM $NKC_TABLE WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
                                 existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
                                 if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
@@ -665,7 +747,9 @@ SET (toast_tuple_target=8160,fillfactor=100
                             }
                         }
                         existing = asMap(rows[0])
-                        Static.collectionDrop(sql, id)
+                        if (xyzOp == XYZ_OP_PURGE) {
+                            Static.collectionDrop(sql, id)
+                        }
                         table.returnDeleted(existing)
                         continue
                     }
@@ -729,5 +813,42 @@ SET (toast_tuple_target=8160,fillfactor=100
             if (value.isString()) return value.readString()
         }
         return "Feature"
+    }
+
+    /**
+     * Returns collectionId without partition part.
+     * For `topology_p000` it will return `topology`.
+     */
+    fun getBaseCollectionId(collectionId: String): String {
+        // Note: "topology_p000" is a partition, but we need collection-id.
+        //        0123456789012
+        // So, in that case we will find an underscore at index 8, so i = length-5!
+        val i = collectionId.lastIndexOf('_')
+        return if (i >= 0 && i == (collectionId.length - 5) && collectionId[i + 1] == 'p') {
+            collectionId.substring(0, i)
+        } else {
+            collectionId
+        }
+    }
+
+    fun getCollectionConfig(collectionId: String): IMap {
+        return if (collectionConfiguration.containsKey(collectionId)) {
+            collectionConfiguration[collectionId]!!
+        } else {
+            val collectionsSearchRows = asArray(sql.execute("select $COL_FEATURE from $NKC_TABLE where $COL_ID = $1", arrayOf(collectionId)))
+            if (collectionsSearchRows.isEmpty()) {
+                throw RuntimeException("collection $collectionId does not exist in $NKC_TABLE")
+            }
+            val cols = asMap(collectionsSearchRows[0])
+            val jbFeature = JbFeature().mapBytes(cols[COL_FEATURE])
+            val featureAsMap = JbMap().mapReader(jbFeature.reader).toIMap()
+            collectionConfiguration.put(collectionId, featureAsMap)
+            featureAsMap
+        }
+    }
+
+    private fun isHistoryEnabled(collectionId: String): Boolean {
+        val isDisabled: Boolean? = getCollectionConfig(collectionId)[NKC_DISABLE_HISTORY]
+        return isDisabled != true
     }
 }

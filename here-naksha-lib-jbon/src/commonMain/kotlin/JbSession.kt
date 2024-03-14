@@ -90,4 +90,9 @@ open class JbSession(var appName: String, var streamId: String, var appId: Strin
         val length = if (offset + size <= bytes.size) size else bytes.size - offset
         return Jb.env.newDataView(bytes, offset, length)
     }
+
+    /**
+     * Clears cached values, but keeps the context, so it's possible to use session for multiple transactions.
+     */
+    open fun clear() {}
 }

@@ -209,6 +209,9 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun triggerAfter() {
         val session = NakshaSession.get()
+        val topologyCollectionConfig = newMap()
+        topologyCollectionConfig.put(NKC_DISABLE_HISTORY, true)
+        session.collectionConfiguration.put("foo", topologyCollectionConfig)
 
         val builderFeature = XyzBuilder.create(65536)
         val topology = asMap(env.parse(topologyJson))
