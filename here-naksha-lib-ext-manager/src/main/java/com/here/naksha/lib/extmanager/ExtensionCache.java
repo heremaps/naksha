@@ -122,14 +122,17 @@ public class ExtensionCache {
           return;
         }
       }
+      if (!isNullOrEmpty(extension.getInitClassName()))
+        logger.info(
+            "Extension {} initialization using initClassName {} done successfully.",
+            extension.getId(),
+            extension.getInitClassName());
+      loaderCache.put(extension.getId(), new KVPair<Extension, ClassLoader>(extension, loader));
+      PluginCache.removeExtensionCache(extension.getId());
       logger.info(
           "Extension {},{} is successfully loaded into the cache.",
           extension.getId(),
           extension.getVersion());
-      if (!isNullOrEmpty(extension.getInitClassName()))
-        logger.info("initClassName {} initialization done successfully.", extension.getInitClassName());
-      loaderCache.put(extension.getId(), new KVPair<Extension, ClassLoader>(extension, loader));
-      PluginCache.removeExtensionCache(extension.getId());
     }
   }
 

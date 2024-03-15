@@ -33,7 +33,6 @@ import org.jetbrains.annotations.Nullable;
 @AvailableSince(NakshaVersion.v2_0_3)
 @JsonTypeName
 public class Extension extends XyzFeature {
-  public static final String EXTENSION_ID = "extensionId";
   public static final String URL = "url";
   public static final String VERSION = "version";
   public static final String INIT_CLASS_NAME = "initClassName";
@@ -50,7 +49,7 @@ public class Extension extends XyzFeature {
   /**
    * Create an extension.
    *
-   * @param extensionId  Unique identifier of extension.
+   * @param id  Unique identifier of extension.
    * @param url source url of given extension.
    * @param version version of extension.
    * @param initClassName Extension initialisation class.
@@ -58,11 +57,11 @@ public class Extension extends XyzFeature {
   @AvailableSince(NakshaVersion.v2_0_3)
   @JsonCreator
   public Extension(
-      @JsonProperty(EXTENSION_ID) @NotNull String extensionId,
+      @JsonProperty(ID) @NotNull String id,
       @JsonProperty(URL) @NotNull String url,
       @JsonProperty(VERSION) @NotNull String version,
       @JsonProperty(INIT_CLASS_NAME) @Nullable String initClassName) {
-    super(extensionId);
+    super(id);
     this.url = url;
     this.version = version;
     this.initClassName = initClassName;
