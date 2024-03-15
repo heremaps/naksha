@@ -1,13 +1,13 @@
 {
   "type": "Feature",
-  "id": "test_app:topology_delta:2024:02:28:855602",
+  "id": "test_app:topology_delta:2024:02:29:870920",
   "geometry": {
     "type": "LineString",
     "coordinates": [
       [
-        -9.1162,
-        38.7847,
-        120.88
+        -8.1162,
+        37.7847,
+        119.88
       ],
       [
         -9.11603,
@@ -73,21 +73,6 @@
         -9.11314,
         38.78596,
         112.14
-      ],
-      [
-        -9.11268,
-        38.78599,
-        110.87
-      ],
-      [
-        -9.11213,
-        38.78602,
-        108.46
-      ],
-      [
-        -9.11156,
-        38.78603,
-        105.73
       ]
     ]
   },
@@ -117,62 +102,76 @@
       "createdAt": 1706017408414,
       "extend": 6013440,
       "grid": "eycs8s9",
-      "puuid": "test_app:topology_delta:2024:02:28:843606",
-      "rt_ts": 1709129603731,
-      "streamId": "wvp9EFi5P81f",
-      "stream_id": "wvp9EFi5P81f",
+      "puuid": "test_app:topology_delta:2024:02:28:855602",
+      "rt_ts": 1709205572500,
+      "streamId": "AprZxQxJm46D",
+      "stream_id": "AprZxQxJm46D",
       "tags": [
         "@:review-state:ENDORSED"
       ],
-      "txn": 2024022800000000000,
-      "txn_next": 2024022900000000000,
-      "txn_uuid": "test_app:topology_delta:2024:02:28:17",
-      "updatedAt": 1709129347686,
-      "uuid": "test_app:topology_delta:2024:02:28:855602",
-      "version": 34
+      "txn": 2024022900000000000,
+      "txn_uuid": "test_app:topology_delta:2024:02:29:13",
+      "updatedAt": 1709205560899,
+      "uuid": "test_app:topology_delta:2024:02:29:870920",
+      "version": 35
     },
     "@ns:com:here:xyz:log": {
       "action": "UPDATE",
       "diff": {
-        "add": 0,
-        "remove": 3,
+        "add": 3,
+        "remove": 0,
         "replace": 3,
         "ops": [
           {
             "op": "replace",
             "path": "/geometry/coordinates/0/0",
-            "value": -8.1162
+            "value": -9.1162
           },
           {
             "op": "replace",
             "path": "/geometry/coordinates/0/1",
-            "value": 37.7847
+            "value": 38.7847
           },
           {
             "op": "replace",
             "path": "/geometry/coordinates/0/2",
-            "value": 119.88
+            "value": 120.88
           },
           {
-            "op": "remove",
-            "path": "/geometry/coordinates/14"
+            "op": "add",
+            "path": "/geometry/coordinates/14",
+            "value": [
+              -9.11268,
+              38.78599,
+              110.87
+            ]
           },
           {
-            "op": "remove",
-            "path": "/geometry/coordinates/15"
+            "op": "add",
+            "path": "/geometry/coordinates/15",
+            "value": [
+              -9.11213,
+              38.78602,
+              108.46
+            ]
           },
           {
-            "op": "remove",
-            "path": "/geometry/coordinates/16"
+            "op": "add",
+            "path": "/geometry/coordinates/16",
+            "value": [
+              -9.11156,
+              38.78603,
+              105.73
+            ]
           }
         ]
       },
       "id": "urn:here::here:Topology:80150801",
       "original": {
         "createdAt": 1706017408414,
-        "puuid": "test_app:topology_delta:2024:02:28:843606",
+        "puuid": "test_app:topology_delta:2024:02:28:855602",
         "space": "enhancer_test_space_id",
-        "updatedAt": 1709129347686
+        "updatedAt": 1709205560899
       }
     },
     "gradeCategory": [
