@@ -7,7 +7,8 @@
   "properties": {
     "@ns:com:here:xyz": {
       "action": "UPDATE"
-    }
+    },
+    %s
   },
   "title": "Storage Handler for UniMap Moderation Dev Storage"
 }

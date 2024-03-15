@@ -165,12 +165,11 @@ class EventHandlerApiTest extends ApiTest {
 
   @ParameterizedTest
   @MethodSource("validTagFilterProperties")
-  void tc105_testCreateTagFilterHandler(String handlerProperties) throws URISyntaxException, IOException, InterruptedException {
+  void tc105_testCreateTagFilterHandler(String handlerProps, String expectedPropsInResponse) throws URISyntaxException, IOException, InterruptedException {
     final String streamId = UUID.randomUUID().toString();
-    final String handlerId = "tag-filter-handler-create-" + Base64.getEncoder().encodeToString(handlerProperties.getBytes());
-    final String createJson = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/create_event_handler_template.json").formatted(handlerId,handlerProperties);
-    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/response_template.json").formatted(handlerId,handlerProperties);
-
+    final String handlerId = "tag-filter-handler-create-" + Base64.getEncoder().encodeToString(handlerProps.getBytes());
+    final String createJson = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/create_event_handler_template.json").formatted(handlerId,handlerProps);
+    final String expectedResponse = loadFileOrFail("EventHandlerApi/TC0105_createTagFilterHandler/response_template.json").formatted(handlerId,expectedPropsInResponse);
 
     final HttpResponse<String> response = nakshaClient.post("hub/handlers", createJson, streamId);
 
@@ -178,6 +177,7 @@ class EventHandlerApiTest extends ApiTest {
             .hasStatus(200)
             .hasJsonBody(expectedResponse)
             .hasStreamIdHeader(streamId);
+
   }
 
   @ParameterizedTest
@@ -201,12 +201,12 @@ class EventHandlerApiTest extends ApiTest {
 
   @ParameterizedTest
   @MethodSource("validTagFilterProperties")
-  void tc107_testUpdateTagFilterHandler(String handlerProperties) throws URISyntaxException, IOException, InterruptedException {
+  void tc107_testUpdateTagFilterHandler(String handlerProps, String expectedPropsInResponse) throws URISyntaxException, IOException, InterruptedException {
     final String streamId = UUID.randomUUID().toString();
-    final String handlerId = "tag-filter-handler-update-" + Base64.getEncoder().encodeToString(handlerProperties.getBytes());
+    final String handlerId = "tag-filter-handler-update-" + Base64.getEncoder().encodeToString(handlerProps.getBytes());
     final String createJson = loadFileOrFail("EventHandlerApi/TC0107_updateTagFilterHandler/create_event_handler_template.json").formatted(handlerId);
-    final String updateJson = loadFileOrFail("EventHandlerApi/TC0107_updateTagFilterHandler/update_event_handler_template.json").formatted(handlerId, handlerProperties);
-    final String expectedBody = loadFileOrFail("EventHandlerApi/TC0107_updateTagFilterHandler/response_template.json").formatted(handlerId);
+    final String updateJson = loadFileOrFail("EventHandlerApi/TC0107_updateTagFilterHandler/update_event_handler_template.json").formatted(handlerId, handlerProps);
+    final String expectedBody = loadFileOrFail("EventHandlerApi/TC0107_updateTagFilterHandler/response_template.json").formatted(handlerId,expectedPropsInResponse);
 
     final HttpResponse<String> createResponse = nakshaClient.post("hub/handlers", createJson, streamId);
     final HttpResponse<String> updateResponse = nakshaClient.put("hub/handlers/" + handlerId, updateJson, streamId);
@@ -237,24 +237,47 @@ class EventHandlerApiTest extends ApiTest {
             .hasStreamIdHeader(streamId);
   }
 
+  /**
+   * @return arguments of <ol>
+   *   <li>valid properties
+   *   <li>expected properties in response
+   * </ol>
+   */
   public static Stream<Arguments> validTagFilterProperties() {
-    return Stream.of(
-            Arguments.of("""
+    String allParamsPresent = """
                          "add": [ "tag_a_1" ],
                          "removeWithPrefixes": [ "tag_r_1" ],
                          "contains": [ "tag_c_1" ]
-                    """),
-            Arguments.of("""
+                    """;
+    String oneParamPresent = """
+                         "add": [ "tag_a_1" ]
+                    """;
+    String additionalNotUsedParam = """
+                         "add": [ "tag_a_1" ],
+                         "notUsedParam" : [ "not_used"]
+                    """;
+    String someParamsNull = """
                          "add": null,
                          "removeWithPrefixes": null,
                          "contains": [ "tag_c_1" ]
-                    """),
-            Arguments.of("""
-                         "add": [ "tag_a_1" ]
-                    """)
+                    """;
+    String someParamsNullResponse = """
+                         "contains": [ "tag_c_1" ]
+                    """;
+    return Stream.of(
+            Arguments.of(allParamsPresent, allParamsPresent),
+            Arguments.of(oneParamPresent, oneParamPresent),
+            Arguments.of(additionalNotUsedParam, additionalNotUsedParam),
+            Arguments.of(someParamsNull, someParamsNullResponse)
     );
   }
 
+  /**
+   * @return arguments of <ol>
+   *   <li>invalid properties
+   *   <li>expected error message
+   * </ol>
+   */
   public static Stream<Arguments> invalidTagFilterProperties() {
     String blankElementMessage = "The %s parameter contains blank element";
     return Stream.of(
