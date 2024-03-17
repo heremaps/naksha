@@ -1,7 +1,5 @@
 # Authorization
 
-**TODO** - Add table of content
-
 Naksha supports various out-of-box authorization checks while performing read/write operations against following resources:
 
 - [Storage](../here-naksha-lib-core/src/main/java/com/here/naksha/lib/core/models/naksha/Storage.java)
@@ -21,7 +19,7 @@ based on User's access profile supplied using following attributes as part of [N
 - **su** - Optional
   - Superuser flag, if set, all authorization checks will be bypassed. This is useful where one level of authorization is already performed and we like to avoid repetitive checks on recursive/internal calls.
 
-## 1. URM Format, Sample
+## 1. URM Concept
 
 URM (User-Rights-Matrix) follows the Map<String, Object> format as below,
 which allows to define a matrix of an **Action** against target **Resource** by specifying one/more **AttributeMaps** of zero/more **Attributes**, that should be compared to validate request authorization:
@@ -120,7 +118,7 @@ So:
 
 
 
-### Attribute Maps
+### Attribute Map
 
 Every AttributeMap can have zero or more **Access Attributes**.
 
