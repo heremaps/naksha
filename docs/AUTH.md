@@ -22,7 +22,7 @@ based on User's access profile supplied using following attributes as part of [N
 
 ## 1. URM Format, Sample
 
-URM is expected to follow the Map<String, Object> format as follows:
+URM (User-Rights-Matrix) is expected to follow the Map<String, Object> format as below, which allows to define authorization of an **Action** against target **Resource** by comparing **AttributeMap** of zero or more **Attributes**:
 
 ```json
 {
@@ -35,8 +35,7 @@ URM is expected to follow the Map<String, Object> format as follows:
                     // zero or more access Attributes (all attributes should match)
                     "<accessAttribute1>": "<exactValue>",
                     "<accessAttribute2>": "<valueWithWildcard*>",
-                    "<accessAttribute3>": [
-                        // one or more values (all values should match)
+                    "<accessAttribute3>": [  // one or more values (all values should match)
                         "<anotherExactValue>",
                         "<anotherValueWithWildcard*>"
                     ]
@@ -60,8 +59,7 @@ For example:
                     // zero or more access Attributes (all attributes should match)
                     "id": "my-unique-feature-id",
                     "storageId": "id-with-wild-card-*",
-                    "tags": [
-                        // one or more values (all values should match)
+                    "tags": [  // one or more values (all values should match)
                         "my-unique-tag",
                         "some-common-tag-with-wild-card-*"
                     ]
@@ -76,7 +74,9 @@ For example:
 
 ### Action
 
-Defines the action allowed against a resource. Refer subsequent sections to know what actions are allowed against which resource.
+Defines type of operation allowed against a resource. Refer later sections on this page, to know which specific actions are allowed against which resource.
+
+But, in general:
 
 - **useXXX**: Means that a resource can be used and **id**, **title**, **description** can be viewed, but NOT **properties** details
 - **manageXXX**: Means that a resource can be read and modified (i.e. full access).
@@ -109,7 +109,7 @@ For example:
 }
 ```
 
-Thumb rule is - **Atleast One** access AttributeMap should match with resource AttributeMap, to allow an access.
+Thumb rule is - **Atleast One** access AttributeMap should match with resource AttributeMap, to allow access for that Action.
 
 So:
 
@@ -154,7 +154,7 @@ So:
 
 ### Access Attribute
 
-Every Access Attribute can be a **Scalar** or a **List** of Scalar, where Scalar can be exact value or (in some cases) value with wild card (*).
+Every Access Attribute can be a **Scalar** or a **List** of Scalar, where Scalar can be exact value or (in some cases) value with a wild card (*).
 
 For example:
 
@@ -162,10 +162,10 @@ For example:
 ```json
 {
     "id": "my-unique-feature-id",       // exact value match
-    "storageId": "id-with-wild-card-*", // starts with match
+    "storageId": "id-with-wild-card-*", // startsWith match
     "tags": [                           // all values should match
         "my-unique-tag",
-        "some-common-tag-with-wild-card-*"  // starts with match in list
+        "some-common-tag-with-wild-card-*"  // startsWith match in list
     ]
 }
 ```
