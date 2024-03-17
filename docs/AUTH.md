@@ -1,5 +1,7 @@
 # Authorization
 
+**TODO** - Add table of content
+
 Naksha supports various out-of-box authorization checks while performing read/write operations against following resources:
 
 - [Storage](../here-naksha-lib-core/src/main/java/com/here/naksha/lib/core/models/naksha/Storage.java)
@@ -19,10 +21,10 @@ based on User's access profile supplied using following attributes as part of [N
 - **su** - Optional
   - Superuser flag, if set, all authorization checks will be bypassed. This is useful where one level of authorization is already performed and we like to avoid repetitive checks on recursive/internal calls.
 
-
 ## 1. URM Format, Sample
 
-URM (User-Rights-Matrix) is expected to follow the Map<String, Object> format as below, which allows to define authorization of an **Action** against target **Resource** by comparing **AttributeMap** of zero or more **Attributes**:
+URM (User-Rights-Matrix) follows the Map<String, Object> format as below,
+which allows to define a matrix of an **Action** against target **Resource** by specifying one/more **AttributeMaps** of zero/more **Attributes**, that should be compared to validate request authorization:
 
 ```json
 {
@@ -32,10 +34,10 @@ URM (User-Rights-Matrix) is expected to follow the Map<String, Object> format as
             "<action>": [
                 // one or more Attribute-Map's (atleast one should match)
                 {
-                    // zero or more access Attributes (all attributes should match)
+                    // zero or more access Attributes (all should match)
                     "<accessAttribute1>": "<exactValue>",
                     "<accessAttribute2>": "<valueWithWildcard*>",
-                    "<accessAttribute3>": [  // one or more values (all values should match)
+                    "<accessAttribute3>": [  // one or more values (all should match)
                         "<anotherExactValue>",
                         "<anotherValueWithWildcard*>"
                     ]
@@ -56,10 +58,10 @@ For example:
             "readFeatures": [
                 // one or more Attribute-Map's (atleast one should match)
                 {
-                    // zero or more access Attributes (all attributes should match)
+                    // zero or more access Attributes (all should match)
                     "id": "my-unique-feature-id",
                     "storageId": "id-with-wild-card-*",
-                    "tags": [  // one or more values (all values should match)
+                    "tags": [  // one or more values (all should match)
                         "my-unique-tag",
                         "some-common-tag-with-wild-card-*"
                     ]
@@ -131,7 +133,7 @@ For example:
             // empty attribute map (is a MATCH)
         },
         {
-            // all attributes should match
+            // one or more attributes (all should match)
             "id": "my-unique-feature-id",
             "storageId": "id-with-wild-card-*",
             "tags": [
@@ -163,7 +165,7 @@ For example:
 {
     "id": "my-unique-feature-id",       // exact value match
     "storageId": "id-with-wild-card-*", // startsWith match
-    "tags": [                           // all values should match
+    "tags": [                           // all should match
         "my-unique-tag",
         "some-common-tag-with-wild-card-*"  // startsWith match in list
     ]
@@ -185,6 +187,8 @@ So:
 ---
 
 ## 2. REST API Authorization
+
+**TODO**
 
 ### Header expectations
 
@@ -210,6 +214,7 @@ JWT payload sample
 
 ### JWT Validation
 
+pvt/pub key, expiry
 
 
 
@@ -218,5 +223,14 @@ JWT payload sample
 
 ## 3. Supported Actions and Attributes
 
+**TODO**
+
+Table of all actions and attributes for each resource:
+
+- Storage
+- EventHandler
+- Space
+- Feature
+- Collection
 
 
