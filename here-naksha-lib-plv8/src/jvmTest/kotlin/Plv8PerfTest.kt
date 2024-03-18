@@ -1,7 +1,5 @@
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
-import com.here.naksha.lib.plv8.GEO_TYPE_NULL
-import com.here.naksha.lib.plv8.RET_OP
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -11,7 +9,9 @@ import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
 import java.sql.Connection
 import java.sql.DriverManager
+import java.util.*
 import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlin.collections.ArrayList
 import kotlin.test.assertEquals
 
 @Suppress("ArrayInDataClass")
@@ -174,7 +174,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
      */
     private fun printStatistics(size: Int, rounds: Int, us: Long, baseLine: Double = 0.0): Double {
         val featuresWritten = (rounds * size).toDouble()
-        val seconds = us.toDouble() / 1_000_000.0
+        val seconds = us.toSeconds()
         val featuresPerSecond = featuresWritten / seconds
         val microsPerFeature = us.toDouble() / featuresWritten
         if (baseLine == 0.0) {
@@ -235,25 +235,9 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
     @Order(3)
     @Test
     fun bulkLoadFeatures() {
-        val session = NakshaSession.get()
-        val builder = XyzBuilder.create(65536)
         val tableName = "v2_bulk_test"
 
-        var op = builder.buildXyzOp(XYZ_OP_DELETE, "$tableName", null, "vgrid")
-        var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
-        var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
-        var table = assertInstanceOf(JvmPlv8Table::class.java, result)
-        assertEquals(1, table.rows.size)
-        assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
-
-        op = builder.buildXyzOp(XYZ_OP_CREATE, "$tableName", null, "vgrid")
-        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName", "partition":true}""")))
-        result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
-        table = assertInstanceOf(JvmPlv8Table::class.java, result)
-        assertEquals(1, table.rows.size)
-        assertTrue(XYZ_EXEC_CREATED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
-
-        session.sql.execute("commit")
+        createCollection(tableName, partition = true, disableHistory = true)
 
         // Run for 8 threads.
         val features = Array<ArrayList<BulkFeature>>(256) { ArrayList() }
@@ -293,29 +277,31 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
                             "plv8_${threadId}_app",
                             "plv8_${threadId}_author"
                     )
+                    val threadSession = NakshaSession.get()
                     conn.commit()
-                    val statement = conn.prepareStatement("SET LOCAL session_replication_role = replica;")
-                    statement.use {statement.execute() }
                     var p = 0
                     while (p < 256) {
                         if (featuresDone.compareAndSet(p, false, true)) {
                             val list = features[p]
                             val partName = Static.PARTITION_ID[p]
                             val partTableName = "${tableName}_p${partName}"
-                            val stmt = conn.prepareStatement("INSERT INTO $partTableName (id, geo_grid, feature) VALUES (?, ?, ?)")
                             var j = 0
                             try {
-                                stmt.use {
-                                    while (j < list.size) {
-                                        val f = list[j++]
-                                        stmt.setString(1, f.id)
-                                        stmt.setString(2, "vgrid")
-                                        stmt.setBytes(3, f.feature)
-                                        stmt.addBatch()
-                                    }
-                                    stmt.executeBatch()
-                                    conn.commit()
+                                val opArr = ArrayList<ByteArray>(list.size)
+                                val fArr = ArrayList<ByteArray?>(list.size)
+                                val geoTypeArr = ArrayList<Short>(list.size)
+                                val geoArr = ArrayList<ByteArray?>(list.size)
+                                val tagsArr = ArrayList<ByteArray?>(list.size)
+                                while (j < list.size) {
+                                    val f = list[j++]
+                                    opArr.add(f.op)
+                                    fArr.add(f.feature)
+                                    geoArr.add(f.geometry)
+                                    tagsArr.add(f.tags)
+                                    geoTypeArr.add(f.geoType)
                                 }
+                                threadSession.bulkWriteFeatures(partTableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+                                threadSession.sql.execute("commit")
                             } catch (e: Exception) {
                                 throw e
                             }
@@ -337,4 +323,86 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val end = currentMicros()
         printStatistics(BulkSize, 1, (end - start), baseLine)
     }
+
+    @Order(4)
+    @Test
+    fun bulkInsertFeatures() {
+        val session = NakshaSession.get()
+
+        val tableName = "v2_bulk_insert"
+        createCollection(tableName, partition = true, disableHistory = false)
+
+        var i = 0
+        var numOfFeatures = 10_000
+        val opArr = ArrayList<ByteArray>(numOfFeatures)
+        val fArr = ArrayList<ByteArray?>(numOfFeatures)
+        val geoTypeArr = ArrayList<Short>(numOfFeatures)
+        val geoArr = ArrayList<ByteArray?>(numOfFeatures)
+        val tagsArr = ArrayList<ByteArray?>(numOfFeatures)
+
+        // insert features
+        while (i < numOfFeatures) {
+            val f = createBulkFeature()
+            opArr.add(f.op)
+            fArr.add(f.feature)
+            geoArr.add(f.geometry)
+            tagsArr.add(f.tags)
+            geoTypeArr.add(f.geoType)
+            i++
+        }
+        val insertsStart = currentMicros()
+        val insertResult = session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+        assertTrue(session.sql.rows(insertResult).isNullOrEmpty())
+        session.sql.execute("commit")
+        session.clear()
+
+        println("Inserts done in: ${(currentMicros() - insertsStart).toSeconds()}s")
+
+        // update features
+
+        for (o in opArr.withIndex()) {
+            val xyzOp = XyzOp().mapBytes(o.value)
+            opArr[o.index] = XyzBuilder().buildXyzOp(XYZ_OP_UPDATE, xyzOp.id(), xyzOp.uuid(), xyzOp.grid())
+        }
+        val updateStart = currentMicros()
+        session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+
+        session.sql.execute("commit")
+        session.clear()
+        println("Update ended in: ${(currentMicros() - updateStart).toSeconds()}s")
+
+
+        // delete features
+        for (o in opArr.withIndex()) {
+            val xyzOp = XyzOp().mapBytes(o.value)
+            opArr[o.index] = XyzBuilder().buildXyzOp(XYZ_OP_DELETE, xyzOp.id(), xyzOp.uuid(), xyzOp.grid())
+        }
+        val delStart = currentMicros()
+        session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+
+        session.sql.execute("commit")
+
+        println("Delete ended in: ${(currentMicros() - delStart).toSeconds()}s")
+    }
+
+    private fun createCollection(tableName: String, partition: Boolean, disableHistory: Boolean) {
+        val builder = XyzBuilder.create(65536)
+        var op = builder.buildXyzOp(XYZ_OP_DELETE, "$tableName", null, "vgrid")
+        var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
+        var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
+        var table = assertInstanceOf(JvmPlv8Table::class.java, result)
+        assertEquals(1, table.rows.size)
+        assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
+
+        op = builder.buildXyzOp(XYZ_OP_CREATE, "$tableName", null, "vgrid")
+        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName", "partition":$partition, "disableHistory": $disableHistory}""")))
+        result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
+        table = assertInstanceOf(JvmPlv8Table::class.java, result)
+        assertEquals(1, table.rows.size)
+        assertTrue(XYZ_EXEC_CREATED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
+
+        session.sql.execute("commit")
+    }
+
+    private fun Long.toSeconds(): Double = this.toDouble() / 1_000_000.0
 }
