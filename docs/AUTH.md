@@ -265,6 +265,10 @@ Table of all supported **Actions** and **Attributes** for validating authorizati
 
 **NOTE** for **Actions**:
   * **Limited View** - means, read of resource is allowed BUT without exposing `properies` object (so typically one can read `id`, `title`, `description` etc but not `properties` object)
+  * **Filtered** read restricted resource instances - means, instances that are read restricted, they will be filtered from the result rather than raising exception like forbidden access
+
+
+
 
 ### 3.1 Storage
 
@@ -274,7 +278,7 @@ Table of all supported **Actions** and **Attributes** for validating authorizati
 * `tags` - wild-card supported - prop path `properties.@ns:com:here:xyz.tags`
 * `appId` - `properties.@ns:com:here:xyz.appId`
 * `author` - `properties.@ns:com:here:xyz.author`
-* `className` - `className`
+* `className`
 * **Space** related:
   * `spaceId` - wild-card supported
 
@@ -282,61 +286,103 @@ Table of all supported **Actions** and **Attributes** for validating authorizati
 
 | Action        | Allowed operations                                                                     | Remarks |
 |---------------|----------------------------------------------------------------------------------------|---------|
-| `useStorages` | Get Storage Implementation for a given storageId (and optionally spaceId, if supplied) |         |
-| `useStorages` | Limited view - ReadFeatures from virtual space (`naksha:storages`)                     |         |
-| `manageStorages` | Full control. Read/Write Features from/to virtual space (`naksha:storages`).        |         |
+| `useStorages` | Get Storage Implementation for a given storageId (and also check spaceId, if supplied) |         |
+| `useStorages` | Limited view - Read Features from virtual space (`naksha:storages`)                    |         |
+| `manageStorages` | Full control - Read/Write Features from/to virtual space (`naksha:storages`)           |         |
 
 
-### 3.2 Event Handler
+
+
+### 3.2 EventHandler
 
 #### Attributes
 
+* `id` - wild-card supported
+* `tags` - wild-card supported - prop path `properties.@ns:com:here:xyz.tags`
+* `appId` - `properties.@ns:com:here:xyz.appId`
+* `author` - `properties.@ns:com:here:xyz.author`
+* `className`
+
 #### Actions
 
-| Action | Allowed operations | Remarks |
-|--------|--------------------|---------|
-|        |                    |         |
-|        |                    |         |
-|        |                    |         |
+| Action | Allowed operations                                                                 | Remarks                                                                                                           |
+|--------|------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| `useEventHandlers`       | Limited view - To be able to associate handler while configuring a Space           | For Update Space request, check is applicable only for new handler Ids being associated (not existing ones) |
+| `useEventHandlers`       | Limited view - Read Features from virtual space (`naksha:event_handlers`)          |                                                                                                                   |
+| `manageEventHandlers`    | Full control - Read/Write Features from/to virtual space (`naksha:event_handlers`) |                                                                                                                   |
+
+
 
 
 ### 3.3 Space
 
 #### Attributes
 
+* `id` - wild-card supported
+* `tags` - wild-card supported - prop path `properties.@ns:com:here:xyz.tags`
+* `appId` - `properties.@ns:com:here:xyz.appId`
+* `author` - `properties.@ns:com:here:xyz.author`
+* **EventHandler** related:
+  * `eventHandlerIds` - wild-card supported
+
 #### Actions
 
-| Action | Allowed operations | Remarks |
-|--------|--------------------|---------|
-|        |                    |         |
-|        |                    |         |
-|        |                    |         |
+| Action         | Allowed operations                                                         | Remarks                                                                                           |
+|----------------|----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| `useSpaces`    | Allow creating pipeline for a spaceId                                      | Kind of additional check, to restrict unintentional space access via some other pipeline/handler. |
+| `useSpaces`    | Limited view - Read Features from virtual space (`naksha:spaces`)          |                                                                                                   |
+| `manageSpaces` | Full control - Read/Write Features from/to virtual space (`naksha:spaces`) |                                                                                                   |
+
+
 
 
 ### 3.4 XyzFeature
 
 #### Attributes
 
+* `id` - wild-card supported
+* `tags` - wild-card supported - prop path `properties.@ns:com:here:xyz.tags`
+* `appId` - `properties.@ns:com:here:xyz.appId`
+* `author` - `properties.@ns:com:here:xyz.author`
+* **Storage** related:
+  * `storageId` - wild-card supported
+  * `storageTags` - wild-card supported - Storage prop path `properties.@ns:com:here:xyz.tags`
+* **XyzCollection** related:
+  * `collectionId` - wild-card supported
+  * `collectionTags` - wild-card supported - XyzCollection prop path `properties.@ns:com:here:xyz.tags`
+
 #### Actions
 
-| Action | Allowed operations | Remarks |
-|--------|--------------------|---------|
-|        |                    |         |
-|        |                    |         |
-|        |                    |         |
+| Action           | Allowed operations                                   | Remarks                                                                                                                         |
+|------------------|------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `readFeatures`   | Read specific XyzFeatures from Storage, Collection   |                                                                                                                                 |
+| `createFeatures` | Create specific XyzFeatures in Storage, Collection   | For Upsert/PUT operation, resultant `create`/`update` can be determined only based on Feature's presence in Storage, Collection |
+| `updateFeatures` | Update specific XyzFeatures in Storage, Collection   | For Upsert/PUT operation, resultant `create`/`update` can be determined only based on Feature's presence in Storage, Collection |
+| `deleteFeatures` | Delete specific XyzFeatures from Storage, Collection |                                                                                                                                 |
+
+
 
 
 ### 3.5 XyzCollection
 
 #### Attributes
 
+* `id` - wild-card supported
+* `tags` - wild-card supported - prop path `properties.@ns:com:here:xyz.tags`
+* `appId` - `properties.@ns:com:here:xyz.appId`
+* `author` - `properties.@ns:com:here:xyz.author`
+* **Storage** related:
+  * `storageId` - wild-card supported
+  * `storageTags` - wild-card supported - Storage prop path `properties.@ns:com:here:xyz.tags`
+
 #### Actions
 
-| Action | Allowed operations | Remarks |
-|--------|--------------------|---------|
-|        |                    |         |
-|        |                    |         |
-|        |                    |         |
+| Action              | Allowed operations                             | Remarks |
+|---------------------|------------------------------------------------|---------|
+| `readCollections`   | Read specific Collections from Storage         |         |
+| `createCollections` | Create specific Collections in Storage         |         |
+| `updateCollections` | Update specific Collections in Storage         |         |
+| `deleteCollections` | Delete/Drop specific Collections from Storage  |         |
 
 
 
