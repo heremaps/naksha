@@ -330,7 +330,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val session = NakshaSession.get()
 
         val tableName = "v2_bulk_insert"
-        createCollection(tableName, partition = true, disableHistory = false)
+        createCollection(tableName, partition = false, disableHistory = false)
 
         var i = 0
         var numOfFeatures = 10_000
