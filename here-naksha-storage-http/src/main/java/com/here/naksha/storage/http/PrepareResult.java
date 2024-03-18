@@ -30,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -40,14 +41,14 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Builds a {@link Result} from {@link HttpResponse}
  */
-class ResponseToResult {
+class PrepareResult {
 
   static Result prepareResult(List<XyzFeature> featureList) {
     return createHttpResultFromFeatureList(featureList);
   }
 
   static <T extends Typed> Result prepareResult(
-      HttpResponse<String> httpResponse,
+      HttpResponse<byte[]> httpResponse,
       Class<T> httpResponseType,
       Function<T, List<XyzFeature>> typedResponseToFeatureList) {
 
@@ -58,19 +59,19 @@ class ResponseToResult {
     return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
   }
 
-  private static String prepareBody(HttpResponse<String> response) {
+  private static String prepareBody(HttpResponse<byte[]> response) {
     List<String> contentEncodingList = response.headers().allValues("content-encoding");
-    if (contentEncodingList.isEmpty()) return response.body();
+    if (contentEncodingList.isEmpty()) return new String(response.body(), StandardCharsets.UTF_8);
     if (contentEncodingList.size() > 1)
-      throw new IllegalArgumentException("There are more than one Content-Encoding values in response");
+      throw new IllegalArgumentException("There are more than one Content-Encoding value in response");
     String contentEncoding = contentEncodingList.get(0);
 
     if (contentEncoding.equalsIgnoreCase("gzip")) return gzipDecode(response.body());
     else throw new IllegalArgumentException("Encoding " + contentEncoding + " not recognized");
   }
 
-  private static String gzipDecode(String encoded) {
-    try (ByteArrayInputStream bis = new ByteArrayInputStream(encoded.getBytes());
+  private static String gzipDecode(byte[] encoded) {
+    try (ByteArrayInputStream bis = new ByteArrayInputStream(encoded);
         GZIPInputStream gis = new GZIPInputStream(bis);
         ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
       gis.transferTo(bos);

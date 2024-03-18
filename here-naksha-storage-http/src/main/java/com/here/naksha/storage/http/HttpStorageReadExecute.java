@@ -19,8 +19,7 @@
 package com.here.naksha.storage.http;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
-import static com.here.naksha.storage.http.ResponseToResult.*;
-import static com.here.naksha.storage.http.ResponseToResult.prepareResult;
+import static com.here.naksha.storage.http.PrepareResult.prepareResult;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
@@ -55,7 +54,7 @@ class HttpStorageReadExecute {
       @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String featureId = readRequest.getQueryParameter(FEATURE_ID);
 
-    HttpResponse<String> response = requestSender.sendRequest(
+    HttpResponse<byte[]> response = requestSender.sendRequest(
         String.format("/%s/features/%s", baseEndpoint(readRequest), featureId),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
@@ -71,7 +70,7 @@ class HttpStorageReadExecute {
     List<String> featureIds = readRequest.getQueryParameter(FEATURE_IDS);
     String queryParamsString = FEATURE_IDS + "=" + String.join(",", featureIds);
 
-    HttpResponse<String> response = requestSender.sendRequest(
+    HttpResponse<byte[]> response = requestSender.sendRequest(
         String.format("/%s/features?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
@@ -82,7 +81,7 @@ class HttpStorageReadExecute {
       @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String queryParamsString = keysToKeyValuesStrings(readRequest, WEST, NORTH, EAST, SOUTH, LIMIT);
 
-    HttpResponse<String> response = requestSender.sendRequest(
+    HttpResponse<byte[]> response = requestSender.sendRequest(
         String.format(
             "/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
@@ -99,7 +98,7 @@ class HttpStorageReadExecute {
     if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY))
       return new ErrorResult(XyzError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
 
-    HttpResponse<String> response = requestSender.sendRequest(
+    HttpResponse<byte[]> response = requestSender.sendRequest(
         String.format(
             "/%s/quadkey/%s?%s%s",
             baseEndpoint(readRequest), tileId, queryParamsString, getPOpQueryOrEmpty(readRequest)),
