@@ -40,8 +40,6 @@ class NakshaSession(
         appName: String, streamId: String, appId: String, author: String? = null
 ) : JbSession(appName, streamId, appId, author) {
 
-    val bulk: NakshaBulkLoader = NakshaBulkLoader(this)
-
     /**
      * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
      */
@@ -881,8 +879,9 @@ SET (toast_tuple_target=8160,fillfactor=100
             tags_arr: Array<ByteArray?>
     ): ITable {
         val table = sql.newTable()
+        val bulk = NakshaBulkLoader(collectionId, this)
         try {
-            bulk.bulkWriteFeatures(collectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+            bulk.bulkWriteFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
             table.returnException(e)
