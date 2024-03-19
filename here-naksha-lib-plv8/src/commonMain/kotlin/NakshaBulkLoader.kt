@@ -9,7 +9,6 @@ class NakshaBulkLoader(
 ) {
 
     private val headCollectionId = session.getBaseCollectionId(collectionId)
-    private val headCollectionIdQuoted = session.sql.quoteIdent(headCollectionId)
     private val collectionIdQuoted = session.sql.quoteIdent(collectionId)
     private val delCollectionIdQuoted = quotedDel(headCollectionId)
     private val hstCollectionIdQuoted = quotedHst(headCollectionId)
@@ -18,7 +17,7 @@ class NakshaBulkLoader(
         session.sql.prepare("INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)", COL_ALL_TYPES)
     }
     private val updateHeadPlan: IPlv8Plan by lazy {
-        session.sql.prepare("""UPDATE $headCollectionIdQuoted SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_GEO_TYPE=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18 WHERE id=$19""",
+        session.sql.prepare("""UPDATE $collectionIdQuoted SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_GEO_TYPE=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18 WHERE id=$19""",
                 arrayOf(*COL_ALL_TYPES, SQL_STRING))
     }
     private val insertDelPlan: IPlv8Plan by lazy {
@@ -26,15 +25,15 @@ class NakshaBulkLoader(
         session.sql.prepare("INSERT INTO $delCollectionIdQuoted ($COL_ALL) SELECT 0,$1,$2,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$3,($COL_VERSION+1),$COL_CREATED_AT,$4,$5,$6,$7,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE FROM $collectionIdQuoted WHERE id = $8", arrayOf(SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
     }
 
-    private val copyHeadToHstPlan by lazy {
+    private val copyHeadToHstPlan: IPlv8Plan by lazy {
         session.sql.prepare("""
                 INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
                 SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE 
-                FROM $headCollectionIdQuoted WHERE id = $2
+                FROM $collectionIdQuoted WHERE id = $2
                 """, arrayOf(SQL_INT64, SQL_STRING))
     }
 
-    private val copyDelToHstPlan by lazy {
+    private val copyDelToHstPlan: IPlv8Plan by lazy {
         session.sql.prepare("INSERT INTO $hstCollectionIdQuoted ($COL_ALL) SELECT $COL_ALL FROM $delCollectionIdQuoted WHERE id = $1", arrayOf(SQL_STRING))
     }
 
@@ -57,7 +56,6 @@ class NakshaBulkLoader(
 
         prepareSessionUid(existingFeatures)
 
-//        val featureIdsToCopyToHst = mutableListOf<String>()
         val featureIdsToDeleteFromDel = mutableListOf<String>()
 
         session.sql.execute("SET LOCAL session_replication_role = replica;")
@@ -176,8 +174,8 @@ class NakshaBulkLoader(
 
     fun addCopyHeadToHstStmt(stmt: IPlv8Plan, row: IMap, isHstDisabled: Boolean?) {
         if (isHstDisabled == false) {
-            session.ensureHistoryPartition(collectionId, session.txn())
-            session.ensureHistoryPartition(collectionId, NakshaTxn(Jb.int64.ZERO()))
+            session.ensureHistoryPartition(headCollectionId, session.txn())
+            session.ensureHistoryPartition(headCollectionId, NakshaTxn(Jb.int64.ZERO()))
 
             stmt.setLong(1, session.txn().value)
             stmt.setString(2, row[COL_ID])
