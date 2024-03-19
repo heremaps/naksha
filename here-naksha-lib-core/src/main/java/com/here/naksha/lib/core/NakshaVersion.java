@@ -48,26 +48,63 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   public static final String v2_0_11 = "2.0.11";
   public static final String v2_0_12 = "2.0.12";
   public static final String v2_0_13 = "2.0.13";
+  public static final String v3_0_0_alpha_0 = "3.0.0-alpha.0";
+  public static final String v3_0_0_alpha_1 = "3.0.0-alpha.1";
+  public static final String v3_0_0_alpha_2 = "3.0.0-alpha.2";
 
   /**
    * The latest version of the naksha-extension stored in the resources.
    */
   @AvailableSince(v2_0_5)
-  public static final NakshaVersion latest = of(v2_0_13);
+  public static final NakshaVersion latest = of(v3_0_0_alpha_2);
 
   private final int major;
   private final int minor;
   private final int revision;
 
+  @NotNull
+  private final PreReleaseTag preReleaseTag;
+
+  private final Integer preReleaseVersion;
+
+  public enum PreReleaseTag {
+    none(PRE_RELEASE_TAG_DEFAULT),
+    alpha(0),
+    beta(1);
+
+    final int enc;
+
+    PreReleaseTag(int enc) {
+      this.enc = enc;
+    }
+
+    public static PreReleaseTag findByValue(int enc) {
+      for (PreReleaseTag tag : values()) {
+        if (tag.enc == enc) {
+          return tag;
+        }
+      }
+      throw new IllegalArgumentException("Unknown pre-release tag: " + enc);
+    }
+  }
+
+  private static final int PRE_RELEASE_TAG_DEFAULT = 255;
+  private static final int PRE_RELEASE_VERSION_DEFAULT = 255;
+
   /**
-   * @param major    the major version (0-65535).
-   * @param minor    the minor version (0-65535).
-   * @param revision the revision (0-65535).
+   * @param major             the major version (0-65535).
+   * @param minor             the minor version (0-65535).
+   * @param revision          the revision (0-65535).
+   * @param preReleaseTag     the pre-release tag (alpha, beta, none).
+   * @param preReleaseVersion the pre-release version (0-255 or null).
    */
-  public NakshaVersion(int major, int minor, int revision) {
+  public NakshaVersion(
+      int major, int minor, int revision, @NotNull PreReleaseTag preReleaseTag, Integer preReleaseVersion) {
     this.major = major;
     this.minor = minor;
     this.revision = revision;
+    this.preReleaseTag = preReleaseTag;
+    this.preReleaseVersion = preReleaseVersion;
   }
 
   /**
@@ -81,15 +118,34 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   public static @NotNull NakshaVersion of(@NotNull String version) throws NumberFormatException {
     final int majorEnd = version.indexOf('.');
     final int minorEnd = version.indexOf('.', majorEnd + 1);
-    return new NakshaVersion(
-        Integer.parseInt(version.substring(0, majorEnd)),
-        Integer.parseInt(version.substring(majorEnd + 1, minorEnd)),
-        Integer.parseInt(version.substring(minorEnd + 1)));
+    final int revisionEnd = version.indexOf('-', minorEnd + 1);
+    final int preReleaseTagEnd = revisionEnd == -1 ? -1 : version.indexOf('.', revisionEnd + 1);
+    final int major = Integer.parseInt(version.substring(0, majorEnd));
+    final int minor = Integer.parseInt(version.substring(majorEnd + 1, minorEnd));
+    final int revision = revisionEnd == -1
+        ? Integer.parseInt(version.substring(minorEnd + 1))
+        : Integer.parseInt(version.substring(minorEnd + 1, revisionEnd));
+    final String preReleaseTagString =
+        revisionEnd == -1 ? null : version.substring(revisionEnd + 1, preReleaseTagEnd);
+    final PreReleaseTag preReleaseTag =
+        preReleaseTagString == null ? PreReleaseTag.none : PreReleaseTag.valueOf(preReleaseTagString);
+    final Integer preReleaseVersion =
+        preReleaseTagEnd == -1 ? null : Integer.parseInt(version.substring(preReleaseTagEnd + 1));
+
+    return new NakshaVersion(major, minor, revision, preReleaseTag, preReleaseVersion);
   }
 
   @AvailableSince(v2_0_3)
   public NakshaVersion(long value) {
-    this((int) ((value >>> 32) & 0xffff), (int) ((value >>> 16) & 0xffff), (int) (value & 0xffff));
+    this(
+        (int) ((value >>> 48) & 0xffff),
+        (int) ((value >>> 32) & 0xffff),
+        (int) ((value >>> 16) & 0xffff),
+        PreReleaseTag.findByValue((int) ((value >>> 8) & 0xff)),
+        (int) ((value >>> 8) & 0xff) == PRE_RELEASE_TAG_DEFAULT
+                || ((value) & 0xff) == PRE_RELEASE_VERSION_DEFAULT
+            ? null
+            : (int) ((value) & 0xff));
   }
 
   @AvailableSince(v2_0_3)
@@ -107,9 +163,23 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
     return revision;
   }
 
+  @AvailableSince(v3_0_0_alpha_0)
+  public @NotNull PreReleaseTag getPreReleaseTag() {
+    return preReleaseTag;
+  }
+
+  @AvailableSince(v3_0_0_alpha_0)
+  public Integer getReleaseVersion() {
+    return preReleaseVersion;
+  }
+
   @AvailableSince(v2_0_3)
   public long toLong() {
-    return ((major & 0xffffL) << 32) | ((minor & 0xffffL) << 16) | (revision & 0xffffL);
+    return ((major & 0xffffL) << 48)
+        | ((minor & 0xffffL) << 32)
+        | ((revision & 0xffffL) << 16)
+        | (preReleaseTag.enc & 0xffL) << 8
+        | (preReleaseVersion == null ? PRE_RELEASE_VERSION_DEFAULT & 0xffL : preReleaseVersion & 0xffL);
   }
 
   @Override
@@ -137,6 +207,7 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
 
   @Override
   public @NotNull String toString() {
-    return "" + major + '.' + minor + '.' + revision;
+    return "" + major + '.' + minor + '.' + revision
+        + (preReleaseTag == PreReleaseTag.none ? "" : "-" + preReleaseTag + '.' + preReleaseVersion);
   }
 }
