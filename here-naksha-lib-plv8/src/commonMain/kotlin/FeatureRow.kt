@@ -25,7 +25,7 @@ data class FeatureRow(
             }
             val featureReader = JbFeature()
             val operations = ArrayList<FeatureRow>(op_arr.size)
-            val ids = ArrayList<String>(op_arr.size)
+            val idsToModify = ArrayList<String>(op_arr.size)
             for (i in op_arr.indices) {
                 val opReader = XyzOp()
                 opReader.mapBytes(op_arr[i])
@@ -36,7 +36,8 @@ data class FeatureRow(
                 } else {
                     opReader.id()!!
                 }
-                ids.add(id)
+                if (opReader.op() != XYZ_OP_CREATE)
+                    idsToModify.add(id)
                 val row = newMap()
                 row[COL_ID] = id
                 row[COL_TAGS] = tags_arr[i]
@@ -51,7 +52,7 @@ data class FeatureRow(
                         collectionId = collectionId
                 ))
             }
-            return Pair(operations, ids)
+            return Pair(operations, idsToModify)
         }
     }
 }

@@ -26,11 +26,11 @@ class NakshaBulkLoader(
         val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
         val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
 
-        val (allOperations, ids) = mapToFeatureRow(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val (allOperations, idsToModify) = mapToFeatureRow(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
 
         session.sql.execute("SET LOCAL session_replication_role = replica;")
         // we have to call it upfront, for all partitions to prepare proper uid
-        val existingFeatures = session.queryForExisting(headCollectionId, ids, wait = false)
+        val existingFeatures = existingFeatures(idsToModify)
         prepareSessionUid(existingFeatures)
 
         val featureIdsToDeleteFromDel = mutableListOf<String>()
@@ -221,6 +221,12 @@ class NakshaBulkLoader(
             // java.sql.Statement.EXECUTE_FAILED
             throw NakshaException.forBulk(ERR_FATAL, "error in bulk statement")
         }
+    }
+
+    internal fun existingFeatures(ids: List<String>) = if (ids.isNotEmpty()) {
+        session.queryForExisting(headCollectionId, ids, wait = false)
+    } else {
+        newMap()
     }
 
     class PartitionPlans(
