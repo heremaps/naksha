@@ -197,7 +197,7 @@ Naksha REST App accepts [JWT token](https://datatracker.ietf.org/doc/html/rfc751
 The [JWT token](https://datatracker.ietf.org/doc/html/rfc7519) must be digitally signed by a trusted partner using its private key (`RS256` encryption algorithm),
 and the public key of this trusted partner must be added into the Naksha configuration so that the service can validate the token's authenticity.
 
-JWT format follows:
+Standard JWT format:
 
 ```text
   base64UrlEncoded(header)
@@ -207,7 +207,7 @@ JWT format follows:
   signature
 ```
 
-The sample encoded JWT will look like (can be viewed on [jwt.io](https://jwt.io)):
+The sample encoded JWT (can be viewed on [jwt.io](https://jwt.io)):
 
 ```text
 eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IndlYi1jbGllbnQtYXBwLWlkIiwiYXV0aG9yIjoibXktdXNlci1pZCIsInVybSI6eyJ4eXotaHViIjp7InJlYWRGZWF0dXJlcyI6W3sic3RvcmFnZUlkIjoiZGV2LSoifV19fSwiaWF0IjoxNzA0MDYzNTk5LCJleHAiOjE3MDQwNjcxOTl9.g7maKIpDQ6d8MoC7lPQDa_6BLKV5HhpN9t1BkcdFmNSetc-dHIcor_mhvc4GNpJELEMCBiTiF8RdlY_PEOooJc4Ixx5yWFoeIEaKv-aunvf6TZsOlD8F5KX8CmL8QzEO7t8YrSVz-F3WYrw1rmnl_1WC2tscMUBvfFHRifq3h7F46ZMswO6fm8AGHW0bbSeDCwK2VcjkYOwGVYWmSPodtxT7ie8uxJlAFxaCGzxV1WkVnrqIZFdPcnq3hM_FjbSw01MxOD3qdiL47HRXQnvOzsKjhi5ihClihwiua4N9xOeq2I8nX5_2YJIRWjS8pAozRp7cfnhb15Sm8JevqEwz1A
@@ -245,22 +245,20 @@ Service can be executed in two modes based on [AuthorizationType](../here-naksha
   - Real JWT mode
   - useful, for cloud / prod environment, where security is MUST
   - it will validate the JWT as part of each REST API request and extract the URM for further authorization checks
-  - Absent of JWT will result into Http error code 401 - Unauthorized
+  - Absence of or Invalid JWT will result into Http error code 401 - Unauthorized
 
 
 
 
 ---
 
-## 3. Supported Actions and Attributes
+## 3. Supported Resource Actions and Attributes
 
-**TODO**
-
-Table of all supported **Actions** and **Attributes** for validating authorization against individual resource operation:
+Matrix of all supported **Actions** and **Attributes** for validating authorization against individual resource operation:
 
 **NOTE** for **Attributes**:
   * For all, **exact** String value comparison is supported by default.
-  * For some, **wild-card** value (e.g. `storage-dev*`) is also supported (explicitly marked in table)
+  * For some, **wild-card** value (e.g. `storage-dev*`) is also supported (explicitly mentioned where applicable)
   * For all, **List** of values is supported by default.
 
 **NOTE** for **Actions**:
@@ -270,7 +268,7 @@ Table of all supported **Actions** and **Attributes** for validating authorizati
 
 
 
-### 3.1 Storage
+### 3.1 Resource - Storage
 
 #### Attributes
 
@@ -293,7 +291,7 @@ Table of all supported **Actions** and **Attributes** for validating authorizati
 
 
 
-### 3.2 EventHandler
+### 3.2 Resource - EventHandler
 
 #### Attributes
 
@@ -314,7 +312,7 @@ Table of all supported **Actions** and **Attributes** for validating authorizati
 
 
 
-### 3.3 Space
+### 3.3 Resource - Space
 
 #### Attributes
 
@@ -336,7 +334,7 @@ Table of all supported **Actions** and **Attributes** for validating authorizati
 
 
 
-### 3.4 XyzFeature
+### 3.4 Resource - XyzFeature
 
 #### Attributes
 
@@ -363,7 +361,7 @@ Table of all supported **Actions** and **Attributes** for validating authorizati
 
 
 
-### 3.5 XyzCollection
+### 3.5 Resource - XyzCollection
 
 #### Attributes
 
