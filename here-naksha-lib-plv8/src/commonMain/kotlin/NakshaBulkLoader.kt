@@ -28,14 +28,12 @@ class NakshaBulkLoader(
 
         val (allOperations, ids) = mapToFeatureRow(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
 
+        session.sql.execute("SET LOCAL session_replication_role = replica;")
+        // we have to call it upfront, for all partitions to prepare proper uid
         val existingFeatures = session.queryForExisting(headCollectionId, ids, wait = false)
-
         prepareSessionUid(existingFeatures)
 
         val featureIdsToDeleteFromDel = mutableListOf<String>()
-
-        session.sql.execute("SET LOCAL session_replication_role = replica;")
-
 
         val partitionOperations = groupByPartition(isCollectionPartitioned, allOperations)
         val orderedPartitionKeys = partitionOperations.keys.sorted()

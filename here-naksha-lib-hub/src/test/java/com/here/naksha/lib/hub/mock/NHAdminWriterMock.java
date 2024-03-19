@@ -75,6 +75,11 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
         "WriteRequest type " + writeRequest.getClass().getName() + " not supported");
   }
 
+  @Override
+  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
+    throw new UnsupportedOperationException("bulk write is not supported");
+  }
+
   protected @NotNull Result executeWriteCollection(@NotNull WriteXyzCollections wc) {
     final @NotNull List<XyzCollectionCodec> results = new ArrayList<>();
     for (final XyzCollectionCodec collectionCodec : wc.features) {

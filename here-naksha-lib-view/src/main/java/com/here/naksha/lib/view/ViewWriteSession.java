@@ -86,6 +86,11 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   @Override
+  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
+    throw new UnsupportedOperationException("bulk write on view is not yet supported");
+  }
+
+  @Override
   public void commit(boolean autoCloseCursors) {
     getSession().commit(autoCloseCursors);
   }

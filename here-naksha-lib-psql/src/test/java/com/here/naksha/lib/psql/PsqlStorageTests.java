@@ -18,30 +18,6 @@
  */
 package com.here.naksha.lib.psql;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.models.storage.POp.and;
-import static com.here.naksha.lib.core.models.storage.POp.eq;
-import static com.here.naksha.lib.core.models.storage.POp.exists;
-import static com.here.naksha.lib.core.models.storage.POp.not;
-import static com.here.naksha.lib.core.models.storage.PRef.id;
-import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInMeters;
-import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInRadius;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createBBoxEnvelope;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.deleteFeatureByIdRequest;
-import static java.lang.String.format;
-import static java.util.Arrays.asList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.locationtech.spatial4j.io.GeohashUtils.encodeLatLon;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.here.naksha.lib.core.exceptions.NoCursor;
@@ -49,46 +25,15 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
 import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates;
 import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzLineString;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzMultiPoint;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
+import com.here.naksha.lib.core.models.geojson.implementation.*;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.NakshaFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.CodecError;
-import com.here.naksha.lib.core.models.storage.EExecutedOp;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.models.storage.MutableCursor;
-import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.PRef;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SOp;
-import com.here.naksha.lib.core.models.storage.SeekableCursor;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.WriteFeatures;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.jbon.BigInt64Kt;
 import com.here.naksha.lib.jbon.NakshaTxn;
-import java.io.IOException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -101,6 +46,26 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.operation.buffer.BufferOp;
 import org.locationtech.spatial4j.distance.DistanceUtils;
 import org.postgresql.util.PSQLException;
+
+import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
+
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.core.models.storage.POp.*;
+import static com.here.naksha.lib.core.models.storage.PRef.id;
+import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInMeters;
+import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInRadius;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.*;
+import static java.lang.String.format;
+import static java.util.Arrays.asList;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.locationtech.spatial4j.io.GeohashUtils.encodeLatLon;
 
 @SuppressWarnings({"unused"})
 @TestMethodOrder(OrderAnnotation.class)
@@ -493,7 +458,6 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       txnOfMiddleVersion = cursor.getFeature().getProperties().getXyzNamespace().getTxn();
     }
 
-
     final ReadFeatures request = RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
     request.withReturnAllVersions(true);
     request.setPropertyOp(POp.eq(PRef.txn(), txnOfMiddleVersion));
@@ -519,8 +483,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
              session.execute(requestForPreviousVersion).getXyzMutableCursor()) {
       cursor.next();
       XyzNamespace xyzNamespace = cursor.getFeature().getProperties().getXyzNamespace();
-      assertEquals(puuid,  xyzNamespace.getUuid());
-      assertTrue( txnOfMiddleVersion >  xyzNamespace.getTxn());
+      assertEquals(puuid, xyzNamespace.getUuid());
+      assertTrue(txnOfMiddleVersion > xyzNamespace.getTxn());
       assertFalse(cursor.hasNext());
     }
   }
@@ -665,7 +629,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     request.add(EWriteOp.CREATE, feature);
 
     // when
-    try(final Result result = session.execute(request)) {
+    try (final Result result = session.execute(request)) {
       final WriteXyzFeatures delRequest = new WriteXyzFeatures(collectionId());
       delRequest.delete("TO_DEL_BY_ID", null);
       try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
@@ -861,14 +825,14 @@ public class PsqlStorageTests extends PsqlCollectionTests {
 
     // CREATE feature
     final XyzFeature featureToDel = new XyzFeature(SINGLE_FEATURE_ID);
-    try(final Result result = session.execute(createFeatureRequest(collectionWithAutoPurge, featureToDel))) {
+    try (final Result result = session.execute(createFeatureRequest(collectionWithAutoPurge, featureToDel))) {
       assertTrue(result instanceof SuccessResult);
     } finally {
       session.commit(true);
     }
 
     // DELETE feature
-    try(final Result result = session.execute(deleteFeatureByIdRequest(collectionWithAutoPurge, featureToDel.getId()))) {
+    try (final Result result = session.execute(deleteFeatureByIdRequest(collectionWithAutoPurge, featureToDel.getId()))) {
       assertTrue(result instanceof SuccessResult);
     } finally {
       session.commit(true);
@@ -932,6 +896,31 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   }
 
   @Test
+  @Order(70)
+  @EnabledIf("runTest")
+  void miniBulkInsert() throws NoCursor {
+    assertNotNull(storage);
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    final XyzFeature feature = fg.newRandomFeature();
+    request.add(EWriteOp.CREATE, feature);
+    PsqlWriteSession writeSession = storage.newWriteSession(nakshaContext, true);
+    try (Result result = writeSession.executeBulkWriteFeatures(request)) {
+      assertInstanceOf(SuccessResult.class, result);
+    } finally {
+      writeSession.commit(true);
+    }
+
+    ReadFeatures readReq = RequestHelper.readFeaturesByIdRequest(collectionId(), feature.getId());
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+             session.execute(readReq).getXyzFeatureCursor()) {
+      cursor.next();
+      assertNotNull(cursor.getFeatureJbon());
+      assertNotNull(cursor.getFeature());
+      assertNotNull(cursor.getWkb());
+    }
+  }
+
+  @Test
   @Order(71)
   @EnabledIf("runTest")
   void multipleFeaturesRead() throws NoCursor {
@@ -964,7 +953,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
         assertNotNull(tags);
         assertTrue(tags.size() > 0);
         assertTrue(tags.contains("@:firstName:" + fg.firstNames[0])
-                   || tags.contains("@:firstName:" + fg.firstNames[1]));
+                       || tags.contains("@:firstName:" + fg.firstNames[1]));
       }
     } finally {
       session.commit(true);
@@ -1128,7 +1117,6 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       }
     };
 
-
     // when - search for int value
     ReadFeatures readFeatures = new ReadFeatures(collectionId());
     POp weightSearch = eq(new NonIndexedPRef("properties", "weight"), 60);
@@ -1176,13 +1164,15 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     expect.accept(readFeatures);
 
     // when - search by json object
-    POp jsonSearch2 = POp.contains(new NonIndexedPRef("properties", "references"), reader.readValue("[{\"id\":\"urn:here::here:Topology:106003684\"}]", ArrayList.class));
+    POp jsonSearch2 = POp.contains(new NonIndexedPRef("properties", "references"),
+        reader.readValue("[{\"id\":\"urn:here::here:Topology:106003684\"}]", ArrayList.class));
     readFeatures.setPropertyOp(jsonSearch2);
     // then
     expect.accept(readFeatures);
 
     // when - search by json object
-    POp jsonSearch3 = POp.contains(new NonIndexedPRef("properties", "references"), reader.readValue("[{\"prop\":{\"a\":1}}]", JsonNode.class));
+    POp jsonSearch3 = POp.contains(new NonIndexedPRef("properties", "references"),
+        reader.readValue("[{\"prop\":{\"a\":1}}]", JsonNode.class));
     readFeatures.setPropertyOp(jsonSearch3);
     // then
     expect.accept(readFeatures);

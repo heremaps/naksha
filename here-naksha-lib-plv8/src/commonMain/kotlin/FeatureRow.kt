@@ -42,6 +42,8 @@ data class FeatureRow(
                 row[COL_TAGS] = tags_arr[i]
                 row[COL_GEOMETRY] = geo_arr[i]
                 row[COL_FEATURE] = feature_arr[i]
+                row[COL_GEO_TYPE] = geo_type_arr[i]
+                row[COL_GEO_GRID] = opReader.grid()
 
                 operations.add(FeatureRow(
                         row,

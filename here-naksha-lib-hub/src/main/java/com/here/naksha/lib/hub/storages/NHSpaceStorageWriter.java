@@ -191,6 +191,11 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     throw new UnsupportedOperationException("Locking not supported by this storage instance!");
   }
 
+  @Override
+  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
+    throw new UnsupportedOperationException("bulk write is not supported");
+  }
+
   /**
    * Commit all changes.
    * <p>
