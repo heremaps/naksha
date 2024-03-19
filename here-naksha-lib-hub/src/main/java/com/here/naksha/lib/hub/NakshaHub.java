@@ -20,11 +20,12 @@ package com.here.naksha.lib.hub;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.PluginCache.getStorageConstructor;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.*;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.upsertFeaturesRequest;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
 
-import com.amazonaws.services.s3.AmazonS3URI;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
@@ -39,7 +40,12 @@ import com.here.naksha.lib.core.models.features.Extension;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.models.storage.EExecutedOp;
+import com.here.naksha.lib.core.models.storage.ErrorResult;
+import com.here.naksha.lib.core.models.storage.ForwardCursor;
+import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
+import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
@@ -53,7 +59,6 @@ import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import com.here.naksha.lib.psql.PsqlStorage;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -296,39 +301,39 @@ public class NakshaHub implements INaksha {
 
   private List<Extension> loadExtensionConfigFromS3(String extensionRootPath) {
     AmazonS3Helper s3Helper = new AmazonS3Helper();
-    AmazonS3URI bucketUri = new AmazonS3URI(extensionRootPath);
+    final String bucketName = s3Helper.getS3Uri(extensionRootPath).bucket().get();
 
     List<String> list = s3Helper.listKeysInBucket(extensionRootPath);
     List<Extension> extList = new ArrayList<>();
     list.stream().forEach(extensionPath -> {
-      String filePath = "s3://" + bucketUri.getBucket() + "/" + extensionPath + "latest-"
-          + nakshaHubConfig.env.toLowerCase() + ".txt";
+      String filePath =
+          "s3://" + bucketName + "/" + extensionPath + "latest-" + nakshaHubConfig.env.toLowerCase() + ".txt";
       String version;
       try {
         version = s3Helper.getFileContent(filePath);
-      } catch (IOException e) {
-        logger.error("Failed to read extension content from " + filePath, e);
+      } catch (Exception e) {
+        logger.error("Failed to read extension content from {}", filePath, e);
         return;
       }
 
       String bits[] = extensionPath.split("/");
       String extensionId = bits[bits.length - 1];
 
-      filePath = "s3://" + bucketUri.getBucket() + "/" + extensionPath + extensionId + "-" + version + "."
+      filePath = "s3://" + bucketName + "/" + extensionPath + extensionId + "-" + version + "."
           + nakshaHubConfig.env.toLowerCase().toLowerCase() + ".json";
       String exJson;
       try {
         exJson = s3Helper.getFileContent(filePath);
-      } catch (IOException e) {
-        logger.error("Failed to read extension meta data from " + filePath, e);
+      } catch (Exception e) {
+        logger.error("Failed to read extension meta data from {} ", filePath, e);
         return;
       }
       Extension extension;
       try {
         extension = new ObjectMapper().readValue(exJson, Extension.class);
         extList.add(extension);
-      } catch (JsonProcessingException e) {
-        logger.error("Failed to convert extension meta data to Extension object. " + exJson, e);
+      } catch (Exception e) {
+        logger.error("Failed to convert extension meta data to Extension object. {} ", exJson, e);
         return;
       }
     });

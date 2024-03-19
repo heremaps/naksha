@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.extmanager;
 
-import com.amazonaws.SdkClientException;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.SimpleTask;
 import com.here.naksha.lib.core.models.ExtensionConfig;
@@ -40,6 +39,7 @@ import java.util.concurrent.Future;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkClientException;
 
 /**
  * Class contains registered extensions in naksha. It update/maintain extensions cache over scheduled time.

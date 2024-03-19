@@ -18,12 +18,6 @@
  */
 package com.here.naksha.lib.extmanager.helpers;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.AmazonS3URI;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3Object;
 import com.here.naksha.lib.extmanager.FileClient;
 import java.io.BufferedReader;
 import java.io.File;
@@ -31,11 +25,18 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Uri;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest.Builder;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
 
 public class AmazonS3Helper implements FileClient {
-  private static AmazonS3 s3Client;
+  private static S3Client s3Client;
 
   public AmazonS3Helper() {
     // NOTE
@@ -43,11 +44,11 @@ public class AmazonS3Helper implements FileClient {
     // where AWS S3 connectivity is not mandatory.
   }
 
-  public AmazonS3 getS3Client() {
+  public S3Client getS3Client() {
     if (s3Client == null) {
       synchronized (AmazonS3Helper.class) {
         if (s3Client == null) {
-          s3Client = AmazonS3ClientBuilder.standard().build();
+          s3Client = S3Client.builder().build();
         }
       }
     }
@@ -56,9 +57,9 @@ public class AmazonS3Helper implements FileClient {
 
   public File getFile(@NotNull String url) throws IOException {
     String extension = url.substring(url.lastIndexOf("."));
-    AmazonS3URI fileUri = new AmazonS3URI(url);
-    InputStream inputStream = getS3Object(fileUri);
-    File targetFile = File.createTempFile(fileUri.getBucket(), extension);
+    S3Uri s3Uri = getS3Uri(url);
+    InputStream inputStream = getS3Object(s3Uri);
+    File targetFile = File.createTempFile(s3Uri.bucket().orElse(""), extension);
     try (FileOutputStream fos = new FileOutputStream(targetFile)) {
       byte[] read_buf = new byte[1024];
       int read_len;
@@ -70,15 +71,17 @@ public class AmazonS3Helper implements FileClient {
     return targetFile;
   }
 
-  public InputStream getS3Object(AmazonS3URI fileUri) {
-    S3Object s3Object = getS3Client().getObject(fileUri.getBucket(), fileUri.getKey());
-    return s3Object.getObjectContent();
+  public InputStream getS3Object(S3Uri s3Uri) {
+    final String bucket = s3Uri.bucket().get();
+    Builder getObjectBuilder = GetObjectRequest.builder().bucket(bucket);
+    if (s3Uri.key().isPresent()) getObjectBuilder.key(s3Uri.key().get());
+    return getS3Client().getObject(getObjectBuilder.build());
   }
 
   @Override
   public String getFileContent(String url) throws IOException {
-    AmazonS3URI fileUri = new AmazonS3URI(url);
-    InputStream inputStream = getS3Object(fileUri);
+    S3Uri s3Uri = getS3Uri(url);
+    InputStream inputStream = getS3Object(s3Uri);
     // Read the text input stream one line at a time.
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
       StringBuilder stringBuilder = new StringBuilder();
@@ -91,26 +94,21 @@ public class AmazonS3Helper implements FileClient {
   }
 
   public List<String> listKeysInBucket(String url) {
-    boolean isTopLevel = false;
-    AmazonS3URI fileUri = new AmazonS3URI(url);
-
+    S3Uri fileUri = getS3Uri(url);
     String delimiter = "/";
-    if ("".equals(fileUri.getKey()) || "/".equals(fileUri.getKey())) {
-      isTopLevel = true;
-    }
 
-    ListObjectsV2Request listObjectsRequest;
-    if (isTopLevel) {
-      listObjectsRequest = new ListObjectsV2Request()
-          .withBucketName(fileUri.getBucket())
-          .withDelimiter(delimiter);
-    } else {
-      listObjectsRequest = new ListObjectsV2Request()
-          .withBucketName(fileUri.getBucket())
-          .withPrefix(fileUri.getKey())
-          .withDelimiter(delimiter);
-    }
-    ListObjectsV2Result objects = getS3Client().listObjectsV2(listObjectsRequest);
-    return objects.getCommonPrefixes();
+    ListObjectsRequest.Builder listObjectsRequestBuilder =
+        ListObjectsRequest.builder().bucket(fileUri.bucket().get()).delimiter(delimiter);
+
+    if (fileUri.key().isPresent())
+      listObjectsRequestBuilder.prefix(fileUri.key().get());
+
+    ListObjectsResponse response = getS3Client().listObjects(listObjectsRequestBuilder.build());
+    return response.commonPrefixes().stream().map(cm -> cm.prefix()).toList();
+  }
+
+  public S3Uri getS3Uri(String url) {
+    URI uri = URI.create(url);
+    return getS3Client().utilities().parseUri(uri);
   }
 }
