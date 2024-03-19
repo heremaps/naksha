@@ -58,10 +58,8 @@ public class AmazonS3Helper implements FileClient {
   public File getFile(@NotNull String url) throws IOException {
     String extension = url.substring(url.lastIndexOf("."));
     S3Uri s3Uri = getS3Uri(url);
-    if (s3Uri.bucket().isEmpty()) throw new RuntimeException("S3 Bucket must not be empty " + url);
-
     InputStream inputStream = getS3Object(s3Uri);
-    File targetFile = File.createTempFile(s3Uri.bucket().get(), extension);
+    File targetFile = File.createTempFile(s3Uri.bucket().orElse("tmp_"), extension);
     try (FileOutputStream fos = new FileOutputStream(targetFile)) {
       byte[] read_buf = new byte[1024];
       int read_len;
