@@ -88,7 +88,10 @@ public class ExtensionCache {
         extensionConfig.getExtensions().stream().map(Extension::getId).toList();
 
     for (String key : loaderCache.keySet()) {
-      if (!extIds.contains(key)) loaderCache.remove(key);
+      if (!extIds.contains(key)) {
+        loaderCache.remove(key);
+        logger.info("Extension {} removed from cache.",key);
+      }
     }
     logger.info("Extension cache size " + loaderCache.size());
   }
