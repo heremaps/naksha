@@ -2,11 +2,15 @@
 
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.jbon.*
+
+internal const val NKC_TABLE = "naksha_collections"
 internal const val NKC_PARTITION = "partition"
 internal const val NKC_POINTS_ONLY = "pointsOnly"
 internal const val NKC_DISABLE_HISTORY = "disableHistory"
 internal const val NKC_MAX_AGE = "maxAge"
 internal const val NKC_ESTIMATED_FEATURE_COUNT = "estimatedFeatureCount"
+internal const val NKC_AUTO_PURGE = "autoPurge"
 
 internal const val COL_TXN_NEXT = "txn_next"
 internal const val COL_TXN = "txn"
@@ -28,6 +32,7 @@ internal const val COL_GEOMETRY = "geo"
 internal const val COL_FEATURE = "feature"
 internal const val COL_ALL = "$COL_TXN_NEXT,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE"
 internal const val COL_RETURN = "$COL_TXN_NEXT,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID"
+internal val COL_ALL_TYPES = arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT64,SQL_INT32, SQL_INT16, SQL_INT16, SQL_INT16, SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING, SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY)
 
 /**
  * id, grid, geo_type, geo, tags, feature

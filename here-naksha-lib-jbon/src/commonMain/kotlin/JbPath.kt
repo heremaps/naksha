@@ -67,7 +67,7 @@ class JbPath {
                 bytes = binary
                 feature = JbFeature().mapBytes(bytes)
                 reader = feature.reader
-                view = reader.view!!
+                view = reader.view()
                 jmap = JbMap()
                 jmap.mapReader(feature.reader)
             }

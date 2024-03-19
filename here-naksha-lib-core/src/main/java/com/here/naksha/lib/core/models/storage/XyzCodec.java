@@ -19,10 +19,6 @@
 package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
-import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_CREATE;
-import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_DELETE;
-import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_UPDATE;
-import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_UPSERT;
 import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
@@ -33,15 +29,11 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzTags
 import com.here.naksha.lib.jbon.IMap;
 import com.here.naksha.lib.jbon.JbBuilder;
 import com.here.naksha.lib.jbon.JbDict;
-import com.here.naksha.lib.jbon.JbFeature;
-import com.here.naksha.lib.jbon.JbMap;
 import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.JvmMap;
 import com.here.naksha.lib.jbon.XyzBuilder;
 import com.here.naksha.lib.jbon.XyzNs;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -73,7 +65,9 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     }
     XyzGeometry xyzGeometry = feature.removeGeometry();
 
-    id = feature.getId();
+    if (id == null) {
+      id = feature.getId();
+    }
     final XyzNamespace xyz = feature.getProperties().getXyzNamespace();
     uuid = xyz.getUuid();
 
@@ -104,11 +98,6 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     return self();
   }
 
-  public void decodeXyzOp(@Nullable JbDict globalDict) {
-    XyzBuilder xyzBuilder = new XyzBuilder(newDataView(1024), globalDict);
-    xyzOp = xyzBuilder.buildXyzOp(mapOperationToPerform(op), id, uuid, calculateGrid());
-  }
-
   private void decodeTags(@Nullable List<@NotNull String> tags, @Nullable JbDict globalDict) {
     XyzBuilder xyzBuilder = new XyzBuilder(newDataView(512), globalDict);
     tagsBytes = null;
@@ -121,19 +110,6 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     }
   }
 
-  private int mapOperationToPerform(String action) {
-    if (Objects.equals(EWriteOp.CREATE.value(), action)) {
-      return XYZ_OP_CREATE;
-    } else if (Objects.equals(EWriteOp.UPDATE.value(), action)) {
-      return XYZ_OP_UPDATE;
-    } else if (Objects.equals(EWriteOp.PUT.value(), action)) {
-      return XYZ_OP_UPSERT;
-    } else if (Objects.equals(EWriteOp.DELETE.value(), action)) {
-      return XYZ_OP_DELETE;
-    }
-    throw new UnsupportedOperationException(String.format("Action type %s is not supported", action));
-  }
-
   @Override
   public final @NotNull SELF encodeFeature(boolean force) {
     if (!force && isEncoded) {
@@ -142,9 +118,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     if (featureBytes == null) {
       return self();
     }
-    feature = null;
-
-    feature = getFeatureFromJbon();
+    feature = getFeatureFromJbon(featureClass);
     if (id != null) {
       feature.setId(id);
     }
@@ -158,14 +132,6 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     }
     isEncoded = true;
     return self();
-  }
-
-  @SuppressWarnings("unchecked")
-  private FEATURE getFeatureFromJbon() {
-    JbFeature jbFeature = new JbFeature().mapBytes(featureBytes, 0, featureBytes.length);
-    Map<String, Object> featureAsMap = (Map<String, Object>)
-        new JbMap().mapReader(jbFeature.getReader()).toIMap();
-    return JvmEnv.get().convert(featureAsMap, featureClass);
   }
 
   private XyzNamespace getXyzNamespaceFromFromJbon() {

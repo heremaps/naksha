@@ -55,6 +55,14 @@ CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, a
   }
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION naksha_clear_session() RETURNS void AS $$
+  let jb = require("jbon");
+  let session = jb.JbSession.Companion.threadLocal.get();
+  if (session != null) {
+    session.clear();
+  }
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION naksha_txn() RETURNS int8 AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
@@ -146,6 +154,13 @@ $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
   return require("naksha").Static.partitionNameForId(id);
+$$ LANGUAGE 'plv8' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION naksha_hst_partition_id(id text, txn_next int8) RETURNS int4 AS $$
+  let naksha = require("naksha");
+  let jbon = require("jbon");
+  let session = naksha.NakshaSession.Companion.get();
+  return naksha.Static.hstPartitionNameForId(id, new jbon.NakshaTxn(txn_next));
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_geometry(geo_type int2, geo_bytes bytea) RETURNS geometry AS
@@ -364,7 +379,7 @@ CREATE OR REPLACE FUNCTION feature_to_json(feature bytea) RETURNS text AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION row_to_ns(created_at int8, updated_at int8, txn int8, action int2, version int4, author_ts int8,
- uid int4, app_id text, author text, geo_grid text, collection_id text) RETURNS bytea AS $$
+ uid int4, app_id text, author text, geo_grid text, puid int4, ptxn int8, collection_id text) RETURNS bytea AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
   let mapi = require("jbon").Jb.map;
@@ -376,6 +391,8 @@ CREATE OR REPLACE FUNCTION row_to_ns(created_at int8, updated_at int8, txn int8,
   map["version"] = version;
   map["author_ts"] = author_ts;
   map["uid"] = uid;
+  map["puid"] = puid;
+  map["ptxn"] = ptxn;
   map["app_id"] = app_id;
   map["author"] = author;
   map["geo_grid"] = geo_grid;

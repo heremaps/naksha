@@ -1,46 +1,101 @@
 package com.here.naksha.lib.jbon
 
-const val TYPE_UINT4 = 0b1000_0000
-const val TYPE_SINT4 = 0b1001_0000
-const val TYPE_FLOAT4 = 0b1010_0000
-const val TYPE_REFERENCE = 0b1011_0000
-const val TYPE_STRING = 0b1100_0000
-const val TYPE_STRING_CODE_POINT = 0b0001_0000_0000 // 256
-const val TYPE_TEXT_REF = 0b0001_0000_0001 // 257
-const val TYPE_CONTAINER = 0b1101_0000
-const val TYPE_CONTAINER_MAP = 0b0000_0000
-const val TYPE_MAP = TYPE_CONTAINER or TYPE_CONTAINER_MAP
-const val TYPE_CONTAINER_ARRAY = 0b0000_0100
-const val TYPE_ARRAY = TYPE_CONTAINER or TYPE_CONTAINER_ARRAY
-const val TYPE_CONTAINER_TEXT = 0b0000_1100
-const val TYPE_TEXT = TYPE_CONTAINER or TYPE_CONTAINER_TEXT
-const val TYPE_TINY_LOCAL_REF = 0b1110_0000
-const val TYPE_TINY_GLOBAL_REF = 0b1111_0000
+// Encoding constants
+internal const val ENC_MASK = 0b1100_0000
+internal const val ENC_MIXED = 0b0000_0000
+internal const val ENC_TINY = 0b0100_0000
+internal const val ENC_STRING = 0b1000_0000
+internal const val ENC_STRUCT = 0b1100_0000
 
-// 0b0100_0000 = Reserved
-// 0b0101_0000 = Reserved
-// 0b0110_0000 = Reserved
-// 0b0111_0000 = Reserved
-// 0b001?_???? = Reserved
-// All following are matching the pattern 0b000?_???? (0-31)
-const val TYPE_NULL = 0
-const val TYPE_UNDEFINED = 1
-const val TYPE_BOOL_TRUE = 2
-const val TYPE_BOOL_FALSE = 3
-const val TYPE_FLOAT32 = 4
-const val TYPE_FLOAT64 = 5
-const val TYPE_TIMESTAMP = 6 // UTC epoch in milliseconds
-// 7 = Reserved
+// Encode as ENC_TINY_INT or (value and 0x1f)
+// Decode as ((value shl 27) shr 27)
+internal const val ENC_TINY_MASK = 0b1_00000
+internal const val ENC_TINY_INT = 0b0_00000
+internal const val ENC_TINY_FLOAT = 0b1_00000
 
-const val TYPE_INT8 = 8
-const val TYPE_INT16 = 9
-const val TYPE_INT32 = 10
-const val TYPE_INT64 = 11
-const val TYPE_GLOBAL_DICTIONARY = 16
-const val TYPE_LOCAL_DICTIONARY = 17
-const val TYPE_FEATURE = 18
-const val TYPE_XYZ = 19
-// 20 - 31 = Reserved
+internal const val ENC_MIXED_MASK = 0b1111_0000
+internal const val ENC_MIXED_CORS = 0b0000_0000 // Constant OR Scalar
+internal const val ENC_MIXED_REF5_LOCAL = 0b0001_0000
+internal const val ENC_MIXED_REF5_GLOBAL = 0b0010_0000
+internal const val ENC_MIXED_REF = 0b0011_0000 // 1, 2 or 4 byte payload
+
+// If this is a back-reference: (leadIn and ENC_MIXED_REF_BACK_BIT) == ENC_MIXED_REF_BACK_BIT
+internal const val ENC_MIXED_REF_BACK_BIT = 0b1000
+// If this is a global-reference: (leadIn and ENC_MIXED_REF_GLOBAL_BIT) == ENC_MIXED_REF_GLOBAL_BIT
+internal const val ENC_MIXED_REF_GLOBAL_BIT = 0b0100
+// Mask the reference type: (leadIn and ENC_MIXED_REF_TYPE_MASK)
+internal const val ENC_MIXED_REF_TYPE_MASK = 0b1111_0011
+internal const val ENC_MIXED_REF_NULL = ENC_MIXED_REF or 0b0000
+internal const val ENC_MIXED_REF_INT8 = ENC_MIXED_REF or 0b0001
+internal const val ENC_MIXED_REF_INT16 = ENC_MIXED_REF or 0b0010
+internal const val ENC_MIXED_REF_INT32 = ENC_MIXED_REF or 0b0011
+
+internal const val ENC_MIXED_CONST_UNDEFINED = ENC_MIXED_CORS or 0b0000
+internal const val ENC_MIXED_CONST_NULL = ENC_MIXED_CORS or 0b0001
+internal const val ENC_MIXED_CONST_FALSE = ENC_MIXED_CORS or 0b0010
+internal const val ENC_MIXED_CONST_TRUE = ENC_MIXED_CORS or 0b0011
+internal const val ENC_MIXED_SCALAR_INT8 = ENC_MIXED_CORS or 0b0100 // 1 byte payload
+internal const val ENC_MIXED_SCALAR_INT16 = ENC_MIXED_CORS or 0b0101 // 2 byte payload
+internal const val ENC_MIXED_SCALAR_INT32 = ENC_MIXED_CORS or 0b0110 // 4 byte payload
+internal const val ENC_MIXED_SCALAR_INT64 = ENC_MIXED_CORS or 0b0111 // 8 byte payload
+internal const val ENC_MIXED_SCALAR_FLOAT16 = ENC_MIXED_CORS or 0b1000 // 2 byte payload
+internal const val ENC_MIXED_SCALAR_FLOAT32 = ENC_MIXED_CORS or 0b1001 // 4 byte payload
+internal const val ENC_MIXED_SCALAR_FLOAT64 = ENC_MIXED_CORS or 0b1010 // 8 byte payload
+internal const val ENC_MIXED_SCALAR_FLOAT128 = ENC_MIXED_CORS or 0b1011 // 16 byte payload
+internal const val ENC_MIXED_SCALAR_TIMESTAMP = ENC_MIXED_CORS or 0b1100 // 6 byte payload
+internal const val ENC_MIXED_RESERVED1 = ENC_MIXED_CORS or 0b1101
+internal const val ENC_MIXED_RESERVED2 = ENC_MIXED_CORS or 0b1110
+internal const val ENC_MIXED_RESERVED3 = ENC_MIXED_CORS or 0b1111
+
+internal const val ENC_STRUCT_SIZE_MASK = 0b0011_0000
+internal const val ENC_STRUCT_SIZE0 = 0b00_0000
+internal const val ENC_STRUCT_SIZE8 = 0b01_0000
+internal const val ENC_STRUCT_SIZE16 = 0b10_0000
+internal const val ENC_STRUCT_SIZE32 = 0b11_0000
+
+internal const val ENC_STRUCT_VARIANT_MASK = 0b0000_1100
+internal const val ENC_STRUCT_VARIANT0 = 0b0000 // no variant
+internal const val ENC_STRUCT_VARIANT8 = 0b0100
+internal const val ENC_STRUCT_VARIANT16 = 0b1000
+internal const val ENC_STRUCT_VARIANT32 = 0b1100
+
+internal const val ENC_STRUCT_TYPE_MASK = 0b0000_0011
+internal const val ENC_STRUCT_ARRAY = 0b00 // no variant
+internal const val ENC_STRUCT_MAP = 0b01 // no variant
+internal const val ENC_STRUCT_DICTIONARY = 0b10 // no variant
+internal const val ENC_STRUCT_RESERVED = 0b11 // no variant
+internal const val ENC_STRUCT_VARIANT_FEATURE = 0b00
+internal const val ENC_STRUCT_VARIANT_XYZ = 0b01
+internal const val ENC_STRUCT_VARIANT_CUSTOM = 0b10
+internal const val ENC_STRUCT_VARIANT_RESERVED = 0b11
+
+// Public types.
+const val CLASS_MASK = 0b1111_0000
+const val CLASS_SCALAR = 0b0001_0000
+const val CLASS_STRING = 0b0010_0000
+const val CLASS_STRUCT = 0b0100_0000
+
+const val TYPE_NULL = CLASS_SCALAR or 0b0000
+const val TYPE_UNDEFINED = CLASS_SCALAR or 0b0001
+const val TYPE_BOOL = CLASS_SCALAR or 0b0010
+const val TYPE_INT = CLASS_SCALAR or 0b0011
+const val TYPE_FLOAT = CLASS_SCALAR or 0b0100
+const val TYPE_REF = CLASS_SCALAR or 0b0101
+const val TYPE_TIMESTAMP = CLASS_SCALAR or 0b0110 // UTC epoch in milliseconds
+
+const val TYPE_STRING = CLASS_STRING or 0b0000
+
+// without variant
+const val TYPE_ARRAY = CLASS_STRUCT or 0b0000
+const val TYPE_MAP = CLASS_STRUCT or 0b0001
+const val TYPE_DICTIONARY = CLASS_STRUCT or 0b0010
+const val TYPE_RESERVED1 = CLASS_STRUCT or 0b0111
+// with variant
+const val TYPE_FEATURE = CLASS_STRUCT or 0b0100
+const val TYPE_XYZ = CLASS_STRUCT or 0b0101
+const val TYPE_CUSTOM = CLASS_STRUCT or 0b0110
+const val TYPE_RESERVED2 = CLASS_STRUCT or 0b0111
+
 /**
  * A special type returned when the offset in a reader is invalid or for any other error.
  */
@@ -53,8 +108,6 @@ internal const val ADD_COLON = 0b11
 const val UNDEFINED_STRING = "undefined"
 
 // Internally used to encode float4
-internal val TINY_FLOATS = floatArrayOf(-8f, -7f, -6f, -5f, -4f, -3f, -2f, -1f, 0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)
-internal val TINY_DOUBLES = doubleArrayOf(-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
 internal const val MIN_INT_VALUE_AS_DOUBLE = Int.MIN_VALUE.toDouble()
 internal const val MAX_INT_VALUE_AS_DOUBLE = Int.MAX_VALUE.toDouble()
 
@@ -71,9 +124,9 @@ const val SQL_JSON_TEXT = "json"
 const val SQL_OBJECT = "jsonb"
 
 // XYZ Variants.
-const val XYZ_NS = 0
-const val XYZ_OP = 1
-const val XYZ_TAGS = 2
+const val XYZ_NS_VARIANT = 0
+const val XYZ_OPS_VARIANT = 1
+const val XYZ_TAGS_VARIANT = 2
 
 const val ACTION_CREATE = 0
 const val ACTION_UPDATE = 1
@@ -89,16 +142,22 @@ val XYZ_OP_INT = arrayOf(XYZ_OP_CREATE, XYZ_OP_UPDATE, XYZ_OP_UPSERT, XYZ_OP_DEL
 
 // Feature was read.
 const val XYZ_EXEC_READ = "READ"
+
 // Feature was created.
 const val XYZ_EXEC_CREATED = "CREATED"
+
 // Feature was updated.
 const val XYZ_EXEC_UPDATED = "UPDATED"
+
 // Feature was deleted.
 const val XYZ_EXEC_DELETED = "DELETED"
+
 // Feature was purged.
 const val XYZ_EXEC_PURGED = "PURGED"
+
 // Feature did not change, returns current state, which may be null!
 const val XYZ_EXEC_RETAINED = "RETAINED"
+
 // Operation failed.
 const val XYZ_EXEC_ERROR = "ERROR"
 

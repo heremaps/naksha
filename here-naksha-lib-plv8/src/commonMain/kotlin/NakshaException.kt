@@ -25,8 +25,8 @@ class NakshaException private constructor(
                 NakshaException(errNo, errMsg, id)
 
         @JvmStatic
-        fun forRow(errNo:String, errMsg:String, row :IMap) : NakshaException =
-                NakshaException(errNo, errMsg, row[COL_ID], row[COL_FEATURE], row[COL_GEO_TYPE], row[COL_GEOMETRY], row[COL_TAGS], null)
+        fun forRow(errNo: String, errMsg: String, row: IMap, xyzNs: ByteArray) : NakshaException =
+                NakshaException(errNo, errMsg, row[COL_ID], row[COL_FEATURE], row[COL_GEO_TYPE], row[COL_GEOMETRY], row[COL_TAGS], xyzNs)
         // TODO: Add code that builds the XYZ namespace from the database row!
     }
 }

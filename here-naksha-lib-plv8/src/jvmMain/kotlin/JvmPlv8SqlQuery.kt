@@ -27,8 +27,14 @@ class JvmPlv8SqlQuery(query: String) {
                 if (charIndex < query.length) {
                     val next = query[charIndex]
                     if (next in '1'..'9') {
-                        val dollar = next - '0'
-                        check(dollar in 1..9)
+                        val afterNext = if (charIndex +1 < query.length) query[charIndex +1] else ';'
+                        val dollar:Int = if (afterNext in '0' .. '9') {
+                            "$next$afterNext".toInt()
+                        } else {
+                            next - '0'
+                        }
+
+                        check(dollar in 1..99)
                         var indices = dollarToIndices[dollar]
                         if (indices == null) {
                             indices = ArrayList()
@@ -37,6 +43,9 @@ class JvmPlv8SqlQuery(query: String) {
                         sb.append('?')
                         indices.add(index++)
                         charIndex++
+                        if (dollar > 9) {
+                            charIndex++
+                        }
                         continue
                     }
                 }

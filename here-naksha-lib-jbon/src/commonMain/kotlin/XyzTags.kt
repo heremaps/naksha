@@ -8,17 +8,18 @@ import kotlin.js.JsExport
  * The operation to be executed.
  */
 @JsExport
-class XyzTags : XyzSpecial<XyzTags>() {
+class XyzTags : XyzStruct<XyzTags>() {
     private lateinit var _tagsMap: IMap
     private lateinit var _tagsArray: Array<String>
 
-    override fun parseHeader(mandatory: Boolean) {
-        super.parseHeader(mandatory)
-        check(variant == XYZ_TAGS)
+    override fun parseHeader() {
+        super.parseXyzHeader(XYZ_TAGS_VARIANT)
 
         val globalDictId = if (reader.isString()) reader.readString() else null
         if (globalDictId != null) {
             reader.globalDict = Jb.env.getGlobalDictionary(globalDictId)
+        } else {
+            check(reader.isNull()) {"Invalid header, expected null, but found ${JbReader.unitTypeName(reader.unitType())}"}
         }
 
         // Now all key-value pairs follow.
@@ -60,7 +61,6 @@ class XyzTags : XyzSpecial<XyzTags>() {
         }
         this._tagsMap = map
         this._tagsArray = array.toTypedArray()
-        noContent()
     }
 
     /**

@@ -15,6 +15,20 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 object Static {
+
+    /**
+     * Config for naksha_collection
+     */
+    @JvmStatic
+    internal val nakshaCollectionConfig = newMap()
+
+    init {
+        nakshaCollectionConfig.put(NKC_PARTITION, false)
+        nakshaCollectionConfig.put(NKC_AUTO_PURGE, false)
+        nakshaCollectionConfig.put(NKC_POINTS_ONLY, false)
+        nakshaCollectionConfig.put(NKC_DISABLE_HISTORY, false)
+    }
+
     @JvmStatic
     fun initStorage(sql: IPlv8Sql, schema: String) {
         val schemaOid: Int = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
@@ -71,6 +85,12 @@ $$ LANGUAGE 'plv8';
     @JvmStatic
     internal val BASE32 = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
             'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
+
+    /**
+     * Used to debug.
+     */
+    @JvmStatic
+    val DEBUG = false
 
     /**
      * Can be set to true, to enable stack-trace reporting to _elog(INFO)_.
@@ -223,7 +243,7 @@ SET (toast_tuple_target=8160"""
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(geo_grid COLLATE "C" DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(geo_grid COLLATE "C" text_pattern_ops DESC, txn DESC) WITH (fillfactor=$fillFactor);
 """
 
         // app_id
@@ -256,7 +276,7 @@ SET (toast_tuple_target=8160"""
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
-        val CREATE_TABLE = """CREATE TABLE {table} (
+        val CREATE_TABLE = if (!DEBUG) """CREATE TABLE {table} (
     txn_next    int8 NOT NULL CHECK(txn_next {condition}),
     txn         int8 NOT NULL,
     uid         int4 NOT NULL,
@@ -275,6 +295,25 @@ SET (toast_tuple_target=8160"""
     tags        bytea COMPRESSION lz4,
     geo         bytea COMPRESSION lz4,
     feature     bytea COMPRESSION lz4 NOT NULL
+) """ else """CREATE TABLE {table} (
+    txn_next    int8,
+    txn         int8,
+    uid         int4,
+    version     int4,
+    created_at  int8, -- to_timestamp(created_at / 1000)
+    updated_at  int8, -- to_timestamp(updated_at / 1000)
+    author_ts   int8, -- to_timestamp(author_ts / 1000)
+    action      int2,
+    geo_type    int2,
+    puid        int4,
+    ptxn        int8,
+    author      text,
+    app_id      text,
+    geo_grid    text,
+    id          text COLLATE "C",
+    tags        bytea COMPRESSION lz4,
+    geo         bytea COMPRESSION lz4,
+    feature     bytea COMPRESSION lz4
 ) """
         var query: String
 
@@ -301,6 +340,7 @@ SET (toast_tuple_target=8160"""
                 collectionAddIndices(sql, partName, spGist, false)
             }
         }
+        if (!DEBUG) collectionAttachTriggers(sql, id, schema, schemaOid)
 
         // Create sequence.
         val sequenceName = id + "_uid_seq";
@@ -330,12 +370,9 @@ SET (toast_tuple_target=8160"""
         val hstName = id + "_hst"
         val hstNameQuoted = sql.quoteIdent(hstName)
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
-        query = query.replace("{condition}", "> 0")
+        query = query.replace("{condition}", ">= 0")
         query += "PARTITION BY RANGE (txn_next)"
         sql.execute(query)
-
-        // Optimizations are done on the history partitions!
-        collectionAttachTriggers(sql, id, schema, schemaOid)
     }
 
     /**
@@ -385,4 +422,40 @@ DROP TABLE IF EXISTS $delName CASCADE;
 DROP TABLE IF EXISTS $metaName CASCADE;
 DROP TABLE IF EXISTS $hstName CASCADE;""")
     }
+
+    /**
+     * @param collectionId has to be pure (without _hst suffix).
+     */
+    @JvmStatic
+    fun createHstPartition(sql: IPlv8Sql, collectionId: String, txnNext: NakshaTxn, spGist: Boolean): String {
+        val hstPartName = hstPartitionNameForId(collectionId, txnNext)
+        val partNameQuoted = sql.quoteIdent(hstPartName)
+        val headNameQuoted = sql.quoteIdent(hstHeadNameForId(collectionId))
+        val start = NakshaTxn.of(txnNext.year(), txnNext.month(), txnNext.day(), NakshaTxn.SEQ_MIN).value
+        val end = NakshaTxn.of(txnNext.year(), txnNext.month(), txnNext.day(), NakshaTxn.SEQ_MAX).value
+
+        val query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end);"
+        sql.execute(query)
+        collectionOptimizeTable(sql, hstPartName, true)
+        collectionAddIndices(sql, hstPartName, spGist, true)
+
+        return hstPartName
+    }
+
+    /**
+     * Returns full history partition name i.e. `foo_hst_2023_02_12` for given `foo`.
+     *
+     * @param collectionId head collectionId i.e `topology`
+     * @param txnNext txn to retrieve suffix from
+     */
+    @JvmStatic
+    fun hstPartitionNameForId(collectionId: String, txnNext: NakshaTxn): String = "${hstHeadNameForId(collectionId)}_${txnNext.historyPostfix()}"
+
+    /**
+     * Returns full history head name i.e. `foo_hst`.
+     *
+     * @param collectionId head collectionId i.e `topology`
+     */
+    @JvmStatic
+    fun hstHeadNameForId(collectionId: String): String = "${collectionId}_hst"
 }

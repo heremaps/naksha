@@ -1,0 +1,37 @@
+{
+  "type": "Feature",
+  "id": "urn:here::here:Topology:58626681",
+  "geometry": {
+    "type": "LineString",
+    "bbox": null,
+    "coordinates": [
+      [
+        21.00856,
+        52.2325,
+        146.68
+      ],
+      [
+        21.00879,
+        52.23255,
+        145.78
+      ],
+      [
+        21.00897,
+        52.23258,
+        144.84
+      ]
+    ]
+  },
+  "properties": {
+    "name": "Easy Rider"
+  },
+  "momType": "Topology",
+  "referencePoint": {
+    "type": "Point",
+    "coordinates": [
+      21.00856,
+      52.2325,
+      146.68
+    ]
+  }
+}

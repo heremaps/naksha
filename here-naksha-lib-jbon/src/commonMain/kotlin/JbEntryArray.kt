@@ -10,7 +10,7 @@ import kotlin.js.JsExport
  */
 @Suppress("UNCHECKED_CAST")
 @JsExport
-abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructMapper<SELF>() {
+abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStruct<SELF>() {
     /**
      * The current index in the entry list.
      */
@@ -43,7 +43,7 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructMapper<SELF>() 
      * [index] or update the cache, it **must** only move the [reader] to the next value.
      * @return true if the position is valid after being moved; false if the position is now invalid.
      */
-    internal abstract fun nextEntry() : Boolean
+    internal abstract fun nextEntry(): Boolean
 
     /**
      * Load needed values from where the [reader] is currently positioned into cache.
@@ -59,21 +59,19 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructMapper<SELF>() 
      * Tests if the current position is valid.
      * @return true if the current position is valid; false otherwise.
      */
-    fun ok() : Boolean {
-        return index >= 0 && reader.view != null && reader.offset < encodingEnd
+    fun ok(): Boolean {
+        return reader.isMapped() && index >= 0 && reader.offset() < end
     }
 
     /**
      * Loads the first entry.
      * @return true if there is at least one entry; false if empty.
      */
-    fun first() : Boolean {
-        if (index == 0) {
-            return true
-        }
+    fun first(): Boolean {
+        if (index == 0) return true
         dropEntry()
         index = 0
-        reader.offset = encodingStart
+        reader.setOffset(bodyStart)
         if (ok()) return true
         index = -1
         return false
@@ -84,10 +82,8 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructMapper<SELF>() 
      * @return true if the position is valid after being moved; false if the position is now invalid.
      */
     fun next(): Boolean {
-        if (index < 0) {
-            return first()
-        }
-        if (index in 0..< length) {
+        if (index < 0) return first()
+        if (index in 0..<length) {
             dropEntry()
             if (nextEntry()) {
                 index++
@@ -108,18 +104,18 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructMapper<SELF>() 
     fun length(): Int {
         if (length == Int.MAX_VALUE) {
             // We expect that parse header already does this!
-            if (contentSize() == 0) {
+            if (bodySize() == 0) {
                 length = 0
                 return 0
             }
-            val backup = index
-            reader.setOffset(encodingStart)
+            val backup = reader.offset()
+            reader.setOffset(bodyStart)
             var len = if (reader.ok()) 1 else 0
             while (nextEntry()) {
                 len++
             }
             length = len
-            reader.offset = backup
+            reader.setOffset(backup)
         }
         return length
     }
@@ -128,9 +124,7 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructMapper<SELF>() 
      * Returns the current position.
      * @return The current or -1, if the position currently is invalid.
      */
-    fun pos(): Int {
-        return index
-    }
+    fun pos(): Int = index
 
     /**
      * Sets the position. If the position is below zero or larger/greater than the [length], the position becomes
@@ -140,15 +134,13 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructMapper<SELF>() 
      */
     fun seek(pos: Int): SELF {
         // If the index does not change, do nothing
-        if (index == pos) {
-            return this as SELF
-        }
+        if (index == pos) return this as SELF
         // If we are requested to set the index to an invalid index.
         if (pos < 0 || pos >= length) {
             reset()
             return this as SELF
         }
-        var i : Int
+        var i: Int
         if (index < 0 || index > pos) {
             reset()
             i = 0
@@ -158,7 +150,7 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructMapper<SELF>() 
         while (i < pos && nextEntry()) i++
         // If we did not reach the requested index, index becomes invalid.
         if (i < pos) {
-           reset()
+            reset()
         } else {
             index = i
         }

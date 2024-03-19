@@ -1,18 +1,18 @@
 @file:OptIn(ExperimentalJsExport::class)
+
 package com.here.naksha.lib.jbon
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
-class XyzNs : XyzSpecial<XyzNs>() {
+class XyzNs : XyzStruct<XyzNs>() {
     private lateinit var createdAt: BigInt64
     private lateinit var updatedAt: BigInt64
     private lateinit var txn: NakshaTxn
     private var action: Int = 0
     private var version: Int = 0
     private lateinit var authorTs: BigInt64
-    private lateinit var extent: BigInt64
 
     // Strings and maps are expensive to parse, therefore we only do on demand.
     private var uuid: String = UNDEFINED_STRING
@@ -21,41 +21,37 @@ class XyzNs : XyzSpecial<XyzNs>() {
     private var author: String = UNDEFINED_STRING
     private var grid: String = UNDEFINED_STRING
 
-    override fun parseHeader(mandatory: Boolean) {
-        super.parseHeader(mandatory)
-        check(variant == XYZ_NS)
+    override fun parseHeader() {
+        super.parseXyzHeader(XYZ_NS_VARIANT)
 
+        check(reader.isTimestamp()) { "Field 'createdAt' of XYZ namespace is not timestamp" }
         createdAt = reader.readTimestamp()
-        check(reader.nextUnit())
+        check(reader.nextUnit()) { "Failed to move forward to 'updatedAt' field" }
         updatedAt = if (reader.isNull()) createdAt else reader.readTimestamp()
-        check(reader.nextUnit())
-        txn = NakshaTxn(reader.readInt64())
-        check(reader.nextUnit())
+        check(reader.nextUnit()) { "Failed to move forward to 'txn' field" }
+        txn = NakshaTxn(reader.readInt64() ?: throw IllegalStateException("Missing txn"))
+        check(reader.nextUnit()) { "Failed to move forward to 'action' field" }
         action = reader.readInt32()
-        check(reader.nextUnit())
+        check(reader.nextUnit()) { "Failed to move forward to 'version' field" }
         version = reader.readInt32()
-        check(reader.nextUnit())
+        check(reader.nextUnit()) { "Failed to move forward to 'author_ts' field" }
         authorTs = if (reader.isNull()) updatedAt else reader.readTimestamp()
-        check(reader.nextUnit())
-        extent = reader.readInt64()
-        check(reader.nextUnit())
-
-        setContent(reader.offset, reader.useView().getSize())
+        check(reader.nextUnit()) { "Failed to move forward to 'puuid' field" }
     }
 
     fun createdAt(): BigInt64 = createdAt
     fun updatedAt(): BigInt64 = updatedAt
     fun txn(): NakshaTxn = txn
     fun action(): Int = action
-    fun actionAsString() : String? = when(action) {
+    fun actionAsString(): String? = when (action) {
         ACTION_CREATE -> "CREATE"
         ACTION_UPDATE -> "UPDATE"
         ACTION_DELETE -> "DELETE"
         else -> null
     }
+
     fun version(): Int = version
     fun authorTs(): BigInt64 = authorTs
-    fun extent(): BigInt64 = extent
 
     fun puuid(): String? {
         var value = this.puuid
@@ -135,7 +131,6 @@ class XyzNs : XyzSpecial<XyzNs>() {
         }
         map["version"] = version()
         map["author_ts"] = authorTs().toDouble()
-        map["extent"] = extent().toDouble()
         if (puuid() != null) map["puuid"] = puuid()
         map["uuid"] = uuid()
         map["author"] = author()

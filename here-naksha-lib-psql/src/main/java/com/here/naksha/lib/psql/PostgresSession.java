@@ -19,6 +19,7 @@
 package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
 import static com.here.naksha.lib.psql.sql.SqlGeometryTransformationResolver.addTransformation;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -50,6 +51,8 @@ import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.util.ClosableChildResource;
 import com.here.naksha.lib.core.util.IndexHelper;
 import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.jbon.NakshaTxn;
+import com.here.naksha.lib.jbon.NakshaUuid;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -191,18 +194,26 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   }
 
   void commit(boolean autoCloseCursors) throws SQLException {
-    // TODO: Apply autoCloseCursors
     psqlConnection.commit();
+    clearSession();
   }
 
   void rollback(boolean autoCloseCursors) throws SQLException {
     // TODO: Apply autoCloseCursors
     psqlConnection.rollback();
+    clearSession();
   }
 
   void close(boolean autoCloseCursors) {
     // TODO: Apply autoCloseCursors
     psqlConnection.close();
+  }
+
+  private void clearSession() throws SQLException {
+    try (final Statement stmt = psqlConnection.createStatement()) {
+      stmt.execute("SELECT naksha_clear_session();");
+    }
+    psqlConnection.commit();
   }
 
   private static void assure3d(@NotNull Coordinate @NotNull [] coords) {
@@ -271,19 +282,20 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     if (pRef.equals(PRef.id())) {
       sql.add("id");
     } else if (pRef.equals(PRef.txn())) {
-      sql.add("xyz_txn(xyz)");
+      sql.add("txn");
     } else if (pRef.equals(PRef.txn_next())) {
       sql.add("txn_next");
     } else if (pRef.equals(PRef.uuid())) {
       sql.add("uid");
     } else if (pRef.equals(PRef.app_id())) {
-      sql.add("xyz_author(xyz)");
+      sql.add("author");
     } else if (pRef.equals(PRef.grid())) {
-      sql.add("xyz_grid(xyz)");
+      sql.add("grid");
     } else if (pRef.getTagName() != null) {
       sql.add("tags_to_jsonb(tags)");
     } else {
       // not indexed access
+      sql.add("(");
       sql.add("feature_to_jsonb(feature)");
       List<@NotNull String> path = pRef.getPath();
       final int last = end - 1;
@@ -291,14 +303,14 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         final String pname = path.get(i);
         sql.add(i == last && text ? "->>" : "->");
         sql.addLiteral(pname);
-        sql.add(')');
       }
+      sql.add(')');
     }
     if (text) {
       sql.add(" COLLATE \"C\" ");
     }
     if (nullif) {
-      sql.add(",'null')");
+      sql.add(",null)");
     }
   }
 
@@ -441,6 +453,18 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       sql.add(")");
       return;
     }
+    if (pref == PRef.uuid()) {
+      sql.add("(");
+      NakshaUuid nakshaUuid =
+          NakshaUuid.Companion.fromString(propertyOp.getValue().toString());
+      addOp(sql, parameter, pref, op, nakshaUuid.getUid());
+      sql.add(" AND ");
+      NakshaTxn nakshatxn = NakshaTxn.Companion.of(
+          nakshaUuid.getYear(), nakshaUuid.getMonth(), nakshaUuid.getDay(), nakshaUuid.getSeq());
+      addOp(sql, parameter, PRef.txn(), op, toLong(nakshatxn.getValue()));
+      sql.add(")");
+      return;
+    }
     addOp(sql, parameter, pref, op, value);
   }
 
@@ -464,8 +488,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   private SQL prepareQuery(String collection, String spatial_where, String props_where, Long limit) {
     final SQL query = new SQL();
     query.add("(SELECT 'READ',\n" + "id,\n")
-        .add("row_to_ns(created_at,updated_at,txn,action,version,author_ts,uid,app_id,author,geo_grid,")
-        .addLiteral(collection)
+        .add(
+            "row_to_ns(created_at,updated_at,txn,action,version,author_ts,uid,app_id,author,geo_grid,puid,ptxn,")
+        .addLiteral(collection.replaceFirst("_hst", "")) // uuid should not to refer to _hst table
         .add("::text),\n" + "tags,\n" + "feature,\n" + "geo_type,\n" + "geo,\n" + "null,\n" + "null FROM ")
         .addIdent(collection);
     if (spatial_where.length() > 0 || props_where.length() > 0) {

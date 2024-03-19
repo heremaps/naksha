@@ -79,6 +79,8 @@ import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.here.naksha.lib.jbon.BigInt64Kt;
+import com.here.naksha.lib.jbon.NakshaTxn;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -197,7 +199,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(4, uuidFields[2].length()); // year (4- digits)
       assertTrue(uuidFields[3].length() <= 2); // month (1 or 2 digits)
       assertTrue(uuidFields[4].length() <= 2); // day (1 or 2 digits)
-      assertEquals("0", uuidFields[5]); // seq id
+      assertEquals("2", uuidFields[5]); // seq txn (first for create collection, second for create feature
+      assertEquals("0", uuidFields[6]); // uid seq
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
       assertEquals(xyz.getCreatedAt(), xyz.getUpdatedAt());
@@ -370,7 +373,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   private static final int GUID_YEAR = 2;
   private static final int GUID_MONTH = 3;
   private static final int GUID_DAY = 4;
-  private static final int GUID_ID = 5;
+  private static final int GUID_SEQ = 5;
+  private static final int GUID_ID = 6;
 
   @Test
   @Order(56)
@@ -407,28 +411,33 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(storage.getStorageId(), uuidFields[GUID_STORAGE_ID]);
       assertEquals(collectionId(), uuidFields[GUID_COLLECTION_ID]);
       assertEquals(4, uuidFields[GUID_YEAR].length()); // year (4- digits)
-      assertEquals(2, uuidFields[GUID_MONTH].length()); // hour (2- digits)
-      assertEquals(2, uuidFields[GUID_DAY].length()); // minute (2- digits)
-      // Note: We know that the "id" is actually the sequence number of the storage (so "i").
-      // - We created a feature (0)
-      // - We updated via upsert (2), this created a history entry (1)
-      // - Eventually we did an update (4), which again created a history entry (3)
-      assertEquals("4", uuidFields[GUID_ID]);
+      assertTrue(uuidFields[GUID_MONTH].length() <= 2); // month (1 or 2 digits)
+      assertTrue(uuidFields[GUID_DAY].length() <= 2); // day (1 or 2 digits)
+      // Note: the txn seq should be 4 as:
+      // 1 - used for create collection
+      // 2 - used for insert feature
+      // 3 - used for upsert
+      // 4 - used for update
+      assertEquals("4", uuidFields[GUID_SEQ]);
+      // Note: for each new txn_seq we reset uid to 0
+      assertEquals("0", uuidFields[GUID_ID]);
       // Note: We know that if the schema was dropped, the transaction number is reset to 0.
       // - Create the collection in parent PsqlTest (0) <- commit
       // - Create the single feature (1) <- commit
       // - Upsert the single feature (2) <- commit
       // - Update the single feature (3) <- commit
       if (dropInitially()) {
-        final long txnFromUuid = Long.parseLong(
-            uuidFields[GUID_YEAR] + uuidFields[GUID_MONTH] + uuidFields[GUID_DAY] + "00000000003");
-        assertEquals(txnFromUuid, xyz.getTxn()); // seq id
+        NakshaTxn nakshaTxn = new NakshaTxn(BigInt64Kt.BigInt64(xyz.getTxn()));
+        assertEquals(uuidFields[GUID_YEAR], "" + nakshaTxn.year());
+        assertEquals(uuidFields[GUID_MONTH], "" + nakshaTxn.month());
+        assertEquals(uuidFields[GUID_DAY], "" + nakshaTxn.day());
+        assertEquals(uuidFields[GUID_SEQ], "" + nakshaTxn.seq());
       }
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
 
       Point centroid = geometry.getJTSGeometry().getCentroid();
-      assertEquals(encodeLatLon(centroid.getY(), centroid.getX(), 7), xyz.get("grid"));
+      assertEquals(encodeLatLon(centroid.getY(), centroid.getX(), 14), xyz.get("grid"));
       assertFalse(cursor.hasNext());
     }
   }
@@ -562,7 +571,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     // make sure feature hasn't been updated (has old geometry).
     final ReadFeatures readRequest = RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
+             session.execute(readRequest).getXyzFeatureCursor()) {
       assertTrue(cursor.next());
       assertEquals(
           new Coordinate(5d, 6d, 2d),
@@ -634,16 +643,14 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     request.add(EWriteOp.UPDATE, feature);
 
     // when
-    final Result result = session.execute(request);
-
-    // then
-    assertInstanceOf(ErrorResult.class, result);
-    ErrorResult errorResult = (ErrorResult) result;
-    assertEquals(XyzError.CONFLICT, errorResult.reason);
-    assertTrue(
-        errorResult.message.startsWith("The feature 'TheFeature' uuid 'invalid_UUID' does not match"),
-        errorResult.message);
-    session.commit(true);
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = session.execute(request).getXyzFeatureCursor()) {
+      // then
+      // we don't read uuid from request, so it should get brand new uuid
+      cursor.next();
+      assertNotEquals(feature.xyz().getUuid(), cursor.getUuid());
+    } finally {
+      session.commit(true);
+    }
   }
 
   @Test
@@ -1211,9 +1218,9 @@ public class PsqlStorageTests extends PsqlCollectionTests {
 
       // purge
       final WriteXyzCollections purgeRequest = new WriteXyzCollections();
-      deleteRequest.add(EWriteOp.PURGE, deleteCollection);
+      purgeRequest.add(EWriteOp.PURGE, deleteCollection);
       try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursorPurge =
-               session.execute(deleteRequest).getXyzCollectionCursor()) {
+               session.execute(purgeRequest).getXyzCollectionCursor()) {
         session.commit(true);
       }
 
@@ -1229,7 +1236,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
 
   private ResultSet getFeatureFromTable(PsqlReadSession session, String table, String featureId) throws SQLException {
     final PostgresSession pgSession = session.session();
-    final SQL sql = pgSession.sql().add("SELECT * from ").addIdent(table).add(" WHERE jsondata->>'id' = ? ;");
+    final SQL sql = pgSession.sql().add("SELECT * from ").addIdent(table).add(" WHERE id = ? ;");
     final PreparedStatement stmt = pgSession.prepareStatement(sql);
     stmt.setString(1, featureId);
     return stmt.executeQuery();

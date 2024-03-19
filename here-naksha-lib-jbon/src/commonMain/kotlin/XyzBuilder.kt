@@ -7,7 +7,7 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, global) {
+class XyzBuilder(view: IDataView?=null, global: JbDict? = null) : JbBuilder(view, global) {
 
     companion object {
         /**
@@ -25,7 +25,7 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * Starts tag building.
      */
     fun startTags() {
-        clearAndReserveHeader()
+        end = 10
         val global = this.global
         if (global == null) writeNull() else writeString(global.id()!!)
     }
@@ -65,11 +65,11 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
 
             is Double -> {
                 if (Jb.env.canBeInt32(value)) {
-                    writeInt32(value.toInt())
+                    writeInt(value.toInt())
                 } else if (Jb.env.canBeFloat32(value)) {
-                    writeFloat32(value.toFloat())
+                    writeFloat(value.toFloat())
                 } else {
-                    writeFloat64(value)
+                    writeDouble(value)
                 }
             }
 
@@ -83,38 +83,28 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
     }
 
     /**
+     * Writes the structure header and in-front and then returns the copy of the content.
+     * @param structType The structure type.
+     * @param variant The variant; _null_ if no variant.
+     * @return The bytes of the structure.
+     */
+    private fun finish(structType:Int, variant: Int): ByteArray {
+        val startOfPayload = 10
+        val endOfPayload = end
+        val sizeOfPayload = endOfPayload - startOfPayload
+        val startOfStruct = 10 - sizeOfStructHeader(sizeOfPayload, variant)
+        end = startOfStruct
+        writeStructHeader(structType, variant, sizeOfPayload)
+        end = endOfPayload
+        return view().getByteArray().copyOfRange(startOfStruct, end)
+    }
+
+    /**
      * Finish the tag building and returns the build tag bytes.
      * @return The tag bytes.
      */
     fun buildTags(): ByteArray {
-        return finish(XYZ_TAGS) // Variant
-    }
-
-    private fun clearAndReserveHeader() {
-        clear()
-        // Reserve 7 bytes to prefix with:
-        // lead-in (1 byte)
-        // size (1 to 5 byte)
-        // variant (1 byte)
-        end = 7
-    }
-
-    private fun finish(variant: Int): ByteArray {
-        val endIndex = end
-        val size = end - 7
-        val sizeSize = JbReader.sizeOfIntEncoding(size)
-        // We reserved 7 byte. We need:
-        // lead-in (1 byte)
-        // size (size-size)
-        // variant (1 byte)
-        // So, the start is only 0, if the size need to be stored in 5 byte.
-        val startIndex = 5 - sizeSize
-        end = startIndex
-        view.setInt8(end++, TYPE_XYZ.toByte())
-        writeInt32(size)
-        writeInt32(variant)
-        end = endIndex
-        return view.getByteArray().copyOfRange(startIndex, endIndex)
+        return finish(ENC_STRUCT_VARIANT_XYZ, XYZ_TAGS_VARIANT)
     }
 
     /**
@@ -130,12 +120,12 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
      * @return The JBON encoded XYZ operation.
      */
     fun buildXyzOp(op: Int, id: String?, uuid: String?, grid: String?): ByteArray {
-        clearAndReserveHeader()
-        writeInt32(op)
+        end = 10
+        writeInt(op)
         if (id == null) writeNull() else writeString(id)
         if (uuid == null) writeNull() else writeString(uuid)
         if (grid == null) writeNull() else writeString(grid)
-        return finish(XYZ_OP)
+        return finish(ENC_STRUCT_VARIANT_XYZ, XYZ_OPS_VARIANT)
     }
 
     /**
@@ -149,27 +139,25 @@ class XyzBuilder(view: IDataView, global: JbDict? = null) : JbBuilder(view, glob
             action: Short,
             version: Int,
             authorTs: BigInt64,
-            extent: BigInt64,
             puuid: String?,
             uuid: String,
             appId: String,
             author: String,
             grid: String
     ): ByteArray {
-        clearAndReserveHeader()
+        end = 10
         writeTimestamp(createdAt)
         if (createdAt == updatedAt) writeNull() else writeTimestamp(updatedAt)
         writeInt64(txn)
-        writeInt32(action.toInt())
-        writeInt32(version)
+        writeInt(action.toInt())
+        writeInt(version)
         if (authorTs == updatedAt) writeNull() else writeTimestamp(authorTs)
-        writeInt64(extent)
         if (puuid == null) writeNull() else writeString(puuid)
         writeString(uuid)
         writeString(appId)
         writeString(author)
         writeString(grid)
-        return finish(XYZ_NS)
+        return finish(ENC_STRUCT_VARIANT_XYZ, XYZ_NS_VARIANT)
     }
 
 }

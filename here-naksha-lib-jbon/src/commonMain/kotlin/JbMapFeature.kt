@@ -18,9 +18,9 @@ open class JbMapFeature : JbFeature() {
         return this
     }
 
-    override fun parseHeader(mandatory: Boolean) {
-        super.parseHeader(mandatory)
-        check(reader.isMap())
+    override fun parseHeader() {
+        super.parseHeader()
+        check(reader.isMap()) {"Failed to parse feature payload, expected map, but found ${JbReader.unitTypeName(reader.unitType())}"}
         if (!this::_map.isInitialized) _map = JbMap()
         _map.mapReader(reader)
     }

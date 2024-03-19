@@ -56,7 +56,7 @@ open class JvmPlv8ResultSet(private var rs: ResultSet?) {
                 "point", "line", "lseg", "box", "path", "polygon", "circle", "int4range", "int8range", "numrange",
                 "tsrange", "tstzrange", "daterange" -> row[name] = rs.getString(i)
 
-                "smallint", "int2" -> row[name] = rs.getShort(i).toInt()
+                "smallint", "int2" -> row[name] = rs.getShort(i)
                 "integer", "int4", "xid4", "oid" -> row[name] = rs.getInt(i)
                 "bigint", "int8", "xid8" -> row[name] = JvmBigInt64(rs.getLong(i))
                 "real" -> row[name] = rs.getFloat(i)

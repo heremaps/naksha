@@ -85,17 +85,8 @@ The new format is called GUID (global unique identifier), returning to the roots
 
 **Note**: This format holds all information needed for Naksha to know in which storage a feature is located, of which it only has the _GUID_. The PSQL storage knows from this _GUID_ exactly in which database table the features is located, even taking partitioning into account. The reason is, that partitioning is done by transaction start date, which is contained in the _GUID_. Therefore, providing a _GUID_, directly identifies the storage location of a feature, which in itself holds the information to which transaction it belongs to (`txn`). Beware that the transaction-number as well encodes the transaction start time and therefore allows as well to know exactly where the features of a transaction are located (including finding the transaction details itself).
 
-## Global dictionaries (`naksha_global`)
-As the PostgresQL code switched to [JBON](./JBON.md) encoding, a table for the global dictionaries is needed with the following layout:
-
-| Column | Type  | Modifiers                              | Description                              |
-|--------|-------|----------------------------------------|------------------------------------------|
-| id     | text  | PRIMARY KEY NOT NULL                   | The unique identifier of the dictionary. |
-| data   | bytea | NOT NULL                               | The dictionary JBON data.                |
-
 ## Collection table layout
-
-The table layout for all tables:
+The table layout for all tables of a collection, except for the _meta_ table is:
 
 | Column     | Type  | RO  | Modifiers | Description                                                        |
 |------------|-------|-----|-----------|--------------------------------------------------------------------|
@@ -108,8 +99,8 @@ The table layout for all tables:
 | author_ts  | int8  | yes | NOT NULL  | `f.p.xyz->authorTs`                                                |
 | action     | int2  | yes | NOT NULL  | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2)             |
 | geo_type   | int2  | no  | NOT NULL  | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).         |
-| puid       | int4  | yes |           | `f.p.xyz->puuid`                                                   |
-| ptxn       | int8  | yes |           | `f.p.xyz->uuid`                                                    |
+| puid       | int4  | yes |           | `f.p.xyz->puuid` - Row identifier                                  |
+| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Row identifier                                  |
 | author     | text  | yes |           | `f.p.xyz->author`                                                  |
 | app_id     | text  | yes |           | `f.p.xyz->app_id`                                                  |
 | geo_grid   | text  | yes | NOT NULL  | `f.p.xyz->grid`                                                    |
@@ -119,6 +110,15 @@ The table layout for all tables:
 | feature    | bytea | no  | NOT NULL  | `f` - The Geo-JSON feature in JBON, except for what was extracted. |
 
 The **xyz** namespace is split into parts, to avoid unnecessary work for triggers and functions. Therefore, the **tags** columns contains the tags extracted from the XYZ namespace, while the rest of the XYZ namespace, managed by Naksha, is stored in individual columns. The **txn_next** is as well managed internally and only used for the history (actually, this is the only value that need to be adjusted, when a row is moved into history). All columns should be merged together into the Geo-JSON feature. This merging is left to the client and not part of the database code.
+
+## Meta table layout
+For each collection a _meta_ table is created. This collection stores the [JBON](./JBON.md) dictionaries used by all features stored in the main collection. Next to this, it stores statistics and other internal information. The table does not have a history and only some limited indices, because it is for special internal purpose.
+
+| Column | Type  | Modifiers            | Description                                               |
+|--------|-------|----------------------|-----------------------------------------------------------|
+| id     | text  | PRIMARY KEY NOT NULL | The unique identifier of the entry.                       |
+| link   | text  |                      | If this entry is a symbolic link, the target it links to. |
+| data   | bytea |                      | The JBON encoded data of the entry (_null_ for links).    |
 
 ## Collection-Info
 
@@ -213,23 +213,31 @@ Therefore, the union of all the query returns only exactly one feature, the sear
 
 The transaction logs are stored in the `naksha_txn` table. Each transaction persists out of **signals**, grouped by the transaction-number (`tnx`). Note that there is a `naksha_txn_uid_seq` encoded into the `txn`. The table layout is:
 
-| Column     | Type        | Modifiers            | Description                                                                                |
-|------------|-------------|----------------------|--------------------------------------------------------------------------------------------|
-| uid        | int8        | PRIMARY KEY NOT NULL | Primary unique signal identifier.                                                          |
-| txn        | int8        | NOT NULL             | The transaction-number.                                                                    |
-| ts         | timestamptz | NOT NULL             | The time when the transaction started (`transaction_timestamp()`).                         |
-| xact_id    | int8        | NOT NULL             | The PostgresQL transaction id. Can be used to detect consistency (`pg_current_xact_id()`). |
-| app_id     | text        |                      | The application identifier used for the transaction.                                       |
-| author     | text        |                      | The author used for the transaction.                                                       |
-| details    | bytea       |                      | The details of what happened as part of this transaction (`XyzTxDetails`).                 |
-| seq_id     | int8        |                      | The sequencing identifier, set by the sequencer of `lib-naksha-psql`.                      |
-| seq_ts     | timestamptz |                      | The sequencing time, set by the sequencer of `lib-naksha-psql`.                            |
-| version    | int8        |                      | An arbitrary version tag that can be set.                                                  |
-| attachment | bytea       |                      | An arbitrary attachment as JBON feature.                                                   |
+| Column        | Type        | RO  | Modifiers            | Description                                                                |
+|---------------|-------------|-----|----------------------|----------------------------------------------------------------------------|
+| txn           | int8        | yes | PRIMARY KEY NOT NULL | The transaction-number.                                                    |
+| ts            | timestamptz | yes | NOT NULL             | The time when the transaction started (`transaction_timestamp()`).         |
+| xact_id       | int8        | yes | NOT NULL             | The PostgresQL transaction id (`txid_current()`).                          |
+| version       | int8        | no  |                      | An arbitrary version tag that can be set.                                  |
+| seq_id        | int8        | yes |                      | The sequencing identifier, set by the sequencer .                          |
+| seq_ts        | timestamptz | yes |                      | The sequencing time, set by the sequencer .                                |
+| feature_count | int4        | yes |                      | The amount of features impacted by this transaction, set by the sequencer. |
+| app_id        | text        | yes | NOT NULL             | The application identifier used for the transaction.                       |
+| author        | text        | yes |                      | The author used for the transaction.                                       |
+| stream_id     | text        | yes |                      | The stream-identifier for debugging.                                       |
+| details       | bytea       | yes |                      | The details of what happened as part of this transaction (`XyzTxDetails`). |
+| comment       | text        | no  |                      | Some arbitrary comment.                                                    |
+| tags          | bytea       | no  |                      | Tags to be added to the transaction.                                       |
+| attachment    | bytea       | no  |                      | An arbitrary attachment as JBON feature.                                   |
+
+Columns being flagged as read-only (`RO`) can't be modified by the client, they are only modified internally by the PostgresQL code.
 
 **Note**: The transaction table itself is partitioned by `txn`, **not by** `txn_next`, but except for this the same way the history of the collections is partitioned (`naksha_txn_YYYY_MM_DD`). This is mainly helpful to purge transaction-logs and to improve the access speed.
 
 **Note**: More information about Postgres transaction numbers are available in the [documentation](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-PG-SNAPSHOT). We should enable [track-commit-timestamp](https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-TRACK-COMMIT-TIMESTAMP) so that `pg_commit_ts` holds information when a transaction was committed. This would make our own tracking more reliable.
+
+## Global Meta Table (`naksha_meta`)
+This table has the same layout and use case as the local _meta_ table every collection has, but it allows to keep some database specific statistics or real global dictionaries. Note that the IDs of global dictionaries must be prefixed with `global:`. 
 
 ## History creation
 
@@ -266,3 +274,94 @@ Psql Error Codes are specific to `lib-naksha-psql` library and should be mapped 
 | 23505     | CONFLICT             | Requested feature CREATE but feature already exists |
 | 02000     | NOT_FOUND            | Requested feature UPDATE but feature doesn't exist  |
 | ?ANY?     | ?ANY?                | Any other code will map to XyzError with that code  |
+
+## Performance insights
+For optimal performance we want to reduce the amount of data being transferred to the database, and at the same time, reduce the amount things the database need to do (CPU load). Technically, this section discusses how we can avoid running any code in the database. We still want to have the database code being set up, but mainly to prevent that someone, executing changes using an arbitrary SQL client, breaks the storage state.
+
+Therefore, this document describes what need to be done to have a 100% client side implementation, and what parts need to be installed as database code using [PLV8](https://plv8.github.io/), to prevent breaking modifications and protect the store.
+
+### startSession / naksha_start_session
+There are two ways to access the database, but both require a **NakshaSession**. Using the Java client, a new client-side session can be started via:
+
+```kotlin
+val env = JvmPlv8Env.get()
+val session = env.startSession(conn, schema, appName, streamId, appId, author)
+```
+
+When using an arbitrary SQL client, this session need to be started server side via:
+
+```sql
+SELECT naksha_start_session(appName, streamId, appId, author);
+```
+
+Both use-cases do have a session now. For the _Java_ implementation it will disable triggers. This can be done by settings the [session_replication_role](https://www.postgresql.org/docs/16/runtime-config-client.html#GUC-SESSION-REPLICATION-ROLE) to `replica` and later back to `origin`, like `SET SESSION session_replication_role = replica;`. The server side session relies upon the triggers to ensure history and other things. When the session ends, it will re-enable triggers via `SET SESSION session_replication_role = origin;`.
+
+The session will furthermore, because we use row-level locks for all feature modifications, change the [timeout for locks](https://www.postgresql.org/docs/16/runtime-config-client.html#GUC-LOCK-TIMEOUT) via `SET SESSION lock_timeout=250`. Even while this number appears to be a long time, when used for every row, it is not, because we order all queries by feature-id, and therefore we only wait for the first lock, when we have this, we are more or less sure we will get all others without waiting, because other threads will have to wait for us. This is not fully true, but basically the concept why a higher number will not harm too much.
+
+From this point on, all further operations should be executed against the session. In the database there will be SQL functions prefixed with `naksha_`, having the same name as the corresponding counterparts in the **NakshaSession**. For example, there is a `naksha_write_collections` in SQL which actually supports exactly the same as the `session.writeCollections` function call in _Java_.
+
+### writeCollections / naksha_write_collections
+This function is used to create, update and delete collections fulfilling the standard Naksha _IStorage_ contract.
+
+### writeFeatures / naksha_write_features
+This function is used to create, update and delete features fulfilling the standard Naksha _IStorage_ contract.
+
+### bulkWriteFeatures (client-only)
+This function is used to perform bulk operations to create, update or delete features. It fulfills the Naksha _IStorage_ contract, with some minor limitation. The method automatically rollback failed operations and is always atomic. It allows to suppress the success results the same way the default `writeFeatures` does, but it does not support mixed mode, so in an error case it will not return a cursor, but fully fails and automatically rollback.
+
+In the success case, it will allow to decide between `commit` and `rollback`, but it is highly recommended to make this decision instant, because meanwhile it will keep locks in the database.
+
+The bulk write will implement these steps:
+
+- Fetch details about the collections into which to write
+  - This provides information, if partitioning is supported
+- Ensure we have a transaction number (`txn()`)
+- Autogenerate ids for features not yet having some
+- Sort all features by partition-number and id
+- Query for all features using:
+  - Optimization: Do we need action?
+  - Optimization: When we have an author given (not null), we do not need to fetch author, we anyway override
+  - `SELECT id, txn, uid, action, version, created_at, author, author_ts FROM table WHERE id = ANY(?) FOR UPDATE NOWAIT`
+  - This will acquire row level locks, but does not wait, fail when locking fails
+- Modify UPSERT operations into either INSERT or UPDATE, based upon the result above
+- Ensure that all INSERT operations are possible (feature does not exist), otherwise fail
+- Ensure that all UPDATE and DELETE operations
+  - Fail for UPDATE or DELETE operations, when there is no head state.
+  - Fail for atomic UPDATE or DELETE operations, where the head state is not the expected one (_ptxn_ and _puid_ match given _txn_ and _uid_)
+- ----------------------------------------------------------------------------------------
+- Create batch statements with order:
+  - Note: For each operation we need to calculate all states upfront!
+  - (1) delete feature from del-table
+  - (2) insert deleted into del-table
+  - (3) upsert feature in del-table
+  - (4) update feature in head, set txn_next=txn (move the feature into history)
+  - (5) insert deleted into history
+  - (6) insert feature into head
+- If the feature is created, do:
+  - (1) delete feature from del-table (only if del-table enabled)
+  - (6) insert feature into head
+- If the feature is updated, do:
+  - (1) delete feature from del-table (only if del-table enabled)
+  - (4) update feature in head, set txn_next=txn (only if history enabled, move the feature into history)
+  - (6) insert feature into head
+- If the feature is deleted, do:
+  - (4) update feature in head, set txn_next=txn (only if history enabled, move the feature into history)
+  - create deleted version of feature
+  - (3) upsert feature in del-table (only if del-table enabled)
+  - (5) insert deleted into history
+- Execute all batches in order (1-6)
+
+### Global dictionary training (draft)
+Add support for automatic dictionary training. This is done using `pg_cron` and should run ones a day. It will check all collections and update the statistics. Additionally, it will update the `default:feature` and `default:tags` links. These links (in the _meta_ table) refer to the latest dictionary to be used for encoding the _feature_ and _tags_ [JBON](./JBON.md)'s. So, when encoding new features or tags for a collection, the default behavior should be to read the latest version and encode with this.
+
+**Beware**: The ID encoded in the feature must not be `default:{column}`, but the unique identifier it links to. This prevents, that when the default changes, the decoding of feature or tags fail.
+
+This job may as well delete no longer used dictionaries, if the corresponding history entries are deleted.
+
+### Links
+- https://postgresqlco.nf/doc/en/param/session_replication_role/
+- https://www.postgresql.org/docs/16/runtime-config-client.html#GUC-SESSION-REPLICATION-ROLE
+- https://foojay.io/today/a-dissection-of-java-jdbc-to-postgresql-connections-part-2-batching/
+- https://github.com/PgBulkInsert/PgBulkInsert
+- [Lock Management](https://www.postgresql.org/docs/current/runtime-config-locks.html)
+
