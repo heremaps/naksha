@@ -21,21 +21,18 @@ package com.here.naksha.lib.handlers.internal;
 import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.NakshaContext.currentContext;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readIdsFromResult;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.handlers.exceptions.MissingHandlersException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.jetbrains.annotations.NotNull;
@@ -79,17 +76,9 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   }
 
   private List<String> missingHandlersIds(Result fetchedHandlers, List<String> expectedHandlersIds) {
-    Set<String> availableHandlers = new HashSet<>(expectedHandlersIds.size());
-    try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = fetchedHandlers.getXyzFeatureCursor()) {
-      while (cursor.hasNext()) {
-        cursor.next();
-        availableHandlers.add(cursor.getId());
-      }
-    } catch (NoCursor noCursor) {
-      return expectedHandlersIds;
-    }
+    Set<String> availableHandlerIds = readIdsFromResult(fetchedHandlers);
     return expectedHandlersIds.stream()
-        .filter(expectedId -> !availableHandlers.contains(expectedId))
+        .filter(expectedId -> !availableHandlerIds.contains(expectedId))
         .toList();
   }
 }

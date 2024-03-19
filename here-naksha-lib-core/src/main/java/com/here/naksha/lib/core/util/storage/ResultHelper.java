@@ -18,6 +18,8 @@
  */
 package com.here.naksha.lib.core.util.storage;
 
+import static java.util.Collections.emptySet;
+
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
@@ -103,6 +105,19 @@ public class ResultHelper {
       return null;
     } catch (NoCursor e) {
       return null;
+    }
+  }
+
+  public static Set<String> readIdsFromResult(final @NotNull Result result) {
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
+      HashSet<String> ids = new HashSet<>();
+      while (resultCursor.hasNext()) {
+        resultCursor.next();
+        ids.add(resultCursor.getId());
+      }
+      return ids;
+    } catch (NoCursor e) {
+      return emptySet();
     }
   }
 

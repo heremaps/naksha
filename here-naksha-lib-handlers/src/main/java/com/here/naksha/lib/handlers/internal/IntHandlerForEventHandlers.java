@@ -21,7 +21,6 @@ package com.here.naksha.lib.handlers.internal;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 import static com.here.naksha.lib.core.NakshaContext.currentContext;
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
@@ -39,7 +38,6 @@ import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
@@ -49,6 +47,7 @@ import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.lib.handlers.DefaultViewHandler;
@@ -58,6 +57,7 @@ import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -231,19 +231,11 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     ReadFeatures findStorageById = readFeaturesByIdRequest(STORAGES, storageId);
     try (IReadSession readSession = nakshaHub().getAdminStorage().newReadSession(currentContext(), false)) {
       try (Result result = readSession.execute(findStorageById)) {
-        if (result instanceof ErrorResult er) {
-          throw unchecked(new Exception(
-              "Exception fetching storage details for id " + storageId + ". " + er.message,
-              er.exception));
+        Set<String> fetchedIds = ResultHelper.readIdsFromResult(result);
+        if (fetchedIds.size() == 1 && fetchedIds.contains(storageId)) {
+          return new SuccessResult();
         }
-        try (final ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
-          if (resultCursor.hasNext() && resultCursor.next() && storageId.equals(resultCursor.getId())) {
-            return new SuccessResult();
-          }
-          return new StorageNotFoundException(storageId).toErrorResult();
-        } catch (NoCursor e) {
-          return new StorageNotFoundException(storageId).toErrorResult();
-        }
+        return new StorageNotFoundException(storageId).toErrorResult();
       }
     }
   }
