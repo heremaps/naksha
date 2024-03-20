@@ -343,7 +343,10 @@ SET SESSION enable_seqscan = OFF;
         ensureHistoryPartition(collectionId, txn())
         if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
             ensureHistoryPartition(collectionId, NakshaTxn(Jb.int64.ZERO()))
+            // save current head in hst
+            saveInHst(collectionId, data.OLD)
             copyToDel(collectionId, data.OLD)
+            // save del state in hst
             saveInHst(collectionId, data.OLD)
             deletedFeaturesRowCache.put(data.OLD[COL_ID]!!, data.OLD)
         }
