@@ -40,8 +40,6 @@ class NakshaSession(
         appName: String, streamId: String, appId: String, author: String? = null
 ) : JbSession(appName, streamId, appId, author) {
 
-    val bulk: NakshaBulkLoader = NakshaBulkLoader(this)
-
     /**
      * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
      */
@@ -242,7 +240,7 @@ SET SESSION enable_seqscan = OFF;
         val txnTs = txnTs()
         NEW[COL_TXN] = txn.value
         NEW[COL_TXN_NEXT] = Jb.int64.ZERO()
-        NEW[COL_UID] = uid++
+        NEW[COL_UID] = nextUid()
         NEW[COL_PTXN] = null
         NEW[COL_PUID] = null
         var geoType: Short? = NEW[COL_GEO_TYPE]
@@ -292,9 +290,9 @@ SET SESSION enable_seqscan = OFF;
     }
 
     /**
-     * Updates xyz namespace and copies feature to _del table.
+     * Prepares row before putting into _del table.
      */
-    internal fun copyToDel(collectionId: String, OLD: IMap) {
+    internal fun xyzDel(OLD: IMap) {
         val txn = txn()
         val txnTs = txnTs()
         OLD[COL_TXN] = txn.value
@@ -306,7 +304,16 @@ SET SESSION enable_seqscan = OFF;
         }
         OLD[COL_UPDATE_AT] = txnTs
         OLD[COL_APP_ID] = appId
-        OLD[COL_UID] = uid
+        OLD[COL_UID] = nextUid()
+        val currentVersion: Int = OLD[COL_VERSION]!!
+        OLD[COL_VERSION] =  currentVersion + 1
+    }
+
+    /**
+     * Updates xyz namespace and copies feature to _del table.
+     */
+    internal fun copyToDel(collectionId: String, OLD: IMap) {
+        xyzDel(OLD)
         val collectionConfig = getCollectionConfig(collectionId)
         val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
         if (autoPurge != true) {
@@ -418,6 +425,8 @@ SET SESSION enable_seqscan = OFF;
         }
         return pgVersion
     }
+
+    internal fun nextUid() = uid++
 
     /**
      * Returns the current transaction number, if no transaction number is yet generated, generates a new one.
@@ -870,6 +879,34 @@ SET (toast_tuple_target=8160,fillfactor=100
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>
     ): ITable {
-        return bulk.bulkWriteFeatures(collectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val table = sql.newTable()
+        val bulk = NakshaBulkLoader(collectionId, this)
+        try {
+            bulk.bulkWriteFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        } catch (e: NakshaException) {
+            if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+            table.returnException(e)
+        } catch (e: Throwable) {
+            table.returnErr(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}", null)
+        }
+        return table;
+    }
+
+    internal fun queryForExisting(collectionId: String, ids: List<String>, wait: Boolean): IMap {
+        val waitOp = if (wait) "" else "NOWAIT"
+        val collectionIdQuoted = sql.quoteIdent(collectionId)
+        val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_AUTHOR, $COL_AUTHOR_TS FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp", arrayOf(ids.toTypedArray()))
+        val rows = sql.rows(result)
+
+        var retMap = newMap()
+
+        if (rows.isNullOrEmpty())
+            return retMap
+
+        for (row in rows) {
+            val cols = asMap(row)
+            retMap.put(cols[COL_ID]!!, cols)
+        }
+        return retMap
     }
 }

@@ -23,6 +23,7 @@ Within PostgresQL a collection is a set of database tables. All these tables are
 - The partitioning in the history is based upon `txn_next`. The reason is, because `txn_next` basically is the time when the change was moved into history. The `txn` is the time when a state was originally created. So, at a first view it might be more logical to partition by `txn`, so when a state was created. However, by doing so we run into one problem, assume we decide to keep the history for one year, what do we want? We want to be able to revert all changes that have been done in the last year. Assume a feature is created in 2010 and then stays unchanged for 13 years. In 2023 this feature is modified. If we partition by the time when the state was created, this feature would be directly garbage collected, because it is in a partition being older than one year. However, this is not what we want! We want this feature to stay here until 2024, which means, we need to add it into the partition of `txn_next`, which will link to the today state, so the 2023 state, and therefore it will be added into the 2023 partition.
 - Even while the partitioning based upon `txn_next` is first counter-intuitive, it still is necessary.
 - The partitioning of the HEAD table can be used to bulk-load data. As the history is not written for the first insert, it is possible to load all data into 16 tables in parallel and then to index them later in parallel and eventually to simply add them together to the HEAD table. This does not break the history, nor does it require any trigger, when the client manually performs the necessary steps to create a valid XYZ-namespace, instead of relying on the trigger.
+- With 256 partitions and bulk-load data, postgres has to run with max_locks_per_transaction=256 as bulk operation locks records on partitions.
 
 ## Triggers
 
@@ -337,6 +338,7 @@ The bulk write will implement these steps:
   - (4) update feature in head, set txn_next=txn (move the feature into history)
   - (5) insert deleted into history
   - (6) insert feature into head
+  - (7) purge feature from del-table
 - If the feature is created, do:
   - (1) delete feature from del-table (only if del-table enabled)
   - (6) insert feature into head
@@ -349,6 +351,9 @@ The bulk write will implement these steps:
   - create deleted version of feature
   - (3) upsert feature in del-table (only if del-table enabled)
   - (5) insert deleted into history
+- If the feature action is purge do:
+  - do steps for action DELETE
+  - (7) remove feature from del-table
 - Execute all batches in order (1-6)
 
 ### Global dictionary training (draft)

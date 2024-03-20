@@ -20,6 +20,7 @@ package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
+import static com.here.naksha.lib.psql.XyzErrorMapper.psqlCodeToXyzError;
 import static com.here.naksha.lib.psql.sql.SqlGeometryTransformationResolver.addTransformation;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -41,6 +42,7 @@ import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.SOpType;
+import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.WriteCollections;
 import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.models.storage.WriteRequest;
@@ -51,8 +53,10 @@ import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.util.ClosableChildResource;
 import com.here.naksha.lib.core.util.IndexHelper;
 import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.jbon.NakshaTxn;
-import com.here.naksha.lib.jbon.NakshaUuid;
+import com.here.naksha.lib.jbon.*;
+import com.here.naksha.lib.plv8.JvmPlv8Sql;
+import com.here.naksha.lib.plv8.JvmPlv8Table;
+import com.here.naksha.lib.plv8.NakshaSession;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -93,7 +97,20 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     this.fetchSize = storage.getFetchSize();
     this.stmtTimeoutMillis = storage.getLockTimeout(MILLISECONDS);
     this.lockTimeoutMillis = storage.getLockTimeout(MILLISECONDS);
+
+    JvmPlv8Sql sql = new JvmPlv8Sql(psqlConnection);
+    this.nakshaSession = new NakshaSession(
+        sql,
+        storage.getSchema(),
+        storage.getAppName(),
+        context.getAppId(),
+        context.getStreamId(),
+        context.getAppId(),
+        context.getAuthor());
+    JbSession.Companion.getThreadLocal().set(nakshaSession);
   }
+
+  final @NotNull NakshaSession nakshaSession;
 
   /**
    * The context to be used.
@@ -721,7 +738,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           final String errNo = err_rs.getString(1);
           final String errMsg = err_rs.getString(2);
           if (errNo != null) {
-            return new PsqlError(XyzErrorMapper.psqlCodeToXyzError(errNo), errMsg, cursor);
+            return new PsqlError(psqlCodeToXyzError(errNo), errMsg, cursor);
           }
         }
         return new PsqlSuccess(cursor, originalFeaturesOrder);
@@ -731,6 +748,50 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         } catch (Throwable ce) {
           log.info("Failed to close statement", ce);
         }
+        throw unchecked(e);
+      }
+    }
+    return new ErrorResult(XyzError.NOT_IMPLEMENTED, "The supplied write-request is not yet implemented");
+  }
+
+  @NotNull
+  <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeBulkWrite(
+      @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
+
+    if (writeRequest instanceof WriteFeatures<?, ?, ?>) {
+      final WriteFeatures<?, ?, ?> writeFeatures = (WriteFeatures<?, ?, ?>) writeRequest;
+      try {
+        // new array list, so we don't modify original order
+        final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
+        features.forEach(codec -> codec.decodeParts(false));
+
+        final int SIZE = writeRequest.features.size();
+        final String collection_id = writeFeatures.getCollectionId();
+        // partition_id
+        final byte[][] op_arr = new byte[SIZE][];
+        final byte[][] feature_arr = new byte[SIZE][];
+        final Short[] geo_type_arr = new Short[SIZE];
+        final byte[][] geo_arr = new byte[SIZE][];
+        final byte[][] tags_arr = new byte[SIZE][];
+
+        for (int i = 0; i < SIZE; i++) {
+          final CODEC codec = features.get(i);
+          op_arr[i] = codec.getXyzOp();
+          feature_arr[i] = codec.getFeatureBytes();
+          geo_type_arr[i] = codec.getGeometryEncoding();
+          geo_arr[i] = codec.getGeometryBytes();
+          tags_arr[i] = codec.getTagsBytes();
+        }
+        JvmPlv8Table table = (JvmPlv8Table) nakshaSession.bulkWriteFeatures(
+            collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr);
+        ArrayList<IMap> rows = table.getRows();
+        if (!rows.isEmpty()) {
+          IMap err = rows.get(0);
+          return new PsqlError(psqlCodeToXyzError(IMapKt.get(err, "err_no")), IMapKt.get(err, "err_msg"));
+        } else {
+          return new SuccessResult();
+        }
+      } catch (Throwable e) {
         throw unchecked(e);
       }
     }

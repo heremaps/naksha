@@ -22,7 +22,6 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.storage.IReadSession;
-import com.here.naksha.lib.jbon.JbSession;
 import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.NotNull;
@@ -34,9 +33,6 @@ abstract class PsqlSession implements IReadSession, AutoCloseable {
 
   PsqlSession(@NotNull PostgresStorage storage, @NotNull NakshaContext context, @NotNull PsqlConnection connection) {
     this.session = new PostgresSession(this, storage, context, connection);
-    JbSession jbSession =
-        new JbSession(context.getAppId(), context.getStreamId(), context.getAppId(), context.getAuthor());
-    JbSession.Companion.getThreadLocal().set(jbSession);
   }
 
   private final @NotNull PostgresSession session;

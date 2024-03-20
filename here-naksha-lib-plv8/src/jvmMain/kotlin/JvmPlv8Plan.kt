@@ -1,5 +1,7 @@
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.toLong
 import java.sql.Connection
 import java.sql.PreparedStatement
 
@@ -28,6 +30,34 @@ class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : IPlv8
             return JvmPlv8Cursor(stmt.resultSet)
         }
         return JvmPlv8Cursor(null)
+    }
+
+    override fun setString(parameterIndex: Int, value: String?) {
+        stmt.setString(parameterIndex, value)
+    }
+
+    override fun setBytes(parameterIndex: Int, value: ByteArray?) {
+        stmt.setBytes(parameterIndex, value)
+    }
+
+    override fun setLong(parameterIndex: Int, value: BigInt64?) {
+        stmt.setLong(parameterIndex, value?.toLong() ?: 0)
+    }
+
+    override fun setInt(parameterIndex: Int, value: Int?) {
+        stmt.setInt(parameterIndex, value ?: 0)
+    }
+
+    override fun setShort(parameterIndex: Int, value: Short?) {
+        stmt.setShort(parameterIndex, value ?: 0)
+    }
+
+    override fun addBatch() {
+        stmt.addBatch()
+    }
+
+    override fun executeBatch(): IntArray {
+        return stmt.executeBatch()
     }
 
     override fun free() {

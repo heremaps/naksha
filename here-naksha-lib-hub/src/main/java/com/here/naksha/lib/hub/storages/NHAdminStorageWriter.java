@@ -103,6 +103,11 @@ public class NHAdminStorageWriter extends NHAdminStorageReader implements IWrite
     session.rollback(autoCloseCursors);
   }
 
+  @Override
+  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
+    throw new UnsupportedOperationException("bulk write is not supported");
+  }
+
   /**
    * Closes the session and, when necessary invokes {@link #rollback(boolean)}.
    * <p>

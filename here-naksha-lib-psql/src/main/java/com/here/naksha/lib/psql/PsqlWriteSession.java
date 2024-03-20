@@ -90,6 +90,11 @@ public final class PsqlWriteSession extends PsqlSession implements IWriteSession
   }
 
   @Override
+  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
+    return session().executeBulkWrite(writeRequest);
+  }
+
+  @Override
   public @NotNull Result process(@NotNull Notification<?> notification) {
     return session().process(notification);
   }
