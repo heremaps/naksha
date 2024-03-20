@@ -19,23 +19,31 @@ based on User's access profile supplied using following attributes as part of [N
 - **su** - Optional
   - Superuser flag, if set, all authorization checks will be bypassed. This is useful where one level of authorization is already performed and we like to avoid repetitive checks on recursive/internal calls.
 
-## 1. URM Concept
+## 1. URM, ARM Concept
 
-URM (User-Rights-Matrix) follows the Map<String, Object> format as below,
-which allows to define a matrix of an **Action** against target **Resource** by specifying one/more **AttributeMaps** of zero/more **Attributes**, that should be compared to validate request authorization:
+* URM = (User-Rights-Matrix) holding the rights of the requester/principal (unique combination of appId, author).
+* ARM = (Access-Rights-Matrix) holding the rights necessary to perform the requested action. It depends on type of request.
+
+Assume URM as left-side of comparison, then ARM represents the right-side of comparison indicating what rights are necessary to allow requested action against the target resource.
+
+Both follow the Map<String, Object> format as below,
+which allows to define a rights matrix of an **Action** against target **Resource** by specifying one/more **AttributeMaps** of zero/more **Attributes**, that should be compared to validate request authorization.
+
+Thumb rule is - **All** entries in the ARM are compared against all entries in the URM per **Action**.
+For each entry in the ARM at least one entry being greater or equal to the ARM entry must exist to grant access.
 
 ```json
 {
     "urm": {
-        "xyz-hub": {
+        "xyz-hub": { // ---> ARM is defined at this level with set of Actions 
             // zero or more Actions
             "<action>": [
-                // one or more Attribute-Map's (atleast one should match)
+                // one or more Attribute-Map's (atleast one should match against ARM)
                 {
-                    // zero or more access Attributes (all should match)
+                    // zero or more access Attributes (all should match against ARM)
                     "<accessAttribute1>": "<exactValue>",
                     "<accessAttribute2>": "<valueWithWildcard*>",
-                    "<accessAttribute3>": [  // one or more values (all should match)
+                    "<accessAttribute3>": [  // one or more values (all should match against ARM)
                         "<anotherExactValue>",
                         "<anotherValueWithWildcard*>"
                     ]
@@ -46,7 +54,7 @@ which allows to define a matrix of an **Action** against target **Resource** by 
 }
 ```
 
-For example:
+Sample URM:
 
 ```json
 {
@@ -54,12 +62,12 @@ For example:
         "xyz-hub": {
             // zero or more Actions
             "readFeatures": [
-                // one or more Attribute-Map's (atleast one should match)
+                // one or more Attribute-Map's (atleast one should match against each ARM AttributeMap)
                 {
-                    // zero or more access Attributes (all should match)
+                    // zero or more access Attributes (all should match against ARM)
                     "id": "my-unique-feature-id",
                     "storageId": "id-with-wild-card-*",
-                    "tags": [  // one or more values (all should match)
+                    "tags": [  // one or more values (all should match against ARM)
                         "my-unique-tag",
                         "some-common-tag-with-wild-card-*"
                     ]
@@ -67,6 +75,28 @@ For example:
             ]
         }
     }
+}
+```
+
+Sample ARM:
+
+```json
+{
+    // zero or more Actions (ALL should match against URM)
+    "readFeatures": [
+        // one or more Attribute-Map's (ALL should match against URM)
+        {
+            // one or more resource Attributes (ARM can have more attributes/values than that in URM)
+            "id": "my-unique-feature-id",
+            "storageId": "id-with-wild-card-matching-value",
+            "collectionId": "unused-id-during-checks",
+            "tags": [
+                "my-unique-tag",
+                "some-common-tag-with-wild-card-matching-value",
+                "some-additional-tag"
+            ]
+        }
+    ]
 }
 ```
 
@@ -92,7 +122,7 @@ For example:
 ```json
 {
     "readFeatures": [
-        // one or more Attribute-Map's (atleast one should match)
+        // one or more Attribute-Map's (atleast one should match with each ARM AttributeMap)
         {
             "id": "my-unique-feature-id"
         },
@@ -109,7 +139,7 @@ For example:
 }
 ```
 
-Thumb rule is - **Atleast One** access AttributeMap should match with resource AttributeMap, to allow access for that Action.
+Thumb rule is - **Atleast One** access AttributeMap should match with each (ARM) resource AttributeMap, to allow access for that Action.
 
 So:
 
@@ -131,7 +161,7 @@ For example:
             // empty attribute map (is a MATCH)
         },
         {
-            // one or more attributes (all should match)
+            // one or more attributes (all should match against ARM)
             "id": "my-unique-feature-id",
             "storageId": "id-with-wild-card-*",
             "tags": [
@@ -143,7 +173,7 @@ For example:
 }
 ```
 
-Thumb rule is - **All specified Access Attributes** should match with resource attributes, to call an AttributeMap to have a MATCH.
+Thumb rule is - **All specified Access Attributes** should match with (ARM) resource attributes, to call an AttributeMap to have a MATCH.
 
 So:
 
@@ -170,7 +200,7 @@ For example:
 }
 ```
 
-Thumb rule is - **All specified values** should match with resource attribute values, to call an Access Attribute a MATCH.
+Thumb rule is - **All specified values** should match with (ARM) resource attribute values, to call an Access Attribute a MATCH.
 
 So:
 
