@@ -67,6 +67,7 @@ class NakshaBulkLoader(
                             val headBeforeDelete: IMap = existingFeatures[row.id()]!!
                             addCopyHeadToHstStmt(plans.copyHeadToHstPlan, featureRowMap, isHistoryDisabled)
 
+                            featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
                             featureRowMap[COL_AUTHOR_TS] = headBeforeDelete[COL_AUTHOR_TS]
                             session.xyzDel(featureRowMap)
                             addDelStmt(plans.insertDelPlan, featureRowMap)
@@ -128,11 +129,12 @@ class NakshaBulkLoader(
         stmt.setLong(1, row[COL_TXN])
         stmt.setInt(2, row[COL_UID])
         stmt.setShort(3, row[COL_ACTION])
-        stmt.setLong(4, row[COL_UPDATE_AT])
-        stmt.setLong(5, row[COL_AUTHOR_TS])
-        stmt.setString(6, row[COL_AUTHOR])
-        stmt.setString(7, row[COL_APP_ID])
-        stmt.setString(8, row[COL_ID])
+        stmt.setInt(4, row[COL_VERSION])
+        stmt.setLong(5, row[COL_UPDATE_AT])
+        stmt.setLong(6, row[COL_AUTHOR_TS])
+        stmt.setString(7, row[COL_AUTHOR])
+        stmt.setString(8, row[COL_APP_ID])
+        stmt.setString(9, row[COL_ID])
         stmt.addBatch()
     }
 
@@ -222,9 +224,9 @@ class NakshaBulkLoader(
             // ptxn + puid = txn + uid (as we generate new state in _del)
             session.sql.prepare("""
                     INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
-                    SELECT 0,$1,$2,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$3,($COL_VERSION+1),$COL_CREATED_AT,$4,$5,$6,$7,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE 
+                    SELECT 0,$1,$2,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$3,$4,$COL_CREATED_AT,$4,$5,$6,$7,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE 
                         FROM $partitionHeadQuoted WHERE id = $8""".trimIndent(),
-                    arrayOf(SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
+                    arrayOf(SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
         }
 
         val copyHeadToHstPlan: IPlv8Plan by lazy {

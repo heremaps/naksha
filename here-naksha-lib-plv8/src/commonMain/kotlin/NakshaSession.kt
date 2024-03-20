@@ -305,6 +305,8 @@ SET SESSION enable_seqscan = OFF;
         OLD[COL_UPDATE_AT] = txnTs
         OLD[COL_APP_ID] = appId
         OLD[COL_UID] = nextUid()
+        val currentVersion: Int = OLD[COL_VERSION]!!
+        OLD[COL_VERSION] =  currentVersion + 1
     }
 
     /**
