@@ -229,7 +229,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
    */
   private @NotNull Result storageExistenceValidation(@NotNull String storageId) {
     ReadFeatures findStorageById = readFeaturesByIdRequest(STORAGES, storageId);
-    try (IReadSession readSession = nakshaHub().getAdminStorage().newReadSession(currentContext(), false)) {
+    try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(currentContext(), false)) {
       try (Result result = readSession.execute(findStorageById)) {
         Set<String> fetchedIds = ResultHelper.readIdsFromResult(result);
         if (fetchedIds.size() == 1 && fetchedIds.contains(storageId)) {

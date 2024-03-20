@@ -101,9 +101,8 @@ class IntHandlerForSpacesTest {
         .toList();
 
     // And
-    IStorage admin = nakshaAdminMock();
-    handlersExist(admin, existingHandlers);
-    writingToAdminSucceeds(admin);
+    handlersExist( existingHandlers);
+    writingToAdminSucceeds();
 
     // When
     Result result = handler.process(event);
@@ -161,26 +160,20 @@ class IntHandlerForSpacesTest {
     return event;
   }
 
-  private IStorage nakshaAdminMock() {
+  private void writingToAdminSucceeds() {
     IStorage admin = mock(IStorage.class);
     when(naksha.getAdminStorage()).thenReturn(admin);
-    return admin;
-  }
-
-  private void writingToAdminSucceeds() {
-    writingToAdminSucceeds(nakshaAdminMock());
-  }
-
-  private void writingToAdminSucceeds(IStorage admin) {
     IWriteSession writeSession = mock(IWriteSession.class);
     when(writeSession.execute(any(WriteXyzFeatures.class))).thenReturn(new SuccessResult());
     when(admin.newWriteSession(any(NakshaContext.class), anyBoolean())).thenReturn(writeSession);
   }
 
-  private void handlersExist(IStorage admin, List<String> eventHandlerIds) {
+  private void handlersExist(List<String> eventHandlerIds) {
+    IStorage spaceStorage = mock(IStorage.class);
+    when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
     IReadSession readSession = mock(IReadSession.class);
     when(readSession.execute(argThat(anyReadHandlersRequest()))).thenReturn(new TestSuccessResult(eventHandlerIds));
-    when(admin.newReadSession(any(NakshaContext.class), anyBoolean())).thenReturn(readSession);
+    when(spaceStorage.newReadSession(any(NakshaContext.class), anyBoolean())).thenReturn(readSession);
   }
 
   private ArgumentMatcher<ReadFeatures> anyReadHandlersRequest() {
