@@ -27,15 +27,19 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.view.IView;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerCollection;
+import com.here.naksha.lib.view.ViewReadSession;
+import com.here.naksha.lib.view.merge.MergeByStoragePriority;
+import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +112,6 @@ public class DefaultViewHandler extends AbstractEventHandler {
   }
 
   private Result processRequest(NakshaContext ctx, IView view, Request<?> request) {
-
     if (request instanceof ReadFeatures rf) {
       return forwardReadFeatures(ctx, view, rf);
     } else if (request instanceof WriteFeatures<?, ?, ?> wf) {
@@ -128,8 +131,14 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
   private Result forwardReadFeatures(NakshaContext ctx, IView view, ReadFeatures rf) {
 
-    try (final IReadSession reader = view.newReadSession(ctx, false)) {
-      return reader.execute(rf);
+    Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
+
+    try (final ViewReadSession reader = (ViewReadSession) view.newReadSession(ctx, false)) {
+      return reader.execute(
+          rf,
+          XyzFeatureCodecFactory.get(),
+          new MergeByStoragePriority<>(),
+          new ObligatoryLayersResolver<>(obligatoryLayers));
     }
   }
 
@@ -141,5 +150,17 @@ public class DefaultViewHandler extends AbstractEventHandler {
     }
 
     return new ViewLayerCollection("", viewLayerList);
+  }
+
+  private Set<ViewLayer> getObligatoryLayers(ViewLayerCollection viewLayerCollection) {
+
+    int layerCollectionSize = viewLayerCollection.getLayers().size();
+
+    if (layerCollectionSize >= 2) {
+      List<ViewLayer> obligatoryLayers = viewLayerCollection.getLayers().subList(0, layerCollectionSize - 1);
+      return new HashSet<>(obligatoryLayers);
+    } else {
+      return Set.of(viewLayerCollection.getTopPriorityLayer());
+    }
   }
 }
