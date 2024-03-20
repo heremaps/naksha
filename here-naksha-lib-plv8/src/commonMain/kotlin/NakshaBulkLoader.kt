@@ -32,6 +32,7 @@ class NakshaBulkLoader(
         val existingFeatures = existingFeatures(idsToModify)
 
         val featureIdsToDeleteFromDel = mutableListOf<String>()
+        val featuresToPurgeFromDel = mutableListOf<String>()
 
         val partitionOperations = groupByPartition(isCollectionPartitioned, allOperations)
         val orderedPartitionKeys = partitionOperations.keys.sorted()
@@ -60,16 +61,19 @@ class NakshaBulkLoader(
                         addInsertStmt(plans.insertHeadPlan, featureRowMap)
                     }
 
-                    XYZ_OP_DELETE -> {
-                        // this may throw exception (if we try to delete non-existing feature - that was deleted before)
-                        val headBeforeDelete: IMap = existingFeatures[row.id()]!!
-                        addCopyHeadToHstStmt(plans.copyHeadToHstPlan, featureRowMap, isHistoryDisabled)
-                        featureIdsToDeleteFromDel.add(row.id())
+                    XYZ_OP_DELETE, XYZ_OP_PURGE -> {
+                        if (existingFeatures.containsKey(row.id())) {
+                            // this may throw exception (if we try to delete non-existing feature - that was deleted before)
+                            val headBeforeDelete: IMap = existingFeatures[row.id()]!!
+                            addCopyHeadToHstStmt(plans.copyHeadToHstPlan, featureRowMap, isHistoryDisabled)
 
-                        featureRowMap[COL_AUTHOR_TS] = headBeforeDelete[COL_AUTHOR_TS]
-                        session.xyzDel(featureRowMap)
-                        addDelStmt(plans.insertDelPlan, featureRowMap)
-                        if (isHistoryDisabled == false) addCopyDelToHstStmt(plans.copyDelToHstPlan, featureRowMap)
+                            featureRowMap[COL_AUTHOR_TS] = headBeforeDelete[COL_AUTHOR_TS]
+                            session.xyzDel(featureRowMap)
+                            addDelStmt(plans.insertDelPlan, featureRowMap)
+                            if (isHistoryDisabled == false) addCopyDelToHstStmt(plans.copyDelToHstPlan, featureRowMap)
+                        }
+                        if (op == XYZ_OP_PURGE)
+                            featuresToPurgeFromDel.add(row.id())
                     }
 
                     else -> throw RuntimeException("Operation $op not supported")
@@ -87,6 +91,8 @@ class NakshaBulkLoader(
             executeBatch(plans.copyDelToHstPlan)
             // 6.
             executeBatch(plans.insertHeadPlan)
+            // 7. purge
+            executeBatchDeleteFromDel(delCollectionIdQuoted, featuresToPurgeFromDel)
         }
     }
 

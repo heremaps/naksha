@@ -338,6 +338,7 @@ The bulk write will implement these steps:
   - (4) update feature in head, set txn_next=txn (move the feature into history)
   - (5) insert deleted into history
   - (6) insert feature into head
+  - (7) purge feature from del-table
 - If the feature is created, do:
   - (1) delete feature from del-table (only if del-table enabled)
   - (6) insert feature into head
@@ -350,6 +351,9 @@ The bulk write will implement these steps:
   - create deleted version of feature
   - (3) upsert feature in del-table (only if del-table enabled)
   - (5) insert deleted into history
+- If the feature action is purge do:
+  - do steps for action DELETE
+  - (7) remove feature from del-table
 - Execute all batches in order (1-6)
 
 ### Global dictionary training (draft)
