@@ -423,10 +423,6 @@ SET SESSION enable_seqscan = OFF;
 
     internal fun nextUid() = uid++
 
-    internal fun setUid(newUid: Int) {
-        uid = newUid
-    }
-
     /**
      * Returns the current transaction number, if no transaction number is yet generated, generates a new one.
      * @return The current transaction number.

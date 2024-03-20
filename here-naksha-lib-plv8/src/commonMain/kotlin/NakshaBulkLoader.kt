@@ -29,9 +29,7 @@ class NakshaBulkLoader(
         val (allOperations, idsToModify) = mapToFeatureRow(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
 
         session.sql.execute("SET LOCAL session_replication_role = replica;")
-        // we have to call it upfront, for all partitions to prepare proper uid
         val existingFeatures = existingFeatures(idsToModify)
-        prepareSessionUid(existingFeatures)
 
         val featureIdsToDeleteFromDel = mutableListOf<String>()
 
@@ -105,20 +103,6 @@ class NakshaBulkLoader(
     internal fun executeBatchDeleteFromDel(delCollectionIdQuoted: String, featureIdsToDeleteFromDel: MutableList<String>) {
         if (featureIdsToDeleteFromDel.isNotEmpty()) {
             session.sql.execute("DELETE FROM  $delCollectionIdQuoted WHERE id = ANY($1)", arrayOf(featureIdsToDeleteFromDel.toTypedArray()))
-        }
-    }
-
-    internal fun executeBatchCopyToHst(headTable: String, quotedSrcTable: String, idsToCopy: List<String>, isHistoryDisabled: Boolean?, txnNext: BigInt64) {
-        if (isHistoryDisabled == false && idsToCopy.isNotEmpty()) {
-            session.ensureHistoryPartition(headTable, session.txn())
-            session.ensureHistoryPartition(headTable, NakshaTxn(Jb.int64.ZERO()))
-            session.sql.execute("""
-                INSERT INTO ${quotedHst(headTable)} ($COL_ALL) 
-                SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE 
-                FROM $quotedSrcTable WHERE id = ANY($2)
-                """,
-                    arrayOf(txnNext, idsToCopy.toTypedArray())
-            )
         }
     }
 
@@ -197,23 +181,6 @@ class NakshaBulkLoader(
     internal fun quotedHst(collectionHeadId: String) = session.sql.quoteIdent("${collectionHeadId}_hst")
 
     internal fun quotedDel(collectionHeadId: String) = session.sql.quoteIdent("${collectionHeadId}_del")
-
-    internal fun prepareSessionUid(existingFeatures: IMap) {
-        // we have to calculate maxUid for delete operation.
-        // I.e. let's consider scenario when in head table we have feature with uid = 0
-        // Now first step in delete operation is copy head to _hst with new txn: new_txn and uid: 0
-        // Next we move head to _del table, if we keep the uid same then in next step when we create copy of _del in _hst we'd end up with same new_txn and uid: 0
-        // that's why all features we move to _del have to start from max(uid)+1
-        if (existingFeatures.size() > 0) {
-            val maxUid: Int = existingFeatures.iterator().asSequence()
-                    .map {
-                        val uid: Int = asMap(it.value)[COL_UID]!!
-                        uid
-                    }
-                    .max()
-            session.setUid(maxUid + 1)
-        }
-    }
 
     internal fun executeBatch(stmt: IPlv8Plan) {
         val result = stmt.executeBatch()
