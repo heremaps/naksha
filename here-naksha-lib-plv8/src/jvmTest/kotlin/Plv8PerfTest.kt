@@ -1,18 +1,24 @@
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
+import de.bytefish.pgbulkinsert.row.SimpleRow
+import de.bytefish.pgbulkinsert.row.SimpleRowWriter
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import org.postgresql.copy.CopyManager
+import org.postgresql.core.BaseConnection
+import org.postgresql.jdbc.PgConnection
+import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.*
 import java.util.concurrent.atomic.AtomicReferenceArray
-import kotlin.collections.ArrayList
 import kotlin.test.assertEquals
+
 
 @Suppress("ArrayInDataClass")
 class Plv8PerfTest : Plv8TestContainer() {
@@ -232,6 +238,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         return BulkFeature(id, partId, op, featureBytes)
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     @Order(3)
     @Test
     fun bulkLoadFeatures() {
@@ -262,6 +269,35 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         System.out.flush()
         Thread.sleep(2000)
         println("RUN")
+
+
+
+        // Define the Columns to be inserted:
+        val columnNames = arrayOf(
+                COL_TXN_NEXT,
+                COL_TXN,
+                COL_UID,
+                COL_VERSION,
+                COL_CREATED_AT,
+                COL_UPDATE_AT,
+                COL_AUTHOR_TS,
+                COL_ACTION,
+                COL_GEO_TYPE,
+                COL_PUID,
+                COL_PTXN,
+                COL_AUTHOR,
+                COL_APP_ID,
+                COL_GEO_GRID,
+                COL_ID,
+                COL_TAGS,
+                COL_GEOMETRY,
+                COL_FEATURE
+        )
+
+        // Create the Table Definition:
+
+
+
         System.out.flush()
         val threads = Array(BulkThreads) {
             Thread {
@@ -279,6 +315,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
                     )
                     val threadSession = NakshaSession.get()
                     conn.commit()
+                    threadSession.sql.execute("SET LOCAL session_replication_role = replica;")
                     var p = 0
                     while (p < 256) {
                         if (featuresDone.compareAndSet(p, false, true)) {
@@ -287,20 +324,36 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
                             val partTableName = "${tableName}_p${partName}"
                             var j = 0
                             try {
-                                val opArr = ArrayList<ByteArray>(list.size)
-                                val fArr = ArrayList<ByteArray?>(list.size)
-                                val geoTypeArr = ArrayList<Short>(list.size)
-                                val geoArr = ArrayList<ByteArray?>(list.size)
-                                val tagsArr = ArrayList<ByteArray?>(list.size)
-                                while (j < list.size) {
-                                    val f = list[j++]
-                                    opArr.add(f.op)
-                                    fArr.add(f.feature)
-                                    geoArr.add(f.geometry)
-                                    tagsArr.add(f.tags)
-                                    geoTypeArr.add(f.geoType)
+                                val table: SimpleRowWriter.Table = SimpleRowWriter.Table(partTableName, *columnNames)
+
+                                SimpleRowWriter(table, conn as (PgConnection)).use { writer ->
+                                    while (j < list.size) {
+                                        val f = list[j++]
+                                        writer.startRow { row: SimpleRow ->
+
+                                            row.setLong(COL_TXN_NEXT, 0L)
+                                            row.setLong(COL_TXN, 0)
+                                            row.setInteger(COL_UID, threadSession.nextUid())
+                                            row.setInteger(COL_VERSION, 0)
+                                            row.setLong(COL_CREATED_AT, currentMicros())
+                                            row.setLong(COL_UPDATE_AT, currentMicros())
+                                            row.setLong(COL_AUTHOR_TS, currentMicros())
+                                            row.setShort(COL_ACTION, XYZ_OP_CREATE.toShort())
+                                            row.setShort(COL_GEO_TYPE, f.geoType)
+                                            row.setInteger(COL_PUID, 0)
+                                            row.setLong(COL_PTXN, 0)
+                                            row.setText(COL_AUTHOR, "pm")
+                                            row.setText(COL_APP_ID, "COL_APP_ID")
+                                            row.setText(COL_GEO_GRID, "1111")
+                                            row.setText(COL_ID, f.id)
+                                            row.setByteArray(COL_TAGS, f.tags)
+                                            row.setByteArray(COL_GEOMETRY, f.geometry)
+                                            row.setByteArray(COL_FEATURE, f.feature)
+                                            // \xd49500018c6a4b55374a4634484c51587ad239018474797065876d6f6d5479
+                                        }
+                                    }
+
                                 }
-                                threadSession.bulkWriteFeatures(partTableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
                                 threadSession.sql.execute("commit")
                             } catch (e: Exception) {
                                 throw e
@@ -325,7 +378,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
     }
 
     @Order(4)
-    @Test
+//    @Test
     fun bulkInsertFeatures() {
         val session = NakshaSession.get()
 

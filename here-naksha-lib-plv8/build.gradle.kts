@@ -54,6 +54,7 @@ kotlin {
                 implementation("org.testcontainers:postgresql:1.19.4")
                 implementation("org.postgresql:postgresql:42.5.4")
                 implementation(project(":here-naksha-lib-jbon"))
+                implementation("de.bytefish:pgbulkinsert:8.1.3")
             }
         }
         jsMain {
