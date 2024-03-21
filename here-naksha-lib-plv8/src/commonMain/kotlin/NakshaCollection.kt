@@ -49,7 +49,6 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     fun partition() : Boolean = _partition
     fun pointsOnly() : Boolean = _pointsOnly
     fun disableHistory() : Boolean = _disableHistory
-
     fun partitionCount(): Short? = _partitionCount
     fun maxAge() : BigInt64 = _maxAge ?: Jb.int64.MAX_VALUE()
     fun estimatedFeatureCount() : BigInt64 = _estimatedFeatureCount ?: Jb.int64.MINUS_ONE()
