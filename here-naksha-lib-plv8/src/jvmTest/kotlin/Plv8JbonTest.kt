@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 class Plv8JbonTest : Plv8TestContainer() {
     private val builder = JbBuilder(newDataView(16384))
 
-    private fun jsonToJbonByteArray(json:String) : ByteArray {
+    private fun jsonToJbonByteArray(json: String): ByteArray {
         builder.clear()
         val raw = env.parse(json)
         return builder.buildFeatureFromMap(asMap(raw))
@@ -26,7 +26,7 @@ class Plv8JbonTest : Plv8TestContainer() {
                 arrayOf(SQL_BYTE_ARRAY, SQL_STRING, SQL_BOOLEAN)
         )
         // when
-        query(plan, arrayOf( featureBytea, "bool", false)) {
+        query(plan, arrayOf(featureBytea, "bool", false)) {
             // then
             assertEquals(true, it["jb_get_bool"])
         }
@@ -43,7 +43,7 @@ class Plv8JbonTest : Plv8TestContainer() {
                 arrayOf(SQL_BYTE_ARRAY, SQL_STRING, SQL_INT32)
         )
         // when
-        query(plan, arrayOf( featureBytea, "idi", 0)) {
+        query(plan, arrayOf(featureBytea, "idi", 0)) {
             // then
             assertEquals(123, it["jb_get_int4"])
         }
@@ -61,7 +61,7 @@ class Plv8JbonTest : Plv8TestContainer() {
         )
 
         // when
-        query(plan, arrayOf( featureBytea, "x", 0.0)) {
+        query(plan, arrayOf(featureBytea, "x", 0.0)) {
             // then
             assertEquals(11.5, it["jb_get_double"])
         }
@@ -78,7 +78,7 @@ class Plv8JbonTest : Plv8TestContainer() {
                 arrayOf(SQL_BYTE_ARRAY, SQL_STRING, SQL_STRING)
         )
         // when
-        query(plan, arrayOf( featureBytea, "name", "none")) {
+        query(plan, arrayOf(featureBytea, "name", "none")) {
             // then
             assertEquals("awesome!", it["jb_get_text"])
         }
@@ -103,7 +103,7 @@ class Plv8JbonTest : Plv8TestContainer() {
                 arrayOf(SQL_BYTE_ARRAY, SQL_STRING, SQL_STRING)
         )
         // when
-        query(plan, arrayOf( featureBytea, "properties.@:a:b:c.tag", "")) {
+        query(plan, arrayOf(featureBytea, "properties.@:a:b:c.tag", "")) {
             // then
             assertEquals("bingo!", it["jb_get_text"])
         }
@@ -198,7 +198,7 @@ class Plv8JbonTest : Plv8TestContainer() {
 
     @Test
     fun testPartitioning() {
-        assertEquals(10, Static.partitionNumber("XD44QgPaxbii",1))
-        assertEquals("010", Static.partitionNameForId("XD44QgPaxbii", 1))
+        assertEquals(10, Static.partitionNumber("XD44QgPaxbii", 256))
+        assertEquals("010", Static.partitionNameForId("XD44QgPaxbii", 256))
     }
 }
