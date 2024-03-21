@@ -11,6 +11,7 @@
     "spaceIds": [
       "base_view_union_all_test_http_space",
       "delta_view_union_all_test_psql_space"
-    ]
+    ],
+    "viewType": "UNION_ALL"
   }
 }

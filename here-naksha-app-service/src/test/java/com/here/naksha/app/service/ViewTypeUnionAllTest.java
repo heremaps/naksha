@@ -37,10 +37,6 @@ public class ViewTypeUnionAllTest extends ApiTest {
         setupSpaceAndRelatedResources(nakshaClient, "ViewUnionAll/setup/psql_storage_space");
         // Set up View Space over Psql and Http Storage based spaces
         setupSpaceAndRelatedResources(nakshaClient, "ViewUnionAll/setup/view_space");
-        // Load some test data in HttpStorage based Space
-        final String initialFeaturesJson1 = loadFileOrFail("ViewUnionAll/setup/http_storage_space/create_features.json");
-        final HttpResponse<String> response1 = nakshaClient.post("hub/spaces/" + HTTP_SPACE_ID + "/features", initialFeaturesJson1, UUID.randomUUID().toString());
-        assertThat(response1).hasStatus(200);
         // Load some test data in PsqlStorage based Space
         final String initialFeaturesJson2 = loadFileOrFail("ViewUnionAll/setup/psql_storage_space/create_features.json");
         final HttpResponse<String> response2 = nakshaClient.post("hub/spaces/" + PSQL_SPACE_ID + "/features", initialFeaturesJson2, UUID.randomUUID().toString());
@@ -54,19 +50,19 @@ public class ViewTypeUnionAllTest extends ApiTest {
 
         // Given: Features By BBox request (against view space)
         final String bboxQueryParam = "west=12.79&south=53.59&east=12.82&north=53.62";
-//        final String httpStorageMockResponse =
-//                loadFileOrFail("ReadFeatures/ByBBoxHttpStorage/TC0711_BBoxOnViewSpace/http_storage_response.json");
+        final String httpStorageMockResponse =
+                loadFileOrFail("ViewUnionAll/ByBBox/http_storage_response.json");
         final String expectedViewResponse =
                 loadFileOrFail("ViewUnionAll/ByBBox/feature_response_part.json");
         String streamId = UUID.randomUUID().toString();
 
-//        final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
-//        stubFor(get(endpointPath)
-//                .withQueryParam("west", equalTo("12.79"))
-//                .withQueryParam("south", equalTo("53.59"))
-//                .withQueryParam("east", equalTo("12.82"))
-//                .withQueryParam("north", equalTo("53.62"))
-//                .willReturn(okJson(httpStorageMockResponse)));
+        final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
+        stubFor(get(endpointPath)
+                .withQueryParam("west", equalTo("12.79"))
+                .withQueryParam("south", equalTo("53.59"))
+                .withQueryParam("east", equalTo("12.82"))
+                .withQueryParam("north", equalTo("53.62"))
+                .willReturn(okJson(httpStorageMockResponse)));
 
         // When: Get Features By BBox request is submitted to NakshaHub
         HttpResponse<String> response = nakshaClient.get("hub/spaces/" + VIEW_SPACE_ID + "/bbox?" + bboxQueryParam, streamId);
@@ -78,6 +74,6 @@ public class ViewTypeUnionAllTest extends ApiTest {
                 .hasJsonBody(expectedViewResponse, "Get Feature response body doesn't match");
 
         // Then: Verify request reached endpoint once
-//        verify(1, getRequestedFor(endpointPath));
+        verify(1, getRequestedFor(endpointPath));
     }
 }
