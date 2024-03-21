@@ -133,12 +133,12 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
     try (final ViewReadSession reader = (ViewReadSession) view.newReadSession(ctx, false)) {
       final MissingIdResolver<XyzFeature, XyzFeatureCodec> resolver;
-        if (properties.getViewType() == ViewType.UNION_ALL) {
-            resolver = new IgnoreMissingResolver<>();
-        } else {
-            final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
-            resolver = new ObligatoryLayersResolver<>(obligatoryLayers);
-        }
+      if (properties.getViewType() == ViewType.UNION_ALL) {
+        resolver = new IgnoreMissingResolver<>();
+      } else {
+        final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
+        resolver = new ObligatoryLayersResolver<>(obligatoryLayers);
+      }
       return reader.execute(rf, XyzFeatureCodecFactory.get(), new MergeByStoragePriority<>(), resolver);
     }
   }
