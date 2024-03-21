@@ -22,10 +22,6 @@ import java.util.concurrent.ThreadLocalRandom
 open class JvmEnv : IEnv {
 
     companion object {
-        /**
-         * Cache for global dictionaries.
-         */
-        val globalDictionaries = ConcurrentHashMap<String, JbDict>()
         val unsafe: Unsafe
         val baseOffset: Int
 
@@ -147,21 +143,5 @@ open class JvmEnv : IEnv {
             return restored.copyOf(decompressedLength)
         }
         return restored
-    }
-
-    override fun getGlobalDictionary(id: String): JbDict? {
-        return globalDictionaries[id]
-    }
-
-    override fun putGlobalDictionary(dict: JbDict) {
-        val id = dict.id()
-        require(id != null)
-        globalDictionaries[id] = dict
-    }
-
-    override fun removeGlobalDictionary(dict: JbDict) {
-        val id = dict.id()
-        require(id != null)
-        globalDictionaries.remove(id, dict)
     }
 }

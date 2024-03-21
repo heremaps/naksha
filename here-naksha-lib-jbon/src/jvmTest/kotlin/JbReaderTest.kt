@@ -79,7 +79,7 @@ class JbReaderTest : JbAbstractTest() {
     }
 
     private fun byteToJbMap(bytea: ByteArray): JbMap {
-        val feature = JbFeature().mapBytes(bytea)
+        val feature = JbFeature(dictManager).mapBytes(bytea)
         val reader = feature.reader
         val jmap = JbMap()
         jmap.mapReader(reader)

@@ -94,7 +94,6 @@ Object.assign(JSON, {
             return Jb.env as JsEnv
         }
 
-        private val globalDictionaries = HashMap<String, JbDict>()
         private var convertView: IDataView? = null
     }
 
@@ -165,21 +164,4 @@ Object.assign(JSON, {
         throw NotImplementedError("lz4Inflate")
     }
 
-    override fun putGlobalDictionary(dict: JbDict) {
-        val id = dict.id()
-        check(id != null)
-        globalDictionaries[id] = dict
-    }
-
-    override fun removeGlobalDictionary(dict: JbDict) {
-        val id = dict.id()
-        check(id != null)
-        if (globalDictionaries[id] === dict) {
-            globalDictionaries.remove(id)
-        }
-    }
-
-    override fun getGlobalDictionary(id: String): JbDict? {
-        return globalDictionaries[id]
-    }
 }

@@ -122,22 +122,4 @@ interface IEnv {
      * @return The inflated (decompress) bytes.
      */
     fun lz4Inflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
-
-    /**
-     * Store the given global dictionary in a global cache.
-     * @param dict The global dictionary to store.
-     */
-    fun putGlobalDictionary(dict: JbDict)
-
-    /**
-     * Removes the global dictionary from the environment cache.
-     * @param dict The global dictionary to store.
-     */
-    fun removeGlobalDictionary(dict: JbDict)
-
-    /**
-     * Retrieve the global dictionary with the given identifier from the global cache.
-     * @return The global dictionary with the given identifier; _null_ when no such dictionary exists.
-     */
-    fun getGlobalDictionary(id: String): JbDict?
 }

@@ -7,9 +7,10 @@ import kotlin.js.JsExport
 
 /**
  * A mapper that allows reading a feature. After mapping the [reader] can be used to access the content of the feature.
+ * @property dictManager The dictionary manager to use to decode the feature.
  */
 @JsExport
-open class JbFeature : JbStruct<JbFeature>() {
+open class JbFeature(var dictManager: IDictManager) : JbStruct<JbFeature>() {
     private var id: String? = null
     private var featureType: Int = -1
 
@@ -24,11 +25,11 @@ open class JbFeature : JbStruct<JbFeature>() {
         check(unitType == TYPE_FEATURE) { "Mapped structure is no feature, but ${JbReader.unitTypeName(unitType)}" }
         // The id of global dictionary (optional).
         if (reader.isString()) {
-            val globalDictId = reader.readString()
-            reader.globalDict = Jb.env.getGlobalDictionary(globalDictId)
-            check(reader.globalDict != null) { "Unable to load necessary global dictionary '$globalDictId'" }
+            val dictId = reader.readString()
+            reader.globalDict = dictManager.getDictionary(dictId)
+            check(reader.globalDict != null) { "Unable to load necessary dictionary '$dictId'" }
         } else {
-            check(reader.isNull()) { "Expected global dictionary ID to be either a string or null, but found ${JbReader.unitTypeName(reader.unitType())}" }
+            check(reader.isNull()) { "Expected dictionary ID to be either a string or null, but found ${JbReader.unitTypeName(reader.unitType())}" }
         }
         check(reader.nextUnit()) { "Failed to seek forward to feature-id field" }
         // The feature-id (optional).

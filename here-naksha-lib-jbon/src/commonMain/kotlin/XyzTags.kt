@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalJsExport::class)
+
 package com.here.naksha.lib.jbon
 
 import kotlin.js.ExperimentalJsExport
@@ -6,20 +7,22 @@ import kotlin.js.JsExport
 
 /**
  * The operation to be executed.
+ * @property dictManager The dictionary manager to use to decode the tags.
  */
 @JsExport
-class XyzTags : XyzStruct<XyzTags>() {
+class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
     private lateinit var _tagsMap: IMap
     private lateinit var _tagsArray: Array<String>
 
     override fun parseHeader() {
         super.parseXyzHeader(XYZ_TAGS_VARIANT)
 
-        val globalDictId = if (reader.isString()) reader.readString() else null
-        if (globalDictId != null) {
-            reader.globalDict = Jb.env.getGlobalDictionary(globalDictId)
+        val dictId = if (reader.isString()) reader.readString() else null
+        if (dictId != null) {
+            reader.globalDict = dictManager.getDictionary(dictId)
+            check(reader.globalDict != null) { "Failed to load dictionary with ID '$dictId'" }
         } else {
-            check(reader.isNull()) {"Invalid header, expected null, but found ${JbReader.unitTypeName(reader.unitType())}"}
+            check(reader.isNull()) { "Invalid header, expected null, but found ${JbReader.unitTypeName(reader.unitType())}" }
         }
 
         // Now all key-value pairs follow.

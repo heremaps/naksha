@@ -9,7 +9,7 @@ import kotlin.js.JsExport
  * A feature that wraps a map.
  */
 @JsExport
-open class JbMapFeature : JbFeature() {
+open class JbMapFeature(dictManager: IDictManager) : JbFeature(dictManager) {
     private lateinit var _map: JbMap
 
     override fun clear(): JbMapFeature {

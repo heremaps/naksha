@@ -1,13 +1,4 @@
-import com.here.naksha.lib.jbon.JbPath.Companion.getBool
-import com.here.naksha.lib.jbon.JbPath.Companion.getDouble
-import com.here.naksha.lib.jbon.JbPath.Companion.getFloat32
-import com.here.naksha.lib.jbon.JbPath.Companion.getInt32
-import com.here.naksha.lib.jbon.JbPath.Companion.getInt64
-import com.here.naksha.lib.jbon.JbPath.Companion.getString
-import com.here.naksha.lib.jbon.IMap
-import com.here.naksha.lib.jbon.JbSession
-import com.here.naksha.lib.jbon.JvmEnv
-import com.here.naksha.lib.jbon.JvmMap
+import com.here.naksha.lib.jbon.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
@@ -25,6 +16,7 @@ class JbPathTest : JbAbstractTest() {
         assertEquals(216, bytes.size)
         bytes
     }
+    private val path = JbPath(JbDictManager())
 
     @Test
     fun testParsingJson() {
@@ -38,13 +30,13 @@ class JbPathTest : JbAbstractTest() {
 
     @Test
     fun shouldProperlyReadTypes() {
-        assertTrue(getBool(bytea, "properties.bool", false)!!)
-        assertEquals(123, getInt32(bytea, "properties.int32")!!)
-        assertEquals(10.0f, getFloat32(bytea, "properties.float")!!)
-        assertEquals(3.4028234663852886E42, getDouble(bytea, "properties.double")!!)
-        assertEquals("any String", getString(bytea, "properties.string")!!)
+        assertTrue(path.getBool(bytea, "properties.bool", false)!!)
+        assertEquals(123, path.getInt32(bytea, "properties.int32")!!)
+        assertEquals(10.0f, path.getFloat32(bytea, "properties.float")!!)
+        assertEquals(3.4028234663852886E42, path.getDouble(bytea, "properties.double")!!)
+        assertEquals("any String", path.getString(bytea, "properties.string")!!)
 
-        assertThrows(NotImplementedError::class.java) { getInt64(bytea, "properties.int64")!! }
+        assertThrows(NotImplementedError::class.java) { path.getInt64(bytea, "properties.int64")!! }
         // Replace with below after implementing getInt64
         //  assertEquals(2147483647000L, getInt64(bytea, "properties.int64")!!)
     }
@@ -56,7 +48,7 @@ class JbPathTest : JbAbstractTest() {
         val invalidPath = "dummy.not.real.path"
 
         // when
-        val result = getInt32(bytea, invalidPath, alternative)!!
+        val result = path.getInt32(bytea, invalidPath, alternative)!!
 
         // then
         assertEquals(alternative, result)
@@ -68,7 +60,7 @@ class JbPathTest : JbAbstractTest() {
         val invalidPath = "dummy.not.real.path"
 
         // when
-        val result = getInt32(bytea, invalidPath, null)
+        val result = path.getInt32(bytea, invalidPath, null)
 
         // then
         assertNull(result)
@@ -80,7 +72,7 @@ class JbPathTest : JbAbstractTest() {
         val arrayPath = "properties.array[0].int32"
 
         // when
-        val result = getInt32(bytea, arrayPath)
+        val result = path.getInt32(bytea, arrayPath)
 
         // then
         assertNull(result)
@@ -92,7 +84,7 @@ class JbPathTest : JbAbstractTest() {
         val arrayPath = "properties"
 
         // when
-        val result = getInt32(bytea, arrayPath)
+        val result = path.getInt32(bytea, arrayPath)
 
         // then
         assertNull(result)

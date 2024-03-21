@@ -527,7 +527,7 @@ class JbCoreTest : JbAbstractTest() {
         val builder = JbBuilder()
         builder.writeText("Hello World Hello Test")
         val featureBytes = builder.buildFeature(null, 0)
-        val feature = JbFeature()
+        val feature = JbFeature(dictManager)
         feature.mapBytes(featureBytes)
         val view = feature.reader.view()
         // We expect the following layout:
@@ -650,7 +650,7 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(8341, reader2.unitSize())
 
         // Use the feature reader.
-        val feature = JbFeature().mapView(featureView, 0)
+        val feature = JbFeature(dictManager).mapView(featureView, 0)
         assertEquals(TYPE_STRING, feature.reader.unitType())
         assertTrue(feature.reader.isString())
         // TODO: Fix me!
@@ -774,7 +774,7 @@ class JbCoreTest : JbAbstractTest() {
         // = 21 byte total, 15-byte header (includes local dict), 6-byte content
         val mapData = builder.buildFeature(null)
         assertEquals(22, mapData.size)
-        val feature = JbFeature()
+        val feature = JbFeature(dictManager)
         feature.mapBytes(mapData)
         assertEquals(null, feature.id())
         assertTrue(feature.reader.isMap())
@@ -853,7 +853,7 @@ class JbCoreTest : JbAbstractTest() {
         val featureJson = """{"id":"bar"}"""
         val featureMap = asMap(env.parse(featureJson))
         val featureBytes = builder.buildFeatureFromMap(featureMap)
-        val feature = JbFeature()
+        val feature = JbFeature(dictManager)
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())
     }

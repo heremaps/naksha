@@ -50,6 +50,12 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
     internal var end: Int = 0
 
     /**
+     * Returns the structure variant.
+     * @return The variant, if any; otherwise _null_.
+     */
+    fun variant() : Int? = variant
+
+    /**
      * Invoked after a view, reader or bytes were mapped to parse the internal structure header. When the method is called, the [reader]
      * will be placed behind the unit header, so at the first payload byte of the structure. If the method does nothing, the payload
      * will be fully mapped as body.
@@ -129,12 +135,6 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
         map(view, offset, localDict, globalDict)
         return this as SELF
     }
-
-    /**
-     * Returns the structure variant.
-     * @return The variant, if any; otherwise _null_.
-     */
-    fun variant() : Int? = variant
 
     /**
      * When called, this method will map the given byte-array, automatically creating a view for them, detecting the

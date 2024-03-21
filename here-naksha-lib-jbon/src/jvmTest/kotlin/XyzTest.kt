@@ -23,7 +23,7 @@ class XyzTest : JbAbstractTest() {
     @Test
     fun testXyzTags() {
         val tagBytes = createTags()
-        val tagReader = XyzTags().mapBytes(tagBytes)
+        val tagReader = XyzTags(dictManager).mapBytes(tagBytes)
         val tags = tagReader.tagsMap()
         assertEquals(7, tags.size())
         assertTrue(tags.containsKey("restaurant"))
@@ -95,7 +95,7 @@ class XyzTest : JbAbstractTest() {
 
         // Convert to namespace.
         val tagBytes = createTags()
-        val tagReader = XyzTags().mapBytes(tagBytes)
+        val tagReader = XyzTags(dictManager).mapBytes(tagBytes)
         val ns = reader.toIMap("test_storage", tagReader.tagsArray())
         assertEquals(11, ns.size())
         assertEquals(createdTs.toDouble(), ns["createdAt"])
