@@ -19,6 +19,15 @@ class JbFnv1aHashTest : JbAbstractTest() {
     }
 
     @Test
+    fun testFnv1a32Reverse() {
+        // See: https://md5calc.com/hash/fnv1a32
+        val testString = "test"
+        val expectedHash : Int = 0xffcdb2a1.toInt()
+        val hash = Fnv1a32.stringReverse(Fnv1a32.start(), testString)
+        assertEquals(expectedHash, hash)
+    }
+
+    @Test
     fun testFnv1a64() {
         // See: https://toolkitbay.com/tkb/tool/FNV-1
         val testString = "test"
