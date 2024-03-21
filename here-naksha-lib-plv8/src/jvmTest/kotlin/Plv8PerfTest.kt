@@ -9,9 +9,7 @@ import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
 import java.sql.Connection
 import java.sql.DriverManager
-import java.util.*
 import java.util.concurrent.atomic.AtomicReferenceArray
-import kotlin.collections.ArrayList
 import kotlin.test.assertEquals
 
 @Suppress("ArrayInDataClass")
@@ -217,11 +215,11 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
 
     private var featureBytes: ByteArray? = null
 
-    private fun createBulkFeature(): BulkFeature {
+    private fun createBulkFeature(partitionCount: Short = 32): BulkFeature {
         val id = env.randomString(12)
         val topology = getSmallTopologyFeature()
         topology["id"] = id
-        val partId = Static.partitionNumber(id)
+        val partId = Static.partitionNumber(id, partitionCount)
         val op = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, id, null, "vgrid")
         var featureBytes = this.featureBytes
         if (featureBytes == null) {
@@ -236,18 +234,18 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
     @Test
     fun bulkLoadFeatures() {
         val tableName = "v2_bulk_test"
-
-        createCollection(tableName, partition = true, disableHistory = true)
+        val partitionCount: Short = 32
+        createCollection(tableName, partition = true, disableHistory = true, partitionCount = partitionCount)
 
         // Run for 8 threads.
         val features = Array<ArrayList<BulkFeature>>(256) { ArrayList() }
         val featuresDone = AtomicReferenceArray<Boolean>(256)
         var i = 0
         while (i < BulkSize) {
-            val f = createBulkFeature()
+            val f = createBulkFeature(partitionCount)
             val p = f.partId
-            check(p in 0..255)
-            check(p == Static.partitionNumber(f.id))
+            check(p in 0..<partitionCount)
+            check(p == Static.partitionNumber(f.id, partitionCount))
             featuresDone.setRelease(p, false)
             val list = features[p]
             list.add(f)
@@ -280,7 +278,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
                     val threadSession = NakshaSession.get()
                     conn.commit()
                     var p = 0
-                    while (p < 256) {
+                    while (p < partitionCount) {
                         if (featuresDone.compareAndSet(p, false, true)) {
                             val list = features[p]
                             val partName = Static.PARTITION_ID[p]
@@ -385,7 +383,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         println("Delete ended in: ${(currentMicros() - delStart).toSeconds()}s")
     }
 
-    private fun createCollection(tableName: String, partition: Boolean, disableHistory: Boolean) {
+    private fun createCollection(tableName: String, partition: Boolean, disableHistory: Boolean, partitionCount: Short = 32) {
         val builder = XyzBuilder.create(65536)
         var op = builder.buildXyzOp(XYZ_OP_DELETE, "$tableName", null, "vgrid")
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
@@ -395,7 +393,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
         op = builder.buildXyzOp(XYZ_OP_CREATE, "$tableName", null, "vgrid")
-        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName", "partition":$partition, "disableHistory": $disableHistory}""")))
+        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partition":$partition,"partitionCount":$partitionCount,"disableHistory": $disableHistory}""")))
         result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)

@@ -371,35 +371,6 @@ SET SESSION enable_seqscan = OFF;
     private lateinit var partView: IDataView
 
     /**
-     * Returns the partition from date.
-     * @param year The year, e.g. 2024.
-     * @param month The month between 1 (January) and 12 (December).
-     * @param day The day between 1 and 31.
-     * @return The name of the corresponding history partition.
-     */
-    fun partitionNameForDate(year: Int, month: Int, day: Int): String {
-        val sb = StringBuilder()
-        sb.append(year)
-        sb.append('_')
-        if (month < 10) sb.append('0')
-        sb.append(month)
-        sb.append('_')
-        if (day < 10) sb.append('0')
-        sb.append(day)
-        return sb.toString() // 2024_01_15
-    }
-
-    /**
-     * Returns the partition id based upon the given timestamp (for history partitions).
-     * @param millis The epoch-timestamp in milliseconds.
-     * @return The name of the corresponding history partition.
-     */
-    fun partitionNameForMillis(millis: BigInt64): String {
-        val ts = JbTimestamp.fromMillis(millis)
-        return partitionNameForDate(ts.year, ts.month, ts.day)
-    }
-
-    /**
      * The cached Postgres version.
      */
     private lateinit var pgVersion: XyzVersion
@@ -705,7 +676,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                         query = "INSERT INTO $NKC_TABLE ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
-                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition())
+                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition(), newCollection.partitionCount())
                         val row = asMap(rows[0])
                         table.returnCreated(id, xyzNsFromRow(id, row))
                         continue
@@ -731,7 +702,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                             }
                         }
                         val row = asMap(rows[0])
-                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition())
+                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition(), newCollection.partitionCount())
                         table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }

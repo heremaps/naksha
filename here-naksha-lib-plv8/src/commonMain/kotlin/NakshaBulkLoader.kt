@@ -25,8 +25,9 @@ class NakshaBulkLoader(
         val collectionConfig = session.getCollectionConfig(headCollectionId)
         val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
         val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
+        val partitionCount: Short = if (isCollectionPartitioned == true) collectionConfig[NKC_PARTITION_COUNT]!! else -1
 
-        val (allOperations, idsToModify) = mapToFeatureRow(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val (allOperations, idsToModify) = mapToFeatureRow(headCollectionId, partitionCount, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
 
         session.sql.execute("SET LOCAL session_replication_role = replica;")
         val existingFeatures = existingFeatures(idsToModify)

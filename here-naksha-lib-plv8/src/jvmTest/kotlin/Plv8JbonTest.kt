@@ -198,7 +198,7 @@ class Plv8JbonTest : Plv8TestContainer() {
 
     @Test
     fun testPartitioning() {
-        assertEquals(10, Static.partitionNumber("XD44QgPaxbii"))
-        assertEquals("010", Static.partitionNameForId("XD44QgPaxbii"))
+        assertEquals(10, Static.partitionNumber("XD44QgPaxbii",1))
+        assertEquals("010", Static.partitionNameForId("XD44QgPaxbii", 1))
     }
 }

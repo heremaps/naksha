@@ -148,12 +148,12 @@ CREATE OR REPLACE FUNCTION naksha_err_msg() RETURNS text AS $$
   return session.errMsg;
 $$ LANGUAGE 'plv8' VOLATILE;
 
-CREATE OR REPLACE FUNCTION naksha_partition_number(id text) RETURNS int4 AS $$
-  return require("naksha").Static.partitionNumber(id);
+CREATE OR REPLACE FUNCTION naksha_partition_number(id text, partition_count int4) RETURNS int4 AS $$
+  return require("naksha").Static.partitionNumber(id, partition_count);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text AS $$
-  return require("naksha").Static.partitionNameForId(id);
+CREATE OR REPLACE FUNCTION naksha_partition_id(id text, partition_count int4) RETURNS text AS $$
+  return require("naksha").Static.partitionNameForId(id, partition_count);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION naksha_hst_partition_id(id text, txn_next int8) RETURNS int4 AS $$
