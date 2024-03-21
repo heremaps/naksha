@@ -20,8 +20,8 @@ kotlin {
         nodejs {
         }
         generateTypeScriptDefinitions()
-        //binaries.library()
-        binaries.executable()
+        binaries.library() // gradle jsBrowserProductionLibraryDistribution
+        binaries.executable() // gradle jsBrowserProductionWebpack
     }
 
     sourceSets {
