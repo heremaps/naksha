@@ -18,6 +18,7 @@ class ActionMatrixTest {
         return Stream.of(
                 testSpec(
                         "URM OR with Multiple AttributeMaps - Positive",
+                        // URM ActionMatrix
                         """
                             {
                               "readUser": [
@@ -27,6 +28,7 @@ class ActionMatrixTest {
                               ]
                             }
                         """,
+                        // ARM ActionMatrix
                         """
                             {
                               "readUser": [
@@ -37,6 +39,7 @@ class ActionMatrixTest {
                               ]
                             }
                         """,
+                        // Expected Auth result
                         true
                 ),
                 testSpec(
