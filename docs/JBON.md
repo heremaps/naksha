@@ -274,16 +274,15 @@ The lower 4-bit of the position encode if the position is absolute or relative a
 This section explains why [CBOR](https://www.rfc-editor.org/rfc/rfc8949.html) was not selected. The formats are similar in many points, when you read the two specification. So, why do something new? The major two difference between them are:
 
 ### Size
-**JBON** supports de-duplication, especially for strings, which decreases the size of the data. Compared to **CBOR**, which actually increases the size of data and just makes it binary readable, when compared to a JSON. **JBON** not only allows to de-duplicate strings out of the box, it as well allows to de-duplicate complete objects.
+**JBON** supports de-duplication, especially for strings, which decreases the size of the data. Compared to **CBOR**, which actually increases the size of data and just makes it binary readable. **JBON** not only allows to de-duplicate strings out of the box, it as well allows to de-duplicate complete objects.
 
-Specifically the **text** type does actually allow to de-duplicate parts of a string and is very beneficial (for example in compressing **URN**s), where encoders may simply use the common prefix from a global dictionary. For example the string `urn:here::here:Topology:58626681` can be encoded (using a good encoder) as:
+Specifically the **string** type does actually allow to de-duplicate parts of a string and is very beneficial (for example in compressing **URN**s), where encoders may simply use the common prefix from a global dictionary. For example the string `urn:here::here:Topology:58626681` can be encoded (using a good encoder) as:
 
-- text lead-in (1 byte)
-- text size (1 byte)
-- string-reference into global dictionary for `urn:here::here:Topology:` (2-3 byte)
-- the value `58626681` (8 byte)
+- string lead-in (1 byte) with size embedded
+- string-reference into global dictionary for `urn:here::here:Topology` (2 byte)
+- the string `58626681` (8 byte)
 
-This result in a total of 12 to 13 byte for a 32 character UTF-8 encoded string (compression around 60%). In other words, it saves 19 byte per feature, which means for 100 million features of this type we need instead of 2.98gb of storage only 1.21gb. This is only one value.
+This result in a total of 11 byte for a 32 character UTF-8 encoded string (compression around 65%). In other words, it saves 21 byte per feature, which means for 100 million features of this type we need instead of 2.98gb of storage only 1.03gb. This is only one value.
 
 Generally, every byte we save, decreases the topology data size by around 95mb, while at the same time allows to use the data without any need to decompress or decode them, we can just seek into the data.
 
@@ -468,7 +467,7 @@ Generally, every byte we save, decreases the topology data size by around 95mb, 
 }
 ```
 
-We see, that over and over again this sub-object is encoded:
+We see, over and over again, this sub-object is encoded:
 
 ```json
 {
@@ -498,4 +497,7 @@ Now, in **CBOR** we would have to encode exactly the same thing, it would not be
 However, the best is, that we can ask the reader for this property, and it will return it. When we use the reader, the object will appear as if it is part of the **JBON**. The application does not need to know details, it only needs access to the global dictionaries. Compression optimization is purely done on the encoder side and can be improved for all our use-cases, not having to make old data invalid or have to re-encode it.
 
 Clearly, we could somehow add the dictionaries and text encoding to **CBOR** using [tags](https://www.rfc-editor.org/rfc/rfc8949.html#name-tagging-of-items), but it would be a proprietary extension and therefore anyway force us to do some own implementations. It would eventually make CBOR so incompatible to what the rest of the world does in this format, that there seems to be no advantage in this solution, when compared to creating our own binary encoding.
+
+## Links
+- https://kt.academy/article/ak-js-interop
 
