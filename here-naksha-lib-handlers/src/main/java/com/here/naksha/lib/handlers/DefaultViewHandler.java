@@ -31,6 +31,7 @@ import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import com.here.naksha.lib.handlers.DefaultViewHandlerProperties.ViewType;
 import com.here.naksha.lib.view.*;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
@@ -132,13 +133,12 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
     try (final ViewReadSession reader = (ViewReadSession) view.newReadSession(ctx, false)) {
       final MissingIdResolver<XyzFeature, XyzFeatureCodec> resolver;
-      switch (properties.getViewType()) {
-        case UNION_ALL -> resolver = new IgnoreMissingResolver<>();
-        default -> {
-          final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
-          resolver = new ObligatoryLayersResolver<>(obligatoryLayers);
+        if (properties.getViewType() == ViewType.UNION_ALL) {
+            resolver = new IgnoreMissingResolver<>();
+        } else {
+            final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
+            resolver = new ObligatoryLayersResolver<>(obligatoryLayers);
         }
-      }
       return reader.execute(rf, XyzFeatureCodecFactory.get(), new MergeByStoragePriority<>(), resolver);
     }
   }
