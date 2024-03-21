@@ -6,6 +6,7 @@ import com.here.naksha.lib.jbon.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
+import kotlin.math.absoluteValue
 
 /**
  * To be called once per storage to initialize a storage. This is normally only done from the Java code that invokes
@@ -169,18 +170,20 @@ $$ LANGUAGE 'plv8';
     /**
      * Returns the partition number.
      * @param id The feature-id for which to return the partition-id.
-     * @return The partition id as number between 0 and 255.
+     * @param partitionCount The number of partitions declared in collection config.
+     * @return The partition id as number between 0 and partitionCount.
      */
     @JvmStatic
-    fun partitionNumber(id: String): Int = Fnv1a32.string(Fnv1a32.start(), id) and 0xff
+    fun partitionNumber(id: String, partitionCount: Short): Int = Fnv1a32.string(Fnv1a32.start(), id).absoluteValue % (partitionCount)
 
     /**
      * Returns the partition id as three digit string.
      * @param id The feature-id for which to return the partition-id.
+     * @param partitionCount The number of partitions declared in collection config.
      * @return The partition id as three digit string.
      */
     @JvmStatic
-    fun partitionNameForId(id: String): String = PARTITION_ID[partitionNumber(id)]
+    fun partitionNameForId(id: String, partitionCount: Short): String = PARTITION_ID[partitionNumber(id, partitionCount)]
 
     /**
      * Tests if specific database table (in the Naksha session schema) exists already
@@ -298,7 +301,7 @@ SET (toast_tuple_target=8160"""
      * @param partition If the collection should be partitioned.
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
+    fun collectionCreate(sql: IPlv8Sql, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean, partitionCount: Short? = null) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
@@ -353,10 +356,11 @@ SET (toast_tuple_target=8160"""
             collectionOptimizeTable(sql, id, false)
             collectionAddIndices(sql, id, geoIndex, false)
         } else {
-            query += "PARTITION BY RANGE (naksha_partition_number(id))"
+            check(partitionCount != null && partitionCount > 0 && partitionCount <= 256) { "invalid partitionCount: $partitionCount" }
+            query += "PARTITION BY RANGE (naksha_partition_number(id, $partitionCount))"
             sql.execute(query)
             var i = 0
-            while (i < 256) {
+            while (i < partitionCount) {
                 val partName = id + "_p" + PARTITION_ID[i]
                 val partNameQuoted = sql.quoteIdent(partName)
                 query = "CREATE TABLE $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($i) "
@@ -458,8 +462,8 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         val hstPartName = hstPartitionNameForId(collectionId, txnNext)
         val partNameQuoted = sql.quoteIdent(hstPartName)
         val headNameQuoted = sql.quoteIdent(hstHeadNameForId(collectionId))
-        val start = NakshaTxn.of(txnNext.year(), txnNext.month(), txnNext.day(), NakshaTxn.SEQ_MIN).value
-        val end = NakshaTxn.of(txnNext.year(), txnNext.month(), txnNext.day(), NakshaTxn.SEQ_MAX).value
+        val start = NakshaTxn.of(txnNext.year(), txnNext.month(), 0, NakshaTxn.SEQ_MIN).value
+        val end = NakshaTxn.of(txnNext.year(), txnNext.month(), 31, NakshaTxn.SEQ_MAX).value
 
         val query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end);"
         sql.execute(query)

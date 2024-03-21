@@ -21,4 +21,5 @@ package com.here.naksha.lib.core;
 public class LibraryConstants {
 
   public static long DEFAULT_READ_LIMIT = 1_000_000;
+  public static short DEFAULT_PARTITIONED_COLLECTION_PARTITION_COUNT = 32;
 }

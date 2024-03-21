@@ -29,6 +29,8 @@ import java.util.Objects;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
+import static com.here.naksha.lib.core.LibraryConstants.DEFAULT_PARTITIONED_COLLECTION_PARTITION_COUNT;
+
 /**
  * A collection is a virtual container for features, managed by a {@link Storage}. All collections optionally have a history and transaction
  * log.
@@ -95,7 +97,7 @@ public class XyzCollection extends NakshaFeature {
     super(id);
     this.partition = partition;
     this.pointsOnly = pointsOnly;
-    this.partitionCount = -1;
+    this.partitionCount = partition ? DEFAULT_PARTITIONED_COLLECTION_PARTITION_COUNT : -1;
     this.estimatedFeatureCount = -1L;
     this.estimatedDeletedFeatures = -1L;
   }
@@ -254,6 +256,16 @@ public class XyzCollection extends NakshaFeature {
   @JsonIgnore
   public void disableHistory() {
     disableHistory = true;
+  }
+
+  /**
+   * Override default 32 partitions to any number between 1 and 256.
+   *
+   * @param partitionCount
+   */
+  public void setPartitionCount(int partitionCount) {
+    assert partitionCount == -1 || (partitionCount > 0 && partitionCount <= 256);
+    this.partitionCount = partitionCount;
   }
 
   /**

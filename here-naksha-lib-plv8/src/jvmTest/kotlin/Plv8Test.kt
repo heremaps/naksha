@@ -90,9 +90,10 @@ class Plv8Test : Plv8TestContainer() {
         var i = 0
         while (i++ < 10_000) {
             val s = env.randomString(12)
-            val pnum = Static.partitionNumber(s)
-            assertTrue(pnum in 0..255)
-            val pid = Static.partitionNameForId(s)
+            val partitionCount: Short = 256
+            val pnum = Static.partitionNumber(s, partitionCount)
+            assertTrue(pnum in 0..< partitionCount)
+            val pid = Static.partitionNameForId(s, partitionCount)
             assertEquals(3, pid.length)
             val expectedId = if (pnum < 10) "00$pnum" else if (pnum < 100) "0$pnum" else "$pnum"
             assertEquals(expectedId, pid)

@@ -2,18 +2,20 @@ package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
 
-data class FeatureRow(
+class FeatureRow(
         val rowMap: IMap,
         val xyzOp: XyzOp,
-        val collectionId: String
+        val collectionId: String,
+        collectionPartitionCount: Short
 ) {
-    val partition: Int = Static.partitionNumber(id())
+    val partition: Int = Static.partitionNumber(id(), collectionPartitionCount)
 
     fun id(): String = rowMap[COL_ID]!!
 
     companion object {
         fun mapToFeatureRow(
                 collectionId: String,
+                partitionCount: Short,
                 op_arr: Array<ByteArray>,
                 feature_arr: Array<ByteArray?>,
                 geo_type_arr: Array<Short>,
@@ -49,7 +51,8 @@ data class FeatureRow(
                 operations.add(FeatureRow(
                         row,
                         xyzOp = opReader,
-                        collectionId = collectionId
+                        collectionId = collectionId,
+                        partitionCount
                 ))
             }
             return Pair(operations, idsToModify)
