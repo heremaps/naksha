@@ -20,6 +20,7 @@ package com.here.naksha.storage.http;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 import static com.here.naksha.storage.http.PrepareResult.prepareResult;
+import static java.lang.String.format;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
@@ -47,6 +48,7 @@ class HttpStorageReadExecute {
       case GET_BY_IDS -> executeFeaturesById(context, request, sender);
       case GET_BY_BBOX -> executeFeatureByBBox(context, request, sender);
       case GET_BY_TILE -> executeFeaturesByTile(context, request, sender);
+      case ITERATE -> executeIterate(context, request, sender);
     };
   }
 
@@ -55,7 +57,7 @@ class HttpStorageReadExecute {
     String featureId = readRequest.getQueryParameter(FEATURE_ID);
 
     HttpResponse<byte[]> response = requestSender.sendRequest(
-        String.format("/%s/features/%s", baseEndpoint(readRequest), featureId),
+        format("/%s/features/%s", baseEndpoint(readRequest), featureId),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
     if (response.statusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
@@ -71,7 +73,7 @@ class HttpStorageReadExecute {
     String queryParamsString = FEATURE_IDS + "=" + String.join(",", featureIds);
 
     HttpResponse<byte[]> response = requestSender.sendRequest(
-        String.format("/%s/features?%s", baseEndpoint(readRequest), queryParamsString),
+        format("/%s/features?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
@@ -82,8 +84,7 @@ class HttpStorageReadExecute {
     String queryParamsString = keysToKeyValuesStrings(readRequest, WEST, NORTH, EAST, SOUTH, LIMIT);
 
     HttpResponse<byte[]> response = requestSender.sendRequest(
-        String.format(
-            "/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQueryOrEmpty(readRequest)),
+        format("/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
@@ -99,9 +100,20 @@ class HttpStorageReadExecute {
       return new ErrorResult(XyzError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
 
     HttpResponse<byte[]> response = requestSender.sendRequest(
-        String.format(
+        format(
             "/%s/quadkey/%s?%s%s",
             baseEndpoint(readRequest), tileId, queryParamsString, getPOpQueryOrEmpty(readRequest)),
+        Map.of(HDR_STREAM_ID, context.getStreamId()));
+
+    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+  }
+
+  private static Result executeIterate(
+      @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
+    String queryParamsString = keysToKeyValuesStrings(readRequest, LIMIT);
+
+    HttpResponse<byte[]> response = requestSender.sendRequest(
+        format("/%s/iterate?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
