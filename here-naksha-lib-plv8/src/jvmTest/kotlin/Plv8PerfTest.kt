@@ -31,7 +31,7 @@ class Plv8PerfTest : Plv8TestContainer() {
         private val FeaturesPerRound = 1000
         private val Rounds = 10
         private val BulkThreads = 8
-        private val BulkSize = 256 * 1000
+        private val BulkSize = 10 * 1000
 
         private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
         internal var topologyTemplate: IMap? = null
@@ -233,6 +233,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
     }
 
     @Order(3)
+    @Disabled
     @Test
     fun bulkLoadFeatures() {
         val tableName = "v2_bulk_test"

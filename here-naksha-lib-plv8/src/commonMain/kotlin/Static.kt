@@ -93,6 +93,24 @@ $$ LANGUAGE 'plv8';
     val DEBUG = false
 
     /**
+     * The constant for the GIST geo-index.
+     */
+    @JvmStatic
+    val GEO_INDEX_GIST = false // "gist"
+
+    /**
+     * The constant for the SP-GIST geo-index.
+     */
+    @JvmStatic
+    val GEO_INDEX_SP_GIST = true // "sp-gist"
+
+    /**
+     * The constant for the default geo-index (may change over time).
+     */
+    @JvmStatic
+    val GEO_INDEX_DEFAULT = GEO_INDEX_GIST
+
+    /**
      * Can be set to true, to enable stack-trace reporting to _elog(INFO)_.
      */
     @JvmStatic
@@ -130,10 +148,18 @@ $$ LANGUAGE 'plv8';
         val sb = StringBuilder()
         var hash = Fnv1a32.string(Fnv1a32.start(), id)
         var i = 0
-        sb.append(BASE32[id[0].code and 31])
+        sb.append(Static.BASE32[id[0].code and 31])
         while (i++ < 6) {
             val b32 = hash and 31
-            sb.append(BASE32[b32])
+            sb.append(Static.BASE32[b32])
+            hash = hash ushr 5
+        }
+        hash = Fnv1a32.stringReverse(Fnv1a32.start(), id)
+        i = 0
+        sb.append(Static.BASE32[id[0].code and 31])
+        while (i++ < 6) {
+            val b32 = hash and 31
+            sb.append(Static.BASE32[b32])
             hash = hash ushr 5
         }
         return sb.toString()
@@ -267,11 +293,11 @@ SET (toast_tuple_target=8160"""
      * @param schema The schema name.
      * @param schemaOid The object-id of the schema to look into.
      * @param id The collection identifier.
-     * @param spGist If SP-GIST index should be used, which is better only for point geometry.
+     * @param geoIndex If SP-GIST index should be used, which is better only for point geometry.
      * @param partition If the collection should be partitioned.
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, schema: String, schemaOid: Int, id: String, spGist: Boolean, partition: Boolean) {
+    fun collectionCreate(sql: IPlv8Sql, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
@@ -324,7 +350,7 @@ SET (toast_tuple_target=8160"""
         if (!partition) {
             sql.execute(query)
             collectionOptimizeTable(sql, id, false)
-            collectionAddIndices(sql, id, spGist, false)
+            collectionAddIndices(sql, id, geoIndex, false)
         } else {
             query += "PARTITION BY RANGE (naksha_partition_number(id))"
             sql.execute(query)
@@ -337,7 +363,7 @@ SET (toast_tuple_target=8160"""
                 query += "TO ($i)"
                 sql.execute(query)
                 collectionOptimizeTable(sql, partName, false)
-                collectionAddIndices(sql, partName, spGist, false)
+                collectionAddIndices(sql, partName, geoIndex, false)
             }
         }
         if (!DEBUG) collectionAttachTriggers(sql, id, schema, schemaOid)
@@ -355,7 +381,7 @@ SET (toast_tuple_target=8160"""
         query = query.replace("{condition}", "= 0")
         sql.execute(query)
         collectionOptimizeTable(sql, delName, false)
-        collectionAddIndices(sql, delName, spGist, false)
+        collectionAddIndices(sql, delName, geoIndex, false)
 
         // META.
         val metaName = id + "_meta"
@@ -364,7 +390,7 @@ SET (toast_tuple_target=8160"""
         query = query.replace("{condition}", "= 0")
         sql.execute(query)
         collectionOptimizeTable(sql, metaName, false)
-        collectionAddIndices(sql, metaName, spGist, false)
+        collectionAddIndices(sql, metaName, geoIndex, false)
 
         // HISTORY.
         val hstName = id + "_hst"
@@ -458,4 +484,47 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      */
     @JvmStatic
     fun hstHeadNameForId(collectionId: String): String = "${collectionId}_hst"
+
+    /**
+     * Queries the database for the schema **oid** (object id). The result should be cached as calling this method is expensive.
+     * @param sql The SQL API.
+     * @param schema The name of the schema.
+     * @return The object-id of the schema or _null_, if no such schema was found.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun getSchemaOid(sql: IPlv8Sql, schema: String): Int? {
+        val result = sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema))
+        if (result is Array<*>) {
+            val array = result as Array<Any>
+            if (array.isNotEmpty()) {
+                val row = asMap(array[0])
+                val oid = row.getAny("oid")
+                if (oid is Int) return oid
+            }
+        }
+        return null
+    }
+
+    /**
+     * Tests if the given **id** is a valid collection identifier.
+     * @param id The collection identifier.
+     * @return _true_ if the collection identifier is valid; _false_ otherwise.
+     */
+    fun isValidCollectionId(id: String?) : Boolean {
+        if (id.isNullOrEmpty() || "naksha"==id || id.length > 32) return false
+        var i = 0
+        var c = id[i++]
+        // First character must be a-z
+        if (c.code < 'a'.code || c.code > 'z'.code) return false
+        while (i < id.length) {
+            c = id[i++]
+            when (c.code) {
+                in 'a'.code .. 'z'.code -> continue
+                in '0'.code .. '9'.code -> continue
+                '_'.code, ':'.code, '-'.code -> continue
+                else -> return false
+            }
+        }
+        return true
+    }
 }

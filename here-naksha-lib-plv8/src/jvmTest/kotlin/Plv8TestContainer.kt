@@ -1,4 +1,5 @@
 import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.JbDictManager
 import com.here.naksha.lib.plv8.JvmPlv8Env
 import org.junit.jupiter.api.*
 import org.slf4j.LoggerFactory
@@ -12,6 +13,7 @@ import java.sql.DriverManager
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 open class Plv8TestContainer {
     val env = Jb.env
+    val dictManager = JbDictManager()
 
     companion object {
         private val logger = LoggerFactory.getLogger(Plv8TestContainer::class.java)

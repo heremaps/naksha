@@ -1,24 +1,61 @@
 # PostgresQL Reference Implementation
-
 This part of the documentation explains details about the reference Naksha Storage-API implementation based upon PostgresQL database.
 
 ## Basics
+The admin database and most data storages of Naksha will be using a PostgresQL database. For users, we will allow the usage of the same implementation for their own storages, or they are free to implement an own storage engine. Generally, Naksha Storage-API need to refer to all objects as Geo-JSON features. They have the following general layout:
 
-The admin database of Naksha will (currently) be based upon a PostgresQL database. For users, we will allow the usage of the same implementation for their collections that the Naksha-Hub itself uses to store administrative features.
+```
+{
+  "id": {id},
+  "geometry": {Geo-JSON geometry object},
+  "properties": {
+    "@ns:com:here:xyz": {Internal state values}
+  }
+}
+```
+
+Actually, the storage engine will split this information apart as show in the following table layout.
+
+## Table layout
+All tables used in the Naksha PostgresQL implementation have the same general layout, what simplifies access:
+
+| Column     | Type  | RO  | Modifiers | Description                                                        |
+|------------|-------|-----|-----------|--------------------------------------------------------------------|
+| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                          |
+| uid        | int4  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                          |
+| puid       | int4  | yes | NOT NULL  | `f.p.xyz->puuid` - Row identifier.                                 |
+| ptxn       | int8  | yes | NOT NULL  | `f.p.xyz->puuid` - Row identifier.                                 |
+| created_at | int8  | yes | NOT NULL  | `f.p.xyz->createdAt`                                               |
+| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                               |
+| author_ts  | int8  | yes | NOT NULL  | `f.p.xyz->authorTs`                                                |
+| version    | int8  | yes | NOT NULL  | `f.p.xyz->version`                                                 |
+| geo_grid   | int4  | yes | NOT NULL  | `f.p.xyz->grid` - HERE binary quad-key level 16 above `geo_ref`.   |
+| geo_type   | int2  | no  | NOT NULL  | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).         |
+| action     | int2  | yes | NOT NULL  | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2).            |
+| author     | text  | yes | NOT NULL  | `f.p.xyz->author`                                                  |
+| app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                  |
+| id         | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                |
+| tags       | bytea | no  |           | `f.p.xyz->tags`                                                    |
+| geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                       |
+| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`) .    |
+| feature    | bytea | no  | NOT NULL  | `f` - The Geo-JSON feature in JBON, except for what was extracted. |
+| txn_next   | int8  | yes |           | `f.p.xyz->txn_next` - Only in history.                             |
+
+As being documented in the **Description** column, every feature is split into parts, when stored. The reason is performance and efficiency. This is done to avoid unnecessary work, for example when rows need to be moved into the history. Therefore, the **tags** columns contains the tags extracted from the XYZ namespace, while the rest of the XYZ namespace, managed by the storage engine, is stored in individual columns. The **txn_next** is as well managed internally and only used for the history (actually, this is the only value that need to be adjusted, when a row is moved into history). All columns should be merged together into the Geo-JSON feature. This merging is left to the client and not part of the database code (it is done by the higher level **lib-psql**).
 
 ## Collections
+Within PostgresQL a collection is a set of database tables. All these tables are prefixed by the collection identifier. The tables are:
 
-Within PostgresQL a collection is a set of database tables. All these tables are prefixed by the `collection` identifier. The tables are:
-
-- `{collection}`: The HEAD table (`PARTITION BY LIST naksha_partition_number(naksha_feature_id(feature))`) with all features in their live state. This table is the only one that should be directly accessed for manual SQL queries and has triggers attached that will ensure that the history is written accordingly.
-- `{collection}_p[n]`: The 256 HEAD partitions (`PARTITION OF {collection} FOR VALUES WITH (MODULUS 256, REMAINDER {n})`), beware that the name of the partition is taken from `naksha_partition_id('{collection}')`, which will return a string of the length 3 (`000` to `255`).
-- `{collection}_del`: The HEAD deletion table holding all features that are deleted from the HEAD table. This can be used to read zombie features (features that have been deleted, but are not yet fully unrecoverable dead).
-- `{collection}_hst`: The history table, this is partitioned table, partitioned by `txn_next`.
-- `{collection}_hst_{YYYY}_{MM}_{YY}`: The history partition for a specific day (`txn_next >= naksha_txn('2023-09-29',0) AND txn_next < naksha_txn('2023-09-30',0)`.
-- `{collection}_meta`: The meta-data sub-table, used for arbitrary meta-information and statistics.
+- `{collection}`: The HEAD table. It is either a plain simple table or a partitioned table. When being partitioned, this is done as (`PARTITION BY LIST part_num`) with all features in their live state. This table is the only one that should be directly accessed for manual SQL queries and has triggers attached that will ensure that the history is written accordingly.
+- `{collection}$p[n]`: The HEAD partitions (`PARTITION OF {collection} FOR VALUES WITH (MODULUS 256, REMAINDER {n})`), beware that the name of the partition is taken from `naksha_partition_id('{collection}')`, which will return a string of the length 3 (`000` to `255`).
+- `{collection}$del`: The HEAD deletion table holding all features that are deleted from the HEAD table. This can be used to read zombie features (features that have been deleted, but are not yet fully unrecoverable dead).
+- `{collection}$hst`: The history table, this is always a partitioned table, partitioned by `txn_next`.
+- `{collection}$hst_{YYYY}_{MM}`: The history partition for a specific month of the year (`txn_next >= naksha_txn(2023,1) AND txn_next < naksha_txn(2023,2)`.
+- `{collection}$meta`: The meta-data sub-table, used for arbitrary meta-information and statistics. In this table the **action** column is used to keep track of different types of meta-data. This allows for example, to store symbolic links for dictionaries.
 
 **Notes:**
 
+- The collection identifier `naksha` is reserved for internal tables (`naksha_txn`, `naksha_meta` and `naksha_collections`).
 - The collection names must be lower-cased and only persist out of the following characters: `^[a-z][a-z0-9_-:]{0,31}$`.
 - The partitioning in the history is based upon `txn_next`. The reason is, because `txn_next` basically is the time when the change was moved into history. The `txn` is the time when a state was originally created. So, at a first view it might be more logical to partition by `txn`, so when a state was created. However, by doing so we run into one problem, assume we decide to keep the history for one year, what do we want? We want to be able to revert all changes that have been done in the last year. Assume a feature is created in 2010 and then stays unchanged for 13 years. In 2023 this feature is modified. If we partition by the time when the state was created, this feature would be directly garbage collected, because it is in a partition being older than one year. However, this is not what we want! We want this feature to stay here until 2024, which means, we need to add it into the partition of `txn_next`, which will link to the today state, so the 2023 state, and therefore it will be added into the 2023 partition.
 - Even while the partitioning based upon `txn_next` is first counter-intuitive, it still is necessary.
@@ -26,7 +63,6 @@ Within PostgresQL a collection is a set of database tables. All these tables are
 - With 256 partitions and bulk-load data, postgres has to run with max_locks_per_transaction=256 as bulk operation locks records on partitions.
 
 ## Triggers
-
 Naksha PSQL-Storage will add two triggers to the HEAD table (or partitions) to ensure the desired behavior, even when direct SQL queries are executed. One trigger is added _before_ `INSERT` and `UPDATE`, the other _after_ all. The triggers implement the following behavior (it basically exists in two variants: with history enabled or disabled):
 
 * **before** `INSERT` and `UPDATE`
@@ -70,59 +106,30 @@ The local **sequence-number** is stored in a sequence named `naksha_txn_seq`. Ev
 
 This concept allows up to 4096 billion transactions per day (between 0 and 2^42-1). It will work up until the year 8191, where it will overflow. Should there be more than 4096 billion transaction in a single day, this will overflow as into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible.
 
-The human-readable (Javascript compatible) representation is as a string in the format `{storageId}:txn:{year}:{month}:{day}:{seq}:0`.
+The human-readable (Javascript compatible) representation is as a string in the format:
+
+`urn:here:naksha:txn:{storageId}:{year}:{month}:{day}:{seq}`.
 
 Normally, when a new unique identifier is requested, the method `naksha_txn()` will use the next value from the sequence (`naksha_txn_seq`) and verify it, so, if the year, month and day of the current transaction start-time (`transaction_timestamp()`) matches the one stored in the sequence-number. If this is not the case, it will enter an advisory lock and retry the operation, if the sequence-number is still invalid, it will reset the sequence-number to the correct date, with the _sequence_ part being set to `1`, so that the next `naksha_txn()` method that enters the lock or queries the _sequence_, receives a correct number, starting at _sequence_ `1`. The method itself will use the _sequence_ value `0` in the rollover case.
 
 **Note**: We cache the current transaction-number in the session, so that we do not need to perform the above action multiple times per transaction.
 
-## GUID [`uuid`]
-
+## GUID aka UUID
 Traditionally XYZ-Hub used UUIDs as state-identifiers, but exposed them as strings in the JSON. Basically all known clients ignore the format of the UUID, so none of them expected to really find a UUID in it. This is good, because in Naksha we decided to change the format, but to stick with the name for downward compatibility.
 
 The new format is called GUID (global unique identifier), returning to the roots of the Geo-Space-API. The syntax for a GUID in the PSQL-storage is:
 
-`{storageId}:{collectionId}:{txn.year}:{txn.month}:{txn.day}:{txn.seq}:{uid}`
+`urn:here:naksha:guid:{storageId}:{collectionId}:{txn.year}:{txn.month}:{txn.day}:{txn.seq}:{uid}`
 
 **Note**: This format holds all information needed for Naksha to know in which storage a feature is located, of which it only has the _GUID_. The PSQL storage knows from this _GUID_ exactly in which database table the features is located, even taking partitioning into account. The reason is, that partitioning is done by transaction start date, which is contained in the _GUID_. Therefore, providing a _GUID_, directly identifies the storage location of a feature, which in itself holds the information to which transaction it belongs to (`txn`). Beware that the transaction-number as well encodes the transaction start time and therefore allows as well to know exactly where the features of a transaction are located (including finding the transaction details itself).
 
-## Collection table layout
-The table layout for all tables of a collection, except for the _meta_ table is:
+## Meta table
+For each collection a _meta_ table is created. This collection stores the [JBON](./JBON.md) dictionaries used by all features stored in the main collection. Next to this, it stores statistics and other internal information. The table does not have a history.
 
-| Column     | Type  | RO  | Modifiers | Description                                                        |
-|------------|-------|-----|-----------|--------------------------------------------------------------------|
-| txn_next   | int8  | yes | NOT NULL  | `f.p.xyz->txn_next` - Only needed in history                       |
-| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier                           |
-| uid        | int4  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier                           |
-| version    | int4  | yes | NOT NULL  | `f.p.xyz->version`                                                 |
-| created_at | int8  | yes | NOT NULL  | `f.p.xyz->createdAt`                                               |
-| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                               |
-| author_ts  | int8  | yes | NOT NULL  | `f.p.xyz->authorTs`                                                |
-| action     | int2  | yes | NOT NULL  | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2)             |
-| geo_type   | int2  | no  | NOT NULL  | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).         |
-| puid       | int4  | yes |           | `f.p.xyz->puuid` - Row identifier                                  |
-| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Row identifier                                  |
-| author     | text  | yes |           | `f.p.xyz->author`                                                  |
-| app_id     | text  | yes |           | `f.p.xyz->app_id`                                                  |
-| geo_grid   | text  | yes | NOT NULL  | `f.p.xyz->grid`                                                    |
-| id         | text  | no  |           | `f.id` - The **id** of the feature.                                |
-| tags       | bytea | no  |           | `f.p.xyz->tags`                                                    |
-| geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                       |
-| feature    | bytea | no  | NOT NULL  | `f` - The Geo-JSON feature in JBON, except for what was extracted. |
-
-The **xyz** namespace is split into parts, to avoid unnecessary work for triggers and functions. Therefore, the **tags** columns contains the tags extracted from the XYZ namespace, while the rest of the XYZ namespace, managed by Naksha, is stored in individual columns. The **txn_next** is as well managed internally and only used for the history (actually, this is the only value that need to be adjusted, when a row is moved into history). All columns should be merged together into the Geo-JSON feature. This merging is left to the client and not part of the database code.
-
-## Meta table layout
-For each collection a _meta_ table is created. This collection stores the [JBON](./JBON.md) dictionaries used by all features stored in the main collection. Next to this, it stores statistics and other internal information. The table does not have a history and only some limited indices, because it is for special internal purpose.
-
-| Column | Type  | Modifiers            | Description                                               |
-|--------|-------|----------------------|-----------------------------------------------------------|
-| id     | text  | PRIMARY KEY NOT NULL | The unique identifier of the entry.                       |
-| link   | text  |                      | If this entry is a symbolic link, the target it links to. |
-| data   | bytea |                      | The JBON encoded data of the entry (_null_ for links).    |
+## Dictionary addressing
+To address global dictionaries they are addressed using a URN with the syntax: `urn:here:naksha:dict:{storage-id}:{collection-id}:{dictionary-id}`. To save space, the prefix `urn:here:naksha:dict:{storage-id}:{collection-id}` is internally not stored. It means you need to remember from where the feature came, but the XYZ namespace contains this information encoded in the `txn` and `uuid`.
 
 ## Collection-Info
-
 All collections do have a comment on the HEAD table, which is a JSON objects with the following setup:
 
 | Property              | Type    | Meaning                                                                                   |
@@ -137,7 +144,6 @@ All collections do have a comment on the HEAD table, which is a JSON objects wit
 | optimalPartitioning   | bool    | If _true_, then optimal partitioning is enabled (default to _false_).                     |
 
 ## Optimal Partitioning
-
 Naksha supports optimal partitioning. It creates a background job to do a statistic for every new version appearing in the transaction table. The statistic basically creates an optimal partitioning distribution. It will try to distribute features partitions of equals size, so that not more than 10mb of raw-json is stored in each partition (using the `byteSize` information of the _collection-info_ to decide for the optimal number of features per partition). It will perform the partitioning based upon the spatial distribution, using the `qrid`. As the `crid` is an unknown format, a spatial partitioning can't be guaranteed and `crid` is ignored in this case.
 
 The algorithm will have two input parameters:
@@ -158,7 +164,6 @@ The steps are:
 This results in an optimal partitioning, basically just a special feature that is stored within the meta-table of a collection. The properties of this features should hold a property `by_qrid`, which is a map like `Map<HereRefIdPrefix, FeatureCount>`.
 
 ## Indices and Queries
-
 The indices are all created only directly on the partitions. To keep the documentation, we use the shortcut `xyz` as alias for `jsondata->'properties'->'@ns:com:here:xyz'`.
 
 * The index on `i` is created automatically, because it is a primary key.
@@ -182,7 +187,6 @@ The indices are all created only directly on the partitions. To keep the documen
   * Used to search for tags, optionally in a specific version.
 
 ### History Queries
-
 The Naksha design allows history queries to directly find the correct features using index-only scans in a couple of tables. This design requires that the `txn_next` value it set for all history records. For example, looking for a specific feature in a specific version means to search for `jsondata->>'id'` match where the `txn` is the closest to the one requested. Assume the following states of the feature "foo":
 
 **Note**: We partition the history based upon `txn_next`, not upon `txn`!
@@ -210,38 +214,43 @@ The second query will look into all history tables that can contain features for
 
 Therefore, the union of all the query returns only exactly one feature, the searched one (`foo,speedLimit=25`). This operation does use index-only scans, and is done in parallel for all potential partition.
 
-## Transaction Table (`naksha_txn`)
+## Transaction Table (`naksha$txn`)
+The transaction logs are stored in the `naksha$txn` table. Actually, the only difference to any other table is that the table is partitioned by `txn` and some columns have a different usage:
 
-The transaction logs are stored in the `naksha_txn` table. Each transaction persists out of **signals**, grouped by the transaction-number (`tnx`). Note that there is a `naksha_txn_uid_seq` encoded into the `txn`. The table layout is:
+| Column     | Type  | RO  | Modifiers | Description                                                                               |
+|------------|-------|-----|-----------|-------------------------------------------------------------------------------------------|
+| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                                 |
+| uid        | int4  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier (always 0).                                      |
+| puid       | int4  | yes | NOT NULL  | 0                                                                                         |
+| ptxn       | int8  | yes | NOT NULL  | 0                                                                                         |
+| created_at | int8  | yes | NOT NULL  | `f.p.xyz->createdAt` - The time when the transaction started (`transaction_timestamp()`). |
+| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt` - The sequencing time (**set by the sequencer**).                    |
+| author_ts  | int8  | yes | NOT NULL  | 0                                                                                         |
+| version    | int8  | yes | NOT NULL  | `f.p.xyz->version` - The sequencing number (**set by the sequencer**).                    |
+| geo_grid   | int4  | yes | NOT NULL  | `f.p.xyz->grid` - HERE binary quad-key level 16 (**set by the sequencer**).               |
+| geo_type   | int2  | no  | NOT NULL  | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).                                |
+| action     | int2  | yes | NOT NULL  | 0 (CREATED).                                                                              |
+| author     | text  | yes | NOT NULL  | `f.p.xyz->author`                                                                         |
+| app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                         |
+| id         | text  | no  | NOT NULL  | `f.id` - The **uuid** of the transaction.                                                 |
+| tags       | bytea | no  |           | `f.p.xyz->tags`                                                                           |
+| geo        | bytea | no  |           | `f.geometry` - The geometry of the features modified (**set by the sequencer**).          |
+| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`, (**set by the sequencer**). |
+| feature    | bytea | no  | NOT NULL  | `f` - The Geo-JSON feature in JBON, except for what was extracted.                        |
 
-| Column        | Type        | RO  | Modifiers            | Description                                                                |
-|---------------|-------------|-----|----------------------|----------------------------------------------------------------------------|
-| txn           | int8        | yes | PRIMARY KEY NOT NULL | The transaction-number.                                                    |
-| ts            | timestamptz | yes | NOT NULL             | The time when the transaction started (`transaction_timestamp()`).         |
-| xact_id       | int8        | yes | NOT NULL             | The PostgresQL transaction id (`txid_current()`).                          |
-| version       | int8        | no  |                      | An arbitrary version tag that can be set.                                  |
-| seq_id        | int8        | yes |                      | The sequencing identifier, set by the sequencer .                          |
-| seq_ts        | timestamptz | yes |                      | The sequencing time, set by the sequencer .                                |
-| feature_count | int4        | yes |                      | The amount of features impacted by this transaction, set by the sequencer. |
-| app_id        | text        | yes | NOT NULL             | The application identifier used for the transaction.                       |
-| author        | text        | yes |                      | The author used for the transaction.                                       |
-| stream_id     | text        | yes |                      | The stream-identifier for debugging.                                       |
-| details       | bytea       | yes |                      | The details of what happened as part of this transaction (`XyzTxDetails`). |
-| comment       | text        | no  |                      | Some arbitrary comment.                                                    |
-| tags          | bytea       | no  |                      | Tags to be added to the transaction.                                       |
-| attachment    | bytea       | no  |                      | An arbitrary attachment as JBON feature.                                   |
-
-Columns being flagged as read-only (`RO`) can't be modified by the client, they are only modified internally by the PostgresQL code.
-
-**Note**: The transaction table itself is partitioned by `txn`, **not by** `txn_next`, but except for this the same way the history of the collections is partitioned (`naksha_txn_YYYY_MM_DD`). This is mainly helpful to purge transaction-logs and to improve the access speed.
+**Note**: The transaction table itself is partitioned by `txn`, **not by** `txn_next`, but except for this the same way the history of the collections is partitioned (`naksha_txn_YYYY_MM`). This is mainly helpful to purge transaction-logs and to improve the access speed.
 
 **Note**: More information about Postgres transaction numbers are available in the [documentation](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-PG-SNAPSHOT). We should enable [track-commit-timestamp](https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-TRACK-COMMIT-TIMESTAMP) so that `pg_commit_ts` holds information when a transaction was committed. This would make our own tracking more reliable.
 
-## Global Meta Table (`naksha_meta`)
-This table has the same layout and use case as the local _meta_ table every collection has, but it allows to keep some database specific statistics or real global dictionaries. Note that the IDs of global dictionaries must be prefixed with `global:`. 
+**Note**: To convert from **timestamptz** to 64-bit integer as epoch milliseconds do `SELECT (EXTRACT(epoch FROM ts) * 1000)::int8`, vice versa is `SELECT TO_TIMESTAMP(epoch_ms / 1000.0)`.
+
+## Global Meta Table (`naksha$meta`)
+This table has the same layout and use case as the local _meta_ table every collection has, but it allows to keep some database specific statistics or real global dictionaries. Note that the IDs of global dictionaries must be in the public syntax `urn:here:naksha:dict:{storage-id}::{id}` and the internal syntax `:{id}`.
+
+## Global Collection Table (`naksha$collection`)
+This is a normal collection that store information about collections. It does come with history support.
 
 ## History creation
-
 To manage the history the Naksha PostgresQL library will add a “before” trigger, and an “after” trigger to all main HEAD tables. The “before” trigger will ensure that the XYZ namespace is filled correctly, while the “after” trigger will write the transaction into the history, update the transaction table and move deleted features into the deletion HEAD table.
 
 The history can be enabled and disabled for every space using the following methods:
@@ -250,7 +259,6 @@ The history can be enabled and disabled for every space using the following meth
 - `naksha_collection_enable_history('collection')`
 
 ## Sequencer
-
 The last step is a background job added into the `lib-naksha-psql` that will “publish” the transactions. The job will set the `publish_id` and `publish_ts` to signal the visibility of a transaction and to generate a sequential numeric identifier. The job guarantees that the `pubish_id` has no holes (is continues) and is unique for every transaction. Note that the `publish_id` itself is not unique, multiple events in the transaction table can belong to the same `publish_id`. 
 
 The author and application identifier must be set by the client before starting any transaction via `SELECT naksha_tx_start('{app_id}', '{author}');`. Note that the **author** is optional and can be `null`, but the application identifier **must not** be `null` or an empty string. If the author is `null`, then the current author stays the author for all updates or deletes. New objects in this case, are set to the application identifier, so that the application gains authorship.

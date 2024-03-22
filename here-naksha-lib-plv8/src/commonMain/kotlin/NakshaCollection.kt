@@ -2,9 +2,7 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.BigInt64
-import com.here.naksha.lib.jbon.Jb
-import com.here.naksha.lib.jbon.JbMapFeature
+import com.here.naksha.lib.jbon.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -12,7 +10,7 @@ import kotlin.js.JsExport
  * A collection feature as defined in the Naksha architecture. This class will instantly read the well known properties.
  */
 @JsExport
-class NakshaCollection : JbMapFeature() {
+class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     private var _partition = false
     private var _pointsOnly = false
     private var _disableHistory = false

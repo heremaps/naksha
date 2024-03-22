@@ -5,6 +5,8 @@ package com.here.naksha.lib.plv8
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_MIN
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_NEXT
+import com.here.naksha.lib.plv8.Static.GEO_INDEX_GIST
+import com.here.naksha.lib.plv8.Static.GEO_INDEX_SP_GIST
 import com.here.naksha.lib.plv8.Static.nakshaCollectionConfig
 import kotlinx.datetime.*
 import kotlin.js.ExperimentalJsExport
@@ -39,6 +41,27 @@ class NakshaSession(
         val storageId: String,
         appName: String, streamId: String, appId: String, author: String? = null
 ) : JbSession(appName, streamId, appId, author) {
+
+    /**
+     * The dictionary manager bound to the global dictionary.
+     */
+    internal val globalDictManager = NakshaDictManager(this)
+
+    /**
+     * The dictionary managers for collections with the key being the identifier of the collection and the value being the manager.
+     */
+    internal val collectionDictManagers = HashMap<String, NakshaDictManager>()
+
+    /**
+     * Returns the dictionary manager for the given collection.
+     * @param collectionId The identifier of the collection for which to return the dictionary manager.
+     * @return The dictionary manager.
+     * @throws IllegalArgumentException If no such collection exists.
+     */
+    fun getDictManager(collectionId: String? = null): IDictManager {
+        // TODO: Implement collection specific managers
+        return globalDictManager
+    }
 
     /**
      * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
@@ -146,8 +169,8 @@ SET SESSION enable_seqscan = OFF;
             // Query current transaction.
             val hstPartName = Static.hstPartitionNameForId(collectionId, txn)
             if (!historyPartitionCache.containsKey(hstPartName)) {
-                val spGist: Boolean = collectionConfig[NKC_POINTS_ONLY] ?: false
-                Static.createHstPartition(sql, collectionId, txn, spGist)
+                val geoIndex = if (true == collectionConfig[NKC_POINTS_ONLY]) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
+                Static.createHstPartition(sql, collectionId, txn, geoIndex)
                 historyPartitionCache.put(hstPartName, true)
             }
         }
@@ -325,7 +348,7 @@ SET SESSION enable_seqscan = OFF;
     /**
      * Invoked by the SQL trigger functions. When being used in the JVM, the JVM engine will call
      * this method to simulate triggers.
-     * @param data The trigger data, allows the modification of [PgTrigger.NEW].
+     * @param data The trigger data, allows the modification of [NkCollectionTrigger.NEW].
      */
     fun triggerBefore(data: PgTrigger) {
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
@@ -343,7 +366,7 @@ SET SESSION enable_seqscan = OFF;
     /**
      * Invoked by the SQL trigger functions. When being used in the JVM, the JVM engine will call
      * this method to simulate triggers.
-     * @param data The trigger data, allows the modification of [PgTrigger.NEW].
+     * @param data The trigger data, allows the modification of [NkCollectionTrigger.NEW].
      */
     fun triggerAfter(data: PgTrigger) {
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
@@ -520,7 +543,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         val sql = this.sql
         val table = sql.newTable()
         val opReader = XyzOp()
-        val featureReader = JbFeature()
+        val featureReader = JbFeature(getDictManager(collectionId))
         val collectionIdQuoted = sql.quoteIdent(collectionId)
         val collectionDelQuoted = sql.quoteIdent(collectionId + "_del")
         val updatePlan: IPlv8Plan by lazy {
@@ -671,7 +694,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         val sql = this.sql
         val table = sql.newTable()
         val opReader = XyzOp()
-        val newCollection = NakshaCollection()
+        val newCollection = NakshaCollection(globalDictManager)
         var i = 0
         while (i < op_arr.size) {
             var id: String? = null
@@ -705,7 +728,8 @@ SET (toast_tuple_target=8160,fillfactor=100
                         query = "INSERT INTO $NKC_TABLE ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
-                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition())
+                        val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
+                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, geoIndex, newCollection.partition())
                         val row = asMap(rows[0])
                         table.returnCreated(id, xyzNsFromRow(id, row))
                         continue
@@ -731,7 +755,8 @@ SET (toast_tuple_target=8160,fillfactor=100
                             }
                         }
                         val row = asMap(rows[0])
-                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, newCollection.pointsOnly(), newCollection.partition())
+                        val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
+                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, geoIndex, newCollection.partition())
                         table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }
@@ -791,11 +816,14 @@ SET (toast_tuple_target=8160,fillfactor=100
     /**
      * Extract the id from the given feature.
      * @param feature The feature.
+     * @param collectionId The collection-identifier of the collection from which the bytes were read.
      * @return The id or _null_, if the feature does not have a dedicated id.
+     * @throws IllegalArgumentException If the no such collection exists.
      */
-    fun getFeatureId(feature: ByteArray): String? {
-        if (!this::featureReader.isInitialized) featureReader = JbMapFeature()
+    fun getFeatureId(feature: ByteArray, collectionId: String? = null): String? {
+        if (!this::featureReader.isInitialized) featureReader = JbMapFeature(globalDictManager)
         val reader = featureReader
+        reader.dictManager = getDictManager(collectionId)
         reader.mapBytes(feature)
         return reader.id()
     }
@@ -804,11 +832,14 @@ SET (toast_tuple_target=8160,fillfactor=100
      * Extract the type of the feature by checking _properties.featureType_, _momType_ and _type_ properties in
      * that order. If none of these properties exist, returning _Feature_.
      * @param feature The feature to search in.
+     * @param collectionId The collection-identifier from which the feature bytes were read.
      * @return The feature type.
+     * @throws IllegalArgumentException If no such collection exists.
      */
-    fun getFeatureType(feature: ByteArray): String {
-        if (!this::featureReader.isInitialized) featureReader = JbMapFeature()
+    fun getFeatureType(feature: ByteArray, collectionId: String? = null): String {
+        if (!this::featureReader.isInitialized) featureReader = JbMapFeature(globalDictManager)
         val reader = featureReader
+        reader.dictManager = getDictManager(collectionId)
         reader.mapBytes(feature)
         val root = reader.root()
         if (root.selectKey("properties")) {
@@ -855,7 +886,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                 throw RuntimeException("collection $collectionId does not exist in $NKC_TABLE")
             }
             val cols = asMap(collectionsSearchRows[0])
-            val jbFeature = JbFeature().mapBytes(cols[COL_FEATURE])
+            val jbFeature = JbFeature(getDictManager(collectionId)).mapBytes(cols[COL_FEATURE])
             val featureAsMap = JbMap().mapReader(jbFeature.reader).toIMap()
             collectionConfiguration.put(collectionId, featureAsMap)
             featureAsMap

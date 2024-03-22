@@ -57,7 +57,7 @@ class Plv8Test : Plv8TestContainer() {
         val grid = session.grid("foo", GEO_TYPE_NULL, null)
         assertNotNull(grid)
         assertEquals(14, grid.length)
-        assertEquals("6rcpmez33pmdte", grid)
+        assertEquals("6rqz6zn6zqbkkf", grid)
     }
 
     @Suppress("LocalVariableName")
@@ -120,7 +120,7 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
-        Static.collectionCreate(session.sql, session.schema, session.schemaOid, "foo", spGist = false, partition = false)
+        Static.collectionCreate(session.sql, session.schema, session.schemaOid, "foo", geoIndex = Static.GEO_INDEX_DEFAULT, partition = false)
         // 9 and 10 are next UIDs!
         val pgNew = Jb.map.newMap()
         pgNew[COL_UID] = null // Should be set by trigger
@@ -193,7 +193,7 @@ class Plv8Test : Plv8TestContainer() {
         val collectionBytes = XyzBuilder.create().buildFeatureFromMap(collectionMap)
 
         // when
-        val restoredCollection = NakshaCollection()
+        val restoredCollection = NakshaCollection(dictManager)
         restoredCollection.mapBytes(collectionBytes)
 
         // then
@@ -225,7 +225,6 @@ class Plv8Test : Plv8TestContainer() {
         pgNew[COL_GEOMETRY] = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
         pgNew[COL_TAGS] = null
         val pgOld = pgNew
-
         val t = PgTrigger(
                 TG_OP_UPDATE,
                 "naksha_trigger_before",
