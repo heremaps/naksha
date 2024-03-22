@@ -145,6 +145,7 @@ $$ LANGUAGE 'plv8';
      */
     @JvmStatic
     fun gridFromId(id: String): String {
+        // = Fnv1a32.string(Fnv1a32.start(), id) and 0x7fff_ffff
         val sb = StringBuilder()
         var hash = Fnv1a32.string(Fnv1a32.start(), id)
         var i = 0

@@ -4,6 +4,7 @@ package com.here.naksha.lib.jbon
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmStatic
 
 /**
  * A helper to manage Naksha UUIDs.
@@ -12,6 +13,7 @@ import kotlin.js.JsExport
 class NakshaUuid(val storageId: String, val collectionId: String, val year: Int, val month: Int, val day: Int, val seq:BigInt64, val uid: Int) {
     private lateinit var string : String
     companion object {
+        @JvmStatic
         fun fromString(s:String) : NakshaUuid {
             val values = s.split(':')
             check(values.size == 7) { "invalid naksha uuid $s" }
