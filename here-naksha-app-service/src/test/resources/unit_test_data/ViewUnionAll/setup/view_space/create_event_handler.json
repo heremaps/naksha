@@ -9,8 +9,8 @@
   "properties": {
     "storageId": "view_union_all_view_storage",
     "spaceIds": [
-      "base_view_union_all_test_http_space",
-      "delta_view_union_all_test_psql_space"
+      "delta_view_union_all_test_psql_space",
+      "base_view_union_all_test_http_space"
     ],
     "viewType": "UNION_ALL"
   }
