@@ -87,6 +87,6 @@ public class DefaultViewHandlerProperties extends XyzProperties {
 
   public enum ViewType {
     LAYERED,
-    UNION_ALL
+    UNION
   }
 }
