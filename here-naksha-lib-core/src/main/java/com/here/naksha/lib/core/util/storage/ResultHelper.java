@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.util.storage;
 
-import static java.util.Collections.emptySet;
+import static java.util.Collections.emptyList;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -26,9 +26,10 @@ import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import java.util.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,8 +39,8 @@ public class ResultHelper {
   private ResultHelper() {}
 
   /**
-   * Helper method to fetch features from given Result and return list of features with type T.
-   * Returned list is not limited - to set the upper bound, use sibling method with limit argument.
+   * Helper method to fetch features from given Result and return list of features with type T. Returned list is not limited - to set the
+   * upper bound, use sibling method with limit argument.
    *
    * @param result      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
@@ -52,8 +53,8 @@ public class ResultHelper {
   }
 
   /**
-   * Helper method to fetch features from given Result and return list of features with type T.
-   * Returned list is limited with respect to supplied `limit` parameter.
+   * Helper method to fetch features from given Result and return list of features with type T. Returned list is limited with respect to
+   * supplied `limit` parameter.
    *
    * @param result      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
@@ -108,22 +109,22 @@ public class ResultHelper {
     }
   }
 
-  public static Set<String> readIdsFromResult(final @NotNull Result result) {
+  public static List<String> readIdsFromResult(final @NotNull Result result) {
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
-      HashSet<String> ids = new HashSet<>();
+      List<String> ids = new ArrayList<>();
       while (resultCursor.hasNext()) {
         resultCursor.next();
         ids.add(resultCursor.getId());
       }
       return ids;
     } catch (NoCursor e) {
-      return emptySet();
+      return emptyList();
     }
   }
 
   /**
-   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link EExecutedOp} of features with type T.
-   * Returned lists are limited with respect to supplied `limit` parameter.
+   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link EExecutedOp} of features with
+   * type T. Returned lists are limited with respect to supplied `limit` parameter.
    *
    * @param result      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
@@ -162,8 +163,8 @@ public class ResultHelper {
   }
 
   /**
-   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link EExecutedOp} of features with type T.
-   * Returned list is not limited - to set the upper bound, use sibling method with limit argument.
+   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link EExecutedOp} of features with
+   * type T. Returned list is not limited - to set the upper bound, use sibling method with limit argument.
    *
    * @param result      the Result which is to be read
    * @param featureType the type of feature to be extracted from result

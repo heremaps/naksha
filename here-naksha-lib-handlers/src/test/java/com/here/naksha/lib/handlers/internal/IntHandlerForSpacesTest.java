@@ -31,7 +31,6 @@ import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
-import com.here.naksha.lib.handlers.exceptions.MissingHandlersException;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -101,7 +100,7 @@ class IntHandlerForSpacesTest {
         .toList();
 
     // And
-    handlersExist( existingHandlers);
+    handlersExist(existingHandlers);
     writingToAdminSucceeds();
 
     // When
@@ -110,13 +109,12 @@ class IntHandlerForSpacesTest {
     // Then
     assertInstanceOf(ErrorResult.class, result);
     ErrorResult errorResult = (ErrorResult) result;
-    assertEquals(
-        new MissingHandlersException(space.getId(), missingHandlerIds),
-        errorResult.exception
-    );
     assertEquals(NOT_FOUND, errorResult.reason);
+    assertEquals(errorResult.message, "Following handlers defined for Space %s don't exist: %s".formatted(
+        space.getId(),
+        String.join(",", missingHandlerIds)
+    ));
   }
-
 
   private static Stream<Named<WriteXyzFeatures>> persistingWritesWithInvalidSpace() {
     Space spaceWithoutTitle = space("no_title", null, "some_desc");

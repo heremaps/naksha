@@ -24,6 +24,7 @@ import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesBy
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readIdsFromResult;
 
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
@@ -32,9 +33,7 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.storage.IReadSession;
-import com.here.naksha.lib.handlers.exceptions.MissingHandlersException;
 import java.util.List;
-import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 
 public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
@@ -61,7 +60,10 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     if (missingHandlerIds.isEmpty()) {
       return new SuccessResult();
     } else {
-      return new MissingHandlersException(space.getId(), missingHandlerIds).toErrorResult();
+      return new ErrorResult(
+          XyzError.NOT_FOUND,
+          "Following handlers defined for Space %s don't exist: %s"
+              .formatted(space.getId(), String.join(",", missingHandlerIds)));
     }
   }
 
@@ -76,7 +78,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   }
 
   private List<String> missingHandlersIds(Result fetchedHandlers, List<String> expectedHandlersIds) {
-    Set<String> availableHandlerIds = readIdsFromResult(fetchedHandlers);
+    List<String> availableHandlerIds = readIdsFromResult(fetchedHandlers);
     return expectedHandlersIds.stream()
         .filter(expectedId -> !availableHandlerIds.contains(expectedId))
         .toList();

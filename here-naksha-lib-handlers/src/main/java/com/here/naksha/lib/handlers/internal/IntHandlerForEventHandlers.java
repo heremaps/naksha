@@ -31,7 +31,6 @@ import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_P
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
@@ -57,7 +56,6 @@ import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -231,11 +229,11 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     ReadFeatures findStorageById = readFeaturesByIdRequest(STORAGES, storageId);
     try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(currentContext(), false)) {
       try (Result result = readSession.execute(findStorageById)) {
-        Set<String> fetchedIds = ResultHelper.readIdsFromResult(result);
-        if (fetchedIds.size() == 1 && fetchedIds.contains(storageId)) {
+        List<String> fetchedIds = ResultHelper.readIdsFromResult(result);
+        if (fetchedIds.size() == 1 && fetchedIds.get(0).equals(storageId)) {
           return new SuccessResult();
         }
-        return new StorageNotFoundException(storageId).toErrorResult();
+        return new ErrorResult(XyzError.NOT_FOUND, "Could not find storage with id: " + storageId);
       }
     }
   }
