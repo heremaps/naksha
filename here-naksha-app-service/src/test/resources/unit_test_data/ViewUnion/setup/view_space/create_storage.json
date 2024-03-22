@@ -1,5 +1,5 @@
 {
-  "id": "view_union_all_view_storage",
+  "id": "view_union_view_storage",
   "type": "Storage",
   "title": "Sfw-consistent-dev PSQL storage",
   "description": "PSQL storage instance for testing purpose",

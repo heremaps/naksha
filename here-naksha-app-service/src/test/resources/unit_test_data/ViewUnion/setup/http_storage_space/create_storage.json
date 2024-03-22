@@ -1,5 +1,5 @@
 {
-  "id": "view_union_all_test_http_storage",
+  "id": "view_union_test_http_storage",
   "type": "Storage",
   "title": "Test Http storage",
   "description": "Http storage instance for testing purpose",

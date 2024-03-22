@@ -1,5 +1,5 @@
 {
-  "id": "view_union_all_test_psql_storage",
+  "id": "view_union_test_psql_storage",
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose",
