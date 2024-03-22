@@ -8,6 +8,7 @@ The admin database and most data storages of Naksha will be using a PostgresQL d
 {
   "id": {id},
   "geometry": {Geo-JSON geometry object},
+  "referencePoint": {Geo-JSON geometry object},
   "properties": {
     "@ns:com:here:xyz": {Internal state values}
   }
@@ -19,29 +20,37 @@ Actually, the storage engine will split this information apart as show in the fo
 ## Table layout
 All tables used in the Naksha PostgresQL implementation have the same general layout, what simplifies access:
 
-| Column     | Type  | RO  | Modifiers | Description                                                        |
-|------------|-------|-----|-----------|--------------------------------------------------------------------|
-| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                          |
-| uid        | int4  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                          |
-| puid       | int4  | yes | NOT NULL  | `f.p.xyz->puuid` - Row identifier.                                 |
-| ptxn       | int8  | yes | NOT NULL  | `f.p.xyz->puuid` - Row identifier.                                 |
-| created_at | int8  | yes | NOT NULL  | `f.p.xyz->createdAt`                                               |
-| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                               |
-| author_ts  | int8  | yes | NOT NULL  | `f.p.xyz->authorTs`                                                |
-| version    | int8  | yes | NOT NULL  | `f.p.xyz->version`                                                 |
-| geo_grid   | int4  | yes | NOT NULL  | `f.p.xyz->grid` - HERE binary quad-key level 16 above `geo_ref`.   |
-| geo_type   | int2  | no  | NOT NULL  | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).         |
-| action     | int2  | yes | NOT NULL  | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2).            |
-| author     | text  | yes | NOT NULL  | `f.p.xyz->author`                                                  |
-| app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                  |
-| id         | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                |
-| tags       | bytea | no  |           | `f.p.xyz->tags`                                                    |
-| geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                       |
-| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`) .    |
-| feature    | bytea | no  | NOT NULL  | `f` - The Geo-JSON feature in JBON, except for what was extracted. |
-| txn_next   | int8  | yes |           | `f.p.xyz->txn_next` - Only in history.                             |
+| Column     | Type  | RO  | Modifiers | Description                                                                    |
+|------------|-------|-----|-----------|--------------------------------------------------------------------------------|
+| created_at | int8  | yes | NOT NULL  | `f.p.xyz->createdAt`                                                           |
+| updated_at | int8  | yes |           | `f.p.xyz->updatedAt` - `COALESCE(updated_at, created_at)`                      |
+| author_ts  | int8  | yes |           | `f.p.xyz->authorTs` - `COALESCE(author_ts, COALESCE(updated_at, created_at))`  |
+| version    | int8  | yes |           | `f.p.xyz->version` - `COALESCE(version, 1)`                                    |
+| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                      |
+| txn_next   | int8  | yes |           | `f.p.xyz->txn_next` - Only in history.                                         |
+| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Row identifier.                                             |
+| mtxn       | int8  | yes |           | `f.p.xyz->muuid` - Row identifier.                                             |
+| uid        | int4  | yes |           | `f.p.xyz->uuid` - Primary row identifier - `COALESCE(uid, 0)`                  |
+| puid       | int4  | yes |           | `f.p.xyz->puuid` - Row identifier                                              |
+| muid       | int4  | yes |           | `f.p.xyz->muuid` - Row identifier                                              |
+| geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.               |
+| geo_type   | int2  | no  |           | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).                     |
+| action     | int2  | yes |           | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2) - `COALESCE(action, 0)` |
+| app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                              |
+| author     | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                 |
+| id         | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                            |
+| feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.             |
+| tags       | bytea | no  |           | `f.p.xyz->tags`                                                                |
+| geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                                   |
+| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`) .                |
+
+All **text** columns and all **btree** indices should always be created with `COLLATE "C"` to ensure deterministic ordering in the table, long term stable determinism and default support for _like_ operation. Basically, `text_pattern_ops` is exactly doing the same thing (can be set additionally to be explicit about this). This improves as well deduplication. All queries should always enforce `COLLATE "C"` too. When text is encoded, we should use `normalize(text, 'NFKC')` to ensure the same binary encoding for all values, no matter if written from Java or directly inside the database. Available collations can be queried using `SELECT * FROM pg_collation;` and `ucs_basic` may be another option, but not recommended so far.
 
 As being documented in the **Description** column, every feature is split into parts, when stored. The reason is performance and efficiency. This is done to avoid unnecessary work, for example when rows need to be moved into the history. Therefore, the **tags** columns contains the tags extracted from the XYZ namespace, while the rest of the XYZ namespace, managed by the storage engine, is stored in individual columns. The **txn_next** is as well managed internally and only used for the history (actually, this is the only value that need to be adjusted, when a row is moved into history). All columns should be merged together into the Geo-JSON feature. This merging is left to the client and not part of the database code (it is done by the higher level **lib-psql**).
+
+All indices that use columns where _NULL_ has a default meaning, should use `COALESCE`, for example `COALESCE(updated_at, created_at)`, or little more complicated `COALESCE(author_ts, COALESCE(updated_at, created_at))`.
+
+When creating indices for columns being unique, [disabling deduplication](https://www.postgresql.org/docs/current/btree-implementation.html#BTREE-DEDUPLICATION) can be helpful, but this only effects a small amount of indices. For this, we will use `with (deduplicate_items=OFF)` in such cases.
 
 ## Collections
 Within PostgresQL a collection is a set of database tables. All these tables are prefixed by the collection identifier. The tables are:
@@ -219,24 +228,27 @@ The transaction logs are stored in the `naksha$txn` table. Actually, the only di
 
 | Column     | Type  | RO  | Modifiers | Description                                                                               |
 |------------|-------|-----|-----------|-------------------------------------------------------------------------------------------|
-| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                                 |
-| uid        | int4  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier (always 0).                                      |
-| puid       | int4  | yes | NOT NULL  | 0                                                                                         |
-| ptxn       | int8  | yes | NOT NULL  | 0                                                                                         |
 | created_at | int8  | yes | NOT NULL  | `f.p.xyz->createdAt` - The time when the transaction started (`transaction_timestamp()`). |
-| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt` - The sequencing time (**set by the sequencer**).                    |
-| author_ts  | int8  | yes | NOT NULL  | 0                                                                                         |
-| version    | int8  | yes | NOT NULL  | `f.p.xyz->version` - The sequencing number (**set by the sequencer**).                    |
-| geo_grid   | int4  | yes | NOT NULL  | `f.p.xyz->grid` - HERE binary quad-key level 16 (**set by the sequencer**).               |
-| geo_type   | int2  | no  | NOT NULL  | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).                                |
-| action     | int2  | yes | NOT NULL  | 0 (CREATED).                                                                              |
-| author     | text  | yes | NOT NULL  | `f.p.xyz->author`                                                                         |
+| updated_at | int8  | yes |           | `f.p.xyz->updatedAt` - The sequencing time (**set by the sequencer**).                    |
+| author_ts  | int8  | yes |           | Always `NULL`.                                                                            |
+| version    | int8  | yes |           | `f.p.xyz->version` - The sequencing number (**set by the sequencer**).                    |
+| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                                 |
+| txn_next   | int8  | yes |           | Always `NULL`.                                                                            |
+| ptxn       | int8  | yes |           | Always `NULL`.                                                                            |
+| mtxn       | int8  | yes |           | Always `NULL`.                                                                            |
+| uid        | int4  | yes |           | Always `NULL`.                                                                            |
+| puid       | int4  | yes |           | Always `NULL`.                                                                            |
+| muid       | int4  | yes |           | Always `NULL`.                                                                            |
+| geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                          |
+| geo_type   | int2  | no  |           | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).                                |
+| action     | int2  | yes |           | Always `NULL`.                                                                            |
 | app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                         |
+| author     | text  | yes |           | `f.p.xyz->author`                                                                         |
 | id         | text  | no  | NOT NULL  | `f.id` - The **uuid** of the transaction.                                                 |
+| feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.                        |
 | tags       | bytea | no  |           | `f.p.xyz->tags`                                                                           |
 | geo        | bytea | no  |           | `f.geometry` - The geometry of the features modified (**set by the sequencer**).          |
 | geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`, (**set by the sequencer**). |
-| feature    | bytea | no  | NOT NULL  | `f` - The Geo-JSON feature in JBON, except for what was extracted.                        |
 
 **Note**: The transaction table itself is partitioned by `txn`, **not by** `txn_next`, but except for this the same way the history of the collections is partitioned (`naksha_txn_YYYY_MM`). This is mainly helpful to purge transaction-logs and to improve the access speed.
 
@@ -372,6 +384,7 @@ Add support for automatic dictionary training. This is done using `pg_cron` and 
 This job may as well delete no longer used dictionaries, if the corresponding history entries are deleted.
 
 ### Links
+- [HERE tiling schema](https://www.here.com/docs/bundle/introduction-to-mapping-concepts-user-guide/page/topics/here-tiling-scheme.html)
 - https://postgresqlco.nf/doc/en/param/session_replication_role/
 - https://www.postgresql.org/docs/16/runtime-config-client.html#GUC-SESSION-REPLICATION-ROLE
 - https://foojay.io/today/a-dissection-of-java-jdbc-to-postgresql-connections-part-2-batching/
