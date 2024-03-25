@@ -28,9 +28,8 @@ public class CollectionModificationTest extends ApiTest {
     }
 
     @Test
-    void tc1400_testActivityLogAfterDeleteByFeatureId() throws Exception {
+    void tc1400_testActivityLogPerformanceAfterCollectionMod() throws Exception {
         // Given: Test files
-        // TODO: check autoPurge
         String createFeatureJson = TestUtil.loadFileOrFail("CollectionModification/TC1400_WriteCollectionSuccess/create_features.json");
         String updateFeatureJson = TestUtil.loadFileOrFail("CollectionModification/TC1400_WriteCollectionSuccess/update_feature.json");
         String createFeatureJson2 = TestUtil.loadFileOrFail("CollectionModification/TC1400_WriteCollectionSuccess/create_features2.json");
