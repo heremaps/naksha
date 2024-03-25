@@ -1,5 +1,5 @@
 {
-  "id": "space_api_test_storage",
+  "id": "space-api-test-storage",
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose",

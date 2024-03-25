@@ -55,12 +55,13 @@ public class RequestSender {
    * Send a request configured based on enclosing {@link HttpStorage}.
    *
    * @param endpoint does not contain host:port part, starts with "/".
+   * @param addHeaders headers to be added to the ones defines {@link KeyProperties#defaultHeaders}.
    */
-  HttpResponse<String> sendRequest(@NotNull String endpoint, @Nullable Map<String, String> headers) {
-    return sendRequest(endpoint, true, headers, null, null);
+  HttpResponse<byte[]> sendRequest(@NotNull String endpoint, @Nullable Map<String, String> addHeaders) {
+    return sendRequest(endpoint, true, addHeaders, null, null);
   }
 
-  HttpResponse<String> sendRequest(
+  HttpResponse<byte[]> sendRequest(
       @NotNull String endpoint,
       boolean keepDefHeaders,
       @Nullable Map<String, String> headers,
@@ -80,12 +81,12 @@ public class RequestSender {
     return sendRequest(request);
   }
 
-  private HttpResponse<String> sendRequest(HttpRequest request) {
+  private HttpResponse<byte[]> sendRequest(HttpRequest request) {
     long startTime = System.currentTimeMillis();
-    HttpResponse<String> response = null;
+    HttpResponse<byte[]> response = null;
     try {
-      CompletableFuture<HttpResponse<String>> futureResponse =
-          httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+      CompletableFuture<HttpResponse<byte[]>> futureResponse =
+          httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray());
       response = futureResponse.get(keyProps.socketTimeoutSec, TimeUnit.SECONDS);
       return response;
     } catch (Exception e) {
@@ -102,7 +103,7 @@ public class RequestSender {
           request.uri(),
           (response == null) ? "-" : response.statusCode(),
           executionTime,
-          (response == null) ? 0 : response.body().length());
+          (response == null) ? 0 : response.body().length);
     }
   }
 
