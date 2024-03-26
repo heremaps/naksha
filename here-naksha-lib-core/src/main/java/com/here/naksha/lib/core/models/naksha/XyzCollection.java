@@ -18,18 +18,13 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.NakshaVersion;
-import java.util.Objects;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
-import static com.here.naksha.lib.core.LibraryConstants.DEFAULT_PARTITIONED_COLLECTION_PARTITION_COUNT;
+import java.util.Objects;
 
 /**
  * A collection is a virtual container for features, managed by a {@link Storage}. All collections optionally have a history and transaction
@@ -97,7 +92,6 @@ public class XyzCollection extends NakshaFeature {
     super(id);
     this.partition = partition;
     this.pointsOnly = pointsOnly;
-    this.partitionCount = partition ? DEFAULT_PARTITIONED_COLLECTION_PARTITION_COUNT : -1;
     this.estimatedFeatureCount = -1L;
     this.estimatedDeletedFeatures = -1L;
   }
@@ -259,16 +253,6 @@ public class XyzCollection extends NakshaFeature {
   }
 
   /**
-   * Override default 32 partitions to any number between 1 and 256.
-   *
-   * @param partitionCount
-   */
-  public void setPartitionCount(int partitionCount) {
-    assert partitionCount == -1 || (partitionCount > 0 && partitionCount <= 256);
-    this.partitionCount = partitionCount;
-  }
-
-  /**
    * Returns true if the auto-purge is currently enabled; false otherwise.
    * Auto-purge decides whether features will be written to _del table on DELETE operation (auto-purge: false) or not (auto-purge: true).
    *
@@ -304,23 +288,6 @@ public class XyzCollection extends NakshaFeature {
   public void disableAutoPurge() {
     autoPurge = false;
   }
-
-  /**
-   * Returns the amount of partitions, which is a necessary information for the bulk loader. This returns zero, if the collection is not
-   * partitioned. This information can only be obtained from the storage itself when reading a collection or as result of creating a
-   * collection.
-   *
-   * @return the amount of partitions, which is a necessary information for the bulk loader. The storage returns minus one, if the
-   * information is not known.
-   */
-  public int partitionCount() {
-    return partitionCount;
-  }
-
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(PARTITION_COUNT)
-  @JsonInclude(Include.NON_EMPTY)
-  private int partitionCount;
 
   /**
    * Returns the amount of features being alive in the collection. This returns minus one, if the amount can not be provided by the storage.
@@ -368,7 +335,6 @@ public class XyzCollection extends NakshaFeature {
         && partition == that.partition
         && pointsOnly == that.pointsOnly
         && unlogged == that.unlogged
-        && partitionCount == that.partitionCount
         && estimatedFeatureCount == that.estimatedFeatureCount
         && estimatedDeletedFeatures == that.estimatedDeletedFeatures;
   }
@@ -382,7 +348,6 @@ public class XyzCollection extends NakshaFeature {
         partition,
         pointsOnly,
         unlogged,
-        partitionCount,
         estimatedFeatureCount,
         estimatedDeletedFeatures);
   }

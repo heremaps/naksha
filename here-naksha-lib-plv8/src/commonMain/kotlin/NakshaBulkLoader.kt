@@ -25,9 +25,8 @@ class NakshaBulkLoader(
         val collectionConfig = session.getCollectionConfig(headCollectionId)
         val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
         val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
-        val partitionCount: Int = if (isCollectionPartitioned == true) collectionConfig[NKC_PARTITION_COUNT]!! else -1
 
-        val (allOperations, idsToModify) = mapToFeatureRow(headCollectionId, partitionCount.toShort(), op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val (allOperations, idsToModify) = mapToFeatureRow(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
 
         session.sql.execute("SET LOCAL session_replication_role = replica;")
         val existingFeatures = existingFeatures(idsToModify)
@@ -157,6 +156,7 @@ class NakshaBulkLoader(
 
     fun addCopyHeadToHstStmt(stmt: IPlv8Plan, row: IMap, isHstDisabled: Boolean?) {
         if (isHstDisabled == false) {
+            // FIXME it's not the best idea to check it in every bulk execution, as we need to create _hst partitions only once a year.
             session.ensureHistoryPartition(headCollectionId, session.txn())
             session.ensureHistoryPartition(headCollectionId, NakshaTxn(Jb.int64.ZERO()))
 

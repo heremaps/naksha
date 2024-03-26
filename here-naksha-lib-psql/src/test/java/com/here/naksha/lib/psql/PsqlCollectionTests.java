@@ -58,10 +58,8 @@ abstract class PsqlCollectionTests extends PsqlTests{
       assertFalse(collection.pointsOnly());
       if (partition()) {
         assertTrue(collection.isPartitioned());
-        assertEquals(32, collection.partitionCount());
       } else {
         assertFalse(collection.isPartitioned());
-        assertEquals(-1, collection.partitionCount());
       }
       assertNotNull(collection.getProperties());
       assertNotNull(collection.getProperties().getXyzNamespace());

@@ -6,7 +6,6 @@ import com.here.naksha.lib.jbon.*
 
 internal const val NKC_TABLE = "naksha_collections"
 internal const val NKC_PARTITION = "partition"
-internal const val NKC_PARTITION_COUNT = "partitionCount"
 internal const val NKC_POINTS_ONLY = "pointsOnly"
 internal const val NKC_DISABLE_HISTORY = "disableHistory"
 internal const val NKC_MAX_AGE = "maxAge"
@@ -54,3 +53,10 @@ internal const val GEO_TYPE_NULL : Short = 0
 internal const val GEO_TYPE_WKB : Short = 1
 internal const val GEO_TYPE_EWKB : Short = 2
 internal const val GEO_TYPE_TWKB : Short = 3
+
+internal const val PARTITION_COUNT : Short = 8
+internal const val DEFAULT_TABLESPACE = ""
+
+var MAIN_TABLESPACE_TEMPLATE = "naksha_{id}_main"
+var HEAD_TABLESPACE_TEMPLATE = "naksha_{id}_head_"
+var HST_TABLESPACE_TEMPLATE = "naksha_{id}_hst_"

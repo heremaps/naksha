@@ -5,17 +5,15 @@ import com.here.naksha.lib.jbon.*
 class FeatureRow(
         val rowMap: IMap,
         val xyzOp: XyzOp,
-        val collectionId: String,
-        collectionPartitionCount: Short
+        val collectionId: String
 ) {
-    val partition: Int = Static.partitionNumber(id(), collectionPartitionCount)
+    val partition: Int = Static.partitionNumber(id())
 
     fun id(): String = rowMap[COL_ID]!!
 
     companion object {
         fun mapToFeatureRow(
                 collectionId: String,
-                partitionCount: Short,
                 op_arr: Array<ByteArray>,
                 feature_arr: Array<ByteArray?>,
                 geo_type_arr: Array<Short>,
@@ -25,7 +23,7 @@ class FeatureRow(
             check(op_arr.size == feature_arr.size && op_arr.size == geo_type_arr.size && op_arr.size == geo_arr.size && op_arr.size == tags_arr.size) {
                 "not all input arrays has same size"
             }
-            val featureReader = JbFeature()
+            val featureReader = JbFeature(JbDictManager())
             val operations = ArrayList<FeatureRow>(op_arr.size)
             val idsToModify = ArrayList<String>(op_arr.size)
             for (i in op_arr.indices) {
@@ -51,8 +49,7 @@ class FeatureRow(
                 operations.add(FeatureRow(
                         row,
                         xyzOp = opReader,
-                        collectionId = collectionId,
-                        partitionCount
+                        collectionId = collectionId
                 ))
             }
             return Pair(operations, idsToModify)

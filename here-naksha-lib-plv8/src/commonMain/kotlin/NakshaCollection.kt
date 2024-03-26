@@ -2,7 +2,10 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.IDictManager
+import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.JbMapFeature
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -16,7 +19,6 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     private var _disableHistory = false
     private var _maxAge : BigInt64? = null
     private var _estimatedFeatureCount : BigInt64? = null
-    private var _partitionCount : Short? = null
 
     override fun clear(): NakshaCollection {
         super.clear()
@@ -25,7 +27,6 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
         _disableHistory = false
         _maxAge = null
         _estimatedFeatureCount = null
-        _partitionCount = null
         return this
     }
 
@@ -41,7 +42,6 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
                 NKC_DISABLE_HISTORY -> if (value.isBool()) _disableHistory = value.readBoolean() ?: false
                 NKC_MAX_AGE -> if (value.isInt()) _maxAge = value.readInt64()
                 NKC_ESTIMATED_FEATURE_COUNT -> if (value.isInt()) _estimatedFeatureCount = value.readInt64()
-                NKC_PARTITION_COUNT -> if (value.isInt()) _partitionCount = value.readInt32().toShort()
             }
         }
     }
@@ -49,7 +49,6 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     fun partition() : Boolean = _partition
     fun pointsOnly() : Boolean = _pointsOnly
     fun disableHistory() : Boolean = _disableHistory
-    fun partitionCount(): Short? = _partitionCount
     fun maxAge() : BigInt64 = _maxAge ?: Jb.int64.MAX_VALUE()
     fun estimatedFeatureCount() : BigInt64 = _estimatedFeatureCount ?: Jb.int64.MINUS_ONE()
 }

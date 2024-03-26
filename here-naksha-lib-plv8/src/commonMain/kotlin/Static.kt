@@ -6,7 +6,6 @@ import com.here.naksha.lib.jbon.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
-import kotlin.math.absoluteValue
 
 /**
  * To be called once per storage to initialize a storage. This is normally only done from the Java code that invokes
@@ -31,10 +30,11 @@ object Static {
     }
 
     @JvmStatic
-    fun initStorage(sql: IPlv8Sql, schema: String) {
+    fun initStorage(sql: IPlv8Sql, storageId: String, schema: String) {
         val schemaOid: Int = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
         val schemaIdentQuoted = sql.quoteIdent(schema)
         val schemaJsQuoted = Jb.env.stringify(schema)
+        val storageIdJsQuoted = Jb.env.stringify(storageId)
         val query = """
 SET SESSION search_path TO $schemaIdentQuoted, public, topology;
 CREATE TABLE IF NOT EXISTS naksha_global (
@@ -73,7 +73,7 @@ do $$
     naksha.JsPlv8Env.Companion.initialize();
     let sql = new naksha.JsPlv8Sql();
     if (!naksha.Static.tableExists(sql, "naksha_collections", $schemaOid)) {
-        naksha.Static.collectionCreate(sql, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false);
+        naksha.Static.collectionCreate(sql, $storageIdJsQuoted, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false);
     }
 $$ LANGUAGE 'plv8';
 """
@@ -121,8 +121,8 @@ $$ LANGUAGE 'plv8';
      * Array to fasten partition id.
      */
     @JvmStatic
-    val PARTITION_ID = Array(256) {
-        if (it < 10) "00$it" else if (it < 100) "0$it" else "$it"
+    val PARTITION_ID = Array(8) {
+        "$it"
     }
 
     /**
@@ -170,20 +170,18 @@ $$ LANGUAGE 'plv8';
     /**
      * Returns the partition number.
      * @param id The feature-id for which to return the partition-id.
-     * @param partitionCount The number of partitions declared in collection config.
      * @return The partition id as number between 0 and partitionCount.
      */
     @JvmStatic
-    fun partitionNumber(id: String, partitionCount: Short): Int = Fnv1a32.string(Fnv1a32.start(), id).absoluteValue % (partitionCount)
+    fun partitionNumber(id: String): Int = Fnv1a32.string(Fnv1a32.start(), id) and 0x7
 
     /**
      * Returns the partition id as three digit string.
      * @param id The feature-id for which to return the partition-id.
-     * @param partitionCount The number of partitions declared in collection config.
      * @return The partition id as three digit string.
      */
     @JvmStatic
-    fun partitionNameForId(id: String, partitionCount: Short): String = PARTITION_ID[partitionNumber(id, partitionCount)]
+    fun partitionNameForId(id: String): String = PARTITION_ID[partitionNumber(id)]
 
     /**
      * Tests if specific database table (in the Naksha session schema) exists already
@@ -294,6 +292,7 @@ SET (toast_tuple_target=8160"""
     /**
      * Low level function to create a (optionally partitioned) collection table set.
      * @param sql The SQL API.
+     * @param storageId The Storage id.
      * @param schema The schema name.
      * @param schemaOid The object-id of the schema to look into.
      * @param id The collection identifier.
@@ -301,7 +300,7 @@ SET (toast_tuple_target=8160"""
      * @param partition If the collection should be partitioned.
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean, partitionCount: Short? = null) {
+    fun collectionCreate(sql: IPlv8Sql, storageId: String, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
@@ -344,28 +343,33 @@ SET (toast_tuple_target=8160"""
     tags        bytea COMPRESSION lz4,
     geo         bytea COMPRESSION lz4,
     feature     bytea COMPRESSION lz4
-) """
+) {tablespace}"""
         var query: String
 
         // HEAD
         val headNameQuoted = sql.quoteIdent(id)
         query = CREATE_TABLE.replace("{table}", headNameQuoted)
         query = query.replace("{condition}", "= 0")
+        val tablespaceQueryPart = tablespaceQueryPart(sql, MAIN_TABLESPACE_TEMPLATE.replace("{id}", storageId))
+        query = query.replace("{tablespace}", tablespaceQueryPart)
+
         if (!partition) {
             sql.execute(query)
             collectionOptimizeTable(sql, id, false)
             collectionAddIndices(sql, id, geoIndex, false)
         } else {
-            check(partitionCount != null && partitionCount > 0 && partitionCount <= 256) { "invalid partitionCount: $partitionCount" }
-            query += "PARTITION BY RANGE (naksha_partition_number(id, $partitionCount))"
+            query += "PARTITION BY RANGE (naksha_partition_number(id))"
             sql.execute(query)
+            val headTableSpacePrefix = HEAD_TABLESPACE_TEMPLATE.replace("{id}", storageId)
             var i = 0
-            while (i < partitionCount) {
+            while (i < PARTITION_COUNT) {
                 val partName = id + "_p" + PARTITION_ID[i]
                 val partNameQuoted = sql.quoteIdent(partName)
                 query = "CREATE TABLE $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($i) "
                 i++
                 query += "TO ($i)"
+                val partitionTablespaceQuery = tablespaceQueryPart(sql, "$headTableSpacePrefix${i - 1}")
+                query += " $partitionTablespaceQuery"
                 sql.execute(query)
                 collectionOptimizeTable(sql, partName, false)
                 collectionAddIndices(sql, partName, geoIndex, false)
@@ -384,6 +388,7 @@ SET (toast_tuple_target=8160"""
         val delNameQuoted = sql.quoteIdent(delName)
         query = CREATE_TABLE.replace("{table}", delNameQuoted)
         query = query.replace("{condition}", "= 0")
+        query = query.replace("{tablespace}", tablespaceQueryPart)
         sql.execute(query)
         collectionOptimizeTable(sql, delName, false)
         collectionAddIndices(sql, delName, geoIndex, false)
@@ -393,6 +398,7 @@ SET (toast_tuple_target=8160"""
         val metaNameQuoted = sql.quoteIdent(metaName)
         query = CREATE_TABLE.replace("{table}", metaNameQuoted)
         query = query.replace("{condition}", "= 0")
+        query = query.replace("{tablespace}", tablespaceQueryPart)
         sql.execute(query)
         collectionOptimizeTable(sql, metaName, false)
         collectionAddIndices(sql, metaName, geoIndex, false)
@@ -402,7 +408,10 @@ SET (toast_tuple_target=8160"""
         val hstNameQuoted = sql.quoteIdent(hstName)
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
         query = query.replace("{condition}", ">= 0")
-        query += "PARTITION BY RANGE (txn_next)"
+        if (partition) {
+            query += "PARTITION BY RANGE (txn_next)"
+        }
+        query = query.replace("{tablespace}", tablespaceQueryPart)
         sql.execute(query)
     }
 
@@ -458,19 +467,42 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param collectionId has to be pure (without _hst suffix).
      */
     @JvmStatic
-    fun createHstPartition(sql: IPlv8Sql, collectionId: String, txnNext: NakshaTxn, spGist: Boolean): String {
+    fun createHstPartition(sql: IPlv8Sql, storageId: String, collectionId: String, txnNext: NakshaTxn, geoIndex: Boolean): String {
         val hstPartName = hstPartitionNameForId(collectionId, txnNext)
         val partNameQuoted = sql.quoteIdent(hstPartName)
         val headNameQuoted = sql.quoteIdent(hstHeadNameForId(collectionId))
-        val start = NakshaTxn.of(txnNext.year(), txnNext.month(), 0, NakshaTxn.SEQ_MIN).value
-        val end = NakshaTxn.of(txnNext.year(), txnNext.month(), 31, NakshaTxn.SEQ_MAX).value
+        val start = NakshaTxn.of(txnNext.year(), 0, 0, NakshaTxn.SEQ_MIN).value
+        val end = NakshaTxn.of(txnNext.year(), 12, 31, NakshaTxn.SEQ_MAX).value
 
-        val query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end);"
+        val tablespaceQueryPart = tablespaceQueryPart(sql, MAIN_TABLESPACE_TEMPLATE.replace("{id}", storageId))
+        val query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end) PARTITION BY RANGE (naksha_partition_number(id)) $tablespaceQueryPart;"
         sql.execute(query)
-        collectionOptimizeTable(sql, hstPartName, true)
-        collectionAddIndices(sql, hstPartName, spGist, true)
-
+        val hstTableSpacePrefix = HST_TABLESPACE_TEMPLATE.replace("{id}", storageId)
+        for (subPartition in 0..<PARTITION_COUNT) {
+            val hstTablespacePart = tablespaceQueryPart(sql, "$hstTableSpacePrefix$subPartition")
+            createHstSubPartition(sql, hstPartName, geoIndex, subPartition, hstTablespacePart)
+        }
         return hstPartName
+    }
+
+    private fun createHstSubPartition(sql: IPlv8Sql, hstPartName: String, geoIndex: Boolean, subPartition: Int, tablespaceQueryPart: String) {
+        val hstSubPartName = "${hstPartName}_$subPartition"
+        val subPartNameQuoted = sql.quoteIdent(hstSubPartName)
+        val hstNameQuoted = sql.quoteIdent(hstPartName)
+        val query = "CREATE TABLE IF NOT EXISTS $subPartNameQuoted PARTITION OF $hstNameQuoted FOR VALUES FROM ($subPartition) TO (${subPartition + 1}) $tablespaceQueryPart;"
+        sql.execute(query)
+        collectionOptimizeTable(sql, hstSubPartName, true)
+        collectionAddIndices(sql, hstSubPartName, geoIndex, true)
+    }
+
+    private fun tablespaceQueryPart(sql: IPlv8Sql, tablespace: String): String {
+        val count: BigInt64 = asMap(asArray(sql.execute("select count(*) as count from pg_tablespace where spcname = $1", arrayOf(tablespace)))[0])["count"]!!
+        // unfortunately we can't use default tablespace in partitioned tables, so when tablespace is not declared we have to skip tablespaces.
+        return if (count.toLong() > 0) {
+            " TABLESPACE ${sql.quoteIdent(tablespace)}"
+        } else {
+            ""
+        }
     }
 
     /**
@@ -515,8 +547,8 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param id The collection identifier.
      * @return _true_ if the collection identifier is valid; _false_ otherwise.
      */
-    fun isValidCollectionId(id: String?) : Boolean {
-        if (id.isNullOrEmpty() || "naksha"==id || id.length > 32) return false
+    fun isValidCollectionId(id: String?): Boolean {
+        if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) return false
         var i = 0
         var c = id[i++]
         // First character must be a-z
@@ -524,8 +556,8 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         while (i < id.length) {
             c = id[i++]
             when (c.code) {
-                in 'a'.code .. 'z'.code -> continue
-                in '0'.code .. '9'.code -> continue
+                in 'a'.code..'z'.code -> continue
+                in '0'.code..'9'.code -> continue
                 '_'.code, ':'.code, '-'.code -> continue
                 else -> return false
             }

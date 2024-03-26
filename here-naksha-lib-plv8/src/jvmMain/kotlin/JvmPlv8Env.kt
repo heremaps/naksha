@@ -172,7 +172,7 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
 """)
         executeSqlFromResource(sql, "/naksha.sql", replacements)
         executeSqlFromResource(sql, "/jbon.sql")
-        Static.initStorage(sql, schema)
+        Static.initStorage(sql, storageId, schema)
         conn.commit()
     }
 }

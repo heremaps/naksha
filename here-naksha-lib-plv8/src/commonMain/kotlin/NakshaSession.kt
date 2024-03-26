@@ -164,13 +164,14 @@ SET SESSION enable_seqscan = OFF;
      * @param collectionId The collection identifier.
      */
     fun ensureHistoryPartition(collectionId: String, txn: NakshaTxn) {
-        val collectionConfig = getCollectionConfig(collectionId)
-        if (isHistoryEnabled(collectionId)) {
+
+        if (isHistoryEnabled(collectionId) && isPartitioningEnabled(collectionId)) {
             // Query current transaction.
             val hstPartName = Static.hstPartitionNameForId(collectionId, txn)
             if (!historyPartitionCache.containsKey(hstPartName)) {
+                val collectionConfig = getCollectionConfig(collectionId)
                 val geoIndex = if (true == collectionConfig[NKC_POINTS_ONLY]) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                Static.createHstPartition(sql, collectionId, txn, geoIndex)
+                Static.createHstPartition(sql, storageId, collectionId, txn, geoIndex)
                 historyPartitionCache.put(hstPartName, true)
             }
         }
@@ -700,7 +701,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
                         val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, geoIndex, newCollection.partition(), newCollection.partitionCount())
+                        if (!tableExists) Static.collectionCreate(sql, storageId, schema, schemaOid, id, geoIndex, newCollection.partition())
                         val row = asMap(rows[0])
                         table.returnCreated(id, xyzNsFromRow(id, row))
                         continue
@@ -727,7 +728,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                         }
                         val row = asMap(rows[0])
                         val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, geoIndex, newCollection.partition(), newCollection.partitionCount())
+                        if (!tableExists) Static.collectionCreate(sql, storageId, schema, schemaOid, id, geoIndex, newCollection.partition())
                         table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }
@@ -834,14 +835,14 @@ SET (toast_tuple_target=8160,fillfactor=100
 
     /**
      * Returns collectionId without partition part.
-     * For `topology_p000` it will return `topology`.
+     * For `topology_p0` it will return `topology`.
      */
     fun getBaseCollectionId(collectionId: String): String {
         // Note: "topology_p000" is a partition, but we need collection-id.
         //        0123456789012
         // So, in that case we will find an underscore at index 8, so i = length-5!
         val i = collectionId.lastIndexOf('_')
-        return if (i >= 0 && i == (collectionId.length - 5) && collectionId[i + 1] == 'p') {
+        return if (i >= 0 && i == (collectionId.length - 3) && collectionId[i + 1] == 'p') {
             collectionId.substring(0, i)
         } else {
             collectionId
@@ -864,9 +865,14 @@ SET (toast_tuple_target=8160,fillfactor=100
         }
     }
 
-    private fun isHistoryEnabled(collectionId: String): Boolean {
+    internal fun isHistoryEnabled(collectionId: String): Boolean {
         val isDisabled: Boolean? = getCollectionConfig(collectionId)[NKC_DISABLE_HISTORY]
         return isDisabled != true
+    }
+
+    internal fun isPartitioningEnabled(collectionId: String): Boolean {
+        val isEnabled: Boolean? = getCollectionConfig(collectionId)[NKC_PARTITION]
+        return isEnabled == true
     }
 
     /**

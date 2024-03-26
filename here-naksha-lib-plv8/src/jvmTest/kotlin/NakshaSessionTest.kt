@@ -15,7 +15,7 @@ class NakshaSessionTest : Plv8TestContainer() {
         val session = NakshaSession.get()
 
         // expect
-        assertEquals("foo", session.getBaseCollectionId("foo_p074"))
+        assertEquals("foo", session.getBaseCollectionId("foo_p7"))
     }
 
     @Test
@@ -35,8 +35,6 @@ class NakshaSessionTest : Plv8TestContainer() {
         assertFalse(isHistoryDisabled)
         val isPartitioningEnabled: Boolean = collectionConfig[NKC_PARTITION]!!
         assertTrue(isPartitioningEnabled)
-        val partitionCount: Int? = collectionConfig[NKC_PARTITION_COUNT]
-        assertEquals(32, partitionCount)
         val expectedPartitionName = Static.hstPartitionNameForId(collectionId, session.txn())
         assertTrue(doesTableExist(session, expectedPartitionName))
 
