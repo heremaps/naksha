@@ -1,4 +1,4 @@
-<mxfile host="Electron" modified="2024-03-26T15:34:51.245Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.1.2 Chrome/114.0.5735.289 Electron/25.9.4 Safari/537.36" etag="fX58dojoPFVi7kiOuxAd" version="22.1.2" type="device">
+<mxfile host="Electron" modified="2024-03-26T15:45:40.873Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.1.2 Chrome/114.0.5735.289 Electron/25.9.4 Safari/537.36" etag="f8BEGPE3uxysX96p50xp" version="22.1.2" type="device">
   <diagram name="Page-1" id="c7558073-3199-34d8-9f00-42111426c3f3">
     <mxGraphModel dx="2021" dy="961" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4681" pageHeight="3300" background="none" math="0" shadow="0">
       <root>
@@ -492,13 +492,13 @@
         <mxCell id="ji72XSmRw8APm09SylYo-16" value="+ lockStorage( lockId, timeout, TimeUnit ) : ILock" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ji72XSmRw8APm09SylYo-150" vertex="1">
           <mxGeometry y="78" width="366" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="2r80sXf8cgRXmCBXb2kK-226" value="+ commit()" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ji72XSmRw8APm09SylYo-150" vertex="1">
+        <mxCell id="2r80sXf8cgRXmCBXb2kK-226" value="+ commit()" style="text;strokeColor=#9673a6;fillColor=#e1d5e7;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ji72XSmRw8APm09SylYo-150" vertex="1">
           <mxGeometry y="104" width="366" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="2r80sXf8cgRXmCBXb2kK-227" value="+ rollback()" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ji72XSmRw8APm09SylYo-150" vertex="1">
+        <mxCell id="2r80sXf8cgRXmCBXb2kK-227" value="+ rollback()" style="text;strokeColor=#9673a6;fillColor=#e1d5e7;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ji72XSmRw8APm09SylYo-150" vertex="1">
           <mxGeometry y="130" width="366" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="cOuOxfN4X3Rvot8ub-zh-25" value="+ close()" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ji72XSmRw8APm09SylYo-150" vertex="1">
+        <mxCell id="cOuOxfN4X3Rvot8ub-zh-25" value="+ close()" style="text;strokeColor=#9673a6;fillColor=#e1d5e7;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ji72XSmRw8APm09SylYo-150" vertex="1">
           <mxGeometry y="156" width="366" height="26" as="geometry" />
         </mxCell>
         <mxCell id="ocHGO5GNn9pmyrgSXm_p-11" value="A storage is internally represented by a single instance that grants individual temporary access leases to all plugins." style="html=1;shadow=0;dashed=0;shape=mxgraph.bootstrap.rrect;rSize=5;strokeColor=#999999;strokeWidth=1;fillColor=#FFFFFF;fontColor=#6C767D;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=10;fontSize=14;spacing=10;" parent="1" vertex="1">
@@ -937,44 +937,8 @@
         <mxCell id="C_nnIdQDxCc23Knee7Er-127" value="The txn, uid, storageId and collectionId are decoded from the &quot;uuid&quot; of the feature operation. If the &quot;storageId&quot; and &quot;collectionId&quot; do not match the target collection being written into, the storage assumes that this feature is not from this collection and that the client does not know the current HEAD state. In this case, the storage will raise an error response being conflict, not even trying to perform the operation." style="html=1;shadow=0;dashed=0;shape=mxgraph.bootstrap.rrect;rSize=5;strokeColor=#999999;strokeWidth=1;fillColor=#FFFFFF;fontColor=#6C767D;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=10;fontSize=14;spacing=10;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-140">
           <mxGeometry y="166" width="320" height="190" as="geometry" />
         </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-141" value="" style="group" vertex="1" connectable="0" parent="1">
-          <mxGeometry x="980" y="1368" width="370" height="360" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-6" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;StorageRow&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#0050ef;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#001DBC;fontColor=#ffffff;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-141">
-          <mxGeometry width="370" height="278" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-8" value="+ dictManager: IDictManager?" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
-          <mxGeometry y="26" width="370" height="28" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-9" value="+ feature : ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
-          <mxGeometry y="54" width="370" height="28" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-11" value="+ tags : ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
-          <mxGeometry y="82" width="370" height="28" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-10" value="+ xyzNs : ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
-          <mxGeometry y="110" width="370" height="28" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-15" value="+ geometryType: Short?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
-          <mxGeometry y="138" width="370" height="28" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-12" value="+ geometry: ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
-          <mxGeometry y="166" width="370" height="28" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-13" value="+ referencePoint : ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
-          <mxGeometry y="194" width="370" height="28" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-64" value="+ id : String" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
-          <mxGeometry y="222" width="370" height="28" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-65" value="+ uuid : String" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
-          <mxGeometry y="250" width="370" height="28" as="geometry" />
-        </mxCell>
-        <mxCell id="C_nnIdQDxCc23Knee7Er-60" value="A storage row can be cached perfectly, because it is read-only and immutable. Apart of this, it is very small and only persists out of a new objects in the heap." style="html=1;shadow=0;dashed=0;shape=mxgraph.bootstrap.rrect;rSize=5;strokeColor=#999999;strokeWidth=1;fillColor=#FFFFFF;fontColor=#6C767D;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=10;fontSize=14;spacing=10;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-141">
-          <mxGeometry y="280" width="370" height="80" as="geometry" />
-        </mxCell>
         <mxCell id="C_nnIdQDxCc23Knee7Er-142" value="" style="group" vertex="1" connectable="0" parent="1">
-          <mxGeometry x="550" y="1369.5" width="370" height="320" as="geometry" />
+          <mxGeometry x="550" y="1340" width="370" height="320" as="geometry" />
         </mxCell>
         <mxCell id="C_nnIdQDxCc23Knee7Er-83" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;ReadableStorageRow&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e1d5e7;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#9673a6;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-142">
           <mxGeometry width="370" height="222" as="geometry" />
@@ -1004,7 +968,7 @@
           <mxGeometry y="222" width="370" height="98" as="geometry" />
         </mxCell>
         <mxCell id="C_nnIdQDxCc23Knee7Er-143" value="" style="group" vertex="1" connectable="0" parent="1">
-          <mxGeometry x="40" y="1370" width="440" height="380" as="geometry" />
+          <mxGeometry x="40" y="1341.5" width="440" height="380" as="geometry" />
         </mxCell>
         <mxCell id="C_nnIdQDxCc23Knee7Er-24" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;IDictManager&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#0050ef;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#001DBC;fontColor=#ffffff;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-143">
           <mxGeometry width="440" height="222" as="geometry" />
@@ -1104,6 +1068,45 @@
         </mxCell>
         <mxCell id="C_nnIdQDxCc23Knee7Er-215" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="1qYccRmLHqD2nOXxJYSw-265" target="1qYccRmLHqD2nOXxJYSw-100">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-217" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="980" y="1340" width="370" height="383" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-6" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;StorageRow&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#0050ef;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#001DBC;fontColor=#ffffff;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-217">
+          <mxGeometry width="370" height="306" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-8" value="+ dictManager: IDictManager?" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="26" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-9" value="+ feature : ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="54" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-11" value="+ tags : ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="82" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-10" value="+ xyzNs : ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="110" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-15" value="+ geometryType: Short?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="138" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-12" value="+ geometry: ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="166" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-13" value="+ referencePoint : ByteArray?" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#333333;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="194" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-64" value="+ id : String" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="222" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-65" value="+ uuid : String" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="250" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-216" value="+ type : String" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-6">
+          <mxGeometry y="278" width="370" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="C_nnIdQDxCc23Knee7Er-60" value="A storage row can be cached perfectly, because it is read-only and immutable. Apart of this, it is very small and only persists out of a new objects in the heap." style="html=1;shadow=0;dashed=0;shape=mxgraph.bootstrap.rrect;rSize=5;strokeColor=#999999;strokeWidth=1;fillColor=#FFFFFF;fontColor=#6C767D;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=10;fontSize=14;spacing=10;" vertex="1" parent="C_nnIdQDxCc23Knee7Er-217">
+          <mxGeometry y="303" width="370" height="80" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

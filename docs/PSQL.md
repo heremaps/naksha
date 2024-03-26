@@ -269,12 +269,12 @@ The transaction logs are stored in the `naksha$txn` table. Actually, the only di
 - More information about Postgres transaction numbers are available in the [documentation](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-PG-SNAPSHOT). We should enable [track-commit-timestamp](https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-TRACK-COMMIT-TIMESTAMP) so that `pg_commit_ts` holds information when a transaction was committed. This would make our own tracking more reliable.
 - To convert from **timestamptz** to 64-bit integer as epoch milliseconds do `SELECT (EXTRACT(epoch FROM ts) * 1000)::int8`, vice versa is `SELECT TO_TIMESTAMP(epoch_ms / 1000.0)`.
 
-### Meta Table (`naksha$meta`)
-This table stores internal metadata for collections. It is managed by background jobs. The features stored in here will be bound to a collection using the property `collectionId`.
+### Dictionaries Table (`naksha$dictionaries`)
+This table stores dictionaries. It is managed by background jobs that auto-generate optimal dictionaries. The features stored in here will be bound to a collection using the property `collectionId`.
 
-The `collectionId` property is indexed and used to bind the entries in the table to specific collections. When a collection is deleted, all meta-entries for this collections should be deleted as well, except a **truncate** is done. For the truncate use-case only the tables are dropped and re-created, but some of the meta-data is left intact. We still need to defined where we keep the information which meta-information is kept in the case of a truncation.
+The `collectionId` property is indexed and used to bind the entries in the table to specific collections. When a collection is deleted, all entries for this collections should be deleted as well, except a **truncate** is done. For the truncate use-case only the tables are dropped and re-created, but the dictionaries are left intact.
 
-The `type` of the feature describes the type of the meta-information. Currently only `naksha.Dictionary` is used for dictionaries. There are plans for more types, for example to calculate the distribution of features in HERE or Web-Mercator tiles.
+The `type` of the feature in here is always `naksha.Dictionary`.
 
 ### Collections Table (`naksha$collections`)
 This internal tables stores the configuration of all collections. The type of the features in this table is always `naksha.Collection`.
