@@ -11,6 +11,7 @@ internal const val NKC_DISABLE_HISTORY = "disableHistory"
 internal const val NKC_MAX_AGE = "maxAge"
 internal const val NKC_ESTIMATED_FEATURE_COUNT = "estimatedFeatureCount"
 internal const val NKC_AUTO_PURGE = "autoPurge"
+internal const val NKC_ARENA_ID = "arenaId"
 
 internal const val COL_TXN_NEXT = "txn_next"
 internal const val COL_TXN = "txn"

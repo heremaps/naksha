@@ -171,7 +171,7 @@ SET SESSION enable_seqscan = OFF;
             if (!historyPartitionCache.containsKey(hstPartName)) {
                 val collectionConfig = getCollectionConfig(collectionId)
                 val geoIndex = if (true == collectionConfig[NKC_POINTS_ONLY]) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                Static.createHstPartition(sql, storageId, collectionId, txn, geoIndex, collectionConfig[NKC_PARTITION])
+                Static.createHstPartition(sql, collectionConfig[NKC_ARENA_ID], collectionId, txn, geoIndex, collectionConfig[NKC_PARTITION])
                 historyPartitionCache.put(hstPartName, true)
             }
         }
@@ -701,7 +701,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
                         val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                        if (!tableExists) Static.collectionCreate(sql, storageId, schema, schemaOid, id, geoIndex, newCollection.partition())
+                        if (!tableExists) Static.collectionCreate(sql, newCollection.arenaId(), schema, schemaOid, id, geoIndex, newCollection.partition())
                         val row = asMap(rows[0])
                         table.returnCreated(id, xyzNsFromRow(id, row))
                         continue
@@ -728,7 +728,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                         }
                         val row = asMap(rows[0])
                         val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                        if (!tableExists) Static.collectionCreate(sql, storageId, schema, schemaOid, id, geoIndex, newCollection.partition())
+                        if (!tableExists) Static.collectionCreate(sql, newCollection.arenaId(), schema, schemaOid, id, geoIndex, newCollection.partition())
                         table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }

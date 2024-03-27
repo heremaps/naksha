@@ -121,7 +121,7 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
-        Static.collectionCreate(session.sql, session.storageId, session.schema, session.schemaOid, "foo", geoIndex = Static.GEO_INDEX_DEFAULT, partition = false)
+        Static.collectionCreate(session.sql, null, session.schema, session.schemaOid, "foo", geoIndex = Static.GEO_INDEX_DEFAULT, partition = false)
         // 9 and 10 are next UIDs!
         val pgNew = Jb.map.newMap()
         pgNew[COL_UID] = null // Should be set by trigger
@@ -189,7 +189,7 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun testCreateAndRestoreNakshaCollection() {
         // given
-        val collectionJson = """{"id":"bar","type":"NakshaCollection","maxAge":3560,"unlogged":false,"partition":true,"pointsOnly":true,"properties":{},"disableHistory":true,"partitionCount":32,"estimatedFeatureCount": 50,"estimatedDeletedFeatures":100}"""
+        val collectionJson = """{"id":"bar","type":"NakshaCollection","maxAge":3560,"unlogged":false,"partition":true,"pointsOnly":true,"properties":{},"disableHistory":true,"partitionCount":32,"estimatedFeatureCount": 50,"estimatedDeletedFeatures":100,"arenaId":"test_arena"}"""
         val collectionMap = asMap(env.parse(collectionJson))
         val collectionBytes = XyzBuilder.create().buildFeatureFromMap(collectionMap)
 
@@ -204,6 +204,7 @@ class Plv8Test : Plv8TestContainer() {
         assertEquals("bar", restoredCollection.id())
         assertEquals(3560, restoredCollection.maxAge().toInt())
         assertEquals(50, restoredCollection.estimatedFeatureCount().toInt())
+        assertEquals("test_arena", restoredCollection.arenaId())
     }
 
     @Order(12)

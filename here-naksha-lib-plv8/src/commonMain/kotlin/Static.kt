@@ -13,7 +13,6 @@ import com.here.naksha.lib.jbon.get
 import com.here.naksha.lib.jbon.getAny
 import com.here.naksha.lib.jbon.newMap
 import com.here.naksha.lib.jbon.put
-import com.here.naksha.lib.jbon.toLong
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -41,11 +40,10 @@ object Static {
     }
 
     @JvmStatic
-    fun initStorage(sql: IPlv8Sql, storageId: String, schema: String) {
+    fun initStorage(sql: IPlv8Sql, schema: String) {
         val schemaOid: Int = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
         val schemaIdentQuoted = sql.quoteIdent(schema)
         val schemaJsQuoted = Jb.env.stringify(schema)
-        val storageIdJsQuoted = Jb.env.stringify(storageId)
         val query = """
 SET SESSION search_path TO $schemaIdentQuoted, public, topology;
 CREATE TABLE IF NOT EXISTS naksha_global (
@@ -84,7 +82,7 @@ do $$
     naksha.JsPlv8Env.Companion.initialize();
     let sql = new naksha.JsPlv8Sql();
     if (!naksha.Static.tableExists(sql, "naksha_collections", $schemaOid)) {
-        naksha.Static.collectionCreate(sql, $storageIdJsQuoted, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false);
+        naksha.Static.collectionCreate(sql, null, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false);
     }
 $$ LANGUAGE 'plv8';
 """
@@ -245,9 +243,10 @@ SET (toast_tuple_target=8160"""
      * @param tableName The table name.
      * @param spGist If SP-GIST index should be used, which is better only for point geometry.
      * @param history If _true_, then optimized for historic data; otherwise a volatile HEAD table.
+     * @param tablespaceQueryPart to create indices in, should be an empty string or full query part: " TABLESPACE tablespace_name"
      */
     @JvmStatic
-    private fun collectionAddIndices(sql: IPlv8Sql, tableName: String, spGist: Boolean, history: Boolean) {
+    private fun collectionAddIndices(sql: IPlv8Sql, tableName: String, spGist: Boolean, history: Boolean, tablespaceQueryPart: String) {
         val fillFactor = if (history) "100" else "50"
         // https://www.postgresql.org/docs/current/gin-tips.html
         val geoIndexType = if (spGist) "sp-gist" else "gist"
@@ -258,43 +257,43 @@ SET (toast_tuple_target=8160"""
         // quoted index name
         var qin = sql.quoteIdent("${tableName}_id_idx")
         var query = """CREATE ${unique}INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(id COLLATE "C" text_pattern_ops DESC) WITH (fillfactor=$fillFactor);
+(id COLLATE "C" text_pattern_ops DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // txn, uid
         qin = sql.quoteIdent("${tableName}_txn_uid_idx")
         query += """CREATE UNIQUE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(txn DESC, uid DESC) WITH (fillfactor=$fillFactor);
+(txn DESC, uid DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // geo
         qin = sql.quoteIdent("${tableName}_geo_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndexType
-(naksha_geometry(geo_type,geo), txn) WITH (buffering=ON,fillfactor=$fillFactor);
+(naksha_geometry(geo_type,geo), txn) WITH (buffering=ON,fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // tags
         qin = sql.quoteIdent("${tableName}_tags_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin
-(tags_to_jsonb(tags), txn) WITH (fastupdate=ON,gin_pending_list_limit=32768);
+(tags_to_jsonb(tags), txn) WITH (fastupdate=ON,gin_pending_list_limit=32768) $tablespaceQueryPart;
 """
 
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(geo_grid COLLATE "C" text_pattern_ops DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(geo_grid COLLATE "C" text_pattern_ops DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // app_id
         qin = sql.quoteIdent("${tableName}_app_id_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(app_id COLLATE "C" DESC, updated_at DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(app_id COLLATE "C" DESC, updated_at DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // author
         qin = sql.quoteIdent("${tableName}_author_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(author COLLATE "C" DESC, author_ts DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(author COLLATE "C" DESC, author_ts DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         sql.execute(query)
@@ -303,7 +302,7 @@ SET (toast_tuple_target=8160"""
     /**
      * Low level function to create a (optionally partitioned) collection table set.
      * @param sql The SQL API.
-     * @param storageId The Storage id.
+     * @param arenaId The arena id.
      * @param schema The schema name.
      * @param schemaOid The object-id of the schema to look into.
      * @param id The collection identifier.
@@ -311,7 +310,7 @@ SET (toast_tuple_target=8160"""
      * @param partition If the collection should be partitioned.
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, storageId: String, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
+    fun collectionCreate(sql: IPlv8Sql, arenaId: String?, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
@@ -354,36 +353,36 @@ SET (toast_tuple_target=8160"""
     tags        bytea COMPRESSION lz4,
     geo         bytea COMPRESSION lz4,
     feature     bytea COMPRESSION lz4
-) {tablespace}"""
+) """
         var query: String
+        val arena = ArenaSpace(arenaId)
 
         // HEAD
         val headNameQuoted = sql.quoteIdent(id)
         query = CREATE_TABLE.replace("{table}", headNameQuoted)
         query = query.replace("{condition}", "= 0")
-        val tablespaceQueryPart = tablespaceQueryPart(sql, MAIN_TABLESPACE_TEMPLATE.replace("{id}", storageId))
-        query = query.replace("{tablespace}", tablespaceQueryPart)
 
         if (!partition) {
+            query += arena.mainTablespaceQueryPart()
             sql.execute(query)
             collectionOptimizeTable(sql, id, false)
-            collectionAddIndices(sql, id, geoIndex, false)
+            collectionAddIndices(sql, id, geoIndex, false, arena.mainTablespaceQueryPart())
         } else {
             query += "PARTITION BY RANGE (naksha_partition_number(id))"
+            query += arena.mainTablespaceQueryPart()
             sql.execute(query)
-            val headTableSpacePrefix = HEAD_TABLESPACE_TEMPLATE.replace("{id}", storageId)
             var i = 0
             while (i < PARTITION_COUNT) {
                 val partName = id + "_p" + PARTITION_ID[i]
                 val partNameQuoted = sql.quoteIdent(partName)
                 query = "CREATE TABLE $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($i) "
-                i++
-                query += "TO ($i)"
-                val partitionTablespaceQuery = tablespaceQueryPart(sql, "$headTableSpacePrefix${i - 1}")
-                query += " $partitionTablespaceQuery"
+
+                query += "TO (${i+1})"
+                query += arena.headPartitionTablespaceQueryPart((i))
                 sql.execute(query)
                 collectionOptimizeTable(sql, partName, false)
-                collectionAddIndices(sql, partName, geoIndex, false)
+                collectionAddIndices(sql, partName, geoIndex, false, arena.headPartitionTablespaceQueryPart(i))
+                i++
             }
         }
         if (!DEBUG) collectionAttachTriggers(sql, id, schema, schemaOid)
@@ -399,20 +398,20 @@ SET (toast_tuple_target=8160"""
         val delNameQuoted = sql.quoteIdent(delName)
         query = CREATE_TABLE.replace("{table}", delNameQuoted)
         query = query.replace("{condition}", "= 0")
-        query = query.replace("{tablespace}", tablespaceQueryPart)
+        query += arena.mainTablespaceQueryPart()
         sql.execute(query)
         collectionOptimizeTable(sql, delName, false)
-        collectionAddIndices(sql, delName, geoIndex, false)
+        collectionAddIndices(sql, delName, geoIndex, false, arena.mainTablespaceQueryPart())
 
         // META.
         val metaName = id + "_meta"
         val metaNameQuoted = sql.quoteIdent(metaName)
         query = CREATE_TABLE.replace("{table}", metaNameQuoted)
         query = query.replace("{condition}", "= 0")
-        query = query.replace("{tablespace}", tablespaceQueryPart)
+        query += arena.mainTablespaceQueryPart()
         sql.execute(query)
         collectionOptimizeTable(sql, metaName, false)
-        collectionAddIndices(sql, metaName, geoIndex, false)
+        collectionAddIndices(sql, metaName, geoIndex, false, arena.mainTablespaceQueryPart())
 
         // HISTORY.
         val hstName = id + "_hst"
@@ -420,7 +419,7 @@ SET (toast_tuple_target=8160"""
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
         query = query.replace("{condition}", ">= 0")
         query += "PARTITION BY RANGE (txn_next)"
-        query = query.replace("{tablespace}", tablespaceQueryPart)
+        query += arena.mainTablespaceQueryPart()
         sql.execute(query)
     }
 
@@ -476,26 +475,26 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param collectionId has to be pure (without _hst suffix).
      */
     @JvmStatic
-    fun createHstPartition(sql: IPlv8Sql, storageId: String, collectionId: String, txnNext: NakshaTxn, geoIndex: Boolean, partition: Boolean?): String {
+    fun createHstPartition(sql: IPlv8Sql, arenaId: String?, collectionId: String, txnNext: NakshaTxn, geoIndex: Boolean, partition: Boolean?): String {
         val hstPartName = hstPartitionNameForId(collectionId, txnNext)
         val partNameQuoted = sql.quoteIdent(hstPartName)
         val headNameQuoted = sql.quoteIdent(hstHeadNameForId(collectionId))
         val start = NakshaTxn.of(txnNext.year(), 0, 0, NakshaTxn.SEQ_MIN).value
         val end = NakshaTxn.of(txnNext.year(), 12, 31, NakshaTxn.SEQ_MAX).value
-
-        val tablespaceQueryPart = tablespaceQueryPart(sql, MAIN_TABLESPACE_TEMPLATE.replace("{id}", storageId))
+        val arena = ArenaSpace(arenaId)
         var query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end) "
         if (partition == true) {
-            query += "PARTITION BY RANGE (naksha_partition_number(id)) $tablespaceQueryPart;"
+            query += "PARTITION BY RANGE (naksha_partition_number(id)) ${arena.mainTablespaceQueryPart()}"
             sql.execute(query)
 
-            val hstTableSpacePrefix = HST_TABLESPACE_TEMPLATE.replace("{id}", storageId)
             for (subPartition in 0..<PARTITION_COUNT) {
-                val hstTablespacePart = tablespaceQueryPart(sql, "$hstTableSpacePrefix$subPartition")
-                createHstSubPartition(sql, hstPartName, geoIndex, subPartition, hstTablespacePart)
+                createHstSubPartition(sql, hstPartName, geoIndex, subPartition, arena.hstPartitionTablespaceQueryPart(subPartition))
             }
         } else {
+            query += arena.mainTablespaceQueryPart()
             sql.execute(query)
+            collectionOptimizeTable(sql, partNameQuoted, true)
+            collectionAddIndices(sql, partNameQuoted, geoIndex, true, arena.mainTablespaceQueryPart())
         }
 
         return hstPartName
@@ -508,17 +507,7 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         val query = "CREATE TABLE IF NOT EXISTS $subPartNameQuoted PARTITION OF $hstNameQuoted FOR VALUES FROM ($subPartition) TO (${subPartition + 1}) $tablespaceQueryPart;"
         sql.execute(query)
         collectionOptimizeTable(sql, hstSubPartName, true)
-        collectionAddIndices(sql, hstSubPartName, geoIndex, true)
-    }
-
-    private fun tablespaceQueryPart(sql: IPlv8Sql, tablespace: String): String {
-        val count: BigInt64 = asMap(asArray(sql.execute("select count(*) as count from pg_tablespace where spcname = $1", arrayOf(tablespace)))[0])["count"]!!
-        // unfortunately we can't use default tablespace in partitioned tables, so when tablespace is not declared we have to skip tablespaces.
-        return if (count.toLong() > 0) {
-            " TABLESPACE ${sql.quoteIdent(tablespace)}"
-        } else {
-            ""
-        }
+        collectionAddIndices(sql, hstSubPartName, geoIndex, true, tablespaceQueryPart)
     }
 
     /**

@@ -568,7 +568,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
 
   @SuppressWarnings("unchecked")
   protected FEATURE getFeatureFromJbon(@NotNull Class<FEATURE> featureClass) {
-    //FIXME use existing DictManager
+    // FIXME use existing DictManager
     JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(featureBytes, 0, featureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>)
         new JbMap().mapReader(jbFeature.getReader()).toIMap();

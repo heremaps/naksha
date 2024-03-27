@@ -60,8 +60,8 @@ public class XyzCollection extends NakshaFeature {
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String ESTIMATED_DELETED_FEATURED = "estimatedDeletedFeatures";
 
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public static final String PARTITION_COUNT = "partitionCount";
+  @AvailableSince(NakshaVersion.v3_0_0)
+  public static final String ARENA_ID = "arenaId";
 
   /**
    * Create a new empty default collection with default properties.
@@ -157,6 +157,15 @@ public class XyzCollection extends NakshaFeature {
   @JsonProperty(POINTS_ONLY)
   @JsonInclude(Include.NON_EMPTY)
   private boolean pointsOnly;
+
+  /**
+   * Defines the "arena" that should be taken to store all collections of this storage.
+   * IMPORTANT: you have to make sure that arena is configured, otherwise you'll get an error on collection create.
+   */
+  @AvailableSince(NakshaVersion.v3_0_0)
+  @JsonProperty(ARENA_ID)
+  @JsonInclude(Include.NON_DEFAULT)
+  private String arenaId = null;
 
   /**
    * Returns {@code true} if this collection is unlogged (optimized for performance, but not crash safe).
@@ -319,6 +328,24 @@ public class XyzCollection extends NakshaFeature {
   @JsonInclude(Include.NON_EMPTY)
   private long estimatedDeletedFeatures;
 
+  /**
+   * Returns arena where all of connected objects are kept.
+   *
+   * @return
+   */
+  public String getArenaId() {
+    return arenaId;
+  }
+
+  /**
+   * Specifies in which arena all storage's object should be placed.
+   *
+   * @param arenaId
+   */
+  public void setArenaId(String arenaId) {
+    this.arenaId = arenaId;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -334,6 +361,7 @@ public class XyzCollection extends NakshaFeature {
         && partition == that.partition
         && pointsOnly == that.pointsOnly
         && unlogged == that.unlogged
+        && Objects.equals(arenaId, that.arenaId)
         && estimatedFeatureCount == that.estimatedFeatureCount
         && estimatedDeletedFeatures == that.estimatedDeletedFeatures;
   }
@@ -347,6 +375,7 @@ public class XyzCollection extends NakshaFeature {
         partition,
         pointsOnly,
         unlogged,
+        arenaId,
         estimatedFeatureCount,
         estimatedDeletedFeatures);
   }
