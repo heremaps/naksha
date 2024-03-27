@@ -1,6 +1,6 @@
 -- it looks a little bit dummy, but we can not use any function/loop/block/transaction as
 -- tablespace can't be executed within transaction.
--- REMEMBER to set transaction auto-commit in your tool where you execute this commands.
+-- REMEMBER to set transaction auto-commit in your tool where you execute those commands.
 
 create tablespace naksha_${storageId}_main LOCATION '/tmp/${storageId}/main';
 
