@@ -1,4 +1,4 @@
--- it looks a little bit dummy, but we can use any function/loop/block/transaction as
+-- it looks a little bit dummy, but we can not use any function/loop/block/transaction as
 -- tablespace can't be executed within transaction.
 -- REMEMBER to set transaction auto-commit in your tool where you execute this commands.
 
