@@ -18,25 +18,6 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.jbon.JbDict;
-import com.here.naksha.lib.jbon.JbDictManager;
-import com.here.naksha.lib.jbon.JbFeature;
-import com.here.naksha.lib.jbon.JbMap;
-import com.here.naksha.lib.jbon.JvmEnv;
-import com.here.naksha.lib.jbon.XyzBuilder;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.locationtech.jts.algorithm.Centroid;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.io.ParseException;
-import org.locationtech.spatial4j.io.GeohashUtils;
-
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.Map;
-import java.util.Objects;
-
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.util.StringCache.string;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_CREATE;
@@ -45,6 +26,24 @@ import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_PURGE;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_UPDATE;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_UPSERT;
 import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
+
+import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.jbon.JbDict;
+import com.here.naksha.lib.jbon.JbDictManager;
+import com.here.naksha.lib.jbon.JbFeature;
+import com.here.naksha.lib.jbon.JbMap;
+import com.here.naksha.lib.jbon.JvmEnv;
+import com.here.naksha.lib.jbon.XyzBuilder;
+import java.util.Map;
+import java.util.Objects;
+import javax.annotation.concurrent.NotThreadSafe;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.locationtech.jts.algorithm.Centroid;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.io.ParseException;
+import org.locationtech.spatial4j.io.GeohashUtils;
 
 /**
  * A codec that is able to encode a feature from its parts and to decode a feature into its parts. The implementation is not thread safe.
@@ -569,6 +568,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
 
   @SuppressWarnings("unchecked")
   protected FEATURE getFeatureFromJbon(@NotNull Class<FEATURE> featureClass) {
+    //FIXME use existing DictManager
     JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(featureBytes, 0, featureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>)
         new JbMap().mapReader(jbFeature.getReader()).toIMap();

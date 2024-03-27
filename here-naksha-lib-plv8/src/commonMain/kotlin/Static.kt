@@ -2,7 +2,18 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.Fnv1a32
+import com.here.naksha.lib.jbon.Fnv1a64
+import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.NakshaTxn
+import com.here.naksha.lib.jbon.asArray
+import com.here.naksha.lib.jbon.asMap
+import com.here.naksha.lib.jbon.get
+import com.here.naksha.lib.jbon.getAny
+import com.here.naksha.lib.jbon.newMap
+import com.here.naksha.lib.jbon.put
+import com.here.naksha.lib.jbon.toLong
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -408,9 +419,7 @@ SET (toast_tuple_target=8160"""
         val hstNameQuoted = sql.quoteIdent(hstName)
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
         query = query.replace("{condition}", ">= 0")
-        if (partition) {
-            query += "PARTITION BY RANGE (txn_next)"
-        }
+        query += "PARTITION BY RANGE (txn_next)"
         query = query.replace("{tablespace}", tablespaceQueryPart)
         sql.execute(query)
     }
@@ -467,7 +476,7 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param collectionId has to be pure (without _hst suffix).
      */
     @JvmStatic
-    fun createHstPartition(sql: IPlv8Sql, storageId: String, collectionId: String, txnNext: NakshaTxn, geoIndex: Boolean): String {
+    fun createHstPartition(sql: IPlv8Sql, storageId: String, collectionId: String, txnNext: NakshaTxn, geoIndex: Boolean, partition: Boolean?): String {
         val hstPartName = hstPartitionNameForId(collectionId, txnNext)
         val partNameQuoted = sql.quoteIdent(hstPartName)
         val headNameQuoted = sql.quoteIdent(hstHeadNameForId(collectionId))
@@ -475,13 +484,20 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         val end = NakshaTxn.of(txnNext.year(), 12, 31, NakshaTxn.SEQ_MAX).value
 
         val tablespaceQueryPart = tablespaceQueryPart(sql, MAIN_TABLESPACE_TEMPLATE.replace("{id}", storageId))
-        val query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end) PARTITION BY RANGE (naksha_partition_number(id)) $tablespaceQueryPart;"
-        sql.execute(query)
-        val hstTableSpacePrefix = HST_TABLESPACE_TEMPLATE.replace("{id}", storageId)
-        for (subPartition in 0..<PARTITION_COUNT) {
-            val hstTablespacePart = tablespaceQueryPart(sql, "$hstTableSpacePrefix$subPartition")
-            createHstSubPartition(sql, hstPartName, geoIndex, subPartition, hstTablespacePart)
+        var query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end) "
+        if (partition == true) {
+            query += "PARTITION BY RANGE (naksha_partition_number(id)) $tablespaceQueryPart;"
+            sql.execute(query)
+
+            val hstTableSpacePrefix = HST_TABLESPACE_TEMPLATE.replace("{id}", storageId)
+            for (subPartition in 0..<PARTITION_COUNT) {
+                val hstTablespacePart = tablespaceQueryPart(sql, "$hstTableSpacePrefix$subPartition")
+                createHstSubPartition(sql, hstPartName, geoIndex, subPartition, hstTablespacePart)
+            }
+        } else {
+            sql.execute(query)
         }
+
         return hstPartName
     }
 

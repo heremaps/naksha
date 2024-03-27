@@ -165,13 +165,13 @@ SET SESSION enable_seqscan = OFF;
      */
     fun ensureHistoryPartition(collectionId: String, txn: NakshaTxn) {
 
-        if (isHistoryEnabled(collectionId) && isPartitioningEnabled(collectionId)) {
+        if (isHistoryEnabled(collectionId)) {
             // Query current transaction.
             val hstPartName = Static.hstPartitionNameForId(collectionId, txn)
             if (!historyPartitionCache.containsKey(hstPartName)) {
                 val collectionConfig = getCollectionConfig(collectionId)
                 val geoIndex = if (true == collectionConfig[NKC_POINTS_ONLY]) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                Static.createHstPartition(sql, storageId, collectionId, txn, geoIndex)
+                Static.createHstPartition(sql, storageId, collectionId, txn, geoIndex, collectionConfig[NKC_PARTITION])
                 historyPartitionCache.put(hstPartName, true)
             }
         }
@@ -868,11 +868,6 @@ SET (toast_tuple_target=8160,fillfactor=100
     internal fun isHistoryEnabled(collectionId: String): Boolean {
         val isDisabled: Boolean? = getCollectionConfig(collectionId)[NKC_DISABLE_HISTORY]
         return isDisabled != true
-    }
-
-    internal fun isPartitioningEnabled(collectionId: String): Boolean {
-        val isEnabled: Boolean? = getCollectionConfig(collectionId)[NKC_PARTITION]
-        return isEnabled == true
     }
 
     /**

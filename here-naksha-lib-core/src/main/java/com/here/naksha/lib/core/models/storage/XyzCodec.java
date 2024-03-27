@@ -18,6 +18,9 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
+import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
+import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
+
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
@@ -31,13 +34,9 @@ import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.JvmMap;
 import com.here.naksha.lib.jbon.XyzBuilder;
 import com.here.naksha.lib.jbon.XyzNs;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
-
-import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
-import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 
 /**
  * The default codec for XYZ core library, this can simply be specialized.
@@ -162,6 +161,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     if (tagsBytes == null) {
       return null;
     }
+    // FIXME use existing DictManager.
     com.here.naksha.lib.jbon.XyzTags xyzTags =
         new com.here.naksha.lib.jbon.XyzTags(new JbDictManager()).mapBytes(tagsBytes, 0, tagsBytes.length);
     XyzTags tags = new XyzTags();

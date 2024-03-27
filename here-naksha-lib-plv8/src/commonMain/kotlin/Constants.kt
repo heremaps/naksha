@@ -55,7 +55,6 @@ internal const val GEO_TYPE_EWKB : Short = 2
 internal const val GEO_TYPE_TWKB : Short = 3
 
 internal const val PARTITION_COUNT : Short = 8
-internal const val DEFAULT_TABLESPACE = ""
 
 var MAIN_TABLESPACE_TEMPLATE = "naksha_{id}_main"
 var HEAD_TABLESPACE_TEMPLATE = "naksha_{id}_head_"

@@ -21,10 +21,9 @@ package com.here.naksha.lib.core.models.naksha;
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.here.naksha.lib.core.NakshaVersion;
+import java.util.Objects;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Objects;
 
 /**
  * A collection is a virtual container for features, managed by a {@link Storage}. All collections optionally have a history and transaction
