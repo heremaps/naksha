@@ -170,7 +170,13 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull WriteCollections<?, ?, ?> wc,
       final OperationAttempt operationAttempt) {
     logger.info("Processing WriteCollections against {}", collection.getId());
-    if (isPurgeCollectionRequest(wc)) {
+    if (isUpdateCollectionRequest(wc)) {
+      return forwardWriteRequest(
+          ctx,
+          storageImpl,
+          wc,
+          re -> reattemptCollectionRequest(ctx, storageImpl, collection, wc, operationAttempt, re));
+    } else if (isPurgeCollectionRequest(wc)) {
       if (properties.getAutoDeleteCollection()) {
         return forwardWriteRequest(
             ctx,
@@ -192,6 +198,13 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   private boolean isPurgeCollectionRequest(@NotNull WriteCollections<?, ?, ?> wc) {
     return wc.features.size() == 1
         && EWriteOp.PURGE.toString().equals(wc.features.get(0).getOp());
+  }
+
+  private boolean isUpdateCollectionRequest(@NotNull WriteCollections<?, ?, ?> wc) {
+    final String op = wc.features.get(0).getOp();
+    return wc.features.size() == 1
+        && (EWriteOp.UPDATE.toString().equals(op)
+            || EWriteOp.PUT.toString().equals(op));
   }
 
   private @NotNull Result forwardWriteRequest(

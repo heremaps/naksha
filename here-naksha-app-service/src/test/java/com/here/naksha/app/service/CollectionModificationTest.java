@@ -95,8 +95,7 @@ public class CollectionModificationTest extends ApiTest {
         assertThat(getResp2)
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
-//                .hasJsonBody(expectedActivityResp2)
-        //TODO uncomment this, when change to the collection is upheld after updating a Space
+                .hasJsonBody(expectedActivityResp2)
         ;
     }
 
