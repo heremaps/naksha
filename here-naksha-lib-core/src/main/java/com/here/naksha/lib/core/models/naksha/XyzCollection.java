@@ -60,7 +60,7 @@ public class XyzCollection extends NakshaFeature {
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String ESTIMATED_DELETED_FEATURED = "estimatedDeletedFeatures";
 
-  @AvailableSince(NakshaVersion.v3_0_0)
+  @AvailableSince(NakshaVersion.v3_0_0_alpha_8)
   public static final String ARENA_ID = "arenaId";
 
   /**
@@ -162,7 +162,7 @@ public class XyzCollection extends NakshaFeature {
    * Defines the "arena" that should be taken to store all collections of this storage.
    * IMPORTANT: you have to make sure that arena is configured, otherwise you'll get an error on collection create.
    */
-  @AvailableSince(NakshaVersion.v3_0_0)
+  @AvailableSince(NakshaVersion.v3_0_0_alpha_8)
   @JsonProperty(ARENA_ID)
   @JsonInclude(Include.NON_DEFAULT)
   private String arenaId = null;
