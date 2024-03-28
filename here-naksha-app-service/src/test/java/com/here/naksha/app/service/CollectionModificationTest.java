@@ -6,13 +6,12 @@ import com.here.naksha.app.common.TestUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.net.URLEncoder;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.*;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class CollectionModificationTest extends ApiTest {
 
@@ -95,14 +94,6 @@ public class CollectionModificationTest extends ApiTest {
         assertThat(getResp2)
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
-                .hasJsonBody(expectedActivityResp2)
-        ;
-    }
-
-
-
-
-    private static String urlEncoded(String text) {
-        return URLEncoder.encode(text, UTF_8);
+                .hasJsonBody(expectedActivityResp2);
     }
 }

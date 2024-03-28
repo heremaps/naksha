@@ -171,11 +171,17 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final OperationAttempt operationAttempt) {
     logger.info("Processing WriteCollections against {}", collection.getId());
     if (isUpdateCollectionRequest(wc)) {
-      return forwardWriteRequest(
-          ctx,
-          storageImpl,
-          wc,
-          re -> reattemptCollectionRequest(ctx, storageImpl, collection, wc, operationAttempt, re));
+      if (properties.getAutoCreateCollection()) {
+        return forwardWriteRequest(
+            ctx,
+            storageImpl,
+            wc,
+            re -> reattemptCollectionRequest(ctx, storageImpl, collection, wc, operationAttempt, re));
+      } else {
+        logger.info(
+            "Received update collection request but autoCreate is not enabled, returning success without any action");
+        return new SuccessResult();
+      }
     } else if (isPurgeCollectionRequest(wc)) {
       if (properties.getAutoDeleteCollection()) {
         return forwardWriteRequest(
