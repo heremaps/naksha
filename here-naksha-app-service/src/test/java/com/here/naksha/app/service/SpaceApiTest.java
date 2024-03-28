@@ -265,10 +265,6 @@ class SpaceApiTest extends ApiTest {
     final HttpResponse<String> postResponse = getNakshaClient().post("hub/spaces", createSpaceJson, streamId);
     assertThat(postResponse).hasStatus(200);
 
-    // Creating features should succeed
-//    final HttpResponse<String> createFeatureResp1 = getNakshaClient().post("hub/spaces/tc_264_test_space/features", createFeatureJson, streamId);
-//    assertThat(createFeatureResp1).hasStatus(200);
-
     // When: updating existing space
     final HttpResponse<String> response =
             getNakshaClient().put("hub/spaces/tc_264_test_space", updateSpaceJson, streamId);

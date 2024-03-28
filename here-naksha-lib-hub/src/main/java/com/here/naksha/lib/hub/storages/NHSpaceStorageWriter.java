@@ -160,13 +160,15 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Result executeUpdateSpace(@NotNull WriteFeatures<?, ?, ?> updateSpaceEntryReq) {
     final Space space = ((Space) updateSpaceEntryReq.features.get(0).getFeature());
     final SpaceProperties spaceProperties = JsonSerializable.convert(space.getProperties(), SpaceProperties.class);
-    XyzCollection collection = spaceProperties.getXyzCollection();
-    if (collection == null) {
-      return executeWriteToAdminSpaces(updateSpaceEntryReq, updateSpaceEntryReq.getCollectionId());
+    final XyzCollection collection = spaceProperties.getXyzCollection();
+    Result updateSpaceRes = null;
+    if (collection != null) {
+      // submit Update Collection request to Custom Space based pipeline
+      WriteXyzCollections updateCollectionReq = new WriteXyzCollections().update(collection);
+      updateSpaceRes = executeWriteCollections(updateCollectionReq, space.getId());
     }
-    WriteXyzCollections updateCollectionReq = new WriteXyzCollections().update(collection);
-    Result updateSpaceRes = executeWriteCollections(updateCollectionReq, space.getId());
-    if (updateSpaceRes instanceof SuccessResult) {
+    if (collection == null || updateSpaceRes instanceof SuccessResult) {
+      // submit Update Space request to Admin Space based pipeline
       return executeWriteToAdminSpaces(updateSpaceEntryReq, updateSpaceEntryReq.getCollectionId());
     } else {
       return updateSpaceRes;
