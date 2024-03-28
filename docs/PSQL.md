@@ -41,8 +41,8 @@ All tables used in the Naksha PostgresQL implementation have the same general la
 | action     | int2  | yes |           | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2) - `COALESCE(action, 0)`     |
 | app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                  |
 | author     | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                     |
+| type       | text  | yes |           | `COALESCE(f.momType, f.type)` - The **type** of the feature, `NULL` for `Feature`. |
 | id         | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                                |
-| type       | text  | no  |           | `COALESCE(f.momType, f.type)` - The **type** of the feature, `NULL` for `Feature`. |
 | feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.                 |
 | tags       | bytea | no  |           | `f.p.xyz->tags`                                                                    |
 | geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                                       |
@@ -62,6 +62,7 @@ When creating indices for columns being unique, [disabling deduplication](https:
 Within PostgresQL a collection is a set of database tables. All these tables are prefixed by the collection identifier. The tables are:
 
 - `{collection}`: The HEAD table. It is either a plain simple table or a partitioned table. When being partitioned, this is done as (`PARTITION BY BY RANGE (naksha_partition_number(id))`) with all features in their live state. This table is the only one that should be directly accessed for manual SQL queries and has triggers attached that will ensure that the history is written accordingly.
+- `{collection}$meta`: The meta table that stores cached data.
 - `{collection}$p[n]`: The HEAD partitions (`PARTITION OF {collection} FOR VALUES WITH (MODULUS {m}, REMAINDER {n})`), beware that the name of the partition is taken from `naksha_partition_id('{collection}')`, which will return a two digit value (`00..31`).
 - `{collection}$del`: The HEAD deletion table holding all features that are deleted from the HEAD table. This can be used to read zombie features (features that have been deleted, but are not yet fully unrecoverable dead).
 - `{collection}$hst`: The history table, this is always a partitioned table, partitioned by `txn_next` (`PARTITION BY BY RANGE (txn_next)`).
@@ -257,8 +258,8 @@ The transaction logs are stored in the `naksha$txn` table. Actually, the only di
 | action     | int2  | yes |              | Always `NULL`.                                                                            |
 | app_id     | text  | yes | NOT NULL     | `f.p.xyz->app_id`                                                                         |
 | author     | text  | yes |              | `f.p.xyz->author`                                                                         |
+| type       | text  | yes |              | Always `NULL`, basically translated into `naksha.Transaction`.                            |
 | id         | text  | no  | NOT NULL     | `f.id` - The **uuid** of the transaction.                                                 |
-| type       | text  | no  |              | Always `NULL`, basically translated into `naksha.Transaction`.                            |
 | feature    | bytea | no  |              | `f` - The Geo-JSON feature in JBON, except for what was extracted.                        |
 | tags       | bytea | no  |              | `f.p.xyz->tags`                                                                           |
 | geo        | bytea | no  |              | `f.geometry` - The geometry of the features modified (**set by the sequencer**).          |
