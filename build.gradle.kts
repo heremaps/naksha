@@ -59,7 +59,7 @@ val google_protobuf = "com.google.protobuf:protobuf-java:3.16.3"
 val google_guava = "com.google.guava:guava:31.1-jre"
 val google_tink = "com.google.crypto.tink:tink:1.5.0"
 
-val aws_bom = "software.amazon.awssdk:bom:2.25.19"
+val aws_bom = "software.amazon.awssdk:bom:2.21.1"
 val aws_s3="software.amazon.awssdk:s3"
 
 val jts_core = "org.locationtech.jts:jts-core:1.19.0"
