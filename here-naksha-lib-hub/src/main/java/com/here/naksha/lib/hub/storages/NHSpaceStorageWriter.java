@@ -164,7 +164,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     Result updateSpaceRes = null;
     if (collection != null) {
       // submit Update Collection request to Custom Space based pipeline
-      WriteXyzCollections updateCollectionReq = new WriteXyzCollections().update(collection);
+      WriteXyzCollections updateCollectionReq = new WriteXyzCollections().put(collection);
       updateSpaceRes = executeWriteCollections(updateCollectionReq, space.getId());
     }
     if (collection == null || updateSpaceRes instanceof SuccessResult) {

@@ -113,7 +113,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     final IStorage storageImpl = nakshaHub().getStorageById(storageId);
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
-    XyzCollection collection = chooseCollection();
+    XyzCollection collection = chooseCollection(request);
     applyCollectionId(request, collection.getId());
     return forwardRequestToStorage(ctx, request, storageImpl, collection, FIRST_ATTEMPT);
   }
@@ -353,7 +353,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   // TODO: collectionId at handler level can be potentially removed in the future
-  private @NotNull XyzCollection chooseCollection() {
+  private @NotNull XyzCollection chooseCollection(final Request<?> request) {
     final XyzCollection collectionDefinedInHandler = properties.getXyzCollection();
     if (collectionDefinedInHandler != null) {
       logger.info(
@@ -363,8 +363,16 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       return collectionDefinedInHandler;
     }
     if (eventTarget instanceof Space s) {
-      final SpaceProperties spaceProperties = JsonSerializable.convert(s.getProperties(), SpaceProperties.class);
-      final XyzCollection collectionDefinedInSpace = spaceProperties.getXyzCollection();
+      XyzCollection collectionDefinedInSpace = null;
+      if (request instanceof WriteCollections<?, ?, ?> wc && isUpdateCollectionRequest(wc)) {
+        // use newly provided collection in the Update request itself
+        collectionDefinedInSpace = (XyzCollection) wc.features.get(0).getFeature();
+      } else {
+        // use existing Space collection (as it is not an Update request)
+        final SpaceProperties spaceProperties =
+            JsonSerializable.convert(s.getProperties(), SpaceProperties.class);
+        collectionDefinedInSpace = spaceProperties.getXyzCollection();
+      }
       if (collectionDefinedInSpace != null) {
         logger.info(
             "Using collection with id {} that is associated with Space(id={})",
