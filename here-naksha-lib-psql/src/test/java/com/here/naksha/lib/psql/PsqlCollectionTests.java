@@ -166,11 +166,11 @@ abstract class PsqlCollectionTests extends PsqlTests {
   }
 
   private void createCatalogsForTablespaces(String arenaId) throws IOException, InterruptedException {
-    postgreSQLContainer.execInContainer("mkdir", "-p", format("/%s/main",arenaId));
+    postgreSQLContainer.execInContainer("mkdir", "-p", format("/%s/main", arenaId));
 
     for (int i = 0; i < 8; i++) {
-      postgreSQLContainer.execInContainer("mkdir", "-p", format("/x/hst%s",i));
-      postgreSQLContainer.execInContainer("mkdir", "-p", format("/x/head%s",i));
+      postgreSQLContainer.execInContainer("mkdir", "-p", format("/%s/hst%s", arenaId, i));
+      postgreSQLContainer.execInContainer("mkdir", "-p", format("/%s/head%s", arenaId, i));
     }
     postgreSQLContainer.execInContainer("chown", "postgres:postgres", "-R", format("/%s", arenaId));
   }
@@ -178,8 +178,8 @@ abstract class PsqlCollectionTests extends PsqlTests {
   private void createTablespaces(String arenaId) throws IOException, InterruptedException {
     postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c", format("create tablespace naksha_%s_main LOCATION '/%s/main';", arenaId, arenaId));
     for (int i = 0; i < 8; i++) {
-      postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c",  format("create tablespace naksha_%s_head_%s LOCATION '/%s/head%s';", arenaId, i, arenaId, i));
-      postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c",  format("create tablespace naksha_%s_hst_%s LOCATION '/%s/hst%s';", arenaId, i, arenaId, i));
+      postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c", format("create tablespace naksha_%s_head_%s LOCATION '/%s/head%s';", arenaId, i, arenaId, i));
+      postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c", format("create tablespace naksha_%s_hst_%s LOCATION '/%s/hst%s';", arenaId, i, arenaId, i));
     }
   }
 
