@@ -90,6 +90,7 @@ public class ExtensionCache {
     for (String key : loaderCache.keySet()) {
       if (!extIds.contains(key)) {
         loaderCache.remove(key);
+        PluginCache.removeExtensionCache(key);
         logger.info("Extension {} removed from cache.", key);
       }
     }
