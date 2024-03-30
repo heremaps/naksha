@@ -557,7 +557,7 @@ project(":here-naksha-app-service") {
 
 // Ensure that libraries published to artifactory, while the application generates a shadow-jar.
 subprojects {
-    if (project.name.contains("here-naksha-lib-")) {
+    if (project.name.contains("here-naksha-")) {
         // This is library, publish to maven artifactory
         apply(plugin = "maven-publish")
         publishing {
