@@ -45,12 +45,12 @@ Extension manager expects all extension should have a folder under configured ex
 - jar - Extension fat jar
 - latest-{ENV}.txt - Text file which contains jar version. This value is being used in determining extension configuration json file. Here {ENV} is the environment name the Naksha service is running against.
 - {ExtensionID}-{VERSION}-{ENV}.json - It is a json file, which contains extension specific configuration. {ExtensionID} is the ID of Extension. {VERSION} is resolved value determined from latest-{ENV}.txt. And {ENV} is the environment name. This file should have below attributes 
-  - id - String representing Extension ID
-  - url - Complete path of jar file (In case of S3, It should be S3 URI of extension jar)
-  - version - Extension version being deployed.
-  - initClassName - Full class name. If configured the Extension manager will load this class and instantiate it.   
-  - properties - Extension specific custom/private properties which is required specifically for that extension. For example, remote URL or Database details. 
-  - type - XYZFeature type. Default value is "Extension".
+  - id - mandatory - String representing Extension ID
+  - type - mandatory - XYZFeature type. Default value is "Extension".
+  - url - mandatory - Complete path of jar file (In case of S3, It should be S3 URI of extension jar)
+  - version - mandatory - Extension version being deployed.
+  - initClassName - optional - Full class name. If configured the Extension manager will load this class and instantiate it.   
+  - properties - optional - Extension specific custom/private properties which is required specifically for that extension. For example, remote URL or Database details. 
 
 Below is the sample structure of extension directory. where Root path is `s3://naksha-pvt-releases/extensions/`. And Extension `foo` is deployed on `dev` environment. 
 
@@ -68,10 +68,13 @@ Contents of latest-dev.txt -> 1.0.0
 Contents of foo-1.0.0-dev.json ->
 {
   "id" : "foo",
+  "type": "Extension",
   "url":"s3://naksha-pvt-releases/extensions/foo/foo-1.0.0.jar",
   "version": "1.0.0",
   "initClassName":"",
-  "type": "Extension"
+  "properties": {
+    // custom/private properties relevant for that extension
+  }
 }
 
 ```
