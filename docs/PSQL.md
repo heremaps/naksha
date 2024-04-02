@@ -391,7 +391,7 @@ Add support for automatic dictionary training. This is done using `pg_cron` and 
 
 This job may as well delete no longer used dictionaries, if the corresponding history entries are deleted.
 
-### Links
+## Links
 - [HERE tiling schema](https://www.here.com/docs/bundle/introduction-to-mapping-concepts-user-guide/page/topics/here-tiling-scheme.html)
 - https://postgresqlco.nf/doc/en/param/session_replication_role/
 - https://www.postgresql.org/docs/16/runtime-config-client.html#GUC-SESSION-REPLICATION-ROLE
