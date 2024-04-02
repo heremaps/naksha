@@ -366,6 +366,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       XyzCollection collectionDefinedInSpace = null;
       if (request instanceof WriteCollections<?, ?, ?> wc && isUpdateCollectionRequest(wc)) {
         // use newly provided collection in the Update request itself
+        // to make sure that the newer collection id (if it has been changed) is used
         collectionDefinedInSpace = (XyzCollection) wc.features.get(0).getFeature();
       } else {
         // use existing Space collection (as it is not an Update request)
