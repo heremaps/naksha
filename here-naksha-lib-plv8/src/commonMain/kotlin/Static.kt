@@ -302,7 +302,7 @@ SET (toast_tuple_target=8160"""
     /**
      * Low level function to create a (optionally partitioned) collection table set.
      * @param sql The SQL API.
-     * @param arenaId The arena id.
+     * @param temporary should be treated as temporary or not.
      * @param schema The schema name.
      * @param schemaOid The object-id of the schema to look into.
      * @param id The collection identifier.
@@ -310,12 +310,13 @@ SET (toast_tuple_target=8160"""
      * @param partition If the collection should be partitioned.
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, arenaId: String?, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
+    fun collectionCreate(sql: IPlv8Sql, temporary: Boolean, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
+        val tableConfig = TableConfig(temporary)
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
-        val CREATE_TABLE = if (!DEBUG) """CREATE TABLE {table} (
+        val CREATE_TABLE = if (!DEBUG) """CREATE ${tableConfig.unlogged()} TABLE {table} (
     txn_next    int8 NOT NULL CHECK(txn_next {condition}),
     txn         int8 NOT NULL,
     uid         int4 NOT NULL,
@@ -334,7 +335,7 @@ SET (toast_tuple_target=8160"""
     tags        bytea COMPRESSION lz4,
     geo         bytea COMPRESSION lz4,
     feature     bytea COMPRESSION lz4 NOT NULL
-) """ else """CREATE TABLE {table} (
+) """ else """CREATE ${tableConfig.unlogged()} TABLE {table} (
     txn_next    int8,
     txn         int8,
     uid         int4,
@@ -355,7 +356,6 @@ SET (toast_tuple_target=8160"""
     feature     bytea COMPRESSION lz4
 ) """
         var query: String
-        val arena = ArenaSpace(arenaId)
 
         // HEAD
         val headNameQuoted = sql.quoteIdent(id)
@@ -363,25 +363,24 @@ SET (toast_tuple_target=8160"""
         query = query.replace("{condition}", "= 0")
 
         if (!partition) {
-            query += arena.mainTablespaceQueryPart()
+            query += tableConfig.tablespaceQueryPart()
             sql.execute(query)
             collectionOptimizeTable(sql, id, false)
-            collectionAddIndices(sql, id, geoIndex, false, arena.mainTablespaceQueryPart())
+            collectionAddIndices(sql, id, geoIndex, false, tableConfig.tablespaceQueryPart())
         } else {
             query += "PARTITION BY RANGE (naksha_partition_number(id))"
-            query += arena.mainTablespaceQueryPart()
+            query += tableConfig.tablespaceQueryPart()
             sql.execute(query)
             var i = 0
             while (i < PARTITION_COUNT) {
                 val partName = id + "_p" + PARTITION_ID[i]
                 val partNameQuoted = sql.quoteIdent(partName)
-                query = "CREATE TABLE $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($i) "
-
+                query = "CREATE ${tableConfig.unlogged()} TABLE $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($i) "
                 query += "TO (${i+1})"
-                query += arena.headPartitionTablespaceQueryPart((i))
+                query += tableConfig.tablespaceQueryPart()
                 sql.execute(query)
                 collectionOptimizeTable(sql, partName, false)
-                collectionAddIndices(sql, partName, geoIndex, false, arena.headPartitionTablespaceQueryPart(i))
+                collectionAddIndices(sql, partName, geoIndex, false, tableConfig.tablespaceQueryPart())
                 i++
             }
         }
@@ -398,20 +397,20 @@ SET (toast_tuple_target=8160"""
         val delNameQuoted = sql.quoteIdent(delName)
         query = CREATE_TABLE.replace("{table}", delNameQuoted)
         query = query.replace("{condition}", "= 0")
-        query += arena.mainTablespaceQueryPart()
+        query += tableConfig.tablespaceQueryPart()
         sql.execute(query)
         collectionOptimizeTable(sql, delName, false)
-        collectionAddIndices(sql, delName, geoIndex, false, arena.mainTablespaceQueryPart())
+        collectionAddIndices(sql, delName, geoIndex, false, tableConfig.tablespaceQueryPart())
 
         // META.
         val metaName = id + "_meta"
         val metaNameQuoted = sql.quoteIdent(metaName)
         query = CREATE_TABLE.replace("{table}", metaNameQuoted)
         query = query.replace("{condition}", "= 0")
-        query += arena.mainTablespaceQueryPart()
+        query += tableConfig.tablespaceQueryPart()
         sql.execute(query)
         collectionOptimizeTable(sql, metaName, false)
-        collectionAddIndices(sql, metaName, geoIndex, false, arena.mainTablespaceQueryPart())
+        collectionAddIndices(sql, metaName, geoIndex, false, tableConfig.tablespaceQueryPart())
 
         // HISTORY.
         val hstName = id + "_hst"
@@ -419,7 +418,7 @@ SET (toast_tuple_target=8160"""
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
         query = query.replace("{condition}", ">= 0")
         query += "PARTITION BY RANGE (txn_next)"
-        query += arena.mainTablespaceQueryPart()
+        query += tableConfig.tablespaceQueryPart()
         sql.execute(query)
     }
 
@@ -475,39 +474,40 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param collectionId has to be pure (without _hst suffix).
      */
     @JvmStatic
-    fun createHstPartition(sql: IPlv8Sql, arenaId: String?, collectionId: String, txnNext: NakshaTxn, geoIndex: Boolean, partition: Boolean?): String {
+    fun createHstPartition(sql: IPlv8Sql, temporary: Boolean, collectionId: String, txnNext: NakshaTxn, geoIndex: Boolean, partition: Boolean?): String {
         val hstPartName = hstPartitionNameForId(collectionId, txnNext)
         val partNameQuoted = sql.quoteIdent(hstPartName)
         val headNameQuoted = sql.quoteIdent(hstHeadNameForId(collectionId))
         val start = NakshaTxn.of(txnNext.year(), 0, 0, NakshaTxn.SEQ_MIN).value
         val end = NakshaTxn.of(txnNext.year(), 12, 31, NakshaTxn.SEQ_MAX).value
-        val arena = ArenaSpace(arenaId)
-        var query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end) "
+        val tableConfig = TableConfig(temporary)
+        val tablespaceQueryPart = tableConfig.tablespaceQueryPart()
+        var query = "CREATE ${tableConfig.unlogged()} TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end) "
         if (partition == true) {
-            query += "PARTITION BY RANGE (naksha_partition_number(id)) ${arena.mainTablespaceQueryPart()}"
+            query += "PARTITION BY RANGE (naksha_partition_number(id)) $tablespaceQueryPart"
             sql.execute(query)
 
             for (subPartition in 0..<PARTITION_COUNT) {
-                createHstSubPartition(sql, hstPartName, geoIndex, subPartition, arena.hstPartitionTablespaceQueryPart(subPartition))
+                createHstSubPartition(sql, hstPartName, geoIndex, subPartition, tableConfig)
             }
         } else {
-            query += arena.mainTablespaceQueryPart()
+            query += tablespaceQueryPart
             sql.execute(query)
             collectionOptimizeTable(sql, partNameQuoted, true)
-            collectionAddIndices(sql, partNameQuoted, geoIndex, true, arena.mainTablespaceQueryPart())
+            collectionAddIndices(sql, partNameQuoted, geoIndex, true, tablespaceQueryPart)
         }
 
         return hstPartName
     }
 
-    private fun createHstSubPartition(sql: IPlv8Sql, hstPartName: String, geoIndex: Boolean, subPartition: Int, tablespaceQueryPart: String) {
+    private fun createHstSubPartition(sql: IPlv8Sql, hstPartName: String, geoIndex: Boolean, subPartition: Int, tableConfig: TableConfig) {
         val hstSubPartName = "${hstPartName}_$subPartition"
         val subPartNameQuoted = sql.quoteIdent(hstSubPartName)
         val hstNameQuoted = sql.quoteIdent(hstPartName)
-        val query = "CREATE TABLE IF NOT EXISTS $subPartNameQuoted PARTITION OF $hstNameQuoted FOR VALUES FROM ($subPartition) TO (${subPartition + 1}) $tablespaceQueryPart;"
+        val query = "CREATE ${tableConfig.unlogged()} TABLE IF NOT EXISTS $subPartNameQuoted PARTITION OF $hstNameQuoted FOR VALUES FROM ($subPartition) TO (${subPartition + 1}) ${tableConfig.tablespaceQueryPart()};"
         sql.execute(query)
         collectionOptimizeTable(sql, hstSubPartName, true)
-        collectionAddIndices(sql, hstSubPartName, geoIndex, true, tablespaceQueryPart)
+        collectionAddIndices(sql, hstSubPartName, geoIndex, true, tableConfig.tablespaceQueryPart())
     }
 
     /**

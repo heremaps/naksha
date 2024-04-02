@@ -13,6 +13,8 @@ import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.jbon.JvmBigInt64Api;
+import com.here.naksha.lib.plv8.ConstantsKt;
+import com.here.naksha.lib.plv8.NakshaSession;
 import com.here.naksha.lib.plv8.Static;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -111,24 +113,22 @@ abstract class PsqlCollectionTests extends PsqlTests {
   @Test
   @Order(9002)
   @EnabledIf("isTestContainerRun")
-  void createCollectionInArena() throws NoCursor, SQLException, IOException, InterruptedException {
+  void createTemporaryCollection() throws NoCursor, SQLException, IOException, InterruptedException {
     assertNotNull(storage);
     assertNotNull(session);
 
     // given
-    String arenaId = "x";
 
     // PREPARE CATALOGS IN DOCKER CONTAINER
-    createCatalogsForTablespaces(arenaId);
+    createCatalogsForTablespace();
     // PREPARE TABLESPACES
-    createTablespaces(arenaId);
+    createTablespace();
 
-
-    // WRITE COLLECTION THAT SHOULD BE ASSIGNED TO ARENA TABLESPACE
-    String collectionId = "foo_in_arena";
+    // WRITE COLLECTION THAT SHOULD BE TEMPORARY
+    String collectionId = "foo_temp";
     final WriteXyzCollections request = new WriteXyzCollections();
     XyzCollection xyzCollection = new XyzCollection(collectionId, true, false, true);
-    xyzCollection.setArenaId(arenaId);
+    xyzCollection.setTemporary(true);
     request.add(EWriteOp.CREATE, xyzCollection);
 
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
@@ -148,12 +148,13 @@ abstract class PsqlCollectionTests extends PsqlTests {
     session.commit(true);
 
     // then
-    assertEquals("naksha_x_main", getTablespace(session, collectionId));
-    assertEquals("naksha_x_head_0", getTablespace(session, collectionId + "_p0"));
-    assertEquals("naksha_x_main", getTablespace(session, collectionId + "_hst"));
+    String expectedTablespace = ConstantsKt.getTEMPORARY_TABLESPACE();
+    assertEquals(expectedTablespace, getTablespace(session, collectionId));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_p0"));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_hst"));
     int currentYear = LocalDate.now().getYear();
-    assertEquals("naksha_x_main", getTablespace(session, collectionId + "_hst_" + currentYear));
-    assertEquals("naksha_x_hst_0", getTablespace(session, collectionId + "_hst_" + currentYear + "_0"));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_hst_" + currentYear));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_hst_" + currentYear + "_0"));
   }
 
   private String getTablespace(PsqlWriteSession session, String table) throws SQLException {
@@ -165,22 +166,13 @@ abstract class PsqlCollectionTests extends PsqlTests {
     }
   }
 
-  private void createCatalogsForTablespaces(String arenaId) throws IOException, InterruptedException {
-    postgreSQLContainer.execInContainer("mkdir", "-p", format("/%s/main", arenaId));
-
-    for (int i = 0; i < 8; i++) {
-      postgreSQLContainer.execInContainer("mkdir", "-p", format("/%s/hst%s", arenaId, i));
-      postgreSQLContainer.execInContainer("mkdir", "-p", format("/%s/head%s", arenaId, i));
-    }
-    postgreSQLContainer.execInContainer("chown", "postgres:postgres", "-R", format("/%s", arenaId));
+  private void createCatalogsForTablespace() throws IOException, InterruptedException {
+    postgreSQLContainer.execInContainer("mkdir", "-p", "/tmp/temporary_space");
+    postgreSQLContainer.execInContainer("chown", "postgres:postgres", "-R", "/tmp/temporary_space");
   }
 
-  private void createTablespaces(String arenaId) throws IOException, InterruptedException {
-    postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c", format("create tablespace naksha_%s_main LOCATION '/%s/main';", arenaId, arenaId));
-    for (int i = 0; i < 8; i++) {
-      postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c", format("create tablespace naksha_%s_head_%s LOCATION '/%s/head%s';", arenaId, i, arenaId, i));
-      postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c", format("create tablespace naksha_%s_hst_%s LOCATION '/%s/hst%s';", arenaId, i, arenaId, i));
-    }
+  private void createTablespace() throws IOException, InterruptedException {
+    postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c", format("create tablespace %s LOCATION '/tmp/temporary_space';", ConstantsKt.getTEMPORARY_TABLESPACE()));
   }
 
   private boolean isLockReleased(PsqlWriteSession session, String collectionId) throws SQLException {

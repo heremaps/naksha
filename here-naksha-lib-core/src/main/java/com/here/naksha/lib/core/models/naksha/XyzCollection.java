@@ -61,7 +61,7 @@ public class XyzCollection extends NakshaFeature {
   public static final String ESTIMATED_DELETED_FEATURED = "estimatedDeletedFeatures";
 
   @AvailableSince(NakshaVersion.v3_0_0_alpha_8)
-  public static final String ARENA_ID = "arenaId";
+  public static final String TEMPORARY = "temporary";
 
   /**
    * Create a new empty default collection with default properties.
@@ -159,13 +159,12 @@ public class XyzCollection extends NakshaFeature {
   private boolean pointsOnly;
 
   /**
-   * Defines the "arena" that should be taken to store all collections of this storage.
-   * IMPORTANT: you have to make sure that arena is configured, otherwise you'll get an error on collection create.
+   * Temporary collection might be placed in separate places and are not guaranteed to have backups or survive crashes.
    */
   @AvailableSince(NakshaVersion.v3_0_0_alpha_8)
-  @JsonProperty(ARENA_ID)
+  @JsonProperty(TEMPORARY)
   @JsonInclude(Include.NON_DEFAULT)
-  private String arenaId = null;
+  private Boolean temporary = false;
 
   /**
    * Returns {@code true} if this collection is unlogged (optimized for performance, but not crash safe).
@@ -329,21 +328,22 @@ public class XyzCollection extends NakshaFeature {
   private long estimatedDeletedFeatures;
 
   /**
-   * Returns arena where all of connected objects are kept.
+   * Temporary collection might be placed in separate places and are not guaranteed to have backups or survive crashes.
    *
    * @return
    */
-  public String getArenaId() {
-    return arenaId;
+  public Boolean getTemporary() {
+    return temporary;
   }
 
   /**
-   * Specifies in which arena all storage's object should be placed.
+   * Sets a temporary property which indicates how collection should be treated.
+   * Temporary collection might be placed in separate places and are not guaranteed to have backups or survive crashes.
    *
-   * @param arenaId
+   * @param temporary
    */
-  public void setArenaId(String arenaId) {
-    this.arenaId = arenaId;
+  public void setTemporary(Boolean temporary) {
+    this.temporary = temporary;
   }
 
   @Override
@@ -361,7 +361,7 @@ public class XyzCollection extends NakshaFeature {
         && partition == that.partition
         && pointsOnly == that.pointsOnly
         && unlogged == that.unlogged
-        && Objects.equals(arenaId, that.arenaId)
+        && Objects.equals(temporary, that.temporary)
         && estimatedFeatureCount == that.estimatedFeatureCount
         && estimatedDeletedFeatures == that.estimatedDeletedFeatures;
   }
@@ -375,7 +375,7 @@ public class XyzCollection extends NakshaFeature {
         partition,
         pointsOnly,
         unlogged,
-        arenaId,
+        temporary,
         estimatedFeatureCount,
         estimatedDeletedFeatures);
   }
