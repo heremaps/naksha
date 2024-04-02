@@ -82,7 +82,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
 
   @Override
   boolean partition() {
-    return false;
+    return true;
   }
 
   static final String SINGLE_FEATURE_ID = "TheFeature";

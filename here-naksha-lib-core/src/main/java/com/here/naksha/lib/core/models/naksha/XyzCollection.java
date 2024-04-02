@@ -18,12 +18,8 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.NakshaVersion;
 import java.util.Objects;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -64,8 +60,8 @@ public class XyzCollection extends NakshaFeature {
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String ESTIMATED_DELETED_FEATURED = "estimatedDeletedFeatures";
 
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public static final String PARTITION_COUNT = "partitionCount";
+  @AvailableSince(NakshaVersion.v3_0_0_alpha_8)
+  public static final String TEMPORARY = "temporary";
 
   /**
    * Create a new empty default collection with default properties.
@@ -95,7 +91,6 @@ public class XyzCollection extends NakshaFeature {
     super(id);
     this.partition = partition;
     this.pointsOnly = pointsOnly;
-    this.partitionCount = -1;
     this.estimatedFeatureCount = -1L;
     this.estimatedDeletedFeatures = -1L;
   }
@@ -162,6 +157,14 @@ public class XyzCollection extends NakshaFeature {
   @JsonProperty(POINTS_ONLY)
   @JsonInclude(Include.NON_EMPTY)
   private boolean pointsOnly;
+
+  /**
+   * Temporary collection might be placed in separate places and are not guaranteed to have backups or survive crashes.
+   */
+  @AvailableSince(NakshaVersion.v3_0_0_alpha_8)
+  @JsonProperty(TEMPORARY)
+  @JsonInclude(Include.NON_DEFAULT)
+  private boolean temporary = false;
 
   /**
    * Returns {@code true} if this collection is unlogged (optimized for performance, but not crash safe).
@@ -294,23 +297,6 @@ public class XyzCollection extends NakshaFeature {
   }
 
   /**
-   * Returns the amount of partitions, which is a necessary information for the bulk loader. This returns zero, if the collection is not
-   * partitioned. This information can only be obtained from the storage itself when reading a collection or as result of creating a
-   * collection.
-   *
-   * @return the amount of partitions, which is a necessary information for the bulk loader. The storage returns minus one, if the
-   * information is not known.
-   */
-  public int partitionCount() {
-    return partitionCount;
-  }
-
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(PARTITION_COUNT)
-  @JsonInclude(Include.NON_EMPTY)
-  private int partitionCount;
-
-  /**
    * Returns the amount of features being alive in the collection. This returns minus one, if the amount can not be provided by the storage.
    * This information can only be obtained from the storage itself when reading a collection or as result of creating a collection.
    *
@@ -341,6 +327,25 @@ public class XyzCollection extends NakshaFeature {
   @JsonInclude(Include.NON_EMPTY)
   private long estimatedDeletedFeatures;
 
+  /**
+   * Temporary collection might be placed in separate places and are not guaranteed to have backups or survive crashes.
+   *
+   * @return
+   */
+  public Boolean getTemporary() {
+    return temporary;
+  }
+
+  /**
+   * Sets a temporary property which indicates how collection should be treated.
+   * Temporary collection might be placed in separate places and are not guaranteed to have backups or survive crashes.
+   *
+   * @param temporary
+   */
+  public void setTemporary(Boolean temporary) {
+    this.temporary = temporary;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -356,7 +361,7 @@ public class XyzCollection extends NakshaFeature {
         && partition == that.partition
         && pointsOnly == that.pointsOnly
         && unlogged == that.unlogged
-        && partitionCount == that.partitionCount
+        && Objects.equals(temporary, that.temporary)
         && estimatedFeatureCount == that.estimatedFeatureCount
         && estimatedDeletedFeatures == that.estimatedDeletedFeatures;
   }
@@ -370,7 +375,7 @@ public class XyzCollection extends NakshaFeature {
         partition,
         pointsOnly,
         unlogged,
-        partitionCount,
+        temporary,
         estimatedFeatureCount,
         estimatedDeletedFeatures);
   }

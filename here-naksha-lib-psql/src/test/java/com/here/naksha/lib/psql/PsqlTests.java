@@ -18,9 +18,6 @@
  */
 package com.here.naksha.lib.psql;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
 import com.here.naksha.lib.jbon.JvmEnv;
@@ -38,6 +35,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+
+import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Base class for all PostgresQL tests that require some test database.
@@ -91,6 +93,10 @@ abstract class PsqlTests {
     return enabled();
   }
 
+  final boolean isTestContainerRun() {
+    return runTest() && postgreSQLContainer != null;
+  }
+
   final boolean dropInitially() {
     return runTest() && DROP_INITIALLY;
   }
@@ -126,7 +132,7 @@ abstract class PsqlTests {
   }
 
   @BeforeAll
-  static void beforeTest() {
+  static void beforeTest() throws IOException, InterruptedException {
     NakshaContext.currentContext().setAuthor("PsqlStorageTest");
     NakshaContext.currentContext().setAppId("naksha-lib-psql-unit-tests");
     nakshaContext = new NakshaContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);

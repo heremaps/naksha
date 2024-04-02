@@ -15,7 +15,7 @@ class NakshaSessionTest : Plv8TestContainer() {
         val session = NakshaSession.get()
 
         // expect
-        assertEquals("foo", session.getBaseCollectionId("foo_p074"))
+        assertEquals("foo", session.getBaseCollectionId("foo_p7"))
     }
 
     @Test

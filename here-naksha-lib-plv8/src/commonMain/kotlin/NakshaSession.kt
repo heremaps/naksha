@@ -164,13 +164,15 @@ SET SESSION enable_seqscan = OFF;
      * @param collectionId The collection identifier.
      */
     fun ensureHistoryPartition(collectionId: String, txn: NakshaTxn) {
-        val collectionConfig = getCollectionConfig(collectionId)
+
         if (isHistoryEnabled(collectionId)) {
             // Query current transaction.
             val hstPartName = Static.hstPartitionNameForId(collectionId, txn)
             if (!historyPartitionCache.containsKey(hstPartName)) {
+                val collectionConfig = getCollectionConfig(collectionId)
                 val geoIndex = if (true == collectionConfig[NKC_POINTS_ONLY]) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                Static.createHstPartition(sql, collectionId, txn, geoIndex)
+                val temporary: Boolean? = collectionConfig[NKC_TEMPORARY]
+                Static.createHstPartition(sql, temporary == true, collectionId, txn, geoIndex, collectionConfig[NKC_PARTITION])
                 historyPartitionCache.put(hstPartName, true)
             }
         }
@@ -392,35 +394,6 @@ SET SESSION enable_seqscan = OFF;
      * An internal view to calculate the partition id.
      */
     private lateinit var partView: IDataView
-
-    /**
-     * Returns the partition from date.
-     * @param year The year, e.g. 2024.
-     * @param month The month between 1 (January) and 12 (December).
-     * @param day The day between 1 and 31.
-     * @return The name of the corresponding history partition.
-     */
-    fun partitionNameForDate(year: Int, month: Int, day: Int): String {
-        val sb = StringBuilder()
-        sb.append(year)
-        sb.append('_')
-        if (month < 10) sb.append('0')
-        sb.append(month)
-        sb.append('_')
-        if (day < 10) sb.append('0')
-        sb.append(day)
-        return sb.toString() // 2024_01_15
-    }
-
-    /**
-     * Returns the partition id based upon the given timestamp (for history partitions).
-     * @param millis The epoch-timestamp in milliseconds.
-     * @return The name of the corresponding history partition.
-     */
-    fun partitionNameForMillis(millis: BigInt64): String {
-        val ts = JbTimestamp.fromMillis(millis)
-        return partitionNameForDate(ts.year, ts.month, ts.day)
-    }
 
     /**
      * The cached Postgres version.
@@ -729,7 +702,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
                         val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, geoIndex, newCollection.partition())
+                        if (!tableExists) Static.collectionCreate(sql, newCollection.temporary(), schema, schemaOid, id, geoIndex, newCollection.partition())
                         val row = asMap(rows[0])
                         table.returnCreated(id, xyzNsFromRow(id, row))
                         continue
@@ -756,7 +729,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                         }
                         val row = asMap(rows[0])
                         val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                        if (!tableExists) Static.collectionCreate(sql, schema, schemaOid, id, geoIndex, newCollection.partition())
+                        if (!tableExists) Static.collectionCreate(sql, newCollection.temporary(), schema, schemaOid, id, geoIndex, newCollection.partition())
                         table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }
@@ -863,14 +836,14 @@ SET (toast_tuple_target=8160,fillfactor=100
 
     /**
      * Returns collectionId without partition part.
-     * For `topology_p000` it will return `topology`.
+     * For `topology_p0` it will return `topology`.
      */
     fun getBaseCollectionId(collectionId: String): String {
         // Note: "topology_p000" is a partition, but we need collection-id.
         //        0123456789012
         // So, in that case we will find an underscore at index 8, so i = length-5!
         val i = collectionId.lastIndexOf('_')
-        return if (i >= 0 && i == (collectionId.length - 5) && collectionId[i + 1] == 'p') {
+        return if (i >= 0 && i == (collectionId.length - 3) && collectionId[i + 1] == 'p') {
             collectionId.substring(0, i)
         } else {
             collectionId
@@ -893,7 +866,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         }
     }
 
-    private fun isHistoryEnabled(collectionId: String): Boolean {
+    internal fun isHistoryEnabled(collectionId: String): Boolean {
         val isDisabled: Boolean? = getCollectionConfig(collectionId)[NKC_DISABLE_HISTORY]
         return isDisabled != true
     }

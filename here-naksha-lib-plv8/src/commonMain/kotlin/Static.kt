@@ -2,7 +2,17 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.Fnv1a32
+import com.here.naksha.lib.jbon.Fnv1a64
+import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.NakshaTxn
+import com.here.naksha.lib.jbon.asArray
+import com.here.naksha.lib.jbon.asMap
+import com.here.naksha.lib.jbon.get
+import com.here.naksha.lib.jbon.getAny
+import com.here.naksha.lib.jbon.newMap
+import com.here.naksha.lib.jbon.put
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -72,7 +82,7 @@ do $$
     naksha.JsPlv8Env.Companion.initialize();
     let sql = new naksha.JsPlv8Sql();
     if (!naksha.Static.tableExists(sql, "naksha_collections", $schemaOid)) {
-        naksha.Static.collectionCreate(sql, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false);
+        naksha.Static.collectionCreate(sql, null, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false);
     }
 $$ LANGUAGE 'plv8';
 """
@@ -120,8 +130,8 @@ $$ LANGUAGE 'plv8';
      * Array to fasten partition id.
      */
     @JvmStatic
-    val PARTITION_ID = Array(256) {
-        if (it < 10) "00$it" else if (it < 100) "0$it" else "$it"
+    val PARTITION_ID = Array(8) {
+        "$it"
     }
 
     /**
@@ -169,10 +179,10 @@ $$ LANGUAGE 'plv8';
     /**
      * Returns the partition number.
      * @param id The feature-id for which to return the partition-id.
-     * @return The partition id as number between 0 and 255.
+     * @return The partition id as number between 0 and partitionCount.
      */
     @JvmStatic
-    fun partitionNumber(id: String): Int = Fnv1a32.string(Fnv1a32.start(), id) and 0xff
+    fun partitionNumber(id: String): Int = Fnv1a32.string(Fnv1a32.start(), id) and 0x7
 
     /**
      * Returns the partition id as three digit string.
@@ -233,9 +243,10 @@ SET (toast_tuple_target=8160"""
      * @param tableName The table name.
      * @param spGist If SP-GIST index should be used, which is better only for point geometry.
      * @param history If _true_, then optimized for historic data; otherwise a volatile HEAD table.
+     * @param tablespaceQueryPart to create indices in, should be an empty string or full query part: " TABLESPACE tablespace_name"
      */
     @JvmStatic
-    private fun collectionAddIndices(sql: IPlv8Sql, tableName: String, spGist: Boolean, history: Boolean) {
+    private fun collectionAddIndices(sql: IPlv8Sql, tableName: String, spGist: Boolean, history: Boolean, tablespaceQueryPart: String) {
         val fillFactor = if (history) "100" else "50"
         // https://www.postgresql.org/docs/current/gin-tips.html
         val geoIndexType = if (spGist) "sp-gist" else "gist"
@@ -246,43 +257,43 @@ SET (toast_tuple_target=8160"""
         // quoted index name
         var qin = sql.quoteIdent("${tableName}_id_idx")
         var query = """CREATE ${unique}INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(id COLLATE "C" text_pattern_ops DESC) WITH (fillfactor=$fillFactor);
+(id COLLATE "C" text_pattern_ops DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // txn, uid
         qin = sql.quoteIdent("${tableName}_txn_uid_idx")
         query += """CREATE UNIQUE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(txn DESC, uid DESC) WITH (fillfactor=$fillFactor);
+(txn DESC, uid DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // geo
         qin = sql.quoteIdent("${tableName}_geo_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndexType
-(naksha_geometry(geo_type,geo), txn) WITH (buffering=ON,fillfactor=$fillFactor);
+(naksha_geometry(geo_type,geo), txn) WITH (buffering=ON,fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // tags
         qin = sql.quoteIdent("${tableName}_tags_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin
-(tags_to_jsonb(tags), txn) WITH (fastupdate=ON,gin_pending_list_limit=32768);
+(tags_to_jsonb(tags), txn) WITH (fastupdate=ON,gin_pending_list_limit=32768) $tablespaceQueryPart;
 """
 
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(geo_grid COLLATE "C" text_pattern_ops DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(geo_grid COLLATE "C" text_pattern_ops DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // app_id
         qin = sql.quoteIdent("${tableName}_app_id_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(app_id COLLATE "C" DESC, updated_at DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(app_id COLLATE "C" DESC, updated_at DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // author
         qin = sql.quoteIdent("${tableName}_author_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(author COLLATE "C" DESC, author_ts DESC, txn DESC) WITH (fillfactor=$fillFactor);
+(author COLLATE "C" DESC, author_ts DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         sql.execute(query)
@@ -291,6 +302,7 @@ SET (toast_tuple_target=8160"""
     /**
      * Low level function to create a (optionally partitioned) collection table set.
      * @param sql The SQL API.
+     * @param temporary should be treated as temporary or not.
      * @param schema The schema name.
      * @param schemaOid The object-id of the schema to look into.
      * @param id The collection identifier.
@@ -298,12 +310,13 @@ SET (toast_tuple_target=8160"""
      * @param partition If the collection should be partitioned.
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
+    fun collectionCreate(sql: IPlv8Sql, temporary: Boolean, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
+        val tableConfig = TableConfig(temporary)
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
-        val CREATE_TABLE = if (!DEBUG) """CREATE TABLE {table} (
+        val CREATE_TABLE = if (!DEBUG) """CREATE ${tableConfig.unlogged()} TABLE {table} (
     txn_next    int8 NOT NULL CHECK(txn_next {condition}),
     txn         int8 NOT NULL,
     uid         int4 NOT NULL,
@@ -322,7 +335,7 @@ SET (toast_tuple_target=8160"""
     tags        bytea COMPRESSION lz4,
     geo         bytea COMPRESSION lz4,
     feature     bytea COMPRESSION lz4 NOT NULL
-) """ else """CREATE TABLE {table} (
+) """ else """CREATE ${tableConfig.unlogged()} TABLE {table} (
     txn_next    int8,
     txn         int8,
     uid         int4,
@@ -348,23 +361,27 @@ SET (toast_tuple_target=8160"""
         val headNameQuoted = sql.quoteIdent(id)
         query = CREATE_TABLE.replace("{table}", headNameQuoted)
         query = query.replace("{condition}", "= 0")
+
         if (!partition) {
+            query += tableConfig.tablespaceQueryPart()
             sql.execute(query)
             collectionOptimizeTable(sql, id, false)
-            collectionAddIndices(sql, id, geoIndex, false)
+            collectionAddIndices(sql, id, geoIndex, false, tableConfig.tablespaceQueryPart())
         } else {
             query += "PARTITION BY RANGE (naksha_partition_number(id))"
+            query += tableConfig.tablespaceQueryPart()
             sql.execute(query)
             var i = 0
-            while (i < 256) {
+            while (i < PARTITION_COUNT) {
                 val partName = id + "_p" + PARTITION_ID[i]
                 val partNameQuoted = sql.quoteIdent(partName)
-                query = "CREATE TABLE $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($i) "
-                i++
-                query += "TO ($i)"
+                query = "CREATE ${tableConfig.unlogged()} TABLE $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($i) "
+                query += "TO (${i+1})"
+                query += tableConfig.tablespaceQueryPart()
                 sql.execute(query)
                 collectionOptimizeTable(sql, partName, false)
-                collectionAddIndices(sql, partName, geoIndex, false)
+                collectionAddIndices(sql, partName, geoIndex, false, tableConfig.tablespaceQueryPart())
+                i++
             }
         }
         if (!DEBUG) collectionAttachTriggers(sql, id, schema, schemaOid)
@@ -380,18 +397,20 @@ SET (toast_tuple_target=8160"""
         val delNameQuoted = sql.quoteIdent(delName)
         query = CREATE_TABLE.replace("{table}", delNameQuoted)
         query = query.replace("{condition}", "= 0")
+        query += tableConfig.tablespaceQueryPart()
         sql.execute(query)
         collectionOptimizeTable(sql, delName, false)
-        collectionAddIndices(sql, delName, geoIndex, false)
+        collectionAddIndices(sql, delName, geoIndex, false, tableConfig.tablespaceQueryPart())
 
         // META.
         val metaName = id + "_meta"
         val metaNameQuoted = sql.quoteIdent(metaName)
         query = CREATE_TABLE.replace("{table}", metaNameQuoted)
         query = query.replace("{condition}", "= 0")
+        query += tableConfig.tablespaceQueryPart()
         sql.execute(query)
         collectionOptimizeTable(sql, metaName, false)
-        collectionAddIndices(sql, metaName, geoIndex, false)
+        collectionAddIndices(sql, metaName, geoIndex, false, tableConfig.tablespaceQueryPart())
 
         // HISTORY.
         val hstName = id + "_hst"
@@ -399,6 +418,7 @@ SET (toast_tuple_target=8160"""
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
         query = query.replace("{condition}", ">= 0")
         query += "PARTITION BY RANGE (txn_next)"
+        query += tableConfig.tablespaceQueryPart()
         sql.execute(query)
     }
 
@@ -454,19 +474,40 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param collectionId has to be pure (without _hst suffix).
      */
     @JvmStatic
-    fun createHstPartition(sql: IPlv8Sql, collectionId: String, txnNext: NakshaTxn, spGist: Boolean): String {
+    fun createHstPartition(sql: IPlv8Sql, temporary: Boolean, collectionId: String, txnNext: NakshaTxn, geoIndex: Boolean, partition: Boolean?): String {
         val hstPartName = hstPartitionNameForId(collectionId, txnNext)
         val partNameQuoted = sql.quoteIdent(hstPartName)
         val headNameQuoted = sql.quoteIdent(hstHeadNameForId(collectionId))
-        val start = NakshaTxn.of(txnNext.year(), txnNext.month(), txnNext.day(), NakshaTxn.SEQ_MIN).value
-        val end = NakshaTxn.of(txnNext.year(), txnNext.month(), txnNext.day(), NakshaTxn.SEQ_MAX).value
+        val start = NakshaTxn.of(txnNext.year(), 0, 0, NakshaTxn.SEQ_MIN).value
+        val end = NakshaTxn.of(txnNext.year(), 12, 31, NakshaTxn.SEQ_MAX).value
+        val tableConfig = TableConfig(temporary)
+        val tablespaceQueryPart = tableConfig.tablespaceQueryPart()
+        var query = "CREATE ${tableConfig.unlogged()} TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end) "
+        if (partition == true) {
+            query += "PARTITION BY RANGE (naksha_partition_number(id)) $tablespaceQueryPart"
+            sql.execute(query)
 
-        val query = "CREATE TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end);"
-        sql.execute(query)
-        collectionOptimizeTable(sql, hstPartName, true)
-        collectionAddIndices(sql, hstPartName, spGist, true)
+            for (subPartition in 0..<PARTITION_COUNT) {
+                createHstSubPartition(sql, hstPartName, geoIndex, subPartition, tableConfig)
+            }
+        } else {
+            query += tablespaceQueryPart
+            sql.execute(query)
+            collectionOptimizeTable(sql, partNameQuoted, true)
+            collectionAddIndices(sql, partNameQuoted, geoIndex, true, tablespaceQueryPart)
+        }
 
         return hstPartName
+    }
+
+    private fun createHstSubPartition(sql: IPlv8Sql, hstPartName: String, geoIndex: Boolean, subPartition: Int, tableConfig: TableConfig) {
+        val hstSubPartName = "${hstPartName}_$subPartition"
+        val subPartNameQuoted = sql.quoteIdent(hstSubPartName)
+        val hstNameQuoted = sql.quoteIdent(hstPartName)
+        val query = "CREATE ${tableConfig.unlogged()} TABLE IF NOT EXISTS $subPartNameQuoted PARTITION OF $hstNameQuoted FOR VALUES FROM ($subPartition) TO (${subPartition + 1}) ${tableConfig.tablespaceQueryPart()};"
+        sql.execute(query)
+        collectionOptimizeTable(sql, hstSubPartName, true)
+        collectionAddIndices(sql, hstSubPartName, geoIndex, true, tableConfig.tablespaceQueryPart())
     }
 
     /**
@@ -511,8 +552,8 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param id The collection identifier.
      * @return _true_ if the collection identifier is valid; _false_ otherwise.
      */
-    fun isValidCollectionId(id: String?) : Boolean {
-        if (id.isNullOrEmpty() || "naksha"==id || id.length > 32) return false
+    fun isValidCollectionId(id: String?): Boolean {
+        if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) return false
         var i = 0
         var c = id[i++]
         // First character must be a-z
@@ -520,8 +561,8 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         while (i < id.length) {
             c = id[i++]
             when (c.code) {
-                in 'a'.code .. 'z'.code -> continue
-                in '0'.code .. '9'.code -> continue
+                in 'a'.code..'z'.code -> continue
+                in '0'.code..'9'.code -> continue
                 '_'.code, ':'.code, '-'.code -> continue
                 else -> return false
             }

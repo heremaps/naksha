@@ -2,7 +2,7 @@ package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
 
-data class FeatureRow(
+class FeatureRow(
         val rowMap: IMap,
         val xyzOp: XyzOp,
         val collectionId: String
@@ -23,7 +23,7 @@ data class FeatureRow(
             check(op_arr.size == feature_arr.size && op_arr.size == geo_type_arr.size && op_arr.size == geo_arr.size && op_arr.size == tags_arr.size) {
                 "not all input arrays has same size"
             }
-            val featureReader = JbFeature()
+            val featureReader = JbFeature(JbDictManager())
             val operations = ArrayList<FeatureRow>(op_arr.size)
             val idsToModify = ArrayList<String>(op_arr.size)
             for (i in op_arr.indices) {
