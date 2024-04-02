@@ -164,7 +164,7 @@ public class XyzCollection extends NakshaFeature {
   @AvailableSince(NakshaVersion.v3_0_0_alpha_8)
   @JsonProperty(TEMPORARY)
   @JsonInclude(Include.NON_DEFAULT)
-  private Boolean temporary = false;
+  private boolean temporary = false;
 
   /**
    * Returns {@code true} if this collection is unlogged (optimized for performance, but not crash safe).
