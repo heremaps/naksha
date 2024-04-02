@@ -9,9 +9,7 @@ import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
 import java.sql.Connection
 import java.sql.DriverManager
-import java.util.*
 import java.util.concurrent.atomic.AtomicReferenceArray
-import kotlin.collections.ArrayList
 import kotlin.test.assertEquals
 
 @Suppress("ArrayInDataClass")
@@ -237,7 +235,6 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
     @Test
     fun bulkLoadFeatures() {
         val tableName = "v2_bulk_test"
-
         createCollection(tableName, partition = true, disableHistory = true)
 
         // Run for 8 threads.
@@ -247,7 +244,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         while (i < BulkSize) {
             val f = createBulkFeature()
             val p = f.partId
-            check(p in 0..255)
+            check(p in 0..<PARTITION_COUNT)
             check(p == Static.partitionNumber(f.id))
             featuresDone.setRelease(p, false)
             val list = features[p]
@@ -281,7 +278,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
                     val threadSession = NakshaSession.get()
                     conn.commit()
                     var p = 0
-                    while (p < 256) {
+                    while (p < PARTITION_COUNT) {
                         if (featuresDone.compareAndSet(p, false, true)) {
                             val list = features[p]
                             val partName = Static.PARTITION_ID[p]
@@ -396,7 +393,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
         op = builder.buildXyzOp(XYZ_OP_CREATE, "$tableName", null, "vgrid")
-        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName", "partition":$partition, "disableHistory": $disableHistory}""")))
+        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partition":$partition,"disableHistory": $disableHistory}""")))
         result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)

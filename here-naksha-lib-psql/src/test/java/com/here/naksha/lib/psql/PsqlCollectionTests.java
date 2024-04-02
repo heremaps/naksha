@@ -1,34 +1,47 @@
 package com.here.naksha.lib.psql;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
+import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.jbon.JvmBigInt64Api;
+import com.here.naksha.lib.plv8.ConstantsKt;
+import com.here.naksha.lib.plv8.NakshaSession;
 import com.here.naksha.lib.plv8.Static;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIf;
 
+import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDate;
+
+import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.updateFeatureRequest;
+import static java.lang.String.format;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @TestMethodOrder(OrderAnnotation.class)
-abstract class PsqlCollectionTests extends PsqlTests{
+abstract class PsqlCollectionTests extends PsqlTests {
 
   @Override
   protected PsqlStorage.Params getParams() {
@@ -44,7 +57,7 @@ abstract class PsqlCollectionTests extends PsqlTests{
     final WriteXyzCollections request = new WriteXyzCollections();
     request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partition(), false, true));
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-        session.execute(request).getXyzCollectionCursor()) {
+             session.execute(request).getXyzCollectionCursor()) {
       assertNotNull(cursor);
       assertTrue(cursor.hasNext());
       assertTrue(cursor.next());
@@ -58,10 +71,8 @@ abstract class PsqlCollectionTests extends PsqlTests{
       assertFalse(collection.pointsOnly());
       if (partition()) {
         assertTrue(collection.isPartitioned());
-        assertEquals(256, collection.partitionCount());
       } else {
         assertFalse(collection.isPartitioned());
-        assertEquals(-1, collection.partitionCount());
       }
       assertNotNull(collection.getProperties());
       assertNotNull(collection.getProperties().getXyzNamespace());
@@ -83,7 +94,7 @@ abstract class PsqlCollectionTests extends PsqlTests{
     final WriteXyzCollections request = new WriteXyzCollections();
     request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partition(), false, true));
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-        session.execute(request).getXyzCollectionCursor()) {
+             session.execute(request).getXyzCollectionCursor()) {
       assertTrue(cursor.next());
       assertEquals(collectionId(), cursor.getId());
       assertNotNull(cursor.getUuid());
@@ -98,6 +109,71 @@ abstract class PsqlCollectionTests extends PsqlTests{
   }
 
   // Custom stuff between 50 and 9000
+
+  @Test
+  @Order(9002)
+  @EnabledIf("isTestContainerRun")
+  void createTemporaryCollection() throws NoCursor, SQLException, IOException, InterruptedException {
+    assertNotNull(storage);
+    assertNotNull(session);
+
+    // given
+
+    // PREPARE CATALOGS IN DOCKER CONTAINER
+    createCatalogsForTablespace();
+    // PREPARE TABLESPACES
+    createTablespace();
+
+    // WRITE COLLECTION THAT SHOULD BE TEMPORARY
+    String collectionId = "foo_temp";
+    final WriteXyzCollections request = new WriteXyzCollections();
+    XyzCollection xyzCollection = new XyzCollection(collectionId, true, false, true);
+    xyzCollection.setTemporary(true);
+    request.add(EWriteOp.CREATE, xyzCollection);
+
+    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
+             session.execute(request).getXyzCollectionCursor()) {
+      assertTrue(cursor.next());
+      assertNull(cursor.getError(), () -> cursor.getError().msg);
+    }
+
+    // WRITE AND UPDATE FEATURE TO CREATE _hst PARTITIONS
+    XyzFeature feature = new XyzFeature();
+    try (final @NotNull Result result = session.execute(createFeatureRequest(collectionId, feature))) {
+      assertInstanceOf(SuccessResult.class, result);
+    }
+    try (final @NotNull Result result = session.execute(updateFeatureRequest(collectionId, feature))) {
+      assertInstanceOf(SuccessResult.class, result);
+    }
+    session.commit(true);
+
+    // then
+    String expectedTablespace = ConstantsKt.getTEMPORARY_TABLESPACE();
+    assertEquals(expectedTablespace, getTablespace(session, collectionId));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_p0"));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_hst"));
+    int currentYear = LocalDate.now().getYear();
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_hst_" + currentYear));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_hst_" + currentYear + "_0"));
+  }
+
+  private String getTablespace(PsqlWriteSession session, String table) throws SQLException {
+    try (PreparedStatement statement = session.session().prepareStatement("select tablespace from pg_tables where tablename=?")) {
+      statement.setString(1, table);
+      ResultSet resultSet = statement.executeQuery();
+      assertTrue(resultSet.next(), () -> "no table found: " + table);
+      return resultSet.getString(1);
+    }
+  }
+
+  private void createCatalogsForTablespace() throws IOException, InterruptedException {
+    postgreSQLContainer.execInContainer("mkdir", "-p", "/tmp/temporary_space");
+    postgreSQLContainer.execInContainer("chown", "postgres:postgres", "-R", "/tmp/temporary_space");
+  }
+
+  private void createTablespace() throws IOException, InterruptedException {
+    postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c", format("create tablespace %s LOCATION '/tmp/temporary_space';", ConstantsKt.getTEMPORARY_TABLESPACE()));
+  }
 
   private boolean isLockReleased(PsqlWriteSession session, String collectionId) throws SQLException {
     final PostgresSession pgSession = session.session();

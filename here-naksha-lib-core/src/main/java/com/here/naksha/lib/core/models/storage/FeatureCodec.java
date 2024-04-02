@@ -29,6 +29,7 @@ import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.jbon.JbDict;
+import com.here.naksha.lib.jbon.JbDictManager;
 import com.here.naksha.lib.jbon.JbFeature;
 import com.here.naksha.lib.jbon.JbMap;
 import com.here.naksha.lib.jbon.JvmEnv;
@@ -567,7 +568,8 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
 
   @SuppressWarnings("unchecked")
   protected FEATURE getFeatureFromJbon(@NotNull Class<FEATURE> featureClass) {
-    JbFeature jbFeature = new JbFeature().mapBytes(featureBytes, 0, featureBytes.length);
+    // FIXME use existing DictManager
+    JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(featureBytes, 0, featureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>)
         new JbMap().mapReader(jbFeature.getReader()).toIMap();
     return JvmEnv.get().convert(featureAsMap, featureClass);

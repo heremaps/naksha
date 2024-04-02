@@ -29,6 +29,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzTags
 import com.here.naksha.lib.jbon.IMap;
 import com.here.naksha.lib.jbon.JbBuilder;
 import com.here.naksha.lib.jbon.JbDict;
+import com.here.naksha.lib.jbon.JbDictManager;
 import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.JvmMap;
 import com.here.naksha.lib.jbon.XyzBuilder;
@@ -160,8 +161,9 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     if (tagsBytes == null) {
       return null;
     }
+    // FIXME use existing DictManager.
     com.here.naksha.lib.jbon.XyzTags xyzTags =
-        new com.here.naksha.lib.jbon.XyzTags().mapBytes(tagsBytes, 0, tagsBytes.length);
+        new com.here.naksha.lib.jbon.XyzTags(new JbDictManager()).mapBytes(tagsBytes, 0, tagsBytes.length);
     XyzTags tags = new XyzTags();
     tags.addAll(List.of(xyzTags.tagsArray()));
     return tags;
