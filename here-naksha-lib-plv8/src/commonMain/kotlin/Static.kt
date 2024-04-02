@@ -371,17 +371,8 @@ SET (toast_tuple_target=8160"""
             query += "PARTITION BY RANGE (naksha_partition_number(id))"
             query += tableConfig.tablespaceQueryPart()
             sql.execute(query)
-            var i = 0
-            while (i < PARTITION_COUNT) {
-                val partName = id + "_p" + PARTITION_ID[i]
-                val partNameQuoted = sql.quoteIdent(partName)
-                query = "CREATE ${tableConfig.unlogged()} TABLE $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($i) "
-                query += "TO (${i+1})"
-                query += tableConfig.tablespaceQueryPart()
-                sql.execute(query)
-                collectionOptimizeTable(sql, partName, false)
-                collectionAddIndices(sql, partName, geoIndex, false, tableConfig.tablespaceQueryPart())
-                i++
+            for (part in 0..<PARTITION_COUNT) {
+                createSubPartition(sql, id, "${id}_p$part", geoIndex, part, tableConfig, false)
             }
         }
         if (!DEBUG) collectionAttachTriggers(sql, id, schema, schemaOid)
@@ -397,10 +388,20 @@ SET (toast_tuple_target=8160"""
         val delNameQuoted = sql.quoteIdent(delName)
         query = CREATE_TABLE.replace("{table}", delNameQuoted)
         query = query.replace("{condition}", "= 0")
-        query += tableConfig.tablespaceQueryPart()
-        sql.execute(query)
-        collectionOptimizeTable(sql, delName, false)
-        collectionAddIndices(sql, delName, geoIndex, false, tableConfig.tablespaceQueryPart())
+
+        if (!partition) {
+            query += tableConfig.tablespaceQueryPart()
+            sql.execute(query)
+            collectionOptimizeTable(sql, delName, false)
+            collectionAddIndices(sql, delName, geoIndex, false, tableConfig.tablespaceQueryPart())
+        } else {
+            query += "PARTITION BY RANGE (naksha_partition_number(id))"
+            query += tableConfig.tablespaceQueryPart()
+            sql.execute(query)
+            for (part in 0..<PARTITION_COUNT) {
+                createSubPartition(sql, delName, "${delName}_p$part", geoIndex, part, tableConfig, false)
+            }
+        }
 
         // META.
         val metaName = id + "_meta"
@@ -488,30 +489,29 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
             sql.execute(query)
 
             for (subPartition in 0..<PARTITION_COUNT) {
-                createHstSubPartition(sql, hstPartName, geoIndex, subPartition, tableConfig)
+                createSubPartition(sql, hstPartName, "${hstPartName}_$subPartition", geoIndex, subPartition, tableConfig, true)
             }
         } else {
             query += tablespaceQueryPart
             sql.execute(query)
-            collectionOptimizeTable(sql, partNameQuoted, true)
-            collectionAddIndices(sql, partNameQuoted, geoIndex, true, tablespaceQueryPart)
+            collectionOptimizeTable(sql, hstPartName, true)
+            collectionAddIndices(sql, hstPartName, geoIndex, true, tablespaceQueryPart)
         }
 
         return hstPartName
     }
 
-    private fun createHstSubPartition(sql: IPlv8Sql, hstPartName: String, geoIndex: Boolean, subPartition: Int, tableConfig: TableConfig) {
-        val hstSubPartName = "${hstPartName}_$subPartition"
-        val subPartNameQuoted = sql.quoteIdent(hstSubPartName)
-        val hstNameQuoted = sql.quoteIdent(hstPartName)
-        val query = "CREATE ${tableConfig.unlogged()} TABLE IF NOT EXISTS $subPartNameQuoted PARTITION OF $hstNameQuoted FOR VALUES FROM ($subPartition) TO (${subPartition + 1}) ${tableConfig.tablespaceQueryPart()};"
+    private fun createSubPartition(sql: IPlv8Sql, basicTableName: String, partitionName: String, geoIndex: Boolean, subPartition: Int, tableConfig: TableConfig, history: Boolean) {
+        val subPartNameQuoted = sql.quoteIdent(partitionName)
+        val basicNameQuoted = sql.quoteIdent(basicTableName)
+        val query = "CREATE ${tableConfig.unlogged()} TABLE IF NOT EXISTS $subPartNameQuoted PARTITION OF $basicNameQuoted FOR VALUES FROM ($subPartition) TO (${subPartition + 1}) ${tableConfig.tablespaceQueryPart()};"
         sql.execute(query)
-        collectionOptimizeTable(sql, hstSubPartName, true)
-        collectionAddIndices(sql, hstSubPartName, geoIndex, true, tableConfig.tablespaceQueryPart())
+        collectionOptimizeTable(sql, partitionName, history)
+        collectionAddIndices(sql, partitionName, geoIndex, history, tableConfig.tablespaceQueryPart())
     }
 
     /**
-     * Returns full history partition name i.e. `foo_hst_2023_02_12` for given `foo`.
+     * Returns full history partition name i.e. `foo_hst_p2023` for given `foo`.
      *
      * @param collectionId head collectionId i.e `topology`
      * @param txnNext txn to retrieve suffix from

@@ -1,6 +1,9 @@
+import arrow.core.mapOf
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
@@ -363,8 +366,8 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
             opArr[o.index] = XyzBuilder().buildXyzOp(XYZ_OP_UPDATE, xyzOp.id(), xyzOp.uuid(), xyzOp.grid())
         }
         val updateStart = currentMicros()
-        session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
-
+        val rowsUpdated = session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
+        assertEquals(0, rowsUpdated.rows.size)
         session.sql.execute("commit")
         session.clear()
         println("Update ended in: ${(currentMicros() - updateStart).toSeconds()}s")
@@ -376,8 +379,8 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
             opArr[o.index] = XyzBuilder().buildXyzOp(XYZ_OP_DELETE, xyzOp.id(), xyzOp.uuid(), xyzOp.grid())
         }
         val delStart = currentMicros()
-        session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
-
+        val rowsDeleted = session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
+        assertEquals(0, rowsDeleted.rows.size)
         session.sql.execute("commit")
 
         println("Delete ended in: ${(currentMicros() - delStart).toSeconds()}s")
