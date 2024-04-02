@@ -61,13 +61,14 @@ When creating indices for columns being unique, [disabling deduplication](https:
 ## Collections
 Within PostgresQL a collection is a set of database tables. All these tables are prefixed by the collection identifier. The tables are:
 
-- `{collection}`: The HEAD table. It is either a plain simple table or a partitioned table. When being partitioned, this is done as (`PARTITION BY BY RANGE (naksha_partition_number(id))`) with all features in their live state. This table is the only one that should be directly accessed for manual SQL queries and has triggers attached that will ensure that the history is written accordingly.
-- `{collection}$meta`: The meta table that stores cached data.
-- `{collection}$p[n]`: The HEAD partitions (`PARTITION OF {collection} FOR VALUES WITH (MODULUS {m}, REMAINDER {n})`), beware that the name of the partition is taken from `naksha_partition_id('{collection}')`, which will return a two digit value (`00..31`).
-- `{collection}$del`: The HEAD deletion table holding all features that are deleted from the HEAD table. This can be used to read zombie features (features that have been deleted, but are not yet fully unrecoverable dead).
+- `{collection}`: The HEAD table. It is either a plain simple table or a partitioned table. When being partitioned, this is done as `PARTITION BY BY RANGE (naksha_partition_number(id))`.
+  - `{collection}$p[n]`: The HEAD partitions (`PARTITION OF {collection} FOR VALUES WITH (MODULUS {n}, REMAINDER {i})`), beware that the name of the partition is taken from `naksha_partition_id('{collection}')`, which will return a two digit value (`00..31`).
+- `{collection}$del`: The DELETION table holding all features that are deleted from the HEAD table. This can be used to read zombie features (features that have been deleted, but are not yet fully unrecoverable dead). When being partitioned, this is done as `PARTITION BY BY RANGE (naksha_partition_number(id))`.
+  - `{collection}$del_p[n]`: The DELETION partitions (`PARTITION OF {collection}$del FOR VALUES WITH (MODULUS {n}, REMAINDER {i})`), beware that the name of the partition is taken from `naksha_partition_id('{collection}')`, which will return a two digit value (`00..31`).
 - `{collection}$hst`: The history table, this is always a partitioned table, partitioned by `txn_next` (`PARTITION BY BY RANGE (txn_next)`).
-- `{collection}$hst_{YYYY}`: The history partition for a specific year (`PARTITION OF {collection}$hst_{YYYY} FOR VALUES FROM naksha_txn(2023) TO naksha_txn(2024)`, optionally partitioned again by `id` (`PARTITION BY BY RANGE (naksha_partition_number(id))`), when partitioning is enabled.
-- `{collection}$hst_{YYYY}_$p[n]`: The history partition of a specific year, if partitioning is enabled (`PARTITION OF {collection}$hst_{YYYY} FOR VALUES WITH (MODULUS {m}, REMAINDER {n})`.
+  - `{collection}$hst_{YYYY}`: The history partition for a specific year (`PARTITION OF {collection}$hst_{YYYY} FOR VALUES FROM naksha_txn(2023) TO naksha_txn(2024)`, optionally partitioned again by `id` (`PARTITION BY BY RANGE (naksha_partition_number(id))`), when partitioning is enabled.
+    - `{collection}$hst_{YYYY}_$p[n]`: The history partition of a specific year, if partitioning is enabled (`PARTITION OF {collection}$hst_{YYYY} FOR VALUES WITH (MODULUS {m}, REMAINDER {n})`.
+- `{collection}$meta`: The meta table that stores cached data.
 
 **Notes:**
 
@@ -279,9 +280,6 @@ The `type` of the feature in here is always `naksha.Dictionary`.
 
 ### Collections Table (`naksha$collections`)
 This internal tables stores the configuration of all collections. The type of the features in this table is always `naksha.Collection`.
-
-### Arenas Table (`naksha$arenas`)
-This internal tables stores the available and supported arenas. The type for the features in this table is always `naksha.Arena`.
 
 ### Indices Table (`naksha$indices`)
 This internal tables stores the available and supported indices. Currently, no new indices can be created, but maybe in the future manual index creation will be supported. The type for the feature is always `naksha.Index`.
