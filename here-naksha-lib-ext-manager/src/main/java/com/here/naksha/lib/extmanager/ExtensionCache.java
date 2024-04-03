@@ -145,9 +145,13 @@ public class ExtensionCache {
     if (existingMapping == null) return false;
 
     final Extension exExtension = existingMapping.getKey();
+    final String exInitClassName =
+        isNullOrEmpty(exExtension.getInitClassName()) ? "" : exExtension.getInitClassName();
+    final String initClassName = isNullOrEmpty(extension.getInitClassName()) ? "" : extension.getInitClassName();
+
     return exExtension.getUrl().equals(extension.getUrl())
         && exExtension.getVersion().equals(extension.getVersion())
-        && exExtension.getInitClassName().equals(extension.getInitClassName());
+        && exInitClassName.equals(initClassName);
   }
 
   /**
