@@ -1,9 +1,6 @@
-import arrow.core.mapOf
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
 import org.junit.jupiter.api.Assertions.assertInstanceOf
-import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
@@ -334,7 +331,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         createCollection(tableName, partition = false, disableHistory = false)
 
         var i = 0
-        var numOfFeatures = 10_000
+        val numOfFeatures = 10_000
         val opArr = ArrayList<ByteArray>(numOfFeatures)
         val fArr = ArrayList<ByteArray?>(numOfFeatures)
         val geoTypeArr = ArrayList<Short>(numOfFeatures)
@@ -382,8 +379,49 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val rowsDeleted = session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
         assertEquals(0, rowsDeleted.rows.size)
         session.sql.execute("commit")
+        session.clear()
 
         println("Delete ended in: ${(currentMicros() - delStart).toSeconds()}s")
+    }
+
+    @Order(5)
+    @Test
+    fun bulkAtomicsCheck() {
+        // executed after bulkInsertFeatures
+        val tableName = "v2_bulk_insert"
+        val f = createBulkFeature()
+        val opArr: Array<ByteArray> = arrayOf(f.op)
+        val fArr: Array<ByteArray?> = arrayOf(f.feature)
+        val geoTypeArr: Array<Short> = arrayOf(f.geoType)
+        val geoArr: Array<ByteArray?> = arrayOf(f.geometry)
+        val tagsArr: Array<ByteArray?> = arrayOf(f.tags)
+
+        // insert features
+        val insertResult = session.bulkWriteFeatures(tableName, opArr, fArr, geoTypeArr, geoArr, tagsArr)
+        assertTrue(session.sql.rows(insertResult).isNullOrEmpty())
+        session.sql.execute("commit")
+        session.clear()
+
+
+        val operationWithInvalidUuidToCheck: (Int) -> Unit = { operation ->
+            for (o in opArr.withIndex()) {
+                val xyzOp = XyzOp().mapBytes(o.value)
+                opArr[o.index] = XyzBuilder().buildXyzOp(operation, xyzOp.id(), "invalid:uid:2024:1:1:1:1", xyzOp.grid())
+            }
+            val operationResult = session.bulkWriteFeatures(tableName, opArr, fArr, geoTypeArr, geoArr, tagsArr) as JvmPlv8Table
+            val cols = asMap(operationResult.rows[0])
+            assertEquals("ERROR", cols[RET_OP])
+            assertEquals(ERR_CHECK_VIOLATION, cols[RET_ERR_NO])
+            session.sql.execute("rollback")
+            session.clear()
+        }
+
+        // update using wrong state
+        operationWithInvalidUuidToCheck(XYZ_OP_UPDATE)
+        // delete using wrong state
+        operationWithInvalidUuidToCheck(XYZ_OP_DELETE)
+        // purge using wrong state
+        operationWithInvalidUuidToCheck(XYZ_OP_PURGE)
     }
 
     private fun createCollection(tableName: String, partition: Boolean, disableHistory: Boolean) {

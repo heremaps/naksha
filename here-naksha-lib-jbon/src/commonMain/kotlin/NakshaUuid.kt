@@ -27,6 +27,20 @@ class NakshaUuid(val storageId: String, val collectionId: String, val year: Int,
                     values[6].toInt(),
             )
         }
+
+        @JvmStatic
+        fun from(storageId: String, collectionId: String, txn: BigInt64, uid: Int): NakshaUuid {
+            val nakshaTxn = NakshaTxn(txn)
+            return NakshaUuid(
+                    storageId,
+                    collectionId,
+                    nakshaTxn.year(),
+                    nakshaTxn.month(),
+                    nakshaTxn.day(),
+                    nakshaTxn.seq(),
+                    uid
+            )
+        }
     }
 
     override fun equals(other: Any?) : Boolean {
