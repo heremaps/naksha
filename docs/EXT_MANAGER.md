@@ -44,7 +44,7 @@ Extension manager expects all extension should have a folder under configured ex
 
 - jar - Extension fat jar
 - latest-{ENV}.txt - Text file which contains jar version. This value is being used in determining extension configuration json file. Here {ENV} is the environment name the Naksha service is running against.
-- {ExtensionID}-{VERSION}-{ENV}.json - It is a json file, which contains extension specific configuration. {ExtensionID} is the ID of Extension. {VERSION} is resolved value determined from latest-{ENV}.txt. And {ENV} is the environment name. This file should have below attributes 
+- {ExtensionID}-{VERSION}.{ENV}.json - It is a json file, which contains extension specific configuration. {ExtensionID} is the ID of Extension. {VERSION} is resolved value determined from latest-{ENV}.txt. And {ENV} is the environment name. This file should have below attributes 
   - id - mandatory - String representing Extension ID
   - type - mandatory - XYZFeature type. Default value is "Extension".
   - url - mandatory - Complete path of jar file (In case of S3, It should be S3 URI of extension jar)
@@ -60,12 +60,12 @@ S3 folder structure:
   |___extensions
       |___foo
           |___latest-dev.txt  
-          |___foo-1.0.0-dev.json
+          |___foo-1.0.0.dev.json
           |___foo-1.0.0.jar
 
 Contents of latest-dev.txt -> 1.0.0
 
-Contents of foo-1.0.0-dev.json ->
+Contents of foo-1.0.0.dev.json ->
 {
   "id" : "foo",
   "type": "Extension",
@@ -87,7 +87,7 @@ Loading of Extension into Naksha service is managed by 2 components:
 
 - Naksha Hub performs the job of scanning extension directories and build extension configuration. 
   - It iterates over each extension directories and looks for respective environment's latest-{ENV}.txt file. 
-  - It reads it's content and decode the extension configuration file name. Which is in the form of {ExtensionID}-{VERSION}-{ENV}.json
+  - It reads it's content and decode the extension configuration file name. Which is in the form of {ExtensionID}-{VERSION}.{ENV}.json
   - Once configuration file name is decoded it reads this file content and builds extension configuration.
 
 ### Extension Manager - `lib-ext-manager`
