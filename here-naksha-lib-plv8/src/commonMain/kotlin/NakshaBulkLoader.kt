@@ -76,6 +76,7 @@ class NakshaBulkLoader(
                             featureRowMap[COL_AUTHOR_TS] = headBeforeDelete[COL_AUTHOR_TS]
                             session.xyzDel(featureRowMap)
                             addDelStmt(plans.insertDelPlan, featureRowMap)
+                            addDeleteHeadStmt(plans.deleteHeadPlan, featureRowMap)
                             if (isHistoryDisabled == false) addCopyDelToHstStmt(plans.copyDelToHstPlan, featureRowMap)
                         }
                         if (op == XYZ_OP_PURGE) {
@@ -95,6 +96,7 @@ class NakshaBulkLoader(
             // 4. insert to history and update head
             executeBatch(plans.copyHeadToHstPlan)
             executeBatch(plans.updateHeadPlan)
+            executeBatch(plans.deleteHeadPlan)
             // 5. copy del to hst
             executeBatch(plans.copyDelToHstPlan)
             // 6.
@@ -175,6 +177,11 @@ class NakshaBulkLoader(
         stmt.addBatch()
     }
 
+    fun addDeleteHeadStmt(stmt: IPlv8Plan, row: IMap) {
+        stmt.setString(1, row[COL_ID])
+        stmt.addBatch()
+    }
+
     fun addCopyHeadToHstStmt(stmt: IPlv8Plan, row: IMap, isHstDisabled: Boolean?) {
         if (isHstDisabled == false) {
             // FIXME it's not the best idea to check it in every bulk execution, as we need to create _hst partitions only once a year.
@@ -238,16 +245,23 @@ class NakshaBulkLoader(
         val updateHeadPlan: IPlv8Plan by lazy {
             session.sql.prepare("""
                     UPDATE $partitionHeadQuoted 
-                    SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_GEO_TYPE=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE id=$21
+                    SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_GEO_TYPE=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE $COL_ID=$21
                     """.trimIndent(),
                     arrayOf(*COL_ALL_TYPES, SQL_STRING))
+        }
+        val deleteHeadPlan: IPlv8Plan by lazy {
+            session.sql.prepare("""
+                    DELETE FROM $partitionHeadQuoted
+                    WHERE $COL_ID = $1
+                    """.trimIndent(),
+                    arrayOf(SQL_STRING))
         }
         val insertDelPlan: IPlv8Plan by lazy {
             // ptxn + puid = txn + uid (as we generate new state in _del)
             session.sql.prepare("""
                     INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
                     SELECT null,$1,$2,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$3,$4,$COL_CREATED_AT,$4,$5,$6,$7,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
-                        FROM $partitionHeadQuoted WHERE id = $8""".trimIndent(),
+                        FROM $partitionHeadQuoted WHERE $COL_ID = $8""".trimIndent(),
                     arrayOf(SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
         }
 
@@ -255,12 +269,12 @@ class NakshaBulkLoader(
             session.sql.prepare("""
                 INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
                 SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
-                    FROM $partitionHeadQuoted WHERE id = $2
+                    FROM $partitionHeadQuoted WHERE $COL_ID = $2
                 """.trimIndent(), arrayOf(SQL_INT64, SQL_STRING))
         }
 
         val copyDelToHstPlan: IPlv8Plan by lazy {
-            session.sql.prepare("INSERT INTO $hstCollectionIdQuoted ($COL_ALL) SELECT $COL_ALL FROM $delCollectionIdQuoted WHERE id = $1", arrayOf(SQL_STRING))
+            session.sql.prepare("INSERT INTO $hstCollectionIdQuoted ($COL_ALL) SELECT $COL_ALL FROM $delCollectionIdQuoted WHERE $COL_ID = $1", arrayOf(SQL_STRING))
         }
     }
 }

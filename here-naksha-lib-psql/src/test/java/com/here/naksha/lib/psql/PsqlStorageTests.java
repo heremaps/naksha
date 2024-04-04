@@ -53,6 +53,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -899,6 +900,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     }
   }
 
+  private static XyzFeature bulkInsertedFeature;
+
   @Test
   @Order(70)
   @EnabledIf("runTest")
@@ -906,6 +909,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(storage);
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
     final XyzFeature feature = fg.newRandomFeature();
+    bulkInsertedFeature = feature;
     request.add(EWriteOp.CREATE, feature);
     PsqlWriteSession writeSession = storage.newWriteSession(nakshaContext, true);
     try (Result result = writeSession.executeBulkWriteFeatures(request)) {
@@ -1028,6 +1032,37 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(request.features.get(1).getId(), cursor.getId());
     } finally {
       session.commit(true);
+    }
+  }
+
+  @Test
+  @Order(74)
+  @EnabledIf("runTest")
+  void miniBulkDelete() throws NoCursor {
+    assertNotNull(storage);
+    ReadFeatures readReqBefore = RequestHelper.readFeaturesByIdRequest(collectionId(), bulkInsertedFeature.getId());
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+                 session.execute(readReqBefore).getXyzFeatureCursor()) {
+      assertTrue(cursor.hasNext());
+      assertTrue(cursor.next());
+      final XyzFeature feature = cursor.getFeature();
+      assertEquals(bulkInsertedFeature.getId(), feature.getId());
+    }
+
+    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
+    request.delete(bulkInsertedFeature);
+    PsqlWriteSession writeSession = storage.newWriteSession(nakshaContext, true);
+    try (Result result = writeSession.executeBulkWriteFeatures(request)) {
+      assertInstanceOf(SuccessResult.class, result);
+    } finally {
+      writeSession.commit(true);
+    }
+
+    ReadFeatures readReqAfter = RequestHelper.readFeaturesByIdRequest(collectionId(), bulkInsertedFeature.getId());
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+                 session.execute(readReqAfter).getXyzFeatureCursor()) {
+      assertFalse(cursor.hasNext());
+      assertThrowsExactly(NoSuchElementException.class, cursor::next);
     }
   }
 
