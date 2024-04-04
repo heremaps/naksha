@@ -15,6 +15,8 @@ import kotlin.test.assertEquals
 @Suppress("ArrayInDataClass")
 class Plv8PerfTest : Plv8TestContainer() {
 
+    val GRID = 111
+
     data class Features(
             val size: Int,
             val idArr: Array<String?>,
@@ -67,7 +69,7 @@ class Plv8PerfTest : Plv8TestContainer() {
             val id: String = env.randomString(12)
             topology["id"] = id
             idArr[i] = id
-            opArr[i] = builder.buildXyzOp(XYZ_OP_CREATE, id, null, "vgrid")
+            opArr[i] = builder.buildXyzOp(XYZ_OP_CREATE, id, null, GRID)
             featureArr[i] = builder.buildFeatureFromMap(topology)
             i++
         }
@@ -108,14 +110,14 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val session = NakshaSession.get()
         val builder = XyzBuilder.create(65536)
 
-        var op = builder.buildXyzOp(XYZ_OP_DELETE, "v2_perf_test", null, "vgrid")
+        var op = builder.buildXyzOp(XYZ_OP_DELETE, "v2_perf_test", null, GRID)
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
         var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         var table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
-        op = builder.buildXyzOp(XYZ_OP_CREATE, "v2_perf_test", null, "vgrid")
+        op = builder.buildXyzOp(XYZ_OP_CREATE, "v2_perf_test", null, GRID)
         feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
         result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
@@ -136,7 +138,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
                     var i = 0
                     while (i < FeaturesPerRound) {
                         stmt.setString(1, features.idArr[i])
-                        stmt.setString(2, "vgrid")
+                        stmt.setInt(2, GRID)
                         stmt.setBytes(3, features.featureArr[i])
                         stmt.addBatch()
                         i++
@@ -220,7 +222,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val topology = getSmallTopologyFeature()
         topology["id"] = id
         val partId = Static.partitionNumber(id)
-        val op = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, id, null, "vgrid")
+        val op = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, id, null, GRID)
         var featureBytes = this.featureBytes
         if (featureBytes == null) {
             featureBytes = xyzBuilder.buildFeatureFromMap(topology)
@@ -426,14 +428,14 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
 
     private fun createCollection(tableName: String, partition: Boolean, disableHistory: Boolean) {
         val builder = XyzBuilder.create(65536)
-        var op = builder.buildXyzOp(XYZ_OP_DELETE, "$tableName", null, "vgrid")
+        var op = builder.buildXyzOp(XYZ_OP_DELETE, "$tableName", null, GRID)
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
         var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         var table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
-        op = builder.buildXyzOp(XYZ_OP_CREATE, "$tableName", null, "vgrid")
+        op = builder.buildXyzOp(XYZ_OP_CREATE, "$tableName", null, GRID)
         feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partition":$partition,"disableHistory": $disableHistory}""")))
         result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)

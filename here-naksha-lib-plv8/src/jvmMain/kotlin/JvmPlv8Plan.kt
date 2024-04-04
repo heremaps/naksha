@@ -1,9 +1,11 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.SQL_INT64
 import com.here.naksha.lib.jbon.toLong
 import java.sql.Connection
 import java.sql.PreparedStatement
+import java.sql.Types
 
 /**
  * The Java implementation of a plan.
@@ -41,15 +43,15 @@ class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : IPlv8
     }
 
     override fun setLong(parameterIndex: Int, value: BigInt64?) {
-        stmt.setLong(parameterIndex, value?.toLong() ?: 0)
+        setValueOrNull(parameterIndex, value?.toLong(), Types.BIGINT, stmt::setLong)
     }
 
     override fun setInt(parameterIndex: Int, value: Int?) {
-        stmt.setInt(parameterIndex, value ?: 0)
+        setValueOrNull(parameterIndex, value, Types.INTEGER, stmt::setInt)
     }
 
     override fun setShort(parameterIndex: Int, value: Short?) {
-        stmt.setShort(parameterIndex, value ?: 0)
+        setValueOrNull(parameterIndex, value, Types.SMALLINT, stmt::setShort)
     }
 
     override fun addBatch() {
@@ -58,6 +60,14 @@ class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : IPlv8
 
     override fun executeBatch(): IntArray {
         return stmt.executeBatch()
+    }
+
+    fun <T> setValueOrNull(parameterIndex: Int, value: T?, sqlType: Int, setter: (Int, T) -> Unit) {
+        if (value == null) {
+            stmt.setNull(parameterIndex, sqlType)
+        } else {
+            setter(parameterIndex, value)
+        }
     }
 
     override fun free() {

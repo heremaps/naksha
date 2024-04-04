@@ -43,7 +43,7 @@ class NakshaSessionTest : Plv8TestContainer() {
     private fun createCollection(session: NakshaSession, collectionId: String, partition: Boolean = false, disableHistory: Boolean = true) {
         val collectionJson = """{"id":"$collectionId","type":"NakshaCollection","maxAge":3560,"partition":$partition,"pointsOnly":false,"properties":{},"disableHistory":$disableHistory}"""
         val builder = XyzBuilder.create(65536)
-        val op = builder.buildXyzOp(XYZ_OP_CREATE, collectionId, null, "vgrid")
+        val op = builder.buildXyzOp(XYZ_OP_CREATE, collectionId, null, 1111)
         val feature = builder.buildFeatureFromMap(asMap(env.parse(collectionJson)))
         session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
     }

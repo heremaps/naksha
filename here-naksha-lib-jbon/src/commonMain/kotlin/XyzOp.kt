@@ -13,7 +13,7 @@ class XyzOp : XyzStruct<XyzOp>() {
     private var op: Int = 0
     private var id: String? = null
     private var uuid: String? = null
-    private var grid: String? = null
+    private var grid: Int? = null
 
     companion object {
         @JvmStatic
@@ -41,14 +41,14 @@ class XyzOp : XyzStruct<XyzOp>() {
         check(reader.nextUnit())
         uuid = if (reader.isString()) reader.readString() else null
         check(reader.nextUnit())
-        grid = if (reader.isString()) reader.readString() else null
+        grid = if (reader.isInt()) reader.readInt32() else null
         reader.nextUnit()
     }
 
     fun op(): Int = op
     fun id(): String? = id
     fun uuid(): String? = uuid
-    fun grid(): String? = grid
+    fun grid(): Int? = grid
     fun toIMap() : IMap {
         val map = Jb.map.newMap()
         map["op"] = getOpName(op)

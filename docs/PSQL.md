@@ -22,31 +22,28 @@ Actually, the storage engine will split this information apart as show in the fo
 ## Table layout
 All tables used in the Naksha PostgresQL implementation have the same general layout, what simplifies access:
 
-| Column     | Type  | RO  | Modifiers | Description                                                                        |
-|------------|-------|-----|-----------|------------------------------------------------------------------------------------|
-| created_at | int8  | yes |           | `f.p.xyz->createdAt` - `COALESCE(created_at, updated_at)`                          |
-| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                                               |
-| author_ts  | int8  | yes |           | `f.p.xyz->authorTs` - `COALESCE(author_ts, updated_at)`                            |
-| version    | int8  | yes |           | `f.p.xyz->version` - `COALESCE(version, 1)`                                        |
-| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                          |
-| txn_next   | int8  | yes |           | `f.p.xyz->txn_next` - **Only in history**.                                         |
-| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Row identifier.                                                 |
-| mtxn       | int8  | yes |           | `f.p.xyz->muuid` - Row identifier.                                                 |
-| uid        | int4  | yes |           | `f.p.xyz->uuid` - Primary row identifier - `COALESCE(uid, 0)`                      |
-| uid_next   | int4  | yes |           | `f.p.xyz->uuid` - **Only in history**.                                             |
-| puid       | int4  | yes |           | `f.p.xyz->puuid` - Row identifier                                                  |
-| muid       | int4  | yes |           | `f.p.xyz->muuid` - Row identifier                                                  |
-| geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                   |
-| geo_type   | int2  | no  |           | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).                         |
-| action     | int2  | yes |           | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2) - `COALESCE(action, 0)`     |
-| app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                  |
-| author     | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                     |
-| type       | text  | yes |           | `COALESCE(f.momType, f.type)` - The **type** of the feature, `NULL` for `Feature`. |
-| id         | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                                |
-| feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.                 |
-| tags       | bytea | no  |           | `f.p.xyz->tags`                                                                    |
-| geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                                       |
-| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`) .                    |
+| Column     | Type  | RO  | Modifiers | Description                                                                                       |
+|------------|-------|-----|-----------|---------------------------------------------------------------------------------------------------|
+| created_at | int8  | yes |           | `f.p.xyz->createdAt` - `COALESCE(created_at, updated_at)`                                         |
+| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                                                              |
+| author_ts  | int8  | yes |           | `f.p.xyz->authorTs` - `COALESCE(author_ts, updated_at)`                                           |
+| version    | int8  | yes |           | `f.p.xyz->version` - `COALESCE(version, 1)`                                                       |
+| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                                         |
+| txn_next   | int8  | yes |           | `f.p.xyz->uuid_next` - **Only in history**.                                                       |
+| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Row identifier.                                                                |
+| uid        | int4  | yes |           | `f.p.xyz->uuid` - Primary row identifier - `COALESCE(uid, 0)`                                     |
+| puid       | int4  | yes |           | `f.p.xyz->puuid` - Row identifier                                                                 |
+| geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                                  |
+| geo_type   | int2  | no  |           | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).                                        |
+| action     | int2  | yes |           | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2) - `COALESCE(action, 0)`                    |
+| app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                                 |
+| author     | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                                    |
+| type       | text  | yes |           | `COALESCE(f.momType, f.type)` - The **type** of the feature, `NULL` means collection.defaultType. |
+| id         | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                                               |
+| feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.                                |
+| tags       | bytea | no  |           | `f.p.xyz->tags`                                                                                   |
+| geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                                                      |
+| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`) .                                   |
 
 In the table above `f` refers to the feature root, `f.p` refers to the content of the `properties` of the feature, and `f.p.xyz` refers to the `@ns:com:here:xyz` key in the `properties` of the feature (which is called XYZ namespace for historical reason).
 
@@ -176,9 +173,9 @@ The steps are:
 1. Query all features in the **bbox**. Limit the query by the partition size (**MAX**). Only read the ids.
 2. If less than **MAX** ids are returned, create the feature count, _done_.
 3. Otherwise, create four sub-tasks that each get a new **bbox**, being a fourth of the current **bbox** (so top-left, top-right, bottom-left and bottom-right).
-   - Every child should use an own database connection.
-   - This can be optimized, by creating 4 read-replicas and use them round-robin, when we have too many features.
-   - This will as well distribute the load fair between the four replicas.
+  - Every child should use an own database connection.
+  - This can be optimized, by creating 4 read-replicas and use them round-robin, when we have too many features.
+  - This will as well distribute the load fair between the four replicas.
 4. Start all four sub-tasks, each will start over again at (1) using the new **bbox**.
 
 This results in an optimal partitioning, basically just a special feature that is stored within the meta-table of a collection. The properties of this features should hold a property `by_qrid`, which is a map like `Map<HereRefIdPrefix, FeatureCount>`.
@@ -249,9 +246,7 @@ The transaction logs are stored in the `naksha$txn` table. Actually, the only di
 | txn        | int8  | yes | NOT NULL     | `f.p.xyz->uuid` - Primary row identifier.                                                 |
 | txn_next   | int8  | yes |              | Always `NULL`.                                                                            |
 | ptxn       | int8  | yes |              | Always `NULL`.                                                                            |
-| mtxn       | int8  | yes |              | Always `NULL`.                                                                            |
 | uid        | int4  | yes |              | Always `NULL`.                                                                            |
-| uid_next   | int4  | yes |              | Always `NULL`.                                                                            |
 | puid       | int4  | yes |              | Always `NULL`.                                                                            |
 | muid       | int4  | yes |              | Always `NULL`.                                                                            |
 | geo_grid   | int4  | yes |              | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                          |
@@ -296,7 +291,7 @@ Operations executed on DB might fail with error. When multi-feature write operat
 - result level (single error details) - good to describe global errors like "session not initiated" or "collection/table not exists"
 - row/feature level (details of feature write error) - errors like "unique key violation" that don't affect other features processing
 
-Psql Error Codes are specific to `lib-naksha-psql` library and should be mapped to domain errors as follows: 
+Psql Error Codes are specific to `lib-naksha-psql` library and should be mapped to domain errors as follows:
 
 | PSQL Code | XyzError             | Example                                             |
 |-----------|----------------------|-----------------------------------------------------|

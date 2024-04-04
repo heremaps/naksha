@@ -368,7 +368,7 @@ SET (toast_tuple_target=8160"""
         // txn, uid
         qin = sql.quoteIdent("${tableName}_txn_uid_idx")
         query += """CREATE UNIQUE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(txn DESC, uid DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
+(txn DESC, COALESCE(uid, 0) DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // geo
@@ -386,7 +386,7 @@ SET (toast_tuple_target=8160"""
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(geo_grid COLLATE "C" text_pattern_ops DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
+(geo_grid, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         // app_id
@@ -398,7 +398,7 @@ SET (toast_tuple_target=8160"""
         // author
         qin = sql.quoteIdent("${tableName}_author_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(author COLLATE "C" DESC, author_ts DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
+(COALESCE(author, app_id) COLLATE "C" DESC, COALESCE(author_ts, updated_at) DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
 """
 
         sql.execute(query)
@@ -422,50 +422,54 @@ SET (toast_tuple_target=8160"""
         // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
         // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
         val CREATE_TABLE = if (!DEBUG) """CREATE ${tableConfig.unlogged()} TABLE {table} (
-    txn_next    int8 NOT NULL CHECK(txn_next {condition}),
-    txn         int8 NOT NULL,
-    uid         int4 NOT NULL,
-    version     int4 NOT NULL,
-    created_at  int8 NOT NULL, -- to_timestamp(created_at / 1000)
-    updated_at  int8 NOT NULL, -- to_timestamp(updated_at / 1000)
-    author_ts   int8 NOT NULL, -- to_timestamp(author_ts / 1000)
-    action      int2 NOT NULL,
-    geo_type    int2 NOT NULL,
-    puid        int4,
-    ptxn        int8,
-    author      text NOT NULL,
-    app_id      text NOT NULL,
-    geo_grid    text NOT NULL,
-    id          text COLLATE "C" NOT NULL,
-    tags        bytea COMPRESSION lz4,
-    geo         bytea COMPRESSION lz4,
-    feature     bytea COMPRESSION lz4 NOT NULL
-) """ else """CREATE ${tableConfig.unlogged()} TABLE {table} (
-    txn_next    int8,
-    txn         int8,
-    uid         int4,
-    version     int4,
     created_at  int8, -- to_timestamp(created_at / 1000)
-    updated_at  int8, -- to_timestamp(updated_at / 1000)
+    updated_at  int8 NOT NULL, -- to_timestamp(updated_at / 1000)
     author_ts   int8, -- to_timestamp(author_ts / 1000)
-    action      int2,
-    geo_type    int2,
-    puid        int4,
+    txn         int8 NOT NULL,
+    txn_next    int8 CHECK(txn_next {condition}),
     ptxn        int8,
+    uid         int4,
+    puid        int4,
+    version     int4,
+    geo_grid    int4,
+    geo_type    int2,
+    action      int2,
+    app_id      text NOT NULL,
     author      text,
-    app_id      text,
-    geo_grid    text,
-    id          text COLLATE "C",
+    type        text,
+    id          text COLLATE "C" NOT NULL,
+    feature     bytea COMPRESSION lz4 NOT NULL,
     tags        bytea COMPRESSION lz4,
     geo         bytea COMPRESSION lz4,
-    feature     bytea COMPRESSION lz4
+    geo_ref     bytea COMPRESSION lz4
+) """ else """CREATE ${tableConfig.unlogged()} TABLE {table} (
+    created_at  int8,
+    updated_at  int8,
+    author_ts   int8,
+    txn         int8,
+    txn_next    int8,
+    ptxn        int8,
+    uid         int4,
+    puid        int4,
+    version     int4,
+    geo_grid    int4,
+    geo_type    int2,
+    action      int2,
+    app_id      text,
+    author      text,
+    type        text,
+    id          text COLLATE "C",
+    feature     bytea COMPRESSION lz4,
+    tags        bytea COMPRESSION lz4,
+    geo         bytea COMPRESSION lz4,
+    geo_ref     bytea COMPRESSION lz4
 ) """
         var query: String
 
         // HEAD
         val headNameQuoted = sql.quoteIdent(id)
         query = CREATE_TABLE.replace("{table}", headNameQuoted)
-        query = query.replace("{condition}", "= 0")
+        query = query.replace("{condition}", "= null")
 
         if (!partition) {
             query += tableConfig.tablespaceQueryPart()
@@ -492,7 +496,7 @@ SET (toast_tuple_target=8160"""
         val delName = id + "_del"
         val delNameQuoted = sql.quoteIdent(delName)
         query = CREATE_TABLE.replace("{table}", delNameQuoted)
-        query = query.replace("{condition}", "= 0")
+        query = query.replace("{condition}", "= null")
 
         if (!partition) {
             query += tableConfig.tablespaceQueryPart()
@@ -523,7 +527,7 @@ SET (toast_tuple_target=8160"""
         val hstNameQuoted = sql.quoteIdent(hstName)
         query = CREATE_TABLE.replace("{table}", hstNameQuoted)
         query = query.replace("{condition}", ">= 0")
-        query += "PARTITION BY RANGE (txn_next)"
+        query += "PARTITION BY RANGE (COALESCE(txn_next, txn))"
         query += tableConfig.tablespaceQueryPart()
         sql.execute(query)
     }

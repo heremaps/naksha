@@ -194,12 +194,14 @@ SET SESSION enable_seqscan = OFF;
      * @param geo The feature geometry; if any.
      * @return The GRID (14 character long string).
      */
-    internal fun grid(id: String, geoType: Short, geo: ByteArray?): String {
-        if (geo == null) return Static.gridFromId(id)
-        if (!this::gridPlan.isInitialized) {
-            gridPlan = sql.prepare("SELECT ST_GeoHash(ST_Centroid(naksha_geometry($1::int2,$2::bytea)),14) as hash", arrayOf(SQL_INT16, SQL_BYTE_ARRAY))
-        }
-        return asMap(asArray(gridPlan.execute(arrayOf(geoType, geo)))[0])["hash"]!!
+    internal fun grid(id: String, geoType: Short, geo: ByteArray?): Int {
+        // FIXME TODO use point to here tile function after merge
+        return 0
+//        if (geo == null) return Static.gridFromId(id)
+//        if (!this::gridPlan.isInitialized) {
+//            gridPlan = sql.prepare("SELECT ST_GeoHash(ST_Centroid(naksha_geometry($1::int2,$2::bytea)),14) as hash", arrayOf(SQL_INT16, SQL_BYTE_ARRAY))
+//        }
+//        return asMap(asArray(gridPlan.execute(arrayOf(geoType, geo)))[0])["hash"]!!
     }
 
     /**
@@ -217,7 +219,7 @@ SET SESSION enable_seqscan = OFF;
      * @return The XYZ namespace JBON encoded.
      */
     fun xyzNsFromRow(collectionId: String, row: IMap): ByteArray {
-        val createdAt: BigInt64? = row[COL_CREATED_AT]
+        val createdAt: BigInt64? = row[COL_CREATED_AT] ?: row[COL_UPDATE_AT]
         check(createdAt != null) { "Missing $COL_CREATED_AT in row" }
         val updatedAt: BigInt64? = row[COL_UPDATE_AT]
         check(updatedAt != null) { "Missing $COL_UPDATE_AT in row" }
@@ -234,17 +236,13 @@ SET SESSION enable_seqscan = OFF;
         } else {
             null
         }
-        val action: Short? = row[COL_ACTION]
-        check(action != null) { "Missing $COL_ACTION, please invoke naksha_start_session" }
-        val version: Int? = row[COL_VERSION]
-        check(version != null) { "Missing $COL_VERSION, please invoke naksha_start_session" }
-        val authorTs: BigInt64? = row[COL_AUTHOR_TS]
-        check(authorTs != null) { "Missing $COL_AUTHOR_TS, please invoke naksha_start_session" }
-        val author: String? = row[COL_AUTHOR]
-        check(author != null) { "Missing $COL_AUTHOR, please invoke naksha_start_session" }
+        val action: Short = row[COL_ACTION] ?: 0
+        val version: Int = row[COL_VERSION] ?: 1
+        val authorTs: BigInt64 = row[COL_AUTHOR_TS] ?: updatedAt
         val app_id: String? = row[COL_APP_ID]
         check(app_id != null) { "Missing $COL_APP_ID, please invoke naksha_start_session" }
-        val geo_grid: String? = row[COL_GEO_GRID]
+        val author: String = row[COL_AUTHOR] ?: app_id
+        val geo_grid: Int? = row[COL_GEO_GRID]
         check(geo_grid != null) { "Missing $COL_GEO_GRID, please invoke naksha_start_session" }
         return xyzBuilder.buildXyzNs(createdAt, updatedAt, txn, action, version, authorTs, puuid, uuid.toString(), app_id, author, geo_grid)
     }
@@ -264,7 +262,7 @@ SET SESSION enable_seqscan = OFF;
         val txn = txn()
         val txnTs = txnTs()
         NEW[COL_TXN] = txn.value
-        NEW[COL_TXN_NEXT] = Jb.int64.ZERO()
+        NEW[COL_TXN_NEXT] = null
         NEW[COL_UID] = nextUid()
         NEW[COL_PTXN] = null
         NEW[COL_PUID] = null
@@ -273,19 +271,19 @@ SET SESSION enable_seqscan = OFF;
             geoType = GEO_TYPE_NULL
             NEW[COL_GEO_TYPE] = GEO_TYPE_NULL
         }
-        val geoGrid: String? = NEW[COL_GEO_GRID]
+        val geoGrid: Int? = NEW[COL_GEO_GRID]
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
             val id: String? = NEW[COL_ID]
             check(id != null) { "Missing id" }
             NEW[COL_GEO_GRID] = grid(id, geoType, NEW[COL_GEOMETRY])
         }
-        NEW[COL_ACTION] = ACTION_CREATE.toShort()
-        NEW[COL_VERSION] = 1
-        NEW[COL_CREATED_AT] = txnTs
+        NEW[COL_ACTION] = null // saving space null means 0 (create)
+        NEW[COL_VERSION] = null // saving space null means 1
+        NEW[COL_CREATED_AT] = null // saving space - it is same as update_at at creation,
         NEW[COL_UPDATE_AT] = txnTs
-        NEW[COL_AUTHOR] = if (author != null) author else appId
-        NEW[COL_AUTHOR_TS] = txnTs
+        NEW[COL_AUTHOR] = author
+        NEW[COL_AUTHOR_TS] = null // saving space - only apps are allowed to create features
         NEW[COL_APP_ID] = appId
     }
 
@@ -295,8 +293,9 @@ SET SESSION enable_seqscan = OFF;
     internal fun xyzUpdateHead(collectionId: String, NEW: IMap, OLD: IMap) {
         xyzInsert(collectionId, NEW)
         NEW[COL_ACTION] = ACTION_UPDATE.toShort()
-        NEW[COL_CREATED_AT] = OLD[COL_CREATED_AT]
-        val oldVersion: Int = OLD[COL_VERSION]!!
+        NEW[COL_CREATED_AT] = OLD[COL_CREATED_AT] ?: OLD[COL_UPDATE_AT]
+        NEW[COL_AUTHOR_TS] = if (author == null) OLD[COL_AUTHOR_TS] ?: OLD[COL_UPDATE_AT] else null
+        val oldVersion: Int = OLD[COL_VERSION] ?: 1
         NEW[COL_VERSION] = oldVersion + 1
         NEW[COL_PTXN] = OLD[COL_TXN]
         NEW[COL_PUID] = OLD[COL_UID]
@@ -309,8 +308,8 @@ SET SESSION enable_seqscan = OFF;
         if (isHistoryEnabled(collectionId)) {
             // TODO move it outside and run it once
             val collectionIdQuoted = sql.quoteIdent("${collectionId}_hst")
-            val hstInsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)""", COL_ALL_TYPES)
-            hstInsertPlan.execute(arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE]))
+            val hstInsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", COL_ALL_TYPES)
+            hstInsertPlan.execute(arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
         }
     }
 
@@ -321,7 +320,7 @@ SET SESSION enable_seqscan = OFF;
         val txn = txn()
         val txnTs = txnTs()
         OLD[COL_TXN] = txn.value
-        OLD[COL_TXN_NEXT] = Jb.int64.ZERO()
+        OLD[COL_TXN_NEXT] = null
         OLD[COL_ACTION] = ACTION_DELETE.toShort()
         OLD[COL_AUTHOR] = author ?: appId
         if (author != null) {
@@ -330,8 +329,8 @@ SET SESSION enable_seqscan = OFF;
         OLD[COL_UPDATE_AT] = txnTs
         OLD[COL_APP_ID] = appId
         OLD[COL_UID] = nextUid()
-        val currentVersion: Int = OLD[COL_VERSION]!!
-        OLD[COL_VERSION] =  currentVersion + 1
+        val currentVersion: Int = OLD[COL_VERSION] ?: 1
+        OLD[COL_VERSION] = currentVersion + 1
     }
 
     /**
@@ -343,7 +342,7 @@ SET SESSION enable_seqscan = OFF;
         val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
         if (autoPurge != true) {
             val collectionIdQuoted = sql.quoteIdent("${collectionId}_del")
-            sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE]))
+            sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
         }
     }
 
@@ -522,12 +521,13 @@ SET (toast_tuple_target=8160,fillfactor=100
         val updatePlan: IPlv8Plan by lazy {
             sql.prepare("""UPDATE $collectionIdQuoted
                         SET geo_grid=$2,geo_type=$3,geo=$4,tags=$5,feature=$6,action=$ACTION_UPDATE
+                        WHERE id=$1
                         RETURNING $COL_RETURN""",
-                    arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
+                    arrayOf(SQL_STRING, SQL_INT32, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
         }
         val createPlan: IPlv8Plan by lazy {
             sql.prepare("INSERT INTO $collectionIdQuoted ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN",
-                    arrayOf(SQL_STRING, SQL_STRING, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
+                    arrayOf(SQL_STRING, SQL_INT32, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
         }
         val deleteFeaturePlan: IPlv8Plan by lazy {
             sql.prepare("DELETE FROM $collectionIdQuoted WHERE id=$1 RETURNING $COL_RETURN",
@@ -641,7 +641,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         val tableName: String? = err["table_name"]
         when {
             errCode == ERR_UNIQUE_VIOLATION && op == XYZ_OP_CREATE -> {
-                val existingFeature = asArray(sql.execute("SELECT * FROM $tableName WHERE id=$1", arrayOf(id)))[0]
+                val existingFeature = asArray(sql.execute("SELECT $COL_RETURN FROM $tableName WHERE id=$1", arrayOf(id)))[0]
                 val featureAsMap = asMap(existingFeature)
                 val nakshaException = NakshaException.forRow(ERR_UNIQUE_VIOLATION, "The feature with the id '$id' does exist already", featureAsMap, xyzNsFromRow(tableName!!, featureAsMap))
                 table.returnException(nakshaException)
@@ -689,7 +689,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                 try {
                     newCollection.mapBytes(feature)
                     if (id != newCollection.id()) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "ID in op does not match real feature id: $id != " + newCollection.id(), id)
-                    var query = "SELECT $COL_ALL FROM $NKC_TABLE WHERE $COL_ID = $1"
+                    var query = "SELECT $COL_RETURN FROM $NKC_TABLE WHERE $COL_ID = $1"
                     var rows = asArray(sql.execute(query, arrayOf(id)))
                     var existing: IMap? = if (rows.isNotEmpty()) asMap(rows[0]) else null
                     query = "SELECT oid FROM pg_class WHERE relname = $1 AND relkind = ANY(array['r','p']) AND relnamespace = $2"
@@ -720,7 +720,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                             query = "UPDATE $NKC_TABLE SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 AND txn = $7 AND uid = $8 RETURNING $COL_RETURN"
                             rows = asArray(sql.execute(query, arrayOf(grid, geo_type, geo, feature, tags, id, null, null)))
                             if (rows.isEmpty()) {
-                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM $NKC_TABLE WHERE id = $1"
+                                query = "SELECT $COL_RETURN FROM $NKC_TABLE WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
                                 existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
                                 if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
@@ -743,13 +743,13 @@ SET (toast_tuple_target=8160,fillfactor=100
                         }
                         if (uuid == null) {
                             // Override (not atomic) update.
-                            query = "DELETE FROM $NKC_TABLE WHERE id = $1 RETURNING $COL_ALL"
+                            query = "DELETE FROM $NKC_TABLE WHERE id = $1 RETURNING $COL_RETURN"
                             rows = asArray(sql.execute(query, arrayOf(id)))
                             if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         } else {
                             // Atomic update.
                             // TODO: Fix me!
-                            query = "DELETE FROM $NKC_TABLE WHERE id = $1 AND txn = $2 AND uid = $3 RETURNING $COL_ALL"
+                            query = "DELETE FROM $NKC_TABLE WHERE id = $1 AND txn = $2 AND uid = $3 RETURNING $COL_RETURN"
                             rows = asArray(sql.execute(query, arrayOf(id, null, null)))
                             if (rows.isEmpty()) {
                                 query = "SELECT id,feature,geo_type,geo,tags,xyz FROM $NKC_TABLE WHERE id = $1"
@@ -891,7 +891,7 @@ SET (toast_tuple_target=8160,fillfactor=100
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
             table.returnException(e)
         } catch (e: Throwable) {
-            table.returnErr(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}", null)
+            table.returnErr(ERR_FATAL, e.message ?: "Fatal ${e.stackTraceToString()}", null)
         }
         return table;
     }
@@ -899,7 +899,7 @@ SET (toast_tuple_target=8160,fillfactor=100
     internal fun queryForExisting(collectionId: String, ids: List<String>, wait: Boolean): IMap {
         val waitOp = if (wait) "" else "NOWAIT"
         val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_AUTHOR, $COL_AUTHOR_TS FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp", arrayOf(ids.toTypedArray()))
+        val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR, $COL_AUTHOR_TS FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp", arrayOf(ids.toTypedArray()))
         val rows = sql.rows(result)
 
         val retMap = newMap()

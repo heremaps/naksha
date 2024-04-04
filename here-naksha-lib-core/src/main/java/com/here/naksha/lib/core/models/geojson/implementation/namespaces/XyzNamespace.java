@@ -216,14 +216,14 @@ public class XyzNamespace extends JsonObject {
   public static final String GRID = "grid";
 
   /**
-   * The geometry reference identifier, which is basically a Geo-Hash in level 14. This is automatically calculated based upon the
+   * The geometry reference identifier, which is basically a HERE-tile in level 15. This is automatically calculated based upon the
    * {@link XyzFeature#getReferencePoint() reference point}, if no {@link XyzFeature#getReferencePoint() reference point} is available, the
    * value is calculated from the centroid of the {@link XyzFeature#getGeometry() geometry}, if no geometry is available, then it is
    * calculated from the {@link XyzFeature#getId() id} of the feature.
    */
   @JsonProperty(GRID)
   @JsonInclude(Include.NON_EMPTY)
-  private String grid;
+  private Integer grid;
 
   /**
    * The name of the extend property.
@@ -860,12 +860,12 @@ public class XyzNamespace extends JsonObject {
   }
 
   @AvailableSince(NakshaVersion.v2_0_13)
-  public String getGrid() {
+  public Integer getGrid() {
     return grid;
   }
 
   @AvailableSince(NakshaVersion.v2_0_13)
-  public void setGrid(String grid) {
+  public void setGrid(Integer grid) {
     this.grid = grid;
   }
 }
