@@ -106,6 +106,7 @@ internal const val ADD_UNDERSCORE = 0b10
 internal const val ADD_COLON = 0b11
 
 const val UNDEFINED_STRING = "undefined"
+const val UNDEFINED_INT = -1
 
 // Internally used to encode float4
 internal const val MIN_INT_VALUE_AS_DOUBLE = Int.MIN_VALUE.toDouble()

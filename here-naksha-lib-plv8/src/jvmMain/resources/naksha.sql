@@ -379,7 +379,7 @@ CREATE OR REPLACE FUNCTION feature_to_json(feature bytea) RETURNS text AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION row_to_ns(created_at int8, updated_at int8, txn int8, action int2, version int4, author_ts int8,
- uid int4, app_id text, author text, geo_grid text, puid int4, ptxn int8, collection_id text) RETURNS bytea AS $$
+ uid int4, app_id text, author text, geo_grid int4, puid int4, ptxn int8, collection_id text) RETURNS bytea AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
   let mapi = require("jbon").Jb.map;

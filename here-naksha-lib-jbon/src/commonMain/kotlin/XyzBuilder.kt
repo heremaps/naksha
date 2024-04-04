@@ -119,12 +119,12 @@ class XyzBuilder(view: IDataView?=null, global: JbDict? = null) : JbBuilder(view
      * @param grid The geo reference id.
      * @return The JBON encoded XYZ operation.
      */
-    fun buildXyzOp(op: Int, id: String?, uuid: String?, grid: String?): ByteArray {
+    fun buildXyzOp(op: Int, id: String?, uuid: String?, grid: Int?): ByteArray {
         end = 10
         writeInt(op)
         if (id == null) writeNull() else writeString(id)
         if (uuid == null) writeNull() else writeString(uuid)
-        if (grid == null) writeNull() else writeString(grid)
+        if (grid == null) writeNull() else writeInt(grid)
         return finish(ENC_STRUCT_VARIANT_XYZ, XYZ_OPS_VARIANT)
     }
 
@@ -143,7 +143,7 @@ class XyzBuilder(view: IDataView?=null, global: JbDict? = null) : JbBuilder(view
             uuid: String,
             appId: String,
             author: String,
-            grid: String
+            grid: Int
     ): ByteArray {
         end = 10
         writeTimestamp(createdAt)
@@ -156,7 +156,7 @@ class XyzBuilder(view: IDataView?=null, global: JbDict? = null) : JbBuilder(view
         writeString(uuid)
         writeString(appId)
         writeString(author)
-        writeString(grid)
+        writeInt(grid)
         return finish(ENC_STRUCT_VARIANT_XYZ, XYZ_NS_VARIANT)
     }
 

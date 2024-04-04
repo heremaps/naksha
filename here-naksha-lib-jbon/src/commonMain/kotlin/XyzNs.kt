@@ -19,7 +19,7 @@ class XyzNs : XyzStruct<XyzNs>() {
     private var puuid: String? = UNDEFINED_STRING
     private var appId: String = UNDEFINED_STRING
     private var author: String = UNDEFINED_STRING
-    private var grid: String = UNDEFINED_STRING
+    private var grid: Int = UNDEFINED_INT
 
     override fun parseHeader() {
         super.parseXyzHeader(XYZ_NS_VARIANT)
@@ -99,15 +99,15 @@ class XyzNs : XyzStruct<XyzNs>() {
         return value
     }
 
-    fun grid(): String {
+    fun grid(): Int {
         var value = this.grid
-        if (value === UNDEFINED_STRING) {
+        if (value == UNDEFINED_INT) {
             reset()
             reader.nextUnit() // puuid
             reader.nextUnit() // uuid
             reader.nextUnit() // appId
             reader.nextUnit() // author
-            value = reader.readString()
+            value = reader.readInt32()
             this.grid = value
         }
         return value

@@ -43,7 +43,6 @@ import org.locationtech.jts.algorithm.Centroid;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.io.ParseException;
-import org.locationtech.spatial4j.io.GeohashUtils;
 
 /**
  * A codec that is able to encode a feature from its parts and to decode a feature into its parts. The implementation is not thread safe.
@@ -558,10 +557,12 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     xyzOp = xyzBuilder.buildXyzOp(mapOperationToPerform(op), id, uuid, calculateGrid());
   }
 
-  protected @Nullable String calculateGrid() {
+  protected @Nullable Integer calculateGrid() {
     if (geometry != null && !geometry.isEmpty()) {
       Coordinate centroid = Centroid.getCentroid(geometry);
-      return GeohashUtils.encodeLatLon(centroid.y, centroid.x, 14);
+      //      return GeohashUtils.encodeLatLon(centroid.y, centroid.x, 14);
+      // FIXME TODO use heretile method after merge
+      return 0;
     }
     return null;
   }

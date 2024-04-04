@@ -56,13 +56,13 @@ open class JvmPlv8ResultSet(private var rs: ResultSet?) {
                 "point", "line", "lseg", "box", "path", "polygon", "circle", "int4range", "int8range", "numrange",
                 "tsrange", "tstzrange", "daterange" -> row[name] = rs.getString(i)
 
-                "smallint", "int2" -> row[name] = rs.getShort(i)
-                "integer", "int4", "xid4", "oid" -> row[name] = rs.getInt(i)
-                "bigint", "int8", "xid8" -> row[name] = JvmBigInt64(rs.getLong(i))
-                "real" -> row[name] = rs.getFloat(i)
-                "double precision" -> row[name] = rs.getFloat(i)
+                "smallint", "int2" -> row[name] = getPrimitiveNullable(i, rs, rs::getShort)
+                "integer", "int4", "xid4", "oid" -> row[name] = getPrimitiveNullable(i, rs, rs::getInt)
+                "bigint", "int8", "xid8" -> row[name] = getPrimitiveNullable(i, rs, rs::getLong)?.let { JvmBigInt64(it) }
+                "real" -> row[name] = getPrimitiveNullable(i, rs, rs::getFloat)
+                "double precision" -> row[name] = getPrimitiveNullable(i, rs, rs::getFloat)
                 "numeric" -> row[name] = rs.getBigDecimal(i)
-                "boolean" -> row[name] = rs.getBoolean(i)
+                "boolean" -> row[name] = getPrimitiveNullable(i, rs, rs::getBoolean)
                 "timestamp" -> row[name] = rs.getTimestamp(i)
                 "date" -> row[name] = rs.getDate(i)
                 "bytea" -> row[name] = rs.getBytes(i)
@@ -72,6 +72,15 @@ open class JvmPlv8ResultSet(private var rs: ResultSet?) {
             }
         }
         return row
+    }
+
+    private fun <T> getPrimitiveNullable(idx: Int, rs: ResultSet, getter: (Int) -> T): T? {
+        val primitive: T = getter(idx)
+        return if (rs.wasNull()) {
+            null
+        } else {
+            primitive
+        }
     }
 
     /**

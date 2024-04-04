@@ -150,7 +150,7 @@ class NakshaBulkLoader(
 
     fun addUpdateHeadStmt(stmt: IPlv8Plan, row: IMap) {
         setAllColumnsOnStmt(stmt, row)
-        stmt.setString(19, row[COL_ID])
+        stmt.setString(21, row[COL_ID])
         stmt.addBatch()
     }
 
@@ -180,11 +180,13 @@ class NakshaBulkLoader(
         stmt.setLong(11, row[COL_AUTHOR_TS])
         stmt.setString(12, row[COL_AUTHOR])
         stmt.setString(13, row[COL_APP_ID])
-        stmt.setString(14, row[COL_GEO_GRID])
+        stmt.setInt(14, row[COL_GEO_GRID])
         stmt.setString(15, row[COL_ID])
         stmt.setBytes(16, row[COL_TAGS])
         stmt.setBytes(17, row[COL_GEOMETRY])
         stmt.setBytes(18, row[COL_FEATURE])
+        stmt.setBytes(19, row[COL_GEO_REF])
+        stmt.setString(20, row[COL_TYPE])
     }
 
     internal fun quotedHst(collectionHeadId: String) = session.sql.quoteIdent("${collectionHeadId}_hst")
@@ -212,12 +214,12 @@ class NakshaBulkLoader(
             val session: NakshaSession) {
 
         val insertHeadPlan: IPlv8Plan by lazy {
-            session.sql.prepare("INSERT INTO $partitionHeadQuoted ($COL_ALL) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)", COL_ALL_TYPES)
+            session.sql.prepare("INSERT INTO $partitionHeadQuoted ($COL_ALL) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)", COL_ALL_TYPES)
         }
         val updateHeadPlan: IPlv8Plan by lazy {
             session.sql.prepare("""
                     UPDATE $partitionHeadQuoted 
-                    SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_GEO_TYPE=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18 WHERE id=$19
+                    SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_GEO_TYPE=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE id=$21
                     """.trimIndent(),
                     arrayOf(*COL_ALL_TYPES, SQL_STRING))
         }
@@ -225,7 +227,7 @@ class NakshaBulkLoader(
             // ptxn + puid = txn + uid (as we generate new state in _del)
             session.sql.prepare("""
                     INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
-                    SELECT 0,$1,$2,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$3,$4,$COL_CREATED_AT,$4,$5,$6,$7,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE 
+                    SELECT null,$1,$2,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$3,$4,$COL_CREATED_AT,$4,$5,$6,$7,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                         FROM $partitionHeadQuoted WHERE id = $8""".trimIndent(),
                     arrayOf(SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
         }
@@ -233,7 +235,7 @@ class NakshaBulkLoader(
         val copyHeadToHstPlan: IPlv8Plan by lazy {
             session.sql.prepare("""
                 INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
-                SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE 
+                SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                     FROM $partitionHeadQuoted WHERE id = $2
                 """.trimIndent(), arrayOf(SQL_INT64, SQL_STRING))
         }
