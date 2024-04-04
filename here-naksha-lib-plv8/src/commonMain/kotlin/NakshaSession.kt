@@ -902,7 +902,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_AUTHOR, $COL_AUTHOR_TS FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp", arrayOf(ids.toTypedArray()))
         val rows = sql.rows(result)
 
-        var retMap = newMap()
+        val retMap = newMap()
 
         if (rows.isNullOrEmpty())
             return retMap

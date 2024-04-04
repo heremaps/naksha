@@ -1,7 +1,7 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.plv8.FeatureRow.Companion.mapToFeatureRow
+import com.here.naksha.lib.plv8.FeatureRow.Companion.mapToOperations
 
 class NakshaBulkLoader(
         val collectionId: String,
@@ -10,7 +10,8 @@ class NakshaBulkLoader(
 
     private val headCollectionId = session.getBaseCollectionId(collectionId)
     private val collectionIdQuoted = session.sql.quoteIdent(collectionId)
-    private val delCollectionIdQuoted = quotedDel(headCollectionId)
+    private val delCollectionId = "${headCollectionId}_del"
+    private val delCollectionIdQuoted = session.sql.quoteIdent(delCollectionId)
     private val hstCollectionIdQuoted = quotedHst(headCollectionId)
 
 
@@ -26,10 +27,11 @@ class NakshaBulkLoader(
         val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
         val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
 
-        val (allOperations, idsToModify) = mapToFeatureRow(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val (allOperations, idsToModify, idsToPurge) = mapToOperations(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
 
         session.sql.execute("SET LOCAL session_replication_role = replica;")
-        val existingFeatures = existingFeatures(idsToModify)
+        val existingFeatures = existingFeatures(headCollectionId, idsToModify)
+        val existingInDelFeatures = existingFeatures(delCollectionId, idsToPurge)
 
         val featureIdsToDeleteFromDel = mutableListOf<String>()
         val featuresToPurgeFromDel = mutableListOf<String>()
@@ -49,6 +51,8 @@ class NakshaBulkLoader(
                 when (op) {
                     XYZ_OP_UPDATE -> {
                         val headBeforeUpdate: IMap = existingFeatures[row.id()]!!
+                        checkStateForAtomicOp(row.id(), row.xyzOp.uuid(), headBeforeUpdate)
+
                         featureIdsToDeleteFromDel.add(row.id())
                         addCopyHeadToHstStmt(plans.copyHeadToHstPlan, featureRowMap, isHistoryDisabled)
                         session.xyzUpdateHead(row.collectionId, featureRowMap, headBeforeUpdate)
@@ -65,6 +69,7 @@ class NakshaBulkLoader(
                         if (existingFeatures.containsKey(row.id())) {
                             // this may throw exception (if we try to delete non-existing feature - that was deleted before)
                             val headBeforeDelete: IMap = existingFeatures[row.id()]!!
+                            checkStateForAtomicOp(row.id(), row.xyzOp.uuid(), headBeforeDelete)
                             addCopyHeadToHstStmt(plans.copyHeadToHstPlan, featureRowMap, isHistoryDisabled)
 
                             featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
@@ -73,8 +78,10 @@ class NakshaBulkLoader(
                             addDelStmt(plans.insertDelPlan, featureRowMap)
                             if (isHistoryDisabled == false) addCopyDelToHstStmt(plans.copyDelToHstPlan, featureRowMap)
                         }
-                        if (op == XYZ_OP_PURGE)
+                        if (op == XYZ_OP_PURGE) {
+                            checkStateForAtomicOp(row.id(), row.xyzOp.uuid(), existingInDelFeatures[row.id()]!!)
                             featuresToPurgeFromDel.add(row.id())
+                        }
                     }
 
                     else -> throw RuntimeException("Operation $op not supported")
@@ -106,6 +113,20 @@ class NakshaBulkLoader(
             } else {
                 allOperations.groupBy { -1 }
             }
+
+    private fun checkStateForAtomicOp(reqId: String, reqUuid: String?, currentHead: IMap) {
+        if (reqUuid != null) {
+            val headUuid = NakshaUuid.from(session.storageId, collectionId, currentHead[COL_TXN]!!, currentHead[COL_UID]!!)
+            val expectedUuid = NakshaUuid.fromString(reqUuid)
+            if (expectedUuid != headUuid) {
+                throw NakshaException.forId(
+                        ERR_CHECK_VIOLATION,
+                        "Atomic operation for $reqUuid is impossible, expected state: $reqUuid, actual: $headUuid",
+                        reqUuid
+                )
+            }
+        }
+    }
 
     internal fun executeBatchDeleteFromDel(delCollectionIdQuoted: String, featureIdsToDeleteFromDel: MutableList<String>) {
         if (featureIdsToDeleteFromDel.isNotEmpty()) {
@@ -189,8 +210,6 @@ class NakshaBulkLoader(
 
     internal fun quotedHst(collectionHeadId: String) = session.sql.quoteIdent("${collectionHeadId}_hst")
 
-    internal fun quotedDel(collectionHeadId: String) = session.sql.quoteIdent("${collectionHeadId}_del")
-
     internal fun executeBatch(stmt: IPlv8Plan) {
         val result = stmt.executeBatch()
         if (result.isNotEmpty() && result[0] == -3) {
@@ -199,8 +218,8 @@ class NakshaBulkLoader(
         }
     }
 
-    internal fun existingFeatures(ids: List<String>) = if (ids.isNotEmpty()) {
-        session.queryForExisting(headCollectionId, ids, wait = false)
+    internal fun existingFeatures(collectionId: String, ids: List<String>) = if (ids.isNotEmpty()) {
+        session.queryForExisting(collectionId, ids, wait = false)
     } else {
         newMap()
     }

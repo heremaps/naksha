@@ -12,20 +12,21 @@ class FeatureRow(
     fun id(): String = rowMap[COL_ID]!!
 
     companion object {
-        fun mapToFeatureRow(
+        fun mapToOperations(
                 collectionId: String,
                 op_arr: Array<ByteArray>,
                 feature_arr: Array<ByteArray?>,
                 geo_type_arr: Array<Short>,
                 geo_arr: Array<ByteArray?>,
                 tags_arr: Array<ByteArray?>
-        ): Pair<List<FeatureRow>, List<String>> {
+        ): Operations {
             check(op_arr.size == feature_arr.size && op_arr.size == geo_type_arr.size && op_arr.size == geo_arr.size && op_arr.size == tags_arr.size) {
                 "not all input arrays has same size"
             }
             val featureReader = JbFeature(JbDictManager())
             val operations = ArrayList<FeatureRow>(op_arr.size)
             val idsToModify = ArrayList<String>(op_arr.size)
+            val idsToPurge = ArrayList<String>()
             for (i in op_arr.indices) {
                 val opReader = XyzOp()
                 opReader.mapBytes(op_arr[i])
@@ -36,8 +37,12 @@ class FeatureRow(
                 } else {
                     opReader.id()!!
                 }
-                if (opReader.op() != XYZ_OP_CREATE)
+                if (opReader.op() != XYZ_OP_CREATE) {
                     idsToModify.add(id)
+                    if (opReader.op() == XYZ_OP_PURGE) {
+                        idsToPurge.add(id)
+                    }
+                }
                 val row = newMap()
                 row[COL_ID] = id
                 row[COL_TAGS] = tags_arr[i]
@@ -52,7 +57,9 @@ class FeatureRow(
                         collectionId = collectionId
                 ))
             }
-            return Pair(operations, idsToModify)
+            return Operations(operations, idsToModify, idsToPurge)
         }
     }
 }
+
+data class Operations(val operations: List<FeatureRow>, val idsToModify: List<String>, val idsToPurge: List<String>)
