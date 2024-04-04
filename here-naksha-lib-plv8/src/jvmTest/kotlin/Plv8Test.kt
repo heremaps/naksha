@@ -52,6 +52,23 @@ class Plv8Test : Plv8TestContainer() {
 
     @Order(3)
     @Test
+    fun testHereTile() {
+        assertEquals("", Static.calculateHereTileId(0.0, 0.0, 0))
+        assertEquals("12", Static.calculateHereTileId(0.0, 0.0, 2))
+        assertEquals("13", Static.calculateHereTileId(45.0, 90.0, 2))
+        assertEquals("000", Static.calculateHereTileId(-90.0, -180.0, 3))
+        assertEquals("100", Static.calculateHereTileId(-90.0, 0.0, 3))
+        assertEquals("000", Static.calculateHereTileId(-90.0, 180.0, 3))
+        assertEquals("022222222222", Static.calculateHereTileId(90.0, -180.0, 12))
+        assertEquals("122", Static.calculateHereTileId(90.0, 0.0, 3))
+        assertEquals("022222222222", Static.calculateHereTileId(90.0, 180.0, 12))
+        assertEquals("02", Static.calculateHereTileId(0.0, -180.0, 2))
+        assertEquals("02", Static.calculateHereTileId(0.0, 180.0, 2))
+        assertEquals("132", Static.calculateHereTileId(45.0, 90.0, 3))
+    }
+
+    @Order(3)
+    @Test
     fun testGrid() {
         val session = NakshaSession.get()
         val grid = session.grid("foo", GEO_TYPE_NULL, null)
