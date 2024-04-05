@@ -143,7 +143,38 @@ To get Naksha container running, one must do the following:
       --network=host \
       --env CONFIG_ID=<your Naksha config id> \
       --env DB_URI=<your DB uri that Naksha should use> \
-      localhost/naksha-test
+      localhost/local-naksha-app
+    ```
+
+4) Running in detached mode & finding your container id:\
+   Starting the container as in the sample above will hijack your terminal. To avoid this pass `-d` flag (as in "detached")
+   ```shell
+   > docker run -d --network=host localhost/local-naksha-app
+   3d38a7d51f7881a634da6d5f38c2beb642fe2bd201e63d309d84cecb1c3a81ee
+   ```
+   The output of this command (`3d38...`) will be your `CONTAINER ID`. \
+   To find your `CONTAINER ID` you can also utilize `docker ps` with some basic filtering:
+   ```shell
+   > docker ps -q  --filter ancestor=localhost/local-naksha-app
+   3d38a7d51f78
+   ```
+5) Tailing logs:\
+   If you want to tail logs of your running container (ie when you detached it before), you can use [docker logs]() as in the sample:
+   ```shell
+   docker logs -f --tail 10 3d38a7d51f78   
+   ```
+   The command above will start tailing logs from container with id `3d38...` and also print last 10 lines.
+6) Stopping / killing container, removing the image:
+   To stop the running container simply run:
+   ```shell
+   docker stop 3d38a7d51f78 
+   ```
+   Stopping is graceful, meaning - it sends `SIGTERM` to the process so the app will have some time to perform the cleanup.\
+   If you need to stop the container immediately, use `docker kill 3d38a7d51f78` - the main difference is that instead of `SIGTERM` the process will receive `SIGKILL`.
+7) If you ever need to clean the image, use one of the below (the latter is simply the alias of the former).
+   ```
+   > docker image rm localhost/local-naksha-app
+   > docker rmi localhost/local-naksha-app` 
     ```
 
 ### OpenAPI specification
