@@ -138,7 +138,7 @@ class Plv8Test : Plv8TestContainer() {
     @Test
     fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
-        Static.collectionCreate(session.sql, false, session.schema, session.schemaOid, "foo", geoIndex = Static.GEO_INDEX_DEFAULT, partition = false)
+        Static.collectionCreate(session.sql, false, session.schema, session.schemaOid, "foo", geoIndex = Static.GEO_INDEX_DEFAULT, partition = false, null)
         // 9 and 10 are next UIDs!
         val pgNew = Jb.map.newMap()
         pgNew[COL_UID] = null // Should be set by trigger
@@ -163,7 +163,7 @@ class Plv8Test : Plv8TestContainer() {
         // Simulate a trigger invocation.
         session.triggerBefore(t)
         assertEquals(0, pgNew[COL_UID])
-        assertEquals(BigInt64(0), pgNew[COL_TXN_NEXT])
+        assertEquals(null, pgNew[COL_TXN_NEXT])
         //assertNotNull(pgNew[COL_XYZ])
         // Try the XYZ insert directly
 //        val xyzBytes = session.xyzInsert("foo", "bar", uid, GEO_TYPE_NULL, null)

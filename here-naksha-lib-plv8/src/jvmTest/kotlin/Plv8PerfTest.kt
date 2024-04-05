@@ -240,8 +240,8 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         createCollection(tableName, partition = true, disableHistory = true)
 
         // Run for 8 threads.
-        val features = Array<ArrayList<BulkFeature>>(256) { ArrayList() }
-        val featuresDone = AtomicReferenceArray<Boolean>(256)
+        val features = Array<ArrayList<BulkFeature>>(PARTITION_COUNT.toInt()) { ArrayList() }
+        val featuresDone = AtomicReferenceArray<Boolean>(PARTITION_COUNT.toInt())
         var i = 0
         while (i < BulkSize) {
             val f = createBulkFeature()

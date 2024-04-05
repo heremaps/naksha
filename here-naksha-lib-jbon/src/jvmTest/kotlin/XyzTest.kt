@@ -76,7 +76,7 @@ class XyzTest : JbAbstractTest() {
                 ACTION_CREATE.toShort(), 1, createdTs + 20,
                 null, "test-uuid",
                 "test-app", "test-author",
-                "1234567")
+                1)
         val featureView = JbSession.get().newDataView(xyz)
         val reader = XyzNs()
         reader.mapView(featureView)
@@ -91,7 +91,7 @@ class XyzTest : JbAbstractTest() {
         assertEquals("test-uuid", reader.uuid())
         assertEquals("test-app", reader.appId())
         assertEquals("test-author", reader.author())
-        assertEquals("1234567", reader.grid())
+        assertEquals(1, reader.grid()) // FIXME
 
         // Convert to namespace.
         val tagBytes = createTags()
@@ -104,7 +104,7 @@ class XyzTest : JbAbstractTest() {
         assertEquals("test-uuid", ns["uuid"])
         assertEquals("test-app", ns["app_id"])
         assertEquals("test-author", ns["author"])
-        assertEquals("1234567", ns["grid"])
+        assertEquals(1, ns["grid"]) // FIXME
         assertEquals("test_storage:txn:0:0:0:$txn:0", ns["txn"])
     }
 
@@ -125,7 +125,7 @@ class XyzTest : JbAbstractTest() {
                 uuid,
                 "zcxvzxcvzcvzxc",
                 "11222222222222222211",
-                "sdfasdasdasdad1"
+                1
         )
 
         val xyzNs = XyzNs().mapBytes(nsBytes, 0, nsBytes.size)
