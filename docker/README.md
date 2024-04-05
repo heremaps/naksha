@@ -19,7 +19,7 @@ To get Naksha container running, one must do the following:
 4) Run the container:
    There are two optional environment variables that one can specify when running Naksha conrtainer
     - `NAKSHA_CONFIG_ID`: id of naksha configaration to use, `test-config` by default
-    - `NAKSHA_DB_URL`: url of database for Naksha app to
+    - `NAKSHA_ADMIN_DB_URL`: url of database for Naksha app to
       use, `jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password&schema=naksha&app=naksha_local&id=naksha_admin_db`
       by default
 
@@ -28,43 +28,35 @@ To get Naksha container running, one must do the following:
    network (`--network=host`).\
    Putting it all together the typical command you would use is:
    ```shell
-   docker run \                                                                                                                                                                                                                              
+   docker run \            
+      --name=naksha-app \                                                                                                                                                                                                                  
       --network=host \
       --env NAKSHA_CONFIG_ID=<your Naksha config id> \
-      --env NAKSHA_DB_URI=<your DB uri that Naksha should use> \
+      --env NAKSHA_ADMIN_DB_URL=<your DB uri that Naksha should use> \
       localhost/local-naksha-app
     ```
 
 ### Additional remarks
 
-#### Running in detached mode & finding your container id
+#### Running in detached mode 
 
 Starting the container as in the sample above will hijack your terminal. To avoid this pass `-d`
 flag (as in "detached")
 
    ```shell
-   > docker run -d --network=host localhost/local-naksha-app
-   3d38a7d51f7881a634da6d5f38c2beb642fe2bd201e63d309d84cecb1c3a81ee
-   ```
-
-The output of this command (`3d38...`) will be your `CONTAINER ID`. \
-To find your `CONTAINER ID` you can also utilize `docker ps` with some basic filtering:
-
-   ```shell
-   > docker ps -q  --filter ancestor=localhost/local-naksha-app
-   3d38a7d51f78
+   > docker run --name=naksha-app -d --network=host localhost/local-naksha-app
    ```
 
 #### Tailing logs
 
 If you want to tail logs of your running container (ie when you detached it before), you can
-use [docker logs]() as in the sample:
+use [docker logs](https://docs.docker.com/reference/cli/docker/container/logs/) as in the sample:
 
    ```shell
-   docker logs -f --tail 10 3d38a7d51f78   
+   docker logs -f --tail 10 naksha-app   
    ```
 
-The command above will start tailing logs from container with id `3d38...` and also print last 10
+The command above will start tailing logs from container with the name `naksha-app` and also print last 10
 lines.
 
 #### Stopping / killing container
@@ -72,12 +64,12 @@ lines.
 To stop the running container simply run:
 
    ```shell
-   docker stop 3d38a7d51f78 
+   docker stop naksha-app 
    ```
 
 Stopping is graceful, meaning - it sends `SIGTERM` to the process so the app will have some time to
 perform the cleanup.\
-If you need to stop the container immediately, use `docker kill 3d38a7d51f78` - the main difference
+If you need to stop the container immediately, use `docker kill naksha-app` - the main difference
 is that instead of `SIGTERM` the process will receive `SIGKILL`.
 
 #### Removing the image
