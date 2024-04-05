@@ -81,6 +81,8 @@ java -jar build/libs/naksha-2.0.6-all.jar test-config-with-extensions 'jdbc:post
 
 ### Run App
 
+#### Running local fat jar
+
 The service could also be started directly from a fat jar. In this case Postgres and the other optional dependencies need to be started separately.
 
 To build the fat jar, at the root project directory, run one of the following:
@@ -109,6 +111,40 @@ java -jar build/libs/naksha-2.0.6-all.jar custom-config
 ```
 
 Then use a web browser to connect to `localhost:8080`, an OK message should be displayed if the service is up and running.
+
+#### Running Naksha in container
+
+Naksha can be run in container as well. So far, only locally build image can be used.
+To get Naksha container running, one must do the following:
+
+1) Build the fat jar:
+     ```shell
+    ./gradlew shadowJar
+    ```
+2) Build the local image - you will need to define Naksha version that will be passed to the docker build.\
+   You can either do explicitly or utilize `gradle.properties` file.\
+   Explicit version:
+    ```shell
+   docker build -t local-naksha-app . --build-arg NAKSHA_VER=2.0.15 
+    ```
+   Fetched from `gradle.properties`:
+    ```shell
+    docker build -t local-naksha-app . --build-arg NAKSHA_VER=$(cat gradle.properties | grep ^version= | cut -d "=" -f 2- )
+    ```
+3) Run the container:
+   There are two optional environment variables that one can specify when running Naksha conrtainer
+   - `CONFIG_ID`: id of naksha configaration to use, `test-config` by default
+   - `DB_URI`: uri of database for Naksha app to use, `jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password&schema=naksha&app=naksha_local&id=naksha_admin_db` by default
+   
+   When connecting Naksha app to database, one has to consider container networking - if your database is running locally, then you need to instruct the container to utilize host's network (`--network=host`).\
+   Putting it all together the typical command you would use is:
+   ```shell
+   docker run \                                                                                                                                                                                                                              13:23:35
+      --network=host \
+      --env CONFIG_ID=<your Naksha config id> \
+      --env DB_URI=<your DB uri that Naksha should use> \
+      localhost/naksha-test
+    ```
 
 ### OpenAPI specification
 
