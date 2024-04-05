@@ -21,6 +21,7 @@ package com.here.naksha.lib.core.models.storage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.json.JsonUtil;
+import com.here.naksha.lib.jbon.JbDictManager;
 import com.here.naksha.lib.jbon.JbFeature;
 import com.here.naksha.lib.jbon.JbMap;
 import java.util.Map;
@@ -41,7 +42,7 @@ class StringCodec extends FeatureCodec<String, StringCodec> {
 
   @Override
   public @NotNull StringCodec encodeFeature(boolean force) {
-    JbFeature jbFeature = new JbFeature().mapBytes(featureBytes, 0, featureBytes.length);
+    JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(featureBytes, 0, featureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
     try {
       feature = Json.get().writer().writeValueAsString(featureAsMap);

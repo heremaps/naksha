@@ -14,6 +14,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
+import com.here.naksha.lib.jbon.JbDictManager;
 import com.here.naksha.lib.jbon.JbFeature;
 import com.here.naksha.lib.jbon.JbMap;
 import com.here.naksha.lib.jbon.XyzBuilder;
@@ -53,7 +54,7 @@ public class XyzFeatureCodecTest extends SessionTest {
         "uuid",
         "app_id",
         "author",
-        "grid"
+        11111
     );
 
     XyzFeatureCodec decoder = new XyzFeatureCodec();
@@ -74,7 +75,7 @@ public class XyzFeatureCodecTest extends SessionTest {
     assertEquals("uuid", xyz.getUuid());
     assertEquals(now.toEpochMilli(), xyz.getCreatedAt());
     assertEquals(now.toEpochMilli(), xyz.getUpdatedAt());
-    assertEquals("grid", xyz.getGrid());
+    assertEquals(11111, xyz.getGrid());
     assertEquals(1, xyz.getVersion());
     assertEquals(EXyzAction.CREATE, xyz.getAction());
   }
@@ -102,11 +103,12 @@ public class XyzFeatureCodecTest extends SessionTest {
     codec.decodeParts(true);
 
     // then
-    XyzTags jbTags = new XyzTags().mapBytes(codec.getTagsBytes(), 0, codec.getTagsBytes().length);
+    JbDictManager dictManager = new JbDictManager();
+    XyzTags jbTags = new XyzTags(dictManager).mapBytes(codec.getTagsBytes(), 0, codec.getTagsBytes().length);
     Object[] tags = jbTags.tagsArray();
     assertArrayEquals(requestedTags.toArray(), tags);
 
-    JbFeature jbFeature = new JbFeature().mapBytes(codec.getFeatureBytes(), 0, codec.getFeatureBytes().length);
+    JbFeature jbFeature = new JbFeature(dictManager).mapBytes(codec.getFeatureBytes(), 0, codec.getFeatureBytes().length);
     Map<String, Object> featureSentToDb = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
 
     // empty geometry

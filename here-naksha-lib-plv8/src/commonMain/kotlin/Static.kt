@@ -84,7 +84,7 @@ do $$
     naksha.JsPlv8Env.Companion.initialize();
     let sql = new naksha.JsPlv8Sql();
     if (!naksha.Static.tableExists(sql, "naksha_collections", $schemaOid)) {
-        naksha.Static.collectionCreate(sql, null, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false);
+        naksha.Static.collectionCreate(sql, null, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false, null);
     }
 $$ LANGUAGE 'plv8';
 """
@@ -413,9 +413,10 @@ SET (toast_tuple_target=8160"""
      * @param id The collection identifier.
      * @param geoIndex If SP-GIST index should be used, which is better only for point geometry.
      * @param partition If the collection should be partitioned.
+     * @param txnNext transaction to create current hst partitions - if null won't be created at start and has to be delivered later
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, temporary: Boolean, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean) {
+    fun collectionCreate(sql: IPlv8Sql, temporary: Boolean, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean, txnNext: NakshaTxn?) {
         val tableConfig = TableConfig(temporary)
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
@@ -530,6 +531,10 @@ SET (toast_tuple_target=8160"""
         query += "PARTITION BY RANGE (COALESCE(txn_next, txn))"
         query += tableConfig.tablespaceQueryPart()
         sql.execute(query)
+        if (txnNext != null) {
+            createHstPartition(sql, temporary, id, NakshaTxn(Jb.int64.ZERO()), geoIndex, partition)
+            createHstPartition(sql, temporary, id, txnNext, geoIndex, partition)
+        }
     }
 
     /**

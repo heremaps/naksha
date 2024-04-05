@@ -9,19 +9,23 @@ CREATE OR REPLACE FUNCTION jb_get_type(bin bytea, path text) RETURNS int4 AS $$
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION jb_get_bool(bin bytea, path text, alternative boolean) RETURNS boolean AS $$
-  return require("jbon").JbPath.Companion.getBool(new Uint8Array(bin), path, alternative);
+  let jb = require("jbon");
+  return (new jb.JbPath()).getBool(new Uint8Array(bin), path, alternative);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION jb_get_text(bin bytea, path text, alternative text) RETURNS text AS $$
-  return require("jbon").JbPath.Companion.getString(bin, path, alternative);
+  let jb = require("jbon");
+  return (new jb.JbPath()).getString(bin, path, alternative);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION jb_get_double(bin bytea, path text, alternative double precision) RETURNS double precision AS $$
-  return require("jbon").JbPath.Companion.getDouble(new Uint8Array(bin), path, alternative);
+  let jb = require("jbon");
+  return (new jb.JbPath()).getDouble(new Uint8Array(bin), path, alternative);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION jb_get_int4(bin bytea, path text, alternative int4) RETURNS int4 AS $$
-  return require("jbon").JbPath.Companion.getInt32(new Uint8Array(bin), path, alternative);
+  let jb = require("jbon");
+  return (new jb.JbPath()).getInt32(new Uint8Array(bin), path, alternative);
 $$ LANGUAGE 'plv8' IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION jb_get_int8(bin bytea, path text) RETURNS int8 AS $$
