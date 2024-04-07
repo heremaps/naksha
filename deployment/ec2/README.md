@@ -25,10 +25,17 @@ Ones done, open up a shell to the machine and start the installation:
 ssh ec2-user@IP
 
 # Install necessary software
-sudo yum -y install docker mdadm postgresql15 nc nmap fio
+sudo yum -y install docker mdadm postgresql15 nc nmap fio nvme-cli
 
 # Ensure that names are still what this document state.
 lsblk
+
+# Ensure that block-size is 4k
+nvme id-ns -H /dev/nvme0n1 | grep LBA
+
+# If not using 4k blocks format, change it (optimal would be 32K)
+# Note, by default devices always use 512b formats!
+nvme format --lbaf=1 /dev/nvme0n1
 
 # Create temporary store
 sudo mdadm --create --verbose --chunk=32 /dev/md0 --level=0 --name=pg_temp --raid-devices=4 /dev/nvme0n1 /dev/nvme1n1 /dev/nvme2n1 /dev/nvme3n1

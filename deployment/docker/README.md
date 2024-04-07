@@ -115,6 +115,10 @@ docker run --name naksha_pg \
        -v ~/pg_temp:/usr/local/pgsql/temp \
        -p 0.0.0.0:5432:5432 \
        -d "hcr.data.here.com/naksha-devops/naksha-postgres:arm64-${VERSION}"
+# Show logs
+docker logs naksha_pg
+# Show generated password
+cat ~/pg_data/postgres.pwd
 # Test the db
 psql "user=postgres sslmode=disable host=localhost dbname=unimap"
 # When not okay, delete docker and repeat
@@ -161,6 +165,13 @@ Initialized database with password: bLqzfifYRzfOoXtGvqUsmxQuxCsuhsqT
 ```
 
 **Note**: You may have to change the platform (amd64/arm64) and the version of the container.
+
+## Env-Vars
+The docker container accepts the same environment variables that [libpq](https://www.postgresql.org/docs/current/libpq-envars.html) accepts:
+
+- **PGDATABASE**: Database.
+- **PGUSER**: User.
+- **PGPASSWORD**: Password.
 
 ## Performance test
 ```bash
