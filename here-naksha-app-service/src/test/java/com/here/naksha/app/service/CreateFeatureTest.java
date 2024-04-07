@@ -19,6 +19,7 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.FeatureUtil.generateBigFeature;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.FeatureUtil;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -43,6 +45,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
+
+import com.here.naksha.lib.hub.NakshaHubConfig;
+import com.here.naksha.test.common.JsonUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -367,4 +372,36 @@ class CreateFeatureTest extends ApiTest {
             .hasStatus(200)
             .hasJsonBody(thirdResponse);
   }
+
+  @Test
+  void tc0310_testBigRequestPayload() throws Exception {
+    // Test API : POST /hub/spaces/{spaceId}/features
+    // Given: Input base Feature JSON
+    final String basePayload = loadFileOrFail("CreateFeatures/TC0310_createBigFeature/feature_base_payload.json");
+    final XyzFeature feature = JsonUtil.parseJson(basePayload, XyzFeature.class);
+
+    // Given: Big Feature generated from base Feature
+    final long targetBodySize = (NakshaHubConfig.MAX_REQ_BODY_LIMIT * 1024 * 1024) - 1024; // keep buffer of 1KB
+    FeatureUtil.generateBigFeature(feature, targetBodySize-feature.serialize().length());
+
+    // Given: Big request payload ready to test
+    final String requestPayload = JsonUtil.toJson(new FeatureCollectionRequest().withFeatures(List.of(feature)));
+    String streamId = UUID.randomUUID().toString();
+
+    assertTrue(requestPayload.length() >= targetBodySize, "Feature size isn't big enough");
+
+    // When: Big Feature request is submitted to NakshaHub
+    HttpResponse<String> response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", requestPayload, streamId);
+
+    // Then: Perform assertions that we get success response
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(requestPayload, "Create Feature response body doesn't match")
+            .hasInsertedCountMatchingWithFeaturesInRequest(requestPayload)
+            .hasInsertedIdsMatchingFeatureIds(null)
+            .hasUuids();
+  }
+
+
 }

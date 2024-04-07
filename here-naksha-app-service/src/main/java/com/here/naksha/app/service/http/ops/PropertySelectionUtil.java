@@ -106,7 +106,7 @@ public class PropertySelectionUtil {
           // add standard properties
           gPropPathSet.add(PROP_ID);
           gPropPathSet.add(PROP_FEATURE_TYPE);
-          gPropPathSet.add(XyzFeature.GEOMETRY);
+          // gPropPathSet.add(XyzFeature.GEOMETRY);
         }
         gPropPathSet.add(expandPropSelectionPath(path));
       }
