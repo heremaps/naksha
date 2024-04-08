@@ -2,17 +2,10 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.BigInt64
-import com.here.naksha.lib.jbon.Fnv1a32
-import com.here.naksha.lib.jbon.Fnv1a64
-import com.here.naksha.lib.jbon.Jb
-import com.here.naksha.lib.jbon.NakshaTxn
-import com.here.naksha.lib.jbon.asArray
-import com.here.naksha.lib.jbon.asMap
-import com.here.naksha.lib.jbon.get
-import com.here.naksha.lib.jbon.getAny
-import com.here.naksha.lib.jbon.newMap
-import com.here.naksha.lib.jbon.put
+import com.here.naksha.lib.jbon.*
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -35,60 +28,11 @@ object Static {
     internal val nakshaCollectionConfig = newMap()
 
     init {
+        nakshaCollectionConfig.put(NKC_GEO_INDEX, null)
+        nakshaCollectionConfig.put(NKC_STORAGE_CLASS, null)
         nakshaCollectionConfig.put(NKC_PARTITION, false)
         nakshaCollectionConfig.put(NKC_AUTO_PURGE, false)
-        nakshaCollectionConfig.put(NKC_POINTS_ONLY, false)
         nakshaCollectionConfig.put(NKC_DISABLE_HISTORY, false)
-    }
-
-    @JvmStatic
-    fun initStorage(sql: IPlv8Sql, schema: String) {
-        val schemaOid: Int = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
-        val schemaIdentQuoted = sql.quoteIdent(schema)
-        val schemaJsQuoted = Jb.env.stringify(schema)
-        val query = """
-SET SESSION search_path TO $schemaIdentQuoted, public, topology;
-CREATE TABLE IF NOT EXISTS naksha_global (
-    id          text        PRIMARY KEY NOT NULL,
-    data        bytea       NOT NULL
-);
-CREATE SEQUENCE IF NOT EXISTS naksha_txn_seq AS int8;
-CREATE TABLE IF NOT EXISTS naksha_txn (
-    txn         int8         PRIMARY KEY NOT NULL,
-    ts          timestamptz  NOT NULL DEFAULT transaction_timestamp(),
-    xact_id     xid8         NOT NULL DEFAULT pg_current_xact_id(),
-    app_id      text         COMPRESSION lz4 NOT NULL,
-    author      text         COMPRESSION lz4 NOT NULL,
-    seq_id      int8,
-    seq_ts      timestamptz,
-    version     int8,
-    details     bytea       COMPRESSION lz4,
-    attachment  bytea       COMPRESSION lz4
-) PARTITION BY RANGE (txn);
-CREATE INDEX IF NOT EXISTS naksha_txn_ts_idx ON naksha_txn USING btree ("ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_app_id_ts_idx ON naksha_txn USING btree ("app_id" ASC, "ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_author_ts_idx ON naksha_txn USING btree ("author" ASC, "ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_seq_id_idx ON naksha_txn USING btree ("seq_id" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_seq_ts_idx ON naksha_txn USING btree ("seq_ts" ASC);
-CREATE INDEX IF NOT EXISTS naksha_txn_version_idx ON naksha_txn USING btree ("version" ASC);
--- Create the table for the collection management as normal collection.
--- This is a chicken-egg problem:
--- We need to create this collection before we can create collections, because
--- when a collection is created, this table will be checked. So we need to ensure
--- that this collection is created without this check, but as a valid collection.
--- Note: We do not allow deletion of naksha tables!
-do $$
-    var commonjs2_init = plv8.find_function("commonjs2_init");
-    commonjs2_init();
-    let naksha = require("naksha");
-    naksha.JsPlv8Env.Companion.initialize();
-    let sql = new naksha.JsPlv8Sql();
-    if (!naksha.Static.tableExists(sql, "naksha_collections", $schemaOid)) {
-        naksha.Static.collectionCreate(sql, null, $schemaJsQuoted, $schemaOid, "naksha_collections", false, false, null);
-    }
-$$ LANGUAGE 'plv8';
-"""
-        sql.execute(query)
     }
 
     /**
@@ -108,13 +52,19 @@ $$ LANGUAGE 'plv8';
      * The constant for the GIST geo-index.
      */
     @JvmStatic
-    val GEO_INDEX_GIST = false // "gist"
+    val GEO_INDEX_GIST = "gist"
 
     /**
      * The constant for the SP-GIST geo-index.
      */
     @JvmStatic
-    val GEO_INDEX_SP_GIST = true // "sp-gist"
+    val GEO_INDEX_SP_GIST = "sp-gist"
+
+    /**
+     * The constant for the SP-GIST geo-index.
+     */
+    @JvmStatic
+    val GEO_INDEX_BRIN = "brin"
 
     /**
      * The constant for the default geo-index (may change over time).
@@ -123,17 +73,86 @@ $$ LANGUAGE 'plv8';
     val GEO_INDEX_DEFAULT = GEO_INDEX_GIST
 
     /**
+     * The storage class for collections that should be consistent.
+     */
+    @JvmStatic
+    val SC_CONSISTENT = "consistent"
+
+    /**
+     * The storage class for collections that need to be ultra-fast, but where data loss is acceptable in worst case scenario.
+     */
+    @JvmStatic
+    val SC_BRITTLE = "brittle"
+
+    /**
+     * The storage class for collections that should be ultra-fast and only live for the current session.
+     */
+    @JvmStatic
+    val SC_TEMPORARY = "temporary"
+
+    /**
+     * Default storage class.
+     */
+    @JvmStatic
+    val SC_DEFAULT = SC_CONSISTENT
+
+    /**
+     * Special internal value used to create the transaction table.
+     */
+    @JvmStatic
+    internal val SC_TRANSACTIONS = "naksha~transactions"
+
+    /**
+     * Special internal value used to create the dictionaries table.
+     */
+    @JvmStatic
+    internal val SC_DICTIONARIES = "naksha~dictionaries"
+
+    /**
+     * Special internal value used to create the collections table.
+     */
+    @JvmStatic
+    internal val SC_COLLECTIONS = "naksha~collections"
+
+    /**
+     * Special internal value used to create the dictionaries table.
+     */
+    @JvmStatic
+    internal val SC_INDICES = "naksha~indices"
+
+    /**
      * Can be set to true, to enable stack-trace reporting to _elog(INFO)_.
      */
     @JvmStatic
     var PRINT_STACK_TRACES = false
 
     /**
+     * The number of partitions. We use partitioning for tables that are expected to store more than
+     * ten million features. With eight partitions we can split 10 million features into partitions
+     * of each 1.25 million, 100 million into 12.5 million per partition and for the supported maximum
+     * of 1 billion features, each partition holds 125 million features.
+     *
+     * This value must be a value of 2^n with n between 1 and 8 (2, 4, 8, 16, 32, 64, 128, 256).
+     */
+    @JvmStatic
+    val PARTITION_COUNT = 8
+
+    /**
+     * The bitmask to mask the hash for the partition-id.
+     */
+    @JvmStatic
+    val PARTITION_MASK = PARTITION_COUNT - 1
+
+    /**
      * Array to fasten partition id.
      */
     @JvmStatic
-    val PARTITION_ID = Array(8) {
-        "$it"
+    val PARTITION_ID = Array(PARTITION_COUNT) {
+        when (PARTITION_COUNT) {
+            in 0..9 -> "$it"
+            in 10..99 -> if (it < 10) "0$it" else "$it"
+            else -> if (it < 10) "00$it" else if (it < 100) "0$it" else "$it"
+        }
     }
 
     /**
@@ -282,12 +301,35 @@ $$ LANGUAGE 'plv8';
     }
 
     /**
+     * Create all internal collections.
+     * @param sql The SQL API of the current session.
+     * @param schema The schema in which to create the collections.
+     * @param schemaOid The OID of the schema.
+     */
+    @JvmStatic
+    fun createInternalsIfNotExists(sql: IPlv8Sql, schema: String, schemaOid: Int) {
+        if (!tableExists(sql, SC_TRANSACTIONS, schemaOid)) {
+            collectionCreate(sql, SC_TRANSACTIONS, schema, schemaOid, SC_TRANSACTIONS, GEO_INDEX_DEFAULT, false);
+        }
+        if (!tableExists(sql, SC_DICTIONARIES, schemaOid)) {
+            collectionCreate(sql, SC_DICTIONARIES, schema, schemaOid, SC_DICTIONARIES, GEO_INDEX_DEFAULT, false);
+        }
+        if (!tableExists(sql, SC_COLLECTIONS, schemaOid)) {
+            collectionCreate(sql, SC_COLLECTIONS, schema, schemaOid, SC_COLLECTIONS, GEO_INDEX_DEFAULT, false);
+        }
+        if (!tableExists(sql, SC_INDICES, schemaOid)) {
+            collectionCreate(sql, SC_INDICES, schema, schemaOid, SC_INDICES, GEO_INDEX_DEFAULT, false);
+        }
+        sql.execute("CREATE SEQUENCE IF NOT EXISTS naksha_txn_seq AS int8; COMMIT;")
+    }
+
+    /**
      * Returns the partition number.
      * @param id The feature-id for which to return the partition-id.
      * @return The partition id as number between 0 and partitionCount.
      */
     @JvmStatic
-    fun partitionNumber(id: String): Int = Fnv1a32.string(Fnv1a32.start(), id) and 0x7
+    fun partitionNumber(id: String): Int = Fnv1a32.string(Fnv1a32.start(), id) and PARTITION_MASK
 
     /**
      * Returns the partition id as three digit string.
@@ -346,15 +388,14 @@ SET (toast_tuple_target=8160"""
      * Creates all the indices needed for a collection.
      * @param sql The SQL API.
      * @param tableName The table name.
-     * @param spGist If SP-GIST index should be used, which is better only for point geometry.
+     * @param geoIndex The geo-index to be used.
      * @param history If _true_, then optimized for historic data; otherwise a volatile HEAD table.
-     * @param tablespaceQueryPart to create indices in, should be an empty string or full query part: " TABLESPACE tablespace_name"
+     * @param pgTableInfo The table information.
      */
     @JvmStatic
-    private fun collectionAddIndices(sql: IPlv8Sql, tableName: String, spGist: Boolean, history: Boolean, tablespaceQueryPart: String) {
-        val fillFactor = if (history) "100" else "50"
+    private fun collectionAddIndices(sql: IPlv8Sql, tableName: String, geoIndex: String, history: Boolean, pgTableInfo: PgTableInfo) {
+        val fillFactor = if (history) "100" else "70"
         // https://www.postgresql.org/docs/current/gin-tips.html
-        val geoIndexType = if (spGist) "sp-gist" else "gist"
         val unique = if (history) "" else "UNIQUE "
 
         // quoted table name
@@ -362,43 +403,43 @@ SET (toast_tuple_target=8160"""
         // quoted index name
         var qin = sql.quoteIdent("${tableName}_id_idx")
         var query = """CREATE ${unique}INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(id COLLATE "C" text_pattern_ops DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
+(id text_pattern_ops DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
 """
 
         // txn, uid
         qin = sql.quoteIdent("${tableName}_txn_uid_idx")
         query += """CREATE UNIQUE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(txn DESC, COALESCE(uid, 0) DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
+(txn DESC, COALESCE(uid, 0) DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
 """
 
         // geo
         qin = sql.quoteIdent("${tableName}_geo_idx")
-        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndexType
-(naksha_geometry(geo_type,geo), txn) WITH (buffering=ON,fillfactor=$fillFactor) $tablespaceQueryPart;
+        query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndex
+(naksha_geometry(geo_type,geo), txn) WITH (buffering=ON,fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
 """
 
         // tags
         qin = sql.quoteIdent("${tableName}_tags_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin
-(tags_to_jsonb(tags), txn) WITH (fastupdate=ON,gin_pending_list_limit=32768) $tablespaceQueryPart;
+(tags_to_jsonb(tags), txn) WITH (fastupdate=ON,gin_pending_list_limit=32768) ${pgTableInfo.TABLESPACE};
 """
 
         // grid
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(geo_grid, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
+(geo_grid, txn DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
 """
 
         // app_id
         qin = sql.quoteIdent("${tableName}_app_id_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(app_id COLLATE "C" DESC, updated_at DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
+(app_id DESC, updated_at DESC, txn DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
 """
 
         // author
         qin = sql.quoteIdent("${tableName}_author_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(COALESCE(author, app_id) COLLATE "C" DESC, COALESCE(author_ts, updated_at) DESC, txn DESC) WITH (fillfactor=$fillFactor) $tablespaceQueryPart;
+(COALESCE(author, app_id) DESC, COALESCE(author_ts, updated_at) DESC, txn DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
 """
 
         sql.execute(query)
@@ -407,135 +448,103 @@ SET (toast_tuple_target=8160"""
     /**
      * Low level function to create a (optionally partitioned) collection table set.
      * @param sql The SQL API.
-     * @param temporary should be treated as temporary or not.
+     * @param storageClass The type of storage to be used for the table.
      * @param schema The schema name.
      * @param schemaOid The object-id of the schema to look into.
      * @param id The collection identifier.
-     * @param geoIndex If SP-GIST index should be used, which is better only for point geometry.
+     * @param geoIndex The geo-index to be used.
      * @param partition If the collection should be partitioned.
-     * @param txnNext transaction to create current hst partitions - if null won't be created at start and has to be delivered later
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, temporary: Boolean, schema: String, schemaOid: Int, id: String, geoIndex: Boolean, partition: Boolean, txnNext: NakshaTxn?) {
-        val tableConfig = TableConfig(temporary)
+    fun collectionCreate(sql: IPlv8Sql, storageClass: String?, schema: String, schemaOid: Int, id: String, geoIndex: String, partition: Boolean) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
-        // TODO: Optimize this by generating a complete query as one string and then execute it at ones!
-        // TODO: We need Postgres 16, then we can create the table with STORAGE MAIN!
-        val CREATE_TABLE = if (!DEBUG) """CREATE ${tableConfig.unlogged()} TABLE {table} (
-    created_at  int8, -- to_timestamp(created_at / 1000)
-    updated_at  int8 NOT NULL, -- to_timestamp(updated_at / 1000)
-    author_ts   int8, -- to_timestamp(author_ts / 1000)
-    txn         int8 NOT NULL,
-    txn_next    int8 CHECK(txn_next {condition}),
-    ptxn        int8,
-    uid         int4,
-    puid        int4,
-    version     int4,
-    geo_grid    int4,
-    geo_type    int2,
-    action      int2,
-    app_id      text NOT NULL,
-    author      text,
-    type        text,
-    id          text COLLATE "C" NOT NULL,
-    feature     bytea COMPRESSION lz4 NOT NULL,
-    tags        bytea COMPRESSION lz4,
-    geo         bytea COMPRESSION lz4,
-    geo_ref     bytea COMPRESSION lz4
-) """ else """CREATE ${tableConfig.unlogged()} TABLE {table} (
-    created_at  int8,
-    updated_at  int8,
-    author_ts   int8,
-    txn         int8,
-    txn_next    int8,
-    ptxn        int8,
-    uid         int4,
-    puid        int4,
-    version     int4,
-    geo_grid    int4,
-    geo_type    int2,
-    action      int2,
-    app_id      text,
-    author      text,
-    type        text,
-    id          text COLLATE "C",
-    feature     bytea COMPRESSION lz4,
-    tags        bytea COMPRESSION lz4,
-    geo         bytea COMPRESSION lz4,
-    geo_ref     bytea COMPRESSION lz4
-) """
-        var query: String
+        val pgTableInfo = PgTableInfo(sql, storageClass)
 
         // HEAD
+        var query: String = pgTableInfo.CREATE_TABLE
         val headNameQuoted = sql.quoteIdent(id)
-        query = CREATE_TABLE.replace("{table}", headNameQuoted)
-        query = query.replace("{condition}", "= null")
-
+        query += headNameQuoted
+        query += pgTableInfo.CREATE_TABLE_BODY
         if (!partition) {
-            query += tableConfig.tablespaceQueryPart()
+            query += pgTableInfo.STORAGE_PARAMS
+            query += pgTableInfo.TABLESPACE
             sql.execute(query)
-            collectionOptimizeTable(sql, id, false)
-            collectionAddIndices(sql, id, geoIndex, false, tableConfig.tablespaceQueryPart())
+            //collectionOptimizeTable(sql, id, false)
+            collectionAddIndices(sql, id, geoIndex, false, pgTableInfo)
         } else {
-            query += "PARTITION BY RANGE (naksha_partition_number(id))"
-            query += tableConfig.tablespaceQueryPart()
+            query += " PARTITION BY RANGE (naksha_partition_number(id)) "
+            // Partitioned tables must not have storage params
+            query += pgTableInfo.TABLESPACE
             sql.execute(query)
             for (part in 0..<PARTITION_COUNT) {
-                createSubPartition(sql, id, "${id}_p$part", geoIndex, part, tableConfig, false)
+                createPartitionById(sql, id, geoIndex, part, pgTableInfo, false)
             }
         }
         if (!DEBUG) collectionAttachTriggers(sql, id, schema, schemaOid)
 
-        // Create sequence.
-        val sequenceName = id + "_uid_seq";
-        val sequenceNameQuoted = sql.quoteIdent(sequenceName)
-        query = "CREATE SEQUENCE IF NOT EXISTS $sequenceNameQuoted AS int8 START WITH 1 CACHE 100 OWNED BY ${headNameQuoted}.uid"
-        sql.execute(query)
+//        // Create sequence.
+//        val sequenceName = id + "_uid_seq";
+//        val sequenceNameQuoted = sql.quoteIdent(sequenceName)
+//        query = "CREATE SEQUENCE IF NOT EXISTS $sequenceNameQuoted AS int8 START WITH 1 CACHE 100 OWNED BY ${headNameQuoted}.uid"
+//        sql.execute(query)
 
-        // DEL.
-        val delName = id + "_del"
-        val delNameQuoted = sql.quoteIdent(delName)
-        query = CREATE_TABLE.replace("{table}", delNameQuoted)
-        query = query.replace("{condition}", "= null")
-
-        if (!partition) {
-            query += tableConfig.tablespaceQueryPart()
-            sql.execute(query)
-            collectionOptimizeTable(sql, delName, false)
-            collectionAddIndices(sql, delName, geoIndex, false, tableConfig.tablespaceQueryPart())
-        } else {
-            query += "PARTITION BY RANGE (naksha_partition_number(id))"
-            query += tableConfig.tablespaceQueryPart()
-            sql.execute(query)
-            for (part in 0..<PARTITION_COUNT) {
-                createSubPartition(sql, delName, "${delName}_p$part", geoIndex, part, tableConfig, false)
+        // For all tables except transactions, we create child-tables.
+        if (storageClass != SC_TRANSACTIONS) {
+            // DEL.
+            val delName = "$id\$del"
+            val delNameQuoted = sql.quoteIdent(delName)
+            query = pgTableInfo.CREATE_TABLE
+            query += delNameQuoted
+            query += pgTableInfo.CREATE_TABLE_BODY
+            if (!partition) {
+                query += pgTableInfo.STORAGE_PARAMS
+                sql.execute(query)
+                //collectionOptimizeTable(sql, delName, false)
+                collectionAddIndices(sql, delName, geoIndex, false, pgTableInfo)
+            } else {
+                query += " PARTITION BY RANGE (naksha_partition_number(id)) "
+                query += pgTableInfo.STORAGE_PARAMS
+                sql.execute(query)
+                for (part in 0..<PARTITION_COUNT) {
+                    createPartitionById(sql, delName, geoIndex, part, pgTableInfo, false)
+                }
             }
-        }
 
-        // META.
-        val metaName = id + "_meta"
-        val metaNameQuoted = sql.quoteIdent(metaName)
-        query = CREATE_TABLE.replace("{table}", metaNameQuoted)
-        query = query.replace("{condition}", "= 0")
-        query += tableConfig.tablespaceQueryPart()
-        sql.execute(query)
-        collectionOptimizeTable(sql, metaName, false)
-        collectionAddIndices(sql, metaName, geoIndex, false, tableConfig.tablespaceQueryPart())
+            // META.
+            val metaName = "$id\$meta"
+            val metaNameQuoted = sql.quoteIdent(metaName)
+            query = pgTableInfo.CREATE_TABLE
+            query += metaNameQuoted
+            query += pgTableInfo.CREATE_TABLE_BODY
+            query += pgTableInfo.STORAGE_PARAMS
+            sql.execute(query)
+            //collectionOptimizeTable(sql, metaName, false)
+            collectionAddIndices(sql, metaName, geoIndex, false, pgTableInfo)
 
-        // HISTORY.
-        val hstName = id + "_hst"
-        val hstNameQuoted = sql.quoteIdent(hstName)
-        query = CREATE_TABLE.replace("{table}", hstNameQuoted)
-        query = query.replace("{condition}", ">= 0")
-        query += "PARTITION BY RANGE (COALESCE(txn_next, txn))"
-        query += tableConfig.tablespaceQueryPart()
-        sql.execute(query)
-        if (txnNext != null) {
-            createHstPartition(sql, temporary, id, NakshaTxn(Jb.int64.ZERO()), geoIndex, partition)
-            createHstPartition(sql, temporary, id, txnNext, geoIndex, partition)
+            // HISTORY.
+            val hstName = "$id\$hst"
+            val hstNameQuoted = sql.quoteIdent(hstName)
+            query = pgTableInfo.CREATE_TABLE
+            query += hstNameQuoted
+            query += pgTableInfo.CREATE_TABLE_BODY
+            query += " PARTITION BY RANGE (txn_next) "
+            query += pgTableInfo.TABLESPACE
+            sql.execute(query)
+            val year = yearOf(Jb.env.currentMillis())
+            createHstPartition(sql, id, year, geoIndex, partition, pgTableInfo)
+            createHstPartition(sql, id, year + 1, geoIndex, partition, pgTableInfo)
         }
     }
+
+    /**
+     * Extracts the year from the given epoch timestamp in milliseconds.
+     * @param epochMillis The epoch milliseconds.
+     * @return The UTC year read from the epoch milliseconds.
+     */
+    @JvmStatic
+    fun yearOf(epochMillis: BigInt64): Int =
+            Instant.fromEpochMilliseconds(epochMillis.toLong()).toLocalDateTime(TimeZone.UTC).year
 
     /**
      * Add the before and after triggers.
@@ -586,60 +595,61 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
     }
 
     /**
+     * Create the history partition, which optionally is sub-partitioned by id.
+     * @param sql The SQL API of the session.
      * @param collectionId has to be pure (without _hst suffix).
+     * @param year The year for which to create the history partition.
+     * @param geoIndex The geo-index to use in the history.
+     * @param partition If the history should be sub-partitioned by id.
+     * @param pgTableInfo The table info to know storage class and alike.
      */
     @JvmStatic
-    fun createHstPartition(sql: IPlv8Sql, temporary: Boolean, collectionId: String, txnNext: NakshaTxn, geoIndex: Boolean, partition: Boolean?): String {
-        val hstPartName = hstPartitionNameForId(collectionId, txnNext)
-        val partNameQuoted = sql.quoteIdent(hstPartName)
-        val headNameQuoted = sql.quoteIdent(hstHeadNameForId(collectionId))
-        val start = NakshaTxn.of(txnNext.year(), 0, 0, NakshaTxn.SEQ_MIN).value
-        val end = NakshaTxn.of(txnNext.year(), 12, 31, NakshaTxn.SEQ_MAX).value
-        val tableConfig = TableConfig(temporary)
-        val tablespaceQueryPart = tableConfig.tablespaceQueryPart()
-        var query = "CREATE ${tableConfig.unlogged()} TABLE IF NOT EXISTS $partNameQuoted PARTITION OF $headNameQuoted FOR VALUES FROM ($start) TO ($end) "
-        if (partition == true) {
-            query += "PARTITION BY RANGE (naksha_partition_number(id)) $tablespaceQueryPart"
+    private fun createHstPartition(sql: IPlv8Sql, collectionId: String, year: Int, geoIndex: String, partition: Boolean, pgTableInfo: PgTableInfo): String {
+        val parentName = "${collectionId}\$hst"
+        val parentNameQuoted = sql.quoteIdent(parentName)
+        val hstPartName = "${parentName}_${year}"
+        val hstPartNameQuoted = sql.quoteIdent(hstPartName)
+        val start = NakshaTxn.of(year, 0, 0, NakshaTxn.SEQ_MIN).value
+        val end = NakshaTxn.of(year, 12, 31, NakshaTxn.SEQ_MAX).value
+        var query = pgTableInfo.CREATE_TABLE
+        query += "IF NOT EXISTS $hstPartNameQuoted PARTITION OF $parentNameQuoted FOR VALUES FROM ($start) TO ($end) "
+        if (partition) {
+            query += "PARTITION BY RANGE (naksha_partition_number(id))"
+            query += pgTableInfo.STORAGE_PARAMS
+            query += pgTableInfo.TABLESPACE
             sql.execute(query)
-
             for (subPartition in 0..<PARTITION_COUNT) {
-                createSubPartition(sql, hstPartName, "${hstPartName}_$subPartition", geoIndex, subPartition, tableConfig, true)
+                createPartitionById(sql, hstPartName, geoIndex, subPartition, pgTableInfo, true)
             }
         } else {
-            query += tablespaceQueryPart
+            query += pgTableInfo.STORAGE_PARAMS
+            query += pgTableInfo.TABLESPACE
             sql.execute(query)
-            collectionOptimizeTable(sql, hstPartName, true)
-            collectionAddIndices(sql, hstPartName, geoIndex, true, tablespaceQueryPart)
+            //collectionOptimizeTable(sql, hstPartName, true)
+            collectionAddIndices(sql, hstPartName, geoIndex, true, pgTableInfo)
         }
-
         return hstPartName
     }
 
-    private fun createSubPartition(sql: IPlv8Sql, basicTableName: String, partitionName: String, geoIndex: Boolean, subPartition: Int, tableConfig: TableConfig, history: Boolean) {
-        val subPartNameQuoted = sql.quoteIdent(partitionName)
-        val basicNameQuoted = sql.quoteIdent(basicTableName)
-        val query = "CREATE ${tableConfig.unlogged()} TABLE IF NOT EXISTS $subPartNameQuoted PARTITION OF $basicNameQuoted FOR VALUES FROM ($subPartition) TO (${subPartition + 1}) ${tableConfig.tablespaceQueryPart()};"
+    /**
+     * Create a child partition that partitions by id. This is used for huge tables to split the features equally into partitions.
+     * @param sql The SQL API of the session.
+     * @param parentName The name of the parent table.
+     * @param geoIndex The geo-index to use.
+     * @param part The partition number.
+     * @param pgTableInfo Information about the table.
+     * @param history If this is a history partition; otherwise it is
+     */
+    private fun createPartitionById(sql: IPlv8Sql, parentName: String, geoIndex: String, part: Int, pgTableInfo: PgTableInfo, history: Boolean) {
+        require(part in 0..<PARTITION_COUNT) { "Invalid partition number $part" }
+        val partitionName = if (parentName.contains('$')) "${parentName}_p$part" else "${parentName}\$p$part"
+        val partitionNameQuoted = sql.quoteIdent(partitionName)
+        val parentTableNameQuoted = sql.quoteIdent(parentName)
+        val query = pgTableInfo.CREATE_TABLE + "IF NOT EXISTS $partitionNameQuoted PARTITION OF $parentTableNameQuoted FOR VALUES FROM ($part) TO (${part + 1}) ${pgTableInfo.STORAGE_PARAMS} ${pgTableInfo.TABLESPACE};"
         sql.execute(query)
-        collectionOptimizeTable(sql, partitionName, history)
-        collectionAddIndices(sql, partitionName, geoIndex, history, tableConfig.tablespaceQueryPart())
+        //collectionOptimizeTable(sql, partitionName, history)
+        collectionAddIndices(sql, partitionName, geoIndex, history, pgTableInfo)
     }
-
-    /**
-     * Returns full history partition name i.e. `foo_hst_p2023` for given `foo`.
-     *
-     * @param collectionId head collectionId i.e `topology`
-     * @param txnNext txn to retrieve suffix from
-     */
-    @JvmStatic
-    fun hstPartitionNameForId(collectionId: String, txnNext: NakshaTxn): String = "${hstHeadNameForId(collectionId)}_${txnNext.historyPostfix()}"
-
-    /**
-     * Returns full history head name i.e. `foo_hst`.
-     *
-     * @param collectionId head collectionId i.e `topology`
-     */
-    @JvmStatic
-    fun hstHeadNameForId(collectionId: String): String = "${collectionId}_hst"
 
     /**
      * Queries the database for the schema **oid** (object id). The result should be cached as calling this method is expensive.

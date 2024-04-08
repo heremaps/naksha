@@ -2,7 +2,6 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.IMap
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -12,6 +11,11 @@ import kotlin.js.JsExport
 @Suppress("DuplicatedCode")
 @JsExport
 interface IPlv8Sql {
+    /**
+     * Returns general information about the database to which this API grants access.
+     */
+    fun info() : PgDbInfo
+
     /**
      * Creates a new table for a function to return. When executed inside PostgresQL does only return a small object, that
      * allows invoking the native `plv8.return_next` function. For the JVM, it returns a container that can pick up rows.

@@ -11,7 +11,7 @@ import java.sql.Connection
  */
 class JvmPlv8Env : JvmEnv() {
     companion object {
-        private lateinit var env : JvmPlv8Env
+        private lateinit var env: JvmPlv8Env
 
         @JvmStatic
         fun initialize() {
@@ -128,17 +128,19 @@ class JvmPlv8Env : JvmEnv() {
      * @param name The module name, for example `lz4`.
      * @param path The file-path, for example `/lz4.js`.
      * @param autoload If the module should be automatically loaded.
+     * @param beautify If the source should be beautified before insertion.
      * @param extraCode Additional code to be executed, appended at the end of the module.
      * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    private fun installModuleFromResource(sql: JvmPlv8Sql, name: String, path: String, autoload: Boolean = false, extraCode: String? = null, replacements: Map<String, String>? = null) {
+    private fun installModuleFromResource(sql: JvmPlv8Sql, name: String, path: String, autoload: Boolean = false, beautify: Boolean = false, extraCode: String? = null, replacements: Map<String, String>? = null) {
         val resourceAsText = getResourceAsText(path)
         check(resourceAsText != null)
         var code = applyReplacements(resourceAsText, replacements)
         if (extraCode != null) code += "\n" + extraCode
-        sql.execute("INSERT INTO commonjs2_modules (module, autoload, source) VALUES ($1, $2, $3) " +
-                "ON CONFLICT (module) DO UPDATE SET autoload = $2, source = $3",
-                arrayOf(name, autoload, code))
+        val dollar3 = if (beautify) "js_beautify(\$3)" else "\$3"
+        val query = "INSERT INTO commonjs2_modules (module, autoload, source) VALUES (\$1, \$2, $dollar3) " +
+                "ON CONFLICT (module) DO UPDATE SET autoload = $2, source = $dollar3"
+        sql.execute(query, arrayOf(name, autoload, code))
     }
 
     /**
@@ -150,21 +152,34 @@ class JvmPlv8Env : JvmEnv() {
     fun install(conn: Connection, version: Long, schema: String, storageId: String) {
         conn.autoCommit = false
         val sql = JvmPlv8Sql(conn)
-        val replacements = mapOf("version" to version.toString(), "schema" to schema, "storage_id" to storageId)
-        // Note: We know, that we do not need the replacements and code is faster without them!
+        val schemaQuoted = sql.quoteIdent(schema)
+        val schemaJsQuoted = Jb.env.stringify(schema)
+        sql.execute("""
+CREATE SCHEMA IF NOT EXISTS $schemaQuoted;
+SET SESSION search_path TO $schemaQuoted, public, topology;
+""")
+        val schemaOid: Int = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
+
         executeSqlFromResource(sql, "/commonjs2.sql")
+        installModuleFromResource(sql, "beautify", "/beautify.min.js")
+        executeSqlFromResource(sql, "/beautify.sql")
+        sql.execute("""DO $$
+var commonjs2_init = plv8.find_function("commonjs2_init");
+commonjs2_init();
+$$ LANGUAGE 'plv8';""")
         installModuleFromResource(sql, "lz4_util", "/lz4_util.js")
         installModuleFromResource(sql, "lz4_xxhash", "/lz4_xxhash.js")
         installModuleFromResource(sql, "lz4", "/lz4.js")
         executeSqlFromResource(sql, "/lz4.sql")
+        // Note: We know, that we do not need the replacements and code is faster without them!
+        val replacements = mapOf("version" to version.toString(), "schema" to schema, "storage_id" to storageId)
         // Note: The compiler embeds the JBON classes into plv8.
         //       Therefore, we must not have it standalone, because otherwise we
         //       have two distinct instances in memory.
         //       A side effect sadly is that you need to require naksha, before you can require jbon!
-//        installModuleFromResource(sql, "jbon", "/here-naksha-lib-jbon.js", extraCode = """
-//module.exports = module.exports["here-naksha-lib-jbon"].com.here.naksha.lib.jbon;
-//""");
+        // TODO: Extend the commonjs2 code so that it allows to declare that one module contains another!
         installModuleFromResource(sql, "naksha", "/here-naksha-lib-plv8.js",
+                beautify = true,
                 replacements = replacements,
                 extraCode = """
 plv8.moduleCache["jbon"] = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.jbon;
@@ -172,7 +187,7 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
 """)
         executeSqlFromResource(sql, "/naksha.sql", replacements)
         executeSqlFromResource(sql, "/jbon.sql")
-        Static.initStorage(sql, schema)
+        Static.createInternalsIfNotExists(sql, schema, schemaOid)
         conn.commit()
     }
 }

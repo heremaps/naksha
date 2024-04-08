@@ -70,15 +70,11 @@ class NakshaTxn(val value: BigInt64) : Comparable<NakshaTxn> {
     private lateinit var _uuid: NakshaUuid
 
     /**
-     * Translate the transaction number into a table postfix in the format _yyyy.
+     * Translate the transaction number into a table postfix (currently only the year as "yyyy").
      * @return The table postfix.
      */
     fun historyPostfix(): String {
-        if (!this::_tablePostfix.isInitialized) {
-            val sb = StringBuilder()
-            sb.append(year())
-            _tablePostfix = sb.toString()
-        }
+        if (!this::_tablePostfix.isInitialized) _tablePostfix = "${year()}"
         return _tablePostfix
     }
 

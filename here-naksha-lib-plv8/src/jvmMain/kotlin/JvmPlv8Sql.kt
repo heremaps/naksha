@@ -8,17 +8,16 @@ import java.sql.Connection
  */
 @Suppress("MemberVisibilityCanBePrivate", "UNCHECKED_CAST")
 class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
-    override fun newTable(): ITable {
-        return JvmPlv8Table()
-    }
+    // TODO: Implement detection!
+    private val dbInfo = PgDbInfo(this)
 
-    override fun affectedRows(any: Any): Int? {
-        return if (any is Int) any else null
-    }
+    override fun info(): PgDbInfo = dbInfo
 
-    override fun rows(any: Any): Array<Any>? {
-        return if (any is Array<*>) any as Array<Any> else null
-    }
+    override fun newTable(): ITable = JvmPlv8Table()
+
+    override fun affectedRows(any: Any): Int? = if (any is Int) any else null
+
+    override fun rows(any: Any): Array<Any>? = if (any is Array<*>) any as Array<Any> else null
 
     override fun execute(sql: String, args: Array<Any?>?): Any {
         val conn = this.conn

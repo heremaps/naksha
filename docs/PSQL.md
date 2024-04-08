@@ -235,8 +235,8 @@ For the PostgresQL implementation we follow the general concept of PostgresQL da
 
 Note that this design allow access to internal data using the same general methods that are used for all other tables too, which simplifies testing, reliability and usage. Only when creating internal tables, some additional special code is requires that creates additional indices needed.
 
-### Transactions Table (`naksha~txn`)
-The transaction logs are stored in the `naksha~txn` table. Actually, the only difference to any other table is that the table is partitioned by `txn` and some columns have a different usage:
+### Transactions Table (`naksha~transactions`)
+The transaction logs are stored in the `naksha~transactions` table. Actually, the only difference to any other table is that the table is partitioned by `txn` and some columns have a different usage:
 
 | Column     | Type  | RO  | Modifiers    | Description                                                                               |
 |------------|-------|-----|--------------|-------------------------------------------------------------------------------------------|

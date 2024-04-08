@@ -6,12 +6,12 @@ import com.here.naksha.lib.jbon.*
 
 internal const val NKC_TABLE = "naksha_collections"
 internal const val NKC_PARTITION = "partition"
-internal const val NKC_POINTS_ONLY = "pointsOnly"
+internal const val NKC_GEO_INDEX = "geoIndex"
 internal const val NKC_DISABLE_HISTORY = "disableHistory"
 internal const val NKC_MAX_AGE = "maxAge"
 internal const val NKC_ESTIMATED_FEATURE_COUNT = "estimatedFeatureCount"
 internal const val NKC_AUTO_PURGE = "autoPurge"
-internal const val NKC_TEMPORARY = "temporary"
+internal const val NKC_STORAGE_CLASS = "storageClass"
 
 internal const val COL_TXN_NEXT = "txn_next"
 internal const val COL_TXN = "txn"
@@ -56,7 +56,5 @@ internal const val GEO_TYPE_NULL : Short = 0
 internal const val GEO_TYPE_WKB : Short = 1
 internal const val GEO_TYPE_EWKB : Short = 2
 internal const val GEO_TYPE_TWKB : Short = 3
-
-internal const val PARTITION_COUNT : Short = 8
 
 var TEMPORARY_TABLESPACE = "temp"

@@ -20,6 +20,7 @@ CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
   load = function(key, source) {
       plv8.elog(INFO, "Load module " + key);
       var module = {exports: {}};
+      if (typeof plv8.js_beautify === "function") source = plv8.js_beautify(source, {"indent_size":2,"space_in_empty_paren":true});
       eval("(function(module, exports) {\n" + source + ";\n})")(module, module.exports);
       plv8.moduleCache[key] = module.exports;
       return plv8.moduleCache[key];
@@ -32,7 +33,7 @@ CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
           [module]
       );
       if(rows.length === 0) {
-          plv8.elog(ERROR, 'No such module: ' + module);
+          //plv8.elog(ERROR, 'No such module: ' + module);
           return null;
       }
       return load(module, rows[0].source);
@@ -40,5 +41,7 @@ CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
   plv8.execute("SELECT module, source FROM commonjs2_modules WHERE autoload = true").forEach((row) => {
       load(row.module, row.source);
   });
+  let beautify = require("beautify");
+  if (beautify && typeof beautify.js_beautify === "function") plv8.js_beautify = beautify.js_beautify;
   return true;
 $$ LANGUAGE 'plv8' IMMUTABLE;

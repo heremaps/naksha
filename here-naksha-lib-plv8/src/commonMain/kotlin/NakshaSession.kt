@@ -159,25 +159,6 @@ SET SESSION enable_seqscan = OFF;
         this.deletedFeaturesRowCache = Jb.map.newMap()
     }
 
-    /**
-     * Internally invoked by the triggers before writing into history to ensure that the history partition exists.
-     * @param collectionId The collection identifier.
-     */
-    fun ensureHistoryPartition(collectionId: String, txn: NakshaTxn) {
-
-        if (isHistoryEnabled(collectionId)) {
-            // Query current transaction.
-            val hstPartName = Static.hstPartitionNameForId(collectionId, txn)
-            if (!historyPartitionCache.containsKey(hstPartName)) {
-                val collectionConfig = getCollectionConfig(collectionId)
-                val geoIndex = if (true == collectionConfig[NKC_POINTS_ONLY]) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                val temporary: Boolean? = collectionConfig[NKC_TEMPORARY]
-                Static.createHstPartition(sql, temporary == true, collectionId, txn, geoIndex, collectionConfig[NKC_PARTITION])
-                historyPartitionCache.put(hstPartName, true)
-            }
-        }
-    }
-
     private lateinit var gridPlan: IPlv8Plan
 
     /**
@@ -371,9 +352,7 @@ SET SESSION enable_seqscan = OFF;
      */
     fun triggerAfter(data: PgTrigger) {
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
-        ensureHistoryPartition(collectionId, txn())
         if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
-            ensureHistoryPartition(collectionId, NakshaTxn(Jb.int64.ZERO()))
             // save current head in hst
             saveInHst(collectionId, data.OLD)
             copyToDel(collectionId, data.OLD)
@@ -701,8 +680,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                         query = "INSERT INTO $NKC_TABLE ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
-                        val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                        if (!tableExists) Static.collectionCreate(sql, newCollection.temporary(), schema, schemaOid, id, geoIndex, newCollection.partition(), null)
+                        if (!tableExists) Static.collectionCreate(sql, newCollection.storageClass(), schema, schemaOid, id, newCollection.geoIndex(), newCollection.partition())
                         val row = asMap(rows[0])
                         table.returnCreated(id, xyzNsFromRow(id, row))
                         continue
@@ -728,8 +706,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                             }
                         }
                         val row = asMap(rows[0])
-                        val geoIndex = if (newCollection.pointsOnly()) GEO_INDEX_SP_GIST else GEO_INDEX_GIST
-                        if (!tableExists) Static.collectionCreate(sql, newCollection.temporary(), schema, schemaOid, id, geoIndex, newCollection.partition(), null)
+                        if (!tableExists) Static.collectionCreate(sql, newCollection.storageClass(), schema, schemaOid, id, newCollection.geoIndex(), newCollection.partition())
                         table.returnUpdated(id, xyzNsFromRow(id, row))
                         continue
                     }
@@ -842,7 +819,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         // Note: "topology_p000" is a partition, but we need collection-id.
         //        0123456789012
         // So, in that case we will find an underscore at index 8, so i = length-5!
-        val i = collectionId.lastIndexOf('_')
+        val i = collectionId.lastIndexOf('$')
         return if (i >= 0 && i == (collectionId.length - 3) && collectionId[i + 1] == 'p') {
             collectionId.substring(0, i)
         } else {

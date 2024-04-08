@@ -1,5 +1,6 @@
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
+import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -431,7 +432,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
 
     private fun createCollection(tableName: String, partition: Boolean, disableHistory: Boolean) {
         val builder = XyzBuilder.create(65536)
-        var op = builder.buildXyzOp(XYZ_OP_DELETE, "$tableName", null, GRID)
+        var op = builder.buildXyzOp(XYZ_OP_DELETE, tableName, null, GRID)
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
         var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         var table = assertInstanceOf(JvmPlv8Table::class.java, result)

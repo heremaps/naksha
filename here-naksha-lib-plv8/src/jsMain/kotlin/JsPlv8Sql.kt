@@ -8,6 +8,11 @@ package com.here.naksha.lib.plv8;
 @Suppress("UnsafeCastFromDynamic")
 @JsExport
 class JsPlv8Sql : IPlv8Sql {
+    // TODO: Implement detection!
+    private val dbInfo = PgDbInfo(this)
+
+    override fun info(): PgDbInfo = dbInfo
+
     override fun newTable(): ITable {
         return JsPlv8Table()
     }

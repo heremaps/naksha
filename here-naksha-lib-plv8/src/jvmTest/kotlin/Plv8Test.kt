@@ -1,5 +1,6 @@
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
+import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
 import com.here.naksha.lib.plv8.TG_OP_INSERT
 import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
 import org.junit.jupiter.api.*
@@ -109,7 +110,7 @@ class Plv8Test : JbTest() {
         var i = 0
         while (i++ < 10_000) {
             val s = env.randomString(12)
-            val partitionCount: Short = PARTITION_COUNT
+            val partitionCount: Int = PARTITION_COUNT
             val pnum = Static.partitionNumber(s)
             assertTrue(pnum in 0..< partitionCount)
             val pid = Static.partitionNameForId(s)
@@ -140,7 +141,7 @@ class Plv8Test : JbTest() {
     @Test
     fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
-        Static.collectionCreate(session.sql, false, session.schema, session.schemaOid, "foo", geoIndex = Static.GEO_INDEX_DEFAULT, partition = false, null)
+        Static.collectionCreate(session.sql, Static.SC_DEFAULT, session.schema, session.schemaOid, "foo", geoIndex = Static.GEO_INDEX_DEFAULT, partition = false)
         // 9 and 10 are next UIDs!
         val pgNew = Jb.map.newMap()
         pgNew[COL_UID] = null // Should be set by trigger
@@ -207,8 +208,22 @@ class Plv8Test : JbTest() {
     @Order(11)
     @Test
     fun testCreateAndRestoreNakshaCollection() {
-        // given
-        val collectionJson = """{"id":"bar","type":"NakshaCollection","maxAge":3560,"unlogged":false,"partition":true,"pointsOnly":true,"properties":{},"disableHistory":true,"partitionCount":32,"estimatedFeatureCount": 50,"estimatedDeletedFeatures":100,"temporary":true}"""
+        // given (we expect it to ignore invalid values like "temporary")
+        val collectionJson = """{
+            "id": "bar",
+            "type": "NakshaCollection",
+            "maxAge":3560,
+            "partition":true,
+            "storageClass": "temporary",
+            "geoIndex":"sp-gist",
+            "properties":{},
+            "disableHistory": true,
+            "partitionCount":32,
+            "estimatedFeatureCount": 50,
+            "estimatedDeletedFeatures":100,
+            "temporary":true,
+            "pointsOnly":true
+        }"""
         val collectionMap = asMap(env.parse(collectionJson))
         val collectionBytes = XyzBuilder.create().buildFeatureFromMap(collectionMap)
 
@@ -219,11 +234,11 @@ class Plv8Test : JbTest() {
         // then
         assertTrue(restoredCollection.partition())
         assertTrue(restoredCollection.disableHistory())
-        assertTrue(restoredCollection.pointsOnly())
+        assertEquals(Static.GEO_INDEX_SP_GIST, restoredCollection.geoIndex())
+        assertEquals(Static.SC_TEMPORARY, restoredCollection.storageClass())
         assertEquals("bar", restoredCollection.id())
         assertEquals(3560, restoredCollection.maxAge().toInt())
         assertEquals(50, restoredCollection.estimatedFeatureCount().toInt())
-        assertTrue(restoredCollection.temporary())
     }
 
     @Order(12)

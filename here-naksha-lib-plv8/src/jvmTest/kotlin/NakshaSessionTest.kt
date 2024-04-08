@@ -17,7 +17,7 @@ class NakshaSessionTest : JbTest() {
         val session = NakshaSession.get()
 
         // expect
-        assertEquals("foo", session.getBaseCollectionId("foo_p7"))
+        assertEquals("foo", session.getBaseCollectionId("foo\$p7"))
     }
 
     @Test
@@ -27,9 +27,6 @@ class NakshaSessionTest : JbTest() {
         val collectionId = "foo1"
         createCollection(session = session, collectionId = collectionId, partition = true, disableHistory = false)
 
-        // when
-        session.ensureHistoryPartition(collectionId, session.txn())
-
         // then
         assertTrue(session.collectionConfiguration.contains(collectionId))
         val collectionConfig = session.getCollectionConfig(collectionId)
@@ -37,13 +34,12 @@ class NakshaSessionTest : JbTest() {
         assertFalse(isHistoryDisabled)
         val isPartitioningEnabled: Boolean = collectionConfig[NKC_PARTITION]!!
         assertTrue(isPartitioningEnabled)
-        val expectedPartitionName = Static.hstPartitionNameForId(collectionId, session.txn())
+        val expectedPartitionName = "${collectionId}\$hst_${session.txn().year()}"
         assertTrue(doesTableExist(session, expectedPartitionName))
-
     }
 
     private fun createCollection(session: NakshaSession, collectionId: String, partition: Boolean = false, disableHistory: Boolean = true) {
-        val collectionJson = """{"id":"$collectionId","type":"NakshaCollection","maxAge":3560,"partition":$partition,"pointsOnly":false,"properties":{},"disableHistory":$disableHistory}"""
+        val collectionJson = """{"id":"$collectionId","type":"NakshaCollection","maxAge":3560,"partition":$partition,"properties":{},"disableHistory":$disableHistory}"""
         val builder = XyzBuilder.create(65536)
         val op = builder.buildXyzOp(XYZ_OP_CREATE, collectionId, null, 1111)
         val feature = builder.buildFeatureFromMap(asMap(env.parse(collectionJson)))

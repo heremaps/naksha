@@ -15,20 +15,20 @@ import kotlin.js.JsExport
 @JsExport
 class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     private var _partition = false
-    private var _pointsOnly = false
+    private var _geoIndex: String? = null
     private var _disableHistory = false
-    private var _maxAge : BigInt64? = null
-    private var _estimatedFeatureCount : BigInt64? = null
-    private var _temporary = false
+    private var _maxAge: BigInt64? = null
+    private var _estimatedFeatureCount: BigInt64? = null
+    private var _storageClass: String? = null
 
     override fun clear(): NakshaCollection {
         super.clear()
         _partition = false
-        _pointsOnly = false
+        _geoIndex = null
         _disableHistory = false
         _maxAge = null
         _estimatedFeatureCount = null
-        _temporary = false
+        _storageClass = null
         return this
     }
 
@@ -40,19 +40,19 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
             val value = map.value()
             when (key) {
                 NKC_PARTITION -> if (value.isBool()) _partition = value.readBoolean() ?: false
-                NKC_POINTS_ONLY -> if (value.isBool()) _pointsOnly = value.readBoolean() ?: false
+                NKC_GEO_INDEX -> if (value.isString()) _geoIndex = value.readString()
                 NKC_DISABLE_HISTORY -> if (value.isBool()) _disableHistory = value.readBoolean() ?: false
                 NKC_MAX_AGE -> if (value.isInt()) _maxAge = value.readInt64()
                 NKC_ESTIMATED_FEATURE_COUNT -> if (value.isInt()) _estimatedFeatureCount = value.readInt64()
-                NKC_TEMPORARY -> if (value.isBool()) _temporary = value.readBoolean() ?: false
+                NKC_STORAGE_CLASS -> if (value.isString()) _storageClass = value.readString()
             }
         }
     }
 
-    fun partition() : Boolean = _partition
-    fun pointsOnly() : Boolean = _pointsOnly
-    fun disableHistory() : Boolean = _disableHistory
-    fun maxAge() : BigInt64 = _maxAge ?: Jb.int64.MAX_VALUE()
-    fun estimatedFeatureCount() : BigInt64 = _estimatedFeatureCount ?: Jb.int64.MINUS_ONE()
-    fun temporary() : Boolean = _temporary
+    fun partition(): Boolean = _partition
+    fun geoIndex(): String = _geoIndex ?: Static.GEO_INDEX_DEFAULT
+    fun disableHistory(): Boolean = _disableHistory
+    fun maxAge(): BigInt64 = _maxAge ?: Jb.int64.MAX_VALUE()
+    fun estimatedFeatureCount(): BigInt64 = _estimatedFeatureCount ?: Jb.int64.MINUS_ONE()
+    fun storageClass(): String = _storageClass ?: Static.SC_DEFAULT
 }

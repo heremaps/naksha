@@ -184,10 +184,6 @@ class NakshaBulkLoader(
 
     fun addCopyHeadToHstStmt(stmt: IPlv8Plan, row: IMap, isHstDisabled: Boolean?) {
         if (isHstDisabled == false) {
-            // FIXME it's not the best idea to check it in every bulk execution, as we need to create _hst partitions only once a year.
-            session.ensureHistoryPartition(headCollectionId, session.txn())
-            session.ensureHistoryPartition(headCollectionId, NakshaTxn(Jb.int64.ZERO()))
-
             stmt.setLong(1, session.txn().value)
             stmt.setString(2, row[COL_ID])
             stmt.addBatch()
