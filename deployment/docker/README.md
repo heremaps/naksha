@@ -68,18 +68,22 @@ docker build --platform=linux/amd64 \
 cd ..
 
 # Build the final postgres with run-scripts and default configurations
+# Note, this can be done multiple times without any need to re-build the previous images
+# Therefore we introduce the BASE var
+export BASE="v16.2-r0"
+export VERSION="v16.2-r1"
 cd naksha-pg-release
 docker build --platform=linux/arm64 \
        --build-arg="ARCH=arm64" \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=$VERSION" \
+       --build-arg="VERSION=$BASE" \
        --push \
        -t "${DR_NAKSHA_POSTGRES}:arm64-$VERSION" \
        -t "${DR_NAKSHA_POSTGRES}:arm64-latest" .
 docker build --platform=linux/amd64 \
        --build-arg="ARCH=amd64" \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=$VERSION" \
+       --build-arg="VERSION=$BASE" \
        --push \
        -t "${DR_NAKSHA_POSTGRES}:amd64-$VERSION" \
        -t "${DR_NAKSHA_POSTGRES}:amd64-latest" .
@@ -95,13 +99,13 @@ Building takes a long time and is then directly pushed to the remote server. Thi
 
 ```bash
 # Declare a new version
-export PREVIOUS="v16.2-r0"
-export VERSION="v16.2-r1"
+export BASE="v16.2-r0"
+export VERSION="v16.2-r2"
 # Build the docker
 docker build --platform=linux/arm64 \
        --build-arg="ARCH=arm64" \
        --build-arg="DR_NAKSHA_POSTGRES=${DR_NAKSHA_POSTGRES}" \
-       --build-arg="VERSION=$PREVIOUS" \
+       --build-arg="VERSION=$BASE" \
        -t "${DR_NAKSHA_POSTGRES}:arm64-${VERSION}" \
        .
 # Run the docker
@@ -147,12 +151,12 @@ mkdir -p ~/pg_temp
 To create the container do the following:
 
 ```bash
-docker pull hcr.data.here.com/naksha-devops/naksha-postgres:arm64-v16.2-r0
+docker pull hcr.data.here.com/naksha-devops/naksha-postgres:arm64-v16.2-r1
 docker run --name naksha_pg \
        -v ~/pg_data:/usr/local/pgsql/data \
        -v ~/pg_temp:/usr/local/pgsql/temp \
        -p 0.0.0.0:5432:5432 \
-       -d hcr.data.here.com/naksha-devops/naksha-postgres:arm64-v16.2-r0
+       -d hcr.data.here.com/naksha-devops/naksha-postgres:arm64-v16.2-r1
 ```
 
 When the docker container is started for the first time, it will generate a random password for the `postgres` user and store it inside the docker container in `/home/postgres/postgres.pwd`. You should remember this, because the password is stored in the database. It as well prints it, you can review like:

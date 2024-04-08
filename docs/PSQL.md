@@ -27,14 +27,14 @@ All tables used in the Naksha PostgresQL implementation have the same general la
 | created_at | int8  | yes |           | `f.p.xyz->createdAt` - `COALESCE(created_at, updated_at)`                                         |
 | updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                                                              |
 | author_ts  | int8  | yes |           | `f.p.xyz->authorTs` - `COALESCE(author_ts, updated_at)`                                           |
-| version    | int8  | yes |           | `f.p.xyz->version` - `COALESCE(version, 1)`                                                       |
-| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                                         |
 | txn_next   | int8  | yes |           | `f.p.xyz->uuid_next` - **Only in history**.                                                       |
+| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                                         |
 | ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Row identifier.                                                                |
 | uid        | int4  | yes |           | `f.p.xyz->uuid` - Primary row identifier - `COALESCE(uid, 0)`                                     |
 | puid       | int4  | yes |           | `f.p.xyz->puuid` - Row identifier                                                                 |
+| version    | int4  | yes |           | `f.p.xyz->version` - `COALESCE(version, 1)`                                                       |
 | geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                                  |
-| geo_type   | int2  | no  |           | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).                                        |
+| geo_type   | int2  | no  |           | The geometry type (NULL/0 = TWKB, 1 = WKB, 2 = EWKB).                                             |
 | action     | int2  | yes |           | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2) - `COALESCE(action, 0)`                    |
 | app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                                 |
 | author     | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                                    |
@@ -43,8 +43,7 @@ All tables used in the Naksha PostgresQL implementation have the same general la
 | feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.                                |
 | tags       | bytea | no  |           | `f.p.xyz->tags`                                                                                   |
 | geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                                                      |
-| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`) .                                   |
-
+| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`).                                    |
 In the table above `f` refers to the feature root, `f.p` refers to the content of the `properties` of the feature, and `f.p.xyz` refers to the `@ns:com:here:xyz` key in the `properties` of the feature (which is called XYZ namespace for historical reason).
 
 All **text** columns and all **btree** indices should always be created with `COLLATE "C"` to ensure deterministic ordering in the table, long term stable determinism and default support for _like_ operation. Basically, `text_pattern_ops` is exactly doing the same thing (can be set additionally to be explicit about this). This improves as well deduplication. All queries should always enforce `COLLATE "C"` too. When text is encoded, we should use `normalize(text, 'NFKC')` to ensure the same binary encoding for all values, no matter if written from Java or directly inside the database. Available collations can be queried using `SELECT * FROM pg_collation;` and `ucs_basic` may be another option, but not recommended so far.
@@ -232,25 +231,26 @@ The second query will look into all history tables that can contain features for
 Therefore, the union of all the query returns only exactly one feature, the searched one (`foo,speedLimit=25`). This operation does use index-only scans, and is done in parallel for all potential partition.
 
 ## Internal tables
-For the PostgresQL implementation we follow the basic concept of PostgresQL database and expose all internal data as collection and grant access to all these internal data to clients.
+For the PostgresQL implementation we follow the general concept of PostgresQL database and expose all internal data as collection, granting access to all these internal data to clients. All internal tables use the prefix `naksha~` followed by the unique identifier. All internal table can have additional indices and additional virtual columns, which are stored as part of the root properties of the feature, they will override externally set properties, therefore, clients should only use the `properties` of a transaction feature.
 
-### Transactions Table (`naksha$txn`)
-The transaction logs are stored in the `naksha$txn` table. Actually, the only difference to any other table is that the table is partitioned by `txn` and some columns have a different usage:
+Note that this design allow access to internal data using the same general methods that are used for all other tables too, which simplifies testing, reliability and usage. Only when creating internal tables, some additional special code is requires that creates additional indices needed.
+
+### Transactions Table (`naksha~txn`)
+The transaction logs are stored in the `naksha~txn` table. Actually, the only difference to any other table is that the table is partitioned by `txn` and some columns have a different usage:
 
 | Column     | Type  | RO  | Modifiers    | Description                                                                               |
 |------------|-------|-----|--------------|-------------------------------------------------------------------------------------------|
 | created_at | int8  | yes | **NOT NULL** | `f.p.xyz->createdAt` - The time when the transaction started (`transaction_timestamp()`). |
 | updated_at | int8  | yes | **NULLABLE** | `f.p.xyz->updatedAt` - The sequencing time (**set by the sequencer**).                    |
 | author_ts  | int8  | yes |              | Always `NULL`.                                                                            |
-| version    | int8  | yes |              | `f.p.xyz->version` - The sequencing number (**set by the sequencer**).                    |
-| txn        | int8  | yes | NOT NULL     | `f.p.xyz->uuid` - Primary row identifier.                                                 |
 | txn_next   | int8  | yes |              | Always `NULL`.                                                                            |
+| txn        | int8  | yes | NOT NULL     | `f.p.xyz->uuid` - Primary row identifier.                                                 |
 | ptxn       | int8  | yes |              | Always `NULL`.                                                                            |
 | uid        | int4  | yes |              | Always `NULL`.                                                                            |
 | puid       | int4  | yes |              | Always `NULL`.                                                                            |
-| muid       | int4  | yes |              | Always `NULL`.                                                                            |
+| version    | int4  | yes |              | Always `NULL`.                                                                            |
 | geo_grid   | int4  | yes |              | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                          |
-| geo_type   | int2  | no  |              | The geometry type (0 = NULL, 1 = WKB, 2 = EWKB, 3 = TWKB).                                |
+| geo_type   | int2  | no  |              | Always `NULL`.                                                                            |
 | action     | int2  | yes |              | Always `NULL`.                                                                            |
 | app_id     | text  | yes | NOT NULL     | `f.p.xyz->app_id`                                                                         |
 | author     | text  | yes |              | `f.p.xyz->author`                                                                         |
@@ -262,25 +262,26 @@ The transaction logs are stored in the `naksha$txn` table. Actually, the only di
 | geo_ref    | bytea | no  |              | `f.referencePoint` - The reference point (`ST_Centroid(geo)`, (**set by the sequencer**). |
 
 **Notes**
-- The transaction table itself is partitioned by `txn` and organized in years (`naksha$txn_YYYY`). This is mainly helpful to purge transaction-logs and to improve the access speed as it avoids too many partitions.
-- More information about Postgres transaction numbers are available in the [documentation](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-PG-SNAPSHOT). We should enable [track-commit-timestamp](https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-TRACK-COMMIT-TIMESTAMP) so that `pg_commit_ts` holds information when a transaction was committed. This would make our own tracking more reliable.
+- The transaction table itself is partitioned by `txn` and organized in years (`naksha~txn$YYYY`). This is mainly helpful to purge transaction-logs and to improve the access speed as it avoids too many partitions.
 - To convert from **timestamptz** to 64-bit integer as epoch milliseconds do `SELECT (EXTRACT(epoch FROM ts) * 1000)::int8`, vice versa is `SELECT TO_TIMESTAMP(epoch_ms / 1000.0)`.
+- The feature contains a `seqNumber` that is used to read transactions in order.
+- The feature contains a `collections` map that is used to hold the amount
 
-### Dictionaries Table (`naksha$dictionaries`)
+### Dictionaries Table (`naksha~dictionaries`)
 This table stores dictionaries. It is managed by background jobs that auto-generate optimal dictionaries. The features stored in here will be bound to a collection using the property `collectionId`.
 
 The `collectionId` property is indexed and used to bind the entries in the table to specific collections. When a collection is deleted, all entries for this collections should be deleted as well, except a **truncate** is done. For the truncate use-case only the tables are dropped and re-created, but the dictionaries are left intact.
 
 The `type` of the feature in here is always `naksha.Dictionary`.
 
-### Collections Table (`naksha$collections`)
+### Collections Table (`naksha~collections`)
 This internal tables stores the configuration of all collections. The type of the features in this table is always `naksha.Collection`.
 
-### Indices Table (`naksha$indices`)
+### Indices Table (`naksha~indices`)
 This internal tables stores the available and supported indices. Currently, no new indices can be created, but maybe in the future manual index creation will be supported. The type for the feature is always `naksha.Index`.
 
 ## Sequencer
-The sequence is a background job added into the `lib-psql` that will “publish” the transactions. The job will set the `updated_at` to signal the visibility of a transaction and to generate a sequence number, storing it in the `version` and add it to the transaction feature as `seqNumber`. The job guarantees that the sequence number has no holes (is continues) and is unique for every transaction.
+The sequence is a background job added into the `lib-psql` that will “publish” the transactions. The job will set the `updated_at` to signal the visibility of a transaction and to generate a sequence number, storing it in the `seqNumber` property of the transaction feature. The job guarantees that the sequence number has no holes (is continues) and is unique for every transaction.
 
 The author and application identifier must be set by the client before starting any transaction. The **author** is optional and can be _null_, but the application identifier **must not** be _null_ or an empty string. If the author is _null_, then the current author stays the author for all updates or deletes. New objects in this case do not have an author.
 
