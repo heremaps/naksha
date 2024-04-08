@@ -12,10 +12,17 @@ To get Naksha container running, one must do the following:
      ```shell
     ./gradlew shadowJar
     ```
-3) Build the local image
+3) Build the local image:\
+   If your host's architecture is arm64 (ie you're using MacOS with Apple Silicon chip):
     ```shell
    docker build -t local-naksha-app -f docker/Dockerfile .
     ```
+   For other architectures, you can specify `ARCHITECTURE` build argument that corresponds to different base image repository. For example, when running on amd64 chips (ie MacOS with Intel processors):
+   ```shell
+   docker build -t local-naksha-app -f docker/Dockerfile --build-arg ARCHITECTURE=amd64 .
+   ```
+   Other possible architectures that are supported can be found [on these Docker official images docs](https://github.com/docker-library/official-images#architectures-other-than-amd64). For more details, refer to [docs of our base image (Eclipse Temurin)](https://hub.docker.com/_/eclipse-temurin).
+   
 4) Run the container for the first time:\
    There are two optional environment variables that one can specify when running Naksha conrtainer
     - `NAKSHA_CONFIG_ID`: id of naksha configaration to use, `test-config` by default
@@ -27,14 +34,22 @@ To get Naksha container running, one must do the following:
    database is running locally, then when specifying its host you should use `host.docker.internal` (see default URL above) instead of `localhost`/`127.0.0.1` (docker's default network mode is isolated `bridge` so the `localhost` for container and host are 2 different things) .\
    Putting it all together the typical command you would use is:
    ```shell
-   docker run \            
-      --name=naksha-app \                                                                                                                                                                                                                  
-      --network=host \
+   docker run \
+      --name=naksha-app \
+      -p 8080:8080 \
+      local-naksha-app
+    ```
+   or with custom config / admin db URL:
+   ```shell
+   docker run \
+      --name=naksha-app \
       --env NAKSHA_CONFIG_ID=<your Naksha config id> \
       --env NAKSHA_ADMIN_DB_URL=<your DB uri that Naksha should use> \
       -p 8080:8080 \
-      localhost/local-naksha-app
+      local-naksha-app
     ```
+   
+5) Verify your instance is up and running by accessing local Swagger: http://localhost:8080/hub/swagger/index.html
 
 ### Additional remarks
 
@@ -44,7 +59,7 @@ Starting the container as in the sample above will hijack your terminal. To avoi
 flag (as in "detached")
 
    ```shell
-   > docker run --name=naksha-app -p 8080:8080 -d localhost/local-naksha-app
+   > docker run --name=naksha-app -p 8080:8080 -d local-naksha-app
    ```
 
 #### Tailing logs
@@ -100,7 +115,7 @@ If you ever need to clean the image, use one of the below (the latter is simply 
 former).
 
    ```
-   > docker image rm localhost/local-naksha-app
-   > docker rmi localhost/local-naksha-app
+   > docker image rm local-naksha-app
+   > docker rmi local-naksha-app
    ```
 
