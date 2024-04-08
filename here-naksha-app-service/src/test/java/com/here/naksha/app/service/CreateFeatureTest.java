@@ -55,6 +55,7 @@ import org.json.JSONException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
@@ -63,6 +64,11 @@ class CreateFeatureTest extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
   private static final String SPACE_ID = "create_features_test_space";
+
+  private static boolean runBigPayloadTests() {
+    // by default enabled
+    return !Boolean.parseBoolean(System.getenv("DISABLE_BIG_PAYLOAD_TESTS"));
+  }
 
   @BeforeAll
   static void setup(){
@@ -408,6 +414,7 @@ class CreateFeatureTest extends ApiTest {
   */
 
   @Test
+  @EnabledIf("runBigPayloadTests")
   void tc0311_testFixedSize22MBRequestPayload() throws Exception {
     // Test API : POST /hub/spaces/{spaceId}/features
     // Given: Big Input request payload of 22MB
