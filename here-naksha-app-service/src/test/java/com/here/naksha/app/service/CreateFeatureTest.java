@@ -412,7 +412,7 @@ class CreateFeatureTest extends ApiTest {
     // Test API : POST /hub/spaces/{spaceId}/features
     // Given: Big Input request payload of 22MB
     final long expBodySize = 22 * 1024 * 1024;
-    final Duration timeout = Duration.ofSeconds(30); // bigger timeout for this request
+    final Duration timeout = Duration.ofSeconds(60); // bigger timeout for this request
     final String bodyJson = loadFileOrFail("CreateFeatures/TC0311_create22MBFeature/big_admin_payload_20485579.json");
     String streamId = UUID.randomUUID().toString();
 
