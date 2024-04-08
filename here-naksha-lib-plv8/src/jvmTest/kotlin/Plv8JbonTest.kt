@@ -4,10 +4,12 @@ import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.Static
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import kotlin.test.assertEquals
 
 @Suppress("UNCHECKED_CAST")
-class Plv8JbonTest : Plv8TestContainer() {
+@ExtendWith(Plv8TestContainer::class)
+class Plv8JbonTest : JbTest() {
     private val builder = JbBuilder(newDataView(16384))
 
     private fun jsonToJbonByteArray(json: String): ByteArray {

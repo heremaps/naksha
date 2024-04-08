@@ -4,12 +4,14 @@ import com.here.naksha.lib.plv8.TG_OP_INSERT
 import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
-class Plv8Test : Plv8TestContainer() {
+@ExtendWith(Plv8TestContainer::class)
+class Plv8Test : JbTest() {
     private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
 
     @Order(1)

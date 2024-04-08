@@ -6,6 +6,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.runner.RunWith
 import java.nio.charset.StandardCharsets
 import java.sql.Connection
 import java.sql.DriverManager
@@ -13,7 +15,8 @@ import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.test.assertEquals
 
 @Suppress("ArrayInDataClass")
-class Plv8PerfTest : Plv8TestContainer() {
+@ExtendWith(Plv8TestContainer::class)
+class Plv8PerfTest : JbTest() {
 
     val GRID = 111
 
@@ -266,12 +269,12 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val threads = Array(BulkThreads) {
             Thread {
                 val threadId = it
-                val conn = DriverManager.getConnection(url)
+                val conn = DriverManager.getConnection(Plv8TestContainer.url)
                 conn.use {
                     val env = JvmPlv8Env.get()
                     env.startSession(
                             conn,
-                            schema,
+                            Plv8TestContainer.schema,
                             "plv8_${threadId}_thread",
                             env.randomString(),
                             "plv8_${threadId}_app",
