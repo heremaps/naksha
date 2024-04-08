@@ -43,6 +43,7 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -373,6 +374,8 @@ class CreateFeatureTest extends ApiTest {
             .hasJsonBody(thirdResponse);
   }
 
+  // TODO : This test is disabled for now due to failure in FibMap for generating payload bigger than 6MB
+  /*
   @Test
   void tc0310_testBigRequestPayload() throws Exception {
     // Test API : POST /hub/spaces/{spaceId}/features
@@ -381,14 +384,14 @@ class CreateFeatureTest extends ApiTest {
     final XyzFeature feature = JsonUtil.parseJson(basePayload, XyzFeature.class);
 
     // Given: Big Feature generated from base Feature
-    final long targetBodySize = (NakshaHubConfig.MAX_REQ_BODY_LIMIT * 1024 * 1024) - 1024; // keep buffer of 1KB
+    final long targetBodySize = (5 * 1024 * 1024) - 1024; // keep buffer of 1KB
     FeatureUtil.generateBigFeature(feature, targetBodySize-feature.serialize().length());
 
     // Given: Big request payload ready to test
     final String requestPayload = JsonUtil.toJson(new FeatureCollectionRequest().withFeatures(List.of(feature)));
     String streamId = UUID.randomUUID().toString();
 
-    assertTrue(requestPayload.length() >= targetBodySize, "Feature size isn't big enough");
+    assertTrue(requestPayload.length() >= targetBodySize, "Request payload size isn't big enough");
 
     // When: Big Feature request is submitted to NakshaHub
     HttpResponse<String> response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", requestPayload, streamId);
@@ -402,6 +405,40 @@ class CreateFeatureTest extends ApiTest {
             .hasInsertedIdsMatchingFeatureIds(null)
             .hasUuids();
   }
+  */
 
+  @Test
+  void tc0311_testFixedSize22MBRequestPayload() throws Exception {
+    // Test API : POST /hub/spaces/{spaceId}/features
+    // Given: Big Input request payload of 22MB
+    final long expBodySize = 22 * 1024 * 1024;
+    final Duration timeout = Duration.ofSeconds(30); // bigger timeout for this request
+    final String bodyJson = loadFileOrFail("CreateFeatures/TC0311_create22MBFeature/big_admin_payload_20485579.json");
+    String streamId = UUID.randomUUID().toString();
+
+    assertTrue(bodyJson.length() >= expBodySize, "Request payload size not as big as %s bytes".formatted(expBodySize));
+
+    // When: Big Feature request is submitted to NakshaHub
+    HttpResponse<String> response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId, timeout);
+
+    // Then: Perform assertions that we get success (and not 413 - Request Entity Too Large)
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasResBodySizeGTE(expBodySize)
+            ;
+
+    // When: We query the same Feature from NakshaHub
+    streamId = UUID.randomUUID().toString();
+    final String idQueryParam = "id=%s".formatted(urlEncoded("feature-id-20485579"));
+    response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?"+idQueryParam, streamId, timeout);
+
+    // Then: Perform assertions that we get success (and not 413 - Request Entity Too Large)
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasResBodySizeGTE(expBodySize)
+    ;
+  }
 
 }
