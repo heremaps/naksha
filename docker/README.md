@@ -16,16 +16,15 @@ To get Naksha container running, one must do the following:
     ```shell
    docker build -t local-naksha-app -f docker/Dockerfile .
     ```
-4) Run the container:
+4) Run the container for the first time:\
    There are two optional environment variables that one can specify when running Naksha conrtainer
     - `NAKSHA_CONFIG_ID`: id of naksha configaration to use, `test-config` by default
     - `NAKSHA_ADMIN_DB_URL`: url of database for Naksha app to
-      use, `jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password&schema=naksha&app=naksha_local&id=naksha_admin_db`
+      use, `jdbc:postgresql://host.docker.internal:5432/postgres?user=postgres&password=password&schema=naksha&app=naksha_local&id=naksha_admin_db`
       by default
 
    When connecting Naksha app to database, one has to consider container networking - if your
-   database is running locally, then you need to instruct the container to utilize host's
-   network (`--network=host`).\
+   database is running locally, then when specifying its host you should use `host.docker.internal` (see default URL above) instead of `localhost`/`127.0.0.1` (docker's default network mode is isolated `bridge` so the `localhost` for container and host are 2 different things) .\
    Putting it all together the typical command you would use is:
    ```shell
    docker run \            
@@ -33,6 +32,7 @@ To get Naksha container running, one must do the following:
       --network=host \
       --env NAKSHA_CONFIG_ID=<your Naksha config id> \
       --env NAKSHA_ADMIN_DB_URL=<your DB uri that Naksha should use> \
+      -p 8080:8080 \
       localhost/local-naksha-app
     ```
 
@@ -44,7 +44,7 @@ Starting the container as in the sample above will hijack your terminal. To avoi
 flag (as in "detached")
 
    ```shell
-   > docker run --name=naksha-app -d --network=host localhost/local-naksha-app
+   > docker run --name=naksha-app -p 8080:8080 -d localhost/local-naksha-app
    ```
 
 #### Tailing logs
@@ -71,6 +71,28 @@ Stopping is graceful, meaning - it sends `SIGTERM` to the process so the app wil
 perform the cleanup.\
 If you need to stop the container immediately, use `docker kill naksha-app` - the main difference
 is that instead of `SIGTERM` the process will receive `SIGKILL`.
+
+#### Running stopped / killed container
+
+If your run configuration (ports, environments etc - basically all args that you passed to the `run` command) hasn't changed and you just want to respawn Naksha, use `start`:
+```shell
+docker start naksha-app
+```
+
+This will bring your container back to life in detached mode. To get live logs again, refer to [tailing logs](#tailing-logs).
+
+#### Failure when running container multiple times
+
+If you stop/kill your container and then `run`(nod `start`!) it again, it might happen that you'll see the following error:
+```shell
+Error: creating container storage: the container name "naksha-app" is already in use by <id>.
+You have to remove that container to be able to reuse that name: that name is already in use
+```
+
+That means that your container engine (like docker / podman) has some uncleared data associated with given container name. The quickest fix is to remove it and then run again.
+```shell
+docker rm naksha-app
+```
 
 #### Removing the image
 
