@@ -5,9 +5,11 @@ import com.here.naksha.lib.plv8.NKC_DISABLE_HISTORY
 import com.here.naksha.lib.plv8.NKC_PARTITION
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import java.util.function.BooleanSupplier
 
-class NakshaSessionTest : Plv8TestContainer() {
+@ExtendWith(Plv8TestContainer::class)
+class NakshaSessionTest : JbTest() {
 
     @Test
     fun testGetBaseCollectionId() {
