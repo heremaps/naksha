@@ -22,7 +22,27 @@ To install a new EC2 Postgres instance the following steps are needed:
 Ones done, open up a shell to the machine and start the installation:
 
 ```bash
+# Compact all files and upload them to the new instance
+tar czf files.tgz files
+scp files.tgz ec2-user@<ip>:.
+
+# Enter the machine
 ssh ec2-user@IP
+
+# Unpack the files and install them
+tar xzf files.tgz
+sudo chown -R root:root files
+sudo cp files/etc/security/limits.conf /etc/security/limits.conf
+sudo cp files/etc/systemd/networkd.conf /etc/systemd/networkd.conf
+sudo cp files/etc/sysctl.conf /etc/sysctl.d/99-sysctl.conf
+
+# Reboot the machine (Note: This can easily require 15 minutes, before you can log in again!!!)
+sudo shutdown -r 0
+
+# Login back to the machine, check if new settings are accepted
+sudo cat /proc/sys/net/ipv4/tcp_available_congestion_control    # should show cubic
+sudo cat /proc/sys/net/ipv4/tcp_max_tw_buckets                  # should show 262144
+sudo cat /proc/sys/net/ipv4/tcp_mem                             # should show 2097152	4194304	6291456
 
 # Install necessary software
 sudo yum -y install docker mdadm postgresql15 nc nmap fio nvme-cli
@@ -49,6 +69,14 @@ sudo cat /proc/mdstat
 # Store the configuration
 sudo mdadm --detail --scan --verbose | sudo tee -a /etc/mdadm.conf
 
+# Ensure that the file looks like this:
+ARRAY /dev/md0 level=raid0 num-devices=4 metadata=1.2 name=pg_temp UUID=9c1f21ea:eefb8a1c:a7f57b53:8d7e50bb devices=/dev/nvme0n1,/dev/nvme1n1,/dev/nvme2n1,/dev/nvme3n1
+ARRAY /dev/md1 level=raid0 num-devices=16 metadata=1.2 name=pg_data UUID=7f469a97:bd0113bf:a2f4e2fe:1dbc9994 devices=/dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf,/dev/sdg,/dev/sdh,/dev/sdi,/dev/sdj,/dev/sdk,/dev/sdl,/dev/sdm,/dev/sdn,/dev/sdo,/dev/sdp,/dev/sdq
+# If it does not, then fix it accordingly using 
+
+# A device can be restored via
+sudo mdadm -A /dev/md1
+
 # Create file systems
 # -m = reserved space for root (we do not need this)
 # -b = block-size, should always be the same as the MMU, so always 4k
@@ -73,11 +101,19 @@ sudo mkdir -p /mnt/pg_data && sudo chown postgres:postgres /mnt/pg_data
 sudo mount /dev/md0 /mnt/pg_temp 
 sudo mount /dev/md1 /mnt/pg_data
 
+# Patch /etc/fstab, so this gets auto-mounted
+sudo echo "/dev/md0        /mnt/pg_temp    ext4    defaults,noatime,nofail,discard" | sudo tee -a /etc/fstab
+sudo echo "/dev/md1        /mnt/pg_data    ext4    defaults,noatime,nofail,discard" | sudo tee -a /etc/fstab
+cat /etc/fstab
+
 # Remove lost and found folders (this prevents initdb)
 sudo rm -rf /mnt/pg_temp/lost+found/ /mnt/pg_data/lost+found/
 
-# Start the docker
+# Start docker (and make it auto-starting)
 sudo systemctl start docker
+sudo systemctl enable docker
+
+# Start the PostgresQL docker
 sudo docker pull hcr.data.here.com/naksha-devops/naksha-postgres:amd64-v16.2-r0
 sudo docker run --name naksha_pg --privileged -v /mnt/pg_data:/usr/local/pgsql/data -v /mnt/pg_temp:/usr/local/pgsql/temp --network host -d hcr.data.here.com/naksha-devops/naksha-postgres:amd64-v16.2-r0
 sudo docker logs naksha_pg
@@ -90,6 +126,9 @@ sudo vim /mnt/pg_data/postgresql.conf
 # include_if_exists = '/home/postgres/r6idn.metal.conf'
 # Then save and exit, restart docker
 sudo docker start naksha_pg
+
+# When the docker runs, enable auto-restart
+sudo docker update --restart unless-stopped naksha_pg
 ```
 
 ## Management
