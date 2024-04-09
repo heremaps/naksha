@@ -19,6 +19,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     private var _disableHistory = false
     private var _maxAge: BigInt64? = null
     private var _estimatedFeatureCount: BigInt64? = null
+    private var _estimatedDeletedCount: BigInt64? = null
     private var _storageClass: String? = null
 
     override fun clear(): NakshaCollection {
@@ -28,6 +29,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
         _disableHistory = false
         _maxAge = null
         _estimatedFeatureCount = null
+        _estimatedDeletedCount = null
         _storageClass = null
         return this
     }

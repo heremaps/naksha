@@ -6,7 +6,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * Configuration of the collection.
+ * Configuration of a table.
  * @property sql The SQL API of the session.
  * @property storageClass The storage class to create.
  */

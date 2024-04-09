@@ -103,19 +103,19 @@ object Static {
     internal val SC_TRANSACTIONS = "naksha~transactions"
 
     /**
-     * Special internal value used to create the dictionaries table.
+     * Special internal value used to create the dictionaries' collection.
      */
     @JvmStatic
     internal val SC_DICTIONARIES = "naksha~dictionaries"
 
     /**
-     * Special internal value used to create the collections table.
+     * Special internal value used to create the collections' collection.
      */
     @JvmStatic
     internal val SC_COLLECTIONS = "naksha~collections"
 
     /**
-     * Special internal value used to create the dictionaries table.
+     * Special internal value used to create the indices' collection.
      */
     @JvmStatic
     internal val SC_INDICES = "naksha~indices"

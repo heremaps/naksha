@@ -22,7 +22,6 @@ class NakshaBulkLoader(
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>
     ) {
-
         val collectionConfig = session.getCollectionConfig(headCollectionId)
         val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
         val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
@@ -148,17 +147,17 @@ class NakshaBulkLoader(
         }
     }
 
-    fun addDelStmt(stmt: IPlv8Plan, row: IMap) {
-        stmt.setLong(1, row[COL_TXN])
-        stmt.setInt(2, row[COL_UID])
-        stmt.setShort(3, row[COL_ACTION])
-        stmt.setInt(4, row[COL_VERSION])
-        stmt.setLong(5, row[COL_UPDATE_AT])
-        stmt.setLong(6, row[COL_AUTHOR_TS])
-        stmt.setString(7, row[COL_AUTHOR])
-        stmt.setString(8, row[COL_APP_ID])
-        stmt.setString(9, row[COL_ID])
-        stmt.addBatch()
+    fun addDelStmt(plan: IPlv8Plan, row: IMap) {
+        plan.setLong(1, row[COL_TXN])
+        plan.setInt(2, row[COL_UID])
+        plan.setShort(3, row[COL_ACTION])
+        plan.setInt(4, row[COL_VERSION])
+        plan.setLong(5, row[COL_UPDATE_AT])
+        plan.setLong(6, row[COL_AUTHOR_TS])
+        plan.setString(7, row[COL_AUTHOR])
+        plan.setString(8, row[COL_APP_ID])
+        plan.setString(9, row[COL_ID])
+        plan.addBatch()
     }
 
     fun addCopyDelToHstStmt(stmt: IPlv8Plan, row: IMap) {
