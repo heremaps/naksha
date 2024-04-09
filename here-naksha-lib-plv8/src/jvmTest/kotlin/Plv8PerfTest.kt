@@ -37,7 +37,7 @@ class Plv8PerfTest : JbTest() {
         private val InsertFeaturesPerRound = if (UseSmallFeatures) 10_000 else 1_000
         private val InsertRounds = 10
         private val BulkThreads = 8
-        private val BulkSize = BulkThreads * if (UseSmallFeatures) 100_000 else 10_000
+        private val BulkSize = BulkThreads * if (UseSmallFeatures) 25_000 else 5_000
 
         private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
         internal var topologyTemplate: IMap? = null
@@ -312,9 +312,14 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
                                     tagsArr.add(f.tags)
                                     geoTypeArr.add(f.geoType)
                                 }
-                                threadSession.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+                                val result = threadSession.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+                                if (result is JvmPlv8Table && result.rows.size != 0) {
+                                    val err = result.rows[1]
+                                    println("Error: ${err.getAny(RET_ERR_NO) as String} - ${err.getAny(RET_ERR_MSG) as String}")
+                                }
                                 threadSession.sql.execute("commit")
                             } catch (e: Exception) {
+                                e.printStackTrace()
                                 throw e
                             }
                         }
@@ -342,7 +347,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         val session = NakshaSession.get()
 
         val tableName = "v2_bulk_write"
-        createCollection(tableName, partition = false, disableHistory = false)
+        createCollection(tableName, partition = true, disableHistory = false)
 
         // We only run with a single thread!
         val NumOfFeatures = BulkSize / BulkThreads

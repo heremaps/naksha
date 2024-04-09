@@ -68,7 +68,7 @@ interface IPlv8Plan {
     /**
      * Executes prepared batch and returns number of updated rows
      */
-    fun executeBatch():IntArray
+    fun executeBatch(): IntArray
 
     /**
      * Frees the plan.

@@ -135,6 +135,10 @@ Object.assign(JSON, {
         return js("BigInt(Date.now())")
     }
 
+    override fun currentMicros(): BigInt64 {
+        return js("BigInt(Date.now()*1000)")
+    }
+
     override fun random(): Double {
         return js("Math.random()")
     }

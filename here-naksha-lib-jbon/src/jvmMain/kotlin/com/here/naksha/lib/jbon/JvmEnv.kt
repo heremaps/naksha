@@ -112,9 +112,9 @@ open class JvmEnv : IEnv {
         return JvmThreadLocal()
     }
 
-    override fun currentMillis(): BigInt64 {
-        return JvmBigInt64(System.currentTimeMillis())
-    }
+    override fun currentMillis(): BigInt64 = JvmBigInt64(System.currentTimeMillis())
+
+    override fun currentMicros(): BigInt64 = JvmBigInt64(System.nanoTime() / 1000)
 
     override fun random(): Double {
         return ThreadLocalRandom.current().nextDouble()

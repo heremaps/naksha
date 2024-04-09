@@ -43,15 +43,15 @@ class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : IPlv8
     }
 
     override fun setLong(parameterIndex: Int, value: BigInt64?) {
-        setValueOrNull(parameterIndex, value?.toLong(), Types.BIGINT, stmt::setLong)
+        if (value == null) stmt.setNull(parameterIndex, Types.BIGINT) else stmt.setLong(parameterIndex, value.toLong())
     }
 
     override fun setInt(parameterIndex: Int, value: Int?) {
-        setValueOrNull(parameterIndex, value, Types.INTEGER, stmt::setInt)
+        if (value == null) stmt.setNull(parameterIndex, Types.INTEGER) else stmt.setInt(parameterIndex, value)
     }
 
     override fun setShort(parameterIndex: Int, value: Short?) {
-        setValueOrNull(parameterIndex, value, Types.SMALLINT, stmt::setShort)
+        if (value == null) stmt.setNull(parameterIndex, Types.SMALLINT) else stmt.setShort(parameterIndex, value)
     }
 
     override fun addBatch() {
@@ -60,14 +60,6 @@ class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : IPlv8
 
     override fun executeBatch(): IntArray {
         return stmt.executeBatch()
-    }
-
-    fun <T> setValueOrNull(parameterIndex: Int, value: T?, sqlType: Int, setter: (Int, T) -> Unit) {
-        if (value == null) {
-            stmt.setNull(parameterIndex, sqlType)
-        } else {
-            setter(parameterIndex, value)
-        }
     }
 
     override fun free() {

@@ -40,6 +40,12 @@ interface IEnv {
     fun currentMillis(): BigInt64
 
     /**
+     * Returns the current microseconds (not epoch, only for time measurement).
+     * @return current microseconds (not epoch, only for time measurement).
+     */
+    fun currentMicros() : BigInt64
+
+    /**
      * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).
      * @return The new random number between 0 and 1.
      */

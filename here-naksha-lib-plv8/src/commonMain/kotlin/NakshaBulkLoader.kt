@@ -1,7 +1,8 @@
 package com.here.naksha.lib.plv8
 
+import NakshaBulkLoaderPlan
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.plv8.FeatureRow.Companion.mapToOperations
+import com.here.naksha.lib.plv8.NakshaBulkLoaderOp.Companion.mapToOperations
 
 class NakshaBulkLoader(
         val collectionId: String,
@@ -22,93 +23,101 @@ class NakshaBulkLoader(
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>
     ) {
+        val START = Jb.env.currentMicros() / 1000
         val collectionConfig = session.getCollectionConfig(headCollectionId)
         val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
         val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
 
-        val (allOperations, idsToModify, idsToPurge) = mapToOperations(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val START_MAPPING = Jb.env.currentMicros() / 1000
+        val (allOperations, idsToModify, idsToPurge, partition) = mapToOperations(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val END_MAPPING = Jb.env.currentMicros() / 1000
 
-        session.sql.execute("SET LOCAL session_replication_role = replica;")
+        session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
         val existingFeatures = existingFeatures(headCollectionId, idsToModify)
         val existingInDelFeatures = existingFeatures(delCollectionId, idsToPurge)
+        val END_LOADING = Jb.env.currentMicros() / 1000
 
+        val START_PREPARE = Jb.env.currentMicros() / 1000
         val featureIdsToDeleteFromDel = mutableListOf<String>()
         val featuresToPurgeFromDel = mutableListOf<String>()
 
-        val partitionOperations = groupByPartition(isCollectionPartitioned, allOperations)
-        val orderedPartitionKeys = partitionOperations.keys.sorted()
-        for (partitionKey in orderedPartitionKeys) {
-            val operations = partitionOperations[partitionKey]!!.sortedBy { it.id() }
-
-            val partitionHeadQuoted = getPartitionHeadQuoted(isCollectionPartitioned, partitionKey)
-            val plans = PartitionPlans(partitionHeadQuoted, delCollectionIdQuoted, hstCollectionIdQuoted, session)
-
-            for (row in operations) {
-                val op = calculateOpToPerform(row, existingFeatures)
-                val featureRowMap = row.rowMap
-
-                when (op) {
-                    XYZ_OP_UPDATE -> {
-                        val headBeforeUpdate: IMap = existingFeatures[row.id()]!!
-                        checkStateForAtomicOp(row.id(), row.xyzOp.uuid(), headBeforeUpdate)
-
-                        featureIdsToDeleteFromDel.add(row.id())
-                        addCopyHeadToHstStmt(plans.copyHeadToHstPlan, featureRowMap, isHistoryDisabled)
-                        session.xyzUpdateHead(row.collectionId, featureRowMap, headBeforeUpdate)
-                        addUpdateHeadStmt(plans.updateHeadPlan, featureRowMap)
-                    }
-
-                    XYZ_OP_CREATE -> {
-                        featureIdsToDeleteFromDel.add(row.id())
-                        session.xyzInsert(row.collectionId, featureRowMap)
-                        addInsertStmt(plans.insertHeadPlan, featureRowMap)
-                    }
-
-                    XYZ_OP_DELETE, XYZ_OP_PURGE -> {
-                        if (existingFeatures.containsKey(row.id())) {
-                            // this may throw exception (if we try to delete non-existing feature - that was deleted before)
-                            val headBeforeDelete: IMap = existingFeatures[row.id()]!!
-                            checkStateForAtomicOp(row.id(), row.xyzOp.uuid(), headBeforeDelete)
-                            addCopyHeadToHstStmt(plans.copyHeadToHstPlan, featureRowMap, isHistoryDisabled)
-
-                            featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
-                            featureRowMap[COL_AUTHOR_TS] = headBeforeDelete[COL_AUTHOR_TS]
-                            session.xyzDel(featureRowMap)
-                            addDelStmt(plans.insertDelPlan, featureRowMap)
-                            addDeleteHeadStmt(plans.deleteHeadPlan, featureRowMap)
-                            if (isHistoryDisabled == false) addCopyDelToHstStmt(plans.copyDelToHstPlan, featureRowMap)
-                        }
-                        if (op == XYZ_OP_PURGE) {
-                            checkStateForAtomicOp(row.id(), row.xyzOp.uuid(), existingInDelFeatures[row.id()]!!)
-                            featuresToPurgeFromDel.add(row.id())
-                        }
-                    }
-
-                    else -> throw RuntimeException("Operation $op not supported")
-                }
-            }
-
-            // 1.
-            executeBatchDeleteFromDel(delCollectionIdQuoted, featureIdsToDeleteFromDel)
-            // 3.
-            executeBatch(plans.insertDelPlan)
-            // 4. insert to history and update head
-            executeBatch(plans.copyHeadToHstPlan)
-            executeBatch(plans.updateHeadPlan)
-            executeBatch(plans.deleteHeadPlan)
-            // 5. copy del to hst
-            executeBatch(plans.copyDelToHstPlan)
-            // 6.
-            executeBatch(plans.insertHeadPlan)
-            // 7. purge
-            executeBatchDeleteFromDel(delCollectionIdQuoted, featuresToPurgeFromDel)
+        val plan: NakshaBulkLoaderPlan = if (isCollectionPartitioned == true && partition != null) {
+            println("Insert into a single partition #$partition (isCollectionPartitioned: ${isCollectionPartitioned})")
+            NakshaBulkLoaderPlan(partition, getPartitionHeadQuoted(true, partition), delCollectionIdQuoted, hstCollectionIdQuoted, session)
+        } else {
+            println("Insert into a multiple partitions, therefore via HEAD (isCollectionPartitioned: ${isCollectionPartitioned})")
+            NakshaBulkLoaderPlan(null, getPartitionHeadQuoted(false, -1), delCollectionIdQuoted, hstCollectionIdQuoted, session)
         }
+        for (op in allOperations) {
+            val opType = calculateOpToPerform(op, existingFeatures)
+            val featureRowMap = op.rowMap
+            when (opType) {
+                XYZ_OP_CREATE -> {
+                    featureIdsToDeleteFromDel.add(op.id)
+                    session.xyzInsert(op.collectionId, featureRowMap)
+                    addInsertStmt(plan.insertHeadPlan(), featureRowMap)
+                }
+
+                XYZ_OP_UPDATE -> {
+                    val headBeforeUpdate: IMap = existingFeatures[op.id]!!
+                    checkStateForAtomicOp(op.id, op.xyzOp.uuid(), headBeforeUpdate)
+
+                    featureIdsToDeleteFromDel.add(op.id)
+                    addCopyHeadToHstStmt(plan.copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
+                    session.xyzUpdateHead(op.collectionId, featureRowMap, headBeforeUpdate)
+                    addUpdateHeadStmt(plan.updateHeadPlan(), featureRowMap)
+                }
+
+                XYZ_OP_DELETE, XYZ_OP_PURGE -> {
+                    if (existingFeatures.containsKey(op.id)) {
+                        // this may throw exception (if we try to delete non-existing feature - that was deleted before)
+                        val headBeforeDelete: IMap = existingFeatures[op.id]!!
+                        checkStateForAtomicOp(op.id, op.xyzOp.uuid(), headBeforeDelete)
+                        addCopyHeadToHstStmt(plan.copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
+
+                        featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
+                        featureRowMap[COL_AUTHOR_TS] = headBeforeDelete[COL_AUTHOR_TS]
+                        session.xyzDel(featureRowMap)
+                        addDelStmt(plan.insertDelPlan(), featureRowMap)
+                        addDeleteHeadStmt(plan.deleteHeadPlan(), featureRowMap)
+                        if (isHistoryDisabled == false) addCopyDelToHstStmt(plan.copyDelToHstPlan(), featureRowMap)
+                    }
+                    if (opType == XYZ_OP_PURGE) {
+                        checkStateForAtomicOp(op.id, op.xyzOp.uuid(), existingInDelFeatures[op.id]!!)
+                        featuresToPurgeFromDel.add(op.id)
+                    }
+                }
+
+                else -> throw RuntimeException("Operation $opType not supported")
+            }
+        }
+        val END_PREPARE = Jb.env.currentMicros() / 1000
+
+        val START_EXECUTION = Jb.env.currentMicros() / 1000
+        // 1.
+        if (featureIdsToDeleteFromDel.isNotEmpty()) executeBatchDeleteFromDel(delCollectionIdQuoted, featureIdsToDeleteFromDel)
+        // 3.
+        if (plan.insertDelPlan != null) executeBatch(plan.insertDelPlan())
+        // 4. insert to history and update head
+        if (plan.copyHeadToHstPlan != null) executeBatch(plan.copyHeadToHstPlan())
+        if (plan.updateHeadPlan != null) executeBatch(plan.updateHeadPlan())
+        if (plan.deleteHeadPlan != null) executeBatch(plan.deleteHeadPlan())
+        // 5. copy del to hst
+        if (plan.copyDelToHstPlan != null) executeBatch(plan.copyDelToHstPlan())
+        // 6.
+        if (plan.insertHeadPlan != null) executeBatch(plan.insertHeadPlan())
+        // 7. purge
+        if (featuresToPurgeFromDel.isNotEmpty()) executeBatchDeleteFromDel(delCollectionIdQuoted, featuresToPurgeFromDel)
+        val END_EXECUTION = Jb.env.currentMicros() / 1000
+
+        val END = Jb.env.currentMicros() / 1000
+        println("[${op_arr.size} feature]: ${END - START}ms, loading: ${END_LOADING - START}ms, execution: ${END_EXECUTION - START_EXECUTION}ms, mapping: ${END_MAPPING - START_MAPPING}ms, preparing: ${END_PREPARE - START_PREPARE}ms")
     }
 
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
             if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else collectionIdQuoted
 
-    private fun groupByPartition(isCollectionPartitioned: Boolean?, allOperations: List<FeatureRow>) =
+    private fun groupByPartition(isCollectionPartitioned: Boolean?, allOperations: List<NakshaBulkLoaderOp>) =
             if (isCollectionPartitioned == true) {
                 allOperations.groupBy { it.partition }
             } else {
@@ -135,9 +144,9 @@ class NakshaBulkLoader(
         }
     }
 
-    internal fun calculateOpToPerform(row: FeatureRow, existingFeatures: IMap): Int {
+    internal fun calculateOpToPerform(row: NakshaBulkLoaderOp, existingFeatures: IMap): Int {
         return if (row.xyzOp.op() == XYZ_OP_UPSERT) {
-            if (existingFeatures.containsKey(row.id())) {
+            if (existingFeatures.containsKey(row.id)) {
                 XYZ_OP_UPDATE
             } else {
                 XYZ_OP_CREATE
@@ -229,48 +238,4 @@ class NakshaBulkLoader(
         newMap()
     }
 
-    class PartitionPlans(
-            val partitionHeadQuoted: String,
-            val delCollectionIdQuoted: String,
-            val hstCollectionIdQuoted: String,
-            val session: NakshaSession) {
-
-        val insertHeadPlan: IPlv8Plan by lazy {
-            session.sql.prepare("INSERT INTO $partitionHeadQuoted ($COL_ALL) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)", COL_ALL_TYPES)
-        }
-        val updateHeadPlan: IPlv8Plan by lazy {
-            session.sql.prepare("""
-                    UPDATE $partitionHeadQuoted 
-                    SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_GEO_TYPE=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE $COL_ID=$21
-                    """.trimIndent(),
-                    arrayOf(*COL_ALL_TYPES, SQL_STRING))
-        }
-        val deleteHeadPlan: IPlv8Plan by lazy {
-            session.sql.prepare("""
-                    DELETE FROM $partitionHeadQuoted
-                    WHERE $COL_ID = $1
-                    """.trimIndent(),
-                    arrayOf(SQL_STRING))
-        }
-        val insertDelPlan: IPlv8Plan by lazy {
-            // ptxn + puid = txn + uid (as we generate new state in _del)
-            session.sql.prepare("""
-                    INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
-                    SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$COL_CREATED_AT,$5,$6,$7,$8,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
-                        FROM $partitionHeadQuoted WHERE $COL_ID = $8""".trimIndent(),
-                    arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
-        }
-
-        val copyHeadToHstPlan: IPlv8Plan by lazy {
-            session.sql.prepare("""
-                INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
-                SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
-                    FROM $partitionHeadQuoted WHERE $COL_ID = $2
-                """.trimIndent(), arrayOf(SQL_INT64, SQL_STRING))
-        }
-
-        val copyDelToHstPlan: IPlv8Plan by lazy {
-            session.sql.prepare("INSERT INTO $hstCollectionIdQuoted ($COL_ALL) SELECT $COL_ALL FROM $delCollectionIdQuoted WHERE $COL_ID = $1", arrayOf(SQL_STRING))
-        }
-    }
 }
