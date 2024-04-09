@@ -150,11 +150,11 @@ abstract class PsqlCollectionTests extends PsqlTests {
     // then
     String expectedTablespace = ConstantsKt.getTEMPORARY_TABLESPACE();
     assertEquals(expectedTablespace, getTablespace(session, collectionId));
-    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_p0"));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "$p0"));
     assertEquals(expectedTablespace, getTablespace(session, collectionId + "$hst"));
     int currentYear = LocalDate.now().getYear();
     assertEquals(expectedTablespace, getTablespace(session, collectionId + "$hst_" + currentYear));
-    assertEquals(expectedTablespace, getTablespace(session, collectionId + "$hst_" + currentYear + "_0"));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "$hst_" + currentYear + "_p0"));
   }
 
   private String getTablespace(PsqlWriteSession session, String table) throws SQLException {
