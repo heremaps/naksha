@@ -592,9 +592,9 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();""")
     fun collectionDrop(sql: IPlv8Sql, id: String) {
         require(!id.startsWith("naksha_"))
         val headName = sql.quoteIdent(id)
-        val delName = sql.quoteIdent(id + "_del")
-        val metaName = sql.quoteIdent(id + "_meta")
-        val hstName = sql.quoteIdent(id + "_hst")
+        val delName = sql.quoteIdent("$id\$del")
+        val metaName = sql.quoteIdent("$id\$meta")
+        val hstName = sql.quoteIdent("$id\$hst")
         sql.execute("""DROP TABLE IF EXISTS $headName CASCADE;
 DROP TABLE IF EXISTS $delName CASCADE;
 DROP TABLE IF EXISTS $metaName CASCADE;
