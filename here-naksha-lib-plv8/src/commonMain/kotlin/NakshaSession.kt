@@ -303,14 +303,19 @@ SET SESSION enable_seqscan = OFF;
         OLD[COL_VERSION] = currentVersion + 1
     }
 
+    internal fun deleteFromDel(collectionId: String, id:String) {
+        val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
+        sql.execute("""DELETE FROM $collectionIdQuoted WHERE id = $1""", arrayOf(id))
+    }
+
     /**
      * Updates xyz namespace and copies feature to $del table.
      */
     internal fun copyToDel(collectionId: String, OLD: IMap) {
-        xyzDel(OLD)
         val collectionConfig = getCollectionConfig(collectionId)
         val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
         if (autoPurge != true) {
+            xyzDel(OLD)
             val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
             sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
         }
@@ -342,6 +347,7 @@ SET SESSION enable_seqscan = OFF;
     fun triggerAfter(data: PgTrigger) {
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
         if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
+            deleteFromDel(collectionId, data.OLD.getAny(COL_ID) as String)
             // save current head in hst
             data.OLD[COL_TXN_NEXT] = data.OLD[COL_TXN]
             saveInHst(collectionId, data.OLD)
@@ -353,8 +359,13 @@ SET SESSION enable_seqscan = OFF;
         if (data.TG_OP == TG_OP_UPDATE) {
             check(data.NEW != null) { "Missing NEW for UPDATE" }
             check(data.OLD != null) { "Missing OLD for UPDATE" }
+            deleteFromDel(collectionId, data.NEW.getAny(COL_ID) as String)
             data.OLD[COL_TXN_NEXT] = data.NEW[COL_TXN]
             saveInHst(collectionId, data.OLD)
+        }
+        if (data.TG_OP == TG_OP_INSERT) {
+            check(data.NEW != null) { "Missing NEW for INSERT" }
+            deleteFromDel(collectionId, data.NEW.getAny(COL_ID) as String)
         }
     }
 
