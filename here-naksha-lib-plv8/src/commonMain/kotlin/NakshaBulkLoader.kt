@@ -148,15 +148,16 @@ class NakshaBulkLoader(
     }
 
     fun addDelStmt(plan: IPlv8Plan, row: IMap) {
-        plan.setLong(1, row[COL_TXN])
-        plan.setInt(2, row[COL_UID])
-        plan.setShort(3, row[COL_ACTION])
-        plan.setInt(4, row[COL_VERSION])
-        plan.setLong(5, row[COL_UPDATE_AT])
-        plan.setLong(6, row[COL_AUTHOR_TS])
-        plan.setString(7, row[COL_AUTHOR])
-        plan.setString(8, row[COL_APP_ID])
-        plan.setString(9, row[COL_ID])
+        plan.setLong(1, row[COL_TXN_NEXT])
+        plan.setLong(2, row[COL_TXN])
+        plan.setInt(3, row[COL_UID])
+        plan.setShort(4, row[COL_ACTION])
+        plan.setInt(5, row[COL_VERSION])
+        plan.setLong(6, row[COL_UPDATE_AT])
+        plan.setLong(7, row[COL_AUTHOR_TS])
+        plan.setString(8, row[COL_AUTHOR])
+        plan.setString(9, row[COL_APP_ID])
+        plan.setString(10, row[COL_ID])
         plan.addBatch()
     }
 
@@ -255,9 +256,9 @@ class NakshaBulkLoader(
             // ptxn + puid = txn + uid (as we generate new state in _del)
             session.sql.prepare("""
                     INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
-                    SELECT null,$1,$2,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$3,$4,$COL_CREATED_AT,$4,$5,$6,$7,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+                    SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$COL_CREATED_AT,$5,$6,$7,$8,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                         FROM $partitionHeadQuoted WHERE $COL_ID = $8""".trimIndent(),
-                    arrayOf(SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
+                    arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
         }
 
         val copyHeadToHstPlan: IPlv8Plan by lazy {

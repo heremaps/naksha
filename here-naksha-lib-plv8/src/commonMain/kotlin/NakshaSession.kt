@@ -301,7 +301,7 @@ SET SESSION enable_seqscan = OFF;
         val txn = txn()
         val txnTs = txnTs()
         OLD[COL_TXN] = txn.value
-        OLD[COL_TXN_NEXT] = null
+        OLD[COL_TXN_NEXT] = txn.value
         OLD[COL_ACTION] = ACTION_DELETE.toShort()
         OLD[COL_AUTHOR] = author ?: appId
         if (author != null) {
@@ -354,6 +354,7 @@ SET SESSION enable_seqscan = OFF;
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
         if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
             // save current head in hst
+            data.OLD[COL_TXN_NEXT] = data.OLD[COL_TXN]
             saveInHst(collectionId, data.OLD)
             copyToDel(collectionId, data.OLD)
             // save del state in hst

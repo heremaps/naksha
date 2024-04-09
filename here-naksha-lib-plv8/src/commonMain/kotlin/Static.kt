@@ -535,7 +535,7 @@ SET (toast_tuple_target=8160"""
             query = pgTableInfo.CREATE_TABLE
             query += hstNameQuoted
             query += pgTableInfo.CREATE_TABLE_BODY
-            query += " PARTITION BY RANGE (COALESCE(txn_next, txn)) "
+            query += " PARTITION BY RANGE (txn_next) "
             query += pgTableInfo.TABLESPACE
             sql.execute(query)
             val year = yearOf(Jb.env.currentMillis())
