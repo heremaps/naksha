@@ -36,7 +36,7 @@ class Plv8PerfTest : JbTest() {
         private const val InsertFeaturesPerRound = 5 * 1000
         private const val InsertRounds = 10
         private const val BulkThreads = 12
-        private const val BulkSize = BulkThreads * 1 * 1000
+        private const val BulkSize = BulkThreads * 10 * 1000
 
         private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
         internal var topologyTemplate: IMap? = null
@@ -84,15 +84,15 @@ class Plv8PerfTest : JbTest() {
     @Order(1)
     @Test
     fun createBaseline() {
-        var stmt = conn.prepareStatement("""DROP TABLE IF EXISTS ptest;
-CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, tags bytea, feature bytea, geo bytea);
+        var stmt = conn.prepareStatement("""DROP TABLE IF EXISTS baseline_test;
+CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, tags bytea, feature bytea, geo bytea);
 """)
         stmt.use {
             stmt.executeUpdate()
         }
         val features = createFeatures(BaselineFeatures)
         val start = currentMicros()
-        stmt = conn.prepareStatement("INSERT INTO ptest (id, feature) VALUES (?, ?)")
+        stmt = conn.prepareStatement("INSERT INTO baseline_test (id, feature) VALUES (?, ?)")
         stmt.use {
             var i = 0
             while (i < features.size) {
@@ -241,7 +241,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
     @Order(3)
     @Test
     fun bulkLoadFeatures() {
-        val tableName = "v2_bulk_test"
+        val tableName = "v2_bulk_load"
         createCollection(tableName, partition = true, disableHistory = true)
 
         // Run for bulk threads in virtual partitions.
@@ -412,7 +412,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
     @Test
     fun bulkAtomicsCheck() {
         // executed after bulkInsertFeatures
-        val tableName = "v2_bulk_insert"
+        val tableName = "v2_bulk_write"
         val f = createBulkFeature()
         val opArr: Array<ByteArray> = arrayOf(f.op)
         val fArr: Array<ByteArray?> = arrayOf(f.feature)
