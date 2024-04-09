@@ -109,17 +109,6 @@ SET SESSION enable_seqscan = OFF;
     private var _xactId: BigInt64? = null
 
     /**
-     * The last transaction for which the history partition cache is updated.
-     */
-    private var historyPartitionCacheTxn: NakshaTxn? = null
-
-    /**
-     * A cache to remember which history partitions have been verified already. The key is the collection id
-     * and the value is just _true_.
-     */
-    private lateinit var historyPartitionCache: IMap
-
-    /**
      * Keeps updated(deleted) xyz namespace by after trigger, so we can return it to user.
      */
     private var deletedFeaturesRowCache: IMap = Jb.map.newMap()
@@ -432,31 +421,6 @@ SET SESSION enable_seqscan = OFF;
                 } finally {
                     sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(Static.TXN_LOCK_ID))
                 }
-            }
-            // If the history partition cache does not exist or is outdated, initialize empty.
-            val hst_txn = historyPartitionCacheTxn
-            if (hst_txn == null || hst_txn.year() != txn.year() || hst_txn.month() != txn.month() || hst_txn.day() != txn.day()) {
-                historyPartitionCacheTxn = txn
-                historyPartitionCache = Jb.map.newMap()
-            }
-            val tableName = "${SC_TRANSACTIONS}_${txn.historyPostfix()}"
-            if (!Static.tableExists(sql, tableName, schemaOid)) {
-                val quotedTableName = sql.quoteIdent(tableName)
-                val start = NakshaTxn.of(txn.year(), txn.month(), txn.day(), SEQ_MIN)
-                val end = NakshaTxn.of(txn.year(), txn.month(), txn.day(), SEQ_NEXT)
-                val query = """CREATE TABLE $quotedTableName PARTITION OF $SC_TRANSACTIONS_ESC FOR VALUES FROM (${start.value}) TO (${end.value});
-ALTER TABLE $quotedTableName
-SET (toast_tuple_target=8160,fillfactor=100
--- Specifies the minimum number of updated or deleted tuples needed to trigger a VACUUM in any one table.
-,autovacuum_vacuum_threshold=10000,toast.autovacuum_vacuum_threshold=10000
--- Specifies the number of inserted tuples needed to trigger a VACUUM in any one table.
-,autovacuum_vacuum_insert_threshold=10000,toast.autovacuum_vacuum_insert_threshold=10000
--- Specifies a fraction of the table size to add to autovacuum_vacuum_threshold when deciding whether to trigger a VACUUM.
-,autovacuum_vacuum_scale_factor=0.1,toast.autovacuum_vacuum_scale_factor=0.1
--- Specifies a fraction of the table size to add to autovacuum_analyze_threshold when deciding whether to trigger an ANALYZE.
-,autovacuum_analyze_threshold=10000,autovacuum_analyze_scale_factor=0.1
-);"""
-                sql.execute(query)
             }
         }
         return _txn!!
