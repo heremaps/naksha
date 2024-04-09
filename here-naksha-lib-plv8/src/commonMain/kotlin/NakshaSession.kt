@@ -848,6 +848,20 @@ SET SESSION enable_seqscan = OFF;
         return table;
     }
 
+    internal fun select(collectionId: String, ids: List<String>): IMap {
+        val collectionIdQuoted = sql.quoteIdent(collectionId)
+        val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR, $COL_AUTHOR_TS FROM $collectionIdQuoted WHERE id = ANY($1)", arrayOf(ids.toTypedArray()))
+        val rows = sql.rows(result)
+        val retMap = newMap()
+        if (rows.isNullOrEmpty())
+            return retMap
+        for (row in rows) {
+            val cols = asMap(row)
+            retMap.put(cols[COL_ID]!!, cols)
+        }
+        return retMap
+    }
+
     internal fun queryForExisting(collectionId: String, ids: List<String>, wait: Boolean): IMap {
         val waitOp = if (wait) "" else "NOWAIT"
         val collectionIdQuoted = sql.quoteIdent(collectionId)
