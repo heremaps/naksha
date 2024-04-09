@@ -3,6 +3,7 @@ package com.here.naksha.lib.plv8
 import NakshaBulkLoaderPlan
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.NakshaBulkLoaderOp.Companion.mapToOperations
+import com.here.naksha.lib.plv8.Static.DEBUG
 
 class NakshaBulkLoader(
         val collectionId: String,
@@ -15,6 +16,7 @@ class NakshaBulkLoader(
     private val delCollectionIdQuoted = session.sql.quoteIdent(delCollectionId)
     private val hstCollectionIdQuoted = quotedHst(headCollectionId)
 
+    private fun currentMillis() : BigInt64? = if (DEBUG) Jb.env.currentMicros() / 1000 else null
 
     fun bulkWriteFeatures(
             op_arr: Array<ByteArray>,
@@ -23,29 +25,29 @@ class NakshaBulkLoader(
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>
     ) {
-        val START = Jb.env.currentMicros() / 1000
+        val START = currentMillis()
         val collectionConfig = session.getCollectionConfig(headCollectionId)
         val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
         val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
 
-        val START_MAPPING = Jb.env.currentMicros() / 1000
+        val START_MAPPING = currentMillis()
         val (allOperations, idsToModify, idsToPurge, partition) = mapToOperations(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
-        val END_MAPPING = Jb.env.currentMicros() / 1000
+        val END_MAPPING = currentMillis()
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
         val existingFeatures = existingFeatures(headCollectionId, idsToModify)
         val existingInDelFeatures = existingFeatures(delCollectionId, idsToPurge)
-        val END_LOADING = Jb.env.currentMicros() / 1000
+        val END_LOADING = currentMillis()
 
-        val START_PREPARE = Jb.env.currentMicros() / 1000
+        val START_PREPARE = currentMillis()
         val featureIdsToDeleteFromDel = mutableListOf<String>()
         val featuresToPurgeFromDel = mutableListOf<String>()
 
         val plan: NakshaBulkLoaderPlan = if (isCollectionPartitioned == true && partition != null) {
-            println("Insert into a single partition #$partition (isCollectionPartitioned: ${isCollectionPartitioned})")
+            if (DEBUG) println("Insert into a single partition #$partition (isCollectionPartitioned: ${isCollectionPartitioned})")
             NakshaBulkLoaderPlan(partition, getPartitionHeadQuoted(true, partition), delCollectionIdQuoted, hstCollectionIdQuoted, session)
         } else {
-            println("Insert into a multiple partitions, therefore via HEAD (isCollectionPartitioned: ${isCollectionPartitioned})")
+            if (DEBUG) println("Insert into a multiple partitions, therefore via HEAD (isCollectionPartitioned: ${isCollectionPartitioned})")
             NakshaBulkLoaderPlan(null, getPartitionHeadQuoted(false, -1), delCollectionIdQuoted, hstCollectionIdQuoted, session)
         }
         for (op in allOperations) {
@@ -91,9 +93,9 @@ class NakshaBulkLoader(
                 else -> throw RuntimeException("Operation $opType not supported")
             }
         }
-        val END_PREPARE = Jb.env.currentMicros() / 1000
+        val END_PREPARE = currentMillis()
 
-        val START_EXECUTION = Jb.env.currentMicros() / 1000
+        val START_EXECUTION = currentMillis()
         // 1.
         if (featureIdsToDeleteFromDel.isNotEmpty()) executeBatchDeleteFromDel(delCollectionIdQuoted, featureIdsToDeleteFromDel)
         // 3.
@@ -108,10 +110,12 @@ class NakshaBulkLoader(
         if (plan.insertHeadPlan != null) executeBatch(plan.insertHeadPlan())
         // 7. purge
         if (featuresToPurgeFromDel.isNotEmpty()) executeBatchDeleteFromDel(delCollectionIdQuoted, featuresToPurgeFromDel)
-        val END_EXECUTION = Jb.env.currentMicros() / 1000
+        val END_EXECUTION = currentMillis()
 
-        val END = Jb.env.currentMicros() / 1000
-        println("[${op_arr.size} feature]: ${END - START}ms, loading: ${END_LOADING - START}ms, execution: ${END_EXECUTION - START_EXECUTION}ms, mapping: ${END_MAPPING - START_MAPPING}ms, preparing: ${END_PREPARE - START_PREPARE}ms")
+        val END = currentMillis()
+        if (DEBUG) {
+            println("[${op_arr.size} feature]: ${END!! - START!!}ms, loading: ${END_LOADING!! - START}ms, execution: ${END_EXECUTION!! - START_EXECUTION!!}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
+        }
     }
 
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =

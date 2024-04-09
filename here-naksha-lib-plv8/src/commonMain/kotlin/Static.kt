@@ -498,7 +498,7 @@ SET (toast_tuple_target=8160"""
             }
         }
         //if (id.startsWith("naksha")) collectionAttachTriggers(sql, id, schema, schemaOid)
-        if (!DEBUG) collectionAttachTriggers(sql, id, schema, schemaOid)
+        collectionAttachTriggers(sql, id, schema, schemaOid)
 
 //        // Create sequence.
 //        val sequenceName = id + "_uid_seq";

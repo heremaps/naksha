@@ -1,6 +1,7 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.plv8.Static.DEBUG
 
 internal class NakshaBulkLoaderOp(
         val rowMap: IMap,
@@ -32,10 +33,14 @@ internal class NakshaBulkLoaderOp(
             var total = 0
             val opReader = XyzOp()
             for (i in op_arr.indices) {
-                val START = Jb.env.currentMicros()
-                opReader.mapBytes(op_arr[i])
-                val END = Jb.env.currentMicros()
-                total += (END - START).toInt()
+                if (DEBUG) {
+                    val START = Jb.env.currentMicros()
+                    opReader.mapBytes(op_arr[i])
+                    val END = Jb.env.currentMicros()
+                    total += (END - START).toInt()
+                } else {
+                    opReader.mapBytes(op_arr[i])
+                }
 
                 val id = if (opReader.id() == null) {
                     featureReader.mapBytes(feature_arr[i])
@@ -65,7 +70,7 @@ internal class NakshaBulkLoaderOp(
                     partition = -1
                 }
             }
-            println("opReader.mapBytes(op_arr[i]) took ${total / 1000}ms")
+            if (DEBUG) println("opReader.mapBytes(op_arr[i]) took ${total / 1000}ms")
             return NakshaBulkLoaderOps(operations.sortedBy { it.key }, idsToModify, idsToPurge, if (partition>=0) partition else null)
         }
     }
