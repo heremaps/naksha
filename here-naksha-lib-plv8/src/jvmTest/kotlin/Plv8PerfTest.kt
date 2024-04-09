@@ -1,6 +1,7 @@
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
 import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
+import com.here.naksha.lib.plv8.Static.PARTITION_ID
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -31,10 +32,11 @@ class Plv8PerfTest : JbTest() {
     )
 
     companion object {
-        private val FeaturesPerRound = 1000
-        private val Rounds = 10
-        private val BulkThreads = 8
-        private val BulkSize = 10 * 1000
+        private const val BaselineFeatures = 5 * 1000
+        private const val InsertFeaturesPerRound = 5 * 1000
+        private const val InsertRounds = 10
+        private const val BulkThreads = 12
+        private const val BulkSize = BulkThreads * 1 * 1000
 
         private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
         internal var topologyTemplate: IMap? = null
@@ -58,7 +60,7 @@ class Plv8PerfTest : JbTest() {
 
     private fun currentMicros(): Long = System.nanoTime() / 1000
 
-    private fun createFeatures(size: Int = 2000): Features {
+    private fun createFeatures(size: Int): Features {
         val builder = XyzBuilder.create(65536)
         val topology = asMap(env.parse(topologyJson))
         val idArr = Array<String?>(size) { null }
@@ -88,7 +90,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         stmt.use {
             stmt.executeUpdate()
         }
-        val features = createFeatures(FeaturesPerRound)
+        val features = createFeatures(BaselineFeatures)
         val start = currentMicros()
         stmt = conn.prepareStatement("INSERT INTO ptest (id, feature) VALUES (?, ?)")
         stmt.use {
@@ -132,14 +134,14 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         val useBatch = false
         var totalTime = 0L
         var r = 0
-        while (r++ < Rounds) {
-            val features = createFeatures(FeaturesPerRound)
+        while (r++ < InsertRounds) {
+            val features = createFeatures(InsertFeaturesPerRound)
             val start = currentMicros()
             if (useBatch) {
                 val stmt = conn.prepareStatement("INSERT INTO v2_perf_test (id, geo_grid, feature) VALUES (?, ?, ?)")
                 stmt.use {
                     var i = 0
-                    while (i < FeaturesPerRound) {
+                    while (i < InsertFeaturesPerRound) {
                         stmt.setString(1, features.idArr[i])
                         stmt.setInt(2, GRID)
                         stmt.setBytes(3, features.featureArr[i])
@@ -165,7 +167,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
             val end = currentMicros()
             totalTime += (end - start)
         }
-        printStatistics(FeaturesPerRound, Rounds, totalTime, baseLine)
+        printStatistics(InsertFeaturesPerRound, InsertRounds, totalTime, baseLine)
     }
 
     /**
@@ -222,7 +224,8 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
 
     private fun createBulkFeature(): BulkFeature {
         val id = env.randomString(12)
-        val topology = getSmallTopologyFeature()
+        //val topology = getSmallTopologyFeature()
+        val topology = getTopologyFeature()
         topology["id"] = id
         val partId = Static.partitionNumber(id)
         val op = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, id, null, GRID)
@@ -236,29 +239,36 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
     }
 
     @Order(3)
-    @Disabled
     @Test
     fun bulkLoadFeatures() {
         val tableName = "v2_bulk_test"
         createCollection(tableName, partition = true, disableHistory = true)
 
-        // Run for 8 threads.
-        val features = Array<ArrayList<BulkFeature>>(PARTITION_COUNT.toInt()) { ArrayList() }
-        val featuresDone = AtomicReferenceArray<Boolean>(PARTITION_COUNT.toInt())
+        // Run for bulk threads in virtual partitions.
+        val featuresByVp = Array<ArrayList<BulkFeature>>(BulkThreads) { ArrayList() }
+        val partNameByVp = Array<String?>(BulkThreads) { null }
+        val featuresDoneByVp = AtomicReferenceArray<Boolean>(BulkThreads)
         var i = 0
         while (i < BulkSize) {
             val f = createBulkFeature()
+
+            // Verify physical partition
             val p = f.partId
             check(p in 0..<PARTITION_COUNT)
             check(p == Static.partitionNumber(f.id))
-            featuresDone.setRelease(p, false)
-            val list = features[p]
-            list.add(f)
+
+            // Assign to virtual partition.
+            val vp = (Static.partitionHash(f.id) and 0x7fff_ffff) % BulkThreads
+            check(vp in 0..<BulkThreads)
+            partNameByVp[vp] = PARTITION_ID[p]
+            featuresDoneByVp.setRelease(vp, false)
+            val features = featuresByVp[vp]
+            features.add(f)
             i++
         }
         i = 0
-        while (i < features.size) {
-            println("Features in bulk $i: ${features[i].size}")
+        while (i < featuresByVp.size) {
+            println("Features in bulk $i: ${featuresByVp[i].size}")
             i++
         }
         println("Sleep 2 seconds")
@@ -282,34 +292,33 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
                     )
                     val threadSession = NakshaSession.get()
                     conn.commit()
-                    var p = 0
-                    while (p < PARTITION_COUNT) {
-                        if (featuresDone.compareAndSet(p, false, true)) {
-                            val list = features[p]
-                            val partName = Static.PARTITION_ID[p]
-                            val partTableName = "${tableName}_p${partName}"
+                    var vp = 0
+                    while (vp < BulkThreads) {
+                        threadSession.sql.execute("SET LOCAL session_replication_role = replica;")
+                        if (featuresDoneByVp.compareAndSet(vp, false, true)) {
+                            val features = featuresByVp[vp]
                             var j = 0
                             try {
-                                val opArr = ArrayList<ByteArray>(list.size)
-                                val fArr = ArrayList<ByteArray?>(list.size)
-                                val geoTypeArr = ArrayList<Short>(list.size)
-                                val geoArr = ArrayList<ByteArray?>(list.size)
-                                val tagsArr = ArrayList<ByteArray?>(list.size)
-                                while (j < list.size) {
-                                    val f = list[j++]
+                                val opArr = ArrayList<ByteArray>(features.size)
+                                val fArr = ArrayList<ByteArray?>(features.size)
+                                val geoTypeArr = ArrayList<Short>(features.size)
+                                val geoArr = ArrayList<ByteArray?>(features.size)
+                                val tagsArr = ArrayList<ByteArray?>(features.size)
+                                while (j < features.size) {
+                                    val f = features[j++]
                                     opArr.add(f.op)
                                     fArr.add(f.feature)
                                     geoArr.add(f.geometry)
                                     tagsArr.add(f.tags)
                                     geoTypeArr.add(f.geoType)
                                 }
-                                threadSession.bulkWriteFeatures(partTableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+                                threadSession.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
                                 threadSession.sql.execute("commit")
                             } catch (e: Exception) {
                                 throw e
                             }
                         }
-                        p++
+                        vp++
                     }
                 }
             }
@@ -332,19 +341,20 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
     fun bulkWriteFeatures() {
         val session = NakshaSession.get()
 
-        val tableName = "v2_bulk_insert"
+        val tableName = "v2_bulk_write"
         createCollection(tableName, partition = false, disableHistory = false)
 
+        // We only run with a single thread!
+        val NumOfFeatures = BulkSize / BulkThreads
         var i = 0
-        val numOfFeatures = 5000
-        val opArr = ArrayList<ByteArray>(numOfFeatures)
-        val fArr = ArrayList<ByteArray?>(numOfFeatures)
-        val geoTypeArr = ArrayList<Short>(numOfFeatures)
-        val geoArr = ArrayList<ByteArray?>(numOfFeatures)
-        val tagsArr = ArrayList<ByteArray?>(numOfFeatures)
+        val opArr = ArrayList<ByteArray>(NumOfFeatures)
+        val fArr = ArrayList<ByteArray?>(NumOfFeatures)
+        val geoTypeArr = ArrayList<Short>(NumOfFeatures)
+        val geoArr = ArrayList<ByteArray?>(NumOfFeatures)
+        val tagsArr = ArrayList<ByteArray?>(NumOfFeatures)
 
         // insert features
-        while (i < numOfFeatures) {
+        while (i < NumOfFeatures) {
             val f = createBulkFeature()
             opArr.add(f.op)
             fArr.add(f.feature)
@@ -361,7 +371,7 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         session.clear()
 
         println("Inserts done in: ${(insertEnd - insertsStart).toSeconds()}s")
-        printStatistics(numOfFeatures, 1, (insertEnd - insertsStart), baseLine)
+        printStatistics(NumOfFeatures, 1, (insertEnd - insertsStart), baseLine)
 
         // update features
         var updateCount = 0

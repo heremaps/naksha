@@ -327,6 +327,14 @@ object Static {
     }
 
     /**
+     * Returns the hash that is used to partition features.
+     * @param id The feature-id for which to return the partition-id.
+     * @return The partition hash.
+     */
+    @JvmStatic
+    fun partitionHash(id: String): Int = Fnv1a32.string(Fnv1a32.start(), id)
+
+    /**
      * Returns the partition number.
      * @param id The feature-id for which to return the partition-id.
      * @return The partition id as number between 0 and partitionCount.
@@ -489,6 +497,7 @@ SET (toast_tuple_target=8160"""
                 createPartitionById(sql, id, geoIndex, part, pgTableInfo, false)
             }
         }
+        //if (id.startsWith("naksha")) collectionAttachTriggers(sql, id, schema, schemaOid)
         if (!DEBUG) collectionAttachTriggers(sql, id, schema, schemaOid)
 
 //        // Create sequence.

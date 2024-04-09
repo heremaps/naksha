@@ -85,7 +85,7 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?) {
         builder.setLength(0)
         builder.append(" WITH (")
                 .append("fillfactor=100")
-                .append(",toast_tuple_target=").append(sql.info().pageSize)
+                .append(",toast_tuple_target=").append(sql.info().maxTupleSize)
                 .append(",parallel_workers=").append(Static.PARTITION_COUNT)
                 .append(") ")
         STORAGE_PARAMS = builder.toString()

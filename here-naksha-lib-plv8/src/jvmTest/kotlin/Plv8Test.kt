@@ -3,6 +3,7 @@ import com.here.naksha.lib.plv8.*
 import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
 import com.here.naksha.lib.plv8.TG_OP_INSERT
 import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
+import io.kotlintest.inspectors.buildAssertionError
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.extension.ExtendWith
@@ -110,12 +111,25 @@ class Plv8Test : JbTest() {
         var i = 0
         while (i++ < 10_000) {
             val s = env.randomString(12)
-            val partitionCount: Int = PARTITION_COUNT
             val pnum = Static.partitionNumber(s)
-            assertTrue(pnum in 0..< partitionCount)
+            assertTrue(pnum in 0..<PARTITION_COUNT)
             val pid = Static.partitionNameForId(s)
-            assertEquals(1, pid.length)
-            val expectedId = "$pnum"
+            @Suppress("KotlinConstantConditions")
+            val expectedId : String = when (PARTITION_COUNT) {
+                in 0..9 -> {
+                    assertEquals(1, pid.length)
+                    "$pnum"
+                }
+                in 10..99 -> {
+                    assertEquals(2, pid.length)
+                    if (pnum < 10) "0$pnum" else "$pnum"
+                }
+                in 100..255 -> {
+                    assertEquals(3, pid.length)
+                    if (pnum < 10) "00$pnum" else if (pnum < 100) "0$pnum" else "$pnum"
+                }
+                else -> throw AssertionError("Partition count should be between 0 and 255")
+            }
             assertEquals(expectedId, pid)
         }
     }
@@ -131,7 +145,7 @@ class Plv8Test : JbTest() {
     @Test
     fun dropTestCollectionsIfExists() {
         val session = NakshaSession.get()
-        session.sql.execute("DELETE FROM $NKC_TABLE_ESC WHERE id = ANY($1)", arrayOf(arrayOf("foo","bar")))
+        session.sql.execute("DELETE FROM $NKC_TABLE_ESC WHERE id = ANY($1)", arrayOf(arrayOf("foo", "bar")))
         Static.collectionDrop(session.sql, "foo")
         Static.collectionDrop(session.sql, "bar")
         session.sql.execute("COMMIT")

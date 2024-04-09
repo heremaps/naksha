@@ -8,7 +8,6 @@ import java.sql.Connection
  */
 @Suppress("MemberVisibilityCanBePrivate", "UNCHECKED_CAST")
 class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
-    // TODO: Implement detection!
     private val dbInfo = PgDbInfo(this)
 
     override fun info(): PgDbInfo = dbInfo
