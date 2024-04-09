@@ -32,11 +32,12 @@ class Plv8PerfTest : JbTest() {
     )
 
     companion object {
-        private const val BaselineFeatures = 5 * 1000
-        private const val InsertFeaturesPerRound = 5 * 1000
-        private const val InsertRounds = 10
-        private const val BulkThreads = 12
-        private const val BulkSize = BulkThreads * 10 * 1000
+        private const val UseSmallFeatures = true
+        private val BaselineFeatures = if (UseSmallFeatures) 100_000 else 10_000
+        private val InsertFeaturesPerRound = if (UseSmallFeatures) 10_000 else 1_000
+        private val InsertRounds = 10
+        private val BulkThreads = 8
+        private val BulkSize = BulkThreads * if (UseSmallFeatures) 100_000 else 10_000
 
         private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
         internal var topologyTemplate: IMap? = null
@@ -62,7 +63,7 @@ class Plv8PerfTest : JbTest() {
 
     private fun createFeatures(size: Int): Features {
         val builder = XyzBuilder.create(65536)
-        val topology = asMap(env.parse(topologyJson))
+        val topology = asMap(env.parse(if (UseSmallFeatures) smallTopologyJson else topologyJson))
         val idArr = Array<String?>(size) { null }
         val opArr = Array<ByteArray?>(size) { null }
         val featureArr = Array<ByteArray?>(size) { null }
@@ -224,8 +225,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
 
     private fun createBulkFeature(): BulkFeature {
         val id = env.randomString(12)
-        //val topology = getSmallTopologyFeature()
-        val topology = getTopologyFeature()
+        val topology = if (UseSmallFeatures) getSmallTopologyFeature() else getTopologyFeature()
         topology["id"] = id
         val partId = Static.partitionNumber(id)
         val op = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, id, null, GRID)
