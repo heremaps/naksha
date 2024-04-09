@@ -53,6 +53,7 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   public static final String v3_0_0_alpha_2 = "3.0.0-alpha.2";
   public static final String v3_0_0_alpha_8 = "3.0.0-alpha.8";
   public static final String v3_0_0_alpha_9 = "3.0.0-alpha.9";
+  public static final String v3_0_0_alpha_10 = "3.0.0-alpha.10";
 
   /**
    * The latest version of the naksha-extension stored in the resources.
