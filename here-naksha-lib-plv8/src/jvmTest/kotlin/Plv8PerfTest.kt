@@ -356,38 +356,47 @@ CREATE TABLE ptest (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, 
         }
         val insertsStart = currentMicros()
         val insertResult = session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+        val insertEnd = currentMicros()
         assertTrue(session.sql.rows(insertResult).isNullOrEmpty())
         session.sql.execute("commit")
         session.clear()
 
-        println("Inserts done in: ${(currentMicros() - insertsStart).toSeconds()}s")
+        println("Inserts done in: ${(insertEnd - insertsStart).toSeconds()}s")
+        printStatistics(numOfFeatures, 1, (insertEnd - insertsStart), baseLine)
 
         // update features
-
+        var updateCount = 0
         for (o in opArr.withIndex()) {
             val xyzOp = XyzOp().mapBytes(o.value)
             opArr[o.index] = XyzBuilder().buildXyzOp(XYZ_OP_UPDATE, xyzOp.id(), xyzOp.uuid(), xyzOp.grid())
+            updateCount++
         }
         val updateStart = currentMicros()
         val rowsUpdated = session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
+        val updateEnd = currentMicros()
         assertEquals(0, rowsUpdated.rows.size)
         session.sql.execute("commit")
         session.clear()
-        println("Update ended in: ${(currentMicros() - updateStart).toSeconds()}s")
+        println("Update ended in: ${(updateEnd - updateStart).toSeconds()}s")
+        printStatistics(updateCount, 1, (updateEnd - updateStart), baseLine)
 
 
         // delete features
+        var deleteCount = 0
         for (o in opArr.withIndex()) {
             val xyzOp = XyzOp().mapBytes(o.value)
             opArr[o.index] = XyzBuilder().buildXyzOp(XYZ_OP_DELETE, xyzOp.id(), xyzOp.uuid(), xyzOp.grid())
+            deleteCount++
         }
         val delStart = currentMicros()
         val rowsDeleted = session.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
+        val delEnd = currentMicros()
         assertEquals(0, rowsDeleted.rows.size)
         session.sql.execute("commit")
         session.clear()
 
-        println("Delete ended in: ${(currentMicros() - delStart).toSeconds()}s")
+        println("Delete ended in: ${(delEnd - delStart).toSeconds()}s")
+        printStatistics(deleteCount, 1, (delEnd - delStart), baseLine)
     }
 
     @Order(5)
