@@ -10,7 +10,7 @@ class NakshaBulkLoader(
 
     private val headCollectionId = session.getBaseCollectionId(collectionId)
     private val collectionIdQuoted = session.sql.quoteIdent(collectionId)
-    private val delCollectionId = "${headCollectionId}_del"
+    private val delCollectionId = "${headCollectionId}\$del"
     private val delCollectionIdQuoted = session.sql.quoteIdent(delCollectionId)
     private val hstCollectionIdQuoted = quotedHst(headCollectionId)
 
@@ -106,7 +106,7 @@ class NakshaBulkLoader(
     }
 
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
-            if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}_p${Static.PARTITION_ID[partitionKey]}") else collectionIdQuoted
+            if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else collectionIdQuoted
 
     private fun groupByPartition(isCollectionPartitioned: Boolean?, allOperations: List<FeatureRow>) =
             if (isCollectionPartitioned == true) {
@@ -212,7 +212,7 @@ class NakshaBulkLoader(
         stmt.setString(20, row[COL_TYPE])
     }
 
-    internal fun quotedHst(collectionHeadId: String) = session.sql.quoteIdent("${collectionHeadId}_hst")
+    internal fun quotedHst(collectionHeadId: String) = session.sql.quoteIdent("${collectionHeadId}\$hst")
 
     internal fun executeBatch(stmt: IPlv8Plan) {
         val result = stmt.executeBatch()

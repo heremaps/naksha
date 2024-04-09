@@ -5,8 +5,8 @@ package com.here.naksha.lib.plv8
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_MIN
 import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_NEXT
-import com.here.naksha.lib.plv8.Static.GEO_INDEX_GIST
-import com.here.naksha.lib.plv8.Static.GEO_INDEX_SP_GIST
+import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
+import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS_ESC
 import com.here.naksha.lib.plv8.Static.nakshaCollectionConfig
 import kotlinx.datetime.*
 import kotlin.js.ExperimentalJsExport
@@ -283,19 +283,19 @@ SET SESSION enable_seqscan = OFF;
     }
 
     /**
-     *  Saves OLD in _hst.
+     *  Saves OLD in $hst.
      */
     internal fun saveInHst(collectionId: String, OLD: IMap) {
         if (isHistoryEnabled(collectionId)) {
             // TODO move it outside and run it once
-            val collectionIdQuoted = sql.quoteIdent("${collectionId}_hst")
+            val collectionIdQuoted = sql.quoteIdent("${collectionId}\$hst")
             val hstInsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", COL_ALL_TYPES)
             hstInsertPlan.execute(arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
         }
     }
 
     /**
-     * Prepares row before putting into _del table.
+     * Prepares row before putting into $del table.
      */
     internal fun xyzDel(OLD: IMap) {
         val txn = txn()
@@ -315,14 +315,14 @@ SET SESSION enable_seqscan = OFF;
     }
 
     /**
-     * Updates xyz namespace and copies feature to _del table.
+     * Updates xyz namespace and copies feature to $del table.
      */
     internal fun copyToDel(collectionId: String, OLD: IMap) {
         xyzDel(OLD)
         val collectionConfig = getCollectionConfig(collectionId)
         val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
         if (autoPurge != true) {
-            val collectionIdQuoted = sql.quoteIdent("${collectionId}_del")
+            val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
             sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
         }
     }
@@ -438,14 +438,13 @@ SET SESSION enable_seqscan = OFF;
                 historyPartitionCacheTxn = txn
                 historyPartitionCache = Jb.map.newMap()
             }
-            val tableName = "naksha_txn_${txn.historyPostfix()}"
+            val tableName = "${SC_TRANSACTIONS}_${txn.historyPostfix()}"
             if (!Static.tableExists(sql, tableName, schemaOid)) {
+                val quotedTableName = sql.quoteIdent(tableName)
                 val start = NakshaTxn.of(txn.year(), txn.month(), txn.day(), SEQ_MIN)
                 val end = NakshaTxn.of(txn.year(), txn.month(), txn.day(), SEQ_NEXT)
-                val query = """CREATE TABLE $tableName PARTITION OF naksha_txn FOR VALUES FROM (${start.value}) TO (${end.value});
-ALTER TABLE $tableName
-ALTER COLUMN details SET STORAGE MAIN,
-ALTER COLUMN attachment SET STORAGE MAIN,
+                val query = """CREATE TABLE $quotedTableName PARTITION OF $SC_TRANSACTIONS_ESC FOR VALUES FROM (${start.value}) TO (${end.value});
+ALTER TABLE $quotedTableName
 SET (toast_tuple_target=8160,fillfactor=100
 -- Specifies the minimum number of updated or deleted tuples needed to trigger a VACUUM in any one table.
 ,autovacuum_vacuum_threshold=10000,toast.autovacuum_vacuum_threshold=10000
@@ -496,7 +495,7 @@ SET (toast_tuple_target=8160,fillfactor=100
         val opReader = XyzOp()
         val featureReader = JbFeature(getDictManager(collectionId))
         val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val collectionDelQuoted = sql.quoteIdent(collectionId + "_del")
+        val collectionDelQuoted = sql.quoteIdent(collectionId + "\$del")
         val updatePlan: IPlv8Plan by lazy {
             sql.prepare("""UPDATE $collectionIdQuoted
                         SET geo_grid=$2,geo_type=$3,geo=$4,tags=$5,feature=$6,action=$ACTION_UPDATE
@@ -668,7 +667,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                 try {
                     newCollection.mapBytes(feature)
                     if (id != newCollection.id()) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "ID in op does not match real feature id: $id != " + newCollection.id(), id)
-                    var query = "SELECT $COL_RETURN FROM $NKC_TABLE WHERE $COL_ID = $1"
+                    var query = "SELECT $COL_RETURN FROM $NKC_TABLE_ESC WHERE $COL_ID = $1"
                     var rows = asArray(sql.execute(query, arrayOf(id)))
                     var existing: IMap? = if (rows.isNotEmpty()) asMap(rows[0]) else null
                     query = "SELECT oid FROM pg_class WHERE relname = $1 AND relkind = ANY(array['r','p']) AND relnamespace = $2"
@@ -677,7 +676,7 @@ SET (toast_tuple_target=8160,fillfactor=100
                     if (xyzOp == XYZ_OP_UPSERT) xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
                     if (xyzOp == XYZ_OP_CREATE) {
                         if (existing != null) throw NakshaException.forRow(ERR_COLLECTION_EXISTS, "Feature exists already", existing, xyzNsFromRow(id, existing))
-                        query = "INSERT INTO $NKC_TABLE ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
+                        query = "INSERT INTO $NKC_TABLE_ESC ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
                         rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
                         if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
                         if (!tableExists) Static.collectionCreate(sql, newCollection.storageClass(), schema, schemaOid, id, newCollection.geoIndex(), newCollection.partition())
@@ -689,16 +688,16 @@ SET (toast_tuple_target=8160,fillfactor=100
                         if (existing == null) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         if (uuid == null) {
                             // Override (not atomic) update.
-                            query = "UPDATE $NKC_TABLE SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 RETURNING $COL_RETURN"
+                            query = "UPDATE $NKC_TABLE_ESC SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 RETURNING $COL_RETURN"
                             rows = asArray(sql.execute(query, arrayOf(grid, geo_type, geo, feature, tags, id)))
                             if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         } else {
                             // Atomic update.
                             // TODO: Fix me!
-                            query = "UPDATE $NKC_TABLE SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 AND txn = $7 AND uid = $8 RETURNING $COL_RETURN"
+                            query = "UPDATE $NKC_TABLE_ESC SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 AND txn = $7 AND uid = $8 RETURNING $COL_RETURN"
                             rows = asArray(sql.execute(query, arrayOf(grid, geo_type, geo, feature, tags, id, null, null)))
                             if (rows.isEmpty()) {
-                                query = "SELECT $COL_RETURN FROM $NKC_TABLE WHERE id = $1"
+                                query = "SELECT $COL_RETURN FROM $NKC_TABLE_ESC WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
                                 existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
                                 if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
@@ -720,16 +719,16 @@ SET (toast_tuple_target=8160,fillfactor=100
                         }
                         if (uuid == null) {
                             // Override (not atomic) update.
-                            query = "DELETE FROM $NKC_TABLE WHERE id = $1 RETURNING $COL_RETURN"
+                            query = "DELETE FROM $NKC_TABLE_ESC WHERE id = $1 RETURNING $COL_RETURN"
                             rows = asArray(sql.execute(query, arrayOf(id)))
                             if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
                         } else {
                             // Atomic update.
                             // TODO: Fix me!
-                            query = "DELETE FROM $NKC_TABLE WHERE id = $1 AND txn = $2 AND uid = $3 RETURNING $COL_RETURN"
+                            query = "DELETE FROM $NKC_TABLE_ESC WHERE id = $1 AND txn = $2 AND uid = $3 RETURNING $COL_RETURN"
                             rows = asArray(sql.execute(query, arrayOf(id, null, null)))
                             if (rows.isEmpty()) {
-                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM $NKC_TABLE WHERE id = $1"
+                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM $NKC_TABLE_ESC WHERE id = $1"
                                 rows = asArray(sql.execute(query, arrayOf(id)))
                                 existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
                                 if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
@@ -831,9 +830,9 @@ SET (toast_tuple_target=8160,fillfactor=100
         return if (collectionConfiguration.containsKey(collectionId)) {
             collectionConfiguration[collectionId]!!
         } else {
-            val collectionsSearchRows = asArray(sql.execute("select $COL_FEATURE from $NKC_TABLE where $COL_ID = $1", arrayOf(collectionId)))
+            val collectionsSearchRows = asArray(sql.execute("select $COL_FEATURE from $NKC_TABLE_ESC where $COL_ID = $1", arrayOf(collectionId)))
             if (collectionsSearchRows.isEmpty()) {
-                throw RuntimeException("collection $collectionId does not exist in $NKC_TABLE")
+                throw RuntimeException("collection $collectionId does not exist in $NKC_TABLE_ESC")
             }
             val cols = asMap(collectionsSearchRows[0])
             val jbFeature = JbFeature(getDictManager(collectionId)).mapBytes(cols[COL_FEATURE])

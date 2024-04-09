@@ -102,6 +102,9 @@ object Static {
     @JvmStatic
     internal val SC_TRANSACTIONS = "naksha~transactions"
 
+    @JvmStatic
+    internal val SC_TRANSACTIONS_ESC = "\"naksha~transactions\""
+
     /**
      * Special internal value used to create the dictionaries' collection.
      */
@@ -309,7 +312,7 @@ object Static {
     @JvmStatic
     fun createInternalsIfNotExists(sql: IPlv8Sql, schema: String, schemaOid: Int) {
         if (!tableExists(sql, SC_TRANSACTIONS, schemaOid)) {
-            collectionCreate(sql, SC_TRANSACTIONS, schema, schemaOid, SC_TRANSACTIONS, GEO_INDEX_DEFAULT, false);
+            collectionCreate(sql, SC_TRANSACTIONS, schema, schemaOid, SC_TRANSACTIONS, GEO_INDEX_DEFAULT, true);
         }
         if (!tableExists(sql, SC_DICTIONARIES, schemaOid)) {
             collectionCreate(sql, SC_DICTIONARIES, schema, schemaOid, SC_DICTIONARIES, GEO_INDEX_DEFAULT, false);
@@ -473,7 +476,12 @@ SET (toast_tuple_target=8160"""
             //collectionOptimizeTable(sql, id, false)
             collectionAddIndices(sql, id, geoIndex, false, pgTableInfo)
         } else {
-            query += " PARTITION BY RANGE (naksha_partition_number(id)) "
+            if (id == SC_TRANSACTIONS) {
+                query += " PARTITION BY RANGE (txn) "
+            }
+            else {
+                query += " PARTITION BY RANGE (naksha_partition_number(id)) "
+            }
             // Partitioned tables must not have storage params
             query += pgTableInfo.TABLESPACE
             sql.execute(query)
@@ -504,7 +512,6 @@ SET (toast_tuple_target=8160"""
                 collectionAddIndices(sql, delName, geoIndex, false, pgTableInfo)
             } else {
                 query += " PARTITION BY RANGE (naksha_partition_number(id)) "
-                query += pgTableInfo.STORAGE_PARAMS
                 sql.execute(query)
                 for (part in 0..<PARTITION_COUNT) {
                     createPartitionById(sql, delName, geoIndex, part, pgTableInfo, false)
@@ -528,7 +535,7 @@ SET (toast_tuple_target=8160"""
             query = pgTableInfo.CREATE_TABLE
             query += hstNameQuoted
             query += pgTableInfo.CREATE_TABLE_BODY
-            query += " PARTITION BY RANGE (txn_next) "
+            query += " PARTITION BY RANGE (COALESCE(txn_next, txn)) "
             query += pgTableInfo.TABLESPACE
             sql.execute(query)
             val year = yearOf(Jb.env.currentMillis())
@@ -615,7 +622,6 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         query += "IF NOT EXISTS $hstPartNameQuoted PARTITION OF $parentNameQuoted FOR VALUES FROM ($start) TO ($end) "
         if (partition) {
             query += "PARTITION BY RANGE (naksha_partition_number(id))"
-            query += pgTableInfo.STORAGE_PARAMS
             query += pgTableInfo.TABLESPACE
             sql.execute(query)
             for (subPartition in 0..<PARTITION_COUNT) {
