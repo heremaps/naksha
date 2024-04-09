@@ -20,6 +20,7 @@ package com.here.naksha.app.service.http;
 
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_ID;
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_INFO;
+import static com.here.naksha.app.service.http.apis.ApiParams.queryParamsFromRequest;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.cause;
 import static com.here.naksha.lib.core.models.XyzError.ILLEGAL_ARGUMENT;
 import static com.here.naksha.lib.core.util.MIMEType.APPLICATION_JSON;
@@ -42,13 +43,7 @@ import static io.vertx.core.http.HttpMethod.PUT;
 
 import com.here.naksha.app.service.AbstractNakshaHubVerticle;
 import com.here.naksha.app.service.NakshaApp;
-import com.here.naksha.app.service.http.apis.Api;
-import com.here.naksha.app.service.http.apis.EventHandlerApi;
-import com.here.naksha.app.service.http.apis.HealthApi;
-import com.here.naksha.app.service.http.apis.ReadFeatureApi;
-import com.here.naksha.app.service.http.apis.SpaceApi;
-import com.here.naksha.app.service.http.apis.StorageApi;
-import com.here.naksha.app.service.http.apis.WriteFeatureApi;
+import com.here.naksha.app.service.http.apis.*;
 import com.here.naksha.app.service.http.auth.NakshaJwtAuthHandler;
 import com.here.naksha.app.service.util.logging.AccessLog;
 import com.here.naksha.app.service.util.logging.AccessLogUtil;
@@ -60,6 +55,7 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
+import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.payload.responses.BinaryResponse;
 import com.here.naksha.lib.core.models.payload.responses.ErrorResponse;
 import com.here.naksha.lib.core.models.payload.responses.NotModifiedResponse;
@@ -697,7 +693,13 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
 
   public @NotNull NakshaContext createNakshaContext(final @NotNull RoutingContext routingContext) {
     final NakshaContext ctx = new NakshaContext(AccessLogUtil.getStreamId(routingContext));
-    ctx.setAppId(hubConfig.appId);
+    // TODO Remove below five lines before merging and uncomment sixth line
+    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    String appId = ApiParams.extractParamAsString(queryParams, "appId");
+    String author = ApiParams.extractParamAsString(queryParams, "author");
+    ctx.setAppId(appId);
+    ctx.setAuthor(author);
+    // ctx.setAppId(hubConfig.appId);
     // add streamInfo object to NakshaContext, which will be populated later during pipeline execution
     ctx.attachStreamInfo(AccessLogUtil.getStreamInfo(routingContext));
     // TODO : Author to be set based on JWT token.

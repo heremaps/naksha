@@ -23,7 +23,9 @@ import com.here.naksha.lib.core.util.NanoTime;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -58,6 +60,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    */
   public static final AtomicLong limit =
       new AtomicLong(Math.max(1000, Runtime.getRuntime().availableProcessors() * 50L));
+
+  private static final double authorThreshold = 0.25;
+  private static final Map<String, Integer> authorUsageMap = new HashMap<>();
 
   private static final AtomicLong taskId = new AtomicLong(1L);
   private static final ThreadGroup allTasksGroup = new ThreadGroup("Naksha-Tasks");
@@ -399,10 +404,28 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
       do {
         final long threadCount = AbstractTask.threadCount.get();
         assert threadCount >= 0L;
+        String author = context.getAuthor();
+        int authorUsage = authorUsageMap.getOrDefault(author, 0);
+        if (!internal && authorUsage >= LIMIT * authorThreshold) {
+          log.info(
+              "NAKSHA_ERR_REQ_LIMIT_4_PRINCIPAL - [Request Limit breached for Principal => appId,author,limit,crtValue] - ReqLimitForPrincipal {} {} {} {}",
+              context.getAppId(),
+              author,
+              LIMIT,
+              authorUsage);
+          throw new TooManyTasks();
+        }
         if (!internal && threadCount >= LIMIT) {
+          log.info(
+              "NAKSHA_ERR_REQ_LIMIT_4_INSTANCE - [Request Limit breached for Instance => appId,author,limit,crtValue] - ReqLimitForInstance {} {} {} {}",
+              context.getAppId(),
+              author,
+              LIMIT,
+              threadCount);
           throw new TooManyTasks();
         }
         if (AbstractTask.threadCount.compareAndSet(threadCount, threadCount + 1)) {
+          authorUsageMap.put(author, authorUsage + 1);
           try {
             state.set(State.START);
             final Future<RESULT> future = threadPool.submit(this::init_and_execute);
