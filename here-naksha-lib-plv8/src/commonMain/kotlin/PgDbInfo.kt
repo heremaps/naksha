@@ -7,6 +7,8 @@ import kotlin.js.JsExport
 
 private const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
 private const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 128
+private const val POSTGRES_PAGE_HEADER = 32
+private const val DEFAULT_TOAST_TUPLE_TARGET = 8192
 
 /**
  * Information about the database, that need only to be queried ones per session.
@@ -18,10 +20,11 @@ private const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 128
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 class PgDbInfo(val sql: IPlv8Sql) {
-    val pageSize : Int by lazy {
+    val pageSize: Int by lazy {
         val settings = asMap(sql.rows(sql.execute("SELECT current_setting('block_size') as bs"))!![0])
         val blockSizeStr: String? = settings["bs"]
-        val blockSize = blockSizeStr?.toInt() ?: 8192
+        val blockSize = blockSizeStr?.toInt()?.let { it - POSTGRES_PAGE_HEADER } ?: DEFAULT_TOAST_TUPLE_TARGET
+
         if (blockSize > MAX_POSTGRES_TOAST_TUPLE_TARGET) {
             MAX_POSTGRES_TOAST_TUPLE_TARGET
         } else if (blockSize < MIN_POSTGRES_TOAST_TUPLE_TARGET) {
