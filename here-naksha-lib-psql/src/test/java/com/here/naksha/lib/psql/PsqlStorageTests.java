@@ -742,13 +742,13 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     }
     */
     /**
-     * Check directly _del table.
+     * Check directly $del table.
      */
-    final String collectionDelTableName = collectionId() + "_del";
+    final String collectionDelTableName = collectionId() + "$del";
     try (final PsqlReadSession session = storage.newReadSession(null, true)) {
       ResultSet rs = getFeatureFromTable(session, collectionDelTableName, SINGLE_FEATURE_ID);
 
-      // feature exists in _del table
+      // feature exists in $del table
       assertTrue(rs.next());
 
       /* FIXME uncomment this when read with deleted is ready.
@@ -795,7 +795,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(storage);
     assertNotNull(session);
     // given
-    final String collectionDelTableName = collectionId() + "_del";
+    final String collectionDelTableName = collectionId() + "$del";
 
     // when
     try (final PsqlReadSession session = storage.newReadSession(null, true)) {
@@ -843,16 +843,16 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       session.commit(true);
     }
 
-    // THEN should not exist in _del table (because auto-purge is ON)
+    // THEN should not exist in $del table (because auto-purge is ON)
     try (final PsqlReadSession session = storage.newReadSession(nakshaContext, true)) {
-      ResultSet rs = getFeatureFromTable(session, collectionWithAutoPurge + "_del", SINGLE_FEATURE_ID);
+      ResultSet rs = getFeatureFromTable(session, collectionWithAutoPurge + "$del", SINGLE_FEATURE_ID);
       // then
       assertFalse(rs.next());
     }
 
-    // but it should exist in _hst table
+    // but it should exist in $hst table
     try (final PsqlReadSession session = storage.newReadSession(nakshaContext, true)) {
-      ResultSet rs = getFeatureFromTable(session, collectionWithAutoPurge + "_hst", SINGLE_FEATURE_ID);
+      ResultSet rs = getFeatureFromTable(session, collectionWithAutoPurge + "$hst", SINGLE_FEATURE_ID);
       // then
       assertTrue(rs.next());
     }

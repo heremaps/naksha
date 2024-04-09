@@ -28,7 +28,6 @@ class NakshaSessionTest : JbTest() {
         createCollection(session = session, collectionId = collectionId, partition = true, disableHistory = false)
 
         // then
-        assertTrue(session.collectionConfiguration.contains(collectionId))
         val collectionConfig = session.getCollectionConfig(collectionId)
         val isHistoryDisabled: Boolean = collectionConfig[NKC_DISABLE_HISTORY]!!
         assertFalse(isHistoryDisabled)

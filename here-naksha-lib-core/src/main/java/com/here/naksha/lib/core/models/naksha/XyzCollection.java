@@ -60,8 +60,8 @@ public class XyzCollection extends NakshaFeature {
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String ESTIMATED_DELETED_FEATURED = "estimatedDeletedFeatures";
 
-  @AvailableSince(NakshaVersion.v3_0_0_alpha_8)
-  public static final String TEMPORARY = "temporary";
+  @AvailableSince(NakshaVersion.v3_0_0_alpha_9)
+  public static final String STORAGE_CLASS = "storageClass";
 
   /**
    * Create a new empty default collection with default properties.
@@ -162,9 +162,9 @@ public class XyzCollection extends NakshaFeature {
    * Temporary collection might be placed in separate places and are not guaranteed to have backups or survive crashes.
    */
   @AvailableSince(NakshaVersion.v3_0_0_alpha_8)
-  @JsonProperty(TEMPORARY)
+  @JsonProperty(STORAGE_CLASS)
   @JsonInclude(Include.NON_DEFAULT)
-  private boolean temporary = false;
+  private String storageClass = "consistent";
 
   /**
    * Returns {@code true} if this collection is unlogged (optimized for performance, but not crash safe).
@@ -327,23 +327,16 @@ public class XyzCollection extends NakshaFeature {
   @JsonInclude(Include.NON_EMPTY)
   private long estimatedDeletedFeatures;
 
-  /**
-   * Temporary collection might be placed in separate places and are not guaranteed to have backups or survive crashes.
-   *
-   * @return
-   */
-  public Boolean getTemporary() {
-    return temporary;
+  public String getStorageClass() {
+    return storageClass;
   }
 
   /**
-   * Sets a temporary property which indicates how collection should be treated.
-   * Temporary collection might be placed in separate places and are not guaranteed to have backups or survive crashes.
-   *
-   * @param temporary
+   * Sets storage class that defines the way data is stores. Possible values: temporary, brittle, consistent
+   * @param storageClass
    */
-  public void setTemporary(Boolean temporary) {
-    this.temporary = temporary;
+  public void setStorageClass(String storageClass) {
+    this.storageClass = storageClass;
   }
 
   @Override
@@ -361,7 +354,7 @@ public class XyzCollection extends NakshaFeature {
         && partition == that.partition
         && pointsOnly == that.pointsOnly
         && unlogged == that.unlogged
-        && Objects.equals(temporary, that.temporary)
+        && Objects.equals(storageClass, that.storageClass)
         && estimatedFeatureCount == that.estimatedFeatureCount
         && estimatedDeletedFeatures == that.estimatedDeletedFeatures;
   }
@@ -375,7 +368,7 @@ public class XyzCollection extends NakshaFeature {
         partition,
         pointsOnly,
         unlogged,
-        temporary,
+        storageClass,
         estimatedFeatureCount,
         estimatedDeletedFeatures);
   }

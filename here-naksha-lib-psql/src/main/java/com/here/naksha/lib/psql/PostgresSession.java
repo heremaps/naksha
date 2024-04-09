@@ -507,7 +507,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     query.add("(SELECT 'READ',\n" + "id,\n")
         .add(
             "row_to_ns(created_at,updated_at,txn,action,version,author_ts,uid,app_id,author,geo_grid,puid,ptxn,")
-        .addLiteral(collection.replaceFirst("_hst", "")) // uuid should not to refer to _hst table
+        .addLiteral(collection.replaceFirst("$hst", "")) // uuid should not to refer to _hst table
         .add("::text),\n" + "tags,\n" + "feature,\n" + "geo_type,\n" + "geo,\n" + "null,\n" + "null FROM ")
         .addIdent(collection);
     if (spatial_where.length() > 0 || props_where.length() > 0) {
@@ -633,7 +633,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       ArrayList<Object> parametersHst,
       String spatial_where,
       ReadFeatures readFeatures) {
-    String historyCollection = collection + "_hst";
+    String historyCollection = collection + "$hst";
     SQL hst_props_where = new SQL();
     if (propertyOp != null) {
       addPropertyQuery(hst_props_where, propertyOp, parametersHst, true);

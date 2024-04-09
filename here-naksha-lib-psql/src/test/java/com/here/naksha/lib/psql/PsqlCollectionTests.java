@@ -113,7 +113,7 @@ abstract class PsqlCollectionTests extends PsqlTests {
   @Test
   @Order(9002)
   @EnabledIf("isTestContainerRun")
-  void createTemporaryCollection() throws NoCursor, SQLException, IOException, InterruptedException {
+  void createBrittleCollection() throws NoCursor, SQLException, IOException, InterruptedException {
     assertNotNull(storage);
     assertNotNull(session);
 
@@ -128,7 +128,7 @@ abstract class PsqlCollectionTests extends PsqlTests {
     String collectionId = "foo_temp";
     final WriteXyzCollections request = new WriteXyzCollections();
     XyzCollection xyzCollection = new XyzCollection(collectionId, true, false, true);
-    xyzCollection.setTemporary(true);
+    xyzCollection.setStorageClass("brittle");
     request.add(EWriteOp.CREATE, xyzCollection);
 
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
@@ -151,10 +151,10 @@ abstract class PsqlCollectionTests extends PsqlTests {
     String expectedTablespace = ConstantsKt.getTEMPORARY_TABLESPACE();
     assertEquals(expectedTablespace, getTablespace(session, collectionId));
     assertEquals(expectedTablespace, getTablespace(session, collectionId + "_p0"));
-    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_hst"));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "$hst"));
     int currentYear = LocalDate.now().getYear();
-    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_hst_" + currentYear));
-    assertEquals(expectedTablespace, getTablespace(session, collectionId + "_hst_" + currentYear + "_0"));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "$hst_" + currentYear));
+    assertEquals(expectedTablespace, getTablespace(session, collectionId + "$hst_" + currentYear + "_0"));
   }
 
   private String getTablespace(PsqlWriteSession session, String table) throws SQLException {
