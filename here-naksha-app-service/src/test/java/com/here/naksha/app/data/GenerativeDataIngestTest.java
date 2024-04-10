@@ -1,7 +1,5 @@
 package com.here.naksha.app.data;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import com.here.naksha.app.data.GenerativeDataIngest.TopologyFeatureGenerator;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -13,10 +11,9 @@ import org.locationtech.jts.geom.prep.PreparedGeometry;
 
 class GenerativeDataIngestTest {
 
-
   @ParameterizedTest
   @ValueSource(strings = {"12201213", "12201302", "12201303"})
-  void shouldGenerateGeometryMatchingTile(String tileId){
+  void shouldGenerateGeometryMatchingTile(String tileId) {
     // Given:
     PreparedGeometry tilePolygon = WebMercatorTile.forQuadkey(tileId).getAsPolygon();
 

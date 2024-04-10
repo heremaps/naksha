@@ -1,5 +1,5 @@
 {
-  "id": "create_features_test_handler",
+  "id": "ingest_test_handler",
   "type": "EventHandler",
   "title": "Storage Handler for UniMap Moderation Dev Storage",
   "description": "Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage",
@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "create_features_test_storage"
+    "storageId": "ingest_test_storage"
   }
 }

@@ -1,9 +1,12 @@
 package com.here.naksha.app.data;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
+import com.here.naksha.lib.core.lambdas.F;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
 import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
@@ -13,20 +16,29 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzLineString;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GenerativeDataIngest extends AbstractDataIngest {
+class GenerativeDataIngest extends AbstractDataIngest {
 
   private static final Logger logger = LoggerFactory.getLogger(GenerativeDataIngest.class);
 
-  private final int MAX_BATCH_SIZE = 100;
+  private static final int MAX_BATCH_SIZE = 200;
+
+  private static final int FEATURES_COUNT = 20_000;
+
+  private static final String TILE_IDS_FILE = "topology/tile_ids.csv";
+
+  private static final boolean GENERATED_FEATURES_INGEST_ENABLED = true;
 
   private final List<String> tileIds;
 
@@ -34,10 +46,23 @@ public class GenerativeDataIngest extends AbstractDataIngest {
 
   private final TopologyFeatureGenerator topologyFeatureGenerator;
 
-  public GenerativeDataIngest(List<String> tileIds) {
-    this.tileIds = tileIds;
+  public GenerativeDataIngest() {
+    this.tileIds = tileIds();
     this.random = ThreadLocalRandom.current();
     this.topologyFeatureGenerator = new TopologyFeatureGenerator(random);
+  }
+
+  @Test
+  @EnabledIf("isGeneratedFeaturesIngestEnabled")
+  void ingestRandomFeatures() throws URISyntaxException, IOException, InterruptedException {
+    setNHUrl(nhUrl);
+    setNHToken(nhToken);
+    setNHSpaceId("ingest_test_space");
+    setNakshaClient(new NakshaTestWebClient(nhUrl, 10, 90));
+
+    logger.info("Ingesting {} of generated Topology data using NH Url [{}], in Space [{}]", FEATURES_COUNT, nhUrl, nhSpaceId);
+
+    ingestRandomFeatures(FEATURES_COUNT);
   }
 
   private void ingestRandomFeatures(int totalCount) throws URISyntaxException, IOException, InterruptedException {
@@ -55,10 +80,8 @@ public class GenerativeDataIngest extends AbstractDataIngest {
   }
 
   private void sendFeaturesToNaksha(String requestBody, String streamId) throws URISyntaxException, IOException, InterruptedException {
-    final HttpResponse<String> response = nakshaClient.put(
+    HttpResponse<String> response = nakshaClient.put(
         "hub/spaces/" + nhSpaceId + "/features?access_token=" + nhToken, requestBody, streamId);
-
-    // Perform assertion
     assertEquals(
         200,
         response.statusCode(),
@@ -83,6 +106,17 @@ public class GenerativeDataIngest extends AbstractDataIngest {
 
   private String randomTile() {
     return tileIds.get(random.nextInt(tileIds.size()));
+  }
+
+  private boolean isGeneratedFeaturesIngestEnabled() {
+    return GENERATED_FEATURES_INGEST_ENABLED;
+  }
+
+  private static List<String> tileIds() {
+    String[] rawCsv = TestUtil.loadFileOrFail(DATA_ROOT_FOLDER, TILE_IDS_FILE).split("\n");
+    return Arrays.stream(rawCsv)
+        .skip(1)
+        .toList();
   }
 
   static class TopologyFeatureGenerator {

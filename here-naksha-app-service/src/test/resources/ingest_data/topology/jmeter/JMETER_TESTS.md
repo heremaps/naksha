@@ -15,10 +15,9 @@ This section summarizes mine (Jakub's) results etc.
 ### Tests on infra setup #1
 
 Resources:
-
 - podman machine cpus: 8
 - podman machine memory: 4096
-- naksha-app cpus: 4 (default ev)
+- naksha-app cpus: 4 
 - naksha-psql cpus: 4
 - naksha-app memory: 2048
 - naksha-psql memory: 2048
@@ -32,21 +31,20 @@ JMeter tests:
 |--------------|------------|---------|--------------|-----------------------------------------------------------------------------|
 | 20           | 20         | 2       | 1            | ratio: 30.9/s, avg: 558, min: 154, max: 1207, errors: 0                     |
 | 40           | 20         | 2       | 1            | ratio: 23.5/s, avg: 1572, min: 145, max: 6294, errors: 0                    |
-| 80           | 20         | 2       | 1            | errors: 1600 (100%), reason:  OOMKilled                                     |
+| 80           | 20         | 2       | 1            | errors: 1600 (100%), reason:  timeout + OOMKilled                           |
 | 80           | 20         | 2       | 3            | errors: 1597 (99.81%), reason:  timeout + OOMKilled                         |
 | 60           | 20         | 2       | 3            | errors: 706 (58.83%), reason: timeout, no point in analyzing successful 41% |
 | 50           | 20         | 2       | 3            | errors: 176 (17.60%), reason: timeout, no point in analyzing successful 82% |
 
-The last (failing) scenarios (for 80 & 60 threads) from table above was run multiple times on fresh instances to ensure
+The last (failing) scenarios (for 80, 60, 50 threads) from table above was run multiple times on fresh instances to ensure
 repeatability
-
-- JMeter was able to to send *some* request, each of them took Naksha more than 1 second to respond
+- JMeter was able to send *some* request, each of them took Naksha more than 1 second to respond
   so JMeter treated this as failure (1s timeout is very generous, not defining any will cause JMeter
   to simply hang)
 - After *some* responding to *some* request, Naksha got killed by docker engine as it consumer too
   mach memory (verified with `docker inspect`)
 - I changed timeout on JMeter's side to 3s (!) - it did not help, only 3 out of 1600 planned request
-  returned succesfully
+  returned successfully
 
 Conclusion: 
 - with this setup of infra (see above), `naksha-app` was hitting its limits at ~40 concurrent clients
