@@ -687,9 +687,6 @@ SET SESSION enable_seqscan = OFF;
                     }
                     if (xyzOp == XYZ_OP_DELETE || xyzOp == XYZ_OP_PURGE) {
                         if (existing == null) {
-                            if (xyzOp == XYZ_OP_PURGE) {
-                                Static.collectionDrop(sql, id)
-                            }
                             table.returnRetained(id)
                             continue
                         }
@@ -712,9 +709,7 @@ SET SESSION enable_seqscan = OFF;
                             }
                         }
                         existing = asMap(rows[0])
-                        if (xyzOp == XYZ_OP_PURGE) {
-                            Static.collectionDrop(sql, id)
-                        }
+                        Static.collectionDrop(sql, id)
                         table.returnDeleted(existing)
                         continue
                     }

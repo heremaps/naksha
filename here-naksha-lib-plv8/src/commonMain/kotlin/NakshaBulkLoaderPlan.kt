@@ -1,7 +1,4 @@
-import com.here.naksha.lib.jbon.SQL_INT16
-import com.here.naksha.lib.jbon.SQL_INT32
-import com.here.naksha.lib.jbon.SQL_INT64
-import com.here.naksha.lib.jbon.SQL_STRING
+import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
 import com.here.naksha.lib.plv8.IPlv8Plan
 import com.here.naksha.lib.plv8.NakshaSession
@@ -16,7 +13,16 @@ internal class NakshaBulkLoaderPlan(
 
     fun insertHeadPlan(): IPlv8Plan {
         if (insertHeadPlan == null) {
-            insertHeadPlan = session.sql.prepare("INSERT INTO $partitionHeadQuoted ($COL_ALL) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)", COL_ALL_TYPES)
+            insertHeadPlan = session.sql.prepare("""INSERT INTO $partitionHeadQuoted (
+$COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_GEO_TYPE,
+$COL_APP_ID,$COL_AUTHOR,$COL_TYPE,$COL_ID,
+$COL_FEATURE,$COL_TAGS,$COL_GEOMETRY,$COL_GEO_REF)
+VALUES($1,$2,$3,$4,$5,
+$6,$7,$8,$9,
+$10,$11,$12,$13)""".trimIndent(),
+                    arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT32, SQL_INT16,
+                            SQL_STRING, SQL_STRING, SQL_STRING, SQL_STRING,
+                            SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
         }
         return insertHeadPlan!!
     }

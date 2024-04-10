@@ -46,7 +46,7 @@ object Static {
      * Used to debug.
      */
     @JvmStatic
-    val DEBUG = false
+    val DEBUG = true
 
     /**
      * The constant for the GIST geo-index.
@@ -327,12 +327,13 @@ object Static {
     }
 
     /**
-     * Returns the hash that is used to partition features.
+     * Returns the partition number for the given amount of partitions.
      * @param id The feature-id for which to return the partition-id.
-     * @return The partition hash.
+     * @param parts The number of partitions to generate.
+     * @return The partition number as value between 0 and part (exclusive).
      */
     @JvmStatic
-    fun partitionHash(id: String): Int = Fnv1a32.string(Fnv1a32.start(), id)
+    fun partitionIndex(id: String, parts: Int): Int = (Fnv1a32.string(Fnv1a32.start(), id) and 0x7fff_ffff) % parts
 
     /**
      * Returns the partition number.

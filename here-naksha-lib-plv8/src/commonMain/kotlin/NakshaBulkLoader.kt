@@ -180,7 +180,27 @@ class NakshaBulkLoader(
     }
 
     fun addInsertStmt(stmt: IPlv8Plan, row: IMap) {
-        setAllColumnsOnStmt(stmt, row)
+        // created_at = NULL
+        stmt.setLong(1, row[COL_UPDATE_AT])
+        // author_ts = NULL
+        stmt.setLong(2, row[COL_TXN])
+        // ptxn = NULL
+        stmt.setInt(3, row[COL_UID])
+        // puid = NULL
+        // version = NULL
+        stmt.setInt(4, row[COL_GEO_GRID])
+        stmt.setShort(5, row[COL_GEO_TYPE])
+        // action = NULL
+
+        stmt.setString(6, row[COL_APP_ID])
+        stmt.setString(7, row[COL_AUTHOR])
+        stmt.setString(8, row[COL_TYPE])
+        stmt.setString(9, row[COL_ID])
+
+        stmt.setBytes(10, row[COL_FEATURE])
+        stmt.setBytes(11, row[COL_TAGS])
+        stmt.setBytes(12, row[COL_GEOMETRY])
+        stmt.setBytes(13, row[COL_GEO_REF])
         stmt.addBatch()
     }
 

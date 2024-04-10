@@ -551,18 +551,20 @@ subprojects {
                 }
             }
 
-            publications {
-                create<MavenPublication>("maven") {
-                    groupId = project.group.toString()
-                    artifactId = project.name
-                    version = project.version.toString()
-                    from(components["java"])
-                }
+            if (project.name != "here-naksha-lib-jbon" && project.name != "here-naksha-lib-plv8") {
+                publications {
+                    create<MavenPublication>("maven") {
+                        groupId = project.group.toString()
+                        artifactId = project.name
+                        version = project.version.toString()
+                        from(components["java"])
+                    }
 
-                artifacts {
-                    file("build/libs/${project.name}-${project.version}.jar")
-                    file("build/libs/${project.name}-${project.version}-javadoc.jar")
-                    file("build/libs/${project.name}-${project.version}-sources.jar")
+                    artifacts {
+                        file("build/libs/${project.name}-${project.version}.jar")
+                        file("build/libs/${project.name}-${project.version}-javadoc.jar")
+                        file("build/libs/${project.name}-${project.version}-sources.jar")
+                    }
                 }
             }
         }

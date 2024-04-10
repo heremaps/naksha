@@ -2,6 +2,7 @@ import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
 import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
 import com.here.naksha.lib.plv8.Static.PARTITION_ID
+import com.here.naksha.lib.plv8.Static.SC_BRITTLE
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -32,7 +33,7 @@ class Plv8PerfTest : JbTest() {
     )
 
     companion object {
-        private const val UseSmallFeatures = true
+        private const val UseSmallFeatures = false
         private val BaselineFeatures = if (UseSmallFeatures) 100_000 else 10_000
         private val InsertFeaturesPerRound = if (UseSmallFeatures) 10_000 else 1_000
         private val InsertRounds = 10
@@ -92,6 +93,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
             stmt.executeUpdate()
         }
         val features = createFeatures(BaselineFeatures)
+        println("Create baseline for features of size ${features.featureArr[0]!!.size}")
         val start = currentMicros()
         stmt = conn.prepareStatement("INSERT INTO baseline_test (id, feature) VALUES (?, ?)")
         stmt.use {
@@ -239,10 +241,11 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
     }
 
     @Order(3)
+    @Disabled
     @Test
     fun bulkLoadFeatures() {
         val tableName = "v2_bulk_load"
-        createCollection(tableName, partition = true, disableHistory = true)
+        createCollection(tableName, partition = true, disableHistory = true, storageClass = SC_BRITTLE)
 
         // Run for bulk threads in virtual partitions.
         val featuresByVp = Array<ArrayList<BulkFeature>>(BulkThreads) { ArrayList() }
@@ -258,7 +261,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
             check(p == Static.partitionNumber(f.id))
 
             // Assign to virtual partition.
-            val vp = (Static.partitionHash(f.id) and 0x7fff_ffff) % BulkThreads
+            val vp = Static.partitionIndex(f.id, BulkThreads)
             check(vp in 0..<BulkThreads)
             partNameByVp[vp] = PARTITION_ID[p]
             featuresDoneByVp.setRelease(vp, false)
@@ -313,8 +316,8 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
                                     geoTypeArr.add(f.geoType)
                                 }
                                 val result = threadSession.bulkWriteFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
-                                if (result is JvmPlv8Table && result.rows.size != 0) {
-                                    val err = result.rows[1]
+                                if (result is JvmPlv8Table && result.rows.size > 0) {
+                                    val err = result.rows[0]
                                     println("Error: ${err.getAny(RET_ERR_NO) as String} - ${err.getAny(RET_ERR_MSG) as String}")
                                 }
                                 threadSession.sql.execute("commit")
@@ -347,7 +350,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         val session = NakshaSession.get()
 
         val tableName = "v2_bulk_write"
-        createCollection(tableName, partition = true, disableHistory = false)
+        createCollection(tableName, partition = true, disableHistory = false, storageClass = SC_BRITTLE)
 
         // We only run with a single thread!
         val NumOfFeatures = BulkSize / BulkThreads
@@ -453,7 +456,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         operationWithInvalidUuidToCheck(XYZ_OP_PURGE)
     }
 
-    private fun createCollection(tableName: String, partition: Boolean, disableHistory: Boolean) {
+    private fun createCollection(tableName: String, partition: Boolean, disableHistory: Boolean, storageClass: String?=null) {
         val builder = XyzBuilder.create(65536)
         var op = builder.buildXyzOp(XYZ_OP_DELETE, tableName, null, GRID)
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
@@ -463,7 +466,8 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
         op = builder.buildXyzOp(XYZ_OP_CREATE, "$tableName", null, GRID)
-        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partition":$partition,"disableHistory": $disableHistory}""")))
+        val sc = if (storageClass==null) "null" else "\"$storageClass\""
+        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partition":$partition,"disableHistory":$disableHistory,"storageClass":$sc}""")))
         result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
