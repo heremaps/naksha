@@ -117,6 +117,8 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     geometryBytes = otherCodec.geometryBytes;
     geometryEncoding = otherCodec.geometryEncoding;
     geometry = otherCodec.geometry;
+    err = otherCodec.err;
+    errorJson = otherCodec.errorJson;
     return self();
   }
 
