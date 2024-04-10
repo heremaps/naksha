@@ -1,0 +1,227 @@
+# Local Naksha load test
+
+This README should be treated as nothing more than a scratch file with some results and instructions
+w.r.t. how to load test Naksha in local containerized environment.
+
+To run test for your own refer to sections:
+
+- [Setup](#setup)
+- [Running tests](#running-tests)
+
+## My results
+
+This section summarizes mine (Jakub's) results etc.
+
+### Tests on infra setup #1
+
+Resources:
+
+- podman machine cpus: 8
+- podman machine memory: 4096
+- naksha-app cpus: 4 (default ev)
+- naksha-psql cpus: 4
+- naksha-app memory: 2048
+- naksha-psql memory: 2048
+- psql max connections: 100
+- tiles: 256
+- features: 20_000
+
+JMeter tests:
+
+| thread count | loop count | ramp up | timeouts (s) | outcome                                                                     |
+|--------------|------------|---------|--------------|-----------------------------------------------------------------------------|
+| 20           | 20         | 2       | 1            | ratio: 30.9/s, avg: 558, min: 154, max: 1207, errors: 0                     |
+| 40           | 20         | 2       | 1            | ratio: 23.5/s, avg: 1572, min: 145, max: 6294, errors: 0                    |
+| 80           | 20         | 2       | 1            | errors: 1600 (100%), reason:  OOMKilled                                     |
+| 80           | 20         | 2       | 3            | errors: 1597 (99.81%), reason:  timeout + OOMKilled                         |
+| 60           | 20         | 2       | 3            | errors: 706 (58.83%), reason: timeout, no point in analyzing successful 41% |
+| 50           | 20         | 2       | 3            | errors: 176 (17.60%), reason: timeout, no point in analyzing successful 82% |
+
+The last (failing) scenarios (for 80 & 60 threads) from table above was run multiple times on fresh instances to ensure
+repeatability
+
+- JMeter was able to to send *some* request, each of them took Naksha more than 1 second to respond
+  so JMeter treated this as failure (1s timeout is very generous, not defining any will cause JMeter
+  to simply hang)
+- After *some* responding to *some* request, Naksha got killed by docker engine as it consumer too
+  mach memory (verified with `docker inspect`)
+- I changed timeout on JMeter's side to 3s (!) - it did not help, only 3 out of 1600 planned request
+  returned succesfully
+
+Conclusion: 
+- with this setup of infra (see above), `naksha-app` was hitting its limits at ~40 concurrent clients
+- the different between 20 and 40 concurrent clients is very noticable
+- next tests with larger resources (cpu -> 8, memory-wise we are fine) will be concluded
+
+
+### Test on infra setup #2:
+
+TODO :)
+
+## Setup
+
+### PSQL container
+
+```shell
+docker run \
+  -p 5432:5432 \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_INITDB_ARGS="--auth-host=trust --auth-local=trust" \
+  -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -v "/Users/amanowic/dev/load_psql/data/:/var/lib/postgresql/data" \
+  --name=naksha-psql \
+  docker.io/postgis/postgis:16-3.4
+```
+
+Mind the volume mount (`-v`) - we will populate our database once with 20k features, if you won't
+use shared volume, db data will need to be populated for each container psql lifecycle. Using volume
+will save you lots of time (no need to repopulate db even if your config will change).
+
+### Build and run Naksha container
+
+Please refer to the `docker/README.md` file.
+
+### Load fake data into PSQL
+
+#### Create storage, handler & space
+
+Storage (mind the `host`):
+
+```shell
+curl -XPOST localhost:8080/hub/storages -H "content-type: application/json" -d '
+{
+  "id": "ingest_test_storage",
+  "type": "Storage",
+  "title": "Test PSQL storage",
+  "description": "PSQL storage instance for testing purpose",
+  "className": "com.here.naksha.lib.psql.PsqlStorage",
+  "properties": {
+    "master": {
+      "host": "host.docker.internal",
+      "db": "postgres",
+      "user": "postgres",
+      "password": "password",
+      "readOnly": false
+    },
+    "appName": "ingest-test",
+    "schema": "naksha"
+  }
+}
+' -v
+```
+
+Handler:
+
+```shell
+curl -XPOST localhost:8080/hub/handlers -H "content-type: application/json" -d '
+{
+  "id": "ingest_test_handler",
+  "type": "EventHandler",
+  "title": "Storage Handler for UniMap Moderation Dev Storage",
+  "description": "Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "active": true,
+  "extensionId": null,
+  "properties": {
+    "storageId": "ingest_test_storage"
+  }
+}
+' -v
+```
+
+Space:
+
+```shell
+curl -XPOST localhost:8080/hub/spaces -H "content-type: application/json" -d '
+{
+  "id": "ingest_test_space",
+  "type": "Space",
+  "title": "Topology Space for UniMap Moderation Dev Storage",
+  "description": "Space for managing Topology Feature collection in UniMap Moderation Dev Storage",
+  "eventHandlerIds": [
+    "ingest_test_handler"
+  ],
+  "properties": {
+  }
+}
+' -v
+```
+
+#### Populate the space with fake data
+
+Run `ingestRandomFeatures` method
+from `com.here.naksha.app.data.GenerativeDataIngest.GenerativeDataIngest`.\
+It might take some time - we load 20_000 of generated features in sequential batches of 100
+features. This is likely to be optimized but it's good enough for start.
+
+Take a look at the `ingest_data/topology/tile_ids.csv` file - it contains all tiles for which our
+20_000 featyres where generated (generator logic takes `tileId` as arg and creates matching geometry
+for feature to contain).
+
+#### Prepare your  JMeter scenario
+
+1) If you don't have JMeter, install it: `brew install jmeter`
+2) Open up our scenario: `jmeter -t naksha_local_load.jmx`
+3) Navigate to `CSV Tile ids` step and update `Filename` so it will point
+   to `ingest_data/topology/tile_ids.csv` file from test resources (use full path)
+
+## Running tests
+
+### Before you run tests
+
+1) Be sure that you completed every step from [the setup](#setup).\
+2) [optional] You can also spawn docker's statistics on the side to see how much pressure your
+   containers get (do that before running JMeter):
+    ```shell
+    docker stats --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
+    ```
+
+### Running the scenario
+
+Main command looks as follows:
+
+```shell
+jmeter -n \
+ -t naksha_local_load.jmx \
+  -Jthreads=20 \
+  -JrampUp=2 \
+  -JloopCount=20 \
+  -l {your_results_file} >> {your_output_file}
+```
+
+Parameters explanation:
+
+- Jthreads: how many concurrent client should JMeter use when sending request to Naksha (aka:
+  concurrency)
+- JrampUp: ramp up value of JMeter's thread group (aka: how long before they start doing stuff)
+- JloopCount: how many request should each client send
+- result file: csv with metadata regarding the execution (latency, URL that was used, response code
+  etc)
+- output file: summary of execution (avg time per thread etc)
+
+### Helper scratchpad
+
+Verify distinct features loaded:
+
+```shell
+SELECT count(distinct jsondata ->> 'id')
+FROM naksha.ingest_test_space;
+```
+
+PSQL connection limit:
+
+```shell
+show max_connections;
+```
+
+PSQL currently opened connections:
+
+```shell
+SELECT COUNT(*) from pg_stat_activity;
+```
+
+more detailed view on opened connections:
+
+```shell
+SELECT * FROM pg_stat_activity;
+```
