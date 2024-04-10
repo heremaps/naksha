@@ -3,10 +3,6 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_MIN
-import com.here.naksha.lib.jbon.NakshaTxn.Companion.SEQ_NEXT
-import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
-import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS_ESC
 import com.here.naksha.lib.plv8.Static.nakshaCollectionConfig
 import kotlinx.datetime.*
 import kotlin.js.ExperimentalJsExport
@@ -43,6 +39,16 @@ class NakshaSession(
 ) : JbSession(appName, streamId, appId, author) {
 
     /**
+     * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
+     */
+    internal var schemaOid: Int
+
+    /**
+     * The cached quoted schema name (double quotes).
+     */
+    internal val schemaIdent = sql.quoteIdent(schema)
+
+    /**
      * The dictionary manager bound to the global dictionary.
      */
     internal val globalDictManager = NakshaDictManager(this)
@@ -61,26 +67,6 @@ class NakshaSession(
     fun getDictManager(collectionId: String? = null): IDictManager {
         // TODO: Implement collection specific managers
         return globalDictManager
-    }
-
-    /**
-     * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
-     */
-    val schemaOid: Int
-
-    /**
-     * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the transaction sequence.
-     */
-    val txnSeqOid: Int
-
-    init {
-        val quotedSchema = sql.quoteIdent(schema)
-        val initQuery = """SET SESSION search_path TO $quotedSchema, public, topology;
-SET SESSION enable_seqscan = OFF;
-"""
-        sql.execute(initQuery)
-        schemaOid = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0])["oid"]!!
-        txnSeqOid = asMap(asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = 'naksha_txn_seq' and relnamespace = $1", arrayOf(schemaOid)))[0])["oid"]!!
     }
 
     companion object {
@@ -104,19 +90,14 @@ SET SESSION enable_seqscan = OFF;
     private var _txts: BigInt64? = null
 
     /**
-     * The PostgresQL transaction number.
-     */
-    private var _xactId: BigInt64? = null
-
-    /**
      * Keeps updated(deleted) xyz namespace by after trigger, so we can return it to user.
      */
-    private var deletedFeaturesRowCache: IMap = Jb.map.newMap()
+    private var deletedFeaturesRowCache: IMap
 
     /**
      * A cache to remember collections configuration <collectionId, configMap>
      */
-    var collectionConfiguration: IMap = Jb.map.newMap()
+    var collectionConfiguration: IMap
 
     /**
      * The last error number as SQLState.
@@ -129,6 +110,13 @@ SET SESSION enable_seqscan = OFF;
     var errMsg: String? = null
 
     init {
+        sql.execute("""
+SET SESSION search_path TO $schemaIdent, public, topology;
+SET SESSION enable_seqscan = OFF;
+""")
+        schemaOid = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0]).getAny("oid") as Int
+        deletedFeaturesRowCache = Jb.map.newMap()
+        collectionConfiguration = Jb.map.newMap()
         collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
     }
 
@@ -139,13 +127,25 @@ SET SESSION enable_seqscan = OFF;
 
     override fun clear() {
         super.clear()
-        this._txn = null
-        this._txts = null
-        this._xactId = null
-        this.errNo = null
-        this.errMsg = null
-        this.uid = 0
-        this.deletedFeaturesRowCache = Jb.map.newMap()
+        _txn = null
+        uid = 0
+        _txts = null
+        errNo = null
+        errMsg = null
+        deletedFeaturesRowCache = Jb.map.newMap()
+        collectionConfiguration = Jb.map.newMap()
+    }
+
+    /**
+     * Notify the session of the latest schema-oid detected. This should clear caching, when such a change is detected, which can
+     * happen for example, when the client drops and re-creates the schema this session is bound to.
+     * @param oid The new schema oid.
+     */
+    internal fun verifyCache(oid: Int) {
+        if (schemaOid != oid) {
+            this.schemaOid = oid
+            clear()
+        }
     }
 
     private lateinit var gridPlan: IPlv8Plan
@@ -303,7 +303,7 @@ SET SESSION enable_seqscan = OFF;
         OLD[COL_VERSION] = currentVersion + 1
     }
 
-    internal fun deleteFromDel(collectionId: String, id:String) {
+    internal fun deleteFromDel(collectionId: String, id: String) {
         val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
         sql.execute("""DELETE FROM $collectionIdQuoted WHERE id = $1""", arrayOf(id))
     }
@@ -409,11 +409,18 @@ SET SESSION enable_seqscan = OFF;
      */
     fun txn(): NakshaTxn {
         if (_txn == null) {
-            val row = asMap(asArray(sql.execute("SELECT txid_current() xactid, nextval($1) txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time", arrayOf(txnSeqOid)))[0])
-            _xactId = asBigInt64(row["xactid"])
+            val query = """
+WITH ns as (SELECT oid FROM pg_namespace WHERE nspname = $1),
+     txn_seq as (SELECT cls.oid as oid FROM pg_class cls, ns WHERE cls.relname = 'naksha_txn_seq' and cls.relnamespace = ns.oid)
+SELECT nextval(txn_seq.oid) as txn, txn_seq.oid as txn_oid, (extract(epoch from transaction_timestamp())*1000)::int8 as time, ns.oid as ns_oid
+FROM ns, txn_seq;"""
+            val row = asMap(asArray(sql.execute(query, arrayOf(schema)))[0])
+            val schemaOid = row.getAny("ns_oid") as Int
+            val txnSeqOid = row.getAny("txn_oid") as Int
             val txts = asBigInt64(row["time"])
-            _txts = txts
             var txn = NakshaTxn(asBigInt64(row["txn"]))
+            verifyCache(schemaOid)
+            _txts = txts
             _txn = txn
             val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
             val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
@@ -444,16 +451,6 @@ SET SESSION enable_seqscan = OFF;
     fun txnTs(): BigInt64 {
         txn()
         return _txts!!
-    }
-
-    /**
-     * Returns the PostgresQL transaction number ([xact_id](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-PG-SNAPSHOT).
-     * If no transaction number is yet generated, generates a new one.
-     * @return The current PostgresQL transaction number.
-     */
-    fun xactId(): BigInt64 {
-        txn()
-        return _xactId!!
     }
 
     fun writeFeatures(
@@ -639,7 +636,9 @@ SET SESSION enable_seqscan = OFF;
                 if (id == null) id = newCollection.id()
                 if (id == null) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Missing id", id)
                 val lockId = Static.lockId(id)
-                sql.execute("SELECT pg_advisory_lock($1)", arrayOf(lockId))
+                val query = "SELECT pg_advisory_lock($1), oid FROM pg_namespace WHERE nspname = $2"
+                val schemaOid = asMap(asArray(sql.execute(query, arrayOf(lockId, schema)))[0]).getAny("oid") as Int
+                verifyCache(schemaOid)
                 try {
                     newCollection.mapBytes(feature)
                     if (id != newCollection.id()) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "ID in op does not match real feature id: $id != " + newCollection.id(), id)
