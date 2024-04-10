@@ -1239,27 +1239,13 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertTrue(cursor.next());
       session.commit(true);
 
-      PsqlReadSession readDeletedSession = storage.newReadSession(nakshaContext, false);
-      ResultSet readRs = getFeatureFromTable(readDeletedSession, collectionId(), SINGLE_FEATURE_ID);
-      // It should not have any data but table still exists.
-      assertFalse(readRs.next());
-      readDeletedSession.close();
-
-      // purge
-      final WriteXyzCollections purgeRequest = new WriteXyzCollections();
-      purgeRequest.add(EWriteOp.PURGE, deleteCollection);
-      try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursorPurge =
-               session.execute(purgeRequest).getXyzCollectionCursor()) {
-        session.commit(true);
-      }
-
       // try readSession after purge, table doesn't exist anymore, so it should throw an exception.
-      PsqlReadSession readPurgedSession = storage.newReadSession(nakshaContext, false);
+      PsqlReadSession readDeletedSession = storage.newReadSession(nakshaContext, false);
       assertThrowsExactly(
           PSQLException.class,
-          () -> getFeatureFromTable(readPurgedSession, collectionId(), SINGLE_FEATURE_ID),
+          () -> getFeatureFromTable(readDeletedSession, collectionId(), SINGLE_FEATURE_ID),
           "ERROR: relation \"foo\" does not exist");
-      readPurgedSession.close();
+      readDeletedSession.close();
     }
   }
 

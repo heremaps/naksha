@@ -315,7 +315,6 @@ SET SESSION enable_seqscan = OFF;
         val collectionConfig = getCollectionConfig(collectionId)
         val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
         if (autoPurge != true) {
-            xyzDel(OLD)
             val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
             sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
         }
@@ -351,6 +350,7 @@ SET SESSION enable_seqscan = OFF;
             // save current head in hst
             data.OLD[COL_TXN_NEXT] = data.OLD[COL_TXN]
             saveInHst(collectionId, data.OLD)
+            xyzDel(data.OLD)
             copyToDel(collectionId, data.OLD)
             // save del state in hst
             saveInHst(collectionId, data.OLD)
