@@ -20,6 +20,7 @@ package com.here.naksha.lib.psql;
 
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
+import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +37,7 @@ class PsqlError extends ErrorResult {
     super(reason, message, exception);
   }
 
-  PsqlError(@NotNull XyzError reason, @NotNull String message, @Nullable PsqlCursor<?, ?> cursor) {
+  PsqlError(@NotNull XyzError reason, @NotNull String message, @Nullable ForwardCursor<?, ?> cursor) {
     super(reason, message);
     this.cursor = cursor;
   }

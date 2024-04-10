@@ -236,9 +236,6 @@ public abstract class Result implements Typed, AutoCloseable {
   @JsonIgnore
   public @NotNull ForwardCursor<XyzCollection, XyzCollectionCodec> getXyzCollectionCursor() throws NoCursor {
     if (cursor != null) {
-      if (cursor instanceof HeapCacheCursor) {
-        cursor = ((HeapCacheCursor<?, ?>) cursor).getOriginalCursor();
-      }
       return cursor.withCodecFactory(XyzCollectionCodecFactory.get(), false);
     }
     throw new NoCursor(this);

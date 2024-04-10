@@ -20,6 +20,7 @@ package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
+import static com.here.naksha.lib.jbon.IMapKt.get;
 import static com.here.naksha.lib.psql.XyzErrorMapper.psqlCodeToXyzError;
 import static com.here.naksha.lib.psql.sql.SqlGeometryTransformationResolver.addTransformation;
 import static java.util.Comparator.comparing;
@@ -32,6 +33,7 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import com.here.naksha.lib.core.models.storage.HeapCacheCursor;
 import com.here.naksha.lib.core.models.storage.Notification;
 import com.here.naksha.lib.core.models.storage.OpType;
 import com.here.naksha.lib.core.models.storage.POp;
@@ -46,6 +48,7 @@ import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.WriteCollections;
 import com.here.naksha.lib.core.models.storage.WriteFeatures;
 import com.here.naksha.lib.core.models.storage.WriteRequest;
+import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodecFactory;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
@@ -53,7 +56,10 @@ import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.util.ClosableChildResource;
 import com.here.naksha.lib.core.util.IndexHelper;
 import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.jbon.*;
+import com.here.naksha.lib.jbon.IMap;
+import com.here.naksha.lib.jbon.JbSession;
+import com.here.naksha.lib.jbon.NakshaTxn;
+import com.here.naksha.lib.jbon.NakshaUuid;
 import com.here.naksha.lib.plv8.JvmPlv8Sql;
 import com.here.naksha.lib.plv8.JvmPlv8Table;
 import com.here.naksha.lib.plv8.NakshaSession;
@@ -669,10 +675,13 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         stmt.setArray(3, psqlConnection.createArrayOf("int2", reqGeoType));
         stmt.setArray(4, psqlConnection.createArrayOf("bytea", reqGeo));
         stmt.setArray(5, psqlConnection.createArrayOf("bytea", reqTags));
-        final ResultSet rs = stmt.executeQuery();
-        RequestedParams requestedParams = new RequestedParams(reqFeatures, reqTags, reqGeo);
-        return new PsqlSuccess(
-            new PsqlCursor<>(XyzCollectionCodecFactory.get(), requestedParams, this, stmt, rs), null);
+
+        JvmPlv8Table table =
+            (JvmPlv8Table) nakshaSession.writeCollections(reqOps, reqFeatures, reqGeoType, reqGeo, reqTags);
+        ArrayList<IMap> rows = table.getRows();
+        List<XyzCollectionCodec> codecRows =
+            PsqlResultMapper.mapRowToCodec(XyzCollectionCodecFactory.get(), features, rows);
+        return new PsqlSuccess(new HeapCacheCursor<>(XyzCollectionCodecFactory.get(), codecRows, null), null);
       } catch (Throwable e) {
         try {
           stmt.close();
@@ -787,7 +796,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         ArrayList<IMap> rows = table.getRows();
         if (!rows.isEmpty()) {
           IMap err = rows.get(0);
-          return new PsqlError(psqlCodeToXyzError(IMapKt.get(err, "err_no")), IMapKt.get(err, "err_msg"));
+          return new PsqlError(psqlCodeToXyzError(get(err, "err_no")), get(err, "err_msg"));
         } else {
           return new SuccessResult();
         }
