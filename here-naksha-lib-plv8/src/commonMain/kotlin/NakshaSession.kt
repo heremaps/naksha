@@ -134,6 +134,7 @@ SET SESSION enable_seqscan = OFF;
         errMsg = null
         deletedFeaturesRowCache = Jb.map.newMap()
         collectionConfiguration = Jb.map.newMap()
+        collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
     }
 
     /**
