@@ -2,7 +2,7 @@ import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.*
 import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
 import com.here.naksha.lib.plv8.Static.PARTITION_ID
-import com.here.naksha.lib.plv8.Static.SC_BRITTLE
+import com.here.naksha.lib.plv8.Static.SC_CONSISTENT
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -37,8 +37,9 @@ class Plv8PerfTest : JbTest() {
         private val BaselineFeatures = if (UseSmallFeatures) 100_000 else 10_000
         private val InsertFeaturesPerRound = if (UseSmallFeatures) 10_000 else 1_000
         private val InsertRounds = 10
-        private val BulkThreads = 8
-        private val BulkSize = BulkThreads * if (UseSmallFeatures) 25_000 else 5_000
+        private val BulkLoadThreads = 8
+        private val BulkLoadSize = BulkLoadThreads * if (UseSmallFeatures) 35_000 else 10_000
+        private val BulkWriteSize = if (UseSmallFeatures) 25_000 else 5_000
 
         private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
         internal var topologyTemplate: IMap? = null
@@ -241,18 +242,17 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
     }
 
     @Order(3)
-    @Disabled
     @Test
     fun bulkLoadFeatures() {
         val tableName = "v2_bulk_load"
-        createCollection(tableName, partition = true, disableHistory = true, storageClass = SC_BRITTLE)
+        createCollection(tableName, partition = true, disableHistory = true, storageClass = SC_CONSISTENT)
 
         // Run for bulk threads in virtual partitions.
-        val featuresByVp = Array<ArrayList<BulkFeature>>(BulkThreads) { ArrayList() }
-        val partNameByVp = Array<String?>(BulkThreads) { null }
-        val featuresDoneByVp = AtomicReferenceArray<Boolean>(BulkThreads)
+        val featuresByVp = Array<ArrayList<BulkFeature>>(BulkLoadThreads) { ArrayList() }
+        val partNameByVp = Array<String?>(BulkLoadThreads) { null }
+        val featuresDoneByVp = AtomicReferenceArray<Boolean>(BulkLoadThreads)
         var i = 0
-        while (i < BulkSize) {
+        while (i < BulkLoadSize) {
             val f = createBulkFeature()
 
             // Verify physical partition
@@ -261,8 +261,8 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
             check(p == Static.partitionNumber(f.id))
 
             // Assign to virtual partition.
-            val vp = Static.partitionIndex(f.id, BulkThreads)
-            check(vp in 0..<BulkThreads)
+            val vp = Static.partitionIndex(f.id, BulkLoadThreads)
+            check(vp in 0..<BulkLoadThreads)
             partNameByVp[vp] = PARTITION_ID[p]
             featuresDoneByVp.setRelease(vp, false)
             val features = featuresByVp[vp]
@@ -279,7 +279,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         Thread.sleep(2000)
         println("RUN")
         System.out.flush()
-        val threads = Array(BulkThreads) {
+        val threads = Array(BulkLoadThreads) {
             Thread {
                 val threadId = it
                 val conn = DriverManager.getConnection(Plv8TestContainer.url)
@@ -296,7 +296,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
                     val threadSession = NakshaSession.get()
                     conn.commit()
                     var vp = 0
-                    while (vp < BulkThreads) {
+                    while (vp < BulkLoadThreads) {
                         threadSession.sql.execute("SET LOCAL session_replication_role = replica;")
                         if (featuresDoneByVp.compareAndSet(vp, false, true)) {
                             val features = featuresByVp[vp]
@@ -341,7 +341,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
             threads[i++].join()
         }
         val end = currentMicros()
-        printStatistics(BulkSize, 1, (end - start), baseLine)
+        printStatistics(BulkLoadSize, 1, (end - start), baseLine)
     }
 
     @Order(4)
@@ -350,19 +350,18 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         val session = NakshaSession.get()
 
         val tableName = "v2_bulk_write"
-        createCollection(tableName, partition = true, disableHistory = false, storageClass = SC_BRITTLE)
+        createCollection(tableName, partition = true, disableHistory = false, storageClass = SC_CONSISTENT)
 
         // We only run with a single thread!
-        val NumOfFeatures = BulkSize / BulkThreads
         var i = 0
-        val opArr = ArrayList<ByteArray>(NumOfFeatures)
-        val fArr = ArrayList<ByteArray?>(NumOfFeatures)
-        val geoTypeArr = ArrayList<Short>(NumOfFeatures)
-        val geoArr = ArrayList<ByteArray?>(NumOfFeatures)
-        val tagsArr = ArrayList<ByteArray?>(NumOfFeatures)
+        val opArr = ArrayList<ByteArray>(BulkWriteSize)
+        val fArr = ArrayList<ByteArray?>(BulkWriteSize)
+        val geoTypeArr = ArrayList<Short>(BulkWriteSize)
+        val geoArr = ArrayList<ByteArray?>(BulkWriteSize)
+        val tagsArr = ArrayList<ByteArray?>(BulkWriteSize)
 
         // insert features
-        while (i < NumOfFeatures) {
+        while (i < BulkWriteSize) {
             val f = createBulkFeature()
             opArr.add(f.op)
             fArr.add(f.feature)
@@ -379,7 +378,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         session.clear()
 
         println("Inserts done in: ${(insertEnd - insertsStart).toSeconds()}s")
-        printStatistics(NumOfFeatures, 1, (insertEnd - insertsStart), baseLine)
+        printStatistics(BulkWriteSize, 1, (insertEnd - insertsStart), baseLine)
 
         // update features
         var updateCount = 0

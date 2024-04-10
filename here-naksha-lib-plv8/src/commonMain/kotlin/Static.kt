@@ -46,7 +46,7 @@ object Static {
      * Used to debug.
      */
     @JvmStatic
-    val DEBUG = true
+    val DEBUG = false
 
     /**
      * The constant for the GIST geo-index.
@@ -410,49 +410,48 @@ SET (toast_tuple_target=8160"""
         // https://www.postgresql.org/docs/current/gin-tips.html
         val unique = if (history) "" else "UNIQUE "
 
-        // quoted table name
-        val qtn = sql.quoteIdent(tableName)
-        // quoted index name
-        var qin = sql.quoteIdent("${tableName}_id_idx")
+        // id
+        val qtn = sql.quoteIdent(tableName) // quoted table name
+        var qin = sql.quoteIdent("${tableName}_id_idx") // quoted index name
         var query = """CREATE ${unique}INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(id text_pattern_ops DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
-"""
+(id text_pattern_ops DESC) 
+WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
         // txn, uid
         qin = sql.quoteIdent("${tableName}_txn_uid_idx")
         query += """CREATE UNIQUE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
-(txn DESC, COALESCE(uid, 0) DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
-"""
+(txn DESC, COALESCE(uid, 0) DESC) 
+WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
-        // geo
+        // geo, txn
         qin = sql.quoteIdent("${tableName}_geo_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndex
-(naksha_geometry(geo_type,geo), txn) WITH (buffering=ON,fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
-"""
+(naksha_geometry(geo_type,geo), txn) 
+WITH (buffering=ON,fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE} WHERE geo IS NOT NULL;"""
 
-        // tags
+        // tags, tnx
         qin = sql.quoteIdent("${tableName}_tags_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin
-(tags_to_jsonb(tags), txn) WITH (fastupdate=ON,gin_pending_list_limit=32768) ${pgTableInfo.TABLESPACE};
-"""
+(tags_to_jsonb(tags), txn) 
+WITH (fastupdate=ON,gin_pending_list_limit=32768) ${pgTableInfo.TABLESPACE};"""
 
-        // grid
+        // grid, txn
         qin = sql.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(geo_grid, txn DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
-"""
+(geo_grid DESC, txn DESC) 
+WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
-        // app_id
+        // app_id, updated_at, txn
         qin = sql.quoteIdent("${tableName}_app_id_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(app_id DESC, updated_at DESC, txn DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
-"""
+(app_id text_pattern_ops DESC, updated_at DESC, txn DESC) 
+WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
-        // author
+        // author, author_ts, txn
         qin = sql.quoteIdent("${tableName}_author_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
-(COALESCE(author, app_id) DESC, COALESCE(author_ts, updated_at) DESC, txn DESC) WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};
-"""
+(COALESCE(author, app_id) text_pattern_ops DESC, COALESCE(author_ts, updated_at) DESC, txn DESC) 
+WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
         sql.execute(query)
     }
@@ -487,8 +486,7 @@ SET (toast_tuple_target=8160"""
         } else {
             if (id == SC_TRANSACTIONS) {
                 query += " PARTITION BY RANGE (txn) "
-            }
-            else {
+            } else {
                 query += " PARTITION BY RANGE (naksha_partition_number(id)) "
             }
             // Partitioned tables must not have storage params
@@ -498,8 +496,7 @@ SET (toast_tuple_target=8160"""
                 createPartitionById(sql, id, geoIndex, part, pgTableInfo, false)
             }
         }
-        //if (id.startsWith("naksha")) collectionAttachTriggers(sql, id, schema, schemaOid)
-        collectionAttachTriggers(sql, id, schema, schemaOid)
+        if (!DEBUG || id.startsWith("naksha")) collectionAttachTriggers(sql, id, schema, schemaOid)
 
 //        // Create sequence.
 //        val sequenceName = id + "_uid_seq";
