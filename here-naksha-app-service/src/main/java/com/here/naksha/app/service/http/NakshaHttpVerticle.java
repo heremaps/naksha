@@ -220,7 +220,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         // add handler to set max allowed request payload size
         log.info("Setting Http request body limit to {} MB", hubConfig.requestBodyLimit);
         router.route()
-            .order(-1)
+            .order(-1) // we add this before any other handler
             .handler(BodyHandler.create()
                 .setBodyLimit(hubConfig.requestBodyLimit * 1024 * 1024)
                 .setHandleFileUploads(false)

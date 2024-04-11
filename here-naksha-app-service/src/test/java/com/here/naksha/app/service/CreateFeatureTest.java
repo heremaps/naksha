@@ -383,6 +383,7 @@ class CreateFeatureTest extends ApiTest {
   // TODO : This test is disabled for now due to failure in FibMap for generating payload bigger than 6MB
   /*
   @Test
+  @EnabledIf("runBigPayloadTests")
   void tc0310_testBigRequestPayload() throws Exception {
     // Test API : POST /hub/spaces/{spaceId}/features
     // Given: Input base Feature JSON
@@ -419,7 +420,7 @@ class CreateFeatureTest extends ApiTest {
     // Test API : POST /hub/spaces/{spaceId}/features
     // Given: Big Input request payload of 22MB
     final long expBodySize = 22 * 1024 * 1024;
-    final Duration timeout = Duration.ofSeconds(300); // bigger timeout for this request
+    final Duration timeout = Duration.ofSeconds(30); // bigger timeout for this request
     final String bodyJson = loadFileOrFail("CreateFeatures/TC0311_create22MBFeature/big_admin_payload_20485579.json");
     String streamId = UUID.randomUUID().toString();
 

@@ -62,7 +62,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
   /**
    * The maximum Http request body limit in MB.
    */
-  public static final Integer MAX_REQ_BODY_LIMIT = 25;
+  public static final Integer MAX_REQ_BODY_LIMIT = Math.max(25, DEF_REQ_BODY_LIMIT);
 
   /**
    * Returns a default application name used at many placed.
