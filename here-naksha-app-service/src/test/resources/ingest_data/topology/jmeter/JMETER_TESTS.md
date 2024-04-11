@@ -54,7 +54,7 @@ Conclusion:
 
 ### Test on infra setup #2:
 
-TODO :)
+Changed feature count in tile to 10 (previous itera)
 
 ## Setup
 
@@ -149,11 +149,10 @@ curl -XPOST localhost:8080/hub/spaces -H "content-type: application/json" -d '
 
 Run `ingestRandomFeatures` method
 from `com.here.naksha.app.data.GenerativeDataIngest.GenerativeDataIngest`.\
-It might take some time - we load 20_000 of generated features in sequential batches of 100
-features. This is likely to be optimized but it's good enough for start.
+It generates 10 features per `tileId`.
 
 Take a look at the `ingest_data/topology/tile_ids.csv` file - it contains all tiles for which our
-20_000 featyres where generated (generator logic takes `tileId` as arg and creates matching geometry
+features were generated (generator logic takes `tileId` as arg and creates matching geometry
 for feature to contain).
 
 #### Prepare your  JMeter scenario
@@ -184,6 +183,7 @@ jmeter -n \
   -Jthreads=20 \
   -JrampUp=2 \
   -JloopCount=20 \
+  -Jtimeout=1000 \
   -l {your_results_file} >> {your_output_file}
 ```
 
@@ -193,6 +193,7 @@ Parameters explanation:
   concurrency)
 - JrampUp: ramp up value of JMeter's thread group (aka: how long before they start doing stuff)
 - JloopCount: how many request should each client send
+- JTimeout: timeout of request sent to Naksha
 - result file: csv with metadata regarding the execution (latency, URL that was used, response code
   etc)
 - output file: summary of execution (avg time per thread etc)

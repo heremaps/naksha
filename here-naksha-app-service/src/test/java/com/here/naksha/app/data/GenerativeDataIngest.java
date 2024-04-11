@@ -1,12 +1,12 @@
 package com.here.naksha.app.data;
 
+import static java.util.stream.Stream.generate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
-import com.here.naksha.lib.core.lambdas.F;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
 import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
@@ -22,7 +22,6 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
@@ -32,9 +31,9 @@ class GenerativeDataIngest extends AbstractDataIngest {
 
   private static final Logger logger = LoggerFactory.getLogger(GenerativeDataIngest.class);
 
-  private static final int MAX_BATCH_SIZE = 200;
+  private static final int FEATURES_IN_BATCH_LIMIT = 200;
 
-  private static final int FEATURES_COUNT = 20_000;
+  private static final int FEATURES_PER_TILE = 10;
 
   private static final String TILE_IDS_FILE = "topology/tile_ids.csv";
 
@@ -60,23 +59,24 @@ class GenerativeDataIngest extends AbstractDataIngest {
     setNHSpaceId("ingest_test_space");
     setNakshaClient(new NakshaTestWebClient(nhUrl, 10, 90));
 
-    logger.info("Ingesting {} of generated Topology data using NH Url [{}], in Space [{}]", FEATURES_COUNT, nhUrl, nhSpaceId);
+    logger.info("Ingesting {} tiles with {} generated Topology features each, using NH Url [{}], in Space [{}]", tileIds.size(), FEATURES_PER_TILE, nhUrl, nhSpaceId);
 
-    ingestRandomFeatures(FEATURES_COUNT);
+    ingestRandomFeatures(FEATURES_PER_TILE);
   }
 
-  private void ingestRandomFeatures(int totalCount) throws URISyntaxException, IOException, InterruptedException {
-    int ingestedCount = 0;
+  private void ingestRandomFeatures(int featuresPerTile) throws URISyntaxException, IOException, InterruptedException {
     String streamId = UUID.randomUUID().toString();
-    while (ingestedCount < totalCount) {
-      int batchSize = Math.min(MAX_BATCH_SIZE, totalCount - ingestedCount);
-      String requestBody = batchRequest(batchSize);
-      logger.info("Sending batch of {} features to Naksha", batchSize);
-      sendFeaturesToNaksha(requestBody, streamId);
-      ingestedCount += batchSize;
-      logger.info("Ingested {} generated features, {} features left", ingestedCount, totalCount - ingestedCount);
+    int maxTilesInBatch = FEATURES_IN_BATCH_LIMIT / featuresPerTile;
+    int ingestedTiles = 0;
+    while (ingestedTiles < tileIds.size()){
+      int currentBatchTilesCount = Math.min(maxTilesInBatch, tileIds.size() - ingestedTiles);
+      List<String> tilesInBatch = tileIds.subList(ingestedTiles, ingestedTiles + currentBatchTilesCount);
+      String batchRequest = batchRequest(tilesInBatch, featuresPerTile);
+      logger.info("Populating {} tiles: {}, {} features per tile", tilesInBatch.size(), String.join(",", tilesInBatch), featuresPerTile);
+      sendFeaturesToNaksha(batchRequest, streamId);
+      ingestedTiles += tilesInBatch.size();
+      logger.info("Ingested features for {} tiles, {} tiles left", ingestedTiles, tileIds.size() - ingestedTiles);
     }
-    logger.info("Ingestion of generated features ended, sent total of {} features", ingestedCount);
   }
 
   private void sendFeaturesToNaksha(String requestBody, String streamId) throws URISyntaxException, IOException, InterruptedException {
@@ -88,26 +88,21 @@ class GenerativeDataIngest extends AbstractDataIngest {
         "ResCode mismatch while importing batch with streamId" + streamId);
   }
 
-  private String batchRequest(int size) {
+  private String batchRequest(List<String> tileIds, int featuresPerTile){
+    List<XyzFeature> featuresInBatch = tileIds.stream()
+        .map(tileId -> featuresForTile(tileId, featuresPerTile))
+        .flatMap(List::stream)
+        .toList();
     return new FeatureCollectionRequest()
-        .withFeatures(randomFeatures(size))
+        .withFeatures(featuresInBatch)
         .serialize();
   }
 
-  private List<XyzFeature> randomFeatures(int count) {
-    return Stream.generate(this::randomFeature)
+  private List<XyzFeature> featuresForTile(String tileId, int count){
+    return generate(() -> topologyFeatureGenerator.randomFeatureForTile(tileId))
         .limit(count)
         .toList();
   }
-
-  private XyzFeature randomFeature() {
-    return topologyFeatureGenerator.randomFeatureForTile(randomTile());
-  }
-
-  private String randomTile() {
-    return tileIds.get(random.nextInt(tileIds.size()));
-  }
-
   private boolean isGeneratedFeaturesIngestEnabled() {
     return GENERATED_FEATURES_INGEST_ENABLED;
   }
