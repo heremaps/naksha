@@ -25,8 +25,33 @@ import com.here.naksha.lib.core.AbstractTask;
  * system ignores this limit for internal tasks.
  */
 public class TooManyTasks extends RuntimeException {
+  private final long instanceLimit;
+  private final long principalLimit;
+  private final boolean instanceLevelExceeded;
 
   public TooManyTasks() {
     super("Maximum number of concurrent tasks (" + AbstractTask.limit.get() + ") reached");
+    this.instanceLimit = 0;
+    this.principalLimit = 0;
+    this.instanceLevelExceeded = true;
+  }
+
+  public TooManyTasks(long instanceLimit, long principalLimit, boolean instanceLevelExceeded) {
+    super(instanceLevelExceeded ? "Maximum number of concurrent tasks reached for instance (" + instanceLimit + ")" :
+            "Maximum number of concurrent tasks reached for principal (" + principalLimit + ")");
+    this.instanceLimit = instanceLimit;
+    this.principalLimit = principalLimit;
+    this.instanceLevelExceeded = instanceLevelExceeded;
+  }
+  public long getInstanceLimit() {
+    return instanceLimit;
+  }
+
+  public long getPrincipalLimit() {
+    return principalLimit;
+  }
+
+  public boolean isInstanceLevelExceeded() {
+    return instanceLevelExceeded;
   }
 }
