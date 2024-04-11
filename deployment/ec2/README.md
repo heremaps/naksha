@@ -109,6 +109,9 @@ cat /etc/fstab
 # Remove lost and found folders (this prevents initdb)
 sudo rm -rf /mnt/pg_temp/lost+found/ /mnt/pg_data/lost+found/
 
+# Redirect port 80 to 5432, so we can connect to PostgresQL from VPN
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 5432
+
 # Start docker (and make it auto-starting)
 sudo systemctl start docker
 sudo systemctl enable docker
