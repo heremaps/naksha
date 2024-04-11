@@ -574,7 +574,7 @@ FROM ns, txn_seq;"""
                     if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
                     table.returnException(e)
                 } catch (e: Throwable) {
-                    handleFeatureException(e, table, id, xyzOp)
+                    handleFeatureException(e, table, id)
                 } finally {
                     i++
                 }
@@ -586,17 +586,13 @@ FROM ns, txn_seq;"""
         return table
     }
 
-    private fun handleFeatureException(e: Throwable, table: ITable, id: String?, op: Int?) {
+    private fun handleFeatureException(e: Throwable, table: ITable, id: String?) {
         val err = asMap(e)
-        // available fields: sqlerrcode, schema_name, table_name, column_name, datatype_name, constraint_name, detail, hint, context, internalquery, code
-        val errCode: String? = err["sqlerrcode"]
-        val tableName: String? = err["table_name"]
+        // available fields (only on server): sqlerrcode, schema_name, table_name, column_name, datatype_name, constraint_name, detail, hint, context, internalquery, code
+        val errCode: String? = err["sqlerrcode"] ?: err["sqlstate"]
         when {
-            errCode == ERR_UNIQUE_VIOLATION && op == XYZ_OP_CREATE -> {
-                val existingFeature = asArray(sql.execute("SELECT $COL_RETURN FROM $tableName WHERE id=$1", arrayOf(id)))[0]
-                val featureAsMap = asMap(existingFeature)
-                val nakshaException = NakshaException.forRow(ERR_UNIQUE_VIOLATION, "The feature with the id '$id' does exist already", featureAsMap, xyzNsFromRow(tableName!!, featureAsMap))
-                table.returnException(nakshaException)
+            errCode != null -> {
+                table.returnErr(errCode, e.cause?.message ?: errCode, id)
             }
 
             else -> {
@@ -831,14 +827,35 @@ FROM ns, txn_seq;"""
             tags_arr: Array<ByteArray?>
     ): ITable {
         val table = sql.newTable()
-        val bulk = NakshaBulkLoader(collectionId, this)
+        val bulk = NakshaFeaturesWriter(collectionId, this)
         try {
-            bulk.bulkWriteFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+            bulk.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
             table.returnException(e)
         } catch (e: Throwable) {
             table.returnErr(ERR_FATAL, e.message ?: "Fatal ${e.stackTraceToString()}", null)
+        }
+        return table;
+    }
+
+    fun writeFeaturesAllOrNothing(
+            collectionId: String,
+            op_arr: Array<ByteArray>,
+            feature_arr: Array<ByteArray?>,
+            geo_type_arr: Array<Short>,
+            geo_arr: Array<ByteArray?>,
+            tags_arr: Array<ByteArray?>
+    ): ITable {
+        val table = sql.newTable()
+        val bulk = NakshaFeaturesWriter(collectionId, this)
+        try {
+            return bulk.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, false)
+        } catch (e: NakshaException) {
+            if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+            table.returnException(e)
+        } catch (e: Throwable) {
+            handleFeatureException(e, table, null)
         }
         return table;
     }
@@ -860,7 +877,7 @@ FROM ns, txn_seq;"""
     internal fun queryForExisting(collectionId: String, ids: List<String>, wait: Boolean): IMap {
         val waitOp = if (wait) "" else "NOWAIT"
         val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR, $COL_AUTHOR_TS FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp", arrayOf(ids.toTypedArray()))
+        val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR, $COL_AUTHOR_TS, $COL_GEO_GRID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp", arrayOf(ids.toTypedArray()))
         val rows = sql.rows(result)
 
         val retMap = newMap()
@@ -873,5 +890,16 @@ FROM ns, txn_seq;"""
             retMap.put(cols[COL_ID]!!, cols)
         }
         return retMap
+    }
+
+    internal fun selectOne(collectionId: String, id: String): IMap? {
+        val collectionIdQuoted = sql.quoteIdent(collectionId)
+        val result = sql.execute("SELECT $COL_ALL FROM $collectionIdQuoted WHERE id = $1", arrayOf(id))
+        val rows = sql.rows(result)
+        return if (rows.isNullOrEmpty()) {
+            null
+        } else {
+            asMap(rows[0])
+        }
     }
 }

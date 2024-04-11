@@ -1,11 +1,26 @@
 package com.here.naksha.lib.plv8
 
 import NakshaBulkLoaderPlan
-import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.IMap
+import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.NakshaUuid
+import com.here.naksha.lib.jbon.XYZ_OP_CREATE
+import com.here.naksha.lib.jbon.XYZ_OP_DELETE
+import com.here.naksha.lib.jbon.XYZ_OP_PURGE
+import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
+import com.here.naksha.lib.jbon.XYZ_OP_UPSERT
+import com.here.naksha.lib.jbon.containsKey
+import com.here.naksha.lib.jbon.div
+import com.here.naksha.lib.jbon.get
+import com.here.naksha.lib.jbon.minus
+import com.here.naksha.lib.jbon.newMap
+import com.here.naksha.lib.jbon.overrideBy
+import com.here.naksha.lib.jbon.set
 import com.here.naksha.lib.plv8.NakshaBulkLoaderOp.Companion.mapToOperations
 import com.here.naksha.lib.plv8.Static.DEBUG
 
-class NakshaBulkLoader(
+class NakshaFeaturesWriter(
         val collectionId: String,
         val session: NakshaSession
 ) {
@@ -16,16 +31,18 @@ class NakshaBulkLoader(
     private val delCollectionIdQuoted = session.sql.quoteIdent(delCollectionId)
     private val hstCollectionIdQuoted = quotedHst(headCollectionId)
 
-    private fun currentMillis() : BigInt64? = if (DEBUG) Jb.env.currentMicros() / 1000 else null
+    private fun currentMillis(): BigInt64? = if (DEBUG) Jb.env.currentMicros() / 1000 else null
 
-    fun bulkWriteFeatures(
+    fun writeFeatures(
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?>,
             geo_type_arr: Array<Short>,
             geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray?>
-    ) {
+            tags_arr: Array<ByteArray?>,
+            minResult:Boolean = false
+    ): ITable {
         val START = currentMillis()
+        val table = session.sql.newTable()
         val collectionConfig = session.getCollectionConfig(headCollectionId)
         val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
         val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
@@ -51,13 +68,16 @@ class NakshaBulkLoader(
             NakshaBulkLoaderPlan(null, getPartitionHeadQuoted(false, -1), delCollectionIdQuoted, hstCollectionIdQuoted, session)
         }
         for (op in allOperations) {
-            val opType = calculateOpToPerform(op, existingFeatures)
+            val opType = calculateOpToPerform(op, existingFeatures, collectionConfig)
             val featureRowMap = op.rowMap
             when (opType) {
                 XYZ_OP_CREATE -> {
                     featureIdsToDeleteFromDel.add(op.id)
                     session.xyzInsert(op.collectionId, featureRowMap)
                     addInsertStmt(plan.insertHeadPlan(), featureRowMap)
+                    if (!minResult) {
+                        table.returnCreated(op.id, session.xyzNsFromRow(collectionId, featureRowMap))
+                    }
                 }
 
                 XYZ_OP_UPDATE -> {
@@ -68,6 +88,9 @@ class NakshaBulkLoader(
                     addCopyHeadToHstStmt(plan.copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
                     session.xyzUpdateHead(op.collectionId, featureRowMap, headBeforeUpdate)
                     addUpdateHeadStmt(plan.updateHeadPlan(), featureRowMap)
+                    if (!minResult) {
+                        table.returnUpdated(op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.overrideBy(featureRowMap)))
+                    }
                 }
 
                 XYZ_OP_DELETE, XYZ_OP_PURGE -> {
@@ -83,10 +106,21 @@ class NakshaBulkLoader(
                         addDelStmt(plan.insertDelPlan(), featureRowMap)
                         addDeleteHeadStmt(plan.deleteHeadPlan(), featureRowMap)
                         if (isHistoryDisabled == false) addCopyDelToHstStmt(plan.copyDelToHstPlan(), featureRowMap)
+                        if (!minResult && opType == XYZ_OP_DELETE) {
+                            val fullDeletedFeatureRow = session.selectOne(collectionId, op.id)!!
+                            table.returnDeleted(fullDeletedFeatureRow, session.xyzNsFromRow(collectionId, headBeforeDelete.overrideBy(featureRowMap)))
+                        }
                     }
                     if (opType == XYZ_OP_PURGE) {
-                        checkStateForAtomicOp(op.id, op.xyzOp.uuid(), existingInDelFeatures[op.id]!!)
+                        // FIXME make it better for auto-purge, there is no point of putting row to $del just to remove it in next query
+                        checkStateForAtomicOp(op.id, op.xyzOp.uuid(), existingInDelFeatures[op.id]
+                                ?: existingFeatures[op.id]!!)
                         featuresToPurgeFromDel.add(op.id)
+                        if (!minResult) {
+                            val fullDeletedFeatureRow = session.selectOne(delCollectionId, op.id)
+                                    ?: session.selectOne(collectionId, op.id)!!
+                            table.returnPurged(fullDeletedFeatureRow, session.xyzNsFromRow(collectionId, fullDeletedFeatureRow))
+                        }
                     }
                 }
 
@@ -116,6 +150,8 @@ class NakshaBulkLoader(
         if (DEBUG) {
             println("[${op_arr.size} feature]: ${END!! - START!!}ms, loading: ${END_LOADING!! - START}ms, execution: ${END_EXECUTION!! - START_EXECUTION!!}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
         }
+
+        return table
     }
 
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
@@ -148,13 +184,15 @@ class NakshaBulkLoader(
         }
     }
 
-    internal fun calculateOpToPerform(row: NakshaBulkLoaderOp, existingFeatures: IMap): Int {
+    internal fun calculateOpToPerform(row: NakshaBulkLoaderOp, existingFeatures: IMap, collectionConfig: IMap): Int {
         return if (row.xyzOp.op() == XYZ_OP_UPSERT) {
             if (existingFeatures.containsKey(row.id)) {
                 XYZ_OP_UPDATE
             } else {
                 XYZ_OP_CREATE
             }
+        } else if (row.xyzOp.op() == XYZ_OP_DELETE && collectionConfig.isNkcAutoPurge()) {
+            XYZ_OP_PURGE
         } else {
             row.xyzOp.op()
         }

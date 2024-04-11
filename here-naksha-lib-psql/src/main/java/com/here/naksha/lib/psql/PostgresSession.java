@@ -236,6 +236,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     try (final Statement stmt = psqlConnection.createStatement()) {
       stmt.execute("SELECT naksha_clear_session();");
     }
+    nakshaSession.clear();
     psqlConnection.commit();
   }
 
@@ -737,18 +738,17 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         stmt.setArray(4, psqlConnection.createArrayOf("int2", geo_type_arr));
         stmt.setArray(5, psqlConnection.createArrayOf("bytea", geo_arr));
         stmt.setArray(6, psqlConnection.createArrayOf("bytea", tags_arr));
-        final ResultSet rs = stmt.executeQuery();
-        RequestedParams requestedParams = new RequestedParams(feature_arr, tags_arr, geo_arr);
-        final PsqlCursor<FEATURE, CODEC> cursor =
-            new PsqlCursor<>(writeRequest.getCodecFactory(), requestedParams, this, stmt, rs);
-        try (final PreparedStatement err_stmt = prepareStatement("SELECT naksha_err_no(), naksha_err_msg();")) {
-          final ResultSet err_rs = err_stmt.executeQuery();
-          err_rs.next();
-          final String errNo = err_rs.getString(1);
-          final String errMsg = err_rs.getString(2);
-          if (errNo != null) {
-            return new PsqlError(psqlCodeToXyzError(errNo), errMsg, cursor);
-          }
+        JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeaturesAllOrNothing(
+            collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr);
+        ArrayList<IMap> rows = table.getRows();
+        XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
+        List<XyzFeatureCodec> codecRows = PsqlResultMapper.mapRowToCodec(codecFactory, features, rows);
+        HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor =
+            new HeapCacheCursor<>(codecFactory, codecRows, originalFeaturesOrder);
+
+        if (!codecRows.isEmpty() && codecRows.get(0).hasError()) {
+          XyzFeatureCodec firstRow = codecRows.get(0);
+          return new PsqlError(firstRow.getError().err, firstRow.getError().msg);
         }
         return new PsqlSuccess(cursor, originalFeaturesOrder);
       } catch (Throwable e) {

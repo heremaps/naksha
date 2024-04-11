@@ -59,4 +59,10 @@ class JsMapApi : IMapApi {
     override fun iterator(map: IMap): IMapIterator {
         return JsMapInterator(map, keys(map))
     }
+
+    override fun overrideBy(map1: IMap, map2: IMap): IMap {
+        require(isMap(map1))
+        require(isMap(map2))
+        return js("new Map(Object.entries(Object.assign({}, Object.fromEntries(map1), Object.fromEntries(map2))))")
+    }
 }

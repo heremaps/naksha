@@ -97,7 +97,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     this.isEncoded = otherCodec.isEncoded;
     this.feature = otherCodec.feature;
     this.err = otherCodec.err;
-    this.errorJson = otherCodec.errorJson;
+    this.rawError = otherCodec.rawError;
     return self();
   }
 
@@ -118,7 +118,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     geometryEncoding = otherCodec.geometryEncoding;
     geometry = otherCodec.geometry;
     err = otherCodec.err;
-    errorJson = otherCodec.errorJson;
+    rawError = otherCodec.rawError;
     return self();
   }
 
@@ -276,7 +276,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   /**
    * The JSON of the error.
    */
-  protected @Nullable String errorJson;
+  protected @Nullable String rawError;
 
   /**
    * Sets the given geometry and clears the WKB.
@@ -385,10 +385,10 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   /**
    * Sets the JSON of the error.
    *
-   * @param json The JSON to set.
+   * @param rawError The JSON to set.
    */
-  public void setRawError(@Nullable String json) {
-    this.errorJson = json;
+  public void setRawError(@Nullable String rawError) {
+    this.rawError = rawError;
   }
 
   /**

@@ -98,4 +98,11 @@ interface IMapApi {
      * @throws IllegalArgumentException If the given map is no native map.
      */
     fun iterator(map: IMap): IMapIterator
+
+    /**
+     * Adds '+' other map to existing one (map1 + map2).
+     * @param map1 The base map (values from this map will be overwritten)
+     * @param map2 The map to be added (values from this map will override existing one)
+     */
+    fun overrideBy(map1: IMap, map2: IMap): IMap
 }

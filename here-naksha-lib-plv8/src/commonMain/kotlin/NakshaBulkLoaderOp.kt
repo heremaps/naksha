@@ -60,7 +60,9 @@ internal class NakshaBulkLoaderOp(
                 row[COL_GEOMETRY] = geo_arr[i]
                 row[COL_FEATURE] = feature_arr[i]
                 row[COL_GEO_TYPE] = geo_type_arr[i]
-                row[COL_GEO_GRID] = opReader.grid()
+                if (opReader.grid() != null) {
+                    row[COL_GEO_GRID] = opReader.grid()
+                }
 
                 val op = NakshaBulkLoaderOp(row,xyzOp = opReader,collectionId = collectionId)
                 operations.add(op)

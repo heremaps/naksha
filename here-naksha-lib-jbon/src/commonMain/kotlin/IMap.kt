@@ -22,3 +22,4 @@ inline operator fun IMap.iterator() : Iterator<Map.Entry<String,Any?>> = JbMapIt
 inline fun IMap.put(key:String, value:Any?) : Any? = Jb.map.put(this, key, value)
 inline fun IMap.clear() = Jb.map.clear(this)
 inline fun IMap.getAny(key:String) : Any? = Jb.map.get(this, key)
+inline fun IMap.overrideBy(map: IMap) : IMap = Jb.map.overrideBy(this, map)
