@@ -32,6 +32,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -62,7 +63,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
       new AtomicLong(Math.max(1000, Runtime.getRuntime().availableProcessors() * 50L));
 
   private static final double authorThreshold = 0.25;
-  private static final Map<String, Integer> authorUsageMap = new HashMap<>();
+  private static final Map<String, AtomicInteger> authorUsageMap = new ConcurrentHashMap<>();
 
   private static final AtomicLong taskId = new AtomicLong(1L);
   private static final ThreadGroup allTasksGroup = new ThreadGroup("Naksha-Tasks");
@@ -405,13 +406,14 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         final long threadCount = AbstractTask.threadCount.get();
         assert threadCount >= 0L;
         String author = context.getAuthor();
-        int authorUsage = authorUsageMap.getOrDefault(author, 0);
-        if (!internal && authorUsage >= LIMIT * authorThreshold) {
+        AtomicInteger authorUsage = AbstractTask.authorUsageMap.getOrDefault(author, new AtomicInteger(0));
+        double authorLimit = LIMIT * authorThreshold;
+        if (!internal && authorUsage.get() >= authorLimit) {
           log.info(
               "NAKSHA_ERR_REQ_LIMIT_4_PRINCIPAL - [Request Limit breached for Principal => appId,author,limit,crtValue] - ReqLimitForPrincipal {} {} {} {}",
               context.getAppId(),
               author,
-              LIMIT,
+              authorLimit,
               authorUsage);
           throw new TooManyTasks();
         }
@@ -425,7 +427,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
           throw new TooManyTasks();
         }
         if (AbstractTask.threadCount.compareAndSet(threadCount, threadCount + 1)) {
-          authorUsageMap.put(author, authorUsage + 1);
+          AbstractTask.incrementAuthorUsage(author);
           try {
             state.set(State.START);
             final Future<RESULT> future = threadPool.submit(this::init_and_execute);
@@ -434,6 +436,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
             throw new TooManyTasks();
           } catch (Throwable t) {
             AbstractTask.threadCount.decrementAndGet();
+            AbstractTask.decrementAuthorUsage(author);
             log.atError()
                 .setMessage("Unexpected exception while trying to fork a new thread")
                 .setCause(t)
@@ -476,6 +479,11 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         state.set(State.DONE);
         final long newValue = AbstractTask.threadCount.decrementAndGet();
         assert newValue >= 0L;
+        String author = context.getAuthor();
+        AtomicInteger authorUsage = AbstractTask.authorUsageMap.getOrDefault(author, new AtomicInteger(0));
+        if (authorUsage.get() > 0) {
+          AbstractTask.decrementAuthorUsage(author);
+        }
         detachFromCurrentThread();
       } catch (Throwable t) {
         RESULT = errorResponse(t);
@@ -602,6 +610,27 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
       return false;
     } finally {
       state.set(State.NEW);
+    }
+  }
+
+  /**
+   * Increments the value of authorUsage in the hashmap.
+   *
+   * @param author The author.
+   */
+  private static void incrementAuthorUsage(String author) {
+    AbstractTask.authorUsageMap.computeIfAbsent(author, key -> new AtomicInteger()).incrementAndGet();
+  }
+
+  /**
+   * Decrements the value of authorUsage in the hashmap.
+   *
+   * @param author The author.
+   */
+  private static void decrementAuthorUsage(String author) {
+    AtomicInteger usage = AbstractTask.authorUsageMap.get(author);
+    if (usage != null) {
+      usage.decrementAndGet();
     }
   }
 }
