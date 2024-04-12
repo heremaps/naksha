@@ -54,7 +54,35 @@ Conclusion:
 
 ### Test on infra setup #2:
 
-Changed feature count in tile to 10 (previous itera)
+Results for small instances
+- 10 features per tile, 256 tiles
+- app: 4 cpus, 4096 mem
+- psql: 4 cpus, 4096 mem
+
+| concurrency | loops per thread | timeout (ms) | summary                                                                                                  | errors                                                                                            |
+| ----------- | ---------------- | ------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 80          | 10               | 1000         | summary = 800 in 00:00:15 = 53.6/s<br>Avg: 628<br>Min: 31<br>Max: 13279<br>Err: 1 (0.12%)<br>            | single `500 Internal Server error`                                                                |
+| 80          | 10               | 2000         | summary = 800 in 00:00:06 = 138.1/s<br>Avg: 381<br>Min: 33<br>Max: 883<br>Err: 0 (0.00%)                 | -                                                                                                 |
+| 100         | 5                | 1000         | summary = 500 in 00:00:20 = 25.1/s<br>Avg: 896<br>Min: 33<br>Max: 19440<br>Err: 22 (4.40%)               | 22 responses with `500 Internal Server error`                                                     |
+| 100         | 10               | 2000         | summary = 1000 in 00:00:23 = 42.7/s<br>Avg: 795<br>Min: 22<br>Max: 18445<br>Err: 60 (6.00%)<br>          | 60 responses with `500 Internal Server error`<br>                                                 |
+| 100         | 20               | 3000         | (stats omitted on purpose)<br><br>Thread group breakdown:<br>Active: 99 <br>Started: 100 <br>Finished: 1 | This iteration was hanging and killed manually (99 of 100 thread were unable to finish its loops) |
+|             |                  |              |                                                                                                          |                                                                                                   |
+
+Results for big instances
+- 10 features per tile, 256 tiles
+- app: 12 cpus, 4096 mem
+- psql: 4 cpus, 4096 mem
+
+| concurrency | loops per thread | timeout (ms) | summary                                                                                            | errors                                         |
+| ----------- | ---------------- | ------------ | -------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| 100         | 5                | 1000         | summary = 500 in 00:00:04 = 115.9/s<br>Avg: 470<br>Min: 64<br>Max: 1100<br>Err: 0 (0.00%)<br>      | -                                              |
+| 100 (12:23) | 10               | 1000         | summary = 1000 in 00:00:18 = 55.7/s<br>Avg: 1582<br>Min: 31<br>Max: 10678<br>Err: 46 (4.60%)       | 46 responses with `500 Internal Server error`  |
+| 100 (13:01) | 10               | 1000         | summary = 1000 in 00:00:16 = 62.7/s<br>Avg: 1379<br>Min: 30<br>Max: 8739<br>Err: 18 (1.80%)        | 18 responses with `500 Internal Server error`  |
+| 100 (13:02) | 10               | 1000         | summary = 1000 in 00:00:10 = 104.4/s<br>Avg: 737<br>Min: 36<br>Max: 2212<br>Err: 8 (0.80%)         | 8 responses with `500 Internal Server error`   |
+| 200         | 5                | 1000         | summary = 1000 in 00:00:08 = 131.9/s<br>Avg: 1086<br>Min: 45<br>Max: 2523<br>Err: 298 (29.80%)<br> | 298 responses with `500 Internal Server error` |
+| 200         | 5                | 1000         | summary = 1000 in 00:00:26 = 38.4/s<br>Avg: 1515<br>Min: 32<br>Max: 17416<br>Err: 561 (56.10%)     | 561 responses with `500 Internal Server error` |
+| 200         | 5                | 1000         | summary = 1000 in 00:00:24 = 41.4/s<br>Avg: 3844<br>Min: 42<br>Max: 22588<br>Err: 555 (55.50%)     | 555 responses with `500 Internal Server error` |
+| 200         | 5                | 1000         | summary = 1000 in 00:00:21 = 47.3/s<br>Avg: 3217<br>Min: 43<br>Max: 16216<br>Err: 543 (54.30%)     | 543 responses with `500 Internal Server error` |
 
 ## Setup
 
