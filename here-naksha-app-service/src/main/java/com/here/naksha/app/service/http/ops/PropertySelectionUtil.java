@@ -69,7 +69,7 @@ public class PropertySelectionUtil {
    *    type
    *    geometry
    *
-   * Note - Entire 'geometry' object is added by default, ONLY if it is not already (partially) requested.
+   * Note - Entire 'geometry' object is added by default, UNLESS it is partially requested.
    *
    * </pre>
    *

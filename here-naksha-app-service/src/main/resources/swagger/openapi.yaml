@@ -1182,7 +1182,7 @@ components:
           * properties starting with **'g.'** is expanded internally as **'geometry.'** , for example 'g.type', 'g.coordinates'
         
         
-        Entire **geometry** object is always returned (by default), except when it is partially requested (in that case, only the selected part will be returned).
+        Entire **geometry** object is returned (by default), UNLESS it is partially requested (in that case, only the selected part will be returned).
 
 
         **NOTE** - Be aware that selecting limited fields, can result into logically invalid representation of Feature object.
