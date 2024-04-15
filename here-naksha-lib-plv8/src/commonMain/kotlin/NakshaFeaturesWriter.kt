@@ -15,7 +15,7 @@ import com.here.naksha.lib.jbon.div
 import com.here.naksha.lib.jbon.get
 import com.here.naksha.lib.jbon.minus
 import com.here.naksha.lib.jbon.newMap
-import com.here.naksha.lib.jbon.overrideBy
+import com.here.naksha.lib.jbon.plus
 import com.here.naksha.lib.jbon.set
 import com.here.naksha.lib.plv8.NakshaBulkLoaderOp.Companion.mapToOperations
 import com.here.naksha.lib.plv8.Static.DEBUG
@@ -89,7 +89,7 @@ class NakshaFeaturesWriter(
                     session.xyzUpdateHead(op.collectionId, featureRowMap, headBeforeUpdate)
                     addUpdateHeadStmt(plan.updateHeadPlan(), featureRowMap)
                     if (!minResult) {
-                        table.returnUpdated(op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.overrideBy(featureRowMap)))
+                        table.returnUpdated(op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
                     }
                 }
 
@@ -108,7 +108,7 @@ class NakshaFeaturesWriter(
                         if (isHistoryDisabled == false) addCopyDelToHstStmt(plan.copyDelToHstPlan(), featureRowMap)
                         if (!minResult && opType == XYZ_OP_DELETE) {
                             val fullDeletedFeatureRow = session.selectOne(collectionId, op.id)!!
-                            table.returnDeleted(fullDeletedFeatureRow, session.xyzNsFromRow(collectionId, headBeforeDelete.overrideBy(featureRowMap)))
+                            table.returnDeleted(fullDeletedFeatureRow, session.xyzNsFromRow(collectionId, headBeforeDelete + featureRowMap))
                         }
                     }
                     if (opType == XYZ_OP_PURGE) {

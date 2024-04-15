@@ -36,9 +36,9 @@ class JvmMapApi : IMapApi {
     override fun clear(map: IMap) = modify(map).clear()
     override fun keys(map: IMap): Array<String> = read(map).keys.toTypedArray()
     override fun iterator(map: IMap): IMapIterator = JvmMapIterator(read(map))
-    override fun overrideBy(map1: IMap, map2: IMap): IMap {
-        val merged = newMap()
-        (map1 as JvmMap + map2 as JvmMap).iterator().forEach { merged.put(it.key, it.value) }
-        return merged
+    override fun plus(map1: IMap, map2: IMap): IMap {
+        val merged: HashMap<String, Any?> = newMap() as HashMap<String,Any?>
+        merged.putAll(map1 as HashMap<String, Any?> + map2 as HashMap<String, Any?>)
+        return merged as IMap
     }
 }

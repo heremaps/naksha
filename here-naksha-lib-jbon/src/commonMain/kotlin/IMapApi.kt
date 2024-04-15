@@ -104,5 +104,5 @@ interface IMapApi {
      * @param map1 The base map (values from this map will be overwritten)
      * @param map2 The map to be added (values from this map will override existing one)
      */
-    fun overrideBy(map1: IMap, map2: IMap): IMap
+    fun plus(map1: IMap, map2: IMap): IMap
 }
