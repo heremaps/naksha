@@ -17,7 +17,7 @@ import com.here.naksha.lib.jbon.minus
 import com.here.naksha.lib.jbon.newMap
 import com.here.naksha.lib.jbon.plus
 import com.here.naksha.lib.jbon.set
-import com.here.naksha.lib.plv8.NakshaBulkLoaderOp.Companion.mapToOperations
+import com.here.naksha.lib.plv8.NakshaRequestOp.Companion.mapToOperations
 import com.here.naksha.lib.plv8.Static.DEBUG
 
 class NakshaFeaturesWriter(
@@ -39,7 +39,7 @@ class NakshaFeaturesWriter(
             geo_type_arr: Array<Short>,
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>,
-            minResult:Boolean = false
+            minResult: Boolean = false
     ): ITable {
         val START = currentMillis()
         val table = session.sql.newTable()
@@ -48,12 +48,13 @@ class NakshaFeaturesWriter(
         val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
 
         val START_MAPPING = currentMillis()
-        val (allOperations, idsToModify, idsToPurge, partition) = mapToOperations(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val (allOperations, idsToModify, idsToPurge, idsToDel, partition) = mapToOperations(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
         val END_MAPPING = currentMillis()
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
-        val existingFeatures = existingFeatures(headCollectionId, idsToModify)
-        val existingInDelFeatures = existingFeatures(delCollectionId, idsToPurge)
+
+        val existingFeatures = existingFeatures(headCollectionId, idsToModify, emptyIfMinResult(idsToDel, minResult))
+        val existingInDelFeatures = existingFeatures(delCollectionId, idsToPurge, emptyIfMinResult(idsToPurge, minResult))
         val END_LOADING = currentMillis()
 
         val START_PREPARE = currentMillis()
@@ -107,19 +108,16 @@ class NakshaFeaturesWriter(
                         addDeleteHeadStmt(plan.deleteHeadPlan(), featureRowMap)
                         if (isHistoryDisabled == false) addCopyDelToHstStmt(plan.copyDelToHstPlan(), featureRowMap)
                         if (!minResult && opType == XYZ_OP_DELETE) {
-                            val fullDeletedFeatureRow = session.selectOne(collectionId, op.id)!!
-                            table.returnDeleted(fullDeletedFeatureRow, session.xyzNsFromRow(collectionId, headBeforeDelete + featureRowMap))
+                            table.returnDeleted(headBeforeDelete, session.xyzNsFromRow(collectionId, headBeforeDelete + featureRowMap))
                         }
                     }
                     if (opType == XYZ_OP_PURGE) {
                         // FIXME make it better for auto-purge, there is no point of putting row to $del just to remove it in next query
-                        checkStateForAtomicOp(op.id, op.xyzOp.uuid(), existingInDelFeatures[op.id]
-                                ?: existingFeatures[op.id]!!)
+                        val deletedFeatureRow: IMap = existingInDelFeatures[op.id] ?: existingFeatures[op.id]!!
+                        checkStateForAtomicOp(op.id, op.xyzOp.uuid(), deletedFeatureRow)
                         featuresToPurgeFromDel.add(op.id)
                         if (!minResult) {
-                            val fullDeletedFeatureRow = session.selectOne(delCollectionId, op.id)
-                                    ?: session.selectOne(collectionId, op.id)!!
-                            table.returnPurged(fullDeletedFeatureRow, session.xyzNsFromRow(collectionId, fullDeletedFeatureRow))
+                            table.returnPurged(deletedFeatureRow, session.xyzNsFromRow(collectionId, deletedFeatureRow))
                         }
                     }
                 }
@@ -154,10 +152,12 @@ class NakshaFeaturesWriter(
         return table
     }
 
+    private fun <T> emptyIfMinResult(list: List<T>, minResult: Boolean) = if (minResult) emptyList<T>() else list
+
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
             if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else collectionIdQuoted
 
-    private fun groupByPartition(isCollectionPartitioned: Boolean?, allOperations: List<NakshaBulkLoaderOp>) =
+    private fun groupByPartition(isCollectionPartitioned: Boolean?, allOperations: List<NakshaRequestOp>) =
             if (isCollectionPartitioned == true) {
                 allOperations.groupBy { it.partition }
             } else {
@@ -184,7 +184,7 @@ class NakshaFeaturesWriter(
         }
     }
 
-    internal fun calculateOpToPerform(row: NakshaBulkLoaderOp, existingFeatures: IMap, collectionConfig: IMap): Int {
+    internal fun calculateOpToPerform(row: NakshaRequestOp, existingFeatures: IMap, collectionConfig: IMap): Int {
         return if (row.xyzOp.op() == XYZ_OP_UPSERT) {
             if (existingFeatures.containsKey(row.id)) {
                 XYZ_OP_UPDATE
@@ -294,8 +294,8 @@ class NakshaFeaturesWriter(
         }
     }
 
-    internal fun existingFeatures(collectionId: String, ids: List<String>) = if (ids.isNotEmpty()) {
-        session.queryForExisting(collectionId, ids, wait = false)
+    internal fun existingFeatures(collectionId: String, idsSmallFetch: List<String>, idsFullFetch: List<String>) = if (idsSmallFetch.isNotEmpty()) {
+        session.queryForExisting(collectionId, idsSmallFetch = idsSmallFetch, idsFullFetch = idsFullFetch, wait = false)
     } else {
         newMap()
     }

@@ -742,10 +742,21 @@ FROM ns, txn_seq;"""
         return retMap
     }
 
-    internal fun queryForExisting(collectionId: String, ids: List<String>, wait: Boolean): IMap {
+    internal fun queryForExisting(collectionId: String, idsSmallFetch: List<String>, idsFullFetch: List<String>, wait: Boolean): IMap {
         val waitOp = if (wait) "" else "NOWAIT"
         val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR, $COL_AUTHOR_TS, $COL_GEO_GRID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp", arrayOf(ids.toTypedArray()))
+        val basicQuery = "SELECT $COL_ID,$COL_TXN,$COL_UID,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR,$COL_AUTHOR_TS,$COL_GEO_GRID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp"
+        val result = if (idsFullFetch.isEmpty()) {
+            sql.execute(basicQuery, arrayOf(idsSmallFetch.toTypedArray()))
+        } else {
+            val complexQuery = """
+                with 
+                small as ($basicQuery),
+                remaining as (SELECT $COL_ID, $COL_TXN_NEXT,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_APP_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE FROM $collectionIdQuoted WHERE id = ANY($2))
+                select * from small s left join remaining r on s.$COL_ID = r.$COL_ID 
+            """.trimIndent()
+            sql.execute(complexQuery, arrayOf(idsSmallFetch.toTypedArray(), idsFullFetch.toTypedArray()))
+        }
         val rows = sql.rows(result)
 
         val retMap = newMap()
@@ -758,16 +769,5 @@ FROM ns, txn_seq;"""
             retMap.put(cols[COL_ID]!!, cols)
         }
         return retMap
-    }
-
-    internal fun selectOne(collectionId: String, id: String): IMap? {
-        val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val result = sql.execute("SELECT $COL_ALL FROM $collectionIdQuoted WHERE id = $1", arrayOf(id))
-        val rows = sql.rows(result)
-        return if (rows.isNullOrEmpty()) {
-            null
-        } else {
-            asMap(rows[0])
-        }
     }
 }
