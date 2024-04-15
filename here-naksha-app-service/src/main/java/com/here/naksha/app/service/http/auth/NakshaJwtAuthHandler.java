@@ -18,6 +18,8 @@
  */
 package com.here.naksha.app.service.http.auth;
 
+import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.JsonObject;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
@@ -35,6 +37,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static com.here.naksha.common.http.apis.ApiParamsConst.ACCESS_TOKEN;
 
 public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
 
@@ -70,15 +73,12 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
   public void authenticate(@NotNull RoutingContext context, @NotNull Handler<@NotNull AsyncResult<User>> handler) {
     String jwt = getFromAuthHeader(context.request().headers().get(HttpHeaders.AUTHORIZATION));
 
-    // TODO: Fix me!
-    // Try to get the token from the query parameter
-    //    if (ALLOW_URI_QUERY_PARAMETER && jwt == null) {
-    //      final List<String> accessTokenParam = Query.queryParam(ACCESS_TOKEN, context);
-    //      if (accessTokenParam != null && accessTokenParam.size() > 0) {
-    //        jwt = accessTokenParam.get(0);
-    //        if (jwt != null) context.put(ACCESS_TOKEN, jwt);
-    //      }
-    //    }
+        if (ALLOW_URI_QUERY_PARAMETER && jwt == null) {
+          // Try to get the token from the query parameter
+          QueryParameterList queryParameters = ApiParams.queryParamsFromRequest(context);
+          jwt = ApiParams.extractParamAsString(queryParameters, ACCESS_TOKEN);
+          if (jwt != null) context.put(ACCESS_TOKEN, jwt);
+        }
 
     // If anonymous access is allowed, use the default anonymous JWT token
     if (ALLOW_ANONYMOUS_ACCESS && jwt == null) {
