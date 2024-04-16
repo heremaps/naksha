@@ -454,149 +454,13 @@ FROM ns, txn_seq;"""
         return _txts!!
     }
 
-    fun writeFeatures(
-            collectionId: String,
-            op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?>,
-            geo_type_arr: Array<Short>,
-            geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray?>
-    ): ITable {
-        errNo = null
-        errMsg = null
-        val sql = this.sql
-        val table = sql.newTable()
-        val opReader = XyzOp()
-        val featureReader = JbFeature(getDictManager(collectionId))
-        val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val collectionDelQuoted = sql.quoteIdent(collectionId + "\$del")
-        val updatePlan: IPlv8Plan by lazy {
-            sql.prepare("""UPDATE $collectionIdQuoted
-                        SET geo_grid=$2,geo_type=$3,geo=$4,tags=$5,feature=$6,action=$ACTION_UPDATE
-                        WHERE id=$1
-                        RETURNING $COL_RETURN""",
-                    arrayOf(SQL_STRING, SQL_INT32, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
-        }
-        val createPlan: IPlv8Plan by lazy {
-            sql.prepare("INSERT INTO $collectionIdQuoted ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN",
-                    arrayOf(SQL_STRING, SQL_INT32, SQL_INT16, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
-        }
-        val deleteFeaturePlan: IPlv8Plan by lazy {
-            sql.prepare("DELETE FROM $collectionIdQuoted WHERE id=$1 RETURNING $COL_RETURN",
-                    arrayOf(SQL_STRING))
-        }
-        val deleteFeatureUuidPlan: IPlv8Plan by lazy {
-            sql.prepare("DELETE FROM $collectionIdQuoted WHERE id=$1 and uuid=$2 RETURNING $COL_RETURN",
-                    arrayOf(SQL_STRING, SQL_INT32))
-        }
-        val purgeFeaturePlan: IPlv8Plan by lazy {
-            sql.prepare("DELETE FROM $collectionDelQuoted WHERE id=$1 RETURNING $COL_RETURN",
-                    arrayOf(SQL_STRING))
-        }
-        val purgeFeatureUuidPlan: IPlv8Plan by lazy {
-            sql.prepare("DELETE FROM $collectionDelQuoted WHERE id=$1 and uuid=$2 RETURNING $COL_RETURN",
-                    arrayOf(SQL_STRING, SQL_INT32))
-        }
-
-        try {
-            var i = 0
-            while (i < op_arr.size) {
-                var id: String? = null
-                var xyzOp: Int? = null
-                try {
-                    val op = op_arr[i]
-                    val feature = feature_arr[i]
-                    val geo_type = geo_type_arr[i]
-                    val geo = geo_arr[i]
-                    val tags = tags_arr[i]
-
-                    opReader.mapBytes(op)
-                    xyzOp = opReader.op()
-                    var uuid = opReader.uuid()
-                    var grid = opReader.grid()
-                    id = opReader.id()
-                    if (id == null) {
-                        featureReader.mapBytes(feature)
-                        id = featureReader.id()
-                    }
-                    if (id == null) throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", id)
-                    if (xyzOp == XYZ_OP_UPSERT) {
-                        try {
-                            val rows = asArray(createPlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
-                            // TODO: What if no row is returned?
-                            val cols = asMap(rows[0])
-                            val xyz = xyzNsFromRow(collectionId, cols)
-                            table.returnCreated(id, xyz)
-                        } catch (e: Throwable) {
-                            val err = asMap(e)
-                            val errCode: String? = err["sqlerrcode"]
-                            if (errCode == ERR_UNIQUE_VIOLATION) {
-                                val rows = asArray(updatePlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
-                                val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
-                                table.returnUpdated(id, xyz)
-                            }
-                        }
-                    } else if (xyzOp == XYZ_OP_CREATE) {
-                        val rows = asArray(createPlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
-                        // TODO: What if no row is returned?
-                        val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
-                        table.returnCreated(id, xyz)
-                    } else if (xyzOp == XYZ_OP_UPDATE) {
-                        val rows = asArray(updatePlan.execute(arrayOf(id, grid, geo_type, geo, tags, feature)))
-                        // TODO: What if no row is returned?
-                        val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
-                        table.returnUpdated(id, xyz)
-                    } else if (xyzOp == XYZ_OP_DELETE || xyzOp == XYZ_OP_PURGE) {
-                        var rows = if (uuid != null) {
-                            asArray(deleteFeatureUuidPlan.execute(arrayOf(id, uuid)))
-                        } else {
-                            asArray(deleteFeaturePlan.execute(arrayOf(id)))
-                        }
-                        if (xyzOp == XYZ_OP_PURGE) {
-                            rows = if (uuid != null) {
-                                asArray(purgeFeatureUuidPlan.execute(arrayOf(id, uuid)))
-                            } else {
-                                asArray(purgeFeaturePlan.execute(arrayOf(id)))
-                            }
-                            val row = asMap(rows[0])
-                            val xyz = xyzNsFromRow(collectionId, asMap(rows[0]))
-                            table.returnPurged(row, xyz)
-                        } else {
-                            val row = asMap(rows[0])
-                            val xyz = xyzNsFromRow(collectionId, deletedFeaturesRowCache[id]!!)
-                            table.returnDeleted(row, xyz)
-                        }
-                    } else {
-                        throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Unsupported operation " + XyzOp.getOpName(xyzOp), id)
-                    }
-                    // TODO: Handle update, delete and purge
-                } catch (e: NakshaException) {
-                    if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-                    table.returnException(e)
-                } catch (e: Throwable) {
-                    handleFeatureException(e, table, id, xyzOp)
-                } finally {
-                    i++
-                }
-            }
-        } finally {
-            updatePlan.free()
-            createPlan.free()
-        }
-        return table
-    }
-
-    private fun handleFeatureException(e: Throwable, table: ITable, id: String?, op: Int?) {
+    private fun handleFeatureException(e: Throwable, table: ITable, id: String?) {
         val err = asMap(e)
-        // available fields: sqlerrcode, schema_name, table_name, column_name, datatype_name, constraint_name, detail, hint, context, internalquery, code
-        val errCode: String? = err["sqlerrcode"]
-        val tableName: String? = err["table_name"]
+        // available fields (only on server): sqlerrcode, schema_name, table_name, column_name, datatype_name, constraint_name, detail, hint, context, internalquery, code
+        val errCode: String? = err["sqlerrcode"] ?: err["sqlstate"]
         when {
-            errCode == ERR_UNIQUE_VIOLATION && op == XYZ_OP_CREATE -> {
-                val existingFeature = asArray(sql.execute("SELECT $COL_RETURN FROM $tableName WHERE id=$1", arrayOf(id)))[0]
-                val featureAsMap = asMap(existingFeature)
-                val nakshaException = NakshaException.forRow(ERR_UNIQUE_VIOLATION, "The feature with the id '$id' does exist already", featureAsMap, xyzNsFromRow(tableName!!, featureAsMap))
-                table.returnException(nakshaException)
+            errCode != null -> {
+                table.returnErr(errCode, e.cause?.message ?: errCode, id)
             }
 
             else -> {
@@ -831,14 +695,35 @@ FROM ns, txn_seq;"""
             tags_arr: Array<ByteArray?>
     ): ITable {
         val table = sql.newTable()
-        val bulk = NakshaBulkLoader(collectionId, this)
+        val bulk = NakshaFeaturesWriter(collectionId, this)
         try {
-            bulk.bulkWriteFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+            bulk.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, true)
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
             table.returnException(e)
         } catch (e: Throwable) {
             table.returnErr(ERR_FATAL, e.message ?: "Fatal ${e.stackTraceToString()}", null)
+        }
+        return table;
+    }
+
+    fun writeFeatures(
+            collectionId: String,
+            op_arr: Array<ByteArray>,
+            feature_arr: Array<ByteArray?>,
+            geo_type_arr: Array<Short>,
+            geo_arr: Array<ByteArray?>,
+            tags_arr: Array<ByteArray?>
+    ): ITable {
+        val table = sql.newTable()
+        val bulk = NakshaFeaturesWriter(collectionId, this)
+        try {
+            return bulk.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, false)
+        } catch (e: NakshaException) {
+            if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+            table.returnException(e)
+        } catch (e: Throwable) {
+            handleFeatureException(e, table, null)
         }
         return table;
     }
@@ -857,10 +742,21 @@ FROM ns, txn_seq;"""
         return retMap
     }
 
-    internal fun queryForExisting(collectionId: String, ids: List<String>, wait: Boolean): IMap {
+    internal fun queryForExisting(collectionId: String, idsSmallFetch: List<String>, idsFullFetch: List<String>, wait: Boolean): IMap {
         val waitOp = if (wait) "" else "NOWAIT"
         val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR, $COL_AUTHOR_TS FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp", arrayOf(ids.toTypedArray()))
+        val basicQuery = "SELECT $COL_ID,$COL_TXN,$COL_UID,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR,$COL_AUTHOR_TS,$COL_GEO_GRID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp"
+        val result = if (idsFullFetch.isEmpty()) {
+            sql.execute(basicQuery, arrayOf(idsSmallFetch.toTypedArray()))
+        } else {
+            val complexQuery = """
+                with 
+                small as ($basicQuery),
+                remaining as (SELECT $COL_ID, $COL_TXN_NEXT,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_APP_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE FROM $collectionIdQuoted WHERE id = ANY($2))
+                select * from small s left join remaining r on s.$COL_ID = r.$COL_ID 
+            """.trimIndent()
+            sql.execute(complexQuery, arrayOf(idsSmallFetch.toTypedArray(), idsFullFetch.toTypedArray()))
+        }
         val rows = sql.rows(result)
 
         val retMap = newMap()

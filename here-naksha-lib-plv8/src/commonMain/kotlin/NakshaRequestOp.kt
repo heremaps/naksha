@@ -3,7 +3,7 @@ package com.here.naksha.lib.plv8
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.plv8.Static.DEBUG
 
-internal class NakshaBulkLoaderOp(
+internal class NakshaRequestOp(
         val rowMap: IMap,
         val xyzOp: XyzOp,
         val collectionId: String
@@ -21,15 +21,16 @@ internal class NakshaBulkLoaderOp(
                 geo_type_arr: Array<Short>,
                 geo_arr: Array<ByteArray?>,
                 tags_arr: Array<ByteArray?>
-        ): NakshaBulkLoaderOps {
+        ): NakshaWriteOps {
             check(op_arr.size == feature_arr.size && op_arr.size == geo_type_arr.size && op_arr.size == geo_arr.size && op_arr.size == tags_arr.size) {
                 "not all input arrays has same size"
             }
             var partition : Int = -2
             val featureReader = JbFeature(JbDictManager())
-            val operations = ArrayList<NakshaBulkLoaderOp>(op_arr.size)
+            val operations = ArrayList<NakshaRequestOp>(op_arr.size)
             val idsToModify = ArrayList<String>(op_arr.size)
             val idsToPurge = ArrayList<String>()
+            val idsToDel = ArrayList<String>()
             var total = 0
             val opReader = XyzOp()
             for (i in op_arr.indices) {
@@ -52,6 +53,8 @@ internal class NakshaBulkLoaderOp(
                     idsToModify.add(id)
                     if (opReader.op() == XYZ_OP_PURGE) {
                         idsToPurge.add(id)
+                    } else if (opReader.op() == XYZ_OP_DELETE) {
+                        idsToDel.add(id)
                     }
                 }
                 val row = newMap()
@@ -60,9 +63,12 @@ internal class NakshaBulkLoaderOp(
                 row[COL_GEOMETRY] = geo_arr[i]
                 row[COL_FEATURE] = feature_arr[i]
                 row[COL_GEO_TYPE] = geo_type_arr[i]
-                row[COL_GEO_GRID] = opReader.grid()
+                if (opReader.grid() != null) {
+                    // we don't want it to be null, as null would override calculated value later in response
+                    row[COL_GEO_GRID] = opReader.grid()
+                }
 
-                val op = NakshaBulkLoaderOp(row,xyzOp = opReader,collectionId = collectionId)
+                val op = NakshaRequestOp(row,xyzOp = opReader,collectionId = collectionId)
                 operations.add(op)
                 if (partition == -2) {
                     partition = op.partition
@@ -71,7 +77,7 @@ internal class NakshaBulkLoaderOp(
                 }
             }
             if (DEBUG) println("opReader.mapBytes(op_arr[i]) took ${total / 1000}ms")
-            return NakshaBulkLoaderOps(operations.sortedBy { it.key }, idsToModify, idsToPurge, if (partition>=0) partition else null)
+            return NakshaWriteOps(operations.sortedBy { it.key }, idsToModify, idsToPurge, idsToDel, if (partition>=0) partition else null)
         }
     }
 }

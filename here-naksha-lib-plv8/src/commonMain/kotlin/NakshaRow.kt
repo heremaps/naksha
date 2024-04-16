@@ -79,4 +79,7 @@ internal inline fun IMap.setGeoGrid(geoGrid : String?) { this[COL_GEO_GRID] = ge
 internal inline fun IMap.hasId() : Boolean = getAny(COL_ID) is String
 internal inline fun IMap.getId() : String? = this[COL_ID]
 internal inline fun IMap.setId(id : String?) { this[COL_ID] = id }
-
+internal inline fun IMap.isNkcAutoPurge() : Boolean {
+    val autoPurge: Boolean? = this[NKC_AUTO_PURGE]
+    return autoPurge == true
+}

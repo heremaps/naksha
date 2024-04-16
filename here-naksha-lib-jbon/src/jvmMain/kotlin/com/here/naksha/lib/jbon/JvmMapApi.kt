@@ -4,7 +4,11 @@ package com.here.naksha.lib.jbon
 class JvmMapApi : IMapApi {
     override fun isMap(any: Any?): Boolean = any is IMap
 
-    override fun asMap(any: Any?): IMap = any as IMap
+    override fun asMap(any: Any?): IMap = if (isMap(any)) {
+        any as IMap
+    } else {
+        any?.let { JvmEnv.get().convert(it, JvmMap::class.java) } as IMap
+    }
 
     override fun newMap(): IMap = JvmMap()
 
@@ -12,6 +16,7 @@ class JvmMapApi : IMapApi {
         require(map is Map<*, *>)
         return map as Map<String, Any?>
     }
+
     private fun modify(map: IMap): MutableMap<String, Any?> {
         require(map is MutableMap<*, *>)
         return map as MutableMap<String, Any?>
@@ -26,8 +31,14 @@ class JvmMapApi : IMapApi {
         m[key] = value
         return old
     }
+
     override fun remove(map: IMap, key: String): Any? = modify(map).remove(key)
     override fun clear(map: IMap) = modify(map).clear()
     override fun keys(map: IMap): Array<String> = read(map).keys.toTypedArray()
     override fun iterator(map: IMap): IMapIterator = JvmMapIterator(read(map))
+    override fun plus(map1: IMap, map2: IMap): IMap {
+        val merged: HashMap<String, Any?> = newMap() as HashMap<String,Any?>
+        merged.putAll(map1 as HashMap<String, Any?> + map2 as HashMap<String, Any?>)
+        return merged as IMap
+    }
 }

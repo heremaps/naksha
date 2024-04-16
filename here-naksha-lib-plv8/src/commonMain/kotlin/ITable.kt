@@ -93,7 +93,7 @@ interface ITable {
      * @param xyz The new XYZ namespace produced for purged record.
      */
     fun returnPurged(row: IMap, xyz: ByteArray? = null) {
-        returnRow(XYZ_EXEC_PURGED, row)
+        returnRow(XYZ_EXEC_PURGED, row, xyz)
     }
 
     /**

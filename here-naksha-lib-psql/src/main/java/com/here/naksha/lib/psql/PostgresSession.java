@@ -23,7 +23,6 @@ import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
 import static com.here.naksha.lib.jbon.IMapKt.get;
 import static com.here.naksha.lib.psql.XyzErrorMapper.psqlCodeToXyzError;
 import static com.here.naksha.lib.psql.sql.SqlGeometryTransformationResolver.addTransformation;
-import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -60,6 +59,7 @@ import com.here.naksha.lib.jbon.IMap;
 import com.here.naksha.lib.jbon.JbSession;
 import com.here.naksha.lib.jbon.NakshaTxn;
 import com.here.naksha.lib.jbon.NakshaUuid;
+import com.here.naksha.lib.plv8.JvmPlv8Env;
 import com.here.naksha.lib.plv8.JvmPlv8Sql;
 import com.here.naksha.lib.plv8.JvmPlv8Table;
 import com.here.naksha.lib.plv8.NakshaSession;
@@ -229,13 +229,12 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
 
   void close(boolean autoCloseCursors) {
     // TODO: Apply autoCloseCursors
+    JvmPlv8Env.get().endSession();
     psqlConnection.close();
   }
 
   private void clearSession() throws SQLException {
-    try (final Statement stmt = psqlConnection.createStatement()) {
-      stmt.execute("SELECT naksha_clear_session();");
-    }
+    nakshaSession.clear();
     psqlConnection.commit();
   }
 
@@ -711,8 +710,6 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         features.forEach(codec -> codec.decodeParts(false));
         final Map<String, Integer> originalFeaturesOrder =
             IndexHelper.createKeyIndexMap(features, CODEC::getId);
-        // sort to avoid deadlock
-        features.sort(comparing(FeatureCodec::getId));
 
         final int SIZE = writeRequest.features.size();
         final String collection_id = writeFeatures.getCollectionId();
@@ -737,18 +734,17 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         stmt.setArray(4, psqlConnection.createArrayOf("int2", geo_type_arr));
         stmt.setArray(5, psqlConnection.createArrayOf("bytea", geo_arr));
         stmt.setArray(6, psqlConnection.createArrayOf("bytea", tags_arr));
-        final ResultSet rs = stmt.executeQuery();
-        RequestedParams requestedParams = new RequestedParams(feature_arr, tags_arr, geo_arr);
-        final PsqlCursor<FEATURE, CODEC> cursor =
-            new PsqlCursor<>(writeRequest.getCodecFactory(), requestedParams, this, stmt, rs);
-        try (final PreparedStatement err_stmt = prepareStatement("SELECT naksha_err_no(), naksha_err_msg();")) {
-          final ResultSet err_rs = err_stmt.executeQuery();
-          err_rs.next();
-          final String errNo = err_rs.getString(1);
-          final String errMsg = err_rs.getString(2);
-          if (errNo != null) {
-            return new PsqlError(psqlCodeToXyzError(errNo), errMsg, cursor);
-          }
+        JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
+            collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr);
+        ArrayList<IMap> rows = table.getRows();
+        XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
+        List<XyzFeatureCodec> codecRows = PsqlResultMapper.mapRowToCodec(codecFactory, features, rows);
+        HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor =
+            new HeapCacheCursor<>(codecFactory, codecRows, originalFeaturesOrder);
+
+        if (!codecRows.isEmpty() && codecRows.get(0).hasError()) {
+          XyzFeatureCodec firstRow = codecRows.get(0);
+          return new PsqlError(firstRow.getError().err, firstRow.getError().msg);
         }
         return new PsqlSuccess(cursor, originalFeaturesOrder);
       } catch (Throwable e) {
