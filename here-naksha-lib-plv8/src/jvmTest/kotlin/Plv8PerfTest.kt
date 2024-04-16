@@ -462,10 +462,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
         var table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
-        assertTrue(
-                (XYZ_EXEC_ERROR == table.rows[0][RET_OP] && ERR_COLLECTION_NOT_EXISTS == table.rows[0][RET_ERR_NO])
-                        || XYZ_EXEC_DELETED == table.rows[0][RET_OP]
-        ) { table.rows[0][RET_ERR_MSG] }
+        assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
         op = builder.buildXyzOp(XYZ_OP_CREATE, tableName, null, GRID)
         val sc = if (storageClass==null) "null" else "\"$storageClass\""

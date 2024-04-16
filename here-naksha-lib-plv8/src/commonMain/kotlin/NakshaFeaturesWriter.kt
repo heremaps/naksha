@@ -94,9 +94,8 @@ class NakshaFeaturesWriter(
             val featureRowMap = op.rowMap
             newCollection.mapBytes(featureRowMap.getFeature())
 
-            val lockId = Static.lockId(op.id)
-            val query = "SELECT pg_try_advisory_xact_lock($1), oid FROM pg_namespace WHERE nspname = $2"
-            val schemaOid = asMap(asArray(session.sql.execute(query, arrayOf(lockId, session.schema)))[0]).getAny("oid") as Int
+            val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
+            val schemaOid = asMap(asArray(session.sql.execute(query, arrayOf(session.schema)))[0]).getAny("oid") as Int
             session.verifyCache(schemaOid)
 
             val existingFeature: IMap? = existingFeatures[op.id]
@@ -112,8 +111,6 @@ class NakshaFeaturesWriter(
                 }
 
                 XYZ_OP_DELETE -> {
-                    existingFeature
-                            ?: throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", op.id)
                     Static.collectionDrop(session.sql, op.id)
                     plan.addDelete(op, existingFeature)
                 }

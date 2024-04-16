@@ -155,19 +155,27 @@ internal class NakshaBulkLoaderPlan(
     fun addDelete(op: NakshaRequestOp, existingFeature: IMap?) {
         addDeleteInternal(op, existingFeature)
         if (!minResult) {
-            val headBeforeDelete: IMap = existingFeature!!
-            result.returnDeleted(headBeforeDelete, session.xyzNsFromRow(collectionId, headBeforeDelete + op.rowMap))
+            if (existingFeature == null) {
+                result.returnRetained(op.id)
+            } else {
+                val headBeforeDelete: IMap = existingFeature
+                result.returnDeleted(headBeforeDelete, session.xyzNsFromRow(collectionId, headBeforeDelete + op.rowMap))
+            }
         }
     }
 
     fun addPurge(op: NakshaRequestOp, existingFeature: IMap?, existingInDelFeature: IMap?) {
         addDeleteInternal(op, existingFeature)
         // FIXME make it better for auto-purge, there is no point of putting row to $del just to remove it in next query
-        val deletedFeatureRow: IMap = existingInDelFeature ?: existingFeature!!
+        val deletedFeatureRow: IMap? = existingInDelFeature ?: existingFeature
         checkStateForAtomicOp(op.xyzOp.uuid(), deletedFeatureRow)
         featuresToPurgeFromDel.add(op.id)
         if (!minResult) {
-            result.returnPurged(deletedFeatureRow, session.xyzNsFromRow(collectionId, deletedFeatureRow))
+            if (deletedFeatureRow == null) {
+                result.returnRetained(op.id)
+            } else {
+                result.returnPurged(deletedFeatureRow, session.xyzNsFromRow(collectionId, deletedFeatureRow))
+            }
         }
     }
 
@@ -227,7 +235,6 @@ internal class NakshaBulkLoaderPlan(
             addDelStmt(insertDelPlan(), featureRowMap)
             addDeleteHeadStmt(deleteHeadPlan(), featureRowMap)
             if (isHistoryDisabled == false) addCopyDelToHstStmt(copyDelToHstPlan(), featureRowMap)
-
         }
     }
 
@@ -308,9 +315,9 @@ internal class NakshaBulkLoaderPlan(
         }
     }
 
-    private fun checkStateForAtomicOp(reqUuid: String?, currentHead: IMap) {
+    private fun checkStateForAtomicOp(reqUuid: String?, currentHead: IMap?) {
         if (reqUuid != null) {
-            val headUuid = NakshaUuid.from(session.storageId, collectionId, currentHead[COL_TXN]!!, currentHead[COL_UID]!!)
+            val headUuid = NakshaUuid.from(session.storageId, collectionId, currentHead!![COL_TXN]!!, currentHead[COL_UID]!!)
             val expectedUuid = NakshaUuid.fromString(reqUuid)
             if (expectedUuid != headUuid) {
                 throw NakshaException.forId(
