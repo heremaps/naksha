@@ -694,12 +694,12 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
   public @NotNull NakshaContext createNakshaContext(final @NotNull RoutingContext routingContext) {
     final NakshaContext ctx = new NakshaContext(AccessLogUtil.getStreamId(routingContext));
     // TODO Remove below five lines before merging and uncomment sixth line
-    final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
-    String appId = ApiParams.extractParamAsString(queryParams, "appId");
-    String author = ApiParams.extractParamAsString(queryParams, "author");
-    ctx.setAppId(appId);
-    ctx.setAuthor(author);
-    // ctx.setAppId(hubConfig.appId);
+    //final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
+    //String appId = ApiParams.extractParamAsString(queryParams, "appId");
+    //String author = ApiParams.extractParamAsString(queryParams, "author");
+    //ctx.setAppId(appId);
+    //ctx.setAuthor(author);
+    ctx.setAppId(hubConfig.appId);
     // add streamInfo object to NakshaContext, which will be populated later during pipeline execution
     ctx.attachStreamInfo(AccessLogUtil.getStreamInfo(routingContext));
     // TODO : Author to be set based on JWT token.

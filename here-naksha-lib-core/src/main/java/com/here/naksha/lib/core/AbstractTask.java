@@ -59,8 +59,8 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
   /**
    * The soft-limit of tasks to run concurrently. This limit does normally not apply to child tasks.
    */
-  public static final AtomicLong limit =
-      new AtomicLong(Math.max(1000, Runtime.getRuntime().availableProcessors() * 50L));
+  // TODO Update limit value after exercise before merge
+  public static final AtomicLong limit = new AtomicLong(Runtime.getRuntime().availableProcessors() * 20L);
 
   private static final double authorThreshold = 0.25;
   private static final Map<String, AtomicInteger> authorUsageMap = new ConcurrentHashMap<>();
