@@ -695,25 +695,14 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     }
     if (writeRequest instanceof WriteFeatures<?, ?, ?>) {
       final WriteFeatures<?, ?, ?> writeFeatures = (WriteFeatures<?, ?, ?>) writeRequest;
-      final int partition_id = -1;
-      //      if (writeFeatures instanceof PostgresWriteFeaturesToPartition<?> writeToPartition) {
-      //        partition_id = writeToPartition.partitionId;
-      //      } else {
-      //        partition_id = -1;
-      //      }
-      final PreparedStatement stmt =
-          prepareStatement("SELECT op, id, xyz, tags, feature, geo_type, geo, err_no, err_msg\n"
-              + "FROM naksha_write_features(?,?,?,?,?,?);");
       try {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
         features.forEach(codec -> codec.decodeParts(false));
-        final Map<String, Integer> originalFeaturesOrder =
-            IndexHelper.createKeyIndexMap(features, CODEC::getId);
+        final Map<String, Integer> originalFeaturesOrder = IndexHelper.createKeyIndexMap(features, CODEC::getId);
 
         final int SIZE = writeRequest.features.size();
         final String collection_id = writeFeatures.getCollectionId();
-        // partition_id
         final byte[][] op_arr = new byte[SIZE][];
         final byte[][] feature_arr = new byte[SIZE][];
         final Short[] geo_type_arr = new Short[SIZE];
@@ -728,12 +717,6 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
         }
-        stmt.setString(1, collection_id);
-        stmt.setArray(2, psqlConnection.createArrayOf("bytea", op_arr));
-        stmt.setArray(3, psqlConnection.createArrayOf("bytea", feature_arr));
-        stmt.setArray(4, psqlConnection.createArrayOf("int2", geo_type_arr));
-        stmt.setArray(5, psqlConnection.createArrayOf("bytea", geo_arr));
-        stmt.setArray(6, psqlConnection.createArrayOf("bytea", tags_arr));
         JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
             collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, false);
         ArrayList<IMap> rows = table.getRows();
@@ -748,11 +731,6 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         }
         return new PsqlSuccess(cursor, originalFeaturesOrder);
       } catch (Throwable e) {
-        try {
-          stmt.close();
-        } catch (Throwable ce) {
-          log.info("Failed to close statement", ce);
-        }
         throw unchecked(e);
       }
     }
