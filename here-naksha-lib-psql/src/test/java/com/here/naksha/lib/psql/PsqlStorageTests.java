@@ -1257,6 +1257,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
              session.execute(deleteRequest).getXyzCollectionCursor()) {
       assertTrue(cursor.next());
+      assertFalse(cursor.hasError(), ()-> cursor.getError().msg);
       session.commit(true);
 
       // try readSession after purge, table doesn't exist anymore, so it should throw an exception.

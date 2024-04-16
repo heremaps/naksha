@@ -597,7 +597,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();""")
      */
     @JvmStatic
     fun collectionDrop(sql: IPlv8Sql, id: String) {
-        require(!id.startsWith("naksha_"))
+        require(!id.startsWith("naksha~"))
         val headName = sql.quoteIdent(id)
         val delName = sql.quoteIdent("$id\$del")
         val metaName = sql.quoteIdent("$id\$meta")
@@ -706,4 +706,6 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         }
         return true
     }
+
+    fun currentMillis(): BigInt64? = if (DEBUG) Jb.env.currentMicros() / 1000 else null
 }

@@ -1,14 +1,56 @@
-import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.plv8.*
+import com.here.naksha.lib.jbon.IMap
+import com.here.naksha.lib.jbon.NakshaUuid
+import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
+import com.here.naksha.lib.jbon.SQL_INT16
+import com.here.naksha.lib.jbon.SQL_INT32
+import com.here.naksha.lib.jbon.SQL_INT64
+import com.here.naksha.lib.jbon.SQL_STRING
+import com.here.naksha.lib.jbon.containsKey
+import com.here.naksha.lib.jbon.get
+import com.here.naksha.lib.jbon.plus
+import com.here.naksha.lib.jbon.set
+import com.here.naksha.lib.plv8.COL_ACTION
+import com.here.naksha.lib.plv8.COL_ALL
+import com.here.naksha.lib.plv8.COL_ALL_TYPES
+import com.here.naksha.lib.plv8.COL_APP_ID
+import com.here.naksha.lib.plv8.COL_AUTHOR
+import com.here.naksha.lib.plv8.COL_AUTHOR_TS
+import com.here.naksha.lib.plv8.COL_CREATED_AT
+import com.here.naksha.lib.plv8.COL_FEATURE
+import com.here.naksha.lib.plv8.COL_GEOMETRY
+import com.here.naksha.lib.plv8.COL_GEO_GRID
+import com.here.naksha.lib.plv8.COL_GEO_REF
+import com.here.naksha.lib.plv8.COL_GEO_TYPE
+import com.here.naksha.lib.plv8.COL_ID
+import com.here.naksha.lib.plv8.COL_PTXN
+import com.here.naksha.lib.plv8.COL_PUID
+import com.here.naksha.lib.plv8.COL_TAGS
+import com.here.naksha.lib.plv8.COL_TXN
+import com.here.naksha.lib.plv8.COL_TXN_NEXT
+import com.here.naksha.lib.plv8.COL_TYPE
+import com.here.naksha.lib.plv8.COL_UID
+import com.here.naksha.lib.plv8.COL_UPDATE_AT
+import com.here.naksha.lib.plv8.COL_VERSION
+import com.here.naksha.lib.plv8.ERR_CHECK_VIOLATION
+import com.here.naksha.lib.plv8.ERR_FATAL
 import com.here.naksha.lib.plv8.IPlv8Plan
+import com.here.naksha.lib.plv8.NakshaException
+import com.here.naksha.lib.plv8.NakshaRequestOp
 import com.here.naksha.lib.plv8.NakshaSession
 
 internal class NakshaBulkLoaderPlan(
         val partition: Int?,
+        val collectionId: String,
         val partitionHeadQuoted: String,
         val delCollectionIdQuoted: String,
         val hstCollectionIdQuoted: String,
-        val session: NakshaSession) {
+        val session: NakshaSession,
+        val minResult: Boolean) {
+
+    val featureIdsToDeleteFromDel = mutableListOf<String>()
+    val featuresToPurgeFromDel = mutableListOf<String>()
+    val result = session.sql.newTable()
+
     internal var insertHeadPlan: IPlv8Plan? = null
 
     fun insertHeadPlan(): IPlv8Plan {
@@ -82,5 +124,182 @@ $10,$11,$12,$13)""".trimIndent(),
             copyDelToHstPlan = session.sql.prepare("INSERT INTO $hstCollectionIdQuoted ($COL_ALL) SELECT $COL_ALL FROM $delCollectionIdQuoted WHERE $COL_ID = $1", arrayOf(SQL_STRING))
         }
         return copyDelToHstPlan!!
+    }
+
+
+    fun addCreate(op: NakshaRequestOp) {
+        featureIdsToDeleteFromDel.add(op.id)
+        session.xyzInsert(op.collectionId, op.rowMap)
+        addInsertStmt(insertHeadPlan(), op.rowMap)
+        if (!minResult) {
+            result.returnCreated(op.id, session.xyzNsFromRow(collectionId, op.rowMap))
+        }
+    }
+
+    fun addInsertStmt(stmt: IPlv8Plan, row: IMap) {
+        // created_at = NULL
+        stmt.setLong(1, row[COL_UPDATE_AT])
+        // author_ts = NULL
+        stmt.setLong(2, row[COL_TXN])
+        // ptxn = NULL
+        stmt.setInt(3, row[COL_UID])
+        // puid = NULL
+        // version = NULL
+        stmt.setInt(4, row[COL_GEO_GRID])
+        stmt.setShort(5, row[COL_GEO_TYPE])
+        // action = NULL
+
+        stmt.setString(6, row[COL_APP_ID])
+        stmt.setString(7, row[COL_AUTHOR])
+        stmt.setString(8, row[COL_TYPE])
+        stmt.setString(9, row[COL_ID])
+
+        stmt.setBytes(10, row[COL_FEATURE])
+        stmt.setBytes(11, row[COL_TAGS])
+        stmt.setBytes(12, row[COL_GEOMETRY])
+        stmt.setBytes(13, row[COL_GEO_REF])
+        stmt.addBatch()
+    }
+
+    fun addUpdate(op: NakshaRequestOp, existingFeatures: IMap, isHistoryDisabled: Boolean?) {
+        val featureRowMap = op.rowMap
+        val headBeforeUpdate: IMap = existingFeatures[op.id]!!
+        checkStateForAtomicOp(op.xyzOp.uuid(), headBeforeUpdate)
+
+        featureIdsToDeleteFromDel.add(op.id)
+        addCopyHeadToHstStmt(copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
+        session.xyzUpdateHead(op.collectionId, featureRowMap, headBeforeUpdate)
+        addUpdateHeadStmt(updateHeadPlan(), featureRowMap)
+        if (!minResult) {
+            result.returnUpdated(op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
+        }
+    }
+
+    fun addDelete(op: NakshaRequestOp, existingFeatures: IMap, isHistoryDisabled: Boolean?) {
+        addDeleteInternal(op, existingFeatures, isHistoryDisabled)
+        if (!minResult) {
+            val headBeforeDelete: IMap = existingFeatures[op.id]!!
+            result.returnDeleted(headBeforeDelete, session.xyzNsFromRow(collectionId, headBeforeDelete + op.rowMap))
+        }
+    }
+
+    fun addPurge(op: NakshaRequestOp, existingFeatures: IMap, existingInDelFeatures: IMap, isHistoryDisabled: Boolean?) {
+        addDeleteInternal(op, existingFeatures, isHistoryDisabled)
+        // FIXME make it better for auto-purge, there is no point of putting row to $del just to remove it in next query
+        val deletedFeatureRow: IMap = existingInDelFeatures[op.id] ?: existingFeatures[op.id]!!
+        checkStateForAtomicOp( op.xyzOp.uuid(), deletedFeatureRow)
+        featuresToPurgeFromDel.add(op.id)
+        if (!minResult) {
+            result.returnPurged(deletedFeatureRow, session.xyzNsFromRow(collectionId, deletedFeatureRow))
+        }
+    }
+
+    private fun addDeleteInternal(op: NakshaRequestOp, existingFeatures: IMap, isHistoryDisabled: Boolean?) {
+        val featureRowMap = op.rowMap
+        if (existingFeatures.containsKey(op.id)) {
+            // this may throw exception (if we try to delete non-existing feature - that was deleted before)
+            val headBeforeDelete: IMap = existingFeatures[op.id]!!
+            checkStateForAtomicOp(op.xyzOp.uuid(), headBeforeDelete)
+            addCopyHeadToHstStmt(copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
+
+            featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
+            featureRowMap[COL_AUTHOR_TS] = headBeforeDelete[COL_AUTHOR_TS]
+            session.xyzDel(featureRowMap)
+            addDelStmt(insertDelPlan(), featureRowMap)
+            addDeleteHeadStmt(deleteHeadPlan(), featureRowMap)
+            if (isHistoryDisabled == false) addCopyDelToHstStmt(copyDelToHstPlan(), featureRowMap)
+
+        }
+    }
+
+    fun addDelStmt(plan: IPlv8Plan, row: IMap) {
+        plan.setLong(1, row[COL_TXN_NEXT])
+        plan.setLong(2, row[COL_TXN])
+        plan.setInt(3, row[COL_UID])
+        plan.setShort(4, row[COL_ACTION])
+        plan.setInt(5, row[COL_VERSION])
+        plan.setLong(6, row[COL_UPDATE_AT])
+        plan.setLong(7, row[COL_AUTHOR_TS])
+        plan.setString(8, row[COL_AUTHOR])
+        plan.setString(9, row[COL_APP_ID])
+        plan.setString(10, row[COL_ID])
+        plan.addBatch()
+    }
+
+    fun addCopyDelToHstStmt(stmt: IPlv8Plan, row: IMap) {
+        stmt.setString(1, row[COL_ID])
+        stmt.addBatch()
+    }
+
+    fun addUpdateHeadStmt(stmt: IPlv8Plan, row: IMap) {
+        setAllColumnsOnStmt(stmt, row)
+        stmt.setString(21, row[COL_ID])
+        stmt.addBatch()
+    }
+
+    fun addDeleteHeadStmt(stmt: IPlv8Plan, row: IMap) {
+        stmt.setString(1, row[COL_ID])
+        stmt.addBatch()
+    }
+
+    fun addCopyHeadToHstStmt(stmt: IPlv8Plan, row: IMap, isHstDisabled: Boolean?) {
+        if (isHstDisabled == false) {
+            stmt.setLong(1, session.txn().value)
+            stmt.setString(2, row[COL_ID])
+            stmt.addBatch()
+        }
+    }
+
+    internal fun setAllColumnsOnStmt(stmt: IPlv8Plan, row: IMap) {
+        stmt.setLong(1, row[COL_TXN_NEXT])
+        stmt.setLong(2, row[COL_TXN])
+        stmt.setInt(3, row[COL_UID])
+        stmt.setLong(4, row[COL_PTXN])
+        stmt.setInt(5, row[COL_PUID])
+        stmt.setShort(6, row[COL_GEO_TYPE])
+        stmt.setShort(7, row[COL_ACTION])
+        stmt.setInt(8, row[COL_VERSION])
+        stmt.setLong(9, row[COL_CREATED_AT])
+        stmt.setLong(10, row[COL_UPDATE_AT])
+        stmt.setLong(11, row[COL_AUTHOR_TS])
+        stmt.setString(12, row[COL_AUTHOR])
+        stmt.setString(13, row[COL_APP_ID])
+        stmt.setInt(14, row[COL_GEO_GRID])
+        stmt.setString(15, row[COL_ID])
+        stmt.setBytes(16, row[COL_TAGS])
+        stmt.setBytes(17, row[COL_GEOMETRY])
+        stmt.setBytes(18, row[COL_FEATURE])
+        stmt.setBytes(19, row[COL_GEO_REF])
+        stmt.setString(20, row[COL_TYPE])
+    }
+
+    internal fun executeBatchDeleteFromDel(delCollectionIdQuoted: String, featureIdsToDeleteFromDel: MutableList<String>) {
+        if (featureIdsToDeleteFromDel.isNotEmpty()) {
+            session.sql.execute("DELETE FROM  $delCollectionIdQuoted WHERE id = ANY($1)", arrayOf(featureIdsToDeleteFromDel.toTypedArray()))
+        }
+    }
+
+    internal fun executeBatch(stmt: IPlv8Plan?) {
+        if (stmt != null) {
+            val result = stmt.executeBatch()
+            if (result.isNotEmpty() && result[0] == -3) {
+                // java.sql.Statement.EXECUTE_FAILED
+                throw NakshaException.forBulk(ERR_FATAL, "error in bulk statement")
+            }
+        }
+    }
+
+    private fun checkStateForAtomicOp(reqUuid: String?, currentHead: IMap) {
+        if (reqUuid != null) {
+            val headUuid = NakshaUuid.from(session.storageId, collectionId, currentHead[COL_TXN]!!, currentHead[COL_UID]!!)
+            val expectedUuid = NakshaUuid.fromString(reqUuid)
+            if (expectedUuid != headUuid) {
+                throw NakshaException.forId(
+                        ERR_CHECK_VIOLATION,
+                        "Atomic operation for $reqUuid is impossible, expected state: $reqUuid, actual: $headUuid",
+                        reqUuid
+                )
+            }
+        }
     }
 }

@@ -478,6 +478,25 @@ FROM ns, txn_seq;"""
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>
     ): ITable {
+        val table = sql.newTable()
+        val writer = NakshaFeaturesWriter(NKC_TABLE, this)
+        try {
+            return writer.writeCollections(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, false)
+        } catch (e: NakshaException) {
+            if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+            table.returnException(e)
+        } catch (e: Throwable) {
+            handleFeatureException(e, table, null)
+        }
+        return table;
+    }
+    fun writeCollections2(
+            op_arr: Array<ByteArray>,
+            feature_arr: Array<ByteArray?>,
+            geo_type_arr: Array<Short>,
+            geo_arr: Array<ByteArray?>,
+            tags_arr: Array<ByteArray?>
+    ): ITable {
         errNo = null
         errMsg = null
         val sql = this.sql
