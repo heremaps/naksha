@@ -735,7 +735,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         stmt.setArray(5, psqlConnection.createArrayOf("bytea", geo_arr));
         stmt.setArray(6, psqlConnection.createArrayOf("bytea", tags_arr));
         JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
-            collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr);
+            collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, false);
         ArrayList<IMap> rows = table.getRows();
         XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
         List<XyzFeatureCodec> codecRows = PsqlResultMapper.mapRowToCodec(codecFactory, features, rows);
@@ -787,8 +787,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
         }
-        JvmPlv8Table table = (JvmPlv8Table) nakshaSession.bulkWriteFeatures(
-            collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr);
+        JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
+            collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, true);
         ArrayList<IMap> rows = table.getRows();
         if (!rows.isEmpty()) {
           IMap err = rows.get(0);

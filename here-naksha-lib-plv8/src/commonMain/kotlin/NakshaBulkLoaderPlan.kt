@@ -39,29 +39,37 @@ import com.here.naksha.lib.plv8.NakshaRequestOp
 import com.here.naksha.lib.plv8.NakshaSession
 
 internal class NakshaBulkLoaderPlan(
-        val partition: Int?,
         val collectionId: String,
         val partitionHeadQuoted: String,
-        val delCollectionIdQuoted: String,
-        val hstCollectionIdQuoted: String,
         val session: NakshaSession,
+        val isHistoryDisabled: Boolean?,
         val minResult: Boolean) {
 
-    val featureIdsToDeleteFromDel = mutableListOf<String>()
-    val featuresToPurgeFromDel = mutableListOf<String>()
-    val result = session.sql.newTable()
+    private val headCollectionId = session.getBaseCollectionId(collectionId)
+    private val delCollectionId = "${headCollectionId}\$del"
+    private val delCollectionIdQuoted = session.sql.quoteIdent(delCollectionId)
+    private val hstCollectionIdQuoted = session.sql.quoteIdent("${headCollectionId}\$hst")
+
+    internal val featureIdsToDeleteFromDel = mutableListOf<String>()
+    internal val featuresToPurgeFromDel = mutableListOf<String>()
+    internal val result = session.sql.newTable()
 
     internal var insertHeadPlan: IPlv8Plan? = null
+    internal var updateHeadPlan: IPlv8Plan? = null
+    internal var deleteHeadPlan: IPlv8Plan? = null
+    internal var insertDelPlan: IPlv8Plan? = null
+    internal var copyHeadToHstPlan: IPlv8Plan? = null
+    internal var copyDelToHstPlan: IPlv8Plan? = null
 
-    fun insertHeadPlan(): IPlv8Plan {
+    private fun insertHeadPlan(): IPlv8Plan {
         if (insertHeadPlan == null) {
             insertHeadPlan = session.sql.prepare("""INSERT INTO $partitionHeadQuoted (
-$COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_GEO_TYPE,
-$COL_APP_ID,$COL_AUTHOR,$COL_TYPE,$COL_ID,
-$COL_FEATURE,$COL_TAGS,$COL_GEOMETRY,$COL_GEO_REF)
-VALUES($1,$2,$3,$4,$5,
-$6,$7,$8,$9,
-$10,$11,$12,$13)""".trimIndent(),
+                $COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_GEO_TYPE,
+                $COL_APP_ID,$COL_AUTHOR,$COL_TYPE,$COL_ID,
+                $COL_FEATURE,$COL_TAGS,$COL_GEOMETRY,$COL_GEO_REF)
+                VALUES($1,$2,$3,$4,$5,
+                $6,$7,$8,$9,
+                $10,$11,$12,$13)""".trimIndent(),
                     arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT32, SQL_INT16,
                             SQL_STRING, SQL_STRING, SQL_STRING, SQL_STRING,
                             SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
@@ -69,8 +77,7 @@ $10,$11,$12,$13)""".trimIndent(),
         return insertHeadPlan!!
     }
 
-    internal var updateHeadPlan: IPlv8Plan? = null
-    fun updateHeadPlan(): IPlv8Plan {
+    private fun updateHeadPlan(): IPlv8Plan {
         if (updateHeadPlan == null) {
             updateHeadPlan = session.sql.prepare("""
                 UPDATE $partitionHeadQuoted 
@@ -81,8 +88,7 @@ $10,$11,$12,$13)""".trimIndent(),
         return updateHeadPlan!!
     }
 
-    internal var deleteHeadPlan: IPlv8Plan? = null
-    fun deleteHeadPlan(): IPlv8Plan {
+    private fun deleteHeadPlan(): IPlv8Plan {
         if (deleteHeadPlan == null) {
             deleteHeadPlan = session.sql.prepare("""
                 DELETE FROM $partitionHeadQuoted
@@ -93,8 +99,7 @@ $10,$11,$12,$13)""".trimIndent(),
         return deleteHeadPlan!!
     }
 
-    internal var insertDelPlan: IPlv8Plan? = null
-    fun insertDelPlan(): IPlv8Plan {
+    private fun insertDelPlan(): IPlv8Plan {
         if (insertDelPlan == null) {
             // ptxn + puid = txn + uid (as we generate new state in _del)
             insertDelPlan = session.sql.prepare("""
@@ -106,8 +111,7 @@ $10,$11,$12,$13)""".trimIndent(),
         return insertDelPlan!!
     }
 
-    internal var copyHeadToHstPlan: IPlv8Plan? = null
-    fun copyHeadToHstPlan(): IPlv8Plan {
+    private fun copyHeadToHstPlan(): IPlv8Plan {
         if (copyHeadToHstPlan == null) {
             copyHeadToHstPlan = session.sql.prepare("""
             INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
@@ -118,14 +122,12 @@ $10,$11,$12,$13)""".trimIndent(),
         return copyHeadToHstPlan!!
     }
 
-    internal var copyDelToHstPlan: IPlv8Plan? = null
-    fun copyDelToHstPlan(): IPlv8Plan {
+    private fun copyDelToHstPlan(): IPlv8Plan {
         if (copyDelToHstPlan == null) {
             copyDelToHstPlan = session.sql.prepare("INSERT INTO $hstCollectionIdQuoted ($COL_ALL) SELECT $COL_ALL FROM $delCollectionIdQuoted WHERE $COL_ID = $1", arrayOf(SQL_STRING))
         }
         return copyDelToHstPlan!!
     }
-
 
     fun addCreate(op: NakshaRequestOp) {
         featureIdsToDeleteFromDel.add(op.id)
@@ -136,7 +138,57 @@ $10,$11,$12,$13)""".trimIndent(),
         }
     }
 
-    fun addInsertStmt(stmt: IPlv8Plan, row: IMap) {
+    fun addUpdate(op: NakshaRequestOp, existingFeature: IMap?) {
+        val featureRowMap = op.rowMap
+        val headBeforeUpdate: IMap = existingFeature!!
+        checkStateForAtomicOp(op.xyzOp.uuid(), headBeforeUpdate)
+
+        featureIdsToDeleteFromDel.add(op.id)
+        addCopyHeadToHstStmt(copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
+        session.xyzUpdateHead(op.collectionId, featureRowMap, headBeforeUpdate)
+        addUpdateHeadStmt(updateHeadPlan(), featureRowMap)
+        if (!minResult) {
+            result.returnUpdated(op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
+        }
+    }
+
+    fun addDelete(op: NakshaRequestOp, existingFeature: IMap?) {
+        addDeleteInternal(op, existingFeature)
+        if (!minResult) {
+            val headBeforeDelete: IMap = existingFeature!!
+            result.returnDeleted(headBeforeDelete, session.xyzNsFromRow(collectionId, headBeforeDelete + op.rowMap))
+        }
+    }
+
+    fun addPurge(op: NakshaRequestOp, existingFeature: IMap?, existingInDelFeature: IMap?) {
+        addDeleteInternal(op, existingFeature)
+        // FIXME make it better for auto-purge, there is no point of putting row to $del just to remove it in next query
+        val deletedFeatureRow: IMap = existingInDelFeature ?: existingFeature!!
+        checkStateForAtomicOp(op.xyzOp.uuid(), deletedFeatureRow)
+        featuresToPurgeFromDel.add(op.id)
+        if (!minResult) {
+            result.returnPurged(deletedFeatureRow, session.xyzNsFromRow(collectionId, deletedFeatureRow))
+        }
+    }
+
+    internal fun executeAll() {
+        // 1.
+        executeBatchDeleteFromDel(featureIdsToDeleteFromDel)
+        // 3.
+        executeBatch(insertDelPlan)
+        // 4. insert to history and update head
+        executeBatch(copyHeadToHstPlan)
+        executeBatch(updateHeadPlan)
+        executeBatch(deleteHeadPlan)
+        // 5. copy del to hst
+        executeBatch(copyDelToHstPlan)
+        // 6.
+        executeBatch(insertHeadPlan)
+        // 7. purge
+        executeBatchDeleteFromDel(featuresToPurgeFromDel)
+    }
+
+    private fun addInsertStmt(stmt: IPlv8Plan, row: IMap) {
         // created_at = NULL
         stmt.setLong(1, row[COL_UPDATE_AT])
         // author_ts = NULL
@@ -161,44 +213,11 @@ $10,$11,$12,$13)""".trimIndent(),
         stmt.addBatch()
     }
 
-    fun addUpdate(op: NakshaRequestOp, existingFeatures: IMap, isHistoryDisabled: Boolean?) {
+    private fun addDeleteInternal(op: NakshaRequestOp, existingFeature: IMap?) {
         val featureRowMap = op.rowMap
-        val headBeforeUpdate: IMap = existingFeatures[op.id]!!
-        checkStateForAtomicOp(op.xyzOp.uuid(), headBeforeUpdate)
-
-        featureIdsToDeleteFromDel.add(op.id)
-        addCopyHeadToHstStmt(copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
-        session.xyzUpdateHead(op.collectionId, featureRowMap, headBeforeUpdate)
-        addUpdateHeadStmt(updateHeadPlan(), featureRowMap)
-        if (!minResult) {
-            result.returnUpdated(op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
-        }
-    }
-
-    fun addDelete(op: NakshaRequestOp, existingFeatures: IMap, isHistoryDisabled: Boolean?) {
-        addDeleteInternal(op, existingFeatures, isHistoryDisabled)
-        if (!minResult) {
-            val headBeforeDelete: IMap = existingFeatures[op.id]!!
-            result.returnDeleted(headBeforeDelete, session.xyzNsFromRow(collectionId, headBeforeDelete + op.rowMap))
-        }
-    }
-
-    fun addPurge(op: NakshaRequestOp, existingFeatures: IMap, existingInDelFeatures: IMap, isHistoryDisabled: Boolean?) {
-        addDeleteInternal(op, existingFeatures, isHistoryDisabled)
-        // FIXME make it better for auto-purge, there is no point of putting row to $del just to remove it in next query
-        val deletedFeatureRow: IMap = existingInDelFeatures[op.id] ?: existingFeatures[op.id]!!
-        checkStateForAtomicOp( op.xyzOp.uuid(), deletedFeatureRow)
-        featuresToPurgeFromDel.add(op.id)
-        if (!minResult) {
-            result.returnPurged(deletedFeatureRow, session.xyzNsFromRow(collectionId, deletedFeatureRow))
-        }
-    }
-
-    private fun addDeleteInternal(op: NakshaRequestOp, existingFeatures: IMap, isHistoryDisabled: Boolean?) {
-        val featureRowMap = op.rowMap
-        if (existingFeatures.containsKey(op.id)) {
+        if (existingFeature != null) {
             // this may throw exception (if we try to delete non-existing feature - that was deleted before)
-            val headBeforeDelete: IMap = existingFeatures[op.id]!!
+            val headBeforeDelete: IMap = existingFeature
             checkStateForAtomicOp(op.xyzOp.uuid(), headBeforeDelete)
             addCopyHeadToHstStmt(copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
 
@@ -212,7 +231,7 @@ $10,$11,$12,$13)""".trimIndent(),
         }
     }
 
-    fun addDelStmt(plan: IPlv8Plan, row: IMap) {
+    private fun addDelStmt(plan: IPlv8Plan, row: IMap) {
         plan.setLong(1, row[COL_TXN_NEXT])
         plan.setLong(2, row[COL_TXN])
         plan.setInt(3, row[COL_UID])
@@ -226,23 +245,23 @@ $10,$11,$12,$13)""".trimIndent(),
         plan.addBatch()
     }
 
-    fun addCopyDelToHstStmt(stmt: IPlv8Plan, row: IMap) {
+    private fun addCopyDelToHstStmt(stmt: IPlv8Plan, row: IMap) {
         stmt.setString(1, row[COL_ID])
         stmt.addBatch()
     }
 
-    fun addUpdateHeadStmt(stmt: IPlv8Plan, row: IMap) {
+    private fun addUpdateHeadStmt(stmt: IPlv8Plan, row: IMap) {
         setAllColumnsOnStmt(stmt, row)
         stmt.setString(21, row[COL_ID])
         stmt.addBatch()
     }
 
-    fun addDeleteHeadStmt(stmt: IPlv8Plan, row: IMap) {
+    private fun addDeleteHeadStmt(stmt: IPlv8Plan, row: IMap) {
         stmt.setString(1, row[COL_ID])
         stmt.addBatch()
     }
 
-    fun addCopyHeadToHstStmt(stmt: IPlv8Plan, row: IMap, isHstDisabled: Boolean?) {
+    private fun addCopyHeadToHstStmt(stmt: IPlv8Plan, row: IMap, isHstDisabled: Boolean?) {
         if (isHstDisabled == false) {
             stmt.setLong(1, session.txn().value)
             stmt.setString(2, row[COL_ID])
@@ -250,7 +269,7 @@ $10,$11,$12,$13)""".trimIndent(),
         }
     }
 
-    internal fun setAllColumnsOnStmt(stmt: IPlv8Plan, row: IMap) {
+    private fun setAllColumnsOnStmt(stmt: IPlv8Plan, row: IMap) {
         stmt.setLong(1, row[COL_TXN_NEXT])
         stmt.setLong(2, row[COL_TXN])
         stmt.setInt(3, row[COL_UID])
@@ -273,7 +292,7 @@ $10,$11,$12,$13)""".trimIndent(),
         stmt.setString(20, row[COL_TYPE])
     }
 
-    internal fun executeBatchDeleteFromDel(delCollectionIdQuoted: String, featureIdsToDeleteFromDel: MutableList<String>) {
+    internal fun executeBatchDeleteFromDel(featureIdsToDeleteFromDel: MutableList<String>) {
         if (featureIdsToDeleteFromDel.isNotEmpty()) {
             session.sql.execute("DELETE FROM  $delCollectionIdQuoted WHERE id = ANY($1)", arrayOf(featureIdsToDeleteFromDel.toTypedArray()))
         }
