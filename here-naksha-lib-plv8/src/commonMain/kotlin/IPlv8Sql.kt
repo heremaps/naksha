@@ -14,7 +14,7 @@ interface IPlv8Sql {
     /**
      * Returns general information about the database to which this API grants access.
      */
-    fun info() : PgDbInfo
+    fun info(): PgDbInfo
 
     /**
      * Creates a new table for a function to return. When executed inside PostgresQL does only return a small object, that
@@ -95,4 +95,6 @@ interface IPlv8Sql {
      * @return The prepared plan.
      */
     fun prepare(sql: String, typeNames: Array<String>? = null): IPlv8Plan
+
+    fun executeBatch(plan: IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray
 }

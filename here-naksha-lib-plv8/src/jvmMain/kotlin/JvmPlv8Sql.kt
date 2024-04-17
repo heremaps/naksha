@@ -1,5 +1,11 @@
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
+import com.here.naksha.lib.jbon.SQL_INT16
+import com.here.naksha.lib.jbon.SQL_INT32
+import com.here.naksha.lib.jbon.SQL_INT64
+import com.here.naksha.lib.jbon.SQL_STRING
 import java.io.Closeable
 import java.sql.Connection
 
@@ -44,5 +50,23 @@ class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
     override fun close() {
         conn?.close()
         conn = null
+    }
+
+    override fun executeBatch(plan: IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray {
+        plan as JvmPlv8Plan
+        for (singleQueryParams in bulkParams) {
+            for (p in singleQueryParams) {
+                when (p.type) {
+                    SQL_BYTE_ARRAY -> plan.setBytes(p.idx, p.value as ByteArray?)
+                    SQL_STRING -> plan.setString(p.idx, p.value as String?)
+                    SQL_INT16 -> plan.setShort(p.idx, p.value as Short?)
+                    SQL_INT32 -> plan.setInt(p.idx, p.value as Int?)
+                    SQL_INT64 -> plan.setLong(p.idx, p.value as BigInt64?)
+                }
+            }
+            plan.addBatch()
+        }
+
+        return plan.executeBatch()
     }
 }
