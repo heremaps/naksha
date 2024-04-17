@@ -699,7 +699,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
         features.forEach(codec -> codec.decodeParts(false));
-        final Map<String, Integer> originalFeaturesOrder = IndexHelper.createKeyIndexMap(features, CODEC::getId);
+        final Map<String, Integer> originalFeaturesOrder =
+            IndexHelper.createKeyIndexMap(features, CODEC::getId);
 
         final int SIZE = writeRequest.features.size();
         final String collection_id = writeFeatures.getCollectionId();
