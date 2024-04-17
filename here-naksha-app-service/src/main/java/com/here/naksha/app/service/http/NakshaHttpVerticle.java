@@ -72,10 +72,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpConnection;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerOptions;
-import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.http.*;
 import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -705,8 +702,13 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
     ctx.setAppId(hubConfig.appId);
     // add streamInfo object to NakshaContext, which will be populated later during pipeline execution
     ctx.attachStreamInfo(AccessLogUtil.getStreamInfo(routingContext));
+    // extract the jwt
+    String jwt = routingContext.request().headers().get(AUTHORIZATION);
+    if (jwt == null) {
+      log.error("Missing mandatory JWT for authorization in request "+routingContext.request());
+    }
     // TODO : Author to be set based on JWT token.
-    // ctx.setAuthor();
+//    ctx.setAuthor(routingContext.);
     return ctx;
   }
 }

@@ -89,7 +89,7 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
     context.put(RAW_TOKEN, jwt);
 
     // TODO: Fix me!
-    jwt = ANONYMOUS_JWT;
+//    jwt = ANONYMOUS_JWT;
     // If compressed JWTs are supported
     //    if (ALLOW_COMPRESSED_JWT && jwt != null && !isJWT(jwt)) {
     //      try {
@@ -104,8 +104,8 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
     //    }
 
     if (jwt != null) {
-      final String encoded = authProvider.generateToken(new io.vertx.core.json.JsonObject(jwt));
-      context.request().headers().set(HttpHeaders.AUTHORIZATION, "Bearer " + encoded);
+//      final String encoded = authProvider.generateToken(new io.vertx.core.json.JsonObject(jwt));
+      context.request().headers().set(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
     }
 
     super.authenticate(context, authn -> {
