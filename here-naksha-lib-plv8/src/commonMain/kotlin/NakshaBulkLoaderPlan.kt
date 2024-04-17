@@ -104,7 +104,7 @@ internal class NakshaBulkLoaderPlan(
             // ptxn + puid = txn + uid (as we generate new state in _del)
             insertDelPlan = session.sql.prepare("""
                 INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
-                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$COL_CREATED_AT,$6,$6,$7,$9,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$COL_CREATED_AT,$6,$7,$8,$9,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                     FROM $partitionHeadQuoted WHERE $COL_ID = $10""".trimIndent(),
                     arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
         }
