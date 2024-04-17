@@ -179,7 +179,7 @@ SET search_path FROM CURRENT
 AS $$
   let naksha = require("naksha");
   let session = naksha.NakshaSession.Companion.get();
-  session.writeFeatures(collection_id, ops, features, geometries_type, geometries_bytes, tags, false);
+  session.writeFeatures(collection_id, ops, features, geometries_type, geometries_bytes, tags, true);
 $$;
 
 -- CREATED, UPDATED -> return null for tags, feature, geo_type and geo
