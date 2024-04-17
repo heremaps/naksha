@@ -297,6 +297,9 @@ SET SESSION enable_seqscan = OFF;
         if (author != null) {
             OLD[COL_AUTHOR_TS] = txnTs
         }
+        if (!OLD.hasCreatedAt()) {
+            OLD[COL_CREATED_AT] = OLD[COL_UPDATE_AT]
+        }
         OLD[COL_UPDATE_AT] = txnTs
         OLD[COL_APP_ID] = appId
         OLD[COL_UID] = nextUid()

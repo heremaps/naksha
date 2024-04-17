@@ -104,9 +104,9 @@ internal class NakshaBulkLoaderPlan(
             // ptxn + puid = txn + uid (as we generate new state in _del)
             insertDelPlan = session.sql.prepare("""
                 INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
-                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$COL_CREATED_AT,$6,$7,$8,$9,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
-                    FROM $partitionHeadQuoted WHERE $COL_ID = $10""".trimIndent(),
-                    arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
+                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+                    FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
+                    arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
         }
         return insertDelPlan!!
     }
@@ -231,6 +231,8 @@ internal class NakshaBulkLoaderPlan(
 
             featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
             featureRowMap[COL_AUTHOR_TS] = headBeforeDelete[COL_AUTHOR_TS]
+            featureRowMap[COL_UPDATE_AT] = headBeforeDelete[COL_UPDATE_AT]
+            featureRowMap[COL_CREATED_AT] = headBeforeDelete[COL_CREATED_AT]
             session.xyzDel(featureRowMap)
             addDelStmt(insertDelPlan(), featureRowMap)
             addDeleteHeadStmt(deleteHeadPlan(), featureRowMap)
@@ -244,11 +246,12 @@ internal class NakshaBulkLoaderPlan(
         plan.setInt(3, row[COL_UID])
         plan.setShort(4, row[COL_ACTION])
         plan.setInt(5, row[COL_VERSION])
-        plan.setLong(6, row[COL_UPDATE_AT])
-        plan.setLong(7, row[COL_AUTHOR_TS])
-        plan.setString(8, row[COL_AUTHOR])
-        plan.setString(9, row[COL_APP_ID])
-        plan.setString(10, row[COL_ID])
+        plan.setLong(6, row[COL_CREATED_AT])
+        plan.setLong(7, row[COL_UPDATE_AT])
+        plan.setLong(8, row[COL_AUTHOR_TS])
+        plan.setString(9, row[COL_AUTHOR])
+        plan.setString(10, row[COL_APP_ID])
+        plan.setString(11, row[COL_ID])
         plan.addBatch()
     }
 

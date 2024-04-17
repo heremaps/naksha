@@ -655,6 +655,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
 
     // when
     try (final Result result = session.execute(request)) {
+      session.commit(true);
       final WriteXyzFeatures delRequest = new WriteXyzFeatures(collectionId());
       delRequest.delete("TO_DEL_BY_ID", null);
       try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
@@ -662,6 +663,10 @@ public class PsqlStorageTests extends PsqlCollectionTests {
         assertTrue(cursor.next());
         assertSame(EExecutedOp.DELETED, cursor.getOp());
         assertEquals("TO_DEL_BY_ID", cursor.getId());
+        XyzNamespace xyzNamespace = cursor.getFeature().getProperties().getXyzNamespace();
+        assertNotEquals(xyzNamespace.getCreatedAt(), xyzNamespace.getUpdatedAt());
+        assertEquals(EXyzAction.DELETE, xyzNamespace.getAction());
+        assertEquals(2, xyzNamespace.getVersion());
         assertFalse(cursor.hasNext());
       } finally {
         session.commit(true);

@@ -19,6 +19,7 @@
 package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.jbon.IMapKt.get;
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 
 import com.here.naksha.lib.core.models.storage.CodecError;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
@@ -39,10 +40,10 @@ public class PsqlResultMapper {
       codec.setId(get(row, "id"));
       codec.setOp(get(row, "op"));
       codec.setXyzNsBytes(get(row, "xyz"));
-      codec.setTagsBytes(reqCodec.getTagsBytes());
-      codec.setGeometryBytes(reqCodec.getGeometryBytes());
-      codec.setGeometryEncoding(reqCodec.getGeometryEncoding());
-      codec.setFeatureBytes(reqCodec.getFeatureBytes());
+      codec.setTagsBytes(defaultIfNull(get(row, "tags"), reqCodec.getTagsBytes()));
+      codec.setGeometryBytes(defaultIfNull(get(row, "geo"), reqCodec.getGeometryBytes()));
+      codec.setGeometryEncoding(defaultIfNull(get(row, "geo_type"), reqCodec.getGeometryEncoding()));
+      codec.setFeatureBytes(defaultIfNull(get(row, "feature"), reqCodec.getFeatureBytes()));
       String errMsg = get(row, "err_msg");
       codec.setRawError(errMsg);
       String errNo = get(row, "err_no");
