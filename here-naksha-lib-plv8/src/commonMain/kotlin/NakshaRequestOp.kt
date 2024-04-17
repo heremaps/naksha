@@ -77,7 +77,7 @@ internal class NakshaRequestOp(
                 }
             }
             if (DEBUG) println("opReader.mapBytes(op_arr[i]) took ${total / 1000}ms")
-            return NakshaWriteOps(operations.sortedBy { it.key }, idsToModify, idsToPurge, idsToDel, if (partition>=0) partition else null)
+            return NakshaWriteOps(collectionId, operations.sortedBy { it.key }, idsToModify, idsToPurge, idsToDel, if (partition>=0) partition else null)
         }
     }
 }

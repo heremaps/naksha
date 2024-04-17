@@ -33,6 +33,7 @@ public class XyzErrorMapper {
     // COLLECTION_EXISTS
     PSQL_ERROR_MAP.put("N0001", XyzError.CONFLICT);
     PSQL_ERROR_MAP.put("N1002", XyzError.CONFLICT);
+    PSQL_ERROR_MAP.put("42P07", XyzError.CONFLICT);
 
     // COLLECTION_NOT_EXISTS
     PSQL_ERROR_MAP.put("N0002", XyzError.COLLECTION_NOT_FOUND);

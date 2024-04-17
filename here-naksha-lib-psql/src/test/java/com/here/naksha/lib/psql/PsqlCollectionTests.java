@@ -96,9 +96,6 @@ abstract class PsqlCollectionTests extends PsqlTests {
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
              session.execute(request).getXyzCollectionCursor()) {
       assertTrue(cursor.next());
-      assertEquals(collectionId(), cursor.getId());
-      assertNotNull(cursor.getUuid());
-      assertNull(cursor.getGeometry());
       assertSame(EExecutedOp.ERROR, cursor.getOp());
       assertEquals(XyzError.CONFLICT.value(), cursor.getError().err.value());
     } finally {

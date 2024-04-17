@@ -476,122 +476,19 @@ FROM ns, txn_seq;"""
             feature_arr: Array<ByteArray?>,
             geo_type_arr: Array<Short>,
             geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray?>
+            tags_arr: Array<ByteArray?>,
     ): ITable {
-        errNo = null
-        errMsg = null
-        val sql = this.sql
         val table = sql.newTable()
-        val opReader = XyzOp()
-        val newCollection = NakshaCollection(globalDictManager)
-        var i = 0
-        while (i < op_arr.size) {
-            var id: String? = null
-            try {
-                val feature = feature_arr[i]
-                val geo = geo_arr[i]
-                val geo_type = geo_type_arr[i]
-                val tags = tags_arr[i]
-                val op = op_arr[i]
-                opReader.mapBytes(op)
-                var xyzOp = opReader.op()
-                val uuid = opReader.uuid()
-                val grid = opReader.grid()
-                id = opReader.id()
-                if (id == null) id = newCollection.id()
-                if (id == null) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Missing id", id)
-                val lockId = Static.lockId(id)
-                val query = "SELECT pg_advisory_lock($1), oid FROM pg_namespace WHERE nspname = $2"
-                val schemaOid = asMap(asArray(sql.execute(query, arrayOf(lockId, schema)))[0]).getAny("oid") as Int
-                verifyCache(schemaOid)
-                try {
-                    newCollection.mapBytes(feature)
-                    if (id != newCollection.id()) throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "ID in op does not match real feature id: $id != " + newCollection.id(), id)
-                    var query = "SELECT $COL_RETURN FROM $NKC_TABLE_ESC WHERE $COL_ID = $1"
-                    var rows = asArray(sql.execute(query, arrayOf(id)))
-                    var existing: IMap? = if (rows.isNotEmpty()) asMap(rows[0]) else null
-                    query = "SELECT oid FROM pg_class WHERE relname = $1 AND relkind = ANY(array['r','p']) AND relnamespace = $2"
-                    rows = asArray(sql.execute(query, arrayOf(id, schemaOid)))
-                    val tableExists = rows.isNotEmpty()
-                    if (xyzOp == XYZ_OP_UPSERT) xyzOp = if (existing != null) XYZ_OP_UPDATE else XYZ_OP_CREATE
-                    if (xyzOp == XYZ_OP_CREATE) {
-                        if (existing != null) throw NakshaException.forRow(ERR_COLLECTION_EXISTS, "Feature exists already", existing, xyzNsFromRow(id, existing))
-                        query = "INSERT INTO $NKC_TABLE_ESC ($COL_WRITE) VALUES($1,$2,$3,$4,$5,$6) RETURNING $COL_RETURN"
-                        rows = asArray(sql.execute(query, arrayOf(id, grid, geo_type, geo, tags, feature)))
-                        if (rows.isEmpty()) throw NakshaException.forId(ERR_NO_DATA, "Failed to create collection for unknown reason", id)
-                        if (!tableExists) Static.collectionCreate(sql, newCollection.storageClass(), schema, schemaOid, id, newCollection.geoIndex(), newCollection.partition())
-                        val row = asMap(rows[0])
-                        table.returnCreated(id, xyzNsFromRow(id, row))
-                        continue
-                    }
-                    if (xyzOp == XYZ_OP_UPDATE) {
-                        if (existing == null) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
-                        if (uuid == null) {
-                            // Override (not atomic) update.
-                            query = "UPDATE $NKC_TABLE_ESC SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 RETURNING $COL_RETURN"
-                            rows = asArray(sql.execute(query, arrayOf(grid, geo_type, geo, feature, tags, id)))
-                            if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
-                        } else {
-                            // Atomic update.
-                            // TODO: Fix me!
-                            query = "UPDATE $NKC_TABLE_ESC SET grid=$1, geo_type=$2, geo=$3, feature=$4, tags=$5 WHERE id = $6 AND txn = $7 AND uid = $8 RETURNING $COL_RETURN"
-                            rows = asArray(sql.execute(query, arrayOf(grid, geo_type, geo, feature, tags, id, null, null)))
-                            if (rows.isEmpty()) {
-                                query = "SELECT $COL_RETURN FROM $NKC_TABLE_ESC WHERE id = $1"
-                                rows = asArray(sql.execute(query, arrayOf(id)))
-                                existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
-                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
-                                throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection $id does not exist", id)
-                            }
-                        }
-                        val row = asMap(rows[0])
-                        if (!tableExists) Static.collectionCreate(sql, newCollection.storageClass(), schema, schemaOid, id, newCollection.geoIndex(), newCollection.partition())
-                        table.returnUpdated(id, xyzNsFromRow(id, row))
-                        continue
-                    }
-                    if (xyzOp == XYZ_OP_DELETE || xyzOp == XYZ_OP_PURGE) {
-                        if (existing == null) {
-                            table.returnRetained(id)
-                            continue
-                        }
-                        if (uuid == null) {
-                            // Override (not atomic) update.
-                            query = "DELETE FROM $NKC_TABLE_ESC WHERE id = $1 RETURNING $COL_RETURN"
-                            rows = asArray(sql.execute(query, arrayOf(id)))
-                            if (rows.isEmpty()) throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection does not exist", id)
-                        } else {
-                            // Atomic update.
-                            // TODO: Fix me!
-                            query = "DELETE FROM $NKC_TABLE_ESC WHERE id = $1 AND txn = $2 AND uid = $3 RETURNING $COL_RETURN"
-                            rows = asArray(sql.execute(query, arrayOf(id, null, null)))
-                            if (rows.isEmpty()) {
-                                query = "SELECT id,feature,geo_type,geo,tags,xyz FROM $NKC_TABLE_ESC WHERE id = $1"
-                                rows = asArray(sql.execute(query, arrayOf(id)))
-                                existing = if (rows.isNotEmpty()) asMap(rows[0]) else null
-                                if (existing != null) throw NakshaException.forRow(ERR_CONFLICT, "Collection is in different state", existing, xyzNsFromRow(id, existing))
-                                throw NakshaException.forId(ERR_COLLECTION_NOT_EXISTS, "Collection $id does not exist", id)
-                            }
-                        }
-                        existing = asMap(rows[0])
-                        Static.collectionDrop(sql, id)
-                        table.returnDeleted(existing)
-                        continue
-                    }
-                    throw NakshaException.forId(ERR_INVALID_PARAMETER_VALUE, "Operation for collection $id not supported: " + XyzOp.getOpName(xyzOp), id)
-                } finally {
-                    sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(lockId))
-                }
-            } catch (e: NakshaException) {
-                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-                table.returnException(e)
-            } catch (e: Exception) {
-                if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-                table.returnErr(ERR_FATAL, e.rootCause().message ?: "Fatal", id)
-            } finally {
-                i++
-            }
+        val writer = NakshaFeaturesWriter(NKC_TABLE, this)
+        try {
+            return writer.writeCollections(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, false)
+        } catch (e: NakshaException) {
+            if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
+            table.returnException(e)
+        } catch (e: Throwable) {
+            handleFeatureException(e, table, null)
         }
-        return table
+        return table;
     }
 
     private lateinit var featureReader: JbMapFeature
@@ -686,39 +583,19 @@ FROM ns, txn_seq;"""
      * Single threaded all-or-nothing bulk write operation.
      * As result there is row with success or error returned.
      */
-    fun bulkWriteFeatures(
-            collectionId: String,
-            op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?>,
-            geo_type_arr: Array<Short>,
-            geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray?>
-    ): ITable {
-        val table = sql.newTable()
-        val bulk = NakshaFeaturesWriter(collectionId, this)
-        try {
-            bulk.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, true)
-        } catch (e: NakshaException) {
-            if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-            table.returnException(e)
-        } catch (e: Throwable) {
-            table.returnErr(ERR_FATAL, e.message ?: "Fatal ${e.stackTraceToString()}", null)
-        }
-        return table;
-    }
-
     fun writeFeatures(
             collectionId: String,
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?>,
             geo_type_arr: Array<Short>,
             geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray?>
+            tags_arr: Array<ByteArray?>,
+            minResult: Boolean = true
     ): ITable {
         val table = sql.newTable()
         val bulk = NakshaFeaturesWriter(collectionId, this)
         try {
-            return bulk.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, false)
+            return bulk.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, minResult)
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
             table.returnException(e)
