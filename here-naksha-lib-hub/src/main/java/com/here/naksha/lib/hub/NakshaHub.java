@@ -122,7 +122,7 @@ public class NakshaHub implements INaksha {
     }
     // Setting Concurrency Thresholds
     AbstractTask.initConcurrencyLimits(
-        nakshaHubConfig.thresholdPerProcessor, nakshaHubConfig.percentageThresholdPerPrinciple);
+        nakshaHubConfig.maxParallelRequestsPerCPU, nakshaHubConfig.maxPctParallelRequestsPerPrincipal);
     logger.info("NakshaHub initialization done!");
   }
 

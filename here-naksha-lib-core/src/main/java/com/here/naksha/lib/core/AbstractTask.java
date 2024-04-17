@@ -54,16 +54,23 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
     implements INakshaBound, UncaughtExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(AbstractTask.class);
-  static int thresholdPerProcessor;
-  static int percentageThresholdPerPrinciple;
+  private static int maxParallelRequestsPerCPU = 50;
+  private static int maxPctParallelRequestsPerPrincipal = 100;
 
   public static void initConcurrencyLimits(int cpuThreshHold, int perPrincipalThreshold) {
-    thresholdPerProcessor = cpuThreshHold;
-    percentageThresholdPerPrinciple = perPrincipalThreshold;
+    maxParallelRequestsPerCPU = cpuThreshHold;
+    maxPctParallelRequestsPerPrincipal = perPrincipalThreshold;
   }
 
-  private static final Map<String, AtomicInteger> authorUsageMap = new ConcurrentHashMap<>();
+  /**
+   * The soft-limit of tasks to run concurrently. This limit does normally not apply to child tasks.
+   */
+  public static final AtomicLong limit =
+      new AtomicLong((long) Runtime.getRuntime().availableProcessors() * maxParallelRequestsPerCPU);
 
+  private static final double authorThreshold = (double) maxPctParallelRequestsPerPrincipal / 100;
+  private static final int authorLimit = (int) (limit.get() * authorThreshold);
+  private static final Map<String, AtomicInteger> authorUsageMap = new ConcurrentHashMap<>();
   private static final AtomicLong taskId = new AtomicLong(1L);
   private static final ThreadGroup allTasksGroup = new ThreadGroup("Naksha-Tasks");
   private static final ConcurrentHashMap<Long, NakshaWorker> allTasks = new ConcurrentHashMap<>();
@@ -398,11 +405,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    * @throws RuntimeException      If adding the task to the thread pool failed for an unknown error.
    */
   public @NotNull Future<@NotNull RESULT> start() {
-    // TODO Update limit value after exercise before merge
-    final AtomicLong limit =
-        new AtomicLong((long) Runtime.getRuntime().availableProcessors() * thresholdPerProcessor);
-    final long LIMIT = limit.get();
-    final double authorThreshold = (double) percentageThresholdPerPrinciple / 100;
+    final long LIMIT = AbstractTask.limit.get();
     lockAndRequireNew();
     try {
       do {
@@ -411,15 +414,16 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         String author = context.getAuthor();
         if (author != null) {
           AtomicInteger authorUsage = AbstractTask.authorUsageMap.getOrDefault(author, new AtomicInteger(0));
-          int authorLimit = (int) (LIMIT * authorThreshold);
-          if (!internal && authorUsage.get() >= authorLimit) {
+          if (!internal && authorUsage.get() >= AbstractTask.authorLimit) {
             log.info(
                 "NAKSHA_ERR_REQ_LIMIT_4_PRINCIPAL - [Request Limit breached for Principal => appId,author,limit,crtValue] - ReqLimitForPrincipal {} {} {} {}",
                 context.getAppId(),
                 author,
                 authorLimit,
                 authorUsage);
-            throw new TooManyTasks(0, (long) (authorLimit), false);
+            String errorMessage =
+                "Maximum number of concurrent tasks reached for principal (" + authorLimit + ")";
+            throw new TooManyTasks(errorMessage);
           }
         }
         if (!internal && threadCount >= LIMIT) {
@@ -429,7 +433,8 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
               author,
               LIMIT,
               threadCount);
-          throw new TooManyTasks(LIMIT, 0, true);
+          String errorMessage = "Maximum number of concurrent tasks reached for instance (" + LIMIT + ")";
+          throw new TooManyTasks(errorMessage);
         }
         if (AbstractTask.threadCount.compareAndSet(threadCount, threadCount + 1)) {
           if (author != null) {
@@ -440,7 +445,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
             final Future<RESULT> future = threadPool.submit(this::init_and_execute);
             return future;
           } catch (RejectedExecutionException e) {
-            throw new TooManyTasks();
+            String errorMessage =
+                "Maximum number of concurrent tasks (" + AbstractTask.limit.get() + ") reached";
+            throw new TooManyTasks(errorMessage);
           } catch (Throwable t) {
             AbstractTask.threadCount.decrementAndGet();
             if (author != null) {
@@ -488,16 +495,15 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         state.set(State.DONE);
         final long newValue = AbstractTask.threadCount.decrementAndGet();
         assert newValue >= 0L;
-        String author = context.getAuthor();
-        if (author != null) {
-          AtomicInteger authorUsage = AbstractTask.authorUsageMap.getOrDefault(author, new AtomicInteger(0));
-          if (authorUsage.get() > 0) {
-            decrementAuthorUsage(author);
-          }
-        }
         detachFromCurrentThread();
       } catch (Throwable t) {
         RESULT = errorResponse(t);
+      } finally {
+        // Decrement author usage count regardless of success or failure
+        String author = context.getAuthor();
+        if (author != null) {
+          decrementAuthorUsage(author);
+        }
       }
     }
     return RESULT;

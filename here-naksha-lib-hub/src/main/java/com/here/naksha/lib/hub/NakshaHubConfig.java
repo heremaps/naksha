@@ -103,8 +103,8 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
       @JsonProperty("storageParams") @Nullable Map<String, Object> storageParams,
       @JsonProperty("extensionConfigParams") @Nullable ExtensionConfigParams extensionConfigParams,
       @JsonProperty("requestBodyLimit") @Nullable Integer requestBodyLimit,
-      @JsonProperty("thresholdPerProcessor") @Nullable Integer thresholdPerProcessor,
-      @JsonProperty("percentageThresholdPerPrinciple") @Nullable Integer percentageThresholdPerPrinciple) {
+      @JsonProperty("maxParallelRequestsPerCPU") @Nullable Integer maxParallelRequestsPerCPU,
+      @JsonProperty("maxPctParallelRequestsPerPrincipal") @Nullable Integer maxPctParallelRequestsPerPrincipal) {
     super(id);
     if (httpPort != null && (httpPort < 0 || httpPort > 65535)) {
       logger.atError()
@@ -193,11 +193,11 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
     } else {
       this.requestBodyLimit = requestBodyLimit;
     }
-    this.thresholdPerProcessor =
-        thresholdPerProcessor != null ? thresholdPerProcessor : defaultthresholdPerProcessor();
-    this.percentageThresholdPerPrinciple = percentageThresholdPerPrinciple != null
-        ? percentageThresholdPerPrinciple
-        : defaultpercentageThresholdPerPrinciple();
+    this.maxParallelRequestsPerCPU =
+        maxParallelRequestsPerCPU != null ? maxParallelRequestsPerCPU : defaultMaxParallelRequestsPerCPU();
+    this.maxPctParallelRequestsPerPrincipal = maxPctParallelRequestsPerPrincipal != null
+        ? maxPctParallelRequestsPerPrincipal
+        : defaultMaxPctParallelRequestsPerPrincipal();
   }
 
   private String getEnv() {
@@ -359,7 +359,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
    *
    * @return the default threshold per processor
    */
-  public static int defaultthresholdPerProcessor() {
+  public static int defaultMaxParallelRequestsPerCPU() {
     return 50;
   }
 
@@ -368,7 +368,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
    *
    * @return the default percentage threshold per principal
    */
-  public static int defaultpercentageThresholdPerPrinciple() {
+  public static int defaultMaxPctParallelRequestsPerPrincipal() {
     return 25;
   }
   /**
@@ -388,10 +388,10 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
   /**
    * Optional Total Concurrency Limit
    */
-  public final Integer thresholdPerProcessor;
+  public final Integer maxParallelRequestsPerCPU;
 
   /**
    * Optional Total Author Concurrency Threshold
    */
-  public final Integer percentageThresholdPerPrinciple;
+  public final Integer maxPctParallelRequestsPerPrincipal;
 }

@@ -10,5 +10,7 @@
   "maintenanceIntervalInMins": 720,
   "maintenancePoolCoreSize": 5,
   "maintenancePoolMaxSize": 20,
+  "maxParallelRequestsPerCPU": 50,
+  "maxPctParallelRequestsPerPrincipal": 100,
   "extensionConfigParams": null
 }
