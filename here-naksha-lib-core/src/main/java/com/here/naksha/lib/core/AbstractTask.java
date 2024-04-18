@@ -21,10 +21,7 @@ package com.here.naksha.lib.core;
 import com.here.naksha.lib.core.exceptions.TooManyTasks;
 import com.here.naksha.lib.core.util.NanoTime;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -68,9 +65,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
   public static final AtomicLong limit =
       new AtomicLong((long) Runtime.getRuntime().availableProcessors() * maxParallelRequestsPerCPU);
 
-  private static final double authorThreshold = (double) maxPctParallelRequestsPerPrincipal / 100;
-  private static final int authorLimit = (int) (limit.get() * authorThreshold);
-  private static final Map<String, AtomicInteger> authorUsageMap = new ConcurrentHashMap<>();
+  private static final double principalThreshold = (double) maxPctParallelRequestsPerPrincipal / 100;
+  private static final int principalLimit = (int) (limit.get() * principalThreshold);
+  private static final Map<String, AtomicInteger> principalUsageMap = new ConcurrentHashMap<>();
   private static final AtomicLong taskId = new AtomicLong(1L);
   private static final ThreadGroup allTasksGroup = new ThreadGroup("Naksha-Tasks");
   private static final ConcurrentHashMap<Long, NakshaWorker> allTasks = new ConcurrentHashMap<>();
@@ -411,20 +408,26 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
       do {
         final long threadCount = AbstractTask.threadCount.get();
         assert threadCount >= 0L;
+        AtomicInteger principalUsage = null;
         String author = context.getAuthor();
-        if (author != null) {
-          AtomicInteger authorUsage = AbstractTask.authorUsageMap.getOrDefault(author, new AtomicInteger(0));
-          if (!internal && authorUsage.get() >= AbstractTask.authorLimit) {
-            log.info(
-                "NAKSHA_ERR_REQ_LIMIT_4_PRINCIPAL - [Request Limit breached for Principal => appId,author,limit,crtValue] - ReqLimitForPrincipal {} {} {} {}",
-                context.getAppId(),
-                author,
-                authorLimit,
-                authorUsage);
-            String errorMessage =
-                "Maximum number of concurrent tasks reached for principal (" + authorLimit + ")";
-            throw new TooManyTasks(errorMessage);
+        String principal = getPrincipalName();
+        boolean inPrincipal = false;
+        synchronized (AbstractTask.principalUsageMap) {
+          if (principal != null) {
+            principalUsage =
+                AbstractTask.principalUsageMap.computeIfAbsent(principal, k -> new AtomicInteger(0));
           }
+        }
+        if (!internal && principalUsage != null && principalUsage.get() >= AbstractTask.principalLimit) {
+          log.info(
+              "NAKSHA_ERR_REQ_LIMIT_4_PRINCIPAL - [Request Limit breached for Principal => appId,author,limit,crtValue] - ReqLimitForPrincipal {} {} {} {}",
+              context.getAppId(),
+              author,
+              principalLimit,
+              principalUsage);
+          String errorMessage =
+              "Maximum number of concurrent tasks reached for principal (" + principalLimit + ")";
+          throw new TooManyTasks(errorMessage);
         }
         if (!internal && threadCount >= LIMIT) {
           log.info(
@@ -436,10 +439,13 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
           String errorMessage = "Maximum number of concurrent tasks reached for instance (" + LIMIT + ")";
           throw new TooManyTasks(errorMessage);
         }
+        if (principal != null
+            && AbstractTask.principalUsageMap
+                .get(principal)
+                .compareAndSet(principalUsage.get(), principalUsage.get() + 1)) {
+          inPrincipal = true;
+        }
         if (AbstractTask.threadCount.compareAndSet(threadCount, threadCount + 1)) {
-          if (author != null) {
-            AbstractTask.incrementAuthorUsage(author);
-          }
           try {
             state.set(State.START);
             final Future<RESULT> future = threadPool.submit(this::init_and_execute);
@@ -450,8 +456,15 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
             throw new TooManyTasks(errorMessage);
           } catch (Throwable t) {
             AbstractTask.threadCount.decrementAndGet();
-            if (author != null) {
-              AbstractTask.decrementAuthorUsage(author);
+            if (inPrincipal) {
+              // The lambda function passed to computeIfPresent is applied atomically when the key is
+              // present in the map.
+              // since you're using computeIfPresent, the get() operation is performed within the atomic
+              // operation of computeIfPresent
+              AbstractTask.principalUsageMap.computeIfPresent(principal, (key, value) -> {
+                value.decrementAndGet();
+                return value;
+              });
             }
             log.atError()
                 .setMessage("Unexpected exception while trying to fork a new thread")
@@ -459,6 +472,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
                 .log();
             throw new RuntimeException("Internal error while forking new worker thread", t);
           }
+        }
+        if (inPrincipal) {
+          AbstractTask.principalUsageMap.get(principal).decrementAndGet();
         }
         // Conflict, two threads concurrently try to fork.
       } while (true);
@@ -495,15 +511,20 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         state.set(State.DONE);
         final long newValue = AbstractTask.threadCount.decrementAndGet();
         assert newValue >= 0L;
+        String principal = getPrincipalName();
+        // The lambda function passed to computeIfPresent is applied atomically when the key is present in the
+        // map.
+        // since you're using computeIfPresent, the get() operation is performed within the atomic operation of
+        // computeIfPresent
+        if (principal != null) {
+          AbstractTask.principalUsageMap.computeIfPresent(principal, (key, value) -> {
+            value.decrementAndGet();
+            return value;
+          });
+        }
         detachFromCurrentThread();
       } catch (Throwable t) {
         RESULT = errorResponse(t);
-      } finally {
-        // Decrement author usage count regardless of success or failure
-        String author = context.getAuthor();
-        if (author != null) {
-          decrementAuthorUsage(author);
-        }
       }
     }
     return RESULT;
@@ -632,21 +653,27 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
   /**
    * Increments the value of authorUsage in the hashmap.
    *
-   * @param author The author.
+   * @param principal The author.
    */
-  private static void incrementAuthorUsage(String author) {
-    authorUsageMap.computeIfAbsent(author, key -> new AtomicInteger()).incrementAndGet();
+  private static void incrementPrincipalUsage(String principal) {
+    principalUsageMap.computeIfAbsent(principal, key -> new AtomicInteger()).incrementAndGet();
   }
 
   /**
    * Decrements the value of authorUsage in the hashmap.
    *
-   * @param author The author.
+   * @param principal The author.
    */
-  private static void decrementAuthorUsage(String author) {
-    AtomicInteger usage = authorUsageMap.get(author);
+  private static void decrementPrincipalUsage(String principal) {
+    AtomicInteger usage = principalUsageMap.get(principal);
     if (usage != null) {
       usage.decrementAndGet();
     }
+  }
+
+  private String getPrincipalName() {
+    String author = context.getAuthor();
+    // String appId = context.getAppId();
+    return author;
   }
 }
