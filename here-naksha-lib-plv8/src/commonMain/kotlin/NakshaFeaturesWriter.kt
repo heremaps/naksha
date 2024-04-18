@@ -24,8 +24,6 @@ class NakshaFeaturesWriter(
     private val headCollectionId = session.getBaseCollectionId(collectionId)
 
     private val collectionConfig = session.getCollectionConfig(headCollectionId)
-    private val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
-    private val isHistoryDisabled: Boolean? = collectionConfig[NKC_DISABLE_HISTORY]
 
     fun writeFeatures(
             op_arr: Array<ByteArray>,
@@ -47,7 +45,7 @@ class NakshaFeaturesWriter(
         val END_LOADING = currentMillis()
 
         val START_PREPARE = currentMillis()
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, isHistoryDisabled)
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, collectionConfig[NKC_DISABLE_HISTORY])
 
         for (op in operations.operations) {
             val existingFeature: IMap? = existingFeatures[op.id]
@@ -87,7 +85,7 @@ class NakshaFeaturesWriter(
 
         val existingFeatures = operations.getExistingHeadFeatures(session, minResult)
         val existingInDelFeatures = operations.getExistingDelFeatures(session, minResult)
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, isHistoryDisabled)
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, collectionConfig[NKC_DISABLE_HISTORY])
         val newCollection = NakshaCollection(session.globalDictManager)
 
         for (op in operations.operations) {
@@ -129,14 +127,16 @@ class NakshaFeaturesWriter(
         return plan.result
     }
 
-    private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?) = if (isCollectionPartitioned == true && partition != null) {
-        if (DEBUG) println("Insert into a single partition #$partition (isCollectionPartitioned: ${isCollectionPartitioned})")
-        NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(true, partition), session, isHistoryDisabled, minResult)
-    } else {
-        if (DEBUG) println("Insert into a multiple partitions, therefore via HEAD (isCollectionPartitioned: ${isCollectionPartitioned})")
-        NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(false, -1), session, isHistoryDisabled, minResult)
+    private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?): NakshaBulkLoaderPlan {
+        val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
+        return if (isCollectionPartitioned == true && partition != null) {
+            if (DEBUG) println("Insert into a single partition #$partition (isCollectionPartitioned: ${isCollectionPartitioned})")
+            NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(true, partition), session, isHistoryDisabled, minResult)
+        } else {
+            if (DEBUG) println("Insert into a multiple partitions, therefore via HEAD (isCollectionPartitioned: ${isCollectionPartitioned})")
+            NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(false, -1), session, isHistoryDisabled, minResult)
+        }
     }
-
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
             if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else session.sql.quoteIdent(collectionId)
 

@@ -1,7 +1,6 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.BigInt64
-import com.here.naksha.lib.jbon.SQL_INT64
 import com.here.naksha.lib.jbon.toLong
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -34,31 +33,31 @@ class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : IPlv8
         return JvmPlv8Cursor(null)
     }
 
-    override fun setString(parameterIndex: Int, value: String?) {
+    internal fun setString(parameterIndex: Int, value: String?) {
         stmt.setString(parameterIndex, value)
     }
 
-    override fun setBytes(parameterIndex: Int, value: ByteArray?) {
+    internal fun setBytes(parameterIndex: Int, value: ByteArray?) {
         stmt.setBytes(parameterIndex, value)
     }
 
-    override fun setLong(parameterIndex: Int, value: BigInt64?) {
+    internal fun setLong(parameterIndex: Int, value: BigInt64?) {
         if (value == null) stmt.setNull(parameterIndex, Types.BIGINT) else stmt.setLong(parameterIndex, value.toLong())
     }
 
-    override fun setInt(parameterIndex: Int, value: Int?) {
+    internal fun setInt(parameterIndex: Int, value: Int?) {
         if (value == null) stmt.setNull(parameterIndex, Types.INTEGER) else stmt.setInt(parameterIndex, value)
     }
 
-    override fun setShort(parameterIndex: Int, value: Short?) {
+    internal fun setShort(parameterIndex: Int, value: Short?) {
         if (value == null) stmt.setNull(parameterIndex, Types.SMALLINT) else stmt.setShort(parameterIndex, value)
     }
 
-    override fun addBatch() {
+    internal fun addBatch() {
         stmt.addBatch()
     }
 
-    override fun executeBatch(): IntArray {
+    internal fun executeBatch(): IntArray {
         return stmt.executeBatch()
     }
 

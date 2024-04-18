@@ -39,4 +39,12 @@ class JsPlv8Sql : IPlv8Sql {
     override fun prepare(sql: String, typeNames: Array<String>?): IPlv8Plan {
         return js("typeNames ? plv8.prepare(sql, typeNames) : plv8.execute(typeNames)")
     }
+
+    override fun executeBatch(plan: IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray {
+        for (singleQueryParams in bulkParams) {
+            val executionParams = singleQueryParams.map { it.value }.toTypedArray()
+            js("plan.execute(executionParams)")
+        }
+        return intArrayOf(bulkParams.size)
+    }
 }
