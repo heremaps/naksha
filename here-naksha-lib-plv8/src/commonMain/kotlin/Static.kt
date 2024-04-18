@@ -514,11 +514,13 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
             query += pgTableInfo.CREATE_TABLE_BODY
             if (!partition) {
                 query += pgTableInfo.STORAGE_PARAMS
+                query += pgTableInfo.TABLESPACE
                 sql.execute(query)
                 //collectionOptimizeTable(sql, delName, false)
                 collectionAddIndices(sql, delName, geoIndex, false, pgTableInfo)
             } else {
                 query += " PARTITION BY RANGE (naksha_partition_number(id)) "
+                query += pgTableInfo.TABLESPACE
                 sql.execute(query)
                 for (part in 0..<PARTITION_COUNT) {
                     createPartitionById(sql, delName, geoIndex, part, pgTableInfo, false)
@@ -532,6 +534,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
             query += metaNameQuoted
             query += pgTableInfo.CREATE_TABLE_BODY
             query += pgTableInfo.STORAGE_PARAMS
+            query += pgTableInfo.TABLESPACE
             sql.execute(query)
             //collectionOptimizeTable(sql, metaName, false)
             collectionAddIndices(sql, metaName, geoIndex, false, pgTableInfo)
