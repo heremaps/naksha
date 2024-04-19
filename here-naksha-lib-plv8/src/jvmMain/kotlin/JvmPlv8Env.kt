@@ -1,6 +1,9 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.plv8.Static.SC_DICTIONARIES
+import com.here.naksha.lib.plv8.Static.SC_INDICES
+import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
 import java.sql.Connection
 
 /**
@@ -149,7 +152,7 @@ class JvmPlv8Env : JvmEnv() {
      * @param conn The connection to use for the installation.
      * @param version The Naksha Version.
      */
-    fun install(conn: Connection, version: Long, schema: String, storageId: String) {
+    fun install(conn: Connection, version: Long, schema: String, storageId: String, appName: String) {
         conn.autoCommit = false
         val sql = JvmPlv8Sql(conn)
         val schemaQuoted = sql.quoteIdent(schema)
@@ -187,7 +190,51 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
 """)
         executeSqlFromResource(sql, "/naksha.sql", replacements)
         executeSqlFromResource(sql, "/jbon.sql")
-        Static.createInternalsIfNotExists(sql, schema, schemaOid)
+        Static.createBaseInternalsIfNotExists(sql, schema, schemaOid)
+        createInternalsIfNotExists(conn, schema, appName)
         conn.commit()
+    }
+
+    private fun createInternalsIfNotExists(conn: Connection, schema: String, appName: String) {
+        val verifyCreation: (ITable) -> Unit = {
+            var opPerformed: String? = (it as JvmPlv8Table).rows[0]["op"]
+            assert(opPerformed == XYZ_EXEC_CREATED)
+        }
+
+        startSession(conn, schema, appName, "", appName, null)
+        val nakshaSession = NakshaSession.get()
+
+        val xyzBuilder = XyzBuilder.create()
+        val scTransactionsOp = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, SC_TRANSACTIONS)
+        val scTransactionMap = newMap()
+        scTransactionMap[NKC_ID] = SC_TRANSACTIONS
+        scTransactionMap[NKC_PARTITION] = false
+        scTransactionMap[NKC_AUTO_PURGE] = true
+        scTransactionMap[NKC_DISABLE_HISTORY] = true
+        scTransactionMap[NKC_STORAGE_CLASS] = SC_TRANSACTIONS
+        val scTransactionFeature = xyzBuilder.buildFeatureFromMap(scTransactionMap)
+        nakshaSession.writeCollections(arrayOf(scTransactionsOp), arrayOf(scTransactionFeature)).let(verifyCreation)
+
+        val scDictionariesOp = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, SC_DICTIONARIES)
+        val scDictionariesMap = newMap()
+        scTransactionMap[NKC_ID] = SC_DICTIONARIES
+        scDictionariesMap[NKC_PARTITION] = false
+        scDictionariesMap[NKC_AUTO_PURGE] = false
+        scDictionariesMap[NKC_DISABLE_HISTORY] = false
+        scDictionariesMap[NKC_STORAGE_CLASS] = SC_DICTIONARIES
+        val scDictionariesFeature = xyzBuilder.buildFeatureFromMap(scDictionariesMap)
+        nakshaSession.writeCollections(arrayOf(scDictionariesOp), arrayOf(scDictionariesFeature)).let(verifyCreation)
+
+        val scIndicesOp = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, SC_INDICES)
+        val scIndicesMap = newMap()
+        scTransactionMap[NKC_ID] = SC_INDICES
+        scIndicesMap[NKC_PARTITION] = false
+        scIndicesMap[NKC_AUTO_PURGE] = false
+        scIndicesMap[NKC_DISABLE_HISTORY] = false
+        scIndicesMap[NKC_STORAGE_CLASS] = SC_INDICES
+        val scIndicesFeature = xyzBuilder.buildFeatureFromMap(scIndicesMap)
+        nakshaSession.writeCollections(arrayOf(scIndicesOp), arrayOf(scIndicesFeature)).let(verifyCreation)
+
+        endSession()
     }
 }

@@ -7,6 +7,7 @@ import com.here.naksha.lib.jbon.*
 internal const val NKC_TABLE = "naksha~collections"
 internal const val NKC_TABLE_ESC = "\"naksha~collections\""
 internal const val NKC_PARTITION = "partition"
+internal const val NKC_ID = "id"
 internal const val NKC_GEO_INDEX = "geoIndex"
 internal const val NKC_DISABLE_HISTORY = "disableHistory"
 internal const val NKC_MAX_AGE = "maxAge"

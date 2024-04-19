@@ -3,6 +3,7 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
 import com.here.naksha.lib.plv8.Static.nakshaCollectionConfig
 import kotlinx.datetime.*
 import kotlin.js.ExperimentalJsExport
@@ -90,9 +91,9 @@ class NakshaSession(
     private var _txts: BigInt64? = null
 
     /**
-     * Keeps updated(deleted) xyz namespace by after trigger, so we can return it to user.
+     * Keeps transaction's counters.
      */
-    private var deletedFeaturesRowCache: IMap
+    var transaction: NakshaTransaction = NakshaTransaction(dictManager = globalDictManager)
 
     /**
      * A cache to remember collections configuration <collectionId, configMap>
@@ -115,7 +116,6 @@ SET SESSION search_path TO $schemaIdent, public, topology;
 SET SESSION enable_seqscan = OFF;
 """)
         schemaOid = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0]).getAny("oid") as Int
-        deletedFeaturesRowCache = Jb.map.newMap()
         collectionConfiguration = Jb.map.newMap()
         collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
     }
@@ -132,9 +132,9 @@ SET SESSION enable_seqscan = OFF;
         _txts = null
         errNo = null
         errMsg = null
-        deletedFeaturesRowCache = Jb.map.newMap()
         collectionConfiguration = Jb.map.newMap()
         collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
+        transaction = NakshaTransaction(globalDictManager)
     }
 
     /**
@@ -192,8 +192,8 @@ SET SESSION enable_seqscan = OFF;
     fun xyzNsFromRow(collectionId: String, row: IMap): ByteArray {
         val createdAt: BigInt64? = row[COL_CREATED_AT] ?: row[COL_UPDATE_AT]
         check(createdAt != null) { "Missing $COL_CREATED_AT in row" }
-        val updatedAt: BigInt64? = row[COL_UPDATE_AT]
-        check(updatedAt != null) { "Missing $COL_UPDATE_AT in row" }
+        // for transactions update might be null, for features created at might be null
+        val updatedAt: BigInt64 = row[COL_UPDATE_AT] ?: row[COL_CREATED_AT]!!
         val txn: BigInt64? = row[COL_TXN]
         check(txn != null) { "Missing $COL_TXN in row" }
         val nakshaTxn = NakshaTxn(txn)
@@ -234,7 +234,6 @@ SET SESSION enable_seqscan = OFF;
         val txnTs = txnTs()
         NEW[COL_TXN] = txn.value
         NEW[COL_TXN_NEXT] = null
-        NEW[COL_UID] = nextUid()
         NEW[COL_PTXN] = null
         NEW[COL_PUID] = null
         var geoType: Short? = NEW[COL_GEO_TYPE]
@@ -251,8 +250,15 @@ SET SESSION enable_seqscan = OFF;
         }
         NEW[COL_ACTION] = null // saving space null means 0 (create)
         NEW[COL_VERSION] = null // saving space null means 1
-        NEW[COL_CREATED_AT] = null // saving space - it is same as update_at at creation,
-        NEW[COL_UPDATE_AT] = txnTs
+        if (collectionId == SC_TRANSACTIONS) {
+            NEW[COL_CREATED_AT] = txnTs
+            NEW[COL_UPDATE_AT] = null // saving space - it is same as created_at at creation,
+            NEW[COL_UID] = 0
+        } else {
+            NEW[COL_CREATED_AT] = null // saving space - it is same as update_at at creation,
+            NEW[COL_UPDATE_AT] = txnTs
+            NEW[COL_UID] = nextUid()
+        }
         NEW[COL_AUTHOR] = author
         NEW[COL_AUTHOR_TS] = null // saving space - only apps are allowed to create features
         NEW[COL_APP_ID] = appId
@@ -265,7 +271,11 @@ SET SESSION enable_seqscan = OFF;
         xyzInsert(collectionId, NEW)
         NEW[COL_ACTION] = ACTION_UPDATE.toShort()
         NEW[COL_CREATED_AT] = OLD[COL_CREATED_AT] ?: OLD[COL_UPDATE_AT]
-        NEW[COL_AUTHOR_TS] = if (author == null) OLD[COL_AUTHOR_TS] ?: OLD[COL_UPDATE_AT] else null
+        if (author == null) {
+            NEW[COL_AUTHOR_TS] = OLD[COL_AUTHOR_TS] ?: OLD[COL_UPDATE_AT]
+        } else {
+            NEW[COL_AUTHOR_TS] = null
+        }
         val oldVersion: Int = OLD[COL_VERSION] ?: 1
         NEW[COL_VERSION] = oldVersion + 1
         NEW[COL_PTXN] = OLD[COL_TXN]
@@ -358,7 +368,6 @@ SET SESSION enable_seqscan = OFF;
             copyToDel(collectionId, data.OLD)
             // save del state in hst
             saveInHst(collectionId, data.OLD)
-            deletedFeaturesRowCache.put(data.OLD[COL_ID]!!, data.OLD)
         }
         if (data.TG_OP == TG_OP_UPDATE) {
             check(data.NEW != null) { "Missing NEW for UPDATE" }
@@ -476,10 +485,10 @@ FROM ns, txn_seq;"""
 
     fun writeCollections(
             op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?>,
-            geo_type_arr: Array<Short>,
-            geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray?>,
+            feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
+            geo_type_arr: Array<Short?> = arrayOfNulls(op_arr.size),
+            geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
+            tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size)
     ): ITable {
         val table = sql.newTable()
         val writer = NakshaFeaturesWriter(NKC_TABLE, this)
@@ -589,16 +598,22 @@ FROM ns, txn_seq;"""
     fun writeFeatures(
             collectionId: String,
             op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?>,
-            geo_type_arr: Array<Short>,
-            geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray?>,
+            feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
+            geo_type_arr: Array<Short?> = arrayOfNulls(op_arr.size),
+            geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
+            tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
             minResult: Boolean = true
     ): ITable {
         val table = sql.newTable()
-        val bulk = NakshaFeaturesWriter(collectionId, this)
+        val featureWriter = NakshaFeaturesWriter(collectionId, this)
+        val xyzBuilder = XyzBuilder.create()
+        val transactionWriter = NakshaFeaturesWriter(SC_TRANSACTIONS, this, modifyCounters = false)
         try {
-            return bulk.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, minResult)
+            val op = xyzBuilder.buildXyzOp(XYZ_OP_UPSERT, txn().toUuid(storageId).toString(), null, null)
+            transactionWriter.writeFeatures(arrayOf(op), arrayOf(transaction.toBytes()), minResult = true)
+            val writeFeaturesResult = featureWriter.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, minResult)
+            transactionWriter.writeFeatures(arrayOf(op), arrayOf(transaction.toBytes()), minResult = true)
+            return writeFeaturesResult
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
             table.returnException(e)

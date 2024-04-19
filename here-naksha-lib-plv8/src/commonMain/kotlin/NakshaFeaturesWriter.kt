@@ -18,7 +18,8 @@ import com.here.naksha.lib.plv8.Static.currentMillis
 
 class NakshaFeaturesWriter(
         val collectionId: String,
-        val session: NakshaSession
+        val session: NakshaSession,
+        val modifyCounters: Boolean = true
 ) {
 
     private val headCollectionId = session.getBaseCollectionId(collectionId)
@@ -27,10 +28,10 @@ class NakshaFeaturesWriter(
 
     fun writeFeatures(
             op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?>,
-            geo_type_arr: Array<Short>,
-            geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray?>,
+            feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
+            geo_type_arr: Array<Short?> = arrayOfNulls(op_arr.size),
+            geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
+            tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
             minResult: Boolean
     ): ITable {
         val START = currentMillis()
@@ -45,8 +46,7 @@ class NakshaFeaturesWriter(
         val END_LOADING = currentMillis()
 
         val START_PREPARE = currentMillis()
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, collectionConfig[NKC_DISABLE_HISTORY])
-
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, collectionConfig[NKC_DISABLE_HISTORY], collectionConfig.isNkcAutoPurge())
         for (op in operations.operations) {
             val existingFeature: IMap? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
@@ -62,6 +62,11 @@ class NakshaFeaturesWriter(
 
         val START_EXECUTION = currentMillis()
         plan.executeAll()
+        if (modifyCounters) {
+            // no exception was thrown - execution succeeded, we can increase transaction counter
+            session.transaction.addModifiedCount(op_arr.size)
+            session.transaction.addCollectionCounts(collectionId, op_arr.size)
+        }
         val END_EXECUTION = currentMillis()
 
         val END = currentMillis()
@@ -74,7 +79,7 @@ class NakshaFeaturesWriter(
     fun writeCollections(
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?>,
-            geo_type_arr: Array<Short>,
+            geo_type_arr: Array<Short?>,
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>,
             minResult: Boolean
@@ -85,7 +90,7 @@ class NakshaFeaturesWriter(
 
         val existingFeatures = operations.getExistingHeadFeatures(session, minResult)
         val existingInDelFeatures = operations.getExistingDelFeatures(session, minResult)
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, collectionConfig[NKC_DISABLE_HISTORY])
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, collectionConfig[NKC_DISABLE_HISTORY], collectionConfig.isNkcAutoPurge())
         val newCollection = NakshaCollection(session.globalDictManager)
 
         for (op in operations.operations) {
@@ -127,14 +132,14 @@ class NakshaFeaturesWriter(
         return plan.result
     }
 
-    private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?): NakshaBulkLoaderPlan {
+    private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?, autoPurge: Boolean): NakshaBulkLoaderPlan {
         val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
         return if (isCollectionPartitioned == true && partition != null) {
             if (DEBUG) println("Insert into a single partition #$partition (isCollectionPartitioned: ${isCollectionPartitioned})")
-            NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(true, partition), session, isHistoryDisabled, minResult)
+            NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(true, partition), session, isHistoryDisabled, autoPurge, minResult)
         } else {
             if (DEBUG) println("Insert into a multiple partitions, therefore via HEAD (isCollectionPartitioned: ${isCollectionPartitioned})")
-            NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(false, -1), session, isHistoryDisabled, minResult)
+            NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(false, -1), session, isHistoryDisabled, autoPurge, minResult)
         }
     }
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =

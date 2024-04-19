@@ -108,8 +108,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     this.nakshaSession = new NakshaSession(
         sql,
         storage.getSchema(),
+        storage.storageId,
         storage.getAppName(),
-        context.getAppId(),
         context.getStreamId(),
         context.getAppId(),
         context.getAuthor());

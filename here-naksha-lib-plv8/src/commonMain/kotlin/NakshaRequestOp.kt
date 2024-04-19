@@ -18,7 +18,7 @@ internal class NakshaRequestOp(
                 collectionId: String,
                 op_arr: Array<ByteArray>,
                 feature_arr: Array<ByteArray?>,
-                geo_type_arr: Array<Short>,
+                geo_type_arr: Array<Short?>,
                 geo_arr: Array<ByteArray?>,
                 tags_arr: Array<ByteArray?>
         ): NakshaWriteOps {

@@ -44,6 +44,7 @@ internal class NakshaBulkLoaderPlan(
         val partitionHeadQuoted: String,
         val session: NakshaSession,
         val isHistoryDisabled: Boolean?,
+        val autoPurge: Boolean,
         val minResult: Boolean) {
 
     private val headCollectionId = session.getBaseCollectionId(collectionId)
@@ -57,22 +58,22 @@ internal class NakshaBulkLoaderPlan(
 
     internal val insertToHeadBulkParams = mutableListOf<Array<Param>>()
     internal val copyHeadToDelBulkParams = mutableListOf<Array<Param>>()
-    internal val copyDelToHstBulkParams = mutableListOf<Array<Param>>()
+    internal val insertDelToHstBulkParams = mutableListOf<Array<Param>>()
     internal val updateHeadBulkParams = mutableListOf<Array<Param>>()
     internal val deleteHeadBulkParams = mutableListOf<Array<Param>>()
     internal val copyHeadToHstBulkParams = mutableListOf<Array<Param>>()
 
     private fun insertHeadPlan(): IPlv8Plan {
         return session.sql.prepare("""INSERT INTO $partitionHeadQuoted (
-                $COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_GEO_TYPE,
+                $COL_CREATED_AT,$COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_GEO_TYPE,
                 $COL_APP_ID,$COL_AUTHOR,$COL_TYPE,$COL_ID,
                 $COL_FEATURE,$COL_TAGS,$COL_GEOMETRY,$COL_GEO_REF)
                 VALUES($1,$2,$3,$4,$5,
                 $6,$7,$8,$9,
-                $10,$11,$12,$13)""".trimIndent(),
-                    arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT32, SQL_INT16,
-                            SQL_STRING, SQL_STRING, SQL_STRING, SQL_STRING,
-                            SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
+                $10,$11,$12,$13,$14)""".trimIndent(),
+                arrayOf(SQL_INT64, SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT32, SQL_INT16,
+                        SQL_STRING, SQL_STRING, SQL_STRING, SQL_STRING,
+                        SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
     }
 
     private fun updateHeadPlan(): IPlv8Plan {
@@ -80,7 +81,7 @@ internal class NakshaBulkLoaderPlan(
                 UPDATE $partitionHeadQuoted 
                 SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_GEO_TYPE=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE $COL_ID=$21
                 """.trimIndent(),
-                    arrayOf(*COL_ALL_TYPES, SQL_STRING))
+                arrayOf(*COL_ALL_TYPES, SQL_STRING))
     }
 
     private fun deleteHeadPlan(): IPlv8Plan {
@@ -88,13 +89,21 @@ internal class NakshaBulkLoaderPlan(
                 DELETE FROM $partitionHeadQuoted
                 WHERE $COL_ID = $1
                 """.trimIndent(),
-                    arrayOf(SQL_STRING))
+                arrayOf(SQL_STRING))
     }
 
     private fun insertDelPlan(): IPlv8Plan {
-            // ptxn + puid = txn + uid (as we generate new state in _del)
+        // ptxn + puid = txn + uid (as we generate new state in _del)
         return session.sql.prepare("""
                 INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
+                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+                    FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
+                arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
+    }
+
+    private fun insertDelToHstPlan(): IPlv8Plan {
+        return session.sql.prepare("""
+                INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
                 SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                     FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
                 arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
@@ -108,14 +117,10 @@ internal class NakshaBulkLoaderPlan(
             """.trimIndent(), arrayOf(SQL_INT64, SQL_STRING))
     }
 
-    private fun copyDelToHstPlan(): IPlv8Plan {
-        return session.sql.prepare("INSERT INTO $hstCollectionIdQuoted ($COL_ALL) SELECT $COL_ALL FROM $delCollectionIdQuoted WHERE $COL_ID = $1", arrayOf(SQL_STRING))
-    }
-
     fun addCreate(op: NakshaRequestOp) {
-        featureIdsToDeleteFromDel.add(op.id)
+        addToRemoveFromDel(op.id)
         session.xyzInsert(op.collectionId, op.rowMap)
-        addInsertStmt(insertHeadPlan(), op.rowMap)
+        addInsertParams(op.rowMap)
         if (!minResult) {
             result.returnCreated(op.id, session.xyzNsFromRow(collectionId, op.rowMap))
         }
@@ -126,13 +131,18 @@ internal class NakshaBulkLoaderPlan(
         val headBeforeUpdate: IMap = existingFeature!!
         checkStateForAtomicOp(op.xyzOp.uuid(), headBeforeUpdate)
 
-        featureIdsToDeleteFromDel.add(op.id)
-        addCopyHeadToHstStmt(copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
+        addToRemoveFromDel(op.id)
+        addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
         session.xyzUpdateHead(op.collectionId, featureRowMap, headBeforeUpdate)
-        addUpdateHeadStmt(updateHeadPlan(), featureRowMap)
+        addUpdateHeadParams(featureRowMap)
         if (!minResult) {
             result.returnUpdated(op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
         }
+    }
+
+    private fun addToRemoveFromDel(id: String) {
+        if (!autoPurge) // it's not in $del, so we can skip query
+            featureIdsToDeleteFromDel.add(id)
     }
 
     fun addDelete(op: NakshaRequestOp, existingFeature: IMap?) {
@@ -149,10 +159,10 @@ internal class NakshaBulkLoaderPlan(
 
     fun addPurge(op: NakshaRequestOp, existingFeature: IMap?, existingInDelFeature: IMap?) {
         addDeleteInternal(op, existingFeature)
-        // FIXME make it better for auto-purge, there is no point of putting row to $del just to remove it in next query
         val deletedFeatureRow: IMap? = existingInDelFeature ?: existingFeature
         checkStateForAtomicOp(op.xyzOp.uuid(), deletedFeatureRow)
-        featuresToPurgeFromDel.add(op.id)
+        if (!autoPurge) // it's not in $del, so we don't have to purge
+            featuresToPurgeFromDel.add(op.id)
         if (!minResult) {
             if (deletedFeatureRow == null) {
                 result.returnRetained(op.id)
@@ -170,9 +180,9 @@ internal class NakshaBulkLoaderPlan(
         // 4. insert to history and update head
         executeBatch(::copyHeadToHstPlan, copyHeadToHstBulkParams)
         executeBatch(::updateHeadPlan, updateHeadBulkParams)
+        // 5. copy head (del state) to hst
+        executeBatch(::insertDelToHstPlan, insertDelToHstBulkParams)
         executeBatch(::deleteHeadPlan, deleteHeadBulkParams)
-        // 5. copy del to hst
-        executeBatch(::copyDelToHstPlan, copyDelToHstBulkParams)
         // 6.
         executeBatch(::insertHeadPlan, insertToHeadBulkParams)
         // 7. purge
@@ -185,40 +195,43 @@ internal class NakshaBulkLoaderPlan(
             // this may throw exception (if we try to delete non-existing feature - that was deleted before)
             val headBeforeDelete: IMap = existingFeature
             checkStateForAtomicOp(op.xyzOp.uuid(), headBeforeDelete)
-            addCopyHeadToHstStmt(copyHeadToHstPlan(), featureRowMap, isHistoryDisabled)
+            addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
 
             featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
             featureRowMap[COL_AUTHOR_TS] = headBeforeDelete[COL_AUTHOR_TS]
             featureRowMap[COL_UPDATE_AT] = headBeforeDelete[COL_UPDATE_AT]
             featureRowMap[COL_CREATED_AT] = headBeforeDelete[COL_CREATED_AT]
             session.xyzDel(featureRowMap)
-            addDelStmt(insertDelPlan(), featureRowMap)
-            addDeleteHeadStmt(deleteHeadPlan(), featureRowMap)
-            if (isHistoryDisabled == false) addCopyDelToHstStmt(copyDelToHstPlan(), featureRowMap)
+            if (!autoPurge) // do not push to del
+                addDelParams(copyHeadToDelBulkParams, featureRowMap)
+            addDeleteHeadParams(featureRowMap)
+            if (isHistoryDisabled == false) // even if it's autoPurge we still need a deleted copy in $hst if it's enabled.
+                addDelParams(insertDelToHstBulkParams, featureRowMap)
         }
     }
 
-    private fun addInsertStmt(stmt: IPlv8Plan, row: IMap) {
+    private fun addInsertParams(row: IMap) {
         // created_at = NULL
         insertToHeadBulkParams.add(arrayOf(
-                Param(1, SQL_INT64, row[COL_UPDATE_AT]),
-                Param(2, SQL_INT64, row[COL_TXN]),
-                Param(3, SQL_INT32, row[COL_UID]),
-                Param(4, SQL_INT32, row[COL_GEO_GRID]),
-                Param(5, SQL_INT16, row[COL_GEO_TYPE]),
-                Param(6, SQL_STRING, row[COL_APP_ID]),
-                Param(7, SQL_STRING, row[COL_AUTHOR]),
-                Param(8, SQL_STRING, row[COL_TYPE]),
-                Param(9, SQL_STRING, row[COL_ID]),
-                Param(10, SQL_BYTE_ARRAY, row[COL_FEATURE]),
-                Param(11, SQL_BYTE_ARRAY, row[COL_TAGS]),
-                Param(12, SQL_BYTE_ARRAY, row[COL_GEOMETRY]),
-                Param(13, SQL_BYTE_ARRAY, row[COL_GEO_REF]),
+                Param(1, SQL_INT64, row[COL_CREATED_AT]),
+                Param(2, SQL_INT64, row[COL_UPDATE_AT]),
+                Param(3, SQL_INT64, row[COL_TXN]),
+                Param(4, SQL_INT32, row[COL_UID]),
+                Param(5, SQL_INT32, row[COL_GEO_GRID]),
+                Param(6, SQL_INT16, row[COL_GEO_TYPE]),
+                Param(7, SQL_STRING, row[COL_APP_ID]),
+                Param(8, SQL_STRING, row[COL_AUTHOR]),
+                Param(9, SQL_STRING, row[COL_TYPE]),
+                Param(10, SQL_STRING, row[COL_ID]),
+                Param(11, SQL_BYTE_ARRAY, row[COL_FEATURE]),
+                Param(12, SQL_BYTE_ARRAY, row[COL_TAGS]),
+                Param(13, SQL_BYTE_ARRAY, row[COL_GEOMETRY]),
+                Param(14, SQL_BYTE_ARRAY, row[COL_GEO_REF]),
         ))
     }
 
-    private fun addDelStmt(plan: IPlv8Plan, row: IMap) {
-        copyHeadToDelBulkParams.add(arrayOf(
+    private fun addDelParams(params: MutableList<Array<Param>>, row :IMap) {
+        params.add(arrayOf(
                 Param(1, SQL_INT64, row[COL_TXN_NEXT]),
                 Param(2, SQL_INT64, row[COL_TXN]),
                 Param(3, SQL_INT32, row[COL_UID]),
@@ -233,13 +246,7 @@ internal class NakshaBulkLoaderPlan(
         ))
     }
 
-    private fun addCopyDelToHstStmt(stmt: IPlv8Plan, row: IMap) {
-        copyDelToHstBulkParams.add(arrayOf(
-                Param(1, SQL_STRING, row[COL_ID])
-        ))
-    }
-
-    private fun addUpdateHeadStmt(stmt: IPlv8Plan, row: IMap) {
+    private fun addUpdateHeadParams(row: IMap) {
         updateHeadBulkParams.add(arrayOf(
                 Param(1, SQL_INT64, row[COL_TXN_NEXT]),
                 Param(2, SQL_INT64, row[COL_TXN]),
@@ -265,13 +272,13 @@ internal class NakshaBulkLoaderPlan(
         ))
     }
 
-    private fun addDeleteHeadStmt(stmt: IPlv8Plan, row: IMap) {
+    private fun addDeleteHeadParams(row: IMap) {
         deleteHeadBulkParams.add(arrayOf(
                 Param(1, SQL_STRING, row[COL_ID])
         ))
     }
 
-    private fun addCopyHeadToHstStmt(stmt: IPlv8Plan, row: IMap, isHstDisabled: Boolean?) {
+    private fun addCopyHeadToHstParams(row: IMap, isHstDisabled: Boolean?) {
         if (isHstDisabled == false) {
             copyHeadToHstBulkParams.add(arrayOf(
                     Param(1, SQL_INT64, session.txn().value),

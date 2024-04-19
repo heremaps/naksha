@@ -1,11 +1,46 @@
-import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.plv8.*
+import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.JvmMap
+import com.here.naksha.lib.jbon.SQL_STRING
+import com.here.naksha.lib.jbon.XYZ_EXEC_CREATED
+import com.here.naksha.lib.jbon.XYZ_OP_CREATE
+import com.here.naksha.lib.jbon.XyzBuilder
+import com.here.naksha.lib.jbon.XyzVersion
+import com.here.naksha.lib.jbon.asMap
+import com.here.naksha.lib.jbon.get
+import com.here.naksha.lib.jbon.newMap
+import com.here.naksha.lib.jbon.put
+import com.here.naksha.lib.jbon.set
+import com.here.naksha.lib.jbon.shl
+import com.here.naksha.lib.jbon.toInt
+import com.here.naksha.lib.plv8.COL_FEATURE
+import com.here.naksha.lib.plv8.COL_GEOMETRY
+import com.here.naksha.lib.plv8.COL_GEO_TYPE
+import com.here.naksha.lib.plv8.COL_ID
+import com.here.naksha.lib.plv8.COL_TAGS
+import com.here.naksha.lib.plv8.COL_TXN
+import com.here.naksha.lib.plv8.COL_TXN_NEXT
+import com.here.naksha.lib.plv8.COL_UID
+import com.here.naksha.lib.plv8.GEO_TYPE_EWKB
+import com.here.naksha.lib.plv8.GEO_TYPE_NULL
+import com.here.naksha.lib.plv8.JvmPlv8Table
+import com.here.naksha.lib.plv8.NKC_DISABLE_HISTORY
+import com.here.naksha.lib.plv8.NKC_TABLE_ESC
+import com.here.naksha.lib.plv8.NakshaCollection
+import com.here.naksha.lib.plv8.NakshaSession
+import com.here.naksha.lib.plv8.PgTrigger
+import com.here.naksha.lib.plv8.Static
 import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
+import com.here.naksha.lib.plv8.TG_LEVEL_ROW
 import com.here.naksha.lib.plv8.TG_OP_INSERT
+import com.here.naksha.lib.plv8.TG_OP_UPDATE
 import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
-import io.kotlintest.inspectors.buildAssertionError
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Order
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
@@ -114,20 +149,24 @@ class Plv8Test : JbTest() {
             val pnum = Static.partitionNumber(s)
             assertTrue(pnum in 0..<PARTITION_COUNT)
             val pid = Static.partitionNameForId(s)
+
             @Suppress("KotlinConstantConditions")
-            val expectedId : String = when (PARTITION_COUNT) {
+            val expectedId: String = when (PARTITION_COUNT) {
                 in 0..9 -> {
                     assertEquals(1, pid.length)
                     "$pnum"
                 }
+
                 in 10..99 -> {
                     assertEquals(2, pid.length)
                     if (pnum < 10) "0$pnum" else "$pnum"
                 }
+
                 in 100..255 -> {
                     assertEquals(3, pid.length)
                     if (pnum < 10) "00$pnum" else if (pnum < 100) "0$pnum" else "$pnum"
                 }
+
                 else -> throw AssertionError("Partition count should be between 0 and 255")
             }
             assertEquals(expectedId, pid)

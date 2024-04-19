@@ -119,7 +119,7 @@ class XyzBuilder(view: IDataView?=null, global: JbDict? = null) : JbBuilder(view
      * @param grid The geo reference id.
      * @return The JBON encoded XYZ operation.
      */
-    fun buildXyzOp(op: Int, id: String?, uuid: String?, grid: Int?): ByteArray {
+    fun buildXyzOp(op: Int, id: String? = null, uuid: String? = null, grid: Int? = null): ByteArray {
         end = 10
         writeInt(op)
         if (id == null) writeNull() else writeString(id)
