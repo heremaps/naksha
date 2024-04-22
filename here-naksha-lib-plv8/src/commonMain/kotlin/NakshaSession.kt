@@ -340,6 +340,8 @@ SET SESSION enable_seqscan = OFF;
      * @param data The trigger data, allows the modification of [NkCollectionTrigger.NEW].
      */
     fun triggerBefore(data: PgTrigger) {
+        // FIXME
+        throw RuntimeException("do not use triggers")
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
         if (data.TG_OP == TG_OP_INSERT) {
             check(data.NEW != null) { "Missing NEW for INSERT" }
@@ -358,6 +360,8 @@ SET SESSION enable_seqscan = OFF;
      * @param data The trigger data, allows the modification of [NkCollectionTrigger.NEW].
      */
     fun triggerAfter(data: PgTrigger) {
+        // FIXME
+        throw RuntimeException("do not use triggers")
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
         if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
             deleteFromDel(collectionId, data.OLD.getAny(COL_ID) as String)
