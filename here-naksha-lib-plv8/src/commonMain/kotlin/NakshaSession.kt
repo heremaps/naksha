@@ -341,7 +341,7 @@ SET SESSION enable_seqscan = OFF;
      */
     fun triggerBefore(data: PgTrigger) {
         // FIXME
-        throw RuntimeException("do not use triggers")
+        throw RuntimeException("Forbidden, please use API")
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
         if (data.TG_OP == TG_OP_INSERT) {
             check(data.NEW != null) { "Missing NEW for INSERT" }
@@ -361,7 +361,7 @@ SET SESSION enable_seqscan = OFF;
      */
     fun triggerAfter(data: PgTrigger) {
         // FIXME
-        throw RuntimeException("do not use triggers")
+        throw RuntimeException("Forbidden, please use API")
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
         if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
             deleteFromDel(collectionId, data.OLD.getAny(COL_ID) as String)
