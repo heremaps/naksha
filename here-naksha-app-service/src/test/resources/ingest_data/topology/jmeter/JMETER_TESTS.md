@@ -252,3 +252,34 @@ more detailed view on opened connections:
 ```shell
 SELECT * FROM pg_stat_activity;
 ```
+
+Script for generating helper files
+```shell
+
+```
+
+Analyzing `output` file:
+```shell
+grep "summary =" output | sed 's/ Avg:/\nAvg:/g; s/ Min:/\nMin:/g; s/ Max:/\nMax:/g; s/ Err:/\nErr:/g' | tr -s ' '
+```
+
+Get `ERROR` lines from app log:
+```shell
+grep "\[ERROR\]" naksha-app.logs 
+```
+
+Unique errors from app log:
+```shell
+grep "\[ERROR\]" naksha-app.logs | awk -F' - ' '{print $3}' | uniq
+```
+
+How many socket timeout related errors:
+```shell
+grep "Caused by: java.net.SocketTimeoutException" naksha-app.logs | wc -l
+```
+
+Running postgres interactively (useful when config changes a lot):
+```shell
+
+```
+
