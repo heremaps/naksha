@@ -113,8 +113,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
    * Initializes this task.
    */
   @Override
-  protected void init() {
-  }
+  protected void init() {}
 
   /**
    * Execute this task.
@@ -317,9 +316,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Prepare read request based on parameters supplied
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
-    final ReadFeatures rdRequest = new ReadFeatures()
-        .addCollection(spaceId)
-        .withLimit(limit);
+    final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withLimit(limit);
     if (tagsOp == null && propSearchOp == null) {
       return verticle.sendErrorResponse(
           routingContext, XyzError.ILLEGAL_ARGUMENT, "Atleast Tags or Prop search parameters required.");
@@ -348,24 +345,24 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Note : subsequent steps need to support queryParams being null
 
     // extract limit parameter
-    long offset = 0; // TODO: cleanup, this is not needed
-    long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    long offset = 0;
+    long clientLimit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // extract handle parameter
     IterateHandle handle = ApiParams.extractQueryParamAsIterateHandle(queryParams, HANDLE);
     // create new "handle" if not already provided, or overwrite parameters based on "handle"
     if (handle == null) {
-      handle = new IterateHandle().withLimit(limit);
+      handle = new IterateHandle().withLimit(clientLimit);
     }
     offset = handle.getOffset();
-    limit = handle.getLimit();
-    limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
-    final Map<String, Object> queryParamsMap = Map.of(LIMIT, limit);
+    clientLimit = handle.getLimit();
+    clientLimit = (clientLimit < 0 || clientLimit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : clientLimit;
+    final Map<String, Object> queryParamsMap = Map.of(LIMIT, clientLimit);
 
     // Prepare read request based on parameters supplied
     final ReadFeatures rdRequest = new ReadFeaturesProxyWrapper()
         .withReadRequestType(ReadRequestType.ITERATE)
         .withQueryParameters(queryParamsMap)
-        .withLimit(limit)
+        .withLimit(clientLimit + offset)
         .addCollection(spaceId);
 
     // Forward request to NH Space Storage reader instance
@@ -375,7 +372,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // transform Result to Http FeatureCollection response,
     // restricted by given feature limit and by adding "handle" attribute to support subsequent iteration
     return transformReadResultToXyzCollectionResponse(
-        result, XyzFeature.class, offset, limit, handle, preResponseProcessing);
+        result, XyzFeature.class, offset, clientLimit, handle, preResponseProcessing);
   }
 
   private @NotNull XyzResponse executeFeaturesByRadius() {
@@ -476,7 +473,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final long radius = ApiParams.extractQueryParamAsLong(queryParams, RADIUS, false, 0);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
-    final boolean clip = ApiParams.extractQueryParamAsBoolean(queryParams, CLIP_GEO, false);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
     ApiParams.validateParamRange(RADIUS, radius, 0, Long.MAX_VALUE);

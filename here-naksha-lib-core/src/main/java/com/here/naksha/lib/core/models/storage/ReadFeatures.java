@@ -179,7 +179,7 @@ public class ReadFeatures extends ReadRequest<ReadFeatures> {
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull ReadFeatures withLimit(@NotNull Long limit){
+  public @NotNull ReadFeatures withLimit(@NotNull Long limit) {
     this.limit = limit;
     return this;
   }
