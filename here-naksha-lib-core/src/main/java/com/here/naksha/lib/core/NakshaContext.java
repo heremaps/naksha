@@ -24,6 +24,8 @@ import com.here.naksha.lib.core.exceptions.Unauthorized;
 import com.here.naksha.lib.core.util.NanoTime;
 import com.here.naksha.lib.core.util.StreamInfo;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.here.naksha.lib.core.util.json.JsonObject;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -365,4 +367,23 @@ public final class NakshaContext {
 
   @AvailableSince(NakshaVersion.v2_0_7)
   private @Nullable String author;
+
+  @AvailableSince(NakshaVersion.v2_0_15)
+  private @Nullable JsonObject urm;
+
+  @AvailableSince(NakshaVersion.v2_0_15)
+  public @Nullable JsonObject getUrm() {
+    return urm;
+  }
+
+  @AvailableSince(NakshaVersion.v2_0_15)
+  public void setUrm(@Nullable JsonObject urm) {
+    this.urm = urm;
+  }
+
+  @AvailableSince(NakshaVersion.v2_0_15)
+  public @NotNull NakshaContext withUrm(@Nullable JsonObject urm) {
+    this.urm = urm;
+    return this;
+  }
 }

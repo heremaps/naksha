@@ -20,6 +20,7 @@ package com.here.naksha.app.service.http;
 
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_ID;
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_INFO;
+import static com.here.naksha.app.service.http.auth.actions.JwtUtil.*;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.cause;
 import static com.here.naksha.lib.core.models.XyzError.ILLEGAL_ARGUMENT;
 import static com.here.naksha.lib.core.util.MIMEType.APPLICATION_JSON;
@@ -67,12 +68,15 @@ import com.here.naksha.lib.core.storage.ModifyFeaturesResp;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.MIMEType;
 import com.here.naksha.lib.core.util.StreamInfo;
+import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.*;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.impl.jose.JWT;
 import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -172,7 +176,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         //                .setPreallocateBodyBuffer(true));
 
         // TODO: Port the JWT authentication handler.
-        final AuthenticationHandler jwtHandler = new NakshaJwtAuthHandler(app().authProvider, null);
+        final AuthenticationHandler jwtHandler = new NakshaJwtAuthHandler(app().authProvider, hubConfig,null);
         rb.securityHandler("Bearer", jwtHandler);
 
         final List<@NotNull Api> apiControllers = List.of(
@@ -699,16 +703,21 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
 
   public @NotNull NakshaContext createNakshaContext(final @NotNull RoutingContext routingContext) {
     final NakshaContext ctx = new NakshaContext(AccessLogUtil.getStreamId(routingContext));
-    ctx.setAppId(hubConfig.appId);
     // add streamInfo object to NakshaContext, which will be populated later during pipeline execution
     ctx.attachStreamInfo(AccessLogUtil.getStreamInfo(routingContext));
-    // extract the jwt
+    // extract the JWT from authorization header
     String jwt = routingContext.request().headers().get(AUTHORIZATION);
     if (jwt == null) {
       log.error("Missing mandatory JWT for authorization in request "+routingContext.request());
+      return ctx;
     }
-    // TODO : Author to be set based on JWT token.
-//    ctx.setAuthor(routingContext.);
+    // remove the bearer prefix
+    jwt = jwt.substring(7);
+    JsonObject decodedJwt = new JWT().decode(jwt);
+    // attach authorization info into context
+    ctx.setAppId(decodedJwt.getString(APP_ID));
+    ctx.setAuthor(decodedJwt.getString(USER_ID));
+    ctx.setUrm(getUrmFromJwt(decodedJwt).mapTo(com.here.naksha.lib.core.util.json.JsonObject.class));
     return ctx;
   }
 }

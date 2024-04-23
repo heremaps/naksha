@@ -167,7 +167,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
     this.endpoint = __endpoint;
     this.env = env;
     this.webRoot = webRoot;
-    this.authMode = (authMode == null)? AuthorizationMode.STRICT_JWT : authMode;
+    this.authMode = (authMode == null)? AuthorizationMode.JWT : authMode;
     this.jwtName = jwtName != null && !jwtName.isEmpty() ? jwtName : "jwt";
     this.userAgent = userAgent != null && !userAgent.isEmpty() ? userAgent : defaultAppName();
     this.debug = Boolean.TRUE.equals(debug);
@@ -366,13 +366,13 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
   public static final String NAKSHA_AUTH = "authMode";
 
   /**
-   * The application-id to be used when modifying the admin-database.
+   * The authorization mode.
    */
   @JsonProperty(NAKSHA_AUTH)
   public final @NotNull AuthorizationMode authMode;
 
   public enum AuthorizationMode {
     DUMMY,
-    STRICT_JWT
+    JWT
   }
 }
