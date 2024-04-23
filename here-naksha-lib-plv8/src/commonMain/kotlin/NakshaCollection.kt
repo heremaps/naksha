@@ -17,7 +17,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     private var _partition = false
     private var _geoIndex: String? = null
     private var _disableHistory = false
-    private var _autPurge = false
+    private var _autoPurge = false
     private var _maxAge: BigInt64? = null
     private var _estimatedFeatureCount: BigInt64? = null
     private var _estimatedDeletedCount: BigInt64? = null
@@ -28,7 +28,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
         _partition = false
         _geoIndex = null
         _disableHistory = false
-        _autPurge = false
+        _autoPurge = false
         _maxAge = null
         _estimatedFeatureCount = null
         _estimatedDeletedCount = null
@@ -46,7 +46,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
                 NKC_PARTITION -> if (value.isBool()) _partition = value.readBoolean() ?: false
                 NKC_GEO_INDEX -> if (value.isString()) _geoIndex = value.readString()
                 NKC_DISABLE_HISTORY -> if (value.isBool()) _disableHistory = value.readBoolean() ?: false
-                NKC_AUTO_PURGE -> if (value.isBool()) _autPurge = value.readBoolean() ?: false
+                NKC_AUTO_PURGE -> if (value.isBool()) _autoPurge = value.readBoolean() ?: false
                 NKC_MAX_AGE -> if (value.isInt()) _maxAge = value.readInt64()
                 NKC_ESTIMATED_FEATURE_COUNT -> if (value.isInt()) _estimatedFeatureCount = value.readInt64()
                 NKC_STORAGE_CLASS -> if (value.isString()) _storageClass = value.readString()
@@ -57,7 +57,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     fun partition(): Boolean = _partition
     fun geoIndex(): String = _geoIndex ?: Static.GEO_INDEX_DEFAULT
     fun disableHistory(): Boolean = _disableHistory
-    fun autoPurge(): Boolean = _autPurge
+    fun autoPurge(): Boolean = _autoPurge
     fun maxAge(): BigInt64 = _maxAge ?: Jb.int64.MAX_VALUE()
     fun estimatedFeatureCount(): BigInt64 = _estimatedFeatureCount ?: Jb.int64.MINUS_ONE()
     fun storageClass(): String = _storageClass ?: Static.SC_DEFAULT
