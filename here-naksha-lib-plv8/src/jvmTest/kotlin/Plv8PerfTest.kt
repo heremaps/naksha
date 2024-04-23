@@ -423,7 +423,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         val f = createBulkFeature()
         val opArr: Array<ByteArray> = arrayOf(f.op)
         val fArr: Array<ByteArray?> = arrayOf(f.feature)
-        val geoTypeArr: Array<Short> = arrayOf(f.geoType)
+        val geoTypeArr: Array<Short?> = arrayOf(f.geoType)
         val geoArr: Array<ByteArray?> = arrayOf(f.geometry)
         val tagsArr: Array<ByteArray?> = arrayOf(f.tags)
 

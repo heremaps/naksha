@@ -2,7 +2,18 @@
 
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.jbon.BigInt64
+import com.here.naksha.lib.jbon.Fnv1a32
+import com.here.naksha.lib.jbon.Fnv1a64
+import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.NakshaTxn
+import com.here.naksha.lib.jbon.asArray
+import com.here.naksha.lib.jbon.asMap
+import com.here.naksha.lib.jbon.div
+import com.here.naksha.lib.jbon.getAny
+import com.here.naksha.lib.jbon.newMap
+import com.here.naksha.lib.jbon.put
+import com.here.naksha.lib.jbon.toLong
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -310,18 +321,9 @@ object Static {
      * @param schemaOid The OID of the schema.
      */
     @JvmStatic
-    fun createInternalsIfNotExists(sql: IPlv8Sql, schema: String, schemaOid: Int) {
-        if (!tableExists(sql, SC_TRANSACTIONS, schemaOid)) {
-            collectionCreate(sql, SC_TRANSACTIONS, schema, schemaOid, SC_TRANSACTIONS, GEO_INDEX_DEFAULT, true);
-        }
-        if (!tableExists(sql, SC_DICTIONARIES, schemaOid)) {
-            collectionCreate(sql, SC_DICTIONARIES, schema, schemaOid, SC_DICTIONARIES, GEO_INDEX_DEFAULT, false);
-        }
+    fun createBaseInternalsIfNotExists(sql: IPlv8Sql, schema: String, schemaOid: Int) {
         if (!tableExists(sql, SC_COLLECTIONS, schemaOid)) {
-            collectionCreate(sql, SC_COLLECTIONS, schema, schemaOid, SC_COLLECTIONS, GEO_INDEX_DEFAULT, false);
-        }
-        if (!tableExists(sql, SC_INDICES, schemaOid)) {
-            collectionCreate(sql, SC_INDICES, schema, schemaOid, SC_INDICES, GEO_INDEX_DEFAULT, false);
+            collectionCreate(sql, SC_COLLECTIONS, schema, schemaOid, SC_COLLECTIONS, GEO_INDEX_DEFAULT, partition = false)
         }
         sql.execute("CREATE SEQUENCE IF NOT EXISTS naksha_txn_seq AS int8; COMMIT;")
     }

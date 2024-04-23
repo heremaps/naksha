@@ -63,7 +63,7 @@ class Plv8TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableRes
         val env = JvmPlv8Env.get()
         val conn = DriverManager.getConnection(url)
         // TODO: Parse the url to extract the schema!
-        env.install(conn, 0, schema, "test_storage")
+        env.install(conn, 0, schema, "test_storage", "plv8_test")
         env.startSession(
                 conn,
                 schema,

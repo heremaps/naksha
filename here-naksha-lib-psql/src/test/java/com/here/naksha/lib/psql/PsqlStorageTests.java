@@ -55,6 +55,9 @@ import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.jbon.BigInt64Kt;
+import com.here.naksha.lib.jbon.JbDictManager;
+import com.here.naksha.lib.jbon.JbFeature;
+import com.here.naksha.lib.jbon.JbMap;
 import com.here.naksha.lib.jbon.NakshaTxn;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -75,6 +78,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -164,6 +168,31 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   @Test
   @Order(51)
   @EnabledIf("runTest")
+  void verifyTransactionCounts() throws NoCursor {
+    ReadFeatures readFeatures = new ReadFeatures("naksha~transactions");
+    try (final ForwardCursor<String, StringCodec> cursor =
+             session.execute(readFeatures).cursor(new StringCodecFactory())) {
+      // there should be just one transaction log at the moment (single feature has been created)
+      assertTrue(cursor.next());
+      final String[] idFields = cursor.getId().split(":");
+      assertEquals(storage.getStorageId(), idFields[0]);
+      assertEquals("txn", idFields[1]);
+      assertEquals(4, idFields[2].length()); // year (4- digits)
+      assertTrue(idFields[3].length() <= 2); // month (1 or 2 digits)
+      assertTrue(idFields[4].length() <= 2); // day (1 or 2 digits)
+      assertEquals("3", idFields[5]); // seq txn (first for internal collections, second for feature create collection, third for create feature)
+      assertEquals("0", idFields[6]); // uid seq
+
+      JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(cursor.getFeatureJbon(), 0, cursor.getFeatureJbon().length);
+      Map<String, Object> featureAsMap = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
+      assertEquals(1, featureAsMap.get("modifiedFeatureCount"));
+      assertEquals(1, ((Map<String, Integer>) featureAsMap.get("collectionCounters")).get(collectionId()));
+    }
+  }
+
+  @Test
+  @Order(51)
+  @EnabledIf("runTest")
   void singleFeatureRead() throws NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
@@ -198,7 +227,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(4, uuidFields[2].length()); // year (4- digits)
       assertTrue(uuidFields[3].length() <= 2); // month (1 or 2 digits)
       assertTrue(uuidFields[4].length() <= 2); // day (1 or 2 digits)
-      assertEquals("2", uuidFields[5]); // seq txn (first for create collection, second for create feature
+      assertEquals("3", uuidFields[5]); // seq txn (first for internal collections, second for feature create collection, third for create feature)
       assertEquals("0", uuidFields[6]); // uid seq
       assertEquals(TEST_APP_ID, xyz.getAppId());
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
@@ -415,11 +444,12 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertTrue(uuidFields[GUID_MONTH].length() <= 2); // month (1 or 2 digits)
       assertTrue(uuidFields[GUID_DAY].length() <= 2); // day (1 or 2 digits)
       // Note: the txn seq should be 4 as:
-      // 1 - used for create collection
-      // 2 - used for insert feature
-      // 3 - used for upsert
-      // 4 - used for update
-      assertEquals("4", uuidFields[GUID_SEQ]);
+      // 1 - used for create internal collections
+      // 2 - used for create collection
+      // 3 - used for insert feature
+      // 4 - used for upsert
+      // 5 - used for update
+      assertEquals("5", uuidFields[GUID_SEQ]);
       // Note: for each new txn_seq we reset uid to 0
       assertEquals("0", uuidFields[GUID_ID]);
       // Note: We know that if the schema was dropped, the transaction number is reset to 0.
@@ -670,6 +700,17 @@ public class PsqlStorageTests extends PsqlCollectionTests {
         assertFalse(cursor.hasNext());
       } finally {
         session.commit(true);
+      }
+
+      // verify if hst contains 2 versions
+      ReadFeatures read = RequestHelper.readFeaturesByIdRequest(collectionId(), "TO_DEL_BY_ID");
+      read.withReturnAllVersions(true);
+      try (final MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+               session.execute(read).mutableCursor()) {
+        assertTrue(cursor.next());
+        assertEquals(EXyzAction.CREATE, cursor.getFeature().getProperties().getXyzNamespace().getAction());
+        assertTrue(cursor.next());
+        assertEquals(EXyzAction.DELETE, cursor.getFeature().getProperties().getXyzNamespace().getAction());
       }
     }
   }
@@ -1262,7 +1303,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
              session.execute(deleteRequest).getXyzCollectionCursor()) {
       assertTrue(cursor.next());
-      assertFalse(cursor.hasError(), ()-> cursor.getError().msg);
+      assertFalse(cursor.hasError(), () -> cursor.getError().msg);
       session.commit(true);
 
       // try readSession after purge, table doesn't exist anymore, so it should throw an exception.

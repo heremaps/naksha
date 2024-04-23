@@ -30,7 +30,7 @@ fun main() {
     JvmPlv8Env.initialize()
     val env = JvmPlv8Env.get()
     val conn = DriverManager.getConnection(url)
-    env.install(conn, 0, schema, "test_storage")
+    env.install(conn, 0, schema, "test_storage", "plv8_test")
     env.startSession(
             conn,
             schema,
