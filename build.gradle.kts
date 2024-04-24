@@ -347,6 +347,7 @@ project(":here-naksha-lib-psql") {
         withSourcesJar()
     }
     dependencies {
+        api(project(":here-naksha-lib-base"))
         api(project(":here-naksha-lib-core"))
         api(project(":here-naksha-lib-jbon"))
         api(project(":here-naksha-lib-plv8"))
