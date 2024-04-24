@@ -161,18 +161,18 @@ SET SESSION enable_seqscan = OFF;
      *
      * See [https://www.movable-type.co.uk/scripts/geohash.html](https://www.movable-type.co.uk/scripts/geohash.html)
      * @param id The feature-id.
-     * @param geoType The geometry type.
+     * @param flags The geometry type.
      * @param geo The feature geometry; if any.
      * @return The GRID (14 character long string).
      */
-    internal fun grid(id: String, geoType: Short, geo: ByteArray?): Int {
+    internal fun grid(id: String, flags: Int, geo: ByteArray?): Int {
         // FIXME TODO use point to here tile function after merge
         return 0
 //        if (geo == null) return Static.gridFromId(id)
 //        if (!this::gridPlan.isInitialized) {
 //            gridPlan = sql.prepare("SELECT ST_GeoHash(ST_Centroid(naksha_geometry($1::int2,$2::bytea)),14) as hash", arrayOf(SQL_INT16, SQL_BYTE_ARRAY))
 //        }
-//        return asMap(asArray(gridPlan.execute(arrayOf(geoType, geo)))[0])["hash"]!!
+//        return asMap(asArray(gridPlan.execute(arrayOf(flags, geo)))[0])["hash"]!!
     }
 
     /**
@@ -236,17 +236,17 @@ SET SESSION enable_seqscan = OFF;
         NEW[COL_TXN_NEXT] = null
         NEW[COL_PTXN] = null
         NEW[COL_PUID] = null
-        var geoType: Short? = NEW[COL_GEO_TYPE]
-        if (geoType == null) {
-            geoType = GEO_TYPE_NULL
-            NEW[COL_GEO_TYPE] = GEO_TYPE_NULL
+        var flags: Int? = NEW[COL_FLAGS]
+        if (flags == null) {
+            flags = GEO_TYPE_NULL
+            NEW[COL_FLAGS] = GEO_TYPE_NULL
         }
         val geoGrid: Int? = NEW[COL_GEO_GRID]
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
             val id: String? = NEW[COL_ID]
             check(id != null) { "Missing id" }
-            NEW[COL_GEO_GRID] = grid(id, geoType, NEW[COL_GEOMETRY])
+            NEW[COL_GEO_GRID] = grid(id, flags, NEW[COL_GEOMETRY])
         }
         NEW[COL_ACTION] = null // saving space null means 0 (create)
         NEW[COL_VERSION] = null // saving space null means 1
@@ -290,7 +290,7 @@ SET SESSION enable_seqscan = OFF;
             // TODO move it outside and run it once
             val collectionIdQuoted = sql.quoteIdent("${collectionId}\$hst")
             val hstInsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", COL_ALL_TYPES)
-            hstInsertPlan.execute(arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
+            hstInsertPlan.execute(arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_FLAGS], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
         }
     }
 
@@ -330,7 +330,7 @@ SET SESSION enable_seqscan = OFF;
         val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
         if (autoPurge != true) {
             val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
-            sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_GEO_TYPE], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
+            sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_FLAGS], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
         }
     }
 
@@ -490,14 +490,14 @@ FROM ns, txn_seq;"""
     fun writeCollections(
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            geo_type_arr: Array<Short?> = arrayOfNulls(op_arr.size),
+            flags_arr: Array<Int?> = arrayOfNulls(op_arr.size),
             geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
             tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size)
     ): ITable {
         val table = sql.newTable()
         val writer = NakshaFeaturesWriter(NKC_TABLE, this)
         try {
-            return writer.writeCollections(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, false)
+            return writer.writeCollections(op_arr, feature_arr, flags_arr, geo_arr, tags_arr, false)
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
             table.returnException(e)
@@ -603,7 +603,7 @@ FROM ns, txn_seq;"""
             collectionId: String,
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            geo_type_arr: Array<Short?> = arrayOfNulls(op_arr.size),
+            flags_arr: Array<Int?> = arrayOfNulls(op_arr.size),
             geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
             tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
             minResult: Boolean = true
@@ -615,7 +615,7 @@ FROM ns, txn_seq;"""
         try {
             val op = xyzBuilder.buildXyzOp(XYZ_OP_UPSERT, txn().toUuid(storageId).toString(), null, null)
             transactionWriter.writeFeatures(arrayOf(op), arrayOf(transaction.toBytes()), minResult = true)
-            val writeFeaturesResult = featureWriter.writeFeatures(op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, minResult)
+            val writeFeaturesResult = featureWriter.writeFeatures(op_arr, feature_arr, flags_arr, geo_arr, tags_arr, minResult)
             transactionWriter.writeFeatures(arrayOf(op), arrayOf(transaction.toBytes()), minResult = true)
             return writeFeaturesResult
         } catch (e: NakshaException) {
@@ -651,7 +651,7 @@ FROM ns, txn_seq;"""
             val complexQuery = """
                 with 
                 small as ($basicQuery),
-                remaining as (SELECT $COL_ID, $COL_TXN_NEXT,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_APP_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE FROM $collectionIdQuoted WHERE id = ANY($2))
+                remaining as (SELECT $COL_ID, $COL_TXN_NEXT,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_APP_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE FROM $collectionIdQuoted WHERE id = ANY($2))
                 select * from small s left join remaining r on s.$COL_ID = r.$COL_ID 
             """.trimIndent()
             sql.execute(complexQuery, arrayOf(idsSmallFetch.toTypedArray(), idsFullFetch.toTypedArray()))

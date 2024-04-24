@@ -18,11 +18,11 @@ internal class NakshaRequestOp(
                 collectionId: String,
                 op_arr: Array<ByteArray>,
                 feature_arr: Array<ByteArray?>,
-                geo_type_arr: Array<Short?>,
+                flags_arr: Array<Int?>,
                 geo_arr: Array<ByteArray?>,
                 tags_arr: Array<ByteArray?>
         ): NakshaWriteOps {
-            check(op_arr.size == feature_arr.size && op_arr.size == geo_type_arr.size && op_arr.size == geo_arr.size && op_arr.size == tags_arr.size) {
+            check(op_arr.size == feature_arr.size && op_arr.size == flags_arr.size && op_arr.size == geo_arr.size && op_arr.size == tags_arr.size) {
                 "not all input arrays has same size"
             }
             var partition : Int = -2
@@ -69,7 +69,7 @@ internal class NakshaRequestOp(
                 row[COL_TAGS] = tags_arr[i]
                 row[COL_GEOMETRY] = geo_arr[i]
                 row[COL_FEATURE] = feature_arr[i]
-                row[COL_GEO_TYPE] = geo_type_arr[i]
+                row[COL_FLAGS] = flags_arr[i]
                 if (opReader.grid() != null) {
                     // we don't want it to be null, as null would override calculated value later in response
                     row[COL_GEO_GRID] = opReader.grid()

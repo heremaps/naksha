@@ -35,16 +35,16 @@ interface ITable {
      * @param xyz The new XYZ namespace; _null_ if [XYZ_EXEC_RETAINED].
      * @param tags The new tags; _null_ if the operation was [XYZ_EXEC_CREATED], [XYZ_EXEC_UPDATED] or [XYZ_EXEC_RETAINED].
      * @param feature The new feature; _null_ if the operation was [XYZ_EXEC_CREATED], [XYZ_EXEC_UPDATED] or [XYZ_EXEC_RETAINED].
-     * @param geoType The geometry type; _null_ if the operation was [XYZ_EXEC_CREATED], [XYZ_EXEC_UPDATED] or [XYZ_EXEC_RETAINED].
+     * @param flags The geometry type; _null_ if the operation was [XYZ_EXEC_CREATED], [XYZ_EXEC_UPDATED] or [XYZ_EXEC_RETAINED].
      * @param geo The geometry bytes; _null_ if the operation was [XYZ_EXEC_CREATED], [XYZ_EXEC_UPDATED] or [XYZ_EXEC_RETAINED].
      */
-    fun returnOk(op: String, id: String, xyz: ByteArray?, tags: ByteArray? = null, feature: ByteArray? = null, geoType: Short? = null, geo: Any? = null) {
+    fun returnOk(op: String, id: String, xyz: ByteArray?, tags: ByteArray? = null, feature: ByteArray? = null, flags: Int? = null, geo: Any? = null) {
         val map = Jb.map.newMap()
         map[RET_OP] = op
         map[RET_ID] = id
         map[RET_XYZ] = xyz
         map[RET_TAGS] = tags
-        map[RET_GEO_TYPE] = geoType
+        map[RET_FLAGS] = flags
         map[RET_GEOMETRY] = geo
         map[RET_FEATURE] = feature
         map[RET_ERR_NO] = null
@@ -113,16 +113,16 @@ interface ITable {
      * @param xyz The current value from the database that caused the error; _null_ if the cause is that no such feature exists.
      * @param tags The current value from the database that caused the error; _null_ if the cause is that no such feature exists.
      * @param feature The current value from the database that caused the error; _null_ if the cause is that no such feature exists.
-     * @param geoType The current value from the database that caused the error; _null_ if the cause is that no such feature exists.
+     * @param flags The current value from the database that caused the error; _null_ if the cause is that no such feature exists.
      * @param geo The current value from the database that caused the error; _null_ if the cause is that no such feature exists.
      */
-    fun returnErr(errNo: String, errMsg: String, id: String? = null, xyz: ByteArray? = null, tags: ByteArray? = null, feature: ByteArray? = null, geoType: Short? = null, geo: Any? = null) {
+    fun returnErr(errNo: String, errMsg: String, id: String? = null, xyz: ByteArray? = null, tags: ByteArray? = null, feature: ByteArray? = null, flags: Int? = null, geo: Any? = null) {
         val map = Jb.map.newMap()
         map[RET_OP] = XYZ_EXEC_ERROR
         map[RET_ID] = id
         map[RET_XYZ] = xyz
         map[RET_TAGS] = tags
-        map[RET_GEO_TYPE] = geoType ?: GEO_TYPE_NULL
+        map[RET_FLAGS] = flags ?: GEO_TYPE_NULL
         map[RET_GEOMETRY] = geo
         map[RET_FEATURE] = feature
         map[RET_ERR_NO] = errNo
@@ -145,7 +145,7 @@ interface ITable {
         map[RET_ID] = row[COL_ID]
         map[RET_XYZ] = xyz
         map[RET_TAGS] = row[COL_TAGS]
-        map[RET_GEO_TYPE] = row[COL_GEO_TYPE]
+        map[RET_FLAGS] = row[COL_FLAGS]
         map[RET_GEOMETRY] = row[COL_GEOMETRY]
         map[RET_FEATURE] = row[COL_FEATURE]
         map[RET_ERR_NO] = null
@@ -158,7 +158,7 @@ interface ITable {
      * @param e The exception to use to generate the error.
      */
     fun returnException(e: NakshaException) {
-        returnErr(e.errNo, e.errMsg, e.id, e.xyz, e.tags, e.feature, e.geoType, e.geo)
+        returnErr(e.errNo, e.errMsg, e.id, e.xyz, e.tags, e.feature, e.flags, e.geo)
     }
 
 }

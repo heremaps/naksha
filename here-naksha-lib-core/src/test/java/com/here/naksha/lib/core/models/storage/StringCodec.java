@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
 class StringCodec extends FeatureCodec<String, StringCodec> {
 
   @Override
-  protected Short getDefaultGeometryEncoding() {
+  protected Integer getDefaultGeometryEncoding() {
     return GEO_TYPE_WKB;
   }
 

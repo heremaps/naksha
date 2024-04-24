@@ -19,7 +19,7 @@ import com.here.naksha.lib.plv8.COL_FEATURE
 import com.here.naksha.lib.plv8.COL_GEOMETRY
 import com.here.naksha.lib.plv8.COL_GEO_GRID
 import com.here.naksha.lib.plv8.COL_GEO_REF
-import com.here.naksha.lib.plv8.COL_GEO_TYPE
+import com.here.naksha.lib.plv8.COL_FLAGS
 import com.here.naksha.lib.plv8.COL_ID
 import com.here.naksha.lib.plv8.COL_PTXN
 import com.here.naksha.lib.plv8.COL_PUID
@@ -65,13 +65,13 @@ internal class NakshaBulkLoaderPlan(
 
     private fun insertHeadPlan(): IPlv8Plan {
         return session.sql.prepare("""INSERT INTO $partitionHeadQuoted (
-                $COL_CREATED_AT,$COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_GEO_TYPE,
+                $COL_CREATED_AT,$COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_FLAGS,
                 $COL_APP_ID,$COL_AUTHOR,$COL_TYPE,$COL_ID,
                 $COL_FEATURE,$COL_TAGS,$COL_GEOMETRY,$COL_GEO_REF)
                 VALUES($1,$2,$3,$4,$5,
                 $6,$7,$8,$9,
                 $10,$11,$12,$13,$14)""".trimIndent(),
-                arrayOf(SQL_INT64, SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT32, SQL_INT16,
+                arrayOf(SQL_INT64, SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT32, SQL_INT32,
                         SQL_STRING, SQL_STRING, SQL_STRING, SQL_STRING,
                         SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY))
     }
@@ -79,7 +79,7 @@ internal class NakshaBulkLoaderPlan(
     private fun updateHeadPlan(): IPlv8Plan {
         return session.sql.prepare("""
                 UPDATE $partitionHeadQuoted 
-                SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_GEO_TYPE=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE $COL_ID=$21
+                SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_FLAGS=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE $COL_ID=$21
                 """.trimIndent(),
                 arrayOf(*COL_ALL_TYPES, SQL_STRING))
     }
@@ -96,7 +96,7 @@ internal class NakshaBulkLoaderPlan(
         // ptxn + puid = txn + uid (as we generate new state in _del)
         return session.sql.prepare("""
                 INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
-                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                     FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
                 arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
     }
@@ -104,7 +104,7 @@ internal class NakshaBulkLoaderPlan(
     private fun insertDelToHstPlan(): IPlv8Plan {
         return session.sql.prepare("""
                 INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
-                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_GEO_TYPE,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                     FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
                 arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING))
     }
@@ -112,7 +112,7 @@ internal class NakshaBulkLoaderPlan(
     private fun copyHeadToHstPlan(): IPlv8Plan {
         return session.sql.prepare("""
             INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
-            SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_GEO_TYPE,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+            SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                 FROM $partitionHeadQuoted WHERE $COL_ID = $2
             """.trimIndent(), arrayOf(SQL_INT64, SQL_STRING))
     }
@@ -218,7 +218,7 @@ internal class NakshaBulkLoaderPlan(
                 Param(3, SQL_INT64, row[COL_TXN]),
                 Param(4, SQL_INT32, row[COL_UID]),
                 Param(5, SQL_INT32, row[COL_GEO_GRID]),
-                Param(6, SQL_INT16, row[COL_GEO_TYPE]),
+                Param(6, SQL_INT32, row[COL_FLAGS]),
                 Param(7, SQL_STRING, row[COL_APP_ID]),
                 Param(8, SQL_STRING, row[COL_AUTHOR]),
                 Param(9, SQL_STRING, row[COL_TYPE]),
@@ -253,7 +253,7 @@ internal class NakshaBulkLoaderPlan(
                 Param(3, SQL_INT32, row[COL_UID]),
                 Param(4, SQL_INT64, row[COL_PTXN]),
                 Param(5, SQL_INT32, row[COL_PUID]),
-                Param(6, SQL_INT16, row[COL_GEO_TYPE]),
+                Param(6, SQL_INT32, row[COL_FLAGS]),
                 Param(7, SQL_INT16, row[COL_ACTION]),
                 Param(8, SQL_INT32, row[COL_VERSION]),
                 Param(9, SQL_INT64, row[COL_CREATED_AT]),

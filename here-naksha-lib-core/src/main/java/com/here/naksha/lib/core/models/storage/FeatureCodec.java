@@ -55,10 +55,10 @@ import org.locationtech.jts.io.ParseException;
 public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, SELF>>
     extends FeatureBox<FEATURE, SELF> {
 
-  public static final short GEO_TYPE_NULL = 0;
-  public static final short GEO_TYPE_WKB = 1;
-  public static final short GEO_TYPE_EWKB = 2;
-  public static final short GEO_TYPE_TWKB = 3;
+  public static final int GEO_TYPE_NULL = 0;
+  public static final int GEO_TYPE_WKB = 1;
+  public static final int GEO_TYPE_EWKB = 2;
+  public static final int GEO_TYPE_TWKB = 3;
 
   /**
    * Tries to decode (disassemble) a feature set via {@link #setFeature(Object)} or {@link #withFeature(Object)} into its parts. Unless
@@ -82,7 +82,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    */
   public abstract @NotNull SELF encodeFeature(boolean force);
 
-  protected abstract Short getDefaultGeometryEncoding();
+  protected abstract Integer getDefaultGeometryEncoding();
 
   /**
    * Copy all the values from other codec supplied as an argument. This is useful while iterating through in-memory based codec list,
@@ -246,7 +246,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   /**
    * The wkb type whether it's EWKB, WKB or TWKB.
    */
-  protected @Nullable Short geometryEncoding = getDefaultGeometryEncoding();
+  protected @Nullable Integer geometryEncoding = getDefaultGeometryEncoding();
 
   /**
    * The JTS geometry build from the {@link #geometryBytes}.
@@ -374,11 +374,11 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    *
    * @return
    */
-  public @Nullable Short getGeometryEncoding() {
+  public @Nullable Integer getGeometryEncoding() {
     return geometryEncoding;
   }
 
-  public void setGeometryEncoding(@Nullable Short geometryEncoding) {
+  public void setGeometryEncoding(@Nullable Integer geometryEncoding) {
     this.geometryEncoding = geometryEncoding;
   }
 

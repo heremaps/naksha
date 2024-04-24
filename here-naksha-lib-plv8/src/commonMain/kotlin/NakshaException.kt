@@ -14,7 +14,7 @@ class NakshaException private constructor(
         val errMsg: String,
         val id: String? = null,
         val feature: ByteArray? = null,
-        val geoType : Short? = null,
+        val flags : Int? = null,
         val geo: Any? = null,
         val tags: ByteArray? = null,
         val xyz: ByteArray? = null
@@ -26,7 +26,7 @@ class NakshaException private constructor(
 
         @JvmStatic
         fun forRow(errNo: String, errMsg: String, row: IMap, xyzNs: ByteArray) : NakshaException =
-                NakshaException(errNo, errMsg, row[COL_ID], row[COL_FEATURE], row[COL_GEO_TYPE], row[COL_GEOMETRY], row[COL_TAGS], xyzNs)
+                NakshaException(errNo, errMsg, row[COL_ID], row[COL_FEATURE], row[COL_FLAGS], row[COL_GEOMETRY], row[COL_TAGS], xyzNs)
         // TODO: Add code that builds the XYZ namespace from the database row!
 
         @JvmStatic

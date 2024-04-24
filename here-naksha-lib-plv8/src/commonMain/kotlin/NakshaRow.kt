@@ -48,9 +48,9 @@ internal inline fun IMap.hasAction() : Boolean = getAny(COL_ACTION) is Short
 internal inline fun IMap.getAction() : Short? = this[COL_ACTION]
 internal inline fun IMap.setAction(action : Short?) { this[COL_ACTION] = action }
 
-internal inline fun IMap.hasGeoType() : Boolean = getAny(COL_GEO_TYPE) is Short
-internal inline fun IMap.getGeoType() : Short? = this[COL_GEO_TYPE]
-internal inline fun IMap.setGeoType(geoType : Short?) { this[COL_GEO_TYPE] = geoType }
+internal inline fun IMap.hasFlags() : Boolean = getAny(COL_FLAGS) is Int
+internal inline fun IMap.getFlags() : Int? = this[COL_FLAGS]
+internal inline fun IMap.setFlags(flags : Int?) { this[COL_FLAGS] = flags }
 
 internal inline fun IMap.hasGeometry() : Boolean = getAny(COL_GEOMETRY) is ByteArray
 internal inline fun IMap.getGeometry() : ByteArray? = this[COL_GEOMETRY]

@@ -15,7 +15,7 @@ import com.here.naksha.lib.jbon.shl
 import com.here.naksha.lib.jbon.toInt
 import com.here.naksha.lib.plv8.COL_FEATURE
 import com.here.naksha.lib.plv8.COL_GEOMETRY
-import com.here.naksha.lib.plv8.COL_GEO_TYPE
+import com.here.naksha.lib.plv8.COL_FLAGS
 import com.here.naksha.lib.plv8.COL_ID
 import com.here.naksha.lib.plv8.COL_TAGS
 import com.here.naksha.lib.plv8.COL_TXN
@@ -203,7 +203,7 @@ class Plv8Test : JbTest() {
         pgNew[COL_ID] = "foo"
         pgNew[COL_TXN_NEXT] = null // Should be set by trigger
         pgNew[COL_FEATURE] = null
-        pgNew[COL_GEO_TYPE] = GEO_TYPE_EWKB
+        pgNew[COL_FLAGS] = GEO_TYPE_EWKB
         pgNew[COL_GEOMETRY] = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
         pgNew[COL_TAGS] = null
         val pgOld = null
@@ -313,7 +313,7 @@ class Plv8Test : JbTest() {
         pgNew[COL_ID] = "F1"
         pgNew[COL_TXN_NEXT] = null // Should be set by trigger
         pgNew[COL_FEATURE] = builderFeature.buildFeatureFromMap(topology)
-        pgNew[COL_GEO_TYPE] = GEO_TYPE_EWKB
+        pgNew[COL_FLAGS] = GEO_TYPE_EWKB
         pgNew[COL_GEOMETRY] = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
         pgNew[COL_TAGS] = null
         val pgOld = pgNew

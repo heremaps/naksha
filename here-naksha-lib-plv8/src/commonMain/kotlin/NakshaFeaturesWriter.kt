@@ -29,14 +29,14 @@ class NakshaFeaturesWriter(
     fun writeFeatures(
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            geo_type_arr: Array<Short?> = arrayOfNulls(op_arr.size),
+            flags_arr: Array<Int?> = arrayOfNulls(op_arr.size),
             geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
             tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
             minResult: Boolean
     ): ITable {
         val START = currentMillis()
         val START_MAPPING = currentMillis()
-        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr)
         val END_MAPPING = currentMillis()
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
@@ -79,12 +79,12 @@ class NakshaFeaturesWriter(
     fun writeCollections(
             op_arr: Array<ByteArray>,
             feature_arr: Array<ByteArray?>,
-            geo_type_arr: Array<Short?>,
+            flags_arr: Array<Int?>,
             geo_arr: Array<ByteArray?>,
             tags_arr: Array<ByteArray?>,
             minResult: Boolean
     ): ITable {
-        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr)
+        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr)
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 

@@ -34,7 +34,7 @@ All tables used in the Naksha PostgresQL implementation have the same general la
 | puid       | int4  | yes |           | `f.p.xyz->puuid` - Row identifier                                                                 |
 | version    | int4  | yes |           | `f.p.xyz->version` - `COALESCE(version, 1)`                                                       |
 | geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                                  |
-| geo_type   | int2  | no  |           | The geometry encoding (NULL = TWKB, 0 = undefined, 1 = WKB, 2 = EWKB, 3 = TWKB).                  |
+| flags      | int4  | no  |           | The geometry encoding (NULL = TWKB, 0 = undefined, 1 = WKB, 2 = EWKB, 3 = TWKB).                  |
 | action     | int2  | yes |           | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2) - `COALESCE(action, 0)`                    |
 | app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                                 |
 | author     | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                                    |
@@ -250,7 +250,7 @@ The transaction logs are stored in the `naksha~transactions` table. Actually, th
 | puid       | int4  | yes |           | Always `NULL`.                                                                            |
 | version    | int4  | yes |           | Always `NULL`.                                                                            |
 | geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                          |
-| geo_type   | int2  | no  |           | Always `NULL` (TWKB).                                                                     |
+| flags      | int4  | no  |           | Always `NULL` (TWKB).                                                                     |
 | action     | int2  | yes |           | Always `NULL`.                                                                            |
 | app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                         |
 | author     | text  | yes |           | `f.p.xyz->author`                                                                         |

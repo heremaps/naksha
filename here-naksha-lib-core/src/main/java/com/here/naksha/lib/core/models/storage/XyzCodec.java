@@ -51,7 +51,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
   private final @NotNull Class<FEATURE> featureClass;
 
   @Override
-  protected Short getDefaultGeometryEncoding() {
+  protected Integer getDefaultGeometryEncoding() {
     return GEO_TYPE_TWKB;
   }
 

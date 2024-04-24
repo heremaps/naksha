@@ -69,7 +69,7 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?) {
                 puid        int4,
                 version     int4,
                 geo_grid    int4,
-                geo_type    int2,
+                flags       int4,
                 action      int2,
                 app_id      text STORAGE PLAIN NOT NULL,
                 author      text STORAGE PLAIN,

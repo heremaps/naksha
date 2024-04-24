@@ -284,7 +284,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       }
       SQL variableTransformed =
           addTransformation(spatialOp.getTransformation(), "ST_Force3D(naksha_geometry(3::int2,?))");
-      sql.add(" ST_Intersects(naksha_geometry(geo_type,geo), ")
+      sql.add(" ST_Intersects(naksha_geometry(flags,geo), ")
           .add(variableTransformed)
           .add(")");
       try (final Json jp = Json.get()) {
@@ -513,7 +513,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         .add(
             "row_to_ns(created_at,updated_at,txn,action,version,author_ts,uid,app_id,author,geo_grid,puid,ptxn,")
         .addLiteral(collection.replaceFirst("$hst", "")) // uuid should not to refer to _hst table
-        .add("::text),\n" + "tags,\n" + "feature,\n" + "geo_type,\n" + "geo,\n" + "null,\n" + "null FROM ")
+        .add("::text),\n" + "tags,\n" + "feature,\n" + "flags,\n" + "geo,\n" + "null,\n" + "null FROM ")
         .addIdent(collection);
     if (spatial_where.length() > 0 || props_where.length() > 0) {
       query.add(" WHERE");
@@ -651,13 +651,13 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
-          "SELECT op, id, xyz, tags, feature, geo_type, geo, err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
+          "SELECT op, id, xyz, tags, feature, flags, geo, err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
       try {
         final List<@NotNull CODEC> features = writeRequest.features;
         final int SIZE = writeRequest.features.size();
         final byte[][] reqOps = new byte[SIZE][];
         final byte[][] reqFeatures = new byte[SIZE][];
-        final Short[] reqGeoType = new Short[SIZE];
+        final Integer[] reqFlags = new Integer[SIZE];
         final byte[][] reqGeo = new byte[SIZE][];
         final byte[][] reqTags = new byte[SIZE][];
         for (int i = 0; i < SIZE; i++) {
@@ -666,17 +666,17 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           reqOps[i] = codec.getXyzOp();
           reqFeatures[i] = codec.getFeatureBytes();
           reqGeo[i] = codec.getGeometryBytes();
-          reqGeoType[i] = codec.getGeometryEncoding(); // codec has to dec
+          reqFlags[i] = codec.getGeometryEncoding(); // codec has to dec
           reqTags[i] = codec.getTagsBytes();
         }
         stmt.setArray(1, psqlConnection.createArrayOf("bytea", reqOps));
         stmt.setArray(2, psqlConnection.createArrayOf("bytea", reqFeatures));
-        stmt.setArray(3, psqlConnection.createArrayOf("int2", reqGeoType));
+        stmt.setArray(3, psqlConnection.createArrayOf("int2", reqFlags));
         stmt.setArray(4, psqlConnection.createArrayOf("bytea", reqGeo));
         stmt.setArray(5, psqlConnection.createArrayOf("bytea", reqTags));
 
         JvmPlv8Table table =
-            (JvmPlv8Table) nakshaSession.writeCollections(reqOps, reqFeatures, reqGeoType, reqGeo, reqTags);
+            (JvmPlv8Table) nakshaSession.writeCollections(reqOps, reqFeatures, reqFlags, reqGeo, reqTags);
         ArrayList<IMap> rows = table.getRows();
         List<XyzCollectionCodec> codecRows =
             PsqlResultMapper.mapRowToCodec(XyzCollectionCodecFactory.get(), features, rows);
@@ -706,7 +706,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         final String collection_id = writeFeatures.getCollectionId();
         final byte[][] op_arr = new byte[SIZE][];
         final byte[][] feature_arr = new byte[SIZE][];
-        final Short[] geo_type_arr = new Short[SIZE];
+        final Integer[] flags_arr = new Integer[SIZE];
         final byte[][] geo_arr = new byte[SIZE][];
         final byte[][] tags_arr = new byte[SIZE][];
 
@@ -714,12 +714,12 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           final CODEC codec = features.get(i);
           op_arr[i] = codec.getXyzOp();
           feature_arr[i] = codec.getFeatureBytes();
-          geo_type_arr[i] = codec.getGeometryEncoding();
+          flags_arr[i] = codec.getGeometryEncoding();
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
         }
         JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
-            collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, false);
+            collection_id, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, false);
         ArrayList<IMap> rows = table.getRows();
         XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
         List<XyzFeatureCodec> codecRows = PsqlResultMapper.mapRowToCodec(codecFactory, features, rows);
@@ -754,7 +754,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         // partition_id
         final byte[][] op_arr = new byte[SIZE][];
         final byte[][] feature_arr = new byte[SIZE][];
-        final Short[] geo_type_arr = new Short[SIZE];
+        final Integer[] flags_arr = new Integer[SIZE];
         final byte[][] geo_arr = new byte[SIZE][];
         final byte[][] tags_arr = new byte[SIZE][];
 
@@ -762,12 +762,12 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           final CODEC codec = features.get(i);
           op_arr[i] = codec.getXyzOp();
           feature_arr[i] = codec.getFeatureBytes();
-          geo_type_arr[i] = codec.getGeometryEncoding();
+          flags_arr[i] = codec.getGeometryEncoding();
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
         }
         JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
-            collection_id, op_arr, feature_arr, geo_type_arr, geo_arr, tags_arr, true);
+            collection_id, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, true);
         ArrayList<IMap> rows = table.getRows();
         if (!rows.isEmpty()) {
           IMap err = rows.get(0);

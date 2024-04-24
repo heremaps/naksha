@@ -428,7 +428,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
         // geo, txn
         qin = sql.quoteIdent("${tableName}_geo_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndex
-(naksha_geometry(geo_type,geo), txn) 
+(naksha_geometry(flags,geo), txn) 
 WITH (buffering=ON,fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE} WHERE geo IS NOT NULL;"""
 
         // tags, tnx

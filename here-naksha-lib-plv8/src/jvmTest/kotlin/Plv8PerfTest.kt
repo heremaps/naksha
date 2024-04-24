@@ -27,7 +27,7 @@ class Plv8PerfTest : JbTest() {
             val idArr: Array<String?>,
             val opArr: Array<ByteArray?>,
             val featureArr: Array<ByteArray?>,
-            val geoTypeArr: Array<Short>,
+            val flagsArr: Array<Int>,
             val geoArr: Array<ByteArray?>,
             val tagsArr: Array<ByteArray?>
     )
@@ -69,7 +69,7 @@ class Plv8PerfTest : JbTest() {
         val idArr = Array<String?>(size) { null }
         val opArr = Array<ByteArray?>(size) { null }
         val featureArr = Array<ByteArray?>(size) { null }
-        val geoTypeArr = Array(size) { GEO_TYPE_NULL }
+        val flagsArr = Array(size) { GEO_TYPE_NULL }
         val geoArr = Array<ByteArray?>(size) { null }
         val tagsArr = Array<ByteArray?>(size) { null }
         var i = 0
@@ -81,14 +81,14 @@ class Plv8PerfTest : JbTest() {
             featureArr[i] = builder.buildFeatureFromMap(topology)
             i++
         }
-        return Features(size, idArr, opArr, featureArr, geoTypeArr, geoArr, tagsArr)
+        return Features(size, idArr, opArr, featureArr, flagsArr, geoArr, tagsArr)
     }
 
     @Order(1)
     @Test
     fun createBaseline() {
         var stmt = conn.prepareStatement("""DROP TABLE IF EXISTS baseline_test;
-CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz bytea, tags bytea, feature bytea, geo bytea);
+CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz bytea, tags bytea, feature bytea, geo bytea);
 """)
         stmt.use {
             stmt.executeUpdate()
@@ -161,7 +161,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
                     stmt.setString(1, "v2_perf_test")
                     stmt.setArray(2, conn.createArrayOf(SQL_BYTE_ARRAY, features.opArr))
                     stmt.setArray(3, conn.createArrayOf(SQL_BYTE_ARRAY, features.featureArr))
-                    stmt.setArray(4, conn.createArrayOf(SQL_INT16, features.geoTypeArr))
+                    stmt.setArray(4, conn.createArrayOf(SQL_INT16, features.flagsArr))
                     stmt.setArray(5, conn.createArrayOf(SQL_BYTE_ARRAY, features.geoArr))
                     stmt.setArray(6, conn.createArrayOf(SQL_BYTE_ARRAY, features.tagsArr))
                     stmt.executeQuery()
@@ -199,7 +199,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
             val partId: Int,
             val op: ByteArray,
             val feature: ByteArray,
-            val geoType: Short = GEO_TYPE_NULL,
+            val flags: Int = GEO_TYPE_NULL,
             val geometry: ByteArray? = null,
             val tags: ByteArray? = null
     )
@@ -304,7 +304,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
                             try {
                                 val opArr = ArrayList<ByteArray>(features.size)
                                 val fArr = ArrayList<ByteArray?>(features.size)
-                                val geoTypeArr = ArrayList<Short>(features.size)
+                                val flagsArr = ArrayList<Int>(features.size)
                                 val geoArr = ArrayList<ByteArray?>(features.size)
                                 val tagsArr = ArrayList<ByteArray?>(features.size)
                                 while (j < features.size) {
@@ -313,9 +313,9 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
                                     fArr.add(f.feature)
                                     geoArr.add(f.geometry)
                                     tagsArr.add(f.tags)
-                                    geoTypeArr.add(f.geoType)
+                                    flagsArr.add(f.flags)
                                 }
-                                val result = threadSession.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+                                val result = threadSession.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), flagsArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
                                 if (result is JvmPlv8Table && result.rows.size > 0) {
                                     val err = result.rows[0]
                                     println("Error: ${err.getAny(RET_ERR_NO) as String} - ${err.getAny(RET_ERR_MSG) as String}")
@@ -356,7 +356,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         var i = 0
         val opArr = ArrayList<ByteArray>(BulkWriteSize)
         val fArr = ArrayList<ByteArray?>(BulkWriteSize)
-        val geoTypeArr = ArrayList<Short>(BulkWriteSize)
+        val flagsArr = ArrayList<Int>(BulkWriteSize)
         val geoArr = ArrayList<ByteArray?>(BulkWriteSize)
         val tagsArr = ArrayList<ByteArray?>(BulkWriteSize)
 
@@ -367,11 +367,11 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
             fArr.add(f.feature)
             geoArr.add(f.geometry)
             tagsArr.add(f.tags)
-            geoTypeArr.add(f.geoType)
+            flagsArr.add(f.flags)
             i++
         }
         val insertsStart = currentMicros()
-        val insertResult = session.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+        val insertResult = session.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), flagsArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
         assertTrue(session.sql.rows(insertResult).isNullOrEmpty())
         session.sql.execute("commit")
         val insertEnd = currentMicros()
@@ -388,7 +388,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
             updateCount++
         }
         val updateStart = currentMicros()
-        val rowsUpdated = session.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
+        val rowsUpdated = session.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), flagsArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
         assertEquals(0, rowsUpdated.rows.size)
         session.sql.execute("commit")
         val updateEnd = currentMicros()
@@ -405,7 +405,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
             deleteCount++
         }
         val delStart = currentMicros()
-        val rowsDeleted = session.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), geoTypeArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
+        val rowsDeleted = session.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), flagsArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
         assertEquals(0, rowsDeleted.rows.size)
         session.sql.execute("commit")
         val delEnd = currentMicros()
@@ -423,12 +423,12 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
         val f = createBulkFeature()
         val opArr: Array<ByteArray> = arrayOf(f.op)
         val fArr: Array<ByteArray?> = arrayOf(f.feature)
-        val geoTypeArr: Array<Short?> = arrayOf(f.geoType)
+        val flagsArr: Array<Int?> = arrayOf(f.flags)
         val geoArr: Array<ByteArray?> = arrayOf(f.geometry)
         val tagsArr: Array<ByteArray?> = arrayOf(f.tags)
 
         // insert features
-        val insertResult = session.writeFeatures(tableName, opArr, fArr, geoTypeArr, geoArr, tagsArr)
+        val insertResult = session.writeFeatures(tableName, opArr, fArr, flagsArr, geoArr, tagsArr)
         assertTrue(session.sql.rows(insertResult).isNullOrEmpty())
         session.sql.execute("commit")
         session.clear()
@@ -439,7 +439,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, geo_type int2, id text, xyz
                 val xyzOp = XyzOp().mapBytes(o.value)
                 opArr[o.index] = XyzBuilder().buildXyzOp(operation, xyzOp.id(), "invalid:uid:2024:1:1:1:1", xyzOp.grid())
             }
-            val operationResult = session.writeFeatures(tableName, opArr, fArr, geoTypeArr, geoArr, tagsArr) as JvmPlv8Table
+            val operationResult = session.writeFeatures(tableName, opArr, fArr, flagsArr, geoArr, tagsArr) as JvmPlv8Table
             val cols = asMap(operationResult.rows[0])
             assertEquals("ERROR", cols[RET_OP])
             assertEquals(ERR_CHECK_VIOLATION, cols[RET_ERR_NO])

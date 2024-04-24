@@ -158,7 +158,7 @@ $$;
 
 -- TODO: If needed, create a naksha_write_unordered_features!
 -- This function expects that operations are ordered by id to avoid deadlocks
--- CREATED, UPDATED -> return null for tags, feature, geo_type and geo
+-- CREATED, UPDATED -> return null for tags, feature, flags and geo
 -- DELETED, PURGED, ERROR -> return all data
 CREATE OR REPLACE FUNCTION naksha_write_features(
   collection_id text,
@@ -167,7 +167,7 @@ CREATE OR REPLACE FUNCTION naksha_write_features(
   geometries_type int2[],
   geometries_bytes bytea[], -- WKB, EWKB, TWKB
   tags bytea[] -- XyzTags
-) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo_type int2, geo bytea, err_no text, err_msg text)
+) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, flags int4, geo bytea, err_no text, err_msg text)
 LANGUAGE 'plv8'
 VOLATILE
 PARALLEL UNSAFE
@@ -178,7 +178,7 @@ AS $$
   session.writeFeatures(collection_id, ops, features, geometries_type, geometries_bytes, tags, true);
 $$;
 
--- CREATED, UPDATED -> return null for tags, feature, geo_type and geo
+-- CREATED, UPDATED -> return null for tags, feature, flags and geo
 -- DELETED, PURGED, ERROR -> return all data
 CREATE OR REPLACE FUNCTION naksha_write_collections(
   ops bytea[], -- XyzOp (op, id, uuid)
@@ -186,7 +186,7 @@ CREATE OR REPLACE FUNCTION naksha_write_collections(
   geometries_type int2[],
   geometries_bytes bytea[], -- WKB, EWKB, TWKB
   tags bytea[] -- XyzTags
-) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, geo_type int2, geo bytea, err_no text, err_msg text)
+) RETURNS TABLE (op text, id text, xyz bytea, tags bytea, feature bytea, flags int4, geo bytea, err_no text, err_msg text)
 LANGUAGE 'plv8'
 VOLATILE
 PARALLEL UNSAFE
@@ -258,18 +258,18 @@ AS $$
   return naksha.Static.hstPartitionNameForId(id, new jbon.NakshaTxn(txn_next));
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_geometry(geo_type int2, geo_bytes bytea) RETURNS geometry
+CREATE OR REPLACE FUNCTION naksha_geometry(flags int4, geo_bytes bytea) RETURNS geometry
 LANGUAGE 'plpgsql'
 IMMUTABLE
 PARALLEL SAFE
 SET search_path FROM CURRENT
 AS $$
 BEGIN
-  IF geo_type = 1 THEN
+  IF flags = 1 THEN
     RETURN ST_GeomFromWKB(geo_bytes);
-  ELSIF geo_type = 2 THEN
+  ELSIF flags = 2 THEN
     RETURN ST_GeomFromEWKB(geo_bytes);
-  ELSIF geo_type = 3 THEN
+  ELSIF flags = 3 THEN
     RETURN ST_GeomFromTWKB(geo_bytes);
   ELSE
     RETURN null;

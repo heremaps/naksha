@@ -71,7 +71,7 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
         final byte[] r_xyz = rs.getBytes(3);
         final byte[] r_tags = rs.getBytes(4);
         final byte[] r_feature = rs.getBytes(5);
-        final Short r_geo_type = rs.getShort(6);
+        final Integer r_flags = rs.getInt(6);
         final byte[] r_geo = rs.getBytes(7);
         final String r_err_no = rs.getString(8);
         final String r_err = rs.getString(9);
@@ -83,7 +83,7 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
         row.codec.setXyzNsBytes(r_xyz);
         row.codec.setTagsBytes(defaultIfNull(r_tags, reqParams.tags, idx));
         row.codec.setGeometryBytes(defaultIfNull(r_geo, reqParams.geo, idx));
-        row.codec.setGeometryEncoding(r_geo_type);
+        row.codec.setGeometryEncoding(r_flags);
         row.codec.setFeatureBytes(defaultIfNull(r_feature, reqParams.features, idx));
         row.codec.setRawError(r_err);
         row.codec.setErr(mapToCodecError(r_err_no, r_err));

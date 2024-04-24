@@ -42,7 +42,7 @@ public class PsqlResultMapper {
       codec.setXyzNsBytes(get(row, "xyz"));
       codec.setTagsBytes(defaultIfNull(get(row, "tags"), reqCodec.getTagsBytes()));
       codec.setGeometryBytes(defaultIfNull(get(row, "geo"), reqCodec.getGeometryBytes()));
-      codec.setGeometryEncoding(defaultIfNull(get(row, "geo_type"), reqCodec.getGeometryEncoding()));
+      codec.setGeometryEncoding(defaultIfNull(get(row, "flags"), reqCodec.getGeometryEncoding()));
       codec.setFeatureBytes(defaultIfNull(get(row, "feature"), reqCodec.getFeatureBytes()));
       String errMsg = get(row, "err_msg");
       codec.setRawError(errMsg);
