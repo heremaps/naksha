@@ -12,6 +12,7 @@ import kotlin.js.JsExport
 class NakshaTransaction(dictManager: IDictManager) : JbFeature(dictManager) {
     var modifiedFeatureCount: Int = 0
     var collectionCounters: IMap = newMap()
+    var seqNumber: Int? = null
 
     fun addModifiedCount(count: Int) {
         modifiedFeatureCount += count
@@ -32,6 +33,7 @@ class NakshaTransaction(dictManager: IDictManager) : JbFeature(dictManager) {
         val map = newMap()
         map["modifiedFeatureCount"] = modifiedFeatureCount
         map["collectionCounters"] = collectionCounters
+        map["seqNumber"] = seqNumber
         return JbBuilder(view).buildFeatureFromMap(map)
     }
 }

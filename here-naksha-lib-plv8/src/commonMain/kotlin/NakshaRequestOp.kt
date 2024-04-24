@@ -31,6 +31,7 @@ internal class NakshaRequestOp(
             val idsToModify = ArrayList<String>(op_arr.size)
             val idsToPurge = ArrayList<String>()
             val idsToDel = ArrayList<String>()
+            val uniqueIds = HashSet<String>(op_arr.size)
             var total = 0
             val opReader = XyzOp()
             for (i in op_arr.indices) {
@@ -49,6 +50,12 @@ internal class NakshaRequestOp(
                 } else {
                     opReader.id()!!
                 }
+                if (uniqueIds.contains(id)) {
+                    throw NakshaException.forId(ERR_UNIQUE_VIOLATION, "Cannot perform multiple operations on single feature in one transaction", id)
+                } else {
+                    uniqueIds.add(id)
+                }
+
                 if (opReader.op() != XYZ_OP_CREATE) {
                     idsToModify.add(id)
                     if (opReader.op() == XYZ_OP_PURGE) {
@@ -76,6 +83,7 @@ internal class NakshaRequestOp(
                     partition = -1
                 }
             }
+
             if (DEBUG) println("opReader.mapBytes(op_arr[i]) took ${total / 1000}ms")
             return NakshaWriteOps(collectionId, operations.sortedBy { it.key }, idsToModify, idsToPurge, idsToDel, if (partition>=0) partition else null)
         }

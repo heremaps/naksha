@@ -101,6 +101,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -187,6 +188,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       Map<String, Object> featureAsMap = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
       assertEquals(1, featureAsMap.get("modifiedFeatureCount"));
       assertEquals(1, ((Map<String, Integer>) featureAsMap.get("collectionCounters")).get(collectionId()));
+      assertNull(featureAsMap.get("seqNumber"));
     }
   }
 

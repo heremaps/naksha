@@ -37,6 +37,25 @@ class NakshaSessionTest : JbTest() {
         assertTrue(doesTableExist(session, expectedPartitionName))
     }
 
+    @Test
+    fun writeFeaturesShouldNotAllowMultipleOperationsOnSameFeature() {
+        // given
+        val collectionId = "foo"
+        val session = NakshaSession.get()
+        session.collectionConfiguration.put(collectionId, newMap())
+
+        val builder = XyzBuilder.create(65536)
+        val op1 = builder.buildXyzOp(XYZ_OP_CREATE, "someId")
+        val op2 = builder.buildXyzOp(XYZ_OP_UPDATE, "someId")
+
+        // when
+        val result = session.writeFeatures(collectionId, arrayOf(op1, op2)) as JvmPlv8Table
+
+        // then
+        val error: String? = result.rows[0][RET_ERR_MSG]
+        assertEquals("Cannot perform multiple operations on single feature in one transaction", error)
+    }
+
     private fun createCollection(session: NakshaSession, collectionId: String, partition: Boolean = false, disableHistory: Boolean = true) {
         val collectionJson = """{"id":"$collectionId","type":"NakshaCollection","maxAge":3560,"partition":$partition,"properties":{},"disableHistory":$disableHistory}"""
         val builder = XyzBuilder.create(65536)
