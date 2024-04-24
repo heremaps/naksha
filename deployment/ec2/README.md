@@ -29,6 +29,9 @@ scp files.tgz ec2-user@<ip>:.
 # Enter the machine
 ssh ec2-user@IP
 
+# Install necessary software
+sudo yum -y install docker mdadm postgresql15 nc nmap fio nvme-cli mlocate
+
 # Unpack the files and install them
 tar xzf files.tgz
 sudo chown -R root:root files
@@ -43,9 +46,6 @@ sudo shutdown -r 0
 sudo cat /proc/sys/net/ipv4/tcp_available_congestion_control    # should show cubic
 sudo cat /proc/sys/net/ipv4/tcp_max_tw_buckets                  # should show 262144
 sudo cat /proc/sys/net/ipv4/tcp_mem                             # should show 2097152	4194304	6291456
-
-# Install necessary software
-sudo yum -y install docker mdadm postgresql15 nc nmap fio nvme-cli
 
 # Ensure that names are still what this document state.
 lsblk
@@ -112,7 +112,13 @@ sudo rm -rf /mnt/pg_temp/lost+found/ /mnt/pg_data/lost+found/
 # Redirect port 80 to 5432, so we can connect to PostgresQL from VPN
 sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 5432
 
+# Ensure docker uses enough virtual memory and files for postgresql
+# Note: -i saves the modification back to the file, -r just does replace
+sudo sed -i -r 's/OPTIONS="--default-ulimit nofile=32768:65536"/OPTIONS="--default-ulimit nofile=1048576:1048576 --default-shm-size=16384m"/' /etc/sysconfig/docker
+sudo cat /etc/sysconfig/docker
+
 # Start docker (and make it auto-starting)
+# see: https://docs.docker.com/reference/cli/dockerd/#daemon-configuration-file
 sudo systemctl start docker
 sudo systemctl enable docker
 
