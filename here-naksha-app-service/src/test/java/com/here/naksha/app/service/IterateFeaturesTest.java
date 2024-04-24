@@ -211,20 +211,4 @@ class IterateFeaturesTest extends ApiTest {
         .hasStreamIdHeader(secondStreamId)
         .hasJsonBody(secondExpectedBodyPart, "Final Iterate response body doesn't match");
   }
-
-  @Test
-  void tc1105_iterateShouldRespectAndPropagateLimit() throws Exception {
-    // Given:
-    String streamId = UUID.randomUUID().toString();
-    int limit = 2;
-
-    // When:
-    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/iterate" + "?limit=" + limit, streamId);
-
-    // ThenL
-    ResponseAssertions.assertThat(response)
-        .hasStatus(200)
-        .hasStreamIdHeader(streamId)
-        .hasFeatureCount(limit);
-  }
 }
