@@ -560,7 +560,6 @@ project(":here-naksha-app-service") {
         testImplementation(test_containers)
         testImplementation(testFixtures(project(":here-naksha-lib-core")))
         testImplementation(wiremock)
-        testImplementation(mockito)
     }
     setOverallCoverage(0.25) // only increasing allowed!
 }
