@@ -17,6 +17,7 @@ release.properties
 /xyz-handler-http/src/test/resources/endpoint
 *.log
 *.jfr
+.$*
 .kotlintest
 .DS_Store
 # To be added later
