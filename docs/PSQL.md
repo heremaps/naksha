@@ -238,34 +238,35 @@ Note that this design allow access to internal data using the same general metho
 ### Transactions Table (`naksha~transactions`)
 The transaction logs are stored in the `naksha~transactions` table. Actually, the only difference to any other table is that the table is partitioned by `txn` and some columns have a different usage:
 
-| Column     | Type  | RO  | Modifiers    | Description                                                                               |
-|------------|-------|-----|--------------|-------------------------------------------------------------------------------------------|
-| created_at | int8  | yes | **NOT NULL** | `f.p.xyz->createdAt` - The time when the transaction started (`transaction_timestamp()`). |
-| updated_at | int8  | yes | **NULLABLE** | `f.p.xyz->updatedAt` - The sequencing time (**set by the sequencer**).                    |
-| author_ts  | int8  | yes |              | Always `NULL`.                                                                            |
-| txn_next   | int8  | yes |              | Always `NULL`.                                                                            |
-| txn        | int8  | yes | NOT NULL     | `f.p.xyz->uuid` - Primary row identifier.                                                 |
-| ptxn       | int8  | yes |              | Always `NULL`.                                                                            |
-| uid        | int4  | yes |              | Always `NULL`.                                                                            |
-| puid       | int4  | yes |              | Always `NULL`.                                                                            |
-| version    | int4  | yes |              | Always `NULL`.                                                                            |
-| geo_grid   | int4  | yes |              | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                          |
-| geo_type   | int2  | no  |              | Always `NULL` (TWKB).                                                                     |
-| action     | int2  | yes |              | Always `NULL`.                                                                            |
-| app_id     | text  | yes | NOT NULL     | `f.p.xyz->app_id`                                                                         |
-| author     | text  | yes |              | `f.p.xyz->author`                                                                         |
-| type       | text  | yes |              | Always `NULL`, basically translated into `naksha.Transaction`.                            |
-| id         | text  | no  | NOT NULL     | `f.id` - The **uuid** of the transaction.                                                 |
-| feature    | bytea | no  |              | `f` - The Geo-JSON feature in JBON, except for what was extracted.                        |
-| tags       | bytea | no  |              | `f.p.xyz->tags`                                                                           |
-| geo        | bytea | no  |              | `f.geometry` - The geometry of the features modified (**set by the sequencer**).          |
-| geo_ref    | bytea | no  |              | `f.referencePoint` - The reference point (`ST_Centroid(geo)`, (**set by the sequencer**). |
+| Column     | Type  | RO  | Modifiers | Description                                                                               |
+|------------|-------|-----|-----------|-------------------------------------------------------------------------------------------|
+| created_at | int8  | yes |           | `f.p.xyz->createdAt` - The time when the transaction started (`transaction_timestamp()`). |
+| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt` - The time when the transaction feature was last modified.           |
+| author_ts  | int8  | yes |           | Always `NULL`.                                                                            |
+| txn_next   | int8  | yes |           | Always `NULL`.                                                                            |
+| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                                 |
+| ptxn       | int8  | yes |           | Always `NULL`.                                                                            |
+| uid        | int4  | yes |           | Always `NULL`.                                                                            |
+| puid       | int4  | yes |           | Always `NULL`.                                                                            |
+| version    | int4  | yes |           | Always `NULL`.                                                                            |
+| geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                          |
+| geo_type   | int2  | no  |           | Always `NULL` (TWKB).                                                                     |
+| action     | int2  | yes |           | Always `NULL`.                                                                            |
+| app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                         |
+| author     | text  | yes |           | `f.p.xyz->author`                                                                         |
+| type       | text  | yes |           | Always `NULL`, basically translated into `naksha.Transaction`.                            |
+| id         | text  | no  | NOT NULL  | `f.id` - The **uuid** of the transaction.                                                 |
+| feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.                        |
+| tags       | bytea | no  |           | `f.p.xyz->tags`                                                                           |
+| geo        | bytea | no  |           | `f.geometry` - The geometry of the features modified (**set by the sequencer**).          |
+| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`, (**set by the sequencer**). |
 
 **Notes**
-- The transaction table itself is partitioned by `txn` and organized in years (`naksha~txn$YYYY`). This is mainly helpful to purge transaction-logs and to improve the access speed as it avoids too many partitions.
+- The transaction table itself is partitioned by `txn` and organized in years (`naksha~transactions$YYYY`). This is mainly helpful to purge transaction-logs and to improve the access speed as it avoids too many partitions.
 - To convert from **timestamptz** to 64-bit integer as epoch milliseconds do `SELECT (EXTRACT(epoch FROM ts) * 1000)::int8`, vice versa is `SELECT TO_TIMESTAMP(epoch_ms / 1000.0)`.
 - The feature contains a `seqNumber` that is used to read transactions in order.
-- The feature contains a `collections` map that is used to hold the amount
+- The feature contains a `seqTs` that is used to track when the transaction was sequenced.
+- The feature contains a `collections` map that is used to hold the amount of features modified.
 
 ### Dictionaries Table (`naksha~dictionaries`)
 This table stores dictionaries. It is managed by background jobs that auto-generate optimal dictionaries. The features stored in here will be bound to a collection using the property `collectionId`.
