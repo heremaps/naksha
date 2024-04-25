@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
  *
  * @param <FEATURE> The feature type that the cursor returns.
  * @param <CODEC>   The codec type.
+ * @deprecated use {@link HeapCacheCursor} instead
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
 public class ListBasedForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
@@ -69,7 +70,18 @@ public class ListBasedForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE,
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public void close() {
-    featureCodecList.clear();
+    try {
+      featureCodecList.clear();
+    } catch (UnsupportedOperationException uoe) {
+      log.info(
+          "Invoking List::clear on underlying codecs list failed - operation not supported by {}",
+          featureCodecList.getClass().getName(),
+          uoe);
+    }
     featureIdx = totalFeatures;
+  }
+
+  public int size() {
+    return featureCodecList.size();
   }
 }

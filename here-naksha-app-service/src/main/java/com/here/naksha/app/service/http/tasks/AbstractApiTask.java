@@ -18,9 +18,9 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.DEF_ADMIN_FEATURE_LIMIT;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
@@ -174,15 +174,6 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
       final @Nullable Result rdResult, final @NotNull Class<R> type, final long maxLimit) {
     return transformReadResultToXyzCollectionResponse(rdResult, type, 0, maxLimit, null, null);
-  }
-
-  protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
-      final @Nullable Result rdResult,
-      final @NotNull Class<R> type,
-      final long offset,
-      final long maxLimit,
-      final @Nullable IterateHandle handle) {
-    return transformReadResultToXyzCollectionResponse(rdResult, type, offset, maxLimit, handle, null);
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(

@@ -18,23 +18,30 @@
  */
 package com.here.naksha.lib.core.models.geojson.implementation;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.coordinates.MultiLineStringCoordinates;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
+import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "MultiLineString")
 public class XyzMultiLineString extends XyzGeometryItem {
 
+  @JsonProperty(COORDINATES)
   private MultiLineStringCoordinates coordinates = new MultiLineStringCoordinates();
 
   @Override
+  @JsonGetter
   public MultiLineStringCoordinates getCoordinates() {
     return this.coordinates;
   }
 
+  @JsonSetter
   public void setCoordinates(MultiLineStringCoordinates coordinates) {
     this.coordinates = coordinates;
   }
@@ -52,5 +59,22 @@ public class XyzMultiLineString extends XyzGeometryItem {
   @Override
   public void validate() throws InvalidGeometryException {
     validateMultiLineStringCoordinates(this.coordinates);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    XyzMultiLineString that = (XyzMultiLineString) o;
+    return Objects.equals(coordinates, that.coordinates);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(coordinates);
   }
 }

@@ -1117,19 +1117,17 @@ components:
       description: >
         Additional feature filters which compare the feature's property value with the one
         specified in the query, resulting in a subset of features.
-
-
+        
+        
         The usage of multiple property names represents an AND operation.
         The usage of a comma (,) separating the properties values, represents
         an OR operation.
-
-
-        Properties initiated with 'f.' are used to access values which are added by default in the
-        stored feature. The possible values are: 'f.id', 'f.createdAt' and 'f.updatedAt'.
-
-
-        Properties initiated with 'p.' are used to access values in the stored feature which are
-        under the 'properties' property. Use it as a shorthand accessor for 'properties' values.
+        
+        
+        Properties starting with **'p.'** is expanded internally as **'properties.'** , for example 'p.speedLimit', 'p.taskType'
+        
+        
+        Properties starting with **'f.'** is expanded internally as **'properties.@ns:com:here:xyz.'** , for example 'f.createdAt', 'f.updatedAt', except the **'f.id'** (which is translated to root level 'id' property)
 
 
         The format should follow the specification below
@@ -1174,11 +1172,23 @@ components:
     PropertiesSelection:
       name: selection
       in: query
-      description: |
+      description: >
         A list of properties to be returned in the features result list. Multiple attributes can be
-        specified by using comma(,).
+        specified by using comma(,). Attributes which are not available, will be silently skipped (without raising any error).
+        
+        
+          * properties starting with **'p.'** is expanded internally as **'properties.'** , for example 'p.speedLimit', 'p.taskType'
+          * properties starting with **'f.'** is expanded internally as **'properties.@ns:com:here:xyz.'** , for example 'f.createdAt', 'f.updatedAt', except the 'f.id' (which is translated to root level 'id' property)
+          * properties starting with **'g.'** is expanded internally as **'geometry.'** , for example 'g.type', 'g.coordinates'
+        
+        
+        Entire **geometry** object is returned (by default), UNLESS it is partially requested (in that case, only the selected part will be returned).
 
-        Example: ?selection=p.name,p.capacity,p.color,rootPropertyName
+
+        **NOTE** - Be aware that selecting limited fields, can result into logically invalid representation of Feature object.
+
+
+        Example: ?selection=p.name,p.capacity,f.createdAt,rootPropertyName
       explode: false
       schema:
         type: array
@@ -1416,7 +1426,7 @@ components:
                 id: "custom_collection_id"
                 type: "NakshaCollection"
                 maxAge: 0
-                history: true
+                disableHistory: false
                 autoPurge: false
               autoCreateCollection: true
               autoDeleteCollection: true
@@ -1440,7 +1450,7 @@ components:
                     id: "um-mod-dev:topology"
                     type: "NakshaCollection"
                     maxAge: 0
-                    history: true
+                    disableHistory: false
                     autoPurge: false
   responses:
     EmptyResponse:
@@ -1742,7 +1752,7 @@ components:
                 id: "custom_collection_id"
                 type: "NakshaCollection"
                 maxAge: 0
-                history: true
+                disableHistory: false
                 autoPurge: false
               autoCreateCollection: true
               autoDeleteCollection: true
@@ -1769,7 +1779,7 @@ components:
                     id: "custom_collection_id"
                     type: "NakshaCollection"
                     maxAge: 0
-                    history: true
+                    disableHistory: false
                     autoPurge: false
                   autoCreateCollection: true
                   autoDeleteCollection: true
@@ -1793,7 +1803,7 @@ components:
                     id: "um-mod-dev:topology"
                     type: "NakshaCollection"
                     maxAge: 0
-                    history: true
+                    disableHistory: false
                     autoPurge: false
     SpacesResponse:
       description: The list of spaces.
@@ -1817,7 +1827,7 @@ components:
                       id: "um-mod-dev:topology"
                       type: "NakshaCollection"
                       maxAge: 0
-                      history: true
+                      disableHistory: false
                       autoPurge: false
   schemas:
     Error:
@@ -2152,7 +2162,7 @@ components:
             id: "custom_collection_id"
             type: "NakshaCollection"
             maxAge: 0
-            history: true
+            disableHistory: false
             autoPurge: false
           autoCreateCollection: true
           autoDeleteCollection: true
@@ -2226,8 +2236,8 @@ components:
         maxAge:
           description: The maximum age of the history entries in days. Zero means no history.
           type: number
-        history:
-          description: Toggle if the history is enabled.
+        disableHistory:
+          description: Toggle if the history is disabled.
           type: boolean
         deletedAt:
           description: A value greater than zero implies that the collection shall be treated as deleted and represents the UTC Epoch timestamp in

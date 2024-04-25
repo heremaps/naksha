@@ -4,6 +4,7 @@
 
   "httpPort": 8080,
   "env": "local",
+  "requestBodyLimit": 25,
   "jwtName": "jwt",
   "maintenanceInitialDelayInMins": 60,
   "maintenanceIntervalInMins": 720,
@@ -12,5 +13,6 @@
   "storageParams": {
     "pg_hint_plan": true,
     "pg_stat_statements": true
-  }
+  },
+  "extensionConfigParams": null
 }

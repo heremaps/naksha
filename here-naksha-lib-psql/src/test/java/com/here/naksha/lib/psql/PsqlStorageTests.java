@@ -1042,8 +1042,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   void seekableCursorRead() throws NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
-    final ReadFeatures request = new ReadFeatures(collectionId());
-    request.limit = null;
+    final ReadFeatures request = new ReadFeatures(collectionId()).withLimit(null);
     try (final SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
              session.execute(request).getXyzSeekableCursor()) {
 
@@ -1129,6 +1128,30 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     ReadFeatures readReqAfter = RequestHelper.readFeaturesByIdRequest(collectionId(), bulkInsertedFeature.getId());
     try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
              session.execute(readReqAfter).getXyzFeatureCursor()) {
+      assertFalse(cursor.hasNext());
+      assertThrowsExactly(NoSuchElementException.class, cursor::next);
+    }
+  }
+  @Test
+  @Order(74)
+  @EnabledIf("runTest")
+  void limitedRead() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+    limitToN(1L);
+    limitToN(2L);
+  }
+
+  private void limitToN(final long limit) throws NoCursor {
+    final ReadFeatures request = new ReadFeatures(collectionId()).withLimit(limit);
+    try (final @NotNull ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+                 session.execute(request).getXyzFeatureCursor()) {
+
+      for (long row = 1; row <= limit; row++) {
+        assertTrue(cursor.hasNext());
+        assertTrue(cursor.next());
+        assertNotNull(cursor.getFeature());
+      }
       assertFalse(cursor.hasNext());
       assertThrowsExactly(NoSuchElementException.class, cursor::next);
     }

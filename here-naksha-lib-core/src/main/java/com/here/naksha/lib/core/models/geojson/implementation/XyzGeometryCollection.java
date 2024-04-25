@@ -18,25 +18,34 @@
  */
 package com.here.naksha.lib.core.models.geojson.implementation;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "GeometryCollection")
 public class XyzGeometryCollection extends XyzGeometry {
 
+  public static final String GEOMETRIES = "geometries";
+
+  @JsonProperty(GEOMETRIES)
   private List<XyzGeometryItem> geometries = new ArrayList<>();
 
+  @JsonGetter
   public List<XyzGeometryItem> getGeometries() {
     return this.geometries;
   }
 
   @SuppressWarnings("WeakerAccess")
+  @JsonSetter
   public void setGeometries(List<XyzGeometryItem> geometries) {
     this.geometries = geometries;
   }
@@ -116,5 +125,22 @@ public class XyzGeometryCollection extends XyzGeometry {
             + e.getMessage());
       }
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    XyzGeometryCollection that = (XyzGeometryCollection) o;
+    return Objects.equals(geometries, that.geometries);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(geometries);
   }
 }

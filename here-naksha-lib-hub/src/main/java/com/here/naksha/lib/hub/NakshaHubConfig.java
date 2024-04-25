@@ -51,6 +51,19 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
    */
   public static final @NotNull String APP_NAME = "naksha";
 
+  private static final String EC2_ENV = "EC2_ENV";
+  private static final String NAKSHA_ENV = "ENV";
+
+  /**
+   * The default Http request body limit in MB.
+   */
+  public static final Integer DEF_REQ_BODY_LIMIT = 25;
+
+  /**
+   * The maximum Http request body limit in MB.
+   */
+  public static final Integer MAX_REQ_BODY_LIMIT = Math.max(25, DEF_REQ_BODY_LIMIT);
+
   /**
    * Returns a default application name used at many placed.
    *
@@ -87,7 +100,9 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
       @JsonProperty("maintenanceInitialDelayInMins") @Nullable Integer maintenanceInitialDelayInMins,
       @JsonProperty("maintenancePoolCoreSize") @Nullable Integer maintenancePoolCoreSize,
       @JsonProperty("maintenancePoolMaxSize") @Nullable Integer maintenancePoolMaxSize,
-      @JsonProperty("storageParams") @Nullable Map<String, Object> storageParams) {
+      @JsonProperty("storageParams") @Nullable Map<String, Object> storageParams,
+      @JsonProperty("extensionConfigParams") @Nullable ExtensionConfigParams extensionConfigParams,
+      @JsonProperty("requestBodyLimit") @Nullable Integer requestBodyLimit) {
     super(id);
     if (httpPort != null && (httpPort < 0 || httpPort > 65535)) {
       logger.atError()
@@ -140,7 +155,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
       assert __endpoint != null;
     }
     if (env == null) {
-      env = "local";
+      env = getEnv();
     }
 
     this.hubClassName = (hubClassName != null && !hubClassName.isEmpty()) ? hubClassName : defaultHubClassName();
@@ -164,6 +179,27 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
     this.maintenancePoolMaxSize =
         maintenancePoolMaxSize != null ? maintenancePoolMaxSize : defaultMaintenancePoolMaxSize();
     this.storageParams = storageParams;
+    this.extensionConfigParams = extensionConfigParams;
+    if (requestBodyLimit == null) {
+      this.requestBodyLimit = DEF_REQ_BODY_LIMIT;
+    } else if (requestBodyLimit > MAX_REQ_BODY_LIMIT) {
+      logger.warn(
+          "Configured request body limit {} MB not supported. Falling back to default limit of {} MB",
+          requestBodyLimit,
+          DEF_REQ_BODY_LIMIT);
+      this.requestBodyLimit = DEF_REQ_BODY_LIMIT;
+    } else {
+      this.requestBodyLimit = requestBodyLimit;
+    }
+  }
+
+  private String getEnv() {
+    // This is only to be backward compatible to support EC2 based deployment
+    String envVal = System.getenv(EC2_ENV);
+    if (envVal != null && !envVal.isEmpty() && !"null".equalsIgnoreCase(envVal)) return envVal;
+    envVal = System.getenv(NAKSHA_ENV);
+    if (envVal != null && !envVal.isEmpty() && !"null".equalsIgnoreCase(envVal)) return envVal;
+    return "local";
   }
 
   public static final String HTTP_PORT = "httpPort";
@@ -315,4 +351,13 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
    * Optional storage-specific parameters
    */
   public final Map<String, Object> storageParams;
+  /**
+   * Optional extension-manager parameters
+   */
+  public final ExtensionConfigParams extensionConfigParams;
+
+  /**
+   * Optional Http request body limit in MB. Default is {@link #DEF_REQ_BODY_LIMIT}.
+   */
+  public final Integer requestBodyLimit;
 }
