@@ -167,7 +167,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
     this.endpoint = __endpoint;
     this.env = env;
     this.webRoot = webRoot;
-    this.authMode = (authMode == null)? AuthorizationMode.JWT : authMode;
+    this.authMode = (authMode == null) ? AuthorizationMode.JWT : authMode;
     this.jwtName = jwtName != null && !jwtName.isEmpty() ? jwtName : "jwt";
     this.userAgent = userAgent != null && !userAgent.isEmpty() ? userAgent : defaultAppName();
     this.debug = Boolean.TRUE.equals(debug);
