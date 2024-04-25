@@ -251,14 +251,12 @@ SET SESSION enable_seqscan = OFF;
         NEW[COL_ACTION] = null // saving space null means 0 (create)
         NEW[COL_VERSION] = null // saving space null means 1
         if (collectionId == SC_TRANSACTIONS) {
-            NEW[COL_CREATED_AT] = txnTs
-            NEW[COL_UPDATE_AT] = null // saving space - it is same as created_at at creation,
             NEW[COL_UID] = 0
         } else {
-            NEW[COL_CREATED_AT] = null // saving space - it is same as update_at at creation,
-            NEW[COL_UPDATE_AT] = txnTs
             NEW[COL_UID] = nextUid()
         }
+        NEW[COL_CREATED_AT] = null // saving space - it is same as update_at at creation,
+        NEW[COL_UPDATE_AT] = txnTs
         NEW[COL_AUTHOR] = author
         NEW[COL_AUTHOR_TS] = null // saving space - only apps are allowed to create features
         NEW[COL_APP_ID] = appId
@@ -280,6 +278,9 @@ SET SESSION enable_seqscan = OFF;
         NEW[COL_VERSION] = oldVersion + 1
         NEW[COL_PTXN] = OLD[COL_TXN]
         NEW[COL_PUID] = OLD[COL_UID]
+        if (collectionId == SC_TRANSACTIONS) {
+            NEW[COL_UPDATE_AT] = Jb.env.currentMillis()
+        }
     }
 
     /**

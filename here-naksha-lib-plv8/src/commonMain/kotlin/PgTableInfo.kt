@@ -51,15 +51,9 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?) {
         }
         val builder = StringBuilder()
         builder.append(" (")
-        if (Static.SC_TRANSACTIONS == storageClass) {
-            builder.append("""
-                created_at int8 NOT NULL,
-                updated_at int8,""")
-        } else {
-            builder.append("""
-                created_at int8,
-                updated_at int8 NOT NULL,""")
-        }
+        builder.append("""
+            created_at int8,
+            updated_at int8 NOT NULL,""")
         builder.append("""
                 author_ts   int8,
                 txn_next    int8,
