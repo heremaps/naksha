@@ -1,6 +1,26 @@
 {
+  "appId": "naksha",
+  "userId": "master-test-user",
   "urm": {
-    "xyz-hub": {
+    "naksha": {
+      "useStorages": [
+        {}
+      ],
+      "manageStorages": [
+        {}
+      ],
+      "useEventHandlers": [
+        {}
+      ],
+      "manageEventHandlers": [
+        {}
+      ],
+      "useSpaces": [
+        {}
+      ],
+      "manageSpaces": [
+        {}
+      ],
       "readFeatures": [
         {}
       ],
@@ -13,25 +33,16 @@
       "deleteFeatures": [
         {}
       ],
-      "manageSpaces": [
+      "readCollections": [
         {}
       ],
-      "adminSpaces": [
+      "createCollections": [
         {}
       ],
-      "managePackages": [
+      "updateCollections": [
         {}
       ],
-      "accessConnectors": [
-        {}
-      ],
-      "manageConnectors": [
-        {}
-      ],
-      "useCapabilities": [
-        {}
-      ],
-      "useAdminCapabilities": [
+      "deleteCollections": [
         {}
       ]
     }
