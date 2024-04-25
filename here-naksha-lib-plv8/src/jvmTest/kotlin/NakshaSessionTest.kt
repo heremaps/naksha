@@ -11,6 +11,8 @@ import java.util.function.BooleanSupplier
 @ExtendWith(Plv8TestContainer::class)
 class NakshaSessionTest : JbTest() {
 
+    private val collectionId = "foo_common"
+
     @Test
     fun testGetBaseCollectionId() {
         // given
@@ -24,7 +26,6 @@ class NakshaSessionTest : JbTest() {
     fun testEnsureHistoryPartition() {
         // given
         val session = NakshaSession.get()
-        val collectionId = "foo1"
         createCollection(session = session, collectionId = collectionId, partition = true, disableHistory = false)
 
         // then
@@ -35,6 +36,37 @@ class NakshaSessionTest : JbTest() {
         assertTrue(isPartitioningEnabled)
         val expectedPartitionName = "${collectionId}\$hst_${session.txn().year()}"
         assertTrue(doesTableExist(session, expectedPartitionName))
+    }
+
+    @Test
+    fun transactionShouldBeUpdatedWhenExecutingWriteFeaturesMultipleTimes() {
+        // given
+        val session = NakshaSession.get()
+        createCollection(session = session, collectionId = collectionId, partition = true, disableHistory = false)
+        val otherCollection = "collection2"
+        createCollection(session = session, collectionId = otherCollection, partition = true, disableHistory = false)
+        session.clear()
+
+        val builder = XyzBuilder.create(65536)
+        val op1 = builder.buildXyzOp(XYZ_OP_CREATE, "feature1")
+        val op2 = builder.buildXyzOp(XYZ_OP_CREATE, "feature2")
+        val op3 = builder.buildXyzOp(XYZ_OP_CREATE, "feature3")
+
+        // when
+        session.writeFeatures(collectionId, arrayOf(op1))
+
+        // then
+        assertEquals(1, session.transaction.modifiedFeatureCount)
+        assertEquals(1, session.transaction.collectionCounters[collectionId])
+
+        // when executed again in same session
+        session.writeFeatures(collectionId, arrayOf(op2))
+        session.writeFeatures(otherCollection, arrayOf(op3))
+
+        // then
+        assertEquals(3, session.transaction.modifiedFeatureCount)
+        assertEquals(2, session.transaction.collectionCounters[collectionId])
+        assertEquals(1, session.transaction.collectionCounters[otherCollection])
     }
 
     @Test
@@ -59,7 +91,7 @@ class NakshaSessionTest : JbTest() {
     private fun createCollection(session: NakshaSession, collectionId: String, partition: Boolean = false, disableHistory: Boolean = true) {
         val collectionJson = """{"id":"$collectionId","type":"NakshaCollection","maxAge":3560,"partition":$partition,"properties":{},"disableHistory":$disableHistory}"""
         val builder = XyzBuilder.create(65536)
-        val op = builder.buildXyzOp(XYZ_OP_CREATE, collectionId, null, 1111)
+        val op = builder.buildXyzOp(XYZ_OP_UPSERT, collectionId, null, 1111)
         val feature = builder.buildFeatureFromMap(asMap(env.parse(collectionJson)))
         session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
     }
