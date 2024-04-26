@@ -1,9 +1,19 @@
 curations:
   license_findings:
-    - path: "here-naksha-lib-core/src/main/java/**/License.java"
-      reason: "INCORRECT"
-      comment: "The file contains all possible license identifiers for the content of a space."
-      concluded_license: "Apache-2.0"
+    - path: "here-naksha-lib-core/src/main/java/com/here/naksha/lib/core/models/License.java"
+      start_lines: "56"
+      line_count: 1
+      detected_license: "OSL-3.0"
+      reason: "CODE"
+      comment: "The scanner matches an enumerator `OSL-3.0`."
+      concluded_license: "NONE"
+    - path: "here-naksha-lib-core/src/main/java/com/here/naksha/lib/core/models/License.java"
+      start_lines: "62"
+      line_count: 1
+      detected_license: "ODbL-1.0"
+      reason: "CODE"
+      comment: "The scanner matches an enumerator `ODbL-1.0`."
+      concluded_license: "NONE"
 excludes:
   #paths:
   #- pattern: "**/src/test/**"
