@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2024-04-24T12:20:32.413Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.1.2 Chrome/114.0.5735.289 Electron/25.9.4 Safari/537.36" etag="s8nCbYutAWRNhvG-t6wV" version="22.1.2" type="device">
+<mxfile host="Electron" modified="2024-04-26T10:26:35.720Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.1.2 Chrome/114.0.5735.289 Electron/25.9.4 Safari/537.36" etag="s-6F5SyBxrYyqaiyLplc" version="22.1.2" type="device">
   <diagram name="Page-1" id="c7558073-3199-34d8-9f00-42111426c3f3">
-    <mxGraphModel dx="1742" dy="828" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4681" pageHeight="3300" background="none" math="0" shadow="0">
+    <mxGraphModel dx="2105" dy="1001" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4681" pageHeight="3300" background="none" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -290,16 +290,16 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="1qYccRmLHqD2nOXxJYSw-108" value="EventTarget" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#fff2cc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;strokeColor=#d6b656;" parent="1" vertex="1">
-          <mxGeometry x="3156" y="2460" width="279" height="81.07" as="geometry" />
+          <mxGeometry x="3125" y="2460" width="279" height="81.07" as="geometry" />
         </mxCell>
         <mxCell id="1qYccRmLHqD2nOXxJYSw-109" value="+ eventHandlers : List&amp;lt;String&amp;gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=1;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;movable=1;resizable=1;deletable=1;editable=1;locked=0;connectable=1;" parent="1qYccRmLHqD2nOXxJYSw-108" vertex="1">
           <mxGeometry y="26" width="279" height="25.07" as="geometry" />
         </mxCell>
-        <mxCell id="veuHkW8nXqJATqobilVs-124" value="+ getToken(): ?" style="text;strokeColor=#b85450;fillColor=#f8cecc;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="1qYccRmLHqD2nOXxJYSw-108" vertex="1">
+        <mxCell id="veuHkW8nXqJATqobilVs-124" value="+ context: NakshaContext" style="text;strokeColor=#82b366;fillColor=#d5e8d4;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="1qYccRmLHqD2nOXxJYSw-108" vertex="1">
           <mxGeometry y="51.07" width="279" height="30" as="geometry" />
         </mxCell>
         <mxCell id="1qYccRmLHqD2nOXxJYSw-199" value="An event target is a virtual event sink that can receive events (notifications and requests).&lt;br&gt;&lt;br&gt;To process any events a&amp;nbsp;&lt;b style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i style=&quot;border-color: var(--border-color);&quot;&gt;NakshaContext&lt;/i&gt;&lt;/b&gt;&amp;nbsp;is needed. Therefore, event targets support to define a permanent token, which will be used internally to create the &lt;i&gt;&lt;b&gt;NakshaContext&lt;/b&gt;&lt;/i&gt;, when the event source is an internal one (for example a timer or a new transaction in a storage)." style="html=1;shadow=0;dashed=0;shape=mxgraph.bootstrap.rrect;rSize=5;strokeColor=#999999;strokeWidth=1;fillColor=#FFFFFF;fontColor=#6C767D;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=10;fontSize=14;spacing=10;" parent="1" vertex="1">
-          <mxGeometry x="3435" y="2460" width="330" height="176.93" as="geometry" />
+          <mxGeometry x="3404" y="2460" width="330" height="176.93" as="geometry" />
         </mxCell>
         <mxCell id="2efq71ZKfL60kGu9dnVV-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="1qYccRmLHqD2nOXxJYSw-118" target="1qYccRmLHqD2nOXxJYSw-108" edge="1">
           <mxGeometry relative="1" as="geometry" />
@@ -318,25 +318,22 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="1qYccRmLHqD2nOXxJYSw-210" value="SubscriptionState" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;container=0;" parent="1" vertex="1">
-          <mxGeometry x="2657" y="2481.07" width="287" height="182" as="geometry" />
-        </mxCell>
-        <mxCell id="1qYccRmLHqD2nOXxJYSw-211" value="+ subscriptionId: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="1qYccRmLHqD2nOXxJYSw-210" vertex="1">
-          <mxGeometry y="26" width="287" height="26" as="geometry" />
+          <mxGeometry x="2657" y="2481.07" width="287" height="156" as="geometry" />
         </mxCell>
         <mxCell id="ji72XSmRw8APm09SylYo-50" value="+ callCount: long = 0" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="1qYccRmLHqD2nOXxJYSw-210" vertex="1">
-          <mxGeometry y="52" width="287" height="26" as="geometry" />
+          <mxGeometry y="26" width="287" height="26" as="geometry" />
         </mxCell>
         <mxCell id="ji72XSmRw8APm09SylYo-37" value="+ errCount: long = 0" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="1qYccRmLHqD2nOXxJYSw-210" vertex="1">
-          <mxGeometry y="78" width="287" height="26" as="geometry" />
+          <mxGeometry y="52" width="287" height="26" as="geometry" />
         </mxCell>
         <mxCell id="ji72XSmRw8APm09SylYo-11" value="+ lastError: ErrorResult?" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="1qYccRmLHqD2nOXxJYSw-210" vertex="1">
-          <mxGeometry y="104" width="287" height="26" as="geometry" />
+          <mxGeometry y="78" width="287" height="26" as="geometry" />
         </mxCell>
         <mxCell id="ocHGO5GNn9pmyrgSXm_p-12" value="+ handlerStates: Map&amp;lt;String, Object?&amp;gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="1qYccRmLHqD2nOXxJYSw-210" vertex="1">
-          <mxGeometry y="130" width="287" height="26" as="geometry" />
+          <mxGeometry y="104" width="287" height="26" as="geometry" />
         </mxCell>
         <mxCell id="1qYccRmLHqD2nOXxJYSw-306" value="+ seqNumber: long = 0" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="1qYccRmLHqD2nOXxJYSw-210" vertex="1">
-          <mxGeometry y="156" width="287" height="26" as="geometry" />
+          <mxGeometry y="130" width="287" height="26" as="geometry" />
         </mxCell>
         <mxCell id="1qYccRmLHqD2nOXxJYSw-219" value="Naksha does guarantee subscription notifications, therefore every event-handler of the subscription may store individual state data in the &lt;b&gt;handlerStates&lt;/b&gt; map. The key in that map is the unique identifier of the handler, the value an arbitrary object managed by the handler. The concept behind subscriptions is that they only have one final handler, that eventually processes the transaction event. It is not recommended to add multiple final handlers to the same subscription, because this can lead to data and/or event loss.&lt;br&gt;&lt;br&gt;The subscription state is attached to the &lt;b&gt;&lt;i&gt;SubscriptionNotification&lt;/i&gt;&lt;/b&gt; and Naksha has an own storage for subscriptions states. Handlers are allowed to perform state saves, if needed (partial state saves).&lt;br&gt;&lt;br&gt;If the subscription pipeline returns a &lt;b&gt;&lt;i&gt;NotificationSuccessResult&lt;/i&gt;&lt;/b&gt; the Observer sending the notification will set the &lt;b&gt;seqNumber&lt;/b&gt;&amp;nbsp;of the state either to the one provided in the result or, if the result has no &lt;i&gt;&lt;b&gt;seqNumber&lt;/b&gt;&lt;/i&gt; set (&lt;i&gt;null&lt;/i&gt;), to the one of the last transaction being part of the processed&amp;nbsp;&lt;b style=&quot;font-style: italic;&quot;&gt;SubscriptionNotification&lt;/b&gt;.&amp;nbsp;It will increment the &lt;b&gt;&lt;i&gt;callCount&lt;/i&gt;&lt;/b&gt;, set &lt;b&gt;&lt;i&gt;lastError&lt;/i&gt;&lt;/b&gt; to &lt;i&gt;null&lt;/i&gt;, and the &lt;b&gt;&lt;i&gt;errCount&lt;/i&gt;&lt;/b&gt; to zero, then updating the subscription state atomically. By returning a specific &lt;b&gt;&lt;i&gt;seqNumber&lt;/i&gt;&lt;/b&gt;&amp;nbsp;in the result, the handlers can prevent that unprocessed transactions are skipped.&lt;br&gt;&lt;br&gt;If the pipeline returns an &lt;b&gt;&lt;i&gt;ErrorResult&lt;/i&gt;&lt;/b&gt; the Observer will increment the &lt;b&gt;&lt;i&gt;callCount&lt;/i&gt;&lt;/b&gt;, set the &lt;b&gt;&lt;i&gt;lastError&lt;/i&gt;&lt;/b&gt; to the error returned and increment the&amp;nbsp;&lt;b style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i style=&quot;border-color: var(--border-color);&quot;&gt;errCount&lt;/i&gt;&lt;/b&gt;&amp;nbsp;(which decides about the wait time before firing the same notification again). Then it will update the &lt;b&gt;&lt;i&gt;SubscriptionState&lt;/i&gt;&lt;/b&gt;. The &lt;b&gt;&lt;i&gt;S&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;ubscriptionNotification&lt;/span&gt;&lt;/span&gt;&lt;/i&gt;&lt;/b&gt;&amp;nbsp;is fired again later, the time delta is dependent on the &lt;b&gt;&lt;i&gt;errCount&lt;/i&gt;&lt;/b&gt;.&lt;br&gt;&lt;br&gt;Finally the Observer will continue waiting for more transaction with a &lt;i style=&quot;font-weight: bold;&quot;&gt;seqNumber &lt;/i&gt;greater than the current &lt;i style=&quot;font-weight: bold;&quot;&gt;seqNumber&lt;/i&gt;. The &lt;b&gt;seqNumber&lt;/b&gt;&amp;nbsp;therefore refers to the &lt;b&gt;seqNumber&lt;/b&gt; of the transaction processed successfully last, with zero meaning no transaction has yet been processed successfully (the first transaction is guaranteed to have the &lt;i&gt;&lt;b&gt;seqNumber&lt;/b&gt;&lt;/i&gt; one).&lt;br&gt;&lt;br&gt;If the Naksha-Hub instance that currently runs the Observer executing a &lt;b&gt;&lt;i&gt;SubscriptionNotification&lt;/i&gt;&lt;/b&gt; crashs, another host will detect this, because there is a row-level lock at the &lt;b&gt;&lt;i&gt;SubscriptionState&lt;/i&gt;&lt;/b&gt;. This will cause another host to simply fire the exact same notification again. Handlers may detect such crashes, when they perform in-between state saves updating their personal handler-state." style="html=1;shadow=0;dashed=0;shape=mxgraph.bootstrap.rrect;rSize=5;strokeColor=#999999;strokeWidth=1;fillColor=#FFFFFF;fontColor=#6C767D;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=10;fontSize=14;spacing=10;container=0;" parent="1" vertex="1">
           <mxGeometry x="2031" y="2480" width="623" height="590" as="geometry" />
@@ -362,26 +359,28 @@
         <mxCell id="2efq71ZKfL60kGu9dnVV-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="ocHGO5GNn9pmyrgSXm_p-19" target="1qYccRmLHqD2nOXxJYSw-108" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="2efq71ZKfL60kGu9dnVV-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" parent="1" source="1qYccRmLHqD2nOXxJYSw-211" target="1qYccRmLHqD2nOXxJYSw-130" edge="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="2efq71ZKfL60kGu9dnVV-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" parent="1" target="1qYccRmLHqD2nOXxJYSw-130" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2944" y="2520.0833333333335" as="sourcePoint" />
+            <Array as="points">
+              <mxPoint x="2997" y="2520" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="ocHGO5GNn9pmyrgSXm_p-19" value="Job" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#f8cecc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#b85450;" parent="1" vertex="1">
-          <mxGeometry x="3544" y="2663.07" width="197" height="132" as="geometry" />
-        </mxCell>
-        <mxCell id="veuHkW8nXqJATqobilVs-127" value="+ token: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ocHGO5GNn9pmyrgSXm_p-19" vertex="1">
-          <mxGeometry y="26" width="197" height="28" as="geometry" />
+          <mxGeometry x="3544" y="2663.07" width="197" height="104" as="geometry" />
         </mxCell>
         <mxCell id="ocHGO5GNn9pmyrgSXm_p-25" value="+ state: JobState" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ocHGO5GNn9pmyrgSXm_p-19" vertex="1">
-          <mxGeometry y="54" width="197" height="26" as="geometry" />
+          <mxGeometry y="26" width="197" height="26" as="geometry" />
         </mxCell>
         <mxCell id="ocHGO5GNn9pmyrgSXm_p-26" value="+ next: long" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ocHGO5GNn9pmyrgSXm_p-19" vertex="1">
-          <mxGeometry y="80" width="197" height="26" as="geometry" />
+          <mxGeometry y="52" width="197" height="26" as="geometry" />
         </mxCell>
         <mxCell id="ocHGO5GNn9pmyrgSXm_p-27" value="+ active: boolean" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="ocHGO5GNn9pmyrgSXm_p-19" vertex="1">
-          <mxGeometry y="106" width="197" height="26" as="geometry" />
+          <mxGeometry y="78" width="197" height="26" as="geometry" />
         </mxCell>
         <mxCell id="ocHGO5GNn9pmyrgSXm_p-20" value="A job can be a one time task to be performed with a storage or it can be a regular job simply fired regularly in an interval. The purpose goes from importing or exporting data, making backups, to performing verification of data or applying machine learning algorithms (AI) to data." style="html=1;shadow=0;dashed=0;shape=mxgraph.bootstrap.rrect;rSize=5;strokeColor=#999999;strokeWidth=1;fillColor=#FFFFFF;fontColor=#6C767D;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=10;fontSize=14;spacing=10;" parent="1" vertex="1">
-          <mxGeometry x="3544" y="2795.07" width="270" height="168" as="geometry" />
+          <mxGeometry x="3544" y="2767.07" width="270" height="168" as="geometry" />
         </mxCell>
         <mxCell id="1qYccRmLHqD2nOXxJYSw-134" value="Extension : Plugin&amp;lt;IExtension&amp;gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#fff2cc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#d6b656;" parent="1" vertex="1">
           <mxGeometry x="3484" y="1398" width="260" height="104" as="geometry" />
