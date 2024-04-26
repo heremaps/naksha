@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import io.vertx.core.json.jackson.DatabindCodec;
-import java.util.Map;
 import org.jetbrains.annotations.Nullable;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -31,36 +30,38 @@ import org.jetbrains.annotations.Nullable;
 public class JWTPayload {
 
   /**
-   * The token identifier; if any.
-   */
-  public String tid;
-  /**
    * The authenticated application identifier; if any.
    */
-  public String aid;
+  public String appId;
   /**
-   * The authenticated user; if any.
+   * The authenticated user ID; if any.
    */
-  public String user;
-  /**
-   * The ownership identifier; if any. When creating new objects, then owner receives the ownership. Without an owner, no new objects can be
-   * created, except for features, where the owner of the space is then used as owner.
-   */
-  public String owner;
-  // TODO: ???
-  public String cid;
+  public String userId;
 
-  public Map<String, Object> metadata;
-
+  public int iat;
   public int exp;
   public ServiceMatrix urm;
-  public XYZUsageLimits limits;
-  public boolean anonymous;
 
-  public String jwt;
+  @JsonIgnore
+  private XyzHubActionMatrix __nakshaMatrix; // TODO NakshaActionMatrix
 
   @JsonIgnore
   private XyzHubActionMatrix __xyzHubMatrix;
+
+  @JsonIgnore
+  public @Nullable XyzHubActionMatrix getNakshaMatrix() {
+    if (__nakshaMatrix != null) {
+      return __nakshaMatrix;
+    }
+    if (urm == null) {
+      return null;
+    }
+    final ActionMatrix hereActionMatrix = urm.get(URMServiceId.NAKSHA);
+    if (hereActionMatrix == null) {
+      return null;
+    }
+    return __nakshaMatrix = DatabindCodec.mapper().convertValue(hereActionMatrix, XyzHubActionMatrix.class);
+  }
 
   /**
    * Returns the XYZ Hub action matrix, if there is any for this JWT token.
@@ -86,7 +87,7 @@ public class JWTPayload {
    * Constants for all services that may be part of the JWT token.
    */
   public static final class URMServiceId {
-
+    static final String NAKSHA = "naksha";
     static final String XYZ_HUB = "xyz-hub";
   }
 }

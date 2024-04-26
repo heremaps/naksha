@@ -65,7 +65,11 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
 
   @Override
   public void authenticate(@NotNull RoutingContext context, @NotNull Handler<@NotNull AsyncResult<User>> handler) {
-    final String jwt = chooseJwt(context);
+    if (hubConfig.authMode == AuthorizationMode.DUMMY
+            && !context.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
+      // Use the master JWT for testing in DUMMY auth mode
+      context.request().headers().set(HttpHeaders.AUTHORIZATION, "Bearer " + MASTER_JWT);
+    }
     // TODO: If compressed JWTs are supported
     //    if (ALLOW_COMPRESSED_JWT && jwt != null && !isJWT(jwt)) {
     //      try {
@@ -78,16 +82,10 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
     //        return;
     //      }
     //    }
-    if (jwt != null) {
-      // Set the token into RoutingContext for authentication below
-      context.request().headers().set(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
-    }
     super.authenticate(context, authn -> {
       if (authn.failed()) {
         handler.handle(Future.failedFuture(new HttpException(401, authn.cause())));
       } else {
-        // For other places like AccessLogUtil
-        authn.result().principal().put("jwt", jwt);
         handler.handle(authn);
       }
     });
@@ -99,12 +97,5 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
 
   private boolean isJWT(final @Nullable String jwt) {
     return StringUtils.countMatches(jwt, ".") == 2;
-  }
-
-  private @Nullable String chooseJwt(@NotNull RoutingContext context) {
-      if (hubConfig.authMode == AuthorizationMode.DUMMY && !context.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
-        return MASTER_JWT;
-      }
-    return getFromAuthHeader(context.request().headers().get(HttpHeaders.AUTHORIZATION));
   }
 }

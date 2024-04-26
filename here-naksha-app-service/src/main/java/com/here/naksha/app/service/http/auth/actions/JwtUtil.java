@@ -1,28 +1,42 @@
+/*
+ * Copyright (C) 2017-2023 HERE Europe B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * License-Filename: LICENSE
+ */
 package com.here.naksha.app.service.http.auth.actions;
 
-import io.vertx.core.json.JsonObject;
-import org.jetbrains.annotations.NotNull;
+import com.here.naksha.app.service.http.auth.JWTPayload;
+import io.vertx.core.json.jackson.DatabindCodec;
+import io.vertx.ext.web.RoutingContext;
+import org.jetbrains.annotations.Nullable;
 
 public class JwtUtil {
 
-    /**
-     * Static reference to JSON property within decoded JWT needed for authorization.
-     */
-    public static final String APP_ID = "appId";
-    /**{@link JwtUtil#APP_ID readDocHere}*/
-    public static final String USER_ID = "userId";
-    /**{@link JwtUtil#APP_ID readDocHere}*/
-    public static final String NAKSHA = "naksha";
-    /**{@link JwtUtil#APP_ID readDocHere}*/
-    public static final String URM = "urm";
+  public static final String JWT = "jwt";
 
-    public static @NotNull JsonObject getUrmFromJwt(JsonObject decodedJwt) {
-        if (decodedJwt.containsKey(NAKSHA)) {
-            JsonObject naksha = decodedJwt.getJsonObject(NAKSHA);
-            if (naksha.containsKey(URM)) {
-                return naksha.getJsonObject(URM);
-            }
-        }
-        return new JsonObject();
+  public static @Nullable JWTPayload getOrCreateJWT(final @Nullable RoutingContext context) {
+    if (context == null) {
+      return null;
     }
+    JWTPayload payload = context.get(JWT);
+    if (payload == null && context.user() != null) {
+      payload = DatabindCodec.mapper().convertValue(context.user().principal(), JWTPayload.class);
+      context.put(JWT, payload);
+    }
+
+    return payload;
+  }
 }

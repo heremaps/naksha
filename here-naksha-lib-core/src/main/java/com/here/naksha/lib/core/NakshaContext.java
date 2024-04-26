@@ -23,7 +23,7 @@ import static java.lang.ThreadLocal.withInitial;
 import com.here.naksha.lib.core.exceptions.Unauthorized;
 import com.here.naksha.lib.core.util.NanoTime;
 import com.here.naksha.lib.core.util.StreamInfo;
-import com.here.naksha.lib.core.util.json.JsonObject;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -368,20 +368,20 @@ public final class NakshaContext {
   private @Nullable String author;
 
   @AvailableSince(NakshaVersion.v2_0_15)
-  private @Nullable JsonObject urm;
+  private @Nullable Map<String, Object> urm;
 
   @AvailableSince(NakshaVersion.v2_0_15)
-  public @Nullable JsonObject getUrm() {
+  public @Nullable Map<String, Object> getUrm() {
     return urm;
   }
 
   @AvailableSince(NakshaVersion.v2_0_15)
-  public void setUrm(@Nullable JsonObject urm) {
+  public void setUrm(@Nullable Map<String, Object> urm) {
     this.urm = urm;
   }
 
   @AvailableSince(NakshaVersion.v2_0_15)
-  public @NotNull NakshaContext withUrm(@Nullable JsonObject urm) {
+  public @NotNull NakshaContext withUrm(@Nullable Map<String, Object> urm) {
     this.urm = urm;
     return this;
   }
