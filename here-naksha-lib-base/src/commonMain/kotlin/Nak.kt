@@ -58,61 +58,61 @@ expect class Nak {
         fun initNak(vararg parameters: Any?): Boolean
 
         /**
-         * Reads the current multi-platform type of the given object from the given symbol.
-         * @param <P> The platform type.
-         * @param <T> The multi-platform type.
-         * @param o The object to cast.
-         * @param symbol The symbol to read.
-         * @return The multi-platform type or _null_, if this symbol is not yet linked.
+         * Reads the current assignment to the given object for the given symbol; if there is any.
+         * @param <T> The assignment type.
+         * @param o The object to query.
+         * @param symbol The symbol to query.
+         * @return The assignment or _null_, if this symbol is not yet assigned.
          */
         @JvmStatic
-        fun <P, T : NakType<P>> type(o: P, symbol: PSymbol = NAK_SYM): T?
+        fun <T : NakType> getAssignment(o: Any?, symbol: PSymbol = NAK_SYM): T?
 
         /**
-         * Cast the given object to the multi-platform type represented by the given multi-platform class. This method will fail when
-         * [NakClass.canCast] returns _false_.
-         * @param <P> The platform type.
-         * @param <T> The multi-platform type.
-         * @param o The object to cast.
-         * @param klass The multi-platform class.
-         * @return The multi-platform type.
-         * @throws ClassCastException If casting failed.
+         * Assigns the given assignment type to the given platform object. This method will fail when [NakKlass.isAssignable]
+         * returns _false_. The method will [unbox] the given object to acquire the platform object.
+         * @param <T> The assignment type.
+         * @param o The object to query.
+         * @param klass The assignment class.
+         * @param args The arguments for the constructor, if it will be invoked.
+         * @return The assignment type.
+         * @throws ClassCastException If the assignment failed.
          */
         @JvmStatic
-        fun <P, T : NakType<P>> cast(o: P, klass: NakClass<P, T>): T
+        fun <T : NakType> assign(o: Any, klass: NakKlass<T>, vararg args: Any?): T
 
         /**
-         * Forces to cast the given object to the multi-platform type represented by the given multi-platform class. This method does
-         * not invoke [NakClass.canCast].
+         * Assigns the given assignment type to the given platform object. The method will [unbox] the given object
+         * to acquire the platform object. This method is a forceful operation that does not invoke
+         * [NakKlass.isAssignable]. It should be used carefully.
          * @param <P> The platform type.
-         * @param <T> The multi-platform type.
-         * @param o The object to cast.
-         * @param klass The multi-platform class.
-         * @return The multi-platform type.
-         * @throws ClassCastException If casting failed, only when the given object does not allow multi-platform types, which means, it
-         * does not allow symbols.
+         * @param <T> The assignment type.
+         * @param o The object to query.
+         * @param klass The assignment class.
+         * @param args The arguments for the constructor, if it will be invoked.
+         * @return The assignment type.
+         * @throws ClassCastException If the assignment failed, only happens when trying to assign to a primitive.
          */
         @JvmStatic
-        fun <P, T : NakType<P>> force(o: P, klass: NakClass<P, T>): T
+        fun <T : NakType> forceAssign(o: Any, klass: NakKlass<T>, vararg args: Any?): T
 
         /**
-         * Tests if the given object can be cast to the given multi-platform type. If the method returns _false_, casting is still
-         * possible doing a forceful cast, but not recommended. This method is a shortcut for calling [NakClass.canCast].
-         * @param o The object to test.
-         * @param klass The multi-platform class.
-         * @return _true_ if the object can be cast safely to the given type; _false_ otherwise.
+         * Tests if the assignment type can be assigned to the given platform object. This method is a shortcut for calling
+         * [NakKlass.isAssignable].
+         * @param o The object to test (will be [unbox]'ed).
+         * @param klass The assignment class to test.
+         * @return _true_ if the given assignment class can be assigned to the given platform object; _false_ otherwise.
          */
         @JvmStatic
-        fun canCast(o: Any?, klass: NakClass<*, *>): Boolean
+        fun isAssignable(o: Any?, klass: NakKlass<*>): Boolean
 
         /**
          * Returns the symbol for the given string from the global registry. It is recommended to use the package name, for example
          * _com.here.naksha.lib.nak_ is used for [NAK_SYM], the default Naksha multi-platform library.
-         * @param key The symbol key.
+         * @param key The symbol key; if _null_, a random symbol not part of the registry is created.
          * @return The existing symbol, if no such symbol exist yet, creates a new one.
          */
         @JvmStatic
-        fun symbol(key: String): PSymbol
+        fun symbol(key: String?): PSymbol
 
         /**
          * Creates a new platform object.
@@ -376,6 +376,22 @@ expect class Nak {
          */
         @JvmStatic
         fun objectIterator(o: PObject): PIterator<String, Any?>
+
+        /**
+         * Returns the amount of properties assigned to the given object.
+         * @param o The object for which to count the properties.
+         * @return The amount of properties.
+         */
+        @JvmStatic
+        fun size(o: Any?): Int
+
+        /**
+         * Returns the amount of values being in the array.
+         * @param a The array.
+         * @return The amount of values being in the array.
+         */
+        @JvmStatic
+        fun length(a: PArray?): Int
 
         /**
          * Collect all the keys of the object properties. For an array this only returns the property keys, so not the value indices.

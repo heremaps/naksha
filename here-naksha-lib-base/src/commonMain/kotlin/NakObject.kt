@@ -9,19 +9,15 @@ import kotlin.jvm.JvmStatic
  * The Naksha type for an object.
  */
 @JsExport
-open class NakObject(data: PObject) : NakType<PObject>(data) {
+open class NakObject(vararg args: Any?) : NakMap<Any?>(*args) {
     companion object {
         @JvmStatic
-        val klass = object : NakClass<PObject, NakObject>() {
-            override fun symbol(): PSymbol = Nak.NAK_SYM
-
-            override fun canCast(o: Any?): Boolean = true
-
+        val klass = object : NakObjectKlass<NakObject>() {
             override fun isInstance(o: Any?): Boolean = o is NakObject
 
-            override fun create(o: PObject): NakObject = NakObject(o)
+            override fun newInstance(vararg args: Any?): NakObject = NakObject()
         }
     }
 
-    override fun nakClass(): NakClass<PObject, *> = klass
+    override fun getKlass(): NakKlass<*> = klass
 }

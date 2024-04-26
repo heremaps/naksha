@@ -2,27 +2,23 @@ package com.here.naksha.lib.nak
 
 import kotlin.jvm.JvmStatic
 
-class XyzNs(raw: PObject) : NakObject(raw) {
+class XyzNs : NakObject() {
     companion object {
         @JvmStatic
-        val klass = object : NakClass<PObject, XyzNs>() {
-            override fun symbol(): PSymbol = Nak.NAK_SYM
-
-            override fun canCast(o: Any?): Boolean = Nak.isObject(o)
-
+        val klass = object : NakObjectKlass<XyzNs>() {
             override fun isInstance(o: Any?): Boolean = o is XyzNs
 
-            override fun create(o: PObject): XyzNs = XyzNs(o)
+            override fun newInstance(vararg args: Any?): XyzNs = XyzNs()
 
         }
     }
 
-    override fun nakClass(): NakClass<PObject, *> = klass
+    override fun getKlass(): NakKlass<*> = klass
 
-    fun getAction(): String = data["action"] as? String ?: "CREATE"
+    fun getAction(): String = data()["action"] as? String ?: "CREATE"
     fun setAction(action: String?): String {
         val old = getAction()
-        data["action"] = action
+        data()["action"] = action
         return old
     }
 

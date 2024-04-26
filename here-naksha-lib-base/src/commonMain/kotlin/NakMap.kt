@@ -7,26 +7,22 @@ import com.here.naksha.lib.nak.Nak.Companion.undefined
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
-/**
- * The Naksha type for an object.
- * @param <E> The element type.
- */
 @Suppress("MemberVisibilityCanBePrivate")
 @JsExport
-open class NakArray<E>(vararg args: E?) : NakType() {
+open class NakMap<E>(vararg args: Any?) : NakType() {
     init {
         @Suppress("SENSELESS_COMPARISON")
         if (args !== null && args !== undefined && args.isNotEmpty()) {
-            this.data = Nak.newArray(*args)
+            this.data = Nak.newObject(*args)
         }
     }
 
     companion object {
         @JvmStatic
-        val klass = object : NakArrayKlass<Any?, NakArray<Any?>>() {
-            override fun isInstance(o: Any?): Boolean = o is NakArray<*>
+        val klass = object : NakMapKlass<Any?, NakMap<Any?>>() {
+            override fun isInstance(o: Any?): Boolean = o is NakMap<*>
 
-            override fun newInstance(vararg args: Any?): NakArray<Any?> = NakArray()
+            override fun newInstance(vararg args: Any?): NakMap<Any?> = NakMap()
         }
     }
 
@@ -39,16 +35,16 @@ open class NakArray<E>(vararg args: E?) : NakType() {
     @Suppress("UNCHECKED_CAST")
     var componentKlass: Klass<E> = Klass.anyKlass as Klass<E>
 
-    override fun data(): PArray {
+    override fun data(): PObject {
         var data = this.data
         if (data == null) {
-            data = Nak.newArray()
+            data = Nak.newObject()
             this.data = data
         }
-        return data as PArray
+        return data as PObject
     }
 
-    open fun allowNull() : Boolean = true
+    open fun allowNull(): Boolean = true
 
     open fun isElement(value: Any?): Boolean {
         val data = unbox(value)
@@ -74,11 +70,11 @@ open class NakArray<E>(vararg args: E?) : NakType() {
         return Nak.assign(data, componentKlass) as E
     }
 
-    protected open operator fun get(i: Int): E? = toElement(data()[i])
-    protected open operator fun set(i: Int, value: E?): E? {
+    protected open operator fun get(key: String): E? = toElement(data()[key])
+    protected open operator fun set(key: String, value: E?): E? {
         val data = data()
-        val old = toElement(data[i], false)
-        data[i] = unbox(value)
+        val old = toElement(data[key], false)
+        data[key] = unbox(value)
         return old
     }
 }

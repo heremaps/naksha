@@ -170,5 +170,5 @@ inline fun Int64.toFloat(): Float = Nak.toDouble(this).toFloat()
 inline fun Int64.toDouble(): Double = Nak.toDouble(this)
 inline fun Int64.toDoubleRawBits(): Double = Nak.toDoubleRawBits(this)
 
-inline operator fun PArray.iterator() : Iterator<NakPair<Int, Any?>> = NakIterator(Nak.arrayIterator(this))
-inline operator fun PObject.iterator() : Iterator<NakPair<String, Any?>> = NakIterator(Nak.objectIterator(this))
+inline operator fun PArray.iterator() : Iterator<RawPair<Int, Any?>> = KtIterator(Nak.arrayIterator(this))
+inline operator fun PObject.iterator() : Iterator<RawPair<String, Any?>> = KtIterator(Nak.objectIterator(this))

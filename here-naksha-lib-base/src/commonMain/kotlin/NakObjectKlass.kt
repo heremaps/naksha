@@ -3,8 +3,6 @@
 package com.here.naksha.lib.nak
 
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 @JsExport
-@JsName("Array")
-interface PArray
+abstract class NakObjectKlass<out T : NakObject> : NakMapKlass<Any?, T>()

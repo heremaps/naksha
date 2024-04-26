@@ -2,7 +2,7 @@ import com.here.naksha.lib.nak.symbol
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import com.here.naksha.lib.nak.*
-import com.here.naksha.lib.nak.Nak.Companion.cast
+import com.here.naksha.lib.nak.Nak.Companion.assign
 import com.here.naksha.lib.nak.Nak.Companion.initNak
 import com.here.naksha.lib.nak.Nak.Companion.newArray
 import com.here.naksha.lib.nak.Nak.Companion.newByteArray
@@ -34,6 +34,11 @@ class JvmBasicTest {
             assertEquals("test", entry.key)
             assertEquals(5, entry.value)
         }
+
+        val TEST2 = newObject("hello", "world", "beta", 10)
+        assertEquals(2, Nak.size(TEST2))
+        assertEquals("world", TEST2["hello"])
+        assertEquals(10, TEST2["beta"])
     }
 
     @Test
@@ -53,7 +58,7 @@ class JvmBasicTest {
     fun testXyzNs() {
         val o = newObject()
         assertEquals(undefined, o[XyzNs.klass.symbol()])
-        val xyz = cast(o, XyzNs.klass)
+        val xyz = assign(o, XyzNs.klass)
         assertEquals("CREATE", xyz.getAction())
         assertEquals("CREATE", xyz.setAction("UPDATE"))
         assertEquals("UPDATE", xyz.getAction())

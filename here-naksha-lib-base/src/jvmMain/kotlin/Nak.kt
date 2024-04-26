@@ -97,42 +97,43 @@ actual class Nak {
         }
 
         @JvmStatic
-        actual fun <P, T : NakType<P>> type(o: P, symbol: PSymbol): T? = toJvmObject(o)?.get(symbol) as? T
+        actual fun <T : NakType> getAssignment(o: Any?, symbol: PSymbol): T? = toJvmObject(o)?.get(symbol) as? T
 
         @JvmStatic
-        actual fun <P, T : NakType<P>> cast(o: P, klass: NakClass<P, T>): T {
+        actual fun <T : NakType> assign(o: Any, klass: NakKlass<T>, vararg args: Any?): T {
             val data = toJvmObject(o)
             require(data != null)
             val sym = klass.symbol()
-            var t: Any? = data[sym]
-            if (klass.isInstance(t)) return t as T
-            require(klass.canCast(o))
-            t = klass.create(o)
-            data[sym] = t
-            return t
+            var nakType: Any? = data[sym]
+            if (klass.isInstance(nakType)) return nakType as T
+            require(klass.isAssignable(data))
+            nakType = klass.newInstance(*args)
+            data[sym] = nakType
+            return nakType
         }
 
         @JvmStatic
-        actual fun <P, T : NakType<P>> force(o: P, klass: NakClass<P, T>): T {
+        actual fun <T : NakType> forceAssign(o: Any, klass: NakKlass<T>, vararg args: Any?): T {
             val data = toJvmObject(o)
             require(data != null)
             val sym = klass.symbol()
-            var t: Any? = data[sym]
-            if (klass.isInstance(t)) return t as T
-            //require(klass.canCast(o)) <-- only difference to cast
-            t = klass.create(o)
-            data[sym] = t
-            return t
+            var nakType: Any? = data[sym]
+            if (klass.isInstance(nakType)) return nakType as T
+            require(klass.getPlatformKlass().isInstance(data))
+            nakType = klass.newInstance(*args)
+            data[sym] = nakType
+            return nakType
         }
 
         @JvmStatic
-        actual fun canCast(o: Any?, klass: NakClass<*, *>): Boolean {
+        actual fun isAssignable(o: Any?, klass: NakKlass<*>): Boolean {
             val data = toJvmObject(o)
-            return if (data != null) klass.canCast(data) else false
+            return data != null && klass.isAssignable(data)
         }
 
         @JvmStatic
-        actual fun symbol(key: String): PSymbol {
+        actual fun symbol(key: String?): PSymbol {
+            if (key == null) return JvmPSymbol()
             var symbol = symbolsCache[key]
             if (symbol == null) {
                 symbol = JvmPSymbol(key)
@@ -155,7 +156,7 @@ actual class Nak {
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PDataView = JvmPDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun unbox(o: Any?): Any? = if (o is NakType<*>) o.data as? JvmObject else if (o is JvmObject) o else null
+        actual fun unbox(o: Any?): Any? = if (o is NakType) o.data as? JvmObject else if (o is JvmObject) o else null
 
         /**
          * Returns the [JvmObject] of the given object. This method uses the same implementation as [unbox].
@@ -163,7 +164,7 @@ actual class Nak {
          * @return The [JvmObject] or _null_.
          */
         @JvmStatic
-        fun toJvmObject(o: Any?): JvmObject? = if (o is NakType<*>) o.data as? JvmObject else if (o is JvmObject) o else null
+        fun toJvmObject(o: Any?): JvmObject? = if (o is NakType) o.data as? JvmObject else if (o is JvmObject) o else null
 
         @JvmStatic
         actual fun toInt(value: Any): Int = when (value) {
@@ -284,6 +285,12 @@ actual class Nak {
 
         @JvmStatic
         actual fun objectIterator(o: PObject): PIterator<String, Any?> = JvmPObjectIterator(o as JvmPObject)
+
+        @JvmStatic
+        actual fun size(o: Any?): Int = if (o is JvmObject) o.properties?.size ?: 0 else 0
+
+        @JvmStatic
+        actual fun length(a: PArray?): Int = if (a is JvmPArray) a.size else 0
 
         private val EMPTY_KEYS = arrayOf<String>()
         private val EMPTY_VALUES = arrayOf<Any?>()

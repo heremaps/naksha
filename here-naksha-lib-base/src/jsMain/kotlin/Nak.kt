@@ -112,33 +112,37 @@ Object.assign(BigInt, {
         actual val MAX_SAFE_INT: Double = 9007199254740991.0
         actual val MIN_SAFE_INT: Double = -9007199254740991.0
 
-        actual fun <P, T : NakType<P>> type(o: P, symbol: PSymbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
+        actual fun <T : NakType> getAssignment(o: Any?, symbol: PSymbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun <P, T : NakType<P>> cast(o: P, klass: NakClass<P, T>): T {
-            var sym = klass.symbol()
-            var t: Any? = js("o[sym]")
-            if (klass.isInstance(t)) return t.unsafeCast<T>()
-            require(klass.canCast(o))
-            t = klass.create(o)
-            js("o[sym]=t")
-            return t
+        actual fun <T : NakType> assign(o: Any, klass: NakKlass<T>, vararg args: Any?): T {
+            val sym = klass.symbol()
+            val raw = unbox(o)
+            var nakType: Any? = js("raw[sym]")
+            if (klass.isInstance(nakType)) return nakType.unsafeCast<T>()
+            require(klass.isAssignable(raw))
+            nakType = klass.newInstance(*args)
+            nakType.data = raw
+            js("raw[sym]=t")
+            return nakType
         }
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun <P, T : NakType<P>> force(o: P, klass: NakClass<P, T>): T {
-            var sym = klass.symbol()
-            var t: Any? = js("o[sym]")
-            if (klass.isInstance(t)) return t.unsafeCast<T>()
-            //require(klass.canCast(o)) <-- only difference to cast!
-            t = klass.create(o)
-            js("o[sym]=t")
-            return t
+        actual fun <T : NakType> forceAssign(o: Any, klass: NakKlass<T>, vararg args: Any?): T {
+            val sym = klass.symbol()
+            val raw = unbox(o)
+            var nakType: Any? = js("raw[sym]")
+            if (klass.isInstance(nakType)) return nakType.unsafeCast<T>()
+            require(klass.getPlatformKlass().isInstance(raw))
+            nakType = klass.newInstance(*args)
+            nakType.data = raw
+            js("raw[sym]=t")
+            return nakType
         }
 
-        actual fun canCast(o: Any?, klass: NakClass<*, *>): Boolean = klass.canCast(o)
+        actual fun isAssignable(o: Any?, klass: NakKlass<*>): Boolean = klass.isAssignable(unbox(o))
 
-        actual fun symbol(key: String): PSymbol = js("Symbol.for(key)").unsafeCast<PSymbol>()
+        actual fun symbol(key: String?): PSymbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<PSymbol>()
 
         @Suppress("UNUSED_VARIABLE")
         actual fun newObject(vararg entries: Any?): PObject {
@@ -174,7 +178,7 @@ size = size ? Math.floor(size) : byteArray.byteLength - offset;
 return new DataView(byteArray.buffer, offset, size);
 """).unsafeCast<PDataView>()
 
-        actual fun unbox(o: Any?): Any? = if (o is NakType<*>) o.data else o
+        actual fun unbox(o: Any?): Any? = if (o is NakType) o.data else o
 
         actual fun toInt(value: Any): Int = js("Number(value) >> 0").unsafeCast<Int>()
 
@@ -213,7 +217,7 @@ return new DataView(byteArray.buffer, offset, size);
             return js("view.getFloat64(0)").unsafeCast<Double>()
         }
 
-        actual fun isNative(o: Any?): Boolean = o !is NakType<*>
+         actual fun isNative(o: Any?): Boolean = o !is NakType
 
         actual fun isString(o: Any?): Boolean = o is String
 
@@ -251,9 +255,13 @@ return new DataView(byteArray.buffer, offset, size);
 
         actual fun delete(o: Any, key: Any): Any? = js("var old=o[key]; delete o[key]; old")
 
+        actual fun arrayIterator(o: PArray): PIterator<Int,Any?> = JsArrayIterator(o)
+
         actual fun objectIterator(o: PObject): PIterator<String,Any?> = JsObjectIterator(o)
 
-        actual fun arrayIterator(o: PArray): PIterator<Int,Any?> = JsArrayIterator(o)
+        actual fun size(o: Any?): Int = if (o != null) keys(o).size else 0
+
+        actual fun length(a: PArray?): Int = js("(Array.isArray(a) ? a.length : 0)").unsafeCast<Int>()
 
         actual fun keys(o: Any): Array<String> = js("var k=Object.keys(o); (Array.isArray(o) ? k.splice(o.length) : k)").unsafeCast<Array<String>>()
 

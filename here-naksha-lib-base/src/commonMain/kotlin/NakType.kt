@@ -5,19 +5,43 @@ package com.here.naksha.lib.nak
 import kotlin.js.JsExport
 
 /**
- * The base class for all multi-platform types.
+ * The base class for all assignment types.
  * @param <P> The platform type, being one of: [PObject], [PArray] or [PDataView].
- * @property data The data object to which this type is bound.
+ * @property data The platform object to which this type is bound.
  * @property symbol The symbol to which this type is bound.
  */
 @JsExport
-abstract class NakType<P>(val data: P) {
+abstract class NakType {
+    companion object {
+        val klass = object : NakKlass<NakType>() {
+            override fun getPlatformKlass(): Klass<Any> = anyKlass
+
+            override fun isAbstract(): Boolean = true
+
+            override fun isArray(): Boolean = false
+
+            override fun isInstance(o: Any?): Boolean = o is NakType
+
+            override fun newInstance(vararg args: Any?): NakType = throw UnsupportedOperationException()
+        }
+    }
+
     /**
-     * Returns the Naksha class of this Naksha type, should always be implemented by returning the value of the static member
-     * with the name **klass**.
-     * @return The Naksha class.
+     * Returns the Klass of this instance.
+     * @return The Klass of this instance.
      */
-    abstract fun nakClass(): NakClass<P, *>
+    abstract fun getKlass(): NakKlass<*>
+
+    /**
+     * The data object to which this class is bound. Is late bound by [Nak].
+     */
+    internal var data: Any? = null
+
+    /**
+     * Returns the data object to which this assignment type is bound.
+     * @return The data object to which this assignment type is bound.
+     */
+    abstract fun data(): Any
 }
 
 //
