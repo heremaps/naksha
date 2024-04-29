@@ -31,6 +31,11 @@ CREATE EXTENSION IF NOT EXISTS btree_gist SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS btree_gin SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS postgis SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS postgis_topology SCHEMA topology;
+do $$ begin
+  if exists (select from pg_available_extensions where name = 'gzip' and installed_version is null) then
+  	CREATE EXTENSION gzip SCHEMA public;
+  end if;
+end; $$ language 'plpgsql';
 
 -- Restore search_path (postgis_topology modifies it), then install hint-plan.
 SET SESSION search_path TO "${schema}", public, topology;
