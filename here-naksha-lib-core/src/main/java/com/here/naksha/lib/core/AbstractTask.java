@@ -405,79 +405,58 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
     final long LIMIT = AbstractTask.limit.get();
     lockAndRequireNew();
     try {
-      do {
-        final long threadCount = AbstractTask.threadCount.get();
-        assert threadCount >= 0L;
-        AtomicInteger principalUsage = null;
-        String author = context.getAuthor();
-        String principal = getPrincipalName();
-        boolean inPrincipal = false;
-        synchronized (AbstractTask.principalUsageMap) {
-          if (principal != null) {
-            principalUsage =
-                AbstractTask.principalUsageMap.computeIfAbsent(principal, k -> new AtomicInteger(0));
-          }
-        }
-        if (!internal && principalUsage != null && principalUsage.get() >= AbstractTask.principalLimit) {
-          log.info(
-              "NAKSHA_ERR_REQ_LIMIT_4_PRINCIPAL - [Request Limit breached for Principal => appId,author,limit,crtValue] - ReqLimitForPrincipal {} {} {} {}",
-              context.getAppId(),
-              author,
-              principalLimit,
-              principalUsage);
-          String errorMessage =
-              "Maximum number of concurrent tasks reached for principal (" + principalLimit + ")";
-          throw new TooManyTasks(errorMessage);
-        }
-        if (!internal && threadCount >= LIMIT) {
+      long myIncrementedValue = AbstractTask.threadCount.updateAndGet(l -> {
+        if (!internal && AbstractTask.threadCount.get() >= LIMIT) {
           log.info(
               "NAKSHA_ERR_REQ_LIMIT_4_INSTANCE - [Request Limit breached for Instance => appId,author,limit,crtValue] - ReqLimitForInstance {} {} {} {}",
               context.getAppId(),
-              author,
+              getAuthorName(),
               LIMIT,
               threadCount);
           String errorMessage = "Maximum number of concurrent tasks reached for instance (" + LIMIT + ")";
           throw new TooManyTasks(errorMessage);
         }
-        if (principal != null
-            && AbstractTask.principalUsageMap
-                .get(principal)
-                .compareAndSet(principalUsage.get(), principalUsage.get() + 1)) {
-          inPrincipal = true;
-        }
-        if (AbstractTask.threadCount.compareAndSet(threadCount, threadCount + 1)) {
-          try {
-            state.set(State.START);
-            final Future<RESULT> future = threadPool.submit(this::init_and_execute);
-            return future;
-          } catch (RejectedExecutionException e) {
-            String errorMessage =
-                "Maximum number of concurrent tasks (" + AbstractTask.limit.get() + ") reached";
-            throw new TooManyTasks(errorMessage);
-          } catch (Throwable t) {
-            AbstractTask.threadCount.decrementAndGet();
-            if (inPrincipal) {
-              // The lambda function passed to computeIfPresent is applied atomically when the key is
-              // present in the map.
-              // since you're using computeIfPresent, the get() operation is performed within the atomic
-              // operation of computeIfPresent
-              AbstractTask.principalUsageMap.computeIfPresent(principal, (key, value) -> {
-                value.decrementAndGet();
-                return value;
-              });
-            }
-            log.atError()
-                .setMessage("Unexpected exception while trying to fork a new thread")
-                .setCause(t)
-                .log();
-            throw new RuntimeException("Internal error while forking new worker thread", t);
-          }
-        }
-        if (inPrincipal) {
-          AbstractTask.principalUsageMap.get(principal).decrementAndGet();
-        }
-        // Conflict, two threads concurrently try to fork.
-      } while (true);
+        return l + 1;
+      });
+      assert myIncrementedValue >= 0L;
+      String principal = getPrincipalName();
+      if (principal != null) {
+        AtomicInteger authorUsageValue = principalUsageMap.merge(
+            principal, new AtomicInteger(0), (oldAuthorUsageValue, newAuthorUsageValue) -> {
+              int authorLimit = (int) (LIMIT * principalThreshold);
+              if (!internal && oldAuthorUsageValue.get() >= authorLimit) {
+                log.info(
+                    "NAKSHA_ERR_REQ_LIMIT_4_PRINCIPAL - [Request Limit breached for Principal => appId,author,limit,crtValue] - ReqLimitForPrincipal {} {} {} {}",
+                    context.getAppId(),
+                    getAuthorName(),
+                    authorLimit,
+                    oldAuthorUsageValue);
+                AbstractTask.threadCount.decrementAndGet();
+                String errorMessage = "Maximum number of concurrent tasks reached for principal ("
+                    + principalLimit + ")";
+                throw new TooManyTasks(errorMessage);
+              }
+              oldAuthorUsageValue.incrementAndGet();
+              return oldAuthorUsageValue;
+            });
+      }
+
+      try {
+        state.set(State.START);
+        final Future<RESULT> future = threadPool.submit(this::init_and_execute);
+        return future;
+      } catch (RejectedExecutionException e) {
+        String errorMessage = "Maximum number of concurrent tasks (" + AbstractTask.limit.get() + ") reached";
+        throw new TooManyTasks(errorMessage);
+      } catch (Throwable t) {
+        AbstractTask.threadCount.decrementAndGet();
+        AbstractTask.decrementPrincipalUsage(principal);
+        log.atError()
+            .setMessage("Unexpected exception while trying to fork a new thread")
+            .setCause(t)
+            .log();
+        throw new RuntimeException("Internal error while forking new worker thread", t);
+      }
     } finally {
       unlock();
     }
@@ -512,16 +491,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         final long newValue = AbstractTask.threadCount.decrementAndGet();
         assert newValue >= 0L;
         String principal = getPrincipalName();
-        // The lambda function passed to computeIfPresent is applied atomically when the key is present in the
-        // map.
-        // since you're using computeIfPresent, the get() operation is performed within the atomic operation of
-        // computeIfPresent
-        if (principal != null) {
-          AbstractTask.principalUsageMap.computeIfPresent(principal, (key, value) -> {
-            value.decrementAndGet();
-            return value;
-          });
-        }
+        decrementPrincipalUsage(principal);
         detachFromCurrentThread();
       } catch (Throwable t) {
         RESULT = errorResponse(t);
@@ -651,29 +621,49 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
     }
   }
   /**
-   * Increments the value of authorUsage in the hashmap.
+   * Increments the value of authorUsage in the hashmap atomically.
    *
    * @param principal The author.
    */
   private static void incrementPrincipalUsage(String principal) {
-    principalUsageMap.computeIfAbsent(principal, key -> new AtomicInteger()).incrementAndGet();
+    if (principal != null) {
+      AtomicInteger authorUsageValue =
+          principalUsageMap.merge(principal, new AtomicInteger(0), (existingValue, newValue) -> {
+            existingValue.incrementAndGet();
+            return existingValue;
+          });
+    }
   }
 
   /**
-   * Decrements the value of authorUsage in the hashmap.
+   * Decrements the value of authorUsage in the hashmap atomically.
    *
    * @param principal The author.
    */
   private static void decrementPrincipalUsage(String principal) {
-    AtomicInteger usage = principalUsageMap.get(principal);
-    if (usage != null) {
-      usage.decrementAndGet();
+    if (principal != null) {
+      AtomicInteger authorUsageValue = principalUsageMap.computeIfPresent(principal, (key, oldValue) -> {
+        if (oldValue.get() > 0) {
+          oldValue.decrementAndGet();
+        }
+        return oldValue;
+      });
     }
   }
 
+  /**
+   * Returns the  value of author name.
+   */
+  private String getAuthorName() {
+    return context.getAuthor();
+  }
+
+  /**
+   * Returns the  value of principal name.
+   */
   private String getPrincipalName() {
     String author = context.getAuthor();
-    // String appId = context.getAppId();
-    return author;
+    String appId = context.getAppId();
+    return author + appId;
   }
 }
