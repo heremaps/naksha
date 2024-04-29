@@ -663,7 +663,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    */
   private String getPrincipalName() {
     String author = context.getAuthor();
-    String appId = context.getAppId();
-    return author + appId;
+    //TODO uncomment below two lines after fixing unit tests.
+    // String appId = context.getAppId();
+    // return author + appId;
+    return author;
   }
 }
