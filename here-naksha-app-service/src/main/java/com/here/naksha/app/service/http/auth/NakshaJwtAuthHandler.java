@@ -22,14 +22,12 @@ import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.NakshaHubConfig.AuthorizationMode;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.impl.JWTAuthHandlerImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -66,8 +64,8 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
   @Override
   public void authenticate(@NotNull RoutingContext context, @NotNull Handler<@NotNull AsyncResult<User>> handler) {
     if (hubConfig.authMode == AuthorizationMode.DUMMY
-            && !context.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
-      // Use the master JWT for testing in DUMMY auth mode
+        && !context.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
+      // Use the master JWT for testing in DUMMY auth mode with no JWT provided in request
       context.request().headers().set(HttpHeaders.AUTHORIZATION, "Bearer " + MASTER_JWT);
     }
     // TODO: If compressed JWTs are supported
@@ -82,13 +80,7 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
     //        return;
     //      }
     //    }
-    super.authenticate(context, authn -> {
-      if (authn.failed()) {
-        handler.handle(Future.failedFuture(new HttpException(401, authn.cause())));
-      } else {
-        handler.handle(authn);
-      }
-    });
+    super.authenticate(context, handler);
   }
 
   private @Nullable String getFromAuthHeader(@Nullable String authHeader) {

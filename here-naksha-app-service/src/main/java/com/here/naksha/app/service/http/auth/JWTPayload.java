@@ -22,6 +22,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.here.naksha.lib.core.models.auth.ActionMatrix;
+import com.here.naksha.lib.core.models.auth.ServiceMatrix;
 import io.vertx.core.json.jackson.DatabindCodec;
 import org.jetbrains.annotations.Nullable;
 

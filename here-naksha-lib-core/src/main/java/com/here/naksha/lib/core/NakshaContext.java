@@ -21,9 +21,9 @@ package com.here.naksha.lib.core;
 import static java.lang.ThreadLocal.withInitial;
 
 import com.here.naksha.lib.core.exceptions.Unauthorized;
+import com.here.naksha.lib.core.models.auth.ServiceMatrix;
 import com.here.naksha.lib.core.util.NanoTime;
 import com.here.naksha.lib.core.util.StreamInfo;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -368,20 +368,20 @@ public final class NakshaContext {
   private @Nullable String author;
 
   @AvailableSince(NakshaVersion.v2_0_15)
-  private @Nullable Map<String, Object> urm;
+  private @Nullable ServiceMatrix urm;
 
   @AvailableSince(NakshaVersion.v2_0_15)
-  public @Nullable Map<String, Object> getUrm() {
+  public @Nullable ServiceMatrix getUrm() {
     return urm;
   }
 
   @AvailableSince(NakshaVersion.v2_0_15)
-  public void setUrm(@Nullable Map<String, Object> urm) {
+  public void setUrm(@Nullable ServiceMatrix urm) {
     this.urm = urm;
   }
 
   @AvailableSince(NakshaVersion.v2_0_15)
-  public @NotNull NakshaContext withUrm(@Nullable Map<String, Object> urm) {
+  public @NotNull NakshaContext withUrm(@Nullable ServiceMatrix urm) {
     this.urm = urm;
     return this;
   }

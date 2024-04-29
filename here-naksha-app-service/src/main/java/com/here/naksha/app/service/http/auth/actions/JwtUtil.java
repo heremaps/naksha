@@ -21,22 +21,19 @@ package com.here.naksha.app.service.http.auth.actions;
 import com.here.naksha.app.service.http.auth.JWTPayload;
 import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.ext.web.RoutingContext;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class JwtUtil {
 
   public static final String JWT = "jwt";
 
-  public static @Nullable JWTPayload getOrCreateJWT(final @Nullable RoutingContext context) {
-    if (context == null) {
-      return null;
-    }
+  public static @Nullable JWTPayload getOrCreateJWT(final @NotNull RoutingContext context) {
     JWTPayload payload = context.get(JWT);
     if (payload == null && context.user() != null) {
       payload = DatabindCodec.mapper().convertValue(context.user().principal(), JWTPayload.class);
       context.put(JWT, payload);
     }
-
     return payload;
   }
 }

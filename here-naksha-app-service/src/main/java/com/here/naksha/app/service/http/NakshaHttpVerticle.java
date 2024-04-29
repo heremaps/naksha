@@ -705,10 +705,14 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
     ctx.attachStreamInfo(AccessLogUtil.getStreamInfo(routingContext));
     // extract the JWT from authorization header
     final JWTPayload jwtPayload = getOrCreateJWT(routingContext);
-    // attach authorization info into context
-    ctx.setAppId(jwtPayload.appId);
-    ctx.setAuthor(jwtPayload.userId);
-//    ctx.setUrm(jwtPayload.urm.m);
+    if (jwtPayload == null) {
+      log.error("Cannot detect JWT payload in routing context: {}", routingContext);
+    } else {
+      // attach authorization info into context
+      ctx.setAppId(jwtPayload.appId);
+      ctx.setAuthor(jwtPayload.userId);
+      ctx.setUrm(jwtPayload.urm);
+    }
     return ctx;
   }
 }
