@@ -27,7 +27,7 @@ class Flags(initialFlags: Int? = null) {
     fun getFeatureEncoding() = featureEncoding
 
     fun setGeometryEncoding(ge: Int) {
-        check(ge < 64) // 2^6-1
+        check(ge in 0..63) // 2^6-1
         geometryEncoding = ge
     }
 
@@ -35,7 +35,7 @@ class Flags(initialFlags: Int? = null) {
      * Temporarily only internal, in future we might allow to set encoding.
      */
     internal fun setFeatureEncoding(fe: Int) {
-        check(fe < 64) // 2^6-1
+        check(fe in 0..63) // 2^6-1
         featureEncoding = fe
     }
 
@@ -51,7 +51,7 @@ class Flags(initialFlags: Int? = null) {
         return featureEncoding == FEATURE_ENCODING_JSON_GZIP || featureEncoding == FEATURE_ENCODING_JBON_GZIP
     }
 
-    fun toCombinedFlags(): Int = reserved.shl(12) + featureEncoding.shl(6) + geometryEncoding
+    fun toCombinedFlags(): Int = featureEncoding.shl(6) or geometryEncoding
 
     companion object {
         const val GEO_TYPE_NULL : Int = 0
