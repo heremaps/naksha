@@ -3,6 +3,7 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.nak.Flags
 import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
 import com.here.naksha.lib.plv8.Static.nakshaCollectionConfig
 import kotlinx.datetime.*
@@ -236,17 +237,15 @@ SET SESSION enable_seqscan = OFF;
         NEW[COL_TXN_NEXT] = null
         NEW[COL_PTXN] = null
         NEW[COL_PUID] = null
-        var flags: Int? = NEW[COL_FLAGS]
-        if (flags == null) {
-            flags = GEO_TYPE_NULL
-            NEW[COL_FLAGS] = GEO_TYPE_NULL
-        }
+        val flags = Flags(NEW[COL_FLAGS])
+        NEW[COL_FLAGS] = flags.toCombinedFlags()
+
         val geoGrid: Int? = NEW[COL_GEO_GRID]
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
             val id: String? = NEW[COL_ID]
             check(id != null) { "Missing id" }
-            NEW[COL_GEO_GRID] = grid(id, flags, NEW[COL_GEOMETRY])
+            NEW[COL_GEO_GRID] = grid(id, flags.getGeometryEncoding(), NEW[COL_GEOMETRY])
         }
         NEW[COL_ACTION] = null // saving space null means 0 (create)
         NEW[COL_VERSION] = null // saving space null means 1
@@ -579,12 +578,15 @@ FROM ns, txn_seq;"""
         return if (collectionConfiguration.containsKey(collectionId)) {
             collectionConfiguration[collectionId]!!
         } else {
-            val collectionsSearchRows = asArray(sql.execute("select $COL_FEATURE from $NKC_TABLE_ESC where $COL_ID = $1", arrayOf(collectionId)))
+            val collectionsSearchRows = asArray(sql.execute("select $COL_FEATURE, $COL_FLAGS from $NKC_TABLE_ESC where $COL_ID = $1", arrayOf(collectionId)))
             if (collectionsSearchRows.isEmpty()) {
                 throw RuntimeException("collection $collectionId does not exist in $NKC_TABLE_ESC")
             }
             val cols = asMap(collectionsSearchRows[0])
-            val jbFeature = JbFeature(getDictManager(collectionId)).mapBytes(cols[COL_FEATURE])
+            val bytes: ByteArray? = cols[COL_FEATURE]
+            val flags = Flags(cols[COL_FLAGS])
+            val rawFeatureBytes: ByteArray? = if (bytes != null && flags.isFeatureEncodedWithGZip()) sql.gzipDecompress(bytes) else bytes
+            val jbFeature = JbFeature(getDictManager(collectionId)).mapBytes(rawFeatureBytes)
             val featureAsMap = JbMap().mapReader(jbFeature.reader).toIMap()
             collectionConfiguration.put(collectionId, featureAsMap)
             featureAsMap

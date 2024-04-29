@@ -2,6 +2,9 @@
 
 package com.here.naksha.lib.plv8;
 
+import com.here.naksha.lib.jbon.asMap
+import com.here.naksha.lib.jbon.get
+
 /**
  * Thin wrapper around the native plv8 engine methods. This wrapper allows to simulate this in the JVM.
  */
@@ -46,5 +49,13 @@ class JsPlv8Sql : IPlv8Sql {
             js("plan.execute(executionParams)")
         }
         return intArrayOf(bulkParams.size)
+    }
+
+    override fun gzipCompress(raw: ByteArray): ByteArray {
+        return asMap(rows(execute("SELECT gzip($1) as compressed", arrayOf(raw)))!![0])["compressed"]!!
+    }
+
+    override fun gzipDecompress(raw: ByteArray): ByteArray {
+        return asMap(rows(execute("SELECT gunzip($1) as uncompressed", arrayOf(raw)))!![0])["uncompressed"]!!
     }
 }

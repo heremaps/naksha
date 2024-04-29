@@ -49,6 +49,9 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?) {
                 TABLESPACE = ""
             }
         }
+
+        val featureCompression = if (sql.info().gzipSupported) "EXTERNAL" else DEFAULT_FEATURE_STORAGE
+
         val builder = StringBuilder()
         builder.append(" (")
         builder.append("""
@@ -69,10 +72,10 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?) {
                 author      text STORAGE PLAIN,
                 type        text STORAGE PLAIN,
                 id          text STORAGE PLAIN NOT NULL,
-                feature     bytea STORAGE MAIN COMPRESSION lz4,
-                tags        bytea STORAGE MAIN COMPRESSION lz4,
-                geo         bytea STORAGE MAIN COMPRESSION lz4,
-                geo_ref     bytea STORAGE MAIN COMPRESSION lz4
+                feature     bytea STORAGE $featureCompression,
+                tags        bytea STORAGE EXTERNAL,
+                geo         bytea STORAGE EXTERNAL,
+                geo_ref     bytea STORAGE EXTERNAL
             ) """)
         CREATE_TABLE_BODY = builder.toString()
 
@@ -83,5 +86,9 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?) {
                 .append(",parallel_workers=").append(Static.PARTITION_COUNT)
                 .append(") ")
         STORAGE_PARAMS = builder.toString()
+    }
+
+    companion object {
+        const val DEFAULT_FEATURE_STORAGE = "MAIN COMPRESSION lz4"
     }
 }

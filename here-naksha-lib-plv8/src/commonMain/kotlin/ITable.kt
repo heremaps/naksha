@@ -3,6 +3,7 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.nak.Flags
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -122,7 +123,7 @@ interface ITable {
         map[RET_ID] = id
         map[RET_XYZ] = xyz
         map[RET_TAGS] = tags
-        map[RET_FLAGS] = flags ?: GEO_TYPE_NULL
+        map[RET_FLAGS] = flags ?: Flags()
         map[RET_GEOMETRY] = geo
         map[RET_FEATURE] = feature
         map[RET_ERR_NO] = errNo

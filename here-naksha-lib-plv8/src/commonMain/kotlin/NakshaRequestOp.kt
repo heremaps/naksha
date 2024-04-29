@@ -1,15 +1,18 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.nak.Flags
 import com.here.naksha.lib.plv8.Static.DEBUG
 
 internal class NakshaRequestOp(
+        val rawFeature: ByteArray?,
         val rowMap: IMap,
         val xyzOp: XyzOp,
         val collectionId: String
 ) {
     val id: String = rowMap.getAny(COL_ID) as String
     val partition: Int = Static.partitionNumber(id)
+
     // Used for sorting
     val key = "${Static.PARTITION_ID[partition]}_${id}"
 
@@ -20,12 +23,13 @@ internal class NakshaRequestOp(
                 feature_arr: Array<ByteArray?>,
                 flags_arr: Array<Int?>,
                 geo_arr: Array<ByteArray?>,
-                tags_arr: Array<ByteArray?>
+                tags_arr: Array<ByteArray?>,
+                sql: IPlv8Sql
         ): NakshaWriteOps {
             check(op_arr.size == feature_arr.size && op_arr.size == flags_arr.size && op_arr.size == geo_arr.size && op_arr.size == tags_arr.size) {
                 "not all input arrays has same size"
             }
-            var partition : Int = -2
+            var partition: Int = -2
             val featureReader = JbFeature(JbDictManager())
             val operations = ArrayList<NakshaRequestOp>(op_arr.size)
             val idsToModify = ArrayList<String>(op_arr.size)
@@ -68,14 +72,20 @@ internal class NakshaRequestOp(
                 row[COL_ID] = id
                 row[COL_TAGS] = tags_arr[i]
                 row[COL_GEOMETRY] = geo_arr[i]
-                row[COL_FEATURE] = feature_arr[i]
-                row[COL_FLAGS] = flags_arr[i]
+                val flags = Flags(flags_arr[i])
+                row[COL_FEATURE] = if (!flags.isFeatureEncodedWithGZip() && sql.info().gzipSupported && feature_arr[i] != null) {
+                    flags.forceGzipOnFeatureEncoding()
+                    sql.gzipCompress(feature_arr[i]!!)
+                } else {
+                    feature_arr[i]
+                }
+                row[COL_FLAGS] = flags.toCombinedFlags()
                 if (opReader.grid() != null) {
                     // we don't want it to be null, as null would override calculated value later in response
                     row[COL_GEO_GRID] = opReader.grid()
                 }
 
-                val op = NakshaRequestOp(row,xyzOp = opReader,collectionId = collectionId)
+                val op = NakshaRequestOp(feature_arr[i], row, xyzOp = opReader, collectionId = collectionId)
                 operations.add(op)
                 if (partition == -2) {
                     partition = op.partition
@@ -85,7 +95,7 @@ internal class NakshaRequestOp(
             }
 
             if (DEBUG) println("opReader.mapBytes(op_arr[i]) took ${total / 1000}ms")
-            return NakshaWriteOps(collectionId, operations.sortedBy { it.key }, idsToModify, idsToPurge, idsToDel, if (partition>=0) partition else null)
+            return NakshaWriteOps(collectionId, operations.sortedBy { it.key }, idsToModify, idsToPurge, idsToDel, if (partition >= 0) partition else null)
         }
     }
 }

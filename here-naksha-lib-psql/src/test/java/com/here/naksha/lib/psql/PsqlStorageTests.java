@@ -58,7 +58,12 @@ import com.here.naksha.lib.jbon.BigInt64Kt;
 import com.here.naksha.lib.jbon.JbDictManager;
 import com.here.naksha.lib.jbon.JbFeature;
 import com.here.naksha.lib.jbon.JbMap;
+import com.here.naksha.lib.jbon.JbSession;
+import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.NakshaTxn;
+import com.here.naksha.lib.nak.Flags;
+import com.here.naksha.lib.nak.GZip;
+import com.here.naksha.lib.plv8.NakshaSession;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -184,8 +189,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals("3", idFields[5]); // seq txn (first for internal collections, second for feature create collection, third for create feature)
       assertEquals("0", idFields[6]); // uid seq
 
-      JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(cursor.getFeatureJbon(), 0, cursor.getFeatureJbon().length);
-      Map<String, Object> featureAsMap = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
+      Map<String, Object> featureAsMap = (Map<String, Object>) JvmEnv.get().parse(cursor.getFeature());
       assertEquals(1, featureAsMap.get("modifiedFeatureCount"));
       assertEquals(1, ((Map<String, Integer>) featureAsMap.get("collectionCounters")).get(collectionId()));
       assertNull(featureAsMap.get("seqNumber"));

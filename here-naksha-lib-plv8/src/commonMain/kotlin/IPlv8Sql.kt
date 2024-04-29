@@ -97,4 +97,18 @@ interface IPlv8Sql {
     fun prepare(sql: String, typeNames: Array<String>? = null): IPlv8Plan
 
     fun executeBatch(plan: IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray
+
+    /**
+     * Compress bytes using GZip.
+     * @param raw The bytes to compress.
+     * @return The deflated (compressed) bytes.
+     */
+    fun gzipCompress(raw: ByteArray): ByteArray
+
+    /**
+     * Decompress bytes compressed by GZip.
+     * @param compressed The bytes to decompress.
+     * @return The inflated (decompress) bytes.
+     */
+    fun gzipDecompress(raw: ByteArray): ByteArray
 }

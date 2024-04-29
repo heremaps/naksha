@@ -54,9 +54,4 @@ internal const val RET_GEOMETRY = "geo"
 internal const val RET_ERR_NO = "err_no"
 internal const val RET_ERR_MSG = "err_msg"
 
-internal const val GEO_TYPE_NULL : Int = 0
-internal const val GEO_TYPE_WKB : Int = 1
-internal const val GEO_TYPE_EWKB : Int = 2
-internal const val GEO_TYPE_TWKB : Int = 3
-
 var TEMPORARY_TABLESPACE = "temp"

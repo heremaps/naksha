@@ -25,13 +25,15 @@ import com.here.naksha.lib.core.models.storage.CodecError;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
 import com.here.naksha.lib.jbon.IMap;
+import com.here.naksha.lib.nak.Flags;
+import com.here.naksha.lib.plv8.IPlv8Sql;
 import java.util.ArrayList;
 import java.util.List;
 
 public class PsqlResultMapper {
 
   public static <CODEC extends FeatureCodec<FEATURE, CODEC>, FEATURE> List<CODEC> mapRowToCodec(
-      FeatureCodecFactory<FEATURE, CODEC> codecFactory, List<?> reqCodecs, List<IMap> rsRows) {
+      FeatureCodecFactory<FEATURE, CODEC> codecFactory, List<?> reqCodecs, List<IMap> rsRows, IPlv8Sql sql) {
     List<CODEC> codecRows = new ArrayList<>(reqCodecs.size());
     for (int i = 0; i < rsRows.size(); i++) {
       CODEC codec = codecFactory.newInstance();
@@ -42,8 +44,15 @@ public class PsqlResultMapper {
       codec.setXyzNsBytes(get(row, "xyz"));
       codec.setTagsBytes(defaultIfNull(get(row, "tags"), reqCodec.getTagsBytes()));
       codec.setGeometryBytes(defaultIfNull(get(row, "geo"), reqCodec.getGeometryBytes()));
-      codec.setGeometryEncoding(defaultIfNull(get(row, "flags"), reqCodec.getGeometryEncoding()));
-      codec.setFeatureBytes(defaultIfNull(get(row, "feature"), reqCodec.getFeatureBytes()));
+
+      byte[] featureBytes = get(row, "feature");
+      if (featureBytes == null) {
+        codec.setFlags(reqCodec.getFlags());
+        codec.setFeatureBytes(reqCodec.getFeatureBytes());
+      } else {
+        codec.setFlags(new Flags(get(row, "flags")));
+        codec.setFeatureBytes(featureBytes);
+      }
       String errMsg = get(row, "err_msg");
       codec.setRawError(errMsg);
       String errNo = get(row, "err_no");

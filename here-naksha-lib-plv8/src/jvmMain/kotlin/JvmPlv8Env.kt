@@ -197,8 +197,9 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
 
     private fun createInternalsIfNotExists(conn: Connection, schema: String, appName: String) {
         val verifyCreation: (ITable) -> Unit = {
-            var opPerformed: String? = (it as JvmPlv8Table).rows[0]["op"]
-            assert(opPerformed == XYZ_EXEC_CREATED)
+            val table = it as JvmPlv8Table
+            val opPerformed: String? = table.rows[0][RET_OP]
+            assert(opPerformed == XYZ_EXEC_CREATED) { table.rows[0][RET_ERR_MSG]!! }
         }
 
         startSession(conn, schema, appName, "", appName, null)
