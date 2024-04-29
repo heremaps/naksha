@@ -1,12 +1,22 @@
-import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_NULL
-import com.here.naksha.lib.plv8.*
+import com.here.naksha.lib.jbon.XYZ_OP_CREATE
+import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
+import com.here.naksha.lib.jbon.XYZ_OP_UPSERT
+import com.here.naksha.lib.jbon.XyzBuilder
+import com.here.naksha.lib.jbon.asArray
+import com.here.naksha.lib.jbon.asMap
+import com.here.naksha.lib.jbon.get
+import com.here.naksha.lib.jbon.newMap
+import com.here.naksha.lib.jbon.put
+import com.here.naksha.lib.plv8.JvmPlv8Table
 import com.here.naksha.lib.plv8.NKC_DISABLE_HISTORY
 import com.here.naksha.lib.plv8.NKC_PARTITION
-import org.junit.jupiter.api.Assertions.*
+import com.here.naksha.lib.plv8.NakshaSession
+import com.here.naksha.lib.plv8.RET_ERR_MSG
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import java.util.function.BooleanSupplier
 
 @ExtendWith(Plv8TestContainer::class)
 class NakshaSessionTest : JbTest() {
@@ -93,7 +103,7 @@ class NakshaSessionTest : JbTest() {
         val builder = XyzBuilder.create(65536)
         val op = builder.buildXyzOp(XYZ_OP_UPSERT, collectionId, null, 1111)
         val feature = builder.buildFeatureFromMap(asMap(env.parse(collectionJson)))
-        session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
+        session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(null), arrayOf(null), arrayOf(null))
     }
 
     private fun doesTableExist(session: NakshaSession, tableName: String): Boolean {

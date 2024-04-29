@@ -47,6 +47,14 @@ class Flags(initialFlags: Int? = null) {
             }
     }
 
+    fun turnOffGzipOnFeatureEncoding() {
+        featureEncoding = when (featureEncoding) {
+            FEATURE_ENCODING_JSON_GZIP -> FEATURE_ENCODING_JSON
+            FEATURE_ENCODING_JBON_GZIP -> FEATURE_ENCODING_JBON
+            else -> featureEncoding
+        }
+    }
+
     fun isFeatureEncodedWithGZip(): Boolean {
         return featureEncoding == FEATURE_ENCODING_JSON_GZIP || featureEncoding == FEATURE_ENCODING_JBON_GZIP
     }

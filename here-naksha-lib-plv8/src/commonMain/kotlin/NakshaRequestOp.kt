@@ -73,10 +73,11 @@ internal class NakshaRequestOp(
                 row[COL_TAGS] = tags_arr[i]
                 row[COL_GEOMETRY] = geo_arr[i]
                 val flags = Flags(flags_arr[i])
-                row[COL_FEATURE] = if (!flags.isFeatureEncodedWithGZip() && sql.info().gzipSupported && feature_arr[i] != null) {
+                row[COL_FEATURE] = if (sql.info().gzipSupported && feature_arr[i] != null) {
                     flags.forceGzipOnFeatureEncoding()
                     sql.gzipCompress(feature_arr[i]!!)
                 } else {
+                    flags.turnOffGzipOnFeatureEncoding()
                     feature_arr[i]
                 }
                 row[COL_FLAGS] = flags.toCombinedFlags()

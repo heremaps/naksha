@@ -1,6 +1,29 @@
-import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.jbon.IMap
+import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
+import com.here.naksha.lib.jbon.SQL_INT16
+import com.here.naksha.lib.jbon.XYZ_EXEC_CREATED
+import com.here.naksha.lib.jbon.XYZ_EXEC_DELETED
+import com.here.naksha.lib.jbon.XYZ_EXEC_RETAINED
+import com.here.naksha.lib.jbon.XYZ_OP_CREATE
+import com.here.naksha.lib.jbon.XYZ_OP_DELETE
+import com.here.naksha.lib.jbon.XYZ_OP_PURGE
+import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
+import com.here.naksha.lib.jbon.XyzBuilder
+import com.here.naksha.lib.jbon.XyzOp
+import com.here.naksha.lib.jbon.asMap
+import com.here.naksha.lib.jbon.get
+import com.here.naksha.lib.jbon.getAny
+import com.here.naksha.lib.jbon.set
 import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_NULL
-import com.here.naksha.lib.plv8.*
+import com.here.naksha.lib.plv8.ERR_CHECK_VIOLATION
+import com.here.naksha.lib.plv8.JvmPlv8Env
+import com.here.naksha.lib.plv8.JvmPlv8Sql
+import com.here.naksha.lib.plv8.JvmPlv8Table
+import com.here.naksha.lib.plv8.NakshaSession
+import com.here.naksha.lib.plv8.RET_ERR_MSG
+import com.here.naksha.lib.plv8.RET_ERR_NO
+import com.here.naksha.lib.plv8.RET_OP
+import com.here.naksha.lib.plv8.Static
 import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
 import com.here.naksha.lib.plv8.Static.PARTITION_ID
 import com.here.naksha.lib.plv8.Static.SC_CONSISTENT
@@ -460,7 +483,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         val builder = XyzBuilder.create(65536)
         var op = builder.buildXyzOp(XYZ_OP_DELETE, tableName, null, GRID)
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
-        var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
+        var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(null), arrayOf(null), arrayOf(null))
         var table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
@@ -468,7 +491,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         op = builder.buildXyzOp(XYZ_OP_CREATE, tableName, null, GRID)
         val sc = if (storageClass==null) "null" else "\"$storageClass\""
         feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partition":$partition,"disableHistory":$disableHistory,"storageClass":$sc}""")))
-        result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
+        result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(null), arrayOf(null), arrayOf(null))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_CREATED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
