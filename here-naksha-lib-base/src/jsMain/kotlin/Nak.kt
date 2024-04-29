@@ -112,6 +112,8 @@ Object.assign(BigInt, {
         actual val MAX_SAFE_INT: Double = 9007199254740991.0
         actual val MIN_SAFE_INT: Double = -9007199254740991.0
 
+        actual fun intern(s: String, cd: Boolean): String = js("(cd ? s.normalize('NFC') : s.normalize('NFKC'))").unsafeCast<String>()
+
         actual fun <T : NakType> getAssignment(o: Any?, symbol: PSymbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
 
         @Suppress("UNUSED_VARIABLE")

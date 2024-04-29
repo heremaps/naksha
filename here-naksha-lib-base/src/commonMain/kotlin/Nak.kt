@@ -58,6 +58,18 @@ expect class Nak {
         fun initNak(vararg parameters: Any?): Boolean
 
         /**
+         * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
+         * followed by Canonical Composition). Optionally, if [cd] is set to _true_, perform a Compatibility Decomposition,
+         * followed by Canonical Composition. Beware that this is only good for search or special cases, the recommended
+         * form is NFC (the default).
+         * @param s The string to intern and convert to NFC form.
+         * @param cd If _true_, then perform a Compatibility Decomposition instead of the Canonical Decomposition.
+         * @return The new interned string or the given one, if it is already in the right form.
+         */
+        @JvmStatic
+        fun intern(s: String, cd: Boolean = false): String
+
+        /**
          * Reads the current assignment to the given object for the given symbol; if there is any.
          * @param <T> The assignment type.
          * @param o The object to query.

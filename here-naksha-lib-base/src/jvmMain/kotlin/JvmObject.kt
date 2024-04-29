@@ -7,6 +7,15 @@ import com.here.naksha.lib.nak.Nak.Companion.undefined
  * The base class of all other platform objects.
  */
 open class JvmObject {
+    // TODO: Improve the HashMap implementation. We want all keys to be NFC (or NFCK) encoded, and to be interned, and normalized.
+    //       The reason is, that our hash-map should be as fast as accessing native properties, but this requires that we can
+    //       compare the keys with a simple === instead of == (equals), because actually, two strings only equal after comparing
+    //       all bytes of them, because even when they have the same hash, they still may not be the same strings. But if we
+    //       ensure that the same key is always the same instance, the check is, especially when the strings are being equal,
+    //       much faster. The compare will be as well very fast for misses, unless they accidentally have the same hash.
+    //       For very small sized hash-maps, keeping a simple array is enough, iterating 8 to 16 key-value pairs should be as
+    //       fast as a complicated hash-map.
+
     /**
      * The properties of the object; if any.
      */

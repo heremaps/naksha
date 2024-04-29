@@ -96,6 +96,10 @@ actual class Nak {
             return false
         }
 
+        // TODO: Add cache and normalization!
+        @JvmStatic
+        actual fun intern(s: String, cd: Boolean): String = s
+
         @JvmStatic
         actual fun <T : NakType> getAssignment(o: Any?, symbol: PSymbol): T? = toJvmObject(o)?.get(symbol) as? T
 
