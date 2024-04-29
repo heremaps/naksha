@@ -20,6 +20,8 @@ package com.here.naksha.lib.core.models.storage;
 
 import com.here.naksha.lib.core.util.json.JsonUtil;
 import java.util.UUID;
+
+import com.here.naksha.lib.nak.Flags;
 import org.jetbrains.annotations.NotNull;
 
 public class InfiniteForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
@@ -47,6 +49,7 @@ public class InfiniteForwardCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, 
     row.codec.setFeatureBytes(JsonUtil.jsonToJbonByte(json));
     row.codec.setRawError(null);
     row.codec.setErr(null);
+    row.codec.setFlags(new Flags());
     row.valid = true;
 
     lastId++;

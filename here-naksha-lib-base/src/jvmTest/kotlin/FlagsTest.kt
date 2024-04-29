@@ -4,7 +4,7 @@ import com.here.naksha.lib.nak.Flags.Companion.FEATURE_ENCODING_JBON_GZIP
 import com.here.naksha.lib.nak.Flags.Companion.FEATURE_ENCODING_JSON
 import com.here.naksha.lib.nak.Flags.Companion.FEATURE_ENCODING_JSON_GZIP
 import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_EWKB
-import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_TWKB
+import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_NULL
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -17,8 +17,8 @@ class FlagsTest {
         val flags = Flags() // empty flags
 
         // expect default values
-        assertEquals(GEO_TYPE_TWKB, flags.getGeometryEncoding())
-        assertEquals(FEATURE_ENCODING_JBON_GZIP, flags.getFeatureEncoding())
+        assertEquals(GEO_TYPE_NULL, flags.getGeometryEncoding())
+        assertEquals(FEATURE_ENCODING_JBON, flags.getFeatureEncoding())
     }
 
     @Test
@@ -32,7 +32,7 @@ class FlagsTest {
         // then
         assertEquals(GEO_TYPE_EWKB, flags.getGeometryEncoding())
         // untouched other flags
-        assertEquals(FEATURE_ENCODING_JBON_GZIP, flags.getFeatureEncoding())
+        assertEquals(FEATURE_ENCODING_JBON, flags.getFeatureEncoding())
         assertEquals(0, flags.getReserved())
     }
 
@@ -47,7 +47,7 @@ class FlagsTest {
         // then
         assertEquals(FEATURE_ENCODING_JSON_GZIP, flags.getFeatureEncoding())
         // untouched other flags
-        assertEquals(GEO_TYPE_TWKB, flags.getGeometryEncoding())
+        assertEquals(Flags.GEO_TYPE_NULL, flags.getGeometryEncoding())
         assertEquals(0, flags.getReserved())
     }
 
@@ -61,7 +61,7 @@ class FlagsTest {
 
         // then
         assertEquals(63, flags.getGeometryEncoding())
-        assertEquals(FEATURE_ENCODING_JBON_GZIP, flags.getFeatureEncoding())
+        assertEquals(FEATURE_ENCODING_JBON, flags.getFeatureEncoding())
     }
 
     @Test
@@ -92,11 +92,11 @@ class FlagsTest {
     @Test
     fun testCombinedFlag() {
         // given
-        val flags = Flags(128)
+        val flags = Flags()
 
         // when
-//        flags.setGeometryEncoding(11)
-//        flags.setFeatureEncoding(15)
+        flags.setGeometryEncoding(11)
+        flags.setFeatureEncoding(15)
 
         val restoredFlags = Flags(flags.toCombinedFlags())
 
