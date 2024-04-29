@@ -29,6 +29,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-common"))
                 implementation(project(":here-naksha-lib-jbon"))
+                implementation(project(":here-naksha-lib-base"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
@@ -40,6 +41,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-jbon"))
+                implementation(project(":here-naksha-lib-base"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
                 implementation("org.postgresql:postgresql:42.5.4")
             }

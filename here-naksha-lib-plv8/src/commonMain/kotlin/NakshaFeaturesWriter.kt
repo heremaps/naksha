@@ -36,7 +36,7 @@ class NakshaFeaturesWriter(
     ): ITable {
         val START = currentMillis()
         val START_MAPPING = currentMillis()
-        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr)
+        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, session.sql)
         val END_MAPPING = currentMillis()
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
@@ -84,7 +84,7 @@ class NakshaFeaturesWriter(
             tags_arr: Array<ByteArray?>,
             minResult: Boolean
     ): ITable {
-        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr)
+        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, session.sql)
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
@@ -94,8 +94,7 @@ class NakshaFeaturesWriter(
         val newCollection = NakshaCollection(session.globalDictManager)
 
         for (op in operations.operations) {
-            val featureRowMap = op.rowMap
-            newCollection.mapBytes(featureRowMap.getFeature())
+            newCollection.mapBytes(op.rawFeature)
 
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
             val schemaOid = asMap(asArray(session.sql.execute(query, arrayOf(session.schema)))[0]).getAny("oid") as Int

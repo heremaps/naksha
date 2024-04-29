@@ -34,6 +34,8 @@ import com.here.naksha.lib.jbon.JbFeature;
 import com.here.naksha.lib.jbon.JbMap;
 import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.XyzBuilder;
+import com.here.naksha.lib.nak.Flags;
+import com.here.naksha.lib.nak.GZip;
 import java.util.Map;
 import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -82,7 +84,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    */
   public abstract @NotNull SELF encodeFeature(boolean force);
 
-  protected abstract Integer getDefaultGeometryEncoding();
+  protected abstract Flags getDefaultFlags();
 
   /**
    * Copy all the values from other codec supplied as an argument. This is useful while iterating through in-memory based codec list,
@@ -115,7 +117,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     tagsBytes = otherCodec.tagsBytes;
     featureBytes = otherCodec.featureBytes;
     geometryBytes = otherCodec.geometryBytes;
-    geometryEncoding = otherCodec.geometryEncoding;
+    flags = otherCodec.flags;
     geometry = otherCodec.geometry;
     err = otherCodec.err;
     rawError = otherCodec.rawError;
@@ -168,7 +170,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     id = null;
     uuid = null;
     geometryBytes = null;
-    geometryEncoding = null;
+    flags = null;
     geometry = null;
     featureBytes = null;
     xyzNsBytes = null;
@@ -190,7 +192,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     xyzNsBytes = null;
     tagsBytes = null;
     geometryBytes = null;
-    geometryEncoding = null;
+    flags = null;
     geometry = null;
     return self();
   }
@@ -244,9 +246,9 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   protected byte @Nullable [] geometryBytes;
 
   /**
-   * The wkb type whether it's EWKB, WKB or TWKB.
+   * The flags {@link Flags}.
    */
-  protected @Nullable Integer geometryEncoding = getDefaultGeometryEncoding();
+  protected @Nullable Flags flags = getDefaultFlags();
 
   /**
    * The JTS geometry build from the {@link #geometryBytes}.
@@ -289,7 +291,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     final Geometry old = getGeometry();
     this.geometry = geometry;
     this.geometryBytes = null;
-    this.geometryEncoding = null;
+    this.flags = null;
     return (G) old;
   }
 
@@ -302,7 +304,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   public @NotNull SELF withGeometry(@Nullable Geometry geometry) {
     this.geometry = geometry;
     this.geometryBytes = null;
-    this.geometryEncoding = null;
+    this.flags = null;
     return self();
   }
 
@@ -362,7 +364,10 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
       if (geometry != null) {
         try (final Json jp = Json.get()) {
           this.geometryBytes = jp.twkbWriter.write(geometry);
-          this.geometryEncoding = GEO_TYPE_TWKB;
+          if (flags == null) {
+            this.flags = new Flags();
+          }
+          this.flags.setGeometryEncoding(GEO_TYPE_TWKB);
         }
       }
     }
@@ -374,12 +379,20 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
    *
    * @return
    */
-  public @Nullable Integer getGeometryEncoding() {
-    return geometryEncoding;
+  public @Nullable Flags getFlags() {
+    return flags;
   }
 
-  public void setGeometryEncoding(@Nullable Integer geometryEncoding) {
-    this.geometryEncoding = geometryEncoding;
+  public void setFlags(@Nullable Flags flags) {
+    this.flags = flags;
+  }
+
+  public @Nullable Integer getCombinedFlags() {
+    if (flags == null) {
+      return null;
+    } else {
+      return flags.toCombinedFlags();
+    }
   }
 
   /**
@@ -485,7 +498,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   }
 
   /**
-   * Returns feature as jbon byte array.
+   * Returns encoded feature
    *
    * @return
    */
@@ -494,7 +507,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   }
 
   /**
-   * Sets feature as jbon byte array.
+   * Sets encoded feature.
    *
    * @param featureBytes
    */
@@ -572,7 +585,12 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   @SuppressWarnings("unchecked")
   protected FEATURE getFeatureFromJbon(@NotNull Class<FEATURE> featureClass) {
     // FIXME use existing DictManager
-    JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(featureBytes, 0, featureBytes.length);
+    byte[] uncompressedFeatureBytes = featureBytes != null && flags.isFeatureEncodedWithGZip()
+        ? GZip.INSTANCE.gunzip(featureBytes)
+        : featureBytes;
+
+    JbFeature jbFeature = new JbFeature(new JbDictManager())
+        .mapBytes(uncompressedFeatureBytes, 0, uncompressedFeatureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>)
         new JbMap().mapReader(jbFeature.getReader()).toIMap();
     return JvmEnv.get().convert(featureAsMap, featureClass);

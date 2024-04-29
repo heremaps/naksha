@@ -13,6 +13,8 @@ import com.here.naksha.lib.jbon.put
 import com.here.naksha.lib.jbon.set
 import com.here.naksha.lib.jbon.shl
 import com.here.naksha.lib.jbon.toInt
+import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_EWKB
+import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_NULL
 import com.here.naksha.lib.plv8.COL_FEATURE
 import com.here.naksha.lib.plv8.COL_GEOMETRY
 import com.here.naksha.lib.plv8.COL_FLAGS
@@ -21,8 +23,6 @@ import com.here.naksha.lib.plv8.COL_TAGS
 import com.here.naksha.lib.plv8.COL_TXN
 import com.here.naksha.lib.plv8.COL_TXN_NEXT
 import com.here.naksha.lib.plv8.COL_UID
-import com.here.naksha.lib.plv8.GEO_TYPE_EWKB
-import com.here.naksha.lib.plv8.GEO_TYPE_NULL
 import com.here.naksha.lib.plv8.JvmPlv8Table
 import com.here.naksha.lib.plv8.NKC_DISABLE_HISTORY
 import com.here.naksha.lib.plv8.NKC_TABLE_ESC

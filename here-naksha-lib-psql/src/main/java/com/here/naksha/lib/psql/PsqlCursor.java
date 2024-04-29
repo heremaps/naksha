@@ -25,6 +25,7 @@ import com.here.naksha.lib.core.models.storage.CodecError;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
+import com.here.naksha.lib.nak.Flags;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -83,7 +84,7 @@ public class PsqlCursor<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> ext
         row.codec.setXyzNsBytes(r_xyz);
         row.codec.setTagsBytes(defaultIfNull(r_tags, reqParams.tags, idx));
         row.codec.setGeometryBytes(defaultIfNull(r_geo, reqParams.geo, idx));
-        row.codec.setGeometryEncoding(r_flags);
+        row.codec.setFlags(new Flags(r_flags));
         row.codec.setFeatureBytes(defaultIfNull(r_feature, reqParams.features, idx));
         row.codec.setRawError(r_err);
         row.codec.setErr(mapToCodecError(r_err_no, r_err));

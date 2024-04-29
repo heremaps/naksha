@@ -1,6 +1,6 @@
 import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_NULL
 import com.here.naksha.lib.plv8.*
-import com.here.naksha.lib.plv8.GEO_TYPE_NULL
 import com.here.naksha.lib.plv8.NKC_DISABLE_HISTORY
 import com.here.naksha.lib.plv8.NKC_PARTITION
 import org.junit.jupiter.api.Assertions.*

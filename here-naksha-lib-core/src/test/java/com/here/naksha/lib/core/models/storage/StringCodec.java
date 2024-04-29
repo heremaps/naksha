@@ -25,13 +25,15 @@ import com.here.naksha.lib.jbon.JbDictManager;
 import com.here.naksha.lib.jbon.JbFeature;
 import com.here.naksha.lib.jbon.JbMap;
 import java.util.Map;
+
+import com.here.naksha.lib.nak.Flags;
 import org.jetbrains.annotations.NotNull;
 
 class StringCodec extends FeatureCodec<String, StringCodec> {
 
   @Override
-  protected Integer getDefaultGeometryEncoding() {
-    return GEO_TYPE_WKB;
+  protected Flags getDefaultFlags() {
+    return new Flags();
   }
 
   @Override

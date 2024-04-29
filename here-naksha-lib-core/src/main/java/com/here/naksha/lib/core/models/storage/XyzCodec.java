@@ -34,6 +34,7 @@ import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.JvmMap;
 import com.here.naksha.lib.jbon.XyzBuilder;
 import com.here.naksha.lib.jbon.XyzNs;
+import com.here.naksha.lib.nak.Flags;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,8 +52,10 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
   private final @NotNull Class<FEATURE> featureClass;
 
   @Override
-  protected Integer getDefaultGeometryEncoding() {
-    return GEO_TYPE_TWKB;
+  protected Flags getDefaultFlags() {
+    Flags defaultFlags = new Flags();
+    defaultFlags.setGeometryEncoding(GEO_TYPE_TWKB);
+    return defaultFlags;
   }
 
   @NotNull

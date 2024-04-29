@@ -25,13 +25,16 @@ import com.here.naksha.lib.jbon.JbDictManager;
 import com.here.naksha.lib.jbon.JbFeature;
 import com.here.naksha.lib.jbon.JbMap;
 import java.util.Map;
+
+import com.here.naksha.lib.nak.Flags;
+import com.here.naksha.lib.nak.GZip;
 import org.jetbrains.annotations.NotNull;
 
 class StringCodec extends FeatureCodec<String, StringCodec> {
 
   @Override
-  protected Integer getDefaultGeometryEncoding() {
-    return GEO_TYPE_WKB;
+  protected Flags getDefaultFlags() {
+    return new Flags();
   }
 
   @Override
@@ -42,7 +45,8 @@ class StringCodec extends FeatureCodec<String, StringCodec> {
 
   @Override
   public @NotNull StringCodec encodeFeature(boolean force) {
-    JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(featureBytes, 0, featureBytes.length);
+    byte[] rawFeatureBytes = flags.isFeatureEncodedWithGZip()? GZip.INSTANCE.gunzip(featureBytes) : featureBytes;
+    JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(rawFeatureBytes, 0, rawFeatureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
     try {
       feature = Json.get().writer().writeValueAsString(featureAsMap);

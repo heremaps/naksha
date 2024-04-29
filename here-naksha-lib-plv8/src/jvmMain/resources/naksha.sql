@@ -258,6 +258,25 @@ AS $$
   return naksha.Static.hstPartitionNameForId(id, new jbon.NakshaTxn(txn_next));
 $$;
 
+CREATE OR REPLACE FUNCTION naksha_geometry_in_type(geo_type int4, geo_bytes bytea) RETURNS geometry
+LANGUAGE 'plpgsql'
+IMMUTABLE
+PARALLEL SAFE
+SET search_path FROM CURRENT
+AS $$
+BEGIN
+  IF geo_type = 1 THEN
+    RETURN ST_GeomFromWKB(geo_bytes);
+  ELSIF geo_type = 2 THEN
+    RETURN ST_GeomFromEWKB(geo_bytes);
+  ELSIF geo_type = 3 THEN
+    RETURN ST_GeomFromTWKB(geo_bytes);
+  ELSE
+    RETURN null;
+  END IF;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION naksha_geometry(flags int4, geo_bytes bytea) RETURNS geometry
 LANGUAGE 'plpgsql'
 IMMUTABLE
@@ -265,15 +284,7 @@ PARALLEL SAFE
 SET search_path FROM CURRENT
 AS $$
 BEGIN
-  IF flags = 1 THEN
-    RETURN ST_GeomFromWKB(geo_bytes);
-  ELSIF flags = 2 THEN
-    RETURN ST_GeomFromEWKB(geo_bytes);
-  ELSIF flags = 3 THEN
-    RETURN ST_GeomFromTWKB(geo_bytes);
-  ELSE
-    RETURN null;
-  END IF;
+  return naksha_geometry_in_type(naksha_geo_type(flags),geo_bytes);
 END;
 $$;
 
@@ -619,4 +630,38 @@ AS $$
   map["author"] = author;
   map["geo_grid"] = geo_grid;
   return session.xyzNsFromRow(collection_id, map)
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, flags int4) RETURNS bytea LANGUAGE 'plpgsql' STRICT IMMUTABLE AS $$
+DECLARE
+    encoding int4;
+BEGIN
+    encoding = naksha_feature_encoding(flags);
+    if encoding = 2 or encoding = 4 then
+      RETURN gunzip(feature);
+    else
+      RETURN feature;
+    end if;
+END $$;
+
+CREATE OR REPLACE FUNCTION naksha_geo_type(flags int4) RETURNS int4
+LANGUAGE 'plpgsql'
+IMMUTABLE
+PARALLEL SAFE
+SET search_path FROM CURRENT
+AS $$
+BEGIN
+  RETURN (flags::bit(6))::int4;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_feature_encoding(flags int4) RETURNS int4
+LANGUAGE 'plpgsql'
+IMMUTABLE
+PARALLEL SAFE
+SET search_path FROM CURRENT
+AS $$
+BEGIN
+  RETURN ((flags>>6)::bit(6))::int4;
+END;
 $$;

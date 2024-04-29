@@ -283,7 +283,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         throw new IllegalArgumentException("Missing geometry");
       }
       SQL variableTransformed =
-          addTransformation(spatialOp.getTransformation(), "ST_Force3D(naksha_geometry(3::int2,?))");
+          addTransformation(spatialOp.getTransformation(), "ST_Force3D(naksha_geometry_in_type(3::int2,?))");
       sql.add(" ST_Intersects(naksha_geometry(flags,geo), ")
           .add(variableTransformed)
           .add(")");
@@ -318,7 +318,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     } else {
       // not indexed access
       sql.add("(");
-      sql.add("feature_to_jsonb(feature)");
+      sql.add("feature_to_jsonb(naksha_feature(feature,flags))");
       List<@NotNull String> path = pRef.getPath();
       final int last = end - 1;
       for (int i = 0; i < end; i++) {
@@ -666,7 +666,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           reqOps[i] = codec.getXyzOp();
           reqFeatures[i] = codec.getFeatureBytes();
           reqGeo[i] = codec.getGeometryBytes();
-          reqFlags[i] = codec.getGeometryEncoding(); // codec has to dec
+          reqFlags[i] = codec.getCombinedFlags();
           reqTags[i] = codec.getTagsBytes();
         }
         stmt.setArray(1, psqlConnection.createArrayOf("bytea", reqOps));
@@ -678,8 +678,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         JvmPlv8Table table =
             (JvmPlv8Table) nakshaSession.writeCollections(reqOps, reqFeatures, reqFlags, reqGeo, reqTags);
         ArrayList<IMap> rows = table.getRows();
-        List<XyzCollectionCodec> codecRows =
-            PsqlResultMapper.mapRowToCodec(XyzCollectionCodecFactory.get(), features, rows);
+        List<XyzCollectionCodec> codecRows = PsqlResultMapper.mapRowToCodec(
+            XyzCollectionCodecFactory.get(), features, rows, nakshaSession.getSql());
         return new PsqlSuccess(new HeapCacheCursor<>(XyzCollectionCodecFactory.get(), codecRows, null), null);
       } catch (Throwable e) {
         try {
@@ -714,7 +714,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           final CODEC codec = features.get(i);
           op_arr[i] = codec.getXyzOp();
           feature_arr[i] = codec.getFeatureBytes();
-          flags_arr[i] = codec.getGeometryEncoding();
+          flags_arr[i] = codec.getCombinedFlags();
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
         }
@@ -722,7 +722,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
             collection_id, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, false);
         ArrayList<IMap> rows = table.getRows();
         XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
-        List<XyzFeatureCodec> codecRows = PsqlResultMapper.mapRowToCodec(codecFactory, features, rows);
+        List<XyzFeatureCodec> codecRows =
+            PsqlResultMapper.mapRowToCodec(codecFactory, features, rows, nakshaSession.getSql());
         HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor =
             new HeapCacheCursor<>(codecFactory, codecRows, originalFeaturesOrder);
 
@@ -762,7 +763,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           final CODEC codec = features.get(i);
           op_arr[i] = codec.getXyzOp();
           feature_arr[i] = codec.getFeatureBytes();
-          flags_arr[i] = codec.getGeometryEncoding();
+          flags_arr[i] = codec.getCombinedFlags();
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
         }

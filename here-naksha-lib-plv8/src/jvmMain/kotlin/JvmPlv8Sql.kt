@@ -6,6 +6,7 @@ import com.here.naksha.lib.jbon.SQL_INT16
 import com.here.naksha.lib.jbon.SQL_INT32
 import com.here.naksha.lib.jbon.SQL_INT64
 import com.here.naksha.lib.jbon.SQL_STRING
+import com.here.naksha.lib.nak.GZip
 import java.io.Closeable
 import java.sql.Connection
 
@@ -69,4 +70,8 @@ class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
 
         return plan.executeBatch()
     }
+
+    override fun gzipCompress(raw: ByteArray): ByteArray = GZip.gzip(raw)
+
+    override fun gzipDecompress(raw: ByteArray): ByteArray = GZip.gunzip(raw)
 }

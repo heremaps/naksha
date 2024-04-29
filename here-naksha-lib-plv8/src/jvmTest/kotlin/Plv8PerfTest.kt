@@ -1,4 +1,5 @@
 import com.here.naksha.lib.jbon.*
+import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_NULL
 import com.here.naksha.lib.plv8.*
 import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
 import com.here.naksha.lib.plv8.Static.PARTITION_ID
