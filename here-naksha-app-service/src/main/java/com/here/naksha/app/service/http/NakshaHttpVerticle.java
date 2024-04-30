@@ -511,7 +511,11 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       assert streamId.equals(response.getStreamId());
       assert response.getError() != null;
       assert response.getErrorMessage() != null;
-      httpStatus = mapErrorToHttpStatus(response.getError());
+      if (throwable instanceof HttpException e) {
+        httpStatus = HttpResponseStatus.valueOf(e.getStatusCode());
+      } else {
+        httpStatus = mapErrorToHttpStatus(response.getError());
+      }
       sendRawResponse(routingContext, httpStatus, APPLICATION_JSON, Buffer.buffer(response.serialize()));
     } catch (Throwable t) {
       log.atError()

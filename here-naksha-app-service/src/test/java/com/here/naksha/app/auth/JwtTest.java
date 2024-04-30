@@ -38,6 +38,14 @@ public class JwtTest extends ApiTest {
     }
 
     @Test
+    public void testDummyModeJWTSignedByUnknownKey() throws Exception {
+        final String streamId = UUID.randomUUID().toString();
+        // Providing an invalid JWT, should return HTTP 401 code
+        HttpResponse<String> response = getNakshaClient().get("hub/storages", streamId, "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
+        assertThat(response).hasStatus(401);
+    }
+
+    @Test
     public void testDummyModeValidJWT() throws Exception {
         final String streamId = UUID.randomUUID().toString();
         final String jwtKey;
@@ -52,6 +60,7 @@ public class JwtTest extends ApiTest {
                 .addPubSecKey(new PubSecKeyOptions().setAlgorithm("RS256").setBuffer(jwtKey))
                 ;
         final NakshaAuthProvider nakshaAuthProvider = new NakshaAuthProvider(Vertx.vertx(), authOptions);
+        // Sign the following JWT payload
         final String jwt = nakshaAuthProvider.generateToken(new JsonObject("""
                 {
                     "appId": "web-client-app-id",
@@ -71,5 +80,42 @@ public class JwtTest extends ApiTest {
         // Providing a valid JWT, should success
         HttpResponse<String> response = getNakshaClient().get("hub/storages", streamId, "Bearer "+jwt);
         assertThat(response).hasStatus(200);
+    }
+
+    @Test
+    public void testDummyModeExpiredJWT() throws Exception {
+        final String streamId = UUID.randomUUID().toString();
+        final String jwtKey;
+        // Load private key
+        {
+            final String path = "auth/jwt.key";
+            final LoadedBytes loaded = IoHelp.readBytesFromHomeOrResource(path, false, NakshaHubConfig.APP_NAME);
+            jwtKey = new String(loaded.getBytes(), StandardCharsets.UTF_8);
+        }
+        final JWTAuthOptions authOptions = new JWTAuthOptions()
+                .setJWTOptions(new JWTOptions().setAlgorithm("RS256"))
+                .addPubSecKey(new PubSecKeyOptions().setAlgorithm("RS256").setBuffer(jwtKey))
+                ;
+        final NakshaAuthProvider nakshaAuthProvider = new NakshaAuthProvider(Vertx.vertx(), authOptions);
+        // Sign the following JWT payload
+        final String jwt = nakshaAuthProvider.generateToken(new JsonObject("""
+                {
+                    "appId": "web-client-app-id",
+                    "userId": "my-user-id",
+                    "urm": {
+                        "naksha": {
+                            "readFeatures": [
+                                {
+                                    "storageId": "dev-*"
+                                }
+                            ]
+                        }
+                    },
+                    "iat": 1704063599,
+                    "exp": 1704063599
+                }"""));
+        // Providing an expired JWT, should fail
+        HttpResponse<String> response = getNakshaClient().get("hub/storages", streamId, "Bearer "+jwt);
+        assertThat(response).hasStatus(401);
     }
 }
