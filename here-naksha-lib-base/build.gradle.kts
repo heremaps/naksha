@@ -11,7 +11,7 @@ kotlin {
     }
 
     js(IR) {
-        moduleName = "nak"
+        moduleName = "base"
         browser {
             webpackTask {
                 output.libraryTarget = "commonjs2"
