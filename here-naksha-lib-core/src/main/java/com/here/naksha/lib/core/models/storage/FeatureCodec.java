@@ -36,6 +36,7 @@ import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.XyzBuilder;
 import com.here.naksha.lib.nak.Flags;
 import com.here.naksha.lib.nak.GZip;
+import com.here.naksha.lib.nak.HereTile;
 import java.util.Map;
 import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -575,9 +576,8 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   protected @Nullable Integer calculateGrid() {
     if (geometry != null && !geometry.isEmpty()) {
       Coordinate centroid = Centroid.getCentroid(geometry);
-      //      return GeohashUtils.encodeLatLon(centroid.y, centroid.x, 14);
-      // FIXME TODO use heretile method after merge
-      return 0;
+      final HereTile hereTile = new HereTile(centroid.y, centroid.x);
+      return hereTile.getIntKey();
     }
     return null;
   }

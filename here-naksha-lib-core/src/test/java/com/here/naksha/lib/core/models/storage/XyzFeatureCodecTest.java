@@ -23,6 +23,8 @@ import com.here.naksha.lib.jbon.XyzTags;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+
+import com.here.naksha.lib.nak.HereTile;
 import org.junit.jupiter.api.Test;
 
 public class XyzFeatureCodecTest extends SessionTest {
@@ -122,5 +124,8 @@ public class XyzFeatureCodecTest extends SessionTest {
     assertEquals(0, xyzOp.op());
     assertEquals("uuid", xyzOp.uuid());
     assertEquals("ID", xyzOp.id());
+    final Integer grid = xyzOp.grid();
+    final HereTile hereTile = new HereTile(grid);
+    assertEquals("120000021231231", hereTile.quadKey());
   }
 }

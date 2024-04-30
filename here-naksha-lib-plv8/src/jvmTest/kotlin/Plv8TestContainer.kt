@@ -24,6 +24,11 @@ class Plv8TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableRes
     }
 
     private fun architecture(): String {
+        val os = System.getProperty("os.name")
+        if (os == "Mac OS X") {
+            return "arm64"
+        }
+
         val arch = System.getProperty("os.arch")
         return if (arch == "x86_64" || arch == "amd64") {
             "amd64"
