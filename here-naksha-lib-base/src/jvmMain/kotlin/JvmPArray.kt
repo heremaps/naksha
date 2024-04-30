@@ -1,6 +1,6 @@
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
-import com.here.naksha.lib.nak.Nak.Companion.undefined
+import com.here.naksha.lib.base.Base.Companion.undefined
 
 /**
  * The JVM implementation of a [PArray].

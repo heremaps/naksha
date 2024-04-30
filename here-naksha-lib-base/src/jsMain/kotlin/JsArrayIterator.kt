@@ -1,4 +1,4 @@
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 class JsArrayIterator(private val a: dynamic) : PIterator<Int, Any?> {
     private val last = a.length.unsafeCast<Int>()

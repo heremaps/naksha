@@ -1,11 +1,11 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
 
 @JsExport
-abstract class NakDataViewKlass<out T : NakType> : NakKlass<T>() {
+abstract class BaseDataViewKlass<out T : BaseType> : BaseKlass<T>() {
     override fun isAbstract(): Boolean = false
 
     override fun isArray(): Boolean = false

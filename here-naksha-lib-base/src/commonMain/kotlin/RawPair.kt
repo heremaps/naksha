@@ -1,4 +1,6 @@
-package com.here.naksha.lib.nak
+@file:Suppress("OPT_IN_USAGE")
+
+package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
 
@@ -7,7 +9,6 @@ import kotlin.js.JsExport
  * @property key The key.
  * @property value The value.
  */
-@Suppress("OPT_IN_USAGE")
 @JsExport
 class RawPair<K, V>(var key: K, var value: V) : Raw() {
     /**
@@ -16,5 +17,5 @@ class RawPair<K, V>(var key: K, var value: V) : Raw() {
      */
     fun copy(): RawPair<K, V> = RawPair(key, value)
 
-    override fun toPlatform(): PObject = Nak.newObject("key", key, "value", value)
+    override fun toPlatform(): PObject = Base.newObject("key", key, "value", value)
 }

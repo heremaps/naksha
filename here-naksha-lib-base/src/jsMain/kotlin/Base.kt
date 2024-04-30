@@ -1,10 +1,10 @@
 @file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE", "unused", "UNUSED_VARIABLE")
 
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 @Suppress("MemberVisibilityCanBePrivate", "ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT")
 @JsExport
-actual class Nak {
+actual class Base {
     actual companion object {
         private var isInitialized: Boolean = false
 
@@ -105,7 +105,7 @@ Object.assign(BigInt, {
             return false
         }
 
-        actual val NAK_SYM = symbol("com.here.naksha.lib.nak")
+        actual val BASE_SYM = symbol("com.here.naksha.lib.nak")
         actual val undefined: Any = js("undefined").unsafeCast<Any>()
         actual val INT64_MAX_VALUE: Int64 = js("BigInt('9223372036854775807')").unsafeCast<Int64>()
         actual val INT64_MIN_VALUE: Int64 = js("BigInt('9223372036854775808')").unsafeCast<Int64>()
@@ -114,10 +114,10 @@ Object.assign(BigInt, {
 
         actual fun intern(s: String, cd: Boolean): String = js("(cd ? s.normalize('NFC') : s.normalize('NFKC'))").unsafeCast<String>()
 
-        actual fun <T : NakType> getAssignment(o: Any?, symbol: PSymbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
+        actual fun <T : BaseType> getAssignment(o: Any?, symbol: PSymbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun <T : NakType> assign(o: Any, klass: NakKlass<T>, vararg args: Any?): T {
+        actual fun <T : BaseType> assign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
             val sym = klass.symbol()
             val raw = unbox(o)
             var nakType: Any? = js("raw[sym]")
@@ -130,7 +130,7 @@ Object.assign(BigInt, {
         }
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun <T : NakType> forceAssign(o: Any, klass: NakKlass<T>, vararg args: Any?): T {
+        actual fun <T : BaseType> forceAssign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
             val sym = klass.symbol()
             val raw = unbox(o)
             var nakType: Any? = js("raw[sym]")
@@ -142,7 +142,7 @@ Object.assign(BigInt, {
             return nakType
         }
 
-        actual fun isAssignable(o: Any?, klass: NakKlass<*>): Boolean = klass.isAssignable(unbox(o))
+        actual fun isAssignable(o: Any?, klass: BaseKlass<*>): Boolean = klass.isAssignable(unbox(o))
 
         actual fun symbol(key: String?): PSymbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<PSymbol>()
 
@@ -180,7 +180,7 @@ size = size ? Math.floor(size) : byteArray.byteLength - offset;
 return new DataView(byteArray.buffer, offset, size);
 """).unsafeCast<PDataView>()
 
-        actual fun unbox(o: Any?): Any? = if (o is NakType) o.data else o
+        actual fun unbox(o: Any?): Any? = if (o is BaseType) o.data else o
 
         actual fun toInt(value: Any): Int = js("Number(value) >> 0").unsafeCast<Int>()
 
@@ -219,7 +219,7 @@ return new DataView(byteArray.buffer, offset, size);
             return js("view.getFloat64(0)").unsafeCast<Double>()
         }
 
-         actual fun isNative(o: Any?): Boolean = o !is NakType
+         actual fun isNative(o: Any?): Boolean = o !is BaseType
 
         actual fun isString(o: Any?): Boolean = o is String
 
@@ -305,11 +305,11 @@ return new DataView(byteArray.buffer, offset, size);
 
         actual fun hashCodeOf(o: Any?): Int {
             if (o == null) return 0
-            val S = NAK_SYM
+            val S = BASE_SYM
             val nak : dynamic = o
             if (js("nak[S] && typeof nak[S].hashCode === 'function'").unsafeCast<Boolean>()) {
                 try {
-                    return nak[NAK_SYM].hashCode().unsafeCast<Int>()
+                    return nak[BASE_SYM].hashCode().unsafeCast<Int>()
                 } catch (ignore: Throwable) {
                 }
             }

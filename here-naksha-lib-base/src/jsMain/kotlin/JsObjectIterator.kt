@@ -1,4 +1,4 @@
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 class JsObjectIterator(private val o: dynamic) : PIterator<String, Any?> {
     private val it = js("Object.keys(o)[Symbol.iterator]()")

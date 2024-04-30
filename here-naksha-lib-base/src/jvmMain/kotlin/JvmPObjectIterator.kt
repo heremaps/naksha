@@ -1,4 +1,4 @@
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 class JvmPObjectIterator(obj: JvmPObject) : PIterator<String, Any?> {
     private val it = obj.properties?.iterator()

@@ -1,4 +1,4 @@
-<mxfile host="Electron" modified="2024-04-29T08:39:15.744Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.1.2 Chrome/114.0.5735.289 Electron/25.9.4 Safari/537.36" etag="qOuBM8quhqLNdo0C0nLU" version="22.1.2" type="device">
+<mxfile host="Electron" modified="2024-04-29T15:53:47.965Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.1.2 Chrome/114.0.5735.289 Electron/25.9.4 Safari/537.36" etag="Jzmf90xLvvkiK9onszd0" version="22.1.2" type="device">
   <diagram name="Page-1" id="c7558073-3199-34d8-9f00-42111426c3f3">
     <mxGraphModel dx="1742" dy="4128" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4681" pageHeight="3300" background="none" math="0" shadow="0">
       <root>
@@ -67,7 +67,7 @@
         <mxCell id="P7LG4y36yVNv2cbaxUf2-659" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="2r80sXf8cgRXmCBXb2kK-207" target="ji72XSmRw8APm09SylYo-29" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="2r80sXf8cgRXmCBXb2kK-207" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;abstract &lt;b&gt;NkWriteRequest&lt;/b&gt; : NakObject&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
+        <mxCell id="2r80sXf8cgRXmCBXb2kK-207" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;abstract &lt;b&gt;NakWriteRequest&lt;/b&gt; : NakObject&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="1264.64" y="2054" width="350" height="82" as="geometry" />
         </mxCell>
         <mxCell id="8fjC0QTDsI_MNkPcusRU-2" value="+&amp;gt; noResults: Boolean = false" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="2r80sXf8cgRXmCBXb2kK-207" vertex="1">
@@ -346,7 +346,7 @@
         <mxCell id="P7LG4y36yVNv2cbaxUf2-77" value="To implement an Naksha type for an in-memory data (only &lt;b&gt;PObject&lt;/b&gt;, &lt;b&gt;PArray&lt;/b&gt; or &lt;b&gt;PDataView&lt;/b&gt;), extend the &lt;b&gt;NakType&lt;/b&gt; and create a &lt;b&gt;NakKlass&lt;/b&gt; for the type. From this point on, the type can be used for any in-memory data either via&amp;nbsp;&lt;b&gt;Nak.assign(data, klass, args)&amp;nbsp;&lt;/b&gt;or&amp;nbsp;&lt;b&gt;klass.assign(data, args)&lt;/b&gt;&amp;nbsp;method. Any type is recommended to have a static member named &lt;b&gt;klass&lt;/b&gt; that refers to its Klass.&lt;br&gt;&lt;br&gt;This separates multi-platform business specific types from the raw data stored in memory and therefore allows the implementation of general tools like parsers or patchers, that operate on arbitrary data, without understanding the concrete data model.&lt;br&gt;&lt;br&gt;For every type a decision need to be made, if it is a base type that should be located in the default type symbol or if it should be managed additionally (in parallel) to the default type symbol. For example, the &lt;b&gt;Mom2Feature&lt;/b&gt; and &lt;b&gt;Mom2Properties&lt;/b&gt; are recommended to be stored beside the default type symbol, because there can be additionally &lt;b&gt;Mom3&lt;/b&gt; and more. Beware that the default type symbol is shared between all libraries, while private symbols are limited to the specific library." style="html=1;shadow=0;dashed=0;shape=mxgraph.bootstrap.rrect;rSize=5;strokeColor=#999999;strokeWidth=1;fillColor=#FFFFFF;fontColor=#6C767D;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=10;fontSize=14;spacing=10;" parent="1" vertex="1">
           <mxGeometry x="1080" y="520" width="560" height="311" as="geometry" />
         </mxCell>
-        <mxCell id="P7LG4y36yVNv2cbaxUf2-83" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;expect&lt;i&gt; &lt;/i&gt;&lt;b&gt;Nak&lt;/b&gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
+        <mxCell id="P7LG4y36yVNv2cbaxUf2-83" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;expect&lt;i&gt; &lt;/i&gt;&lt;b&gt;Base&lt;/b&gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="398.5" y="386" width="471.5" height="362" as="geometry" />
         </mxCell>
         <mxCell id="P7LG4y36yVNv2cbaxUf2-685" value="&amp;gt;&amp;gt; SYM: PSymbol" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="P7LG4y36yVNv2cbaxUf2-83" vertex="1">
@@ -619,7 +619,7 @@
         <mxCell id="UfRl3wJBrGC50zkCGHNN-53" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="P7LG4y36yVNv2cbaxUf2-310" target="P7LG4y36yVNv2cbaxUf2-529">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="P7LG4y36yVNv2cbaxUf2-310" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;NakObject&lt;/b&gt;&amp;nbsp;: NakMap&amp;lt;Any?&amp;gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
+        <mxCell id="P7LG4y36yVNv2cbaxUf2-310" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;BaseObject&lt;/b&gt;&amp;nbsp;: NakMap&amp;lt;Any?&amp;gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="944.64" y="1486.5" width="320" height="54" as="geometry" />
         </mxCell>
         <mxCell id="P7LG4y36yVNv2cbaxUf2-598" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="P7LG4y36yVNv2cbaxUf2-322" target="P7LG4y36yVNv2cbaxUf2-364" edge="1">
@@ -685,7 +685,7 @@
         <mxCell id="P7LG4y36yVNv2cbaxUf2-360" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;NakMultiPoint&lt;/b&gt; : NakList&amp;lt;NakPoint&amp;gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="30" y="1751.52" width="330" height="54" as="geometry" />
         </mxCell>
-        <mxCell id="P7LG4y36yVNv2cbaxUf2-367" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;abstract&amp;nbsp;&lt;b&gt;NakType&lt;/b&gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
+        <mxCell id="P7LG4y36yVNv2cbaxUf2-367" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;abstract &lt;b&gt;BaseType&lt;/b&gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="497.85" y="887" width="460" height="138" as="geometry" />
         </mxCell>
         <mxCell id="P7LG4y36yVNv2cbaxUf2-681" value="&amp;gt;&amp;gt; klass: NakKlass&amp;lt;SELF&amp;gt;" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="P7LG4y36yVNv2cbaxUf2-367" vertex="1">
@@ -793,7 +793,7 @@
         <mxCell id="UfRl3wJBrGC50zkCGHNN-60" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="P7LG4y36yVNv2cbaxUf2-529" target="UfRl3wJBrGC50zkCGHNN-55">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="P7LG4y36yVNv2cbaxUf2-529" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;NakMap&lt;/b&gt;&amp;lt;E&amp;gt; : NakType&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
+        <mxCell id="P7LG4y36yVNv2cbaxUf2-529" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;BasePairs&lt;/b&gt;&amp;lt;E&amp;gt; : NakType&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="943.64" y="1090" width="321.72" height="82" as="geometry" />
         </mxCell>
         <mxCell id="UfRl3wJBrGC50zkCGHNN-50" value="-&amp;gt; data(): PObject" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="P7LG4y36yVNv2cbaxUf2-529">
@@ -805,7 +805,7 @@
         <mxCell id="P7LG4y36yVNv2cbaxUf2-594" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="P7LG4y36yVNv2cbaxUf2-535" target="P7LG4y36yVNv2cbaxUf2-367" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="P7LG4y36yVNv2cbaxUf2-535" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;NakDataView&lt;/b&gt; : NakType&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
+        <mxCell id="P7LG4y36yVNv2cbaxUf2-535" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;BaseDataView&lt;/b&gt; : NakType&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="54.9999999999999" y="929" width="315" height="54" as="geometry" />
         </mxCell>
         <mxCell id="UfRl3wJBrGC50zkCGHNN-48" value="-&amp;gt; data(): PDataView" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="P7LG4y36yVNv2cbaxUf2-535">
@@ -820,7 +820,7 @@
         <mxCell id="P7LG4y36yVNv2cbaxUf2-591" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="P7LG4y36yVNv2cbaxUf2-587" target="P7LG4y36yVNv2cbaxUf2-364" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="P7LG4y36yVNv2cbaxUf2-587" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;NakList&lt;/b&gt;&amp;lt;E&amp;gt; : NakArray&amp;lt;E&amp;gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
+        <mxCell id="P7LG4y36yVNv2cbaxUf2-587" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;BaseList&lt;/b&gt;&amp;lt;E&amp;gt; : NakArray&amp;lt;E&amp;gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="29.99999999999995" y="1166" width="315.71" height="54" as="geometry" />
         </mxCell>
         <mxCell id="P7LG4y36yVNv2cbaxUf2-590" value="... This opens the setter/getters from NakArray" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;gradientDirection=east;rounded=0;shadow=0;glass=0;" parent="P7LG4y36yVNv2cbaxUf2-587" vertex="1">
@@ -829,7 +829,7 @@
         <mxCell id="UfRl3wJBrGC50zkCGHNN-59" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="P7LG4y36yVNv2cbaxUf2-364" target="UfRl3wJBrGC50zkCGHNN-55">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="P7LG4y36yVNv2cbaxUf2-364" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;NakArray&lt;/b&gt;&amp;lt;E&amp;gt; : NakType&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
+        <mxCell id="P7LG4y36yVNv2cbaxUf2-364" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;BaseArray&lt;/b&gt;&amp;lt;E&amp;gt; : NakType&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="398.49999999999994" y="1343.25" width="315.71" height="82" as="geometry" />
         </mxCell>
         <mxCell id="UfRl3wJBrGC50zkCGHNN-49" value="-&amp;gt; data(): PArray" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="P7LG4y36yVNv2cbaxUf2-364">
@@ -1349,7 +1349,7 @@
         <mxCell id="PtreMAfRORDTyX6bqiL5-111" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="PtreMAfRORDTyX6bqiL5-37" target="PtreMAfRORDTyX6bqiL5-95" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="UfRl3wJBrGC50zkCGHNN-9" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;abstract &lt;b&gt;NakKlass&lt;/b&gt;&amp;lt;T: NakType&amp;gt; : Klass&amp;lt;T&amp;gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" vertex="1" parent="1">
+        <mxCell id="UfRl3wJBrGC50zkCGHNN-9" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;abstract &lt;b&gt;BaseKlass&lt;/b&gt;&amp;lt;T: NakType&amp;gt; : Klass&amp;lt;T&amp;gt;&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" vertex="1" parent="1">
           <mxGeometry x="1080" y="831" width="560" height="138" as="geometry" />
         </mxCell>
         <mxCell id="UfRl3wJBrGC50zkCGHNN-15" value="-&amp;gt; platformKlass(): Klass&amp;lt;*&amp;gt;" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;gradientDirection=east;rounded=0;shadow=0;glass=0;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="UfRl3wJBrGC50zkCGHNN-9">
@@ -1385,11 +1385,23 @@
         <mxCell id="UfRl3wJBrGC50zkCGHNN-58" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="UfRl3wJBrGC50zkCGHNN-55" target="P7LG4y36yVNv2cbaxUf2-367">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="UfRl3wJBrGC50zkCGHNN-55" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;NakElementType&lt;/b&gt;&amp;lt;E&amp;gt; : NakType&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" vertex="1" parent="1">
+        <mxCell id="UfRl3wJBrGC50zkCGHNN-55" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;BaseElementType&lt;/b&gt;&amp;lt;E&amp;gt; : NakType&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" vertex="1" parent="1">
           <mxGeometry x="597.84" y="1104" width="260.01" height="54" as="geometry" />
         </mxCell>
         <mxCell id="UfRl3wJBrGC50zkCGHNN-57" value="&amp;gt;&amp;gt; componentKlass: Klass&amp;lt;E&amp;gt;" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;gradientDirection=east;rounded=0;shadow=0;glass=0;" vertex="1" parent="UfRl3wJBrGC50zkCGHNN-55">
           <mxGeometry y="26" width="260.01" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="UfRl3wJBrGC50zkCGHNN-64" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="UfRl3wJBrGC50zkCGHNN-61" target="P7LG4y36yVNv2cbaxUf2-529">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UfRl3wJBrGC50zkCGHNN-61" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;open &lt;b&gt;BaseMap&lt;/b&gt;&amp;lt;E&amp;gt; : NakType&lt;br&gt;&lt;/span&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#dae8fc;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="1040.48" width="321.72" height="82" as="geometry" />
+        </mxCell>
+        <mxCell id="UfRl3wJBrGC50zkCGHNN-62" value="-&amp;gt; data(): PObject" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="UfRl3wJBrGC50zkCGHNN-61">
+          <mxGeometry y="26" width="321.72" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="UfRl3wJBrGC50zkCGHNN-63" value="&amp;gt;&amp;gt; componentKlass: Klass&amp;lt;E&amp;gt;" style="text;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;gradientDirection=east;rounded=0;shadow=0;glass=0;" vertex="1" parent="UfRl3wJBrGC50zkCGHNN-61">
+          <mxGeometry y="54" width="321.72" height="28" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

@@ -1,6 +1,6 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
 
@@ -11,18 +11,18 @@ import kotlin.js.JsExport
  * @property symbol The symbol to which this type is bound.
  */
 @JsExport
-abstract class NakType {
+abstract class BaseType {
     companion object {
-        val klass = object : NakKlass<NakType>() {
+        val klass = object : BaseKlass<BaseType>() {
             override fun getPlatformKlass(): Klass<Any> = anyKlass
 
             override fun isAbstract(): Boolean = true
 
             override fun isArray(): Boolean = false
 
-            override fun isInstance(o: Any?): Boolean = o is NakType
+            override fun isInstance(o: Any?): Boolean = o is BaseType
 
-            override fun newInstance(vararg args: Any?): NakType = throw UnsupportedOperationException()
+            override fun newInstance(vararg args: Any?): BaseType = throw UnsupportedOperationException()
         }
     }
 
@@ -30,10 +30,10 @@ abstract class NakType {
      * Returns the Klass of this instance.
      * @return The Klass of this instance.
      */
-    abstract fun getKlass(): NakKlass<*>
+    abstract fun getKlass(): BaseKlass<*>
 
     /**
-     * The data object to which this class is bound. Is late bound by [Nak].
+     * The data object to which this class is bound. Is late bound by [Base].
      */
     internal var data: Any? = null
 

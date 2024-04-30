@@ -1,4 +1,4 @@
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 /**
  * Simple implementation of the [Iterable] interface for all Naksha types.

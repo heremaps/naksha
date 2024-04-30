@@ -1,0 +1,22 @@
+{
+  "type": "Feature",
+  "id": "urn:here::here:Topology:58626681",
+  "properties": {
+    "bool": true,
+    "int32": 123,
+    "int64": 2147483647000,
+    "float": 10.0,
+    "double": 3402823466385288600000000000000000000001111.000000,
+    "string": "any String",
+    "null": null,
+    "properties.@ns:com:here:xyz.tags": ["tag1", "tag2"],
+    "array": [
+      {
+        "int32": 1
+      },
+      {
+        "int32": 2
+      }
+    ]
+  }
+}
