@@ -1,19 +1,19 @@
 @file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 import kotlin.jvm.JvmStatic
 
 /**
- * The platform engine to support the multi-platform code. All methods in this engine are by definition thread safe.
+ * The base engine to support the multi-platform code. All methods in this engine are by definition thread safe.
  */
-expect class Nak {
+expect class Base {
     companion object {
         /**
          * The symbol to store the default Naksha multi-platform types in.
          */
         @JvmStatic
-        val NAK_SYM: PSymbol
+        val BASE_SYM: PSymbol
 
         /**
          * The maximum value of a 64-bit integer.
@@ -58,6 +58,18 @@ expect class Nak {
         fun initNak(vararg parameters: Any?): Boolean
 
         /**
+         * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
+         * followed by Canonical Composition). Optionally, if [cd] is set to _true_, perform a Compatibility Decomposition,
+         * followed by Canonical Composition. Beware that this is only good for search or special cases, the recommended
+         * form is NFC (the default).
+         * @param s The string to intern and convert to NFC form.
+         * @param cd If _true_, then perform a Compatibility Decomposition instead of the Canonical Decomposition.
+         * @return The new interned string or the given one, if it is already in the right form.
+         */
+        @JvmStatic
+        fun intern(s: String, cd: Boolean = false): String
+
+        /**
          * Reads the current assignment to the given object for the given symbol; if there is any.
          * @param <T> The assignment type.
          * @param o The object to query.
@@ -65,10 +77,10 @@ expect class Nak {
          * @return The assignment or _null_, if this symbol is not yet assigned.
          */
         @JvmStatic
-        fun <T : NakType> getAssignment(o: Any?, symbol: PSymbol = NAK_SYM): T?
+        fun <T : BaseType> getAssignment(o: Any?, symbol: PSymbol = BASE_SYM): T?
 
         /**
-         * Assigns the given assignment type to the given platform object. This method will fail when [NakKlass.isAssignable]
+         * Assigns the given assignment type to the given platform object. This method will fail when [BaseKlass.isAssignable]
          * returns _false_. The method will [unbox] the given object to acquire the platform object.
          * @param <T> The assignment type.
          * @param o The object to query.
@@ -78,12 +90,12 @@ expect class Nak {
          * @throws ClassCastException If the assignment failed.
          */
         @JvmStatic
-        fun <T : NakType> assign(o: Any, klass: NakKlass<T>, vararg args: Any?): T
+        fun <T : BaseType> assign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T
 
         /**
          * Assigns the given assignment type to the given platform object. The method will [unbox] the given object
          * to acquire the platform object. This method is a forceful operation that does not invoke
-         * [NakKlass.isAssignable]. It should be used carefully.
+         * [BaseKlass.isAssignable]. It should be used carefully.
          * @param <P> The platform type.
          * @param <T> The assignment type.
          * @param o The object to query.
@@ -93,21 +105,21 @@ expect class Nak {
          * @throws ClassCastException If the assignment failed, only happens when trying to assign to a primitive.
          */
         @JvmStatic
-        fun <T : NakType> forceAssign(o: Any, klass: NakKlass<T>, vararg args: Any?): T
+        fun <T : BaseType> forceAssign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T
 
         /**
          * Tests if the assignment type can be assigned to the given platform object. This method is a shortcut for calling
-         * [NakKlass.isAssignable].
+         * [BaseKlass.isAssignable].
          * @param o The object to test (will be [unbox]'ed).
          * @param klass The assignment class to test.
          * @return _true_ if the given assignment class can be assigned to the given platform object; _false_ otherwise.
          */
         @JvmStatic
-        fun isAssignable(o: Any?, klass: NakKlass<*>): Boolean
+        fun isAssignable(o: Any?, klass: BaseKlass<*>): Boolean
 
         /**
          * Returns the symbol for the given string from the global registry. It is recommended to use the package name, for example
-         * _com.here.naksha.lib.nak_ is used for [NAK_SYM], the default Naksha multi-platform library.
+         * _com.here.naksha.lib.nak_ is used for [BASE_SYM], the default Naksha multi-platform library.
          * @param key The symbol key; if _null_, a random symbol not part of the registry is created.
          * @return The existing symbol, if no such symbol exist yet, creates a new one.
          */

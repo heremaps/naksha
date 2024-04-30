@@ -1,6 +1,6 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
 
@@ -8,7 +8,7 @@ import kotlin.js.JsExport
  * The base class for all Naksha map types.
  */
 @JsExport
-abstract class NakMapKlass<E, out T : NakMap<E>> : NakKlass<T>() {
+abstract class BasePairsKlass<E, out T : BasePairs<E>> : BaseKlass<T>() {
     override fun isAbstract(): Boolean = false
 
     override fun isArray(): Boolean = false

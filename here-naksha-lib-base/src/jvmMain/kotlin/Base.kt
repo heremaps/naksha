@@ -1,6 +1,6 @@
 @file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "unused", "UNCHECKED_CAST")
 
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 import sun.misc.Unsafe
 import java.util.concurrent.ConcurrentHashMap
@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * The JVM implementation of the static Naksha multi-platform singleton.
  */
-actual class Nak {
+actual class Base {
     actual companion object {
         /**
          * The cache stores the 64-bit integers between -1024 and +1023 with 0 being at index 0, 1023 at index 1023, -1024 at index 1024
@@ -34,7 +34,7 @@ actual class Nak {
          * The symbol (_com.here.naksha.lib.nak_) to store the default Naksha multi-platform types in.
          */
         @JvmStatic
-        actual val NAK_SYM: PSymbol = symbol("com.here.naksha.lib.nak")
+        actual val BASE_SYM: PSymbol = symbol("com.here.naksha.lib.nak")
 
         /**
          * The maximum value of a 64-bit integer.
@@ -96,11 +96,15 @@ actual class Nak {
             return false
         }
 
+        // TODO: Add cache and normalization!
         @JvmStatic
-        actual fun <T : NakType> getAssignment(o: Any?, symbol: PSymbol): T? = toJvmObject(o)?.get(symbol) as? T
+        actual fun intern(s: String, cd: Boolean): String = s
 
         @JvmStatic
-        actual fun <T : NakType> assign(o: Any, klass: NakKlass<T>, vararg args: Any?): T {
+        actual fun <T : BaseType> getAssignment(o: Any?, symbol: PSymbol): T? = toJvmObject(o)?.get(symbol) as? T
+
+        @JvmStatic
+        actual fun <T : BaseType> assign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
             val data = toJvmObject(o)
             require(data != null)
             val sym = klass.symbol()
@@ -113,7 +117,7 @@ actual class Nak {
         }
 
         @JvmStatic
-        actual fun <T : NakType> forceAssign(o: Any, klass: NakKlass<T>, vararg args: Any?): T {
+        actual fun <T : BaseType> forceAssign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
             val data = toJvmObject(o)
             require(data != null)
             val sym = klass.symbol()
@@ -126,7 +130,7 @@ actual class Nak {
         }
 
         @JvmStatic
-        actual fun isAssignable(o: Any?, klass: NakKlass<*>): Boolean {
+        actual fun isAssignable(o: Any?, klass: BaseKlass<*>): Boolean {
             val data = toJvmObject(o)
             return data != null && klass.isAssignable(data)
         }
@@ -156,7 +160,7 @@ actual class Nak {
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PDataView = JvmPDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun unbox(o: Any?): Any? = if (o is NakType) o.data as? JvmObject else if (o is JvmObject) o else null
+        actual fun unbox(o: Any?): Any? = if (o is BaseType) o.data as? JvmObject else if (o is JvmObject) o else null
 
         /**
          * Returns the [JvmObject] of the given object. This method uses the same implementation as [unbox].
@@ -164,7 +168,7 @@ actual class Nak {
          * @return The [JvmObject] or _null_.
          */
         @JvmStatic
-        fun toJvmObject(o: Any?): JvmObject? = if (o is NakType) o.data as? JvmObject else if (o is JvmObject) o else null
+        fun toJvmObject(o: Any?): JvmObject? = if (o is BaseType) o.data as? JvmObject else if (o is JvmObject) o else null
 
         @JvmStatic
         actual fun toInt(value: Any): Int = when (value) {
@@ -295,7 +299,7 @@ actual class Nak {
         private val EMPTY_KEYS = arrayOf<String>()
         private val EMPTY_VALUES = arrayOf<Any?>()
         private val EMPTY_SYMBOLS = arrayOf<PSymbol>()
-        private val NAK_ONLY_SYMBOLS = arrayOf(NAK_SYM)
+        private val NAK_ONLY_SYMBOLS = arrayOf(BASE_SYM)
 
         @JvmStatic
         actual fun keys(o: Any): Array<String> =
@@ -307,7 +311,7 @@ actual class Nak {
             require(o is JvmObject)
             val symbols = o.symbols
             if (symbols != null) return symbols.keys.toTypedArray()
-            if (o.nakSym != undefined) return NAK_ONLY_SYMBOLS
+            if (o.baseSym != undefined) return NAK_ONLY_SYMBOLS
             return EMPTY_SYMBOLS
         }
 

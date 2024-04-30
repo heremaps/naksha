@@ -1,4 +1,4 @@
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 class JvmPArrayIterator(private val arr: JvmPArray) : PIterator<Int, Any?> {
     private var index = -1

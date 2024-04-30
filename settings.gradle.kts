@@ -4,6 +4,8 @@ plugins {
 rootProject.name = "naksha"
 
 include(":here-naksha-lib-base")
+include(":here-naksha-lib-geo")
+include(":here-naksha-lib-nak")
 include(":here-naksha-lib-jbon")
 include(":here-naksha-lib-plv8")
 include(":here-naksha-lib-core")

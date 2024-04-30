@@ -1,4 +1,4 @@
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 class JvmPSymbol internal constructor(private val key: String = "") : PSymbol {
 

@@ -1,4 +1,4 @@
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 /**
  * A default implementation of an iterator above a Naksha object or array.

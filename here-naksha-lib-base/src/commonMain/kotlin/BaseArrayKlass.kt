@@ -1,6 +1,6 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
 
@@ -8,7 +8,7 @@ import kotlin.js.JsExport
  * The base class for all Naksha array types.
  */
 @JsExport
-abstract class NakArrayKlass<E, out T : NakArray<E>> : NakKlass<T>() {
+abstract class BaseArrayKlass<E, out T : BaseArray<E>> : BaseKlass<T>() {
     override fun isAbstract(): Boolean = false
 
     override fun isArray(): Boolean = true

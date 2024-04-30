@@ -1,18 +1,18 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package com.here.naksha.lib.nak
+package com.here.naksha.lib.base
 
-import com.here.naksha.lib.nak.Nak.Companion.isArray
-import com.here.naksha.lib.nak.Nak.Companion.isDataView
-import com.here.naksha.lib.nak.Nak.Companion.isDouble
-import com.here.naksha.lib.nak.Nak.Companion.isInt64
-import com.here.naksha.lib.nak.Nak.Companion.isObject
-import com.here.naksha.lib.nak.Nak.Companion.isString
-import com.here.naksha.lib.nak.Nak.Companion.newArray
-import com.here.naksha.lib.nak.Nak.Companion.newObject
-import com.here.naksha.lib.nak.Nak.Companion.toDouble
-import com.here.naksha.lib.nak.Nak.Companion.toInt64
-import com.here.naksha.lib.nak.Nak.Companion.undefined
+import com.here.naksha.lib.base.Base.Companion.isArray
+import com.here.naksha.lib.base.Base.Companion.isDataView
+import com.here.naksha.lib.base.Base.Companion.isDouble
+import com.here.naksha.lib.base.Base.Companion.isInt64
+import com.here.naksha.lib.base.Base.Companion.isObject
+import com.here.naksha.lib.base.Base.Companion.isString
+import com.here.naksha.lib.base.Base.Companion.newArray
+import com.here.naksha.lib.base.Base.Companion.newObject
+import com.here.naksha.lib.base.Base.Companion.toDouble
+import com.here.naksha.lib.base.Base.Companion.toInt64
+import com.here.naksha.lib.base.Base.Companion.undefined
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
@@ -52,7 +52,7 @@ abstract class Klass<out T> {
                     is Boolean -> a
                     is String -> a.isNotEmpty() && a.lowercase() != "false"
                     is Byte, Short, Int -> a != 0
-                    is Int64 -> !Nak.eqi(a, 0)
+                    is Int64 -> !Base.eqi(a, 0)
                     is Float, Double -> a != 0.0
                     else -> false
                 }
@@ -72,7 +72,7 @@ abstract class Klass<out T> {
                 if (args.isEmpty()) return 0
                 val a = args[0]
                 if (a == null || a == undefined) return 0
-                return Nak.toInt(a)
+                return Base.toInt(a)
             }
         }
 
@@ -137,10 +137,10 @@ abstract class Klass<out T> {
             override fun isInstance(o: Any?): Boolean = o is PSymbol
 
             override fun newInstance(vararg args: Any?): PSymbol {
-                if (args.isEmpty()) return Nak.symbol(null)
+                if (args.isEmpty()) return Base.symbol(null)
                 val a = args[0]
                 require(a is String) {"Symbols can only be found to strings in the global registry"}
-                return Nak.symbol(a)
+                return Base.symbol(a)
             }
         }
 
@@ -182,11 +182,11 @@ abstract class Klass<out T> {
                 val byteArray = args[0]
                 require(byteArray is ByteArray) { "Invalid first argument, must be ByteArray" }
                 return when (args.size) {
-                    1 -> Nak.newDataView(byteArray)
+                    1 -> Base.newDataView(byteArray)
                     2 -> {
                         val offset = args[1]
                         require(offset is Int) { "Invalid second argument, offset must be Int" }
-                        Nak.newDataView(byteArray, offset)
+                        Base.newDataView(byteArray, offset)
                     }
 
                     3 -> {
@@ -194,7 +194,7 @@ abstract class Klass<out T> {
                         require(offset is Int) { "Invalid second argument, offset must be Int" }
                         val length = args[2]
                         require(length is Int) { "Invalid third argument, length must be Int" }
-                        Nak.newDataView(byteArray, offset, length)
+                        Base.newDataView(byteArray, offset, length)
                     }
 
                     else -> throw IllegalArgumentException("DataView constructor has maximal 3 arguments: byteArray, offset, length")
@@ -204,8 +204,8 @@ abstract class Klass<out T> {
     }
 
     /**
-     * Returns _true_ if this is an [PArray] or [NakArray].
-     * @return _true_ if this is an [PArray] or [NakArray].
+     * Returns _true_ if this is an [PArray] or [BaseArray].
+     * @return _true_ if this is an [PArray] or [BaseArray].
      */
     abstract fun isArray(): Boolean
 
