@@ -28,9 +28,9 @@ import com.here.naksha.lib.plv8.NKC_DISABLE_HISTORY
 import com.here.naksha.lib.plv8.NKC_TABLE_ESC
 import com.here.naksha.lib.plv8.NakshaCollection
 import com.here.naksha.lib.plv8.NakshaSession
+import com.here.naksha.lib.plv8.PARTITION_COUNT_NONE
 import com.here.naksha.lib.plv8.PgTrigger
 import com.here.naksha.lib.plv8.Static
-import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
 import com.here.naksha.lib.plv8.TG_LEVEL_ROW
 import com.here.naksha.lib.plv8.TG_OP_INSERT
 import com.here.naksha.lib.plv8.TG_OP_UPDATE
@@ -51,6 +51,8 @@ import kotlin.test.assertNull
 @ExtendWith(Plv8TestContainer::class)
 class Plv8Test : JbTest() {
     private val topologyJson = Plv8PerfTest::class.java.getResource("/topology.json")!!.readText(StandardCharsets.UTF_8)
+
+    private val PARTITION_COUNT = 128
 
     @Order(1)
     @Test
@@ -147,9 +149,9 @@ class Plv8Test : JbTest() {
         var i = 0
         while (i++ < 10_000) {
             val s = env.randomString(12)
-            val pnum = Static.partitionNumber(s)
+            val pnum = Static.partitionNumber(s, PARTITION_COUNT)
             assertTrue(pnum in 0..<PARTITION_COUNT)
-            val pid = Static.partitionNameForId(s)
+            val pid = Static.partitionNameForId(s, PARTITION_COUNT)
 
             @Suppress("KotlinConstantConditions")
             val expectedId: String = when (PARTITION_COUNT) {
@@ -196,7 +198,7 @@ class Plv8Test : JbTest() {
     @Test
     fun testInternalCollectionCreationOfFoo() {
         val session = NakshaSession.get()
-        Static.collectionCreate(session.sql, Static.SC_DEFAULT, session.schema, session.schemaOid, "foo", geoIndex = Static.GEO_INDEX_DEFAULT, partition = false)
+        Static.collectionCreate(session.sql, Static.SC_DEFAULT, session.schema, session.schemaOid, "foo", geoIndex = Static.GEO_INDEX_DEFAULT, partitionCount = PARTITION_COUNT)
         // 9 and 10 are next UIDs!
         val pgNew = Jb.map.newMap()
         pgNew[COL_UID] = null // Should be set by trigger
@@ -241,7 +243,7 @@ class Plv8Test : JbTest() {
         val session = NakshaSession.get()
         // TODO: We need a test for this case, that is a general issue with empty local dictionaries!
         //val collectionJson = """{"id":"bar"}"""
-        val collectionJson = """{"id":"bar","type":"NakshaCollection","minAge":3560,"unlogged":false,"partition":false,"pointsOnly":false,"properties":{},"disableHistory":false,"partitionCount":-1,"estimatedFeatureCount": -1,"estimatedDeletedFeatures":-1}"""
+        val collectionJson = """{"id":"bar","type":"NakshaCollection","minAge":3560,"unlogged":false,"partitionCount":${PARTITION_COUNT_NONE},"pointsOnly":false,"properties":{},"disableHistory":false,"estimatedFeatureCount": -1,"estimatedDeletedFeatures":-1}"""
         val collectionMap = asMap(env.parse(collectionJson))
         val builder = XyzBuilder.create()
         builder.clear()
@@ -287,7 +289,7 @@ class Plv8Test : JbTest() {
         restoredCollection.mapBytes(collectionBytes)
 
         // then
-        assertTrue(restoredCollection.partition())
+        assertEquals(32, restoredCollection.partitionCount())
         assertTrue(restoredCollection.disableHistory())
         assertEquals(Static.GEO_INDEX_SP_GIST, restoredCollection.geoIndex())
         assertEquals(Static.SC_TEMPORARY, restoredCollection.storageClass())

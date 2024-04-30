@@ -24,7 +24,6 @@ import com.here.naksha.lib.plv8.RET_ERR_MSG
 import com.here.naksha.lib.plv8.RET_ERR_NO
 import com.here.naksha.lib.plv8.RET_OP
 import com.here.naksha.lib.plv8.Static
-import com.here.naksha.lib.plv8.Static.PARTITION_COUNT
 import com.here.naksha.lib.plv8.Static.PARTITION_ID
 import com.here.naksha.lib.plv8.Static.SC_CONSISTENT
 import org.junit.jupiter.api.Assertions.assertInstanceOf
@@ -45,6 +44,7 @@ import kotlin.test.assertEquals
 class Plv8PerfTest : JbTest() {
 
     val GRID = 111
+    val PARTITION_COUNT = 8
 
     data class Features(
             val size: Int,
@@ -254,7 +254,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         val id = env.randomString(12)
         val topology = if (UseSmallFeatures) getSmallTopologyFeature() else getTopologyFeature()
         topology["id"] = id
-        val partId = Static.partitionNumber(id)
+        val partId = Static.partitionNumber(id, PARTITION_COUNT)
         val op = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, id, null, GRID)
         var featureBytes = this.featureBytes
         if (featureBytes == null) {
@@ -269,7 +269,8 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
     @Test
     fun bulkLoadFeatures() {
         val tableName = "v2_bulk_load"
-        createCollection(tableName, partition = true, disableHistory = true, storageClass = SC_CONSISTENT)
+
+        createCollection(tableName, partitionCount = PARTITION_COUNT, disableHistory = true, storageClass = SC_CONSISTENT)
 
         // Run for bulk threads in virtual partitions.
         val featuresByVp = Array<ArrayList<BulkFeature>>(BulkLoadThreads) { ArrayList() }
@@ -282,7 +283,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
             // Verify physical partition
             val p = f.partId
             check(p in 0..<PARTITION_COUNT)
-            check(p == Static.partitionNumber(f.id))
+            check(p == Static.partitionNumber(f.id, PARTITION_COUNT))
 
             // Assign to virtual partition.
             val vp = Static.partitionIndex(f.id, BulkLoadThreads)
@@ -374,7 +375,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         val session = NakshaSession.get()
 
         val tableName = "v2_bulk_write"
-        createCollection(tableName, partition = true, disableHistory = false, storageClass = SC_CONSISTENT)
+        createCollection(tableName, partitionCount = PARTITION_COUNT, disableHistory = false, storageClass = SC_CONSISTENT)
 
         // We only run with a single thread!
         var i = 0
@@ -479,7 +480,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         operationWithInvalidUuidToCheck(XYZ_OP_PURGE)
     }
 
-    private fun createCollection(tableName: String, partition: Boolean, disableHistory: Boolean, storageClass: String?=null) {
+    private fun createCollection(tableName: String, partitionCount: Int, disableHistory: Boolean, storageClass: String?=null) {
         val builder = XyzBuilder.create(65536)
         var op = builder.buildXyzOp(XYZ_OP_DELETE, tableName, null, GRID)
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
@@ -490,7 +491,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         op = builder.buildXyzOp(XYZ_OP_CREATE, tableName, null, GRID)
         val sc = if (storageClass==null) "null" else "\"$storageClass\""
-        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partition":$partition,"disableHistory":$disableHistory,"storageClass":$sc}""")))
+        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partitionCount":$partitionCount,"disableHistory":$disableHistory,"storageClass":$sc}""")))
         result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(null), arrayOf(null), arrayOf(null))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)

@@ -21,6 +21,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 import kotlin.math.abs
+import kotlin.math.absoluteValue
 import kotlin.math.min
 
 /**
@@ -41,7 +42,7 @@ object Static {
     init {
         nakshaCollectionConfig.put(NKC_GEO_INDEX, null)
         nakshaCollectionConfig.put(NKC_STORAGE_CLASS, null)
-        nakshaCollectionConfig.put(NKC_PARTITION, false)
+        nakshaCollectionConfig.put(NKC_PARTITION_COUNT, PARTITION_COUNT_NONE)
         nakshaCollectionConfig.put(NKC_AUTO_PURGE, false)
         nakshaCollectionConfig.put(NKC_DISABLE_HISTORY, false)
     }
@@ -140,29 +141,15 @@ object Static {
     @JvmStatic
     var PRINT_STACK_TRACES = false
 
-    /**
-     * The number of partitions. We use partitioning for tables that are expected to store more than
-     * ten million features. With eight partitions we can split 10 million features into partitions
-     * of each 1.25 million, 100 million into 12.5 million per partition and for the supported maximum
-     * of 1 billion features, each partition holds 125 million features.
-     *
-     * This value must be a value of 2^n with n between 1 and 8 (2, 4, 8, 16, 32, 64, 128, 256).
-     */
     @JvmStatic
-    val PARTITION_COUNT = 8
-
-    /**
-     * The bitmask to mask the hash for the partition-id.
-     */
-    @JvmStatic
-    val PARTITION_MASK = PARTITION_COUNT - 1
+    val MAX_PARTITION_COUNT = 128
 
     /**
      * Array to fasten partition id.
      */
     @JvmStatic
-    val PARTITION_ID = Array(PARTITION_COUNT) {
-        when (PARTITION_COUNT) {
+    val PARTITION_ID = Array(MAX_PARTITION_COUNT) {
+        when (MAX_PARTITION_COUNT) {
             in 0..9 -> "$it"
             in 10..99 -> if (it < 10) "0$it" else "$it"
             else -> if (it < 10) "00$it" else if (it < 100) "0$it" else "$it"
@@ -323,7 +310,7 @@ object Static {
     @JvmStatic
     fun createBaseInternalsIfNotExists(sql: IPlv8Sql, schema: String, schemaOid: Int) {
         if (!tableExists(sql, SC_COLLECTIONS, schemaOid)) {
-            collectionCreate(sql, SC_COLLECTIONS, schema, schemaOid, SC_COLLECTIONS, GEO_INDEX_DEFAULT, partition = false)
+            collectionCreate(sql, SC_COLLECTIONS, schema, schemaOid, SC_COLLECTIONS, GEO_INDEX_DEFAULT, partitionCount = PARTITION_COUNT_NONE)
         }
         sql.execute("CREATE SEQUENCE IF NOT EXISTS naksha_txn_seq AS int8; COMMIT;")
     }
@@ -340,18 +327,20 @@ object Static {
     /**
      * Returns the partition number.
      * @param id The feature-id for which to return the partition-id.
+     * @param partitionCount number of partitions on specific collection.
      * @return The partition id as number between 0 and partitionCount.
      */
     @JvmStatic
-    fun partitionNumber(id: String): Int = Fnv1a32.string(Fnv1a32.start(), id) and PARTITION_MASK
+    fun partitionNumber(id: String, partitionCount: Int): Int = Fnv1a32.string(Fnv1a32.start(), id).absoluteValue % (partitionCount)
 
     /**
      * Returns the partition id as three digit string.
      * @param id The feature-id for which to return the partition-id.
+     * @param partitionCount number of partitions on specific collection.
      * @return The partition id as three digit string.
      */
     @JvmStatic
-    fun partitionNameForId(id: String): String = PARTITION_ID[partitionNumber(id)]
+    fun partitionNameForId(id: String, partitionCount: Int): String = PARTITION_ID[partitionNumber(id, partitionCount)]
 
     /**
      * Tests if specific database table (in the Naksha session schema) exists already
@@ -466,20 +455,20 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
      * @param schemaOid The object-id of the schema to look into.
      * @param id The collection identifier.
      * @param geoIndex The geo-index to be used.
-     * @param partition If the collection should be partitioned.
+     * @param partitionCount Number of partitions, possible values: 0 (no partitioning), 2, 4, 8, 16, 32, 64, 128, 256)
      */
     @JvmStatic
-    fun collectionCreate(sql: IPlv8Sql, storageClass: String?, schema: String, schemaOid: Int, id: String, geoIndex: String, partition: Boolean) {
+    fun collectionCreate(sql: IPlv8Sql, storageClass: String?, schema: String, schemaOid: Int, id: String, geoIndex: String, partitionCount: Int) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
-        val pgTableInfo = PgTableInfo(sql, storageClass)
+        val pgTableInfo = PgTableInfo(sql, storageClass, partitionCount)
 
         // HEAD
         var query: String = pgTableInfo.CREATE_TABLE
         val headNameQuoted = sql.quoteIdent(id)
         query += headNameQuoted
         query += pgTableInfo.CREATE_TABLE_BODY
-        if (!partition) {
+        if (!partitionCount.isPartitioningEnabled()) {
             query += pgTableInfo.STORAGE_PARAMS
             query += pgTableInfo.TABLESPACE
             sql.execute(query)
@@ -489,12 +478,12 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
             if (id == SC_TRANSACTIONS) {
                 query += " PARTITION BY RANGE (txn) "
             } else {
-                query += " PARTITION BY RANGE (naksha_partition_number(id)) "
+                query += " PARTITION BY RANGE (naksha_partition_number(id, $partitionCount)) "
             }
             // Partitioned tables must not have storage params
             query += pgTableInfo.TABLESPACE
             sql.execute(query)
-            for (part in 0..<PARTITION_COUNT) {
+            for (part in 0..<partitionCount) {
                 createPartitionById(sql, id, geoIndex, part, pgTableInfo, false)
             }
         }
@@ -514,17 +503,17 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
             query = pgTableInfo.CREATE_TABLE
             query += delNameQuoted
             query += pgTableInfo.CREATE_TABLE_BODY
-            if (!partition) {
+            if (!partitionCount.isPartitioningEnabled()) {
                 query += pgTableInfo.STORAGE_PARAMS
                 query += pgTableInfo.TABLESPACE
                 sql.execute(query)
                 //collectionOptimizeTable(sql, delName, false)
                 collectionAddIndices(sql, delName, geoIndex, false, pgTableInfo)
             } else {
-                query += " PARTITION BY RANGE (naksha_partition_number(id)) "
+                query += " PARTITION BY RANGE (naksha_partition_number(id, $partitionCount)) "
                 query += pgTableInfo.TABLESPACE
                 sql.execute(query)
-                for (part in 0..<PARTITION_COUNT) {
+                for (part in 0..<partitionCount) {
                     createPartitionById(sql, delName, geoIndex, part, pgTableInfo, false)
                 }
             }
@@ -551,8 +540,8 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
             query += pgTableInfo.TABLESPACE
             sql.execute(query)
             val year = yearOf(Jb.env.currentMillis())
-            createHstPartition(sql, id, year, geoIndex, partition, pgTableInfo)
-            createHstPartition(sql, id, year + 1, geoIndex, partition, pgTableInfo)
+            createHstPartition(sql, id, year, geoIndex, pgTableInfo)
+            createHstPartition(sql, id, year + 1, geoIndex, pgTableInfo)
         }
     }
 
@@ -619,11 +608,10 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param collectionId has to be pure (without _hst suffix).
      * @param year The year for which to create the history partition.
      * @param geoIndex The geo-index to use in the history.
-     * @param partition If the history should be sub-partitioned by id.
      * @param pgTableInfo The table info to know storage class and alike.
      */
     @JvmStatic
-    private fun createHstPartition(sql: IPlv8Sql, collectionId: String, year: Int, geoIndex: String, partition: Boolean, pgTableInfo: PgTableInfo): String {
+    private fun createHstPartition(sql: IPlv8Sql, collectionId: String, year: Int, geoIndex: String, pgTableInfo: PgTableInfo): String {
         val parentName = "${collectionId}\$hst"
         val parentNameQuoted = sql.quoteIdent(parentName)
         val hstPartName = "${parentName}_${year}"
@@ -632,11 +620,11 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         val end = NakshaTxn.of(year, 12, 31, NakshaTxn.SEQ_MAX).value
         var query = pgTableInfo.CREATE_TABLE
         query += "IF NOT EXISTS $hstPartNameQuoted PARTITION OF $parentNameQuoted FOR VALUES FROM ($start) TO ($end) "
-        if (partition) {
-            query += "PARTITION BY RANGE (naksha_partition_number(id))"
+        if (pgTableInfo.partitionCount.isPartitioningEnabled()) {
+            query += "PARTITION BY RANGE (naksha_partition_number(id, ${pgTableInfo.partitionCount}))"
             query += pgTableInfo.TABLESPACE
             sql.execute(query)
-            for (subPartition in 0..<PARTITION_COUNT) {
+            for (subPartition in 0..<pgTableInfo.partitionCount) {
                 createPartitionById(sql, hstPartName, geoIndex, subPartition, pgTableInfo, true)
             }
         } else {
@@ -659,8 +647,9 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param history If this is a history partition; otherwise it is
      */
     private fun createPartitionById(sql: IPlv8Sql, parentName: String, geoIndex: String, part: Int, pgTableInfo: PgTableInfo, history: Boolean) {
-        require(part in 0..<PARTITION_COUNT) { "Invalid partition number $part" }
-        val partitionName = if (parentName.contains('$')) "${parentName}_p$part" else "${parentName}\$p$part"
+        require(part in 0..<pgTableInfo.partitionCount) { "Invalid partition number $part" }
+        val partString = PARTITION_ID[part]
+        val partitionName = if (parentName.contains('$')) "${parentName}_p$partString" else "${parentName}\$p$partString"
         val partitionNameQuoted = sql.quoteIdent(partitionName)
         val parentTableNameQuoted = sql.quoteIdent(parentName)
         val query = pgTableInfo.CREATE_TABLE + "IF NOT EXISTS $partitionNameQuoted PARTITION OF $parentTableNameQuoted FOR VALUES FROM ($part) TO (${part + 1}) ${pgTableInfo.STORAGE_PARAMS} ${pgTableInfo.TABLESPACE};"
@@ -713,4 +702,6 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
     }
 
     fun currentMillis(): BigInt64? = if (DEBUG) Jb.env.currentMicros() / 1000 else null
+
+    private fun Int.isPartitioningEnabled() = this >= 2
 }

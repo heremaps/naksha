@@ -55,7 +55,7 @@ abstract class PsqlCollectionTests extends PsqlTests {
     assertNotNull(storage);
     assertNotNull(session);
     final WriteXyzCollections request = new WriteXyzCollections();
-    request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partition(), false, true));
+    request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partitionCount(), false, true));
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
              session.execute(request).getXyzCollectionCursor()) {
       assertNotNull(cursor);
@@ -92,7 +92,7 @@ abstract class PsqlCollectionTests extends PsqlTests {
     assertNotNull(storage);
     assertNotNull(session);
     final WriteXyzCollections request = new WriteXyzCollections();
-    request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partition(), false, true));
+    request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partitionCount(), false, true));
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
              session.execute(request).getXyzCollectionCursor()) {
       assertTrue(cursor.next());
@@ -124,7 +124,7 @@ abstract class PsqlCollectionTests extends PsqlTests {
     // WRITE COLLECTION THAT SHOULD BE TEMPORARY
     String collectionId = "foo_temp";
     final WriteXyzCollections request = new WriteXyzCollections();
-    XyzCollection xyzCollection = new XyzCollection(collectionId, true, false, true);
+    XyzCollection xyzCollection = new XyzCollection(collectionId, 8, false, true);
     xyzCollection.setStorageClass("brittle");
     request.add(EWriteOp.CREATE, xyzCollection);
 
@@ -153,9 +153,9 @@ abstract class PsqlCollectionTests extends PsqlTests {
     assertEquals(expectedTablespace, getTablespace(session, collectionId + "$del"));
     assertEquals(expectedTablespace, getTablespace(session, collectionId + "$meta"));
     if (partition()) {
-      assertEquals(expectedTablespace, getTablespace(session, collectionId + "$hst_" + currentYear + "_p0"));
-      assertEquals(expectedTablespace, getTablespace(session, collectionId + "$del_p0"));
-      assertEquals(expectedTablespace, getTablespace(session, collectionId + "$p0"));
+      assertEquals(expectedTablespace, getTablespace(session, collectionId + "$hst_" + currentYear + "_p000"));
+      assertEquals(expectedTablespace, getTablespace(session, collectionId + "$del_p000"));
+      assertEquals(expectedTablespace, getTablespace(session, collectionId + "$p000"));
     }
   }
 
@@ -186,5 +186,9 @@ abstract class PsqlCollectionTests extends PsqlTests {
       resultSet.next();
       return resultSet.getInt(1) == 0;
     }
+  }
+
+  int partitionCount() {
+    return partition()? 8: 1;
   }
 }

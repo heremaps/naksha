@@ -18,10 +18,15 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.NakshaVersion;
 import java.util.Objects;
+import java.util.Set;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,12 +37,13 @@ import org.jetbrains.annotations.NotNull;
 @JsonTypeName(value = "NakshaCollection")
 @AvailableSince(NakshaVersion.v2_0_7)
 public class XyzCollection extends NakshaFeature {
+  private static final Set<Integer> AVAILABLE_PARTITION_COUNT = Set.of(1, 2, 4, 8, 16, 32, 64, 128);
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String ID_PREFIX = "idPrefix";
 
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public static final String PARTITION = "partition";
+  @AvailableSince(NakshaVersion.v3_0_0)
+  public static final String PARTITION_COUNT = "partitionCount";
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String POINTS_ONLY = "pointsOnly";
@@ -71,7 +77,7 @@ public class XyzCollection extends NakshaFeature {
   @AvailableSince(NakshaVersion.v2_0_7)
   @JsonCreator
   public XyzCollection(@JsonProperty(ID) @NotNull String id) {
-    this(id, false, false, false);
+    this(id, 8, false, false);
   }
 
   /**
@@ -80,16 +86,17 @@ public class XyzCollection extends NakshaFeature {
    * <p>This special purpose constructor allows to create partition with some special features. It is not guaranteed if the storage
    * implementation does support this.</p>
    *
-   * @param id         The identifier of the collection.
-   * @param partition  If the collection should be partitioned for better performance to improve bulk operations.
-   * @param pointsOnly If only points will be stored in the collection, which allows to use different indexing, and to reduce the storage
-   *                   space consumed.
-   * @param unlogged   If the collection should be unlogged, this makes it not crash-safe, but much faster.
+   * @param id             The identifier of the collection.
+   * @param partitionCount Number of partitions if the collection should be partitioned for better performance to improve bulk operations. 1 - to disable partitioning.
+   * @param pointsOnly     If only points will be stored in the collection, which allows to use different indexing, and to reduce the storage
+   *                       space consumed.
+   * @param unlogged       If the collection should be unlogged, this makes it not crash-safe, but much faster.
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public XyzCollection(@NotNull String id, boolean partition, boolean pointsOnly, boolean unlogged) {
+  public XyzCollection(@NotNull String id, int partitionCount, boolean pointsOnly, boolean unlogged) {
     super(id);
-    this.partition = partition;
+    assert (AVAILABLE_PARTITION_COUNT.contains(partitionCount));
+    this.partitionCount = partitionCount;
     this.pointsOnly = pointsOnly;
     this.estimatedFeatureCount = -1L;
     this.estimatedDeletedFeatures = -1L;
@@ -127,17 +134,27 @@ public class XyzCollection extends NakshaFeature {
    */
   @JsonIgnore
   public boolean isPartitioned() {
-    return partition;
+    return partitionCount > 1;
   }
 
   /**
-   * A value greater than zero implies that the collection shall be treated as deleted and represents the UTC Epoch timestamp in
-   * milliseconds when the deletion has been done.
+   * Number of partitions.
+   *
+   * @return
+   */
+  @JsonIgnore
+  public int getPartitionCount() {
+    return partitionCount;
+  }
+
+  /**
+   * Number of partitions, possible values:
+   * 1 - no partitioning,2,4,8,16,32,64,128.
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(PARTITION)
+  @JsonProperty(PARTITION_COUNT)
   @JsonInclude(Include.NON_EMPTY)
-  private boolean partition;
+  private int partitionCount;
 
   /**
    * Returns {@code true} if this collection is optimized for point geometry.
@@ -333,6 +350,7 @@ public class XyzCollection extends NakshaFeature {
 
   /**
    * Sets storage class that defines the way data is stores. Possible values: temporary, brittle, consistent
+   *
    * @param storageClass
    */
   public void setStorageClass(String storageClass) {
@@ -351,7 +369,7 @@ public class XyzCollection extends NakshaFeature {
     return minAge == that.minAge
         && disableHistory == that.disableHistory
         && autoPurge == that.autoPurge
-        && partition == that.partition
+        && partitionCount == that.partitionCount
         && pointsOnly == that.pointsOnly
         && unlogged == that.unlogged
         && Objects.equals(storageClass, that.storageClass)
@@ -365,7 +383,7 @@ public class XyzCollection extends NakshaFeature {
         minAge,
         disableHistory,
         autoPurge,
-        partition,
+        partitionCount,
         pointsOnly,
         unlogged,
         storageClass,
