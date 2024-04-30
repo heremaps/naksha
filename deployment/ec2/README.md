@@ -4,21 +4,39 @@ This folder contains EC2 instance configurations needed to run Naksha-Hub or the
 ## Install
 To install a new EC2 Postgres instance the following steps are needed:
 
-- Start a new EC2 instance of the type `r6idn.metal`.
-  - Use **128 GiB** of **gp3** for root storage.
+- Create all resources with tag `odin_add_id` and `Name`.
+- Create a placement group with strategy `cluster`, name `naksha_db_cluster`
+- Create two new Network Interfaces with n being `1` and `2`:
+  - Description: `Naksha PostgresQL ENI-{n}`
+  - Add into subnet `subnet-0a600ceb17a8e19fb` (_public E2E us-east-1a_0_).
+  - Private IPv4 address: Auto-assign
+  - Add security group `sg-0a39beed168bd9e97` (_wikvaya-e2e-us-east-1-sg_).
+  - odin_app_id: `661`
+  - Name: `naksha_db_eni_{n}`
+- Start a new EC2 instance of the type `r6idn.metal` in the new placement group.
+  - Use **256 GiB** of **gp3** for root storage.
   - Locate the instance in **us-east-1** region.
   - Locate in `vpc-0c0b607d333227c5e` (_Direct Connect VPC E2E_).
   - Add into subnet `subnet-0a600ceb17a8e19fb` (_public E2E us-east-1a_0_).
   - Assign a public IP, so that you get access to docker registry.
   - Add security group `sg-0a39beed168bd9e97` (_wikvaya-e2e-us-east-1-sg_).
     - This allows all incoming traffic from `10.0.0.0/8`.
+  - Attach the two network interfaces (they will not have a public IP).
 - Then create 16 EBS volumes using **gp3** type
   - Size: **1024 GiB**
   - Throughput: **1000 MiB/s**
   - IOPS: **16000**
   - Name: `naksha_postgresql_perftest_vNN` (with NN being **00** to **15**) 
   - Attach them to the instance.
-
+- Create Route 53 records
+  - Grab the IPs associated with the two ENIs (`ipconfig`, `ens2` and `ens3`)
+  - Create two DNS records with the same name (`naksha-db.e2e` `.cmtrd.aws.in.here.com`)
+  - TTL: 1m
+  - Routing policy: Weighted
+  - Weight: 100
+  - Heath-check ID: -
+  - Record IDs: `naksha_db_e2e_eni_1` and `naksha_db_e2e_eni_2`
+ 
 Ones done, open up a shell to the machine and start the installation:
 
 ```bash
@@ -178,10 +196,17 @@ Fore more information see [How to remove software raid with mdadm](https://www.d
 Test the connection:
 ```bash
 psql "user=postgres sslmode=disable host=localhost dbname=unimap"
+#or
+psql "user=postgres sslmode=disable host=naksha-db.e2e.cmtrd.aws.in.here.com dbname=unimap"
 ```
 
 Review if the socket is bound:
 ```bash
 sudo netstat -tulpn | grep :5432
 sudo nmap localhost
+```
+
+Show which sockets are listened to:
+```bash
+sudo lsof -i -P -n | grep LISTEN
 ```
