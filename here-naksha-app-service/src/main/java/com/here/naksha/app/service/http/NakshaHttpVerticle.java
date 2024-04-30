@@ -173,7 +173,6 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         //                .setHandleFileUploads(false)
         //                .setPreallocateBodyBuffer(true));
 
-        // TODO: Port the JWT authentication handler.
         final AuthenticationHandler jwtHandler = new NakshaJwtAuthHandler(app().authProvider, hubConfig, null);
         rb.securityHandler("Bearer", jwtHandler);
 
