@@ -32,7 +32,7 @@ class NakXyz(vararg args: Any?) : BaseObject(*args) {
         val DELETE = Base.intern("DELETE")
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 
     fun getAction(): String = getOr(ACTION, Klass.stringKlass, CREATE)
     fun setAction(action: String?) = set(ACTION, action)

@@ -27,7 +27,7 @@ open class BaseDataView(byteArray: ByteArray? = null, offset: Int? = null, lengt
         }
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 
     override fun data(): PDataView {
         val data = this.data

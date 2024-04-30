@@ -20,7 +20,7 @@ open class BaseMap<E>(vararg args: Any?) : BasePairs<E>(*args) {
         }
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 
     override fun <T> getOr(key: String, klass: Klass<T>, alternative: T): T = super.getOr(key, klass, alternative)
     override fun <T> getOrNull(key: String, klass: Klass<T>): T? = super.getOrNull(key, klass)

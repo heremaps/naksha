@@ -29,7 +29,7 @@ abstract class BaseElementType<E> : BaseType() {
         }
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 
     /**
      * Returns the component klass (the klass of the elements stored in this array).

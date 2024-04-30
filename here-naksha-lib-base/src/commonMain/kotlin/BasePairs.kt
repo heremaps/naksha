@@ -26,7 +26,7 @@ open class BasePairs<E>(vararg args: Any?) : BaseElementType<E>() {
         }
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 
     override fun data(): PObject {
         var data = this.data

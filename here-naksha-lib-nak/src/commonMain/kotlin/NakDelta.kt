@@ -23,5 +23,5 @@ class NakDelta(vararg args:Any?) : BaseObject(*args) {
         val CHANGE_STATE = Base.intern("changeState")
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 }

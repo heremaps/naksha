@@ -25,7 +25,7 @@ open class NakProperties(vararg args: Any?) : BaseObject(*args) {
         val DELTA_NS = Base.intern("@ns:com:here:delta")
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 
     open fun getXyz(): NakXyz? = getOrNull(XYZ_NS, NakXyz.klass)
     open fun setXyz(value: NakXyz?) = set(XYZ_NS, value)

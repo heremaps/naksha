@@ -19,5 +19,5 @@ open class BaseObject(vararg args: Any?) : BasePairs<Any?>(*args) {
         }
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 }

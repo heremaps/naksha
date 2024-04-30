@@ -20,7 +20,7 @@ open class NakFeature(vararg args: Any?) : GeoFeature(args) {
         }
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 
     override fun getProperties(): NakProperties = getOrCreate(PROPERTIES, NakProperties.klass)
 

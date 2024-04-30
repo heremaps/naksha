@@ -20,7 +20,7 @@ open class BaseList<E> : BaseArray<E>() {
         }
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
     override operator fun get(i: Int): E? = super.get(i)
     override operator fun set(i: Int, value: E?): E? = super.set(i, value)
 }

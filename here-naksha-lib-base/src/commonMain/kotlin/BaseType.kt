@@ -30,7 +30,7 @@ abstract class BaseType {
      * Returns the Klass of this instance.
      * @return The Klass of this instance.
      */
-    abstract fun getKlass(): BaseKlass<*>
+    abstract fun klass(): BaseKlass<*>
 
     /**
      * The data object to which this class is bound. Is late bound by [Base].

@@ -27,7 +27,7 @@ open class GeoFeature(vararg args: Any?) : BaseObject(args) {
         val PROPERTIES = Base.intern("properties")
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 
     open fun getId(): String? = toElement(get(ID), stringKlass, null)
     open fun setId(id: String?) = set(ID, id)

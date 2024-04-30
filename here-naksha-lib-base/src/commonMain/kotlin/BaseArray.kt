@@ -30,7 +30,7 @@ open class BaseArray<E>(vararg args: E?) : BaseElementType<E>() {
         }
     }
 
-    override fun getKlass(): BaseKlass<*> = klass
+    override fun klass(): BaseKlass<*> = klass
 
     override fun data(): PArray {
         var data = this.data
