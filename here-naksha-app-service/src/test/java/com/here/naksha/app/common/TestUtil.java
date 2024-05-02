@@ -124,9 +124,12 @@ public class TestUtil {
   }
 
   public static String generateJWT(String payload) {
+    return generateJWT(payload, "auth/jwt.key");
+  }
+
+  public static String generateJWT(String payload, String privateKeyPath) {
     // Load private key
-    final String path = "auth/jwt.key";
-    final LoadedBytes loaded = IoHelp.readBytesFromHomeOrResource(path, false, NakshaHubConfig.APP_NAME);
+    final LoadedBytes loaded = IoHelp.readBytesFromHomeOrResource(privateKeyPath, false, NakshaHubConfig.APP_NAME);
     final String jwtKey = new String(loaded.getBytes(), StandardCharsets.UTF_8);
 
     final JWTAuthOptions authOptions = new JWTAuthOptions()

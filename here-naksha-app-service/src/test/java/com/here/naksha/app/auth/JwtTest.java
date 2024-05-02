@@ -31,10 +31,21 @@ public class JwtTest extends ApiTest {
     }
 
     @Test
-    public void testDummyModeJWTSignedByUnknownKey() throws Exception {
+    public void testDummyModeJWTSignedByUnknownSymmetricKey() throws Exception {
         final String streamId = UUID.randomUUID().toString();
         // Providing an invalid JWT, should return HTTP 401 code
         HttpResponse<String> response = getNakshaClient().get("hub/storages", streamId, "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
+        assertThat(response).hasStatus(401);
+    }
+
+    @Test
+    public void testDummyModeJWTSignedByUnknownKey() throws Exception {
+        final String streamId = UUID.randomUUID().toString();
+        final String jwtClaims = TestUtil.loadFileOrFail("Auth/validJwtClaims.json");
+        // Sign the following JWT payload
+        final String jwt = generateJWT(jwtClaims,"unit_test_data/Auth/test_keys/rsa256");
+        // Providing an invalid JWT, should return HTTP 401 code
+        HttpResponse<String> response = getNakshaClient().get("hub/storages", streamId, "Bearer "+jwt);
         assertThat(response).hasStatus(401);
     }
 
