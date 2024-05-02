@@ -385,4 +385,18 @@ public final class NakshaContext {
     this.urm = urm;
     return this;
   }
+
+  @AvailableSince(NakshaVersion.v2_0_15)
+  private boolean suFlag = false;
+
+  @AvailableSince(NakshaVersion.v2_0_15)
+  public boolean getSuFlag() {
+    return suFlag;
+  }
+
+  @AvailableSince(NakshaVersion.v2_0_15)
+  public @NotNull NakshaContext setSuFlag(boolean suFlag) {
+    this.suFlag = suFlag;
+    return this;
+  }
 }
