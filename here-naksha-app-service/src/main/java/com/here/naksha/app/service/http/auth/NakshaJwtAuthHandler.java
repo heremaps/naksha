@@ -38,25 +38,17 @@ import org.slf4j.LoggerFactory;
 public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
 
   protected static final Logger logger = LoggerFactory.getLogger(NakshaJwtAuthHandler.class);
-  /**
-   * Indicates, if compressed JWTs are allowed.
-   */
-  final boolean ALLOW_COMPRESSED_JWT = false;
-
-  /**
-   * Indicates, if the bearer token could be sent in the request URI query component as defined in <a
-   * href="https://datatracker.ietf.org/doc/html/rfc6750#section-2.3">RFC-6750 Section 2.3</a>
-   */
-  final boolean ALLOW_URI_QUERY_PARAMETER = false;
 
   private final NakshaHubConfig hubConfig;
-  private static final String MASTER_JWT_RESOURCE_FILE = "auth/dummyJwt.json";
+  private static final String MASTER_JWT_RESOURCE_FILE = "auth/dummyMasterJwt.json";
   private static final JsonObject MASTER_JWT_PAYLOAD = new JsonObject(IoHelp.readResource(MASTER_JWT_RESOURCE_FILE));
-  /** The master JWT used for testing. */
+  /**
+   * The master JWT used for testing.
+   */
   private final String MASTER_JWT = authProvider.generateToken(MASTER_JWT_PAYLOAD);
 
   public NakshaJwtAuthHandler(
-      @NotNull JWTAuth authProvider, @NotNull NakshaHubConfig hubConfig, @Nullable String realm) {
+          @NotNull JWTAuth authProvider, @NotNull NakshaHubConfig hubConfig, @Nullable String realm) {
     super(authProvider, realm);
     this.hubConfig = hubConfig;
   }
@@ -64,7 +56,7 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
   @Override
   public void authenticate(@NotNull RoutingContext context, @NotNull Handler<@NotNull AsyncResult<User>> handler) {
     if (hubConfig.authMode == AuthorizationMode.DUMMY
-        && !context.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
+            && !context.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
       // Use the master JWT for testing in DUMMY auth mode with no JWT provided in request
       context.request().headers().set(HttpHeaders.AUTHORIZATION, "Bearer " + MASTER_JWT);
     }
@@ -81,13 +73,5 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
     //      }
     //    }
     super.authenticate(context, handler);
-  }
-
-  private @Nullable String getFromAuthHeader(@Nullable String authHeader) {
-    return (authHeader != null && authHeader.startsWith("Bearer ")) ? authHeader.substring(7) : null;
-  }
-
-  private boolean isJWT(final @Nullable String jwt) {
-    return StringUtils.countMatches(jwt, ".") == 2;
   }
 }

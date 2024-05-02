@@ -19,7 +19,7 @@
 package com.here.naksha.app.service.util.logging;
 
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_ID;
-import static com.here.naksha.app.service.http.auth.actions.JwtUtil.getOrCreateJWT;
+import static com.here.naksha.app.service.http.auth.actions.JwtUtil.extractJwtPayloadFromContext;
 import static com.here.naksha.common.http.apis.ApiParamsConst.ACCESS_TOKEN;
 import static io.vertx.core.http.HttpHeaders.*;
 import static io.vertx.core.http.HttpMethod.*;
@@ -188,7 +188,7 @@ public class AccessLogUtil {
     accessLog.respInfo.size = context.response().bytesWritten();
     accessLog.respInfo.contentType = context.response().headers().get(CONTENT_TYPE);
 
-    final JWTPayload tokenPayload = getOrCreateJWT(context);
+    final JWTPayload tokenPayload = extractJwtPayloadFromContext(context);
     if (tokenPayload != null) {
       accessLog.clientInfo.userId = tokenPayload.userId;
       accessLog.clientInfo.appId = tokenPayload.appId;

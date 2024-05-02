@@ -26,9 +26,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class JwtUtil {
 
-  public static final String JWT = "jwt";
+  private static final String JWT = "jwt";
 
-  public static @Nullable JWTPayload getOrCreateJWT(final @NotNull RoutingContext context) {
+  public static @Nullable JWTPayload extractJwtPayloadFromContext(final @NotNull RoutingContext context) {
     JWTPayload payload = context.get(JWT);
     if (payload == null && context.user() != null) {
       payload = DatabindCodec.mapper().convertValue(context.user().principal(), JWTPayload.class);

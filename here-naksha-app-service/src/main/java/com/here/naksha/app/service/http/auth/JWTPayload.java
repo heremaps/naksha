@@ -47,9 +47,11 @@ public class JWTPayload {
   @JsonIgnore
   private XyzHubActionMatrix __nakshaMatrix; // TODO NakshaActionMatrix
 
-  @JsonIgnore
-  private XyzHubActionMatrix __xyzHubMatrix;
-
+  /**
+   * Returns the Naksha action matrix, if there is any for this JWT token.
+   *
+   * @return the Naksha action matrix or null.
+   */
   @JsonIgnore
   public @Nullable XyzHubActionMatrix getNakshaMatrix() {
     if (__nakshaMatrix != null) {
@@ -66,30 +68,9 @@ public class JWTPayload {
   }
 
   /**
-   * Returns the XYZ Hub action matrix, if there is any for this JWT token.
-   *
-   * @return the XYZ Hub action matrix or null.
-   */
-  @JsonIgnore
-  public @Nullable XyzHubActionMatrix getXyzHubMatrix() {
-    if (__xyzHubMatrix != null) {
-      return __xyzHubMatrix;
-    }
-    if (urm == null) {
-      return null;
-    }
-    final ActionMatrix hereActionMatrix = urm.get(URMServiceId.XYZ_HUB);
-    if (hereActionMatrix == null) {
-      return null;
-    }
-    return __xyzHubMatrix = DatabindCodec.mapper().convertValue(hereActionMatrix, XyzHubActionMatrix.class);
-  }
-
-  /**
    * Constants for all services that may be part of the JWT token.
    */
   public static final class URMServiceId {
     static final String NAKSHA = "naksha";
-    static final String XYZ_HUB = "xyz-hub";
   }
 }

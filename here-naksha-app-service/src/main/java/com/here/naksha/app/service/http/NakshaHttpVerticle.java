@@ -707,7 +707,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
     // add streamInfo object to NakshaContext, which will be populated later during pipeline execution
     ctx.attachStreamInfo(AccessLogUtil.getStreamInfo(routingContext));
     // extract the JWT from authorization header
-    final JWTPayload jwtPayload = getOrCreateJWT(routingContext);
+    final JWTPayload jwtPayload = extractJwtPayloadFromContext(routingContext);
     if (jwtPayload == null) {
       log.error("Cannot detect JWT payload in routing context: {}", routingContext);
     } else {

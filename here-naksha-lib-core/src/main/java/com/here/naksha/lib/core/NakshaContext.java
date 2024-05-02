@@ -367,36 +367,47 @@ public final class NakshaContext {
   @AvailableSince(NakshaVersion.v2_0_7)
   private @Nullable String author;
 
-  @AvailableSince(NakshaVersion.v2_0_15)
+  @AvailableSince(NakshaVersion.v2_0_16)
   private @Nullable ServiceMatrix urm;
 
-  @AvailableSince(NakshaVersion.v2_0_15)
+  @AvailableSince(NakshaVersion.v2_0_16)
   public @Nullable ServiceMatrix getUrm() {
     return urm;
   }
 
-  @AvailableSince(NakshaVersion.v2_0_15)
+  @AvailableSince(NakshaVersion.v2_0_16)
   public void setUrm(@Nullable ServiceMatrix urm) {
     this.urm = urm;
   }
 
-  @AvailableSince(NakshaVersion.v2_0_15)
+  @AvailableSince(NakshaVersion.v2_0_16)
   public @NotNull NakshaContext withUrm(@Nullable ServiceMatrix urm) {
     this.urm = urm;
     return this;
   }
 
-  @AvailableSince(NakshaVersion.v2_0_15)
-  private boolean suFlag = false;
+  @AvailableSince(NakshaVersion.v2_0_16)
+  private boolean superUser = false;
 
-  @AvailableSince(NakshaVersion.v2_0_15)
-  public boolean getSuFlag() {
-    return suFlag;
+  @AvailableSince(NakshaVersion.v2_0_16)
+  public boolean isSuperUser() {
+    return superUser;
   }
 
-  @AvailableSince(NakshaVersion.v2_0_15)
-  public @NotNull NakshaContext setSuFlag(boolean suFlag) {
-    this.suFlag = suFlag;
+  @AvailableSince(NakshaVersion.v2_0_16)
+  /*
+    This should be set only in rare cases where recursive / multiple layers of the Auth check needs to be avoided when request has already passed the Auth check in first layer.
+    */
+  public void setSuperUser(boolean superUser) {
+    this.superUser = superUser;
+  }
+
+  @AvailableSince(NakshaVersion.v2_0_16)
+  /*
+    This should be set only in rare cases where recursive / multiple layers of the Auth check needs to be avoided when request has already passed the Auth check in first layer.
+    */
+  public @NotNull NakshaContext withSuperUser(boolean superUser) {
+    setSuperUser(superUser);
     return this;
   }
 }
