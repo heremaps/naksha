@@ -710,6 +710,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
     final JWTPayload jwtPayload = extractJwtPayloadFromContext(routingContext);
     if (jwtPayload == null) {
       log.error("Cannot detect JWT payload in routing context: {}", routingContext);
+      sendErrorResponse(routingContext, XyzError.UNAUTHORIZED, "No JWT payload found.");
     } else {
       // attach authorization info into context
       ctx.setAppId(jwtPayload.appId);

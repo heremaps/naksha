@@ -29,7 +29,6 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.impl.JWTAuthHandlerImpl;
-import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -48,7 +47,7 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
   private final String MASTER_JWT = authProvider.generateToken(MASTER_JWT_PAYLOAD);
 
   public NakshaJwtAuthHandler(
-          @NotNull JWTAuth authProvider, @NotNull NakshaHubConfig hubConfig, @Nullable String realm) {
+      @NotNull JWTAuth authProvider, @NotNull NakshaHubConfig hubConfig, @Nullable String realm) {
     super(authProvider, realm);
     this.hubConfig = hubConfig;
   }
@@ -56,7 +55,7 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
   @Override
   public void authenticate(@NotNull RoutingContext context, @NotNull Handler<@NotNull AsyncResult<User>> handler) {
     if (hubConfig.authMode == AuthorizationMode.DUMMY
-            && !context.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
+        && !context.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
       // Use the master JWT for testing in DUMMY auth mode with no JWT provided in request
       context.request().headers().set(HttpHeaders.AUTHORIZATION, "Bearer " + MASTER_JWT);
     }

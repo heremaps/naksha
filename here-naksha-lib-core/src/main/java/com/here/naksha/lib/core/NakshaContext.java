@@ -396,16 +396,16 @@ public final class NakshaContext {
 
   @AvailableSince(NakshaVersion.v2_0_16)
   /*
-    This should be set only in rare cases where recursive / multiple layers of the Auth check needs to be avoided when request has already passed the Auth check in first layer.
-    */
+  This should be set only in rare cases where recursive / multiple layers of the Auth check needs to be avoided when request has already passed the Auth check in first layer.
+  */
   public void setSuperUser(boolean superUser) {
     this.superUser = superUser;
   }
 
   @AvailableSince(NakshaVersion.v2_0_16)
   /*
-    This should be set only in rare cases where recursive / multiple layers of the Auth check needs to be avoided when request has already passed the Auth check in first layer.
-    */
+  This should be set only in rare cases where recursive / multiple layers of the Auth check needs to be avoided when request has already passed the Auth check in first layer.
+  */
   public @NotNull NakshaContext withSuperUser(boolean superUser) {
     setSuperUser(superUser);
     return this;
