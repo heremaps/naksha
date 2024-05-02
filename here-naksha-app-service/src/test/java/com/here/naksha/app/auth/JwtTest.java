@@ -2,24 +2,52 @@ package com.here.naksha.app.auth;
 
 
 import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpResponse;
 import java.util.UUID;
 
+import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.generateJWT;
+import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 public class JwtTest extends ApiTest {
     // For this test suite, the default test-config.json denotes that
     // the service is launched in DUMMY auth mode
+
+    @BeforeAll
+    static void setup(){
+        setupSpaceAndRelatedResources(new NakshaTestWebClient(), "Auth/setup");
+    }
+
+    private static final String SPACE_ID = "auth_test_space";
+
     @Test
     public void testDummyModeNoJWT() throws Exception {
         final String streamId = UUID.randomUUID().toString();
         // Providing no JWT, the master token should be employed automatically
         HttpResponse<String> response = getNakshaClient().get("hub/storages", streamId);
         assertThat(response).hasStatus(200);
+    }
+
+    @Test
+    public void testDummyModeNoJWTAppIdAuthorExistsInXyzNamespace() throws Exception {
+        final String streamId = UUID.randomUUID().toString();
+        final String bodyJson = loadFileOrFail("Auth/NoJWTAppIdAuthorExists/create_features.json");
+        final String expectedBodyPart = loadFileOrFail("Auth/NoJWTAppIdAuthorExists/feature_response_part.json");
+
+        // Providing no JWT, the master token should be employed automatically
+        HttpResponse<String> response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
+
+        // Then: Perform assertions
+        assertThat(response)
+                .hasStatus(200)
+                .hasStreamIdHeader(streamId)
+                .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match");
     }
 
     @Test
