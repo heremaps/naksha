@@ -28,7 +28,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -51,23 +50,12 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
     implements INakshaBound, UncaughtExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(AbstractTask.class);
-  private static int maxParallelRequestsPerCPU = 50;
-  private static int maxPctParallelRequestsPerPrincipal = 100;
 
-  public static void initConcurrencyLimits(int cpuThreshHold, int perPrincipalThreshold) {
-    maxParallelRequestsPerCPU = cpuThreshHold;
-    maxPctParallelRequestsPerPrincipal = perPrincipalThreshold;
+  private static IRequestLimitManager requestLimitManager = new DefaultRequestLimitManager();
+  public static void initConcurrencyLimits(IRequestLimitManager newRequestLimitManager) {
+    requestLimitManager = newRequestLimitManager;
   }
-
-  /**
-   * The soft-limit of tasks to run concurrently. This limit does normally not apply to child tasks.
-   */
-  public static final AtomicLong limit =
-      new AtomicLong((long) Runtime.getRuntime().availableProcessors() * maxParallelRequestsPerCPU);
-
-  private static final double principalThreshold = (double) maxPctParallelRequestsPerPrincipal / 100;
-  private static final int principalLimit = (int) (limit.get() * principalThreshold);
-  private static final Map<String, AtomicInteger> principalUsageMap = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<@NotNull String, @NotNull Long> actorUsageMap = new ConcurrentHashMap<>();
   private static final AtomicLong taskId = new AtomicLong(1L);
   private static final ThreadGroup allTasksGroup = new ThreadGroup("Naksha-Tasks");
   private static final ConcurrentHashMap<Long, NakshaWorker> allTasks = new ConcurrentHashMap<>();
@@ -402,61 +390,50 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    * @throws RuntimeException      If adding the task to the thread pool failed for an unknown error.
    */
   public @NotNull Future<@NotNull RESULT> start() {
-    final long LIMIT = AbstractTask.limit.get();
+    final long LIMIT = requestLimitManager.getInstanceLevelLimit();
     lockAndRequireNew();
     try {
-      long myIncrementedValue = AbstractTask.threadCount.updateAndGet(l -> {
-        if (!internal && AbstractTask.threadCount.get() >= LIMIT) {
+      String actorId = context.getActor();
+      assert actorId != null;
+      final long ACTOR_LIMIT = requestLimitManager.getActorLevelLimit(context);
+      incActorLevelUsage(actorId, ACTOR_LIMIT);
+      do {
+        final long threadCount = AbstractTask.threadCount.get();
+        assert threadCount >= 0L;
+        if (!internal && threadCount >= LIMIT) {
           log.info(
-              "NAKSHA_ERR_REQ_LIMIT_4_INSTANCE - [Request Limit breached for Instance => appId,author,limit,crtValue] - ReqLimitForInstance {} {} {} {}",
+              "NAKSHA_ERR_REQ_LIMIT_4_INSTANCE - [Request Limit breached for Instance => appId,author,actor,limit,crtValue] - ReqLimitForInstance {} {} {} {} {}",
               context.getAppId(),
-              getAuthorName(),
+              context.getAuthor(),
+              actorId,
               LIMIT,
               threadCount);
           String errorMessage = "Maximum number of concurrent tasks reached for instance (" + LIMIT + ")";
+          decActorLevelUsage(actorId);
           throw new TooManyTasks(errorMessage);
         }
-        return l + 1;
-      });
-      assert myIncrementedValue >= 0L;
-      String principal = getPrincipalName();
-      if (principal != null) {
-        AtomicInteger authorUsageValue = principalUsageMap.merge(
-            principal, new AtomicInteger(0), (oldAuthorUsageValue, newAuthorUsageValue) -> {
-              int authorLimit = (int) (LIMIT * principalThreshold);
-              if (!internal && oldAuthorUsageValue.get() >= authorLimit) {
-                log.info(
-                    "NAKSHA_ERR_REQ_LIMIT_4_PRINCIPAL - [Request Limit breached for Principal => appId,author,limit,crtValue] - ReqLimitForPrincipal {} {} {} {}",
-                    context.getAppId(),
-                    getAuthorName(),
-                    authorLimit,
-                    oldAuthorUsageValue);
-                AbstractTask.threadCount.decrementAndGet();
-                String errorMessage = "Maximum number of concurrent tasks reached for principal ("
-                    + principalLimit + ")";
-                throw new TooManyTasks(errorMessage);
-              }
-              oldAuthorUsageValue.incrementAndGet();
-              return oldAuthorUsageValue;
-            });
-      }
-
-      try {
-        state.set(State.START);
-        final Future<RESULT> future = threadPool.submit(this::init_and_execute);
-        return future;
-      } catch (RejectedExecutionException e) {
-        String errorMessage = "Maximum number of concurrent tasks (" + AbstractTask.limit.get() + ") reached";
-        throw new TooManyTasks(errorMessage);
-      } catch (Throwable t) {
-        AbstractTask.threadCount.decrementAndGet();
-        AbstractTask.decrementPrincipalUsage(principal);
-        log.atError()
-            .setMessage("Unexpected exception while trying to fork a new thread")
-            .setCause(t)
-            .log();
-        throw new RuntimeException("Internal error while forking new worker thread", t);
-      }
+        if (AbstractTask.threadCount.compareAndSet(threadCount, threadCount + 1)) {
+          try {
+            state.set(State.START);
+            final Future<RESULT> future = threadPool.submit(this::init_and_execute);
+            return future;
+          } catch (RejectedExecutionException e) {
+            String errorMessage = "Maximum number of concurrent tasks (" + LIMIT + ") reached";
+            AbstractTask.threadCount.decrementAndGet();
+            decActorLevelUsage(actorId);
+            throw new TooManyTasks(errorMessage);
+          } catch (Throwable t) {
+            AbstractTask.threadCount.decrementAndGet();
+            decActorLevelUsage(actorId);
+            log.atError()
+                .setMessage("Unexpected exception while trying to fork a new thread")
+                .setCause(t)
+                .log();
+            throw new RuntimeException("Internal error while forking new worker thread", t);
+          }
+        }
+        // Conflict, two threads concurrently try to fork.
+      } while (true);
     } finally {
       unlock();
     }
@@ -489,9 +466,8 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
       try {
         state.set(State.DONE);
         final long newValue = AbstractTask.threadCount.decrementAndGet();
+        decActorLevelUsage(context.getActor());
         assert newValue >= 0L;
-        String principal = getPrincipalName();
-        decrementPrincipalUsage(principal);
         detachFromCurrentThread();
       } catch (Throwable t) {
         RESULT = errorResponse(t);
@@ -620,52 +596,81 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
       state.set(State.NEW);
     }
   }
-  /**
-   * Increments the value of authorUsage in the hashmap atomically.
-   *
-   * @param principal The author.
-   */
-  private static void incrementPrincipalUsage(String principal) {
-    if (principal != null) {
-      AtomicInteger authorUsageValue =
-          principalUsageMap.merge(principal, new AtomicInteger(0), (existingValue, newValue) -> {
-            existingValue.incrementAndGet();
-            return existingValue;
-          });
-    }
-  }
 
   /**
-   * Decrements the value of authorUsage in the hashmap atomically.
+   * Increments the value of author usage for given actor anc compares with the specified limit.
    *
-   * @param principal The author.
+   * <p>This method ensures that the number of concurrent tasks for the actor
+   * does not exceed the specified limit. If the limit is reached, it logs an
+   * error and throws a {@link TooManyTasks} exception.
+   *
+   * @param actorId The identifier of the actor for which to acquire the slot.
+   * @param limit The maximum number of concurrent tasks allowed for the actor.
+   * @throws TooManyTasks If the maximum number of concurrent tasks is reached for the actor.
    */
-  private static void decrementPrincipalUsage(String principal) {
-    if (principal != null) {
-      AtomicInteger authorUsageValue = principalUsageMap.computeIfPresent(principal, (key, oldValue) -> {
-        if (oldValue.get() > 0) {
-          oldValue.decrementAndGet();
+  private void incActorLevelUsage(String actorId, long limit) {
+    if (limit <= 0) {
+      log.info(
+          "NAKSHA_ERR_REQ_LIMIT_4_ACTOR - [Request Limit breached for Actor => appId,author,actor,limit,crtValue] - ReqLimitForActor {} {} {} {} {}",
+          context.getAppId(),
+          context.getAuthor(),
+          actorId,
+          limit,
+          0);
+      String errorMessage = "Maximum number of concurrent tasks reached for actor (" + limit + ")";
+      throw new TooManyTasks(errorMessage);
+    }
+    while (true) {
+      Long counter = actorUsageMap.get(actorId);
+      if (counter == null) {
+        Long existing = actorUsageMap.putIfAbsent(actorId, 0L);
+        if (existing != null) {
+          continue; // Repeat, conflict with other thread
         }
-        return oldValue;
-      });
+        counter = 0L;
+      }
+      // Increment counter
+      if (!internal && counter + 1 > limit) {
+        log.info(
+            "NAKSHA_ERR_REQ_LIMIT_4_ACTOR - [Request Limit breached for Actor => appId,author,actor,limit,crtValue] - ReqLimitForActor {} {} {} {} {}",
+            context.getAppId(),
+            context.getAuthor(),
+            actorId,
+            limit,
+            counter + 1);
+        String errorMessage = "Maximum number of concurrent tasks reached for actor (" + limit + ")";
+        throw new TooManyTasks(errorMessage);
+      }
+      if (actorUsageMap.replace(actorId, counter, counter + 1)) {
+        break;
+      }
+      // Failed, conflict, repeat
     }
   }
 
   /**
-   * Returns the  value of author name.
+   * decrements the value of author usage given actor identifier.
+   *
+   * <p>This method decrements the usage count for the actor identifier. If the usage count
+   * becomes zero, it removes the actor identifier from the map. If another thread attempts
+   * to release the slot concurrently, it repeats the process until successful.
+   *
+   * @param actorId The identifier of the actor for which to release the slot.
    */
-  private String getAuthorName() {
-    return context.getAuthor();
-  }
-
-  /**
-   * Returns the  value of principal name.
-   */
-  private String getPrincipalName() {
-    String author = context.getAuthor();
-    //TODO uncomment below two lines after fixing unit tests.
-    // String appId = context.getAppId();
-    // return author + appId;
-    return author;
+  private void decActorLevelUsage(String actorId) {
+    while (true) {
+      Long current = actorUsageMap.get(actorId);
+      if (current == null) {
+        break;
+      } else if (current <= 1) {
+        if (!actorUsageMap.remove(actorId, current)) {
+          continue;
+        }
+        break;
+      } else if (actorUsageMap.replace(actorId, current, current - 1)) {
+        break;
+      }
+      // Failed, repeat, conflict with other thread
+    }
   }
 }

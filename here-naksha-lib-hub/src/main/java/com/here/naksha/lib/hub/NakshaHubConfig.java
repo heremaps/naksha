@@ -104,7 +104,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
       @JsonProperty("extensionConfigParams") @Nullable ExtensionConfigParams extensionConfigParams,
       @JsonProperty("requestBodyLimit") @Nullable Integer requestBodyLimit,
       @JsonProperty("maxParallelRequestsPerCPU") @Nullable Integer maxParallelRequestsPerCPU,
-      @JsonProperty("maxPctParallelRequestsPerPrincipal") @Nullable Integer maxPctParallelRequestsPerPrincipal) {
+      @JsonProperty("maxPctParallelRequestsPerActor") @Nullable Integer maxPctParallelRequestsPerActor) {
     super(id);
     if (httpPort != null && (httpPort < 0 || httpPort > 65535)) {
       logger.atError()
@@ -195,9 +195,9 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
     }
     this.maxParallelRequestsPerCPU =
         maxParallelRequestsPerCPU != null ? maxParallelRequestsPerCPU : defaultMaxParallelRequestsPerCPU();
-    this.maxPctParallelRequestsPerPrincipal = maxPctParallelRequestsPerPrincipal != null
-        ? maxPctParallelRequestsPerPrincipal
-        : defaultMaxPctParallelRequestsPerPrincipal();
+    this.maxPctParallelRequestsPerActor = maxPctParallelRequestsPerActor != null
+        ? maxPctParallelRequestsPerActor
+        : defaultMaxPctParallelRequestsPerActor();
   }
 
   private String getEnv() {
@@ -360,7 +360,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
    * @return the default threshold per processor
    */
   public static int defaultMaxParallelRequestsPerCPU() {
-    return 50;
+    return 30;
   }
 
   /**
@@ -368,7 +368,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
    *
    * @return the default percentage threshold per principal
    */
-  public static int defaultMaxPctParallelRequestsPerPrincipal() {
+  public static int defaultMaxPctParallelRequestsPerActor() {
     return 25;
   }
   /**
@@ -393,5 +393,5 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
   /**
    * Optional Total Author Concurrency Threshold
    */
-  public final Integer maxPctParallelRequestsPerPrincipal;
+  public final Integer maxPctParallelRequestsPerActor;
 }
