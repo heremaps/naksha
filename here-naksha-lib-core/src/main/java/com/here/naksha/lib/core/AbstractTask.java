@@ -52,9 +52,11 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
   private static final Logger log = LoggerFactory.getLogger(AbstractTask.class);
 
   private static IRequestLimitManager requestLimitManager = new DefaultRequestLimitManager();
+
   public static void initConcurrencyLimits(IRequestLimitManager newRequestLimitManager) {
     requestLimitManager = newRequestLimitManager;
   }
+
   private static final ConcurrentHashMap<@NotNull String, @NotNull Long> actorUsageMap = new ConcurrentHashMap<>();
   private static final AtomicLong taskId = new AtomicLong(1L);
   private static final ThreadGroup allTasksGroup = new ThreadGroup("Naksha-Tasks");
@@ -394,7 +396,6 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
     lockAndRequireNew();
     try {
       String actorId = context.getActor();
-      assert actorId != null;
       final long ACTOR_LIMIT = requestLimitManager.getActorLevelLimit(context);
       incActorLevelUsage(actorId, ACTOR_LIMIT);
       do {
@@ -403,7 +404,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         if (!internal && threadCount >= LIMIT) {
           log.info(
               "NAKSHA_ERR_REQ_LIMIT_4_INSTANCE - [Request Limit breached for Instance => appId,author,actor,limit,crtValue] - ReqLimitForInstance {} {} {} {} {}",
-              context.getAppId(),
+              actorId == null ? "" : context.getAppId(),
               context.getAuthor(),
               actorId,
               LIMIT,
@@ -609,6 +610,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    * @throws TooManyTasks If the maximum number of concurrent tasks is reached for the actor.
    */
   private void incActorLevelUsage(String actorId, long limit) {
+    if (internal || actorId == null) return;
     if (limit <= 0) {
       log.info(
           "NAKSHA_ERR_REQ_LIMIT_4_ACTOR - [Request Limit breached for Actor => appId,author,actor,limit,crtValue] - ReqLimitForActor {} {} {} {} {}",
@@ -658,6 +660,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    * @param actorId The identifier of the actor for which to release the slot.
    */
   private void decActorLevelUsage(String actorId) {
+    if (internal || actorId == null) return;
     while (true) {
       Long current = actorUsageMap.get(actorId);
       if (current == null) {
