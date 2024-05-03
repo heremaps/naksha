@@ -11,6 +11,6 @@
   "maintenancePoolCoreSize": 5,
   "maintenancePoolMaxSize": 20,
   "maxParallelRequestsPerCPU": 30,
-  "maxPctParallelRequestsPerActor": 100,
+  "maxPctParallelRequestsPerActor": 25,
   "extensionConfigParams": null
 }
