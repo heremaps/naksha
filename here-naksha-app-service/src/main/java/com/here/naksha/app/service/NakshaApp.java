@@ -19,7 +19,7 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.cause;
-import static com.here.naksha.lib.hub.util.ConfigUtil.readJwtKeyFile;
+import static com.here.naksha.lib.hub.util.ConfigUtil.readAuthKeyFile;
 import static java.lang.System.err;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -28,8 +28,6 @@ import com.here.naksha.app.service.metrics.OTelMetrics;
 import com.here.naksha.app.service.util.UrlUtil;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaVersion;
-import com.here.naksha.lib.core.util.IoHelp;
-import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.NakshaHubFactory;
 import com.here.naksha.lib.hub.util.ConfigUtil;
@@ -43,13 +41,8 @@ import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -231,11 +224,11 @@ public final class NakshaApp extends Thread {
     final String jwtPub;
     {
       final String path = "auth/" + config.jwtName + ".key";
-      jwtKey = readJwtKeyFile(path,NakshaHubConfig.APP_NAME);
+      jwtKey = readAuthKeyFile(path, NakshaHubConfig.APP_NAME);
     }
     {
       final String path = "auth/" + config.jwtName + ".pub";
-      jwtPub = readJwtKeyFile(path,NakshaHubConfig.APP_NAME);
+      jwtPub = readAuthKeyFile(path, NakshaHubConfig.APP_NAME);
     }
     this.authOptions = new JWTAuthOptions()
         .setJWTOptions(new JWTOptions().setAlgorithm("RS256"))
