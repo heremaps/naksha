@@ -35,13 +35,15 @@ public class JwtTest extends ApiTest {
     }
 
     @Test
-    public void testDummyModeNoJWTAppIdAuthorExistsInXyzNamespace() throws Exception {
+    public void testDummyModeAppIdAuthorExistsInXyzNamespace() throws Exception {
         final String streamId = UUID.randomUUID().toString();
-        final String bodyJson = loadFileOrFail("Auth/NoJWTAppIdAuthorExists/create_features.json");
-        final String expectedBodyPart = loadFileOrFail("Auth/NoJWTAppIdAuthorExists/feature_response_part.json");
+        final String bodyJson = loadFileOrFail("Auth/JWTAppIdAuthorExists/create_features.json");
+        final String expectedBodyPart = loadFileOrFail("Auth/JWTAppIdAuthorExists/feature_response_part.json");
 
-        // Providing no JWT, the master token should be employed automatically
-        HttpResponse<String> response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
+        final String jwtClaims = TestUtil.loadFileOrFail("Auth/validJwtClaims.json");
+        // Sign the following JWT payload
+        final String jwt = generateJWT(jwtClaims);
+        HttpResponse<String> response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId,"Bearer "+jwt);
 
         // Then: Perform assertions
         assertThat(response)

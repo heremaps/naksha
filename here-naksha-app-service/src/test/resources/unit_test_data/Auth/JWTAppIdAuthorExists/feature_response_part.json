@@ -5,8 +5,8 @@
       "type": "Feature",
       "properties": {
         "@ns:com:here:xyz": {
-          "appId": "naksha",
-          "author": "master-test-user"
+          "appId": "web-client-custom-app-id",
+          "author": "my-custom-user-id"
         },
         "speedLimit": "60"
       },
@@ -19,8 +19,8 @@
       "type": "Feature",
       "properties": {
         "@ns:com:here:xyz": {
-          "appId": "naksha",
-          "author": "master-test-user"
+          "appId": "web-client-custom-app-id",
+          "author": "my-custom-user-id"
         },
         "speedLimit": "80"
       },

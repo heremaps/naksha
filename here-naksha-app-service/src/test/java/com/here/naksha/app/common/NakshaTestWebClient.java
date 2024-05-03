@@ -90,20 +90,32 @@ public class NakshaTestWebClient {
     return this.get(subPath, streamId, SOCKET_TIMEOUT, jwt);
   }
 
-  public HttpResponse<String> post(String subPath, String jsonBody, String streamId, Duration timeout)
+  public HttpResponse<String> post(String subPath, String jsonBody, String streamId, Duration timeout, @Nullable String jwt)
           throws URISyntaxException, IOException, InterruptedException {
-    HttpRequest postRequest = requestBuilder(timeout)
+    Builder requestBuilder = requestBuilder(timeout)
             .uri(nakshaPath(subPath))
             .POST(BodyPublishers.ofString(jsonBody))
             .header("Content-Type", "application/json")
-            .header(HDR_STREAM_ID, streamId)
-            .build();
-    return sendOnce(postRequest);
+            .header(HDR_STREAM_ID, streamId);
+    if (jwt != null) {
+      requestBuilder.header(AUTHORIZATION,jwt);
+    }
+    return sendOnce(requestBuilder.build());
   }
 
   public HttpResponse<String> post(String subPath, String jsonBody, String streamId)
       throws URISyntaxException, IOException, InterruptedException {
-    return this.post(subPath, jsonBody, streamId, SOCKET_TIMEOUT);
+    return this.post(subPath, jsonBody, streamId, SOCKET_TIMEOUT, null);
+  }
+
+  public HttpResponse<String> post(String subPath, String jsonBody, String streamId, String jwt)
+          throws URISyntaxException, IOException, InterruptedException {
+    return this.post(subPath, jsonBody, streamId, SOCKET_TIMEOUT, jwt);
+  }
+
+  public HttpResponse<String> post(String subPath, String jsonBody, String streamId, Duration timeout)
+          throws URISyntaxException, IOException, InterruptedException {
+    return this.post(subPath, jsonBody, streamId, timeout, null);
   }
 
   public HttpResponse<String> put(String subPath, String jsonBody, String streamId)

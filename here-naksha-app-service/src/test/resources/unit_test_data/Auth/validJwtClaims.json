@@ -1,12 +1,15 @@
 {
-  "appId": "web-client-app-id",
-  "userId": "my-user-id",
+  "appId": "web-client-custom-app-id",
+  "userId": "my-custom-user-id",
   "urm": {
     "naksha": {
       "readFeatures": [
         {
           "storageId": "dev-*"
         }
+      ],
+      "createFeatures": [
+        {}
       ]
     }
   },
