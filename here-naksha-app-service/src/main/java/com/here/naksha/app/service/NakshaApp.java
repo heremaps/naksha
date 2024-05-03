@@ -19,6 +19,7 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.cause;
+import static com.here.naksha.lib.hub.util.ConfigUtil.readJwtKeyFile;
 import static java.lang.System.err;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -230,15 +231,11 @@ public final class NakshaApp extends Thread {
     final String jwtPub;
     {
       final String path = "auth/" + config.jwtName + ".key";
-      final LoadedBytes loaded = IoHelp.readBytesFromHomeOrResource(path, false, NakshaHubConfig.APP_NAME);
-      log.info("Loaded JWT key file {}", loaded.getPath());
-      jwtKey = new String(loaded.getBytes(), StandardCharsets.UTF_8);
+      jwtKey = readJwtKeyFile(path,NakshaHubConfig.APP_NAME);
     }
     {
       final String path = "auth/" + config.jwtName + ".pub";
-      final LoadedBytes loaded = IoHelp.readBytesFromHomeOrResource(path, false, NakshaHubConfig.APP_NAME);
-      log.info("Loaded JWT key file {}", loaded.getPath());
-      jwtPub = new String(loaded.getBytes(), StandardCharsets.UTF_8);
+      jwtPub = readJwtKeyFile(path,NakshaHubConfig.APP_NAME);
     }
     this.authOptions = new JWTAuthOptions()
         .setJWTOptions(new JWTOptions().setAlgorithm("RS256"))
