@@ -6,7 +6,7 @@ import com.here.naksha.lib.jbon.*
 
 internal const val NKC_TABLE = "naksha~collections"
 internal const val NKC_TABLE_ESC = "\"naksha~collections\""
-internal const val NKC_PARTITION = "partition"
+internal const val NKC_PARTITION_COUNT = "partitionCount"
 internal const val NKC_ID = "id"
 internal const val NKC_GEO_INDEX = "geoIndex"
 internal const val NKC_DISABLE_HISTORY = "disableHistory"
@@ -53,5 +53,7 @@ internal const val RET_FLAGS = "flags"
 internal const val RET_GEOMETRY = "geo"
 internal const val RET_ERR_NO = "err_no"
 internal const val RET_ERR_MSG = "err_msg"
+
+const val PARTITION_COUNT_NONE = 1
 
 var TEMPORARY_TABLESPACE = "temp"

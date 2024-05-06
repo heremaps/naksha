@@ -14,7 +14,15 @@ import kotlin.js.JsExport
  */
 @JsExport
 class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
-    private var _partition = false
+    /**
+     * The number of partitions. We use partitioning for tables that are expected to store more than
+     * ten million features. With eight partitions we can split 10 million features into partitions
+     * of each 1.25 million, 100 million into 12.5 million per partition and for the supported maximum
+     * of 1 billion features, each partition holds 125 million features.
+     *
+     * This value must be a value of 2^n with n between 1 and 8 (2, 4, 8, 16, 32, 64, 128).
+     */
+    private var _partitionCount = PARTITION_COUNT_NONE
     private var _geoIndex: String? = null
     private var _disableHistory = false
     private var _autoPurge = false
@@ -25,7 +33,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
 
     override fun clear(): NakshaCollection {
         super.clear()
-        _partition = false
+        _partitionCount = PARTITION_COUNT_NONE
         _geoIndex = null
         _disableHistory = false
         _autoPurge = false
@@ -43,7 +51,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
             val key = map.key()
             val value = map.value()
             when (key) {
-                NKC_PARTITION -> if (value.isBool()) _partition = value.readBoolean() ?: false
+                NKC_PARTITION_COUNT -> if (value.isInt()) _partitionCount = value.readInt32()
                 NKC_GEO_INDEX -> if (value.isString()) _geoIndex = value.readString()
                 NKC_DISABLE_HISTORY -> if (value.isBool()) _disableHistory = value.readBoolean() ?: false
                 NKC_AUTO_PURGE -> if (value.isBool()) _autoPurge = value.readBoolean() ?: false
@@ -54,7 +62,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
         }
     }
 
-    fun partition(): Boolean = _partition
+    fun partitionCount(): Int = _partitionCount
     fun geoIndex(): String = _geoIndex ?: Static.GEO_INDEX_DEFAULT
     fun disableHistory(): Boolean = _disableHistory
     fun autoPurge(): Boolean = _autoPurge

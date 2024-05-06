@@ -9,9 +9,11 @@ import com.here.naksha.lib.jbon.newMap
 import com.here.naksha.lib.jbon.put
 import com.here.naksha.lib.plv8.JvmPlv8Table
 import com.here.naksha.lib.plv8.NKC_DISABLE_HISTORY
-import com.here.naksha.lib.plv8.NKC_PARTITION
+import com.here.naksha.lib.plv8.NKC_PARTITION_COUNT
 import com.here.naksha.lib.plv8.NakshaSession
+import com.here.naksha.lib.plv8.PARTITION_COUNT_NONE
 import com.here.naksha.lib.plv8.RET_ERR_MSG
+import com.here.naksha.lib.plv8.getCollectionPartitionCount
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -36,14 +38,14 @@ class NakshaSessionTest : JbTest() {
     fun testEnsureHistoryPartition() {
         // given
         val session = NakshaSession.get()
-        createCollection(session = session, collectionId = collectionId, partition = true, disableHistory = false)
+        createCollection(session = session, collectionId = collectionId, partitionCount = 8, disableHistory = false)
 
         // then
         val collectionConfig = session.getCollectionConfig(collectionId)
         val isHistoryDisabled: Boolean = collectionConfig[NKC_DISABLE_HISTORY]!!
         assertFalse(isHistoryDisabled)
-        val isPartitioningEnabled: Boolean = collectionConfig[NKC_PARTITION]!!
-        assertTrue(isPartitioningEnabled)
+        val partitionCount: Int = collectionConfig.getCollectionPartitionCount()
+        assertEquals(8, partitionCount)
         val expectedPartitionName = "${collectionId}\$hst_${session.txn().year()}"
         assertTrue(doesTableExist(session, expectedPartitionName))
     }
@@ -52,9 +54,9 @@ class NakshaSessionTest : JbTest() {
     fun transactionShouldBeUpdatedWhenExecutingWriteFeaturesMultipleTimes() {
         // given
         val session = NakshaSession.get()
-        createCollection(session = session, collectionId = collectionId, partition = true, disableHistory = false)
+        createCollection(session = session, collectionId = collectionId, partitionCount = 8, disableHistory = false)
         val otherCollection = "collection2"
-        createCollection(session = session, collectionId = otherCollection, partition = true, disableHistory = false)
+        createCollection(session = session, collectionId = otherCollection, partitionCount = 8, disableHistory = false)
         session.clear()
 
         val builder = XyzBuilder.create(65536)
@@ -98,8 +100,8 @@ class NakshaSessionTest : JbTest() {
         assertEquals("Cannot perform multiple operations on single feature in one transaction", error)
     }
 
-    private fun createCollection(session: NakshaSession, collectionId: String, partition: Boolean = false, disableHistory: Boolean = true) {
-        val collectionJson = """{"id":"$collectionId","type":"NakshaCollection","maxAge":3560,"partition":$partition,"properties":{},"disableHistory":$disableHistory}"""
+    private fun createCollection(session: NakshaSession, collectionId: String, partitionCount: Int = PARTITION_COUNT_NONE, disableHistory: Boolean = true) {
+        val collectionJson = """{"id":"$collectionId","type":"NakshaCollection","maxAge":3560,"partitionCount":$partitionCount,"properties":{},"disableHistory":$disableHistory}"""
         val builder = XyzBuilder.create(65536)
         val op = builder.buildXyzOp(XYZ_OP_UPSERT, collectionId, null, 1111)
         val feature = builder.buildFeatureFromMap(asMap(env.parse(collectionJson)))

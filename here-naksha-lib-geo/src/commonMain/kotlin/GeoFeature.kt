@@ -10,7 +10,7 @@ import kotlin.jvm.JvmStatic
  *
  */
 @JsExport
-open class GeoFeature(vararg args: Any?) : BaseObject(args) {
+open class GeoFeature(vararg args: Any?) : BaseObject(*args) {
 
     companion object {
         @JvmStatic

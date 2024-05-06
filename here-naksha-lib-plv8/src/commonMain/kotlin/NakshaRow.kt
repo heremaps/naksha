@@ -83,3 +83,10 @@ internal inline fun IMap.isNkcAutoPurge() : Boolean {
     val autoPurge: Boolean? = this[NKC_AUTO_PURGE]
     return autoPurge == true
 }
+internal inline fun IMap.getCollectionPartitionCount() : Int {
+    val partitionCount: Int? = this[NKC_PARTITION_COUNT]
+    return partitionCount?: PARTITION_COUNT_NONE
+}
+internal inline fun IMap.isCollectionPartitioned() : Boolean {
+    return getCollectionPartitionCount() > 1
+}

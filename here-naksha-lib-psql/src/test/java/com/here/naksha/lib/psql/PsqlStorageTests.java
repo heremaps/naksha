@@ -55,15 +55,8 @@ import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.jbon.BigInt64Kt;
-import com.here.naksha.lib.jbon.JbDictManager;
-import com.here.naksha.lib.jbon.JbFeature;
-import com.here.naksha.lib.jbon.JbMap;
-import com.here.naksha.lib.jbon.JbSession;
 import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.NakshaTxn;
-import com.here.naksha.lib.nak.Flags;
-import com.here.naksha.lib.nak.GZip;
-import com.here.naksha.lib.plv8.NakshaSession;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -887,7 +880,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     // given
     final WriteXyzCollections request = new WriteXyzCollections();
     String collectionWithAutoPurge = collectionId() + "_ap";
-    XyzCollection collection = new XyzCollection(collectionWithAutoPurge, partition(), false, true);
+    XyzCollection collection = new XyzCollection(collectionWithAutoPurge, partitionCount(), false, true);
     collection.enableAutoPurge();
     request.add(EWriteOp.CREATE, collection);
 

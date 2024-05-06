@@ -201,8 +201,9 @@ class Plv8JbonTest : JbTest() {
     @Test
     fun testPartitioning() {
         val id = "XD44QgPaxbii"
-        val expected = Fnv1a32.string(Fnv1a32.start(), id) % Static.PARTITION_COUNT
-        assertEquals(expected, Static.partitionNumber(id))
-        assertEquals("$expected", Static.partitionNameForId(id))
+        val partitionCount = 8
+        val expected = Fnv1a32.string(Fnv1a32.start(), id) % partitionCount
+        assertEquals(expected, Static.partitionNumber(id, partitionCount))
+        assertEquals("00$expected", Static.partitionNameForId(id, partitionCount))
     }
 }

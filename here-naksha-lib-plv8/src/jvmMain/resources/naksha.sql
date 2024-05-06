@@ -233,22 +233,22 @@ AS $$
   return session.errMsg;
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_partition_number(id text) RETURNS int4
+CREATE OR REPLACE FUNCTION naksha_partition_number(id text, partition_count int4) RETURNS int4
 LANGUAGE 'plv8'
 IMMUTABLE
 PARALLEL SAFE
 SET search_path FROM CURRENT
 AS $$
-  return require("naksha").Static.partitionNumber(id);
+  return require("naksha").Static.partitionNumber(id, partition_count);
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_partition_id(id text) RETURNS text
+CREATE OR REPLACE FUNCTION naksha_partition_id(id text, partition_count int4) RETURNS text
 LANGUAGE 'plv8'
 IMMUTABLE
 PARALLEL SAFE
 SET search_path FROM CURRENT
 AS $$
-  return require("naksha").Static.partitionNameForId(id);
+  return require("naksha").Static.partitionNameForId(id, partition_count);
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_hst_partition_id(id text, txn_next int8) RETURNS int4

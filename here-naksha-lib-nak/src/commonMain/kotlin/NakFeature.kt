@@ -9,7 +9,7 @@ import kotlin.jvm.JvmStatic
  * The Naksha Feature extending the default [GeoFeature].
  */
 @JsExport
-open class NakFeature(vararg args: Any?) : GeoFeature(args) {
+open class NakFeature(vararg args: Any?) : GeoFeature(*args) {
 
     companion object {
         @JvmStatic
