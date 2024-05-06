@@ -36,9 +36,7 @@ import com.here.naksha.lib.plv8.TG_OP_INSERT
 import com.here.naksha.lib.plv8.TG_OP_UPDATE
 import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.assertInstanceOf
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -90,23 +88,6 @@ class Plv8Test : JbTest() {
             assertEquals(1, Jb.map.size(row))
             assertEquals(BigInt64(0L), Jb.map.get(row, "version"))
         }
-    }
-
-    @Order(3)
-    @Test
-    fun testHereTile() {
-        assertEquals("", Static.calculateHereTileId(0.0, 0.0, 0))
-        assertEquals("12", Static.calculateHereTileId(0.0, 0.0, 2))
-        assertEquals("13", Static.calculateHereTileId(45.0, 90.0, 2))
-        assertEquals("000", Static.calculateHereTileId(-90.0, -180.0, 3))
-        assertEquals("100", Static.calculateHereTileId(-90.0, 0.0, 3))
-        assertEquals("000", Static.calculateHereTileId(-90.0, 180.0, 3))
-        assertEquals("022222222222", Static.calculateHereTileId(90.0, -180.0, 12))
-        assertEquals("122", Static.calculateHereTileId(90.0, 0.0, 3))
-        assertEquals("022222222222", Static.calculateHereTileId(90.0, 180.0, 12))
-        assertEquals("02", Static.calculateHereTileId(0.0, -180.0, 2))
-        assertEquals("02", Static.calculateHereTileId(0.0, 180.0, 2))
-        assertEquals("132", Static.calculateHereTileId(45.0, 90.0, 3))
     }
 
     @Order(3)

@@ -20,9 +20,6 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
-import kotlin.math.abs
-import kotlin.math.absoluteValue
-import kotlin.math.min
 
 /**
  * To be called once per storage to initialize a storage. This is normally only done from the Java code that invokes
@@ -196,109 +193,6 @@ object Static {
             hash = hash ushr 5
         }
         return sb.toString()
-    }
-
-    /**
-     * Calculate the HERE Tile quad key from the given latitude, longitude, and quad level.
-     * @param latitude The latitude.
-     * @param longitude The longitude.
-     * @param level The quad level.
-     * @return The HERE Tile quad key.
-     */
-    @JvmStatic
-    fun calculateHereTileId(latitude: Double, longitude: Double, level: Int = 12): String {
-        var x = 0
-        if (abs(longitude) != 180.0) {
-            val angularWidth: Double = getQuadAngularWidth(level)
-            val column = (longitude + 180) / angularWidth
-
-            // In rare occasions, precision issues can cause off-by-one errors, when `column` is rounded to an integer.
-            // To prevent this we verify that the coordinate is not outside the quad boundaries.
-            if (column % 1 == 0.0 && longitude < angularWidth * column - 180.0) {
-                x = column.toInt() - 1
-            } else {
-                x = column.toInt()
-            }
-            x = min(getXMax(level), x)
-        }
-
-        val angularHeight: Double = getQuadAngularHeight(level)
-        val row = (latitude + 90) / angularHeight
-        // In rare occasions, precision issues can cause off-by-one errors, when `row` is rounded to an integer.
-        // To prevent this we verify that the coordinate is not outside the quad boundaries.
-        var y = if (row % 1 == 0.0 && latitude < angularHeight * row - 90.0) {
-            row.toInt() - 1
-        } else {
-            row.toInt()
-        }
-        y = min(getYMax(level).toDouble(), y.toDouble()).toInt()
-
-        var longKey = convertXYLevelToLongKey(x, y, level)
-        longKey = removeLevelIndicator(longKey, level)
-
-        return convertLongKeyToQuadKey(longKey, level)
-    }
-
-    @JvmStatic
-    private fun getQuadAngularWidth(zoomLevel: Int): Double {
-        return 360.0 / (1 shl zoomLevel)
-    }
-
-    @JvmStatic
-    private fun getXMax(zoomLevel: Int): Int {
-        return ((1L shl zoomLevel) - 1).toInt()
-    }
-
-    @JvmStatic
-    private fun getQuadAngularHeight(level: Int): Double {
-        if (level == 0) {
-            return 180.0
-        }
-        return 360.0 / (1L shl level)
-    }
-
-    @JvmStatic
-    private fun getYMax(zoomLevel: Int): Int {
-        return (((1L shl zoomLevel) - 1) / 2).toInt()
-    }
-
-    @JvmStatic
-    private fun convertXYLevelToLongKey(x: Int, y: Int, level: Int): Long {
-        val longKey: Long = convertXYToLongKey(x, y)
-        return longKey or (1L shl (level * 2))
-    }
-
-    @JvmStatic
-    private fun convertXYToLongKey(x: Int, y: Int): Long {
-        val X: Long = interleaveToEvenBits(x.toLong())
-        val Y: Long = interleaveToEvenBits(y.toLong())
-        return X or (Y shl 1)
-    }
-
-    @JvmStatic
-    private fun interleaveToEvenBits(l: Long): Long {
-        var x = l
-        x = (x or (x shl 16)) and 0x0000FFFF0000FFFFL
-        x = (x or (x shl 8)) and 0x00FF00FF00FF00FFL
-        x = (x or (x shl 4)) and 0x0F0F0F0F0F0F0F0FL
-        x = (x or (x shl 2)) and 0x3333333333333333L
-        x = (x or (x shl 1)) and 0x5555555555555555L
-        return x
-    }
-
-    @JvmStatic
-    private fun removeLevelIndicator(longKey: Long, level: Int): Long {
-        return longKey and ((1L shl level * 2) - 1)
-    }
-
-    @JvmStatic
-    private fun convertLongKeyToQuadKey(longKey: Long, level: Int): String {
-        val quadKey = StringBuilder()
-        for (i in level - 1 downTo 0) {
-            val digit = (longKey shr i * 2) and 3
-            quadKey.append(digit)
-        }
-        return quadKey.toString()
     }
 
     /**
