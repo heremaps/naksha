@@ -588,8 +588,8 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    * error and throws a {@link TooManyTasks} exception.
    *
    * @param actorId The identifier of the actor for which to acquire the slot.
-   * @param limit The maximum number of concurrent tasks allowed for the actor.
-   * @throws TooManyTasks If the maximum number of concurrent tasks is reached for the actor.
+   * @param limit The maximum number of concurrent tasks allowed for the instance.
+   * @throws TooManyTasks If the maximum number of concurrent tasks is reached for the instance.
    */
   private void incInstanceLevelUsage(String actorId,Long limit){
     while(true) {
