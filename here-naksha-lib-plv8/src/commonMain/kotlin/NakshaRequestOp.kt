@@ -8,10 +8,11 @@ internal class NakshaRequestOp(
         val rawFeature: ByteArray?,
         val rowMap: IMap,
         val xyzOp: XyzOp,
-        val collectionId: String
+        val collectionId: String,
+        val collectionPartitionCount: Int
 ) {
     val id: String = rowMap.getAny(COL_ID) as String
-    val partition: Int = Static.partitionNumber(id)
+    val partition: Int = Static.partitionNumber(id, collectionPartitionCount)
 
     // Used for sorting
     val key = "${Static.PARTITION_ID[partition]}_${id}"
@@ -24,7 +25,8 @@ internal class NakshaRequestOp(
                 flags_arr: Array<Int?>,
                 geo_arr: Array<ByteArray?>,
                 tags_arr: Array<ByteArray?>,
-                sql: IPlv8Sql
+                sql: IPlv8Sql,
+                collectionPartitionCount: Int
         ): NakshaWriteOps {
             check(op_arr.size == feature_arr.size && op_arr.size == flags_arr.size && op_arr.size == geo_arr.size && op_arr.size == tags_arr.size) {
                 "not all input arrays has same size"
@@ -86,7 +88,7 @@ internal class NakshaRequestOp(
                     row[COL_GEO_GRID] = opReader.grid()
                 }
 
-                val op = NakshaRequestOp(feature_arr[i], row, xyzOp = opReader, collectionId = collectionId)
+                val op = NakshaRequestOp(feature_arr[i], row, xyzOp = opReader, collectionId = collectionId, collectionPartitionCount)
                 operations.add(op)
                 if (partition == -2) {
                     partition = op.partition

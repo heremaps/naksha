@@ -11,7 +11,7 @@ import kotlin.js.JsExport
  * @property storageClass The storage class to create.
  */
 @JsExport
-class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?) {
+class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?, val partitionCount: Int) {
     /**
      * The CREATE TABLE statement.
      */
@@ -83,7 +83,7 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?) {
         builder.append(" WITH (")
                 .append("fillfactor=100")
                 .append(",toast_tuple_target=").append(sql.info().maxTupleSize)
-                .append(",parallel_workers=").append(Static.PARTITION_COUNT)
+                .append(",parallel_workers=").append(partitionCount)
                 .append(") ")
         STORAGE_PARAMS = builder.toString()
     }

@@ -36,7 +36,7 @@ class NakshaFeaturesWriter(
     ): ITable {
         val START = currentMillis()
         val START_MAPPING = currentMillis()
-        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, session.sql)
+        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, session.sql, collectionConfig.getCollectionPartitionCount())
         val END_MAPPING = currentMillis()
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
@@ -84,7 +84,7 @@ class NakshaFeaturesWriter(
             tags_arr: Array<ByteArray?>,
             minResult: Boolean
     ): ITable {
-        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, session.sql)
+        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, session.sql, collectionConfig.getCollectionPartitionCount())
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
@@ -104,7 +104,7 @@ class NakshaFeaturesWriter(
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
             when (opType) {
                 XYZ_OP_CREATE -> {
-                    Static.collectionCreate(session.sql, newCollection.storageClass(), session.schema, schemaOid, op.id, newCollection.geoIndex(), newCollection.partition())
+                    Static.collectionCreate(session.sql, newCollection.storageClass(), session.schema, schemaOid, op.id, newCollection.geoIndex(), newCollection.partitionCount())
                     plan.addCreate(op)
                 }
 
@@ -132,8 +132,8 @@ class NakshaFeaturesWriter(
     }
 
     private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?, autoPurge: Boolean): NakshaBulkLoaderPlan {
-        val isCollectionPartitioned: Boolean? = collectionConfig[NKC_PARTITION]
-        return if (isCollectionPartitioned == true && partition != null) {
+        val isCollectionPartitioned: Boolean = collectionConfig.isCollectionPartitioned()
+        return if (isCollectionPartitioned && partition != null) {
             if (DEBUG) println("Insert into a single partition #$partition (isCollectionPartitioned: ${isCollectionPartitioned})")
             NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(true, partition), session, isHistoryDisabled, autoPurge, minResult)
         } else {
@@ -141,6 +141,7 @@ class NakshaFeaturesWriter(
             NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(false, -1), session, isHistoryDisabled, autoPurge, minResult)
         }
     }
+
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
             if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else session.sql.quoteIdent(collectionId)
 
