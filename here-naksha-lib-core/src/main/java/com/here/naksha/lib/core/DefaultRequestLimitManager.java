@@ -19,11 +19,11 @@
 package com.here.naksha.lib.core;
 
 public class DefaultRequestLimitManager implements IRequestLimitManager {
-  private final Long instanceLevelLimit;
+  private final long instanceLevelLimit;
   private final double actorLimitPct;
 
-  private static Long getAvailableProcessors() {
-    return (long) Runtime.getRuntime().availableProcessors();
+  private static long getAvailableProcessors() {
+    return Runtime.getRuntime().availableProcessors();
   }
 
   // This function is useful where Hub is not involved
