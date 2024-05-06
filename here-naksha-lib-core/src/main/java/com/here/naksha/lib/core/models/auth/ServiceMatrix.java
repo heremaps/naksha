@@ -16,27 +16,13 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.app.common;
+package com.here.naksha.lib.core.models.auth;
 
-import org.junit.jupiter.api.extension.ExtendWith;
+import java.util.LinkedHashMap;
 
 /**
- * Base class for all API-related tests. Extending this class ensures that NakshaApp & all required storages are running
+ * The service action matrix contains the action matrices of multiple services. The key is the service identifier and the value the
+ * corresponding action matrix that describes all access rights the corresponding user or application does have for that service. This
+ * structure is very helpful for caching and offline access control.
  */
-@ExtendWith({ApiTestMaintainer.class})
-public abstract class ApiTest {
-
-  private final NakshaTestWebClient nakshaClient;
-
-  public ApiTest() {
-    this(new NakshaTestWebClient());
-  }
-
-  public ApiTest(NakshaTestWebClient nakshaClient) {
-    this.nakshaClient = nakshaClient;
-  }
-
-  public NakshaTestWebClient getNakshaClient() {
-    return nakshaClient;
-  }
-}
+public class ServiceMatrix extends LinkedHashMap<String, ActionMatrix> {}
