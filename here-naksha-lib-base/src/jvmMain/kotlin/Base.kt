@@ -112,6 +112,7 @@ actual class Base {
             if (klass.isInstance(nakType)) return nakType as T
             require(klass.isAssignable(data))
             nakType = klass.newInstance(*args)
+            nakType.data = data
             data[sym] = nakType
             return nakType
         }
@@ -160,7 +161,7 @@ actual class Base {
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PDataView = JvmPDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun unbox(o: Any?): Any? = if (o is BaseType) o.data as? JvmObject else if (o is JvmObject) o else null
+        actual fun unbox(o: Any?): Any? = if (o is BaseType) o.data as? JvmObject else o
 
         /**
          * Returns the [JvmObject] of the given object. This method uses the same implementation as [unbox].

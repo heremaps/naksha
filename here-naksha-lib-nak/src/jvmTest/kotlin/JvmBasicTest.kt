@@ -33,6 +33,10 @@ class JvmBasicTest {
         assertEquals(2, Base.size(TEST2))
         assertEquals("world", TEST2["hello"])
         assertEquals(10, TEST2["beta"])
+
+        val feature = Base.assign(o, NakFeature.klass)
+        feature.setId("test")
+        assertEquals("test", o["id"])
     }
 
 }
