@@ -409,5 +409,4 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
     DUMMY,
     JWT
   }
-
 }

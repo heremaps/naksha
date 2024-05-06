@@ -121,6 +121,8 @@ public class NakshaHub implements INaksha {
       logger.warn("ExtensionManager is not initialised due to extensionConfigParams not found.");
     }
     // Setting Concurrency Thresholds
+    logger.info("Value of maxParallelRequestsPerCPU is {}", nakshaHubConfig.maxParallelRequestsPerCPU);
+    logger.info("Value of maxPctParallelRequestsPerActor is {}", nakshaHubConfig.maxPctParallelRequestsPerActor);
     IRequestLimitManager requestLimitManager = new DefaultRequestLimitManager(
         nakshaHubConfig.maxParallelRequestsPerCPU, nakshaHubConfig.maxPctParallelRequestsPerActor);
     AbstractTask.initConcurrencyLimits(requestLimitManager);

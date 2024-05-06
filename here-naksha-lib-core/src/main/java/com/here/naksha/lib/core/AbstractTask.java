@@ -398,43 +398,25 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
       String actorId = context.getActor();
       final long ACTOR_LIMIT = requestLimitManager.getActorLevelLimit(context);
       incActorLevelUsage(actorId, ACTOR_LIMIT);
-      do {
-        final long threadCount = AbstractTask.threadCount.get();
-        assert threadCount >= 0L;
-        if (!internal && threadCount >= LIMIT) {
-          log.info(
-              "NAKSHA_ERR_REQ_LIMIT_4_INSTANCE - [Request Limit breached for Instance => appId,author,actor,limit,crtValue] - ReqLimitForInstance {} {} {} {} {}",
-              actorId == null ? "" : context.getAppId(),
-              context.getAuthor(),
-              actorId,
-              LIMIT,
-              threadCount);
-          String errorMessage = "Maximum number of concurrent tasks reached for instance (" + LIMIT + ")";
-          decActorLevelUsage(actorId);
-          throw new TooManyTasks(errorMessage);
-        }
-        if (AbstractTask.threadCount.compareAndSet(threadCount, threadCount + 1)) {
-          try {
-            state.set(State.START);
-            final Future<RESULT> future = threadPool.submit(this::init_and_execute);
-            return future;
-          } catch (RejectedExecutionException e) {
-            String errorMessage = "Maximum number of concurrent tasks (" + LIMIT + ") reached";
-            AbstractTask.threadCount.decrementAndGet();
-            decActorLevelUsage(actorId);
-            throw new TooManyTasks(errorMessage);
-          } catch (Throwable t) {
-            AbstractTask.threadCount.decrementAndGet();
-            decActorLevelUsage(actorId);
-            log.atError()
+      incInstanceLevelUsage(actorId, LIMIT);
+      try {
+        state.set(State.START);
+        final Future<RESULT> future = threadPool.submit(this::init_and_execute);
+        return future;
+      } catch (RejectedExecutionException e) {
+        String errorMessage = "Maximum number of concurrent tasks (" + LIMIT + ") reached";
+        AbstractTask.threadCount.decrementAndGet();
+        decActorLevelUsage(actorId);
+        throw new TooManyTasks(errorMessage);
+      } catch (Throwable t) {
+        AbstractTask.threadCount.decrementAndGet();
+        decActorLevelUsage(actorId);
+        log.atError()
                 .setMessage("Unexpected exception while trying to fork a new thread")
                 .setCause(t)
                 .log();
-            throw new RuntimeException("Internal error while forking new worker thread", t);
-          }
-        }
-        // Conflict, two threads concurrently try to fork.
-      } while (true);
+        throw new RuntimeException("Internal error while forking new worker thread", t);
+      }
     } finally {
       unlock();
     }
@@ -599,7 +581,41 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
   }
 
   /**
-   * Increments the value of author usage for given actor anc compares with the specified limit.
+   * Increments the value of instance level usage and compares with the specified limit.
+   *
+   * <p>This method ensures that the number of concurrent tasks for the instance
+   * does not exceed the specified limit. If the limit is reached, it logs an
+   * error and throws a {@link TooManyTasks} exception.
+   *
+   * @param actorId The identifier of the actor for which to acquire the slot.
+   * @param limit The maximum number of concurrent tasks allowed for the actor.
+   * @throws TooManyTasks If the maximum number of concurrent tasks is reached for the actor.
+   */
+  private void incInstanceLevelUsage(String actorId,Long limit){
+    while(true) {
+      final long threadCount = AbstractTask.threadCount.get();
+      assert threadCount >= 0L;
+      if (!internal && threadCount >= limit) {
+        log.info(
+                "NAKSHA_ERR_REQ_LIMIT_4_INSTANCE - [Request Limit breached for Instance => appId,author,actor,limit,crtValue] - ReqLimitForInstance {} {} {} {} {}",
+                context.getAppId(),
+                context.getAuthor(),
+                actorId,
+                limit,
+                threadCount);
+        String errorMessage = "Maximum number of concurrent tasks reached for instance (" + limit + ")";
+        decActorLevelUsage(actorId);
+        throw new TooManyTasks(errorMessage);
+      }
+      if (AbstractTask.threadCount.compareAndSet(threadCount, threadCount + 1)) {
+        break;
+      }
+      // Failed, conflict, repeat
+    }
+  }
+
+  /**
+   * Increments the value of author usage for given actor and compares with the specified limit.
    *
    * <p>This method ensures that the number of concurrent tasks for the actor
    * does not exceed the specified limit. If the limit is reached, it logs an
@@ -610,7 +626,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    * @throws TooManyTasks If the maximum number of concurrent tasks is reached for the actor.
    */
   private void incActorLevelUsage(String actorId, long limit) {
-    if (internal || actorId == null) return;
+    if (actorId == null) return;
     if (limit <= 0) {
       log.info(
           "NAKSHA_ERR_REQ_LIMIT_4_ACTOR - [Request Limit breached for Actor => appId,author,actor,limit,crtValue] - ReqLimitForActor {} {} {} {} {}",
@@ -660,7 +676,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    * @param actorId The identifier of the actor for which to release the slot.
    */
   private void decActorLevelUsage(String actorId) {
-    if (internal || actorId == null) return;
+    if (actorId == null) return;
     while (true) {
       Long current = actorUsageMap.get(actorId);
       if (current == null) {
