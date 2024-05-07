@@ -1,9 +1,11 @@
 import com.here.naksha.lib.base.Base
 import com.here.naksha.lib.base.BaseList
+import com.here.naksha.lib.base.Klass
 import com.here.naksha.lib.base.NakReadFeatures
 import com.here.naksha.lib.base.NakReadRequest
 import com.here.naksha.lib.base.NakRequest
 import com.here.naksha.lib.base.contains
+import com.here.naksha.lib.base.get
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -20,7 +22,7 @@ class JvmRequestTest {
         request.setNoFeature(true)
         request.setNoGeometry(true)
         request.setNoTags(true)
-        request.setCollectionIds(BaseList("id1", "id2"))
+        request.setCollectionIds(Klass.arrayKlass.newInstance("id1", "id2"))
 
         // when
         val o = Base.toJvmObject(request)!!
@@ -32,7 +34,7 @@ class JvmRequestTest {
         assertEquals(request.isNoTags(), o[NakRequest.NO_TAGS])
         assertEquals(request.isNoGeometry(), o[NakRequest.NO_GEOMETRY])
         assertEquals(request.getLimit(), o[NakReadRequest.LIMIT])
-        assertEquals(request.getCollectionIds(), Base.assign(o[NakReadFeatures.COLLECTION_IDS]!!, BaseList.klass) as BaseList<*>)
+        assertEquals(request.getCollectionIds(), o[NakReadFeatures.COLLECTION_IDS])
         assertEquals("id1", request.getCollectionIds()[0])
         assertEquals("id2", request.getCollectionIds()[1])
     }

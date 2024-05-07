@@ -1,5 +1,6 @@
 package com.here.naksha.lib.base
 
+import com.here.naksha.lib.nak.Flags
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -31,14 +32,21 @@ class NakWriteRow(vararg args: Any?) : BaseObject(*args) {
         @JvmStatic
         val ROW = Base.intern("row")
 
-        fun fromFeature(op: String, feature: NakFeature): NakWriteRow {
+        @JvmStatic
+        val FLAGS = Base.intern("flags")
+
+        @JvmStatic
+        val GRID = Base.intern("grid")
+
+
+        fun fromFeature(op: Int, feature: NakFeature): NakWriteRow {
             val nakWriteRow = NakWriteRow()
             nakWriteRow.setOp(op)
             nakWriteRow.setFeature(feature)
             return nakWriteRow
         }
 
-        fun fromRow(op: String, row: NakRow): NakWriteRow {
+        fun fromRow(op: Int, row: NakRow): NakWriteRow {
             val nakWriteRow = NakWriteRow()
             nakWriteRow.setOp(op)
             nakWriteRow.setRow(row)
@@ -46,9 +54,9 @@ class NakWriteRow(vararg args: Any?) : BaseObject(*args) {
         }
     }
 
-    fun setOp(value: String) = set(OP, value)
+    fun setOp(value: Int) = set(OP, value)
 
-    fun getOp(): String = toElement(get(OP), Klass.stringKlass)!!
+    fun getOp(): Int = toElement(get(OP), Klass.intKlass)!!
 
     fun setId(value: String?) = set(ID, value)
 
@@ -65,4 +73,14 @@ class NakWriteRow(vararg args: Any?) : BaseObject(*args) {
     fun setRow(value: NakRow?) = set(ROW, value)
 
     fun getRow(): NakRow? = toElement(get(ROW), NakRow.klass)
+
+    fun getFlags(): Int? = toElement(get(FLAGS), Klass.intKlass)
+
+    fun setFlags(value: Int?) = set(FLAGS, value)
+
+    fun getFlagsObject(): Flags = Flags(getFlags())
+
+    fun setGrid(value: Int?) = set(GRID, value)
+
+    fun getGrid(): Int? = toElement(get(GRID), Klass.intKlass)
 }

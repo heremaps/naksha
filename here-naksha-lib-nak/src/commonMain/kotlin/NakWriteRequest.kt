@@ -11,16 +11,16 @@ abstract class NakWriteRequest(vararg args: Any?) : NakRequest(*args) {
     companion object {
         @JvmStatic
         val NO_RESULTS = Base.intern("noResults")
+
         @JvmStatic
         val ROWS = Base.intern("rows")
     }
 
-    fun isNoResults() : Boolean = toElement(get(NO_RESULTS), Klass.boolKlass, false)!!
+    fun isNoResults(): Boolean = toElement(get(NO_RESULTS), Klass.boolKlass, false)!!
 
     fun setNoResults(value: Boolean) = set(NO_RESULTS, value)
 
-    fun setRows(values: BaseList<String>) = set(ROWS, values)
+    fun setRows(values: PArray) = set(ROWS, values)
 
-    @Suppress("UNCHECKED_CAST")
-    fun getRows(): BaseList<NakWriteRow> = toElement(get(ROWS), BaseList.klass, BaseList())!! as BaseList<NakWriteRow>
+    fun getRows(): PArray = toElement(get(ROWS), Klass.arrayKlass, Klass.arrayKlass.newInstance())!!
 }

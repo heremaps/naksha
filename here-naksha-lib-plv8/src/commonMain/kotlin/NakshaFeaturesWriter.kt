@@ -1,6 +1,9 @@
 package com.here.naksha.lib.plv8
 
 import NakshaBulkLoaderPlan
+import com.here.naksha.lib.base.NakWriteCollections
+import com.here.naksha.lib.base.NakWriteFeatures
+import com.here.naksha.lib.base.size
 import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.XYZ_OP_CREATE
 import com.here.naksha.lib.jbon.XYZ_OP_DELETE
@@ -26,27 +29,20 @@ class NakshaFeaturesWriter(
 
     private val collectionConfig = session.getCollectionConfig(headCollectionId)
 
-    fun writeFeatures(
-            op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            flags_arr: Array<Int?> = arrayOfNulls(op_arr.size),
-            geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            minResult: Boolean
-    ): ITable {
+    fun writeFeatures(writeRequest: NakWriteFeatures): ITable {
         val START = currentMillis()
         val START_MAPPING = currentMillis()
-        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, session.sql, collectionConfig.getCollectionPartitionCount())
+        val operations = mapToOperations(headCollectionId, writeRequest, session.sql, collectionConfig.getCollectionPartitionCount())
         val END_MAPPING = currentMillis()
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
-        val existingFeatures = operations.getExistingHeadFeatures(session, minResult)
-        val existingInDelFeatures = operations.getExistingDelFeatures(session, minResult)
+        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.isNoResults())
+        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.isNoResults())
         val END_LOADING = currentMillis()
 
         val START_PREPARE = currentMillis()
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, collectionConfig[NKC_DISABLE_HISTORY], collectionConfig.isNkcAutoPurge())
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.isNoResults(), collectionConfig[NKC_DISABLE_HISTORY], collectionConfig.isNkcAutoPurge())
         for (op in operations.operations) {
             val existingFeature: IMap? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
@@ -64,37 +60,30 @@ class NakshaFeaturesWriter(
         plan.executeAll()
         if (modifyCounters) {
             // no exception was thrown - execution succeeded, we can increase transaction counter
-            session.transaction.addModifiedCount(op_arr.size)
-            session.transaction.addCollectionCounts(collectionId, op_arr.size)
+            session.transaction.addModifiedCount(writeRequest.getRows().size())
+            session.transaction.addCollectionCounts(collectionId, writeRequest.getRows().size())
         }
         val END_EXECUTION = currentMillis()
 
         val END = currentMillis()
         if (DEBUG) {
-            println("[${op_arr.size} feature]: ${END!! - START!!}ms, loading: ${END_LOADING!! - START}ms, execution: ${END_EXECUTION!! - START_EXECUTION!!}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
+            println("[${writeRequest.getRows().size()} feature]: ${END!! - START!!}ms, loading: ${END_LOADING!! - START}ms, execution: ${END_EXECUTION!! - START_EXECUTION!!}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
         }
         return plan.result
     }
 
-    fun writeCollections(
-            op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?>,
-            flags_arr: Array<Int?>,
-            geo_arr: Array<ByteArray?>,
-            tags_arr: Array<ByteArray?>,
-            minResult: Boolean
-    ): ITable {
-        val operations = mapToOperations(headCollectionId, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, session.sql, collectionConfig.getCollectionPartitionCount())
+    fun writeCollections(writeRequest: NakWriteCollections): ITable {
+        val operations = mapToOperations(headCollectionId, writeRequest, session.sql, collectionConfig.getCollectionPartitionCount())
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
-        val existingFeatures = operations.getExistingHeadFeatures(session, minResult)
-        val existingInDelFeatures = operations.getExistingDelFeatures(session, minResult)
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, minResult, collectionConfig[NKC_DISABLE_HISTORY], collectionConfig.isNkcAutoPurge())
+        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.isNoResults())
+        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.isNoResults())
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.isNoResults(), collectionConfig[NKC_DISABLE_HISTORY], collectionConfig.isNkcAutoPurge())
         val newCollection = NakshaCollection(session.globalDictManager)
 
         for (op in operations.operations) {
-            newCollection.mapBytes(op.rawFeature)
+            newCollection.mapBytes(op.writeRow.getRow()?.getFeature()?.getByteArray())
 
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
             val schemaOid = asMap(asArray(session.sql.execute(query, arrayOf(session.schema)))[0]).getAny("oid") as Int
@@ -146,16 +135,16 @@ class NakshaFeaturesWriter(
             if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else session.sql.quoteIdent(collectionId)
 
     internal fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: IMap?, collectionConfig: IMap): Int {
-        return if (row.xyzOp.op() == XYZ_OP_UPSERT) {
+        return if (row.writeRow.getOp() == XYZ_OP_UPSERT) {
             if (existingFeature != null) {
                 XYZ_OP_UPDATE
             } else {
                 XYZ_OP_CREATE
             }
-        } else if (row.xyzOp.op() == XYZ_OP_DELETE && collectionConfig.isNkcAutoPurge()) {
+        } else if (row.writeRow.getOp() == XYZ_OP_DELETE && collectionConfig.isNkcAutoPurge()) {
             XYZ_OP_PURGE
         } else {
-            row.xyzOp.op()
+            row.writeRow.getOp()
         }
     }
 }

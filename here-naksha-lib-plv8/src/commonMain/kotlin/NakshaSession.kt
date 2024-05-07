@@ -2,6 +2,11 @@
 
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.base.Base
+import com.here.naksha.lib.base.NakRow
+import com.here.naksha.lib.base.NakWriteCollections
+import com.here.naksha.lib.base.NakWriteFeatures
+import com.here.naksha.lib.base.NakWriteRow
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.nak.Flags
 import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
@@ -488,16 +493,12 @@ FROM ns, txn_seq;"""
     }
 
     fun writeCollections(
-            op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            flags_arr: Array<Int?> = arrayOfNulls(op_arr.size),
-            geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size)
+            writeRequest: NakWriteCollections
     ): ITable {
         val table = sql.newTable()
         val writer = NakshaFeaturesWriter(NKC_TABLE, this)
         try {
-            return writer.writeCollections(op_arr, feature_arr, flags_arr, geo_arr, tags_arr, false)
+            return writer.writeCollections(writeRequest)
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
             table.returnException(e)
@@ -602,24 +603,14 @@ FROM ns, txn_seq;"""
      * Single threaded all-or-nothing bulk write operation.
      * As result there is row with success or error returned.
      */
-    fun writeFeatures(
-            collectionId: String,
-            op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            flags_arr: Array<Int?> = arrayOfNulls(op_arr.size),
-            geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            minResult: Boolean = true
-    ): ITable {
+    fun writeFeatures(writeRequest: NakWriteFeatures): ITable {
         val table = sql.newTable()
-        val featureWriter = NakshaFeaturesWriter(collectionId, this)
-        val xyzBuilder = XyzBuilder.create()
-        val transactionWriter = NakshaFeaturesWriter(SC_TRANSACTIONS, this, modifyCounters = false)
+        val featureWriter = NakshaFeaturesWriter(writeRequest.getCollectionId(), this)
+
         try {
-            val op = xyzBuilder.buildXyzOp(XYZ_OP_UPSERT, txn().toUuid(storageId).toString(), null, null)
-            transactionWriter.writeFeatures(arrayOf(op), arrayOf(transaction.toBytes()), minResult = true)
-            val writeFeaturesResult = featureWriter.writeFeatures(op_arr, feature_arr, flags_arr, geo_arr, tags_arr, minResult)
-            transactionWriter.writeFeatures(arrayOf(op), arrayOf(transaction.toBytes()), minResult = true)
+            saveCurrentTransactionLog()
+            val writeFeaturesResult = featureWriter.writeFeatures(writeRequest)
+            saveCurrentTransactionLog()
             return writeFeaturesResult
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
@@ -628,6 +619,18 @@ FROM ns, txn_seq;"""
             handleFeatureException(e, table, null)
         }
         return table;
+    }
+
+    internal fun saveCurrentTransactionLog() {
+        val transactionWriter = NakshaFeaturesWriter(SC_TRANSACTIONS, this, modifyCounters = false)
+        val transactionWriteReq = NakWriteFeatures()
+        transactionWriteReq.setNoResults(true)
+        val row = NakRow()
+        row.setFeature(transaction.toBytes())
+        val writeOp = NakWriteRow.fromRow(XYZ_OP_UPSERT, row )
+        writeOp.setUuid(txn().toUuid(storageId).toString())
+        transactionWriteReq.setRows(Base.newArray(writeOp))
+        transactionWriter.writeFeatures(transactionWriteReq)
     }
 
     internal fun select(collectionId: String, ids: List<String>): IMap {

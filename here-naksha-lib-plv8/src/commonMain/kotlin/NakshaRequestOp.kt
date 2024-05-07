@@ -1,13 +1,17 @@
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.base.Base
+import com.here.naksha.lib.base.NakWriteFeatures
+import com.here.naksha.lib.base.NakWriteRequest
+import com.here.naksha.lib.base.NakWriteRow
+import com.here.naksha.lib.base.iterator
+import com.here.naksha.lib.base.size
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.nak.Flags
 import com.here.naksha.lib.plv8.Static.DEBUG
 
 internal class NakshaRequestOp(
-        val rawFeature: ByteArray?,
+        val writeRow: NakWriteRow,
         val rowMap: IMap,
-        val xyzOp: XyzOp,
         val collectionId: String,
         val collectionPartitionCount: Int
 ) {
@@ -20,75 +24,58 @@ internal class NakshaRequestOp(
     companion object {
         fun mapToOperations(
                 collectionId: String,
-                op_arr: Array<ByteArray>,
-                feature_arr: Array<ByteArray?>,
-                flags_arr: Array<Int?>,
-                geo_arr: Array<ByteArray?>,
-                tags_arr: Array<ByteArray?>,
+                writeRequest: NakWriteRequest,
                 sql: IPlv8Sql,
                 collectionPartitionCount: Int
         ): NakshaWriteOps {
-            check(op_arr.size == feature_arr.size && op_arr.size == flags_arr.size && op_arr.size == geo_arr.size && op_arr.size == tags_arr.size) {
-                "not all input arrays has same size"
-            }
             var partition: Int = -2
-            val featureReader = JbFeature(JbDictManager())
-            val operations = ArrayList<NakshaRequestOp>(op_arr.size)
-            val idsToModify = ArrayList<String>(op_arr.size)
+            val size = writeRequest.getRows().size()
+            val operations = ArrayList<NakshaRequestOp>(size)
+            val idsToModify = ArrayList<String>(size)
             val idsToPurge = ArrayList<String>()
             val idsToDel = ArrayList<String>()
-            val uniqueIds = HashSet<String>(op_arr.size)
-            var total = 0
-            val opReader = XyzOp()
-            for (i in op_arr.indices) {
-                if (DEBUG) {
-                    val START = Jb.env.currentMicros()
-                    opReader.mapBytes(op_arr[i])
-                    val END = Jb.env.currentMicros()
-                    total += (END - START).toInt()
-                } else {
-                    opReader.mapBytes(op_arr[i])
-                }
+            val uniqueIds = HashSet<String>(size)
+            for (rowOb in writeRequest.getRows()) {
+                val nakWriteOp = Base.assign(rowOb, NakWriteRow.klass)
 
-                val id = if (opReader.id() == null) {
-                    featureReader.mapBytes(feature_arr[i])
-                    featureReader.id() ?: throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", null)
-                } else {
-                    opReader.id()!!
-                }
+                val id = nakWriteOp.getId()
+                        ?: nakWriteOp.getFeature()?.getId()
+                        ?: throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", null)
+
                 if (uniqueIds.contains(id)) {
                     throw NakshaException.forId(ERR_UNIQUE_VIOLATION, "Cannot perform multiple operations on single feature in one transaction", id)
                 } else {
                     uniqueIds.add(id)
                 }
 
-                if (opReader.op() != XYZ_OP_CREATE) {
+                if (nakWriteOp.getOp() != XYZ_OP_CREATE) {
                     idsToModify.add(id)
-                    if (opReader.op() == XYZ_OP_PURGE) {
+                    if (nakWriteOp.getOp() == XYZ_OP_PURGE) {
                         idsToPurge.add(id)
-                    } else if (opReader.op() == XYZ_OP_DELETE) {
+                    } else if (nakWriteOp.getOp() == XYZ_OP_DELETE) {
                         idsToDel.add(id)
                     }
                 }
                 val row = newMap()
                 row[COL_ID] = id
-                row[COL_TAGS] = tags_arr[i]
-                row[COL_GEOMETRY] = geo_arr[i]
-                val flags = Flags(flags_arr[i])
-                row[COL_FEATURE] = if (sql.info().gzipSupported && feature_arr[i] != null) {
+                row[COL_TAGS] = nakWriteOp.getRow()?.getTags()?.getByteArray()
+                row[COL_GEOMETRY] = nakWriteOp.getRow()?.getGeo()?.getByteArray()
+                val flags = nakWriteOp.getFlagsObject()
+                val featureBytes = nakWriteOp.getRow()?.getFeature()?.getByteArray()
+                row[COL_FEATURE] = if (sql.info().gzipSupported && featureBytes != null) {
                     flags.forceGzipOnFeatureEncoding()
-                    sql.gzipCompress(feature_arr[i]!!)
+                    sql.gzipCompress(featureBytes)
                 } else {
                     flags.turnOffGzipOnFeatureEncoding()
-                    feature_arr[i]
+                    featureBytes
                 }
                 row[COL_FLAGS] = flags.toCombinedFlags()
-                if (opReader.grid() != null) {
+                if (nakWriteOp.getGrid() != null) {
                     // we don't want it to be null, as null would override calculated value later in response
-                    row[COL_GEO_GRID] = opReader.grid()
+                    row[COL_GEO_GRID] = nakWriteOp.getGrid()
                 }
 
-                val op = NakshaRequestOp(feature_arr[i], row, xyzOp = opReader, collectionId = collectionId, collectionPartitionCount)
+                val op = NakshaRequestOp(nakWriteOp, row, collectionId = collectionId, collectionPartitionCount)
                 operations.add(op)
                 if (partition == -2) {
                     partition = op.partition
@@ -97,7 +84,6 @@ internal class NakshaRequestOp(
                 }
             }
 
-            if (DEBUG) println("opReader.mapBytes(op_arr[i]) took ${total / 1000}ms")
             return NakshaWriteOps(collectionId, operations.sortedBy { it.key }, idsToModify, idsToPurge, idsToDel, if (partition >= 0) partition else null)
         }
     }

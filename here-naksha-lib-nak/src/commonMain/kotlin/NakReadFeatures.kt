@@ -18,14 +18,19 @@ class NakReadFeatures(vararg args: Any?) : NakReadRequest(*args) {
 
         @JvmStatic
         val COLLECTION_IDS = Base.intern("collectionIds")
+
         @JvmStatic
         val QUERY_DELETED = Base.intern("queryDeleted")
+
         @JvmStatic
         val QUERY_HISTORY = Base.intern("queryHistory")
+
         @JvmStatic
         val LIMIT_VERSIONS = Base.intern("limitVersions")
+
         @JvmStatic
         val RETURN_HANDLE = Base.intern("returnHandle")
+
         @JvmStatic
         val ORDER_BY = Base.intern("orderBy")
     }
@@ -50,8 +55,7 @@ class NakReadFeatures(vararg args: Any?) : NakReadRequest(*args) {
 
     fun setOrderBy(value: String?) = set(ORDER_BY, value)
 
-    fun setCollectionIds(values: BaseList<String>) = set(COLLECTION_IDS, values)
+    fun setCollectionIds(values: PArray) = set(COLLECTION_IDS, values)
 
-    @Suppress("UNCHECKED_CAST")
-    fun getCollectionIds(): BaseList<String> = toElement(get(COLLECTION_IDS), BaseList.klass, BaseList())!! as BaseList<String>
+    fun getCollectionIds(): PArray = toElement(get(COLLECTION_IDS), Klass.arrayKlass, Klass.arrayKlass.newInstance())!!
 }

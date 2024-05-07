@@ -153,7 +153,7 @@ abstract class Klass<out T> {
 
             override fun isInstance(o: Any?): Boolean = isArray(o)
 
-            override fun newInstance(vararg args: Any?): PArray = newArray(args)
+            override fun newInstance(vararg args: Any?): PArray = newArray(*args)
         }
 
         /**

@@ -29,6 +29,7 @@ inline fun PObject.delete(key: Symbol): Any? = Base.delete(this, key)
 inline fun PArray.delete(key: Int): Any? = Base.delete(this, key)
 inline fun PArray.delete(key: String): Any? = Base.delete(this, key)
 inline fun PArray.delete(key: Symbol): Any? = Base.delete(this, key)
+inline fun PArray.size():Int = Base.length(this)
 
 inline fun symbol(key: String): Symbol = Base.symbol(key)
 
