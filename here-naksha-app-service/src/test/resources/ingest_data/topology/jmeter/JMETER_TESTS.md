@@ -226,6 +226,45 @@ Parameters explanation:
   etc)
 - output file: summary of execution (avg time per thread etc)
 
+### Working with helper script
+
+There's a small bash script: [test_naksha.sh](./test_naksha.sh) which aims to ease the process of the jmeter load testing.\
+Please have in mind that this was just a local tool tailored for specific environment, treat it as such.\
+
+What it does:
+1) Triggers jmeter scenario
+2) Stores the output and summary in dedicated run-directory
+3) Dumps the logs of the app in dedicated run-directory
+4) Dumps the logs of the psql in dedicated run-directory
+
+Args:
+- `c`: concurrency, mapped to `Jthreads`, required
+- `t`: timout, mapped to `JTimeout`, required
+- `r`: ramp up, mapped to `JrampUp`, optional, 2 by default
+- `l`: loop count, mapped to `JloopCount`, optional, 20 by default
+
+This was written because I had to run different configuration multiple and compare the runs against each other from different angles.\
+
+There are some fixed values references that this script expects (this can be extracted to script arguments):
+1) The jmeter script: `naksha_local_load.jmx`
+2) The name of naksha-app container: `naksha-app`
+3) The name of naksha-psql container: `naksha-psql`
+
+Mind the fact that for long running tests, output logs might get heavy ;)
+
+Sample usage:
+```shell
+./test_naksha.sh -c 180 -t 1000 -l 10
+```
+This would 
+* run jmeter with 180 threads, each performing 10 requests, each request with 1000ms socket timeout
+* store all of the output files in `c=180-t=1000-r=2-l=10-{date}` directory:
+    * `output`: file with jmeter execution summary
+    * `results.csv`: files with individual execution summary
+    * `naksha-app.logs`: application logs gathered during jmeter execution
+    * `naksha-psql.logs`: db logs gathered during jmeter execution
+
+
 ### Helper scratchpad
 
 Verify distinct features loaded:
@@ -253,11 +292,6 @@ more detailed view on opened connections:
 SELECT * FROM pg_stat_activity;
 ```
 
-Script for generating helper files
-```shell
-
-```
-
 Analyzing `output` file:
 ```shell
 grep "summary =" output | sed 's/ Avg:/\nAvg:/g; s/ Min:/\nMin:/g; s/ Max:/\nMax:/g; s/ Err:/\nErr:/g' | tr -s ' '
@@ -277,9 +311,3 @@ How many socket timeout related errors:
 ```shell
 grep "Caused by: java.net.SocketTimeoutException" naksha-app.logs | wc -l
 ```
-
-Running postgres interactively (useful when config changes a lot):
-```shell
-
-```
-
