@@ -59,17 +59,8 @@ val google_protobuf = "com.google.protobuf:protobuf-java:3.16.3"
 val google_guava = "com.google.guava:guava:31.1-jre"
 val google_tink = "com.google.crypto.tink:tink:1.5.0"
 
-val aws_core = "com.amazonaws:aws-java-sdk-core:1.12.472"
-val aws_s3 = "com.amazonaws:aws-java-sdk-s3:1.12.470"
-val aws_sts = "com.amazonaws:aws-java-sdk-sts:1.12.471"
-val aws_dynamodb = "com.amazonaws:aws-java-sdk-dynamodb:1.12.472"
-val aws_sns = "com.amazonaws:aws-java-sdk-sns:1.12.472"
-val aws_kms = "com.amazonaws:aws-java-sdk-kms:1.12.429"
-val aws_cloudwatch = "com.amazonaws:aws-java-sdk-cloudwatch:1.12.472"
-val aws_lambda = "com.amazonaws:aws-java-sdk-lambda:1.12.472"
-val aws_lambda_core = "com.amazonaws:aws-lambda-java-core:1.2.2"
-val aws_lambda_log4j = "com.amazonaws:aws-lambda-java-log4j2:1.5.1"
-val amazon_sns = "software.amazon.awssdk:sns:2.20.69"
+val aws_bom = "software.amazon.awssdk:bom:2.25.19"
+val aws_s3="software.amazon.awssdk:s3"
 
 val jts_core = "org.locationtech.jts:jts-core:1.19.0"
 val jts_io = "org.locationtech.jts:jts-io:1.19.0"
@@ -82,6 +73,8 @@ val spatial4j = "com.spatial4j:spatial4j:0.5"
 
 val slf4j_api = "org.slf4j:slf4j-api:2.0.6"
 val slf4j_console = "org.slf4j:slf4j-simple:2.0.6";
+val jcl_slf4j = "org.slf4j:jcl-over-slf4j:2.0.12"
+
 
 val log4j_core = "org.apache.logging.log4j:log4j-core:2.20.0"
 val log4j_api = "org.apache.logging.log4j:log4j-api:2.20.0"
@@ -114,6 +107,8 @@ val json_assert = "org.skyscreamer:jsonassert:1.5.1"
 val resillience4j_retry = "io.github.resilience4j:resilience4j-retry:2.0.0"
 
 val otel = "io.opentelemetry:opentelemetry-api:1.28.0"
+
+val cytodynamics = "com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
 
 val mavenUrl = getRequiredPropertyFromRootProject("mavenUrl")
 val mavenUser = getRequiredPropertyFromRootProject("mavenUser")
@@ -259,6 +254,7 @@ subprojects {
                 strictly("1.33")
             }
         }
+        implementation(platform(aws_bom))
     }
 
     // Shared dependencies.
@@ -444,36 +440,6 @@ project(":here-naksha-handler-http") {
 }
 */
 
-/*
-project(":here-naksha-handler-psql") {
-    description = "Naksha PostgresQL Handler"
-    dependencies {
-        implementation(project(":here-naksha-lib-core"))
-        implementation(project(":here-naksha-lib-psql"))
-
-        implementation(commons_lang3)
-        implementation(commons_dbutils)
-        implementation(jts_core)
-        implementation(aws_kms)
-        implementation(mchange_commons)
-        implementation(mchange_c3p0)
-        implementation(postgres)
-        //implementation(zaxxer_hikari)
-        implementation(google_tink)
-        implementation(google_protobuf)
-        implementation(vertx_core)
-
-        testImplementation(jayway_jsonpath)
-    }
-
-    tasks {
-        test {
-            enabled = false
-        }
-    }
-}
-*/
-
 configurations.implementation {
     exclude(module = "commons-logging")
 }
@@ -497,18 +463,32 @@ project(":here-naksha-lib-handlers") {
     }
 }
 
+project(":here-naksha-lib-ext-manager") {
+    description = "Naksha Extension Manager Library"
+    dependencies {
+        api(project(":here-naksha-lib-core"))
+
+        implementation(aws_s3)
+        implementation(jcl_slf4j)
+        implementation(cytodynamics)
+        testImplementation(mockito)
+    }
+    setOverallCoverage(0.0) // only increasing allowed!
+}
+
 //try {
 project(":here-naksha-lib-hub") {
     description = "NakshaHub library"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
-        //implementation(project(":here-naksha-lib-extension"))
         implementation(project(":here-naksha-lib-handlers"))
+        implementation(project(":here-naksha-lib-ext-manager"))
 
         implementation(commons_lang3)
         implementation(jts_core)
         implementation(postgres)
+        implementation(aws_s3)
 
         testImplementation(json_assert)
         testImplementation(mockito)
@@ -518,6 +498,7 @@ project(":here-naksha-lib-hub") {
 //} catch (ignore: UnknownProjectException) {
 //}
 
+
 //try {
 project(":here-naksha-app-service") {
     description = "Naksha Service"
@@ -526,7 +507,6 @@ project(":here-naksha-app-service") {
         implementation(project(":here-naksha-lib-psql"))
         implementation(project(":here-naksha-storage-http"))
         //implementation(project(":here-naksha-lib-extension"))
-        //implementation(project(":here-naksha-handler-psql"))
         implementation(project(":here-naksha-lib-hub"))
         implementation(project(":here-naksha-common-http"))
 
@@ -555,34 +535,54 @@ project(":here-naksha-app-service") {
 //} catch (ignore: UnknownProjectException) {
 //}
 
-// Ensure that libraries published to artifactory, while the application generates a shadow-jar.
 subprojects {
-    if (project.name.contains("here-naksha-lib-")) {
-        // This is library, publish to maven artifactory
-        apply(plugin = "maven-publish")
-        publishing {
-            repositories {
-                maven {
-                    url = URI(mavenUrl)
-                    credentials.username = mavenUser
-                    credentials.password = mavenPassword
-                }
+    apply(plugin = "maven-publish")
+    publishing {
+        repositories {
+            maven {
+                url = URI(mavenUrl)
+                credentials.username = mavenUser
+                credentials.password = mavenPassword
+            }
+        }
+
+        publications {
+            create<MavenPublication>("maven") {
+                groupId = project.group.toString()
+                artifactId = project.name
+                version = project.version.toString()
+                from(components["java"])
             }
 
-            publications {
-                create<MavenPublication>("maven") {
-                    groupId = project.group.toString()
-                    artifactId = project.name
-                    version = project.version.toString()
-                    from(components["java"])
-                }
-
-                artifacts {
-                    file("build/libs/${project.name}-${project.version}.jar")
-                    file("build/libs/${project.name}-${project.version}-javadoc.jar")
-                    file("build/libs/${project.name}-${project.version}-sources.jar")
-                }
+            artifacts {
+                file("build/libs/${project.name}-${project.version}.jar")
+                file("build/libs/${project.name}-${project.version}-javadoc.jar")
+                file("build/libs/${project.name}-${project.version}-sources.jar")
             }
+        }
+    }
+}
+// For publishing root project (including shaded jar)
+publishing {
+    repositories {
+        maven {
+            url = URI(mavenUrl)
+            credentials.username = mavenUser
+            credentials.password = mavenPassword
+        }
+    }
+
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+            from(components["java"])
+        }
+
+        artifacts {
+            file("build/libs/${project.name}-${project.version}.jar")
+            file("build/libs/${project.name}-${project.version}-all.jar")
         }
     }
 }

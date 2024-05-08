@@ -13,7 +13,7 @@ servers:
 info:
   title: "Naskha Hub-API"
   description: "Naksha Hub-API is a REST API to provide simple access to geo data."
-  version: "2.0.15"
+  version: "2.0.16"
 
 security:
   - AccessToken: [ ]
@@ -1023,6 +1023,7 @@ components:
         type: array
         items:
           type: string
+        maxItems: 10000000
     Clip:
       name: clip
       in: query
@@ -1117,19 +1118,17 @@ components:
       description: >
         Additional feature filters which compare the feature's property value with the one
         specified in the query, resulting in a subset of features.
-
-
+        
+        
         The usage of multiple property names represents an AND operation.
         The usage of a comma (,) separating the properties values, represents
         an OR operation.
-
-
-        Properties initiated with 'f.' are used to access values which are added by default in the
-        stored feature. The possible values are: 'f.id', 'f.createdAt' and 'f.updatedAt'.
-
-
-        Properties initiated with 'p.' are used to access values in the stored feature which are
-        under the 'properties' property. Use it as a shorthand accessor for 'properties' values.
+        
+        
+        Properties starting with **'p.'** is expanded internally as **'properties.'** , for example 'p.speedLimit', 'p.taskType'
+        
+        
+        Properties starting with **'f.'** is expanded internally as **'properties.@ns:com:here:xyz.'** , for example 'f.createdAt', 'f.updatedAt', except the **'f.id'** (which is translated to root level 'id' property)
 
 
         The format should follow the specification below
@@ -1174,16 +1173,29 @@ components:
     PropertiesSelection:
       name: selection
       in: query
-      description: |
+      description: >
         A list of properties to be returned in the features result list. Multiple attributes can be
-        specified by using comma(,).
+        specified by using comma(,). Attributes which are not available, will be silently skipped (without raising any error).
+        
+        
+          * properties starting with **'p.'** is expanded internally as **'properties.'** , for example 'p.speedLimit', 'p.taskType'
+          * properties starting with **'f.'** is expanded internally as **'properties.@ns:com:here:xyz.'** , for example 'f.createdAt', 'f.updatedAt', except the 'f.id' (which is translated to root level 'id' property)
+          * properties starting with **'g.'** is expanded internally as **'geometry.'** , for example 'g.type', 'g.coordinates'
+        
+        
+        Entire **geometry** object is returned (by default), UNLESS it is partially requested (in that case, only the selected part will be returned).
 
-        Example: ?selection=p.name,p.capacity,p.color,rootPropertyName
+
+        **NOTE** - Be aware that selecting limited fields, can result into logically invalid representation of Feature object.
+
+
+        Example: ?selection=p.name,p.capacity,f.createdAt,rootPropertyName
       explode: false
       schema:
         type: array
         items:
           type: string
+        maxItems: 10000000
     Radius:
       name: radius
       in: query
@@ -1219,6 +1231,7 @@ components:
         type: array
         items:
           type: string
+        maxItems: 10000000
     RequiredIds:
       name: id
       in: query
@@ -1232,6 +1245,7 @@ components:
         type: array
         items:
           type: string
+        maxItems: 10000000
     South:
       name: south
       in: query
@@ -1281,6 +1295,7 @@ components:
         type: array
         items:
           type: string
+        maxItems: 10000000
     TileId:
       name: tileId
       in: path
@@ -1416,7 +1431,7 @@ components:
                 id: "custom_collection_id"
                 type: "NakshaCollection"
                 maxAge: 0
-                history: true
+                disableHistory: false
                 autoPurge: false
               autoCreateCollection: true
               autoDeleteCollection: true
@@ -1440,7 +1455,7 @@ components:
                     id: "um-mod-dev:topology"
                     type: "NakshaCollection"
                     maxAge: 0
-                    history: true
+                    disableHistory: false
                     autoPurge: false
   responses:
     EmptyResponse:
@@ -1712,9 +1727,10 @@ components:
       content:
         application/json:
           schema:
+            type: array
             items:
               $ref: '#/components/schemas/Storage'
-            type: array
+            maxItems: 10000000
           examples:
             response:
               value:
@@ -1742,7 +1758,7 @@ components:
                 id: "custom_collection_id"
                 type: "NakshaCollection"
                 maxAge: 0
-                history: true
+                disableHistory: false
                 autoPurge: false
               autoCreateCollection: true
               autoDeleteCollection: true
@@ -1751,9 +1767,10 @@ components:
       content:
         application/json:
           schema:
+            type: array
             items:
               $ref: '#/components/schemas/EventHandler'
-            type: array
+            maxItems: 10000000
           examples:
             response:
               value:
@@ -1769,7 +1786,7 @@ components:
                     id: "custom_collection_id"
                     type: "NakshaCollection"
                     maxAge: 0
-                    history: true
+                    disableHistory: false
                     autoPurge: false
                   autoCreateCollection: true
                   autoDeleteCollection: true
@@ -1793,16 +1810,17 @@ components:
                     id: "um-mod-dev:topology"
                     type: "NakshaCollection"
                     maxAge: 0
-                    history: true
+                    disableHistory: false
                     autoPurge: false
     SpacesResponse:
       description: The list of spaces.
       content:
         application/json:
           schema:
+            type: array
             items:
               $ref: '#/components/schemas/Space'
-            type: array
+            maxItems: 10000000
           examples:
             response:
               value:
@@ -1817,7 +1835,7 @@ components:
                       id: "um-mod-dev:topology"
                       type: "NakshaCollection"
                       maxAge: 0
-                      history: true
+                      disableHistory: false
                       autoPurge: false
   schemas:
     Error:
@@ -1916,6 +1934,7 @@ components:
               description: Features included in the collection.
               items:
                 $ref: '#/components/schemas/Feature'
+              maxItems: 10000000
     FeatureCollectionIterable:
       description: A FeatureCollection GeoJSON object, with handle to support iterate operation.
       allOf:
@@ -1935,16 +1954,19 @@ components:
               description: List of inserted feature IDs.
               items:
                 type: string
+              maxItems: 10000000
             updated:
               type: array
               description: List of updated features IDs.
               items:
                 type: string
+              maxItems: 10000000
             deleted:
               type: array
               description: List of deleted features IDs.
               items:
                 type: string
+              maxItems: 10000000
             violations:
               type: array
               description: >-
@@ -1952,6 +1974,7 @@ components:
                 This part is applicable in response ONLY when violations are found on calling validation handler driven API endpoint.
               items:
                 $ref: '#/components/schemas/Feature'
+              maxItems: 10000000
     LineString:
       allOf:
         - $ref: '#/components/schemas/Geometry'
@@ -1967,6 +1990,7 @@ components:
                 maxItems: 3
                 minItems: 2
               minItems: 2
+              maxItems: 10000000
     MultiLineString:
       allOf:
         - $ref: '#/components/schemas/Geometry'
@@ -1984,6 +2008,8 @@ components:
                   maxItems: 3
                   minItems: 2
                 minItems: 2
+                maxItems: 10000000
+              maxItems: 10000000
     MultiPoint:
       allOf:
         - $ref: '#/components/schemas/Geometry'
@@ -1998,6 +2024,7 @@ components:
                   type: number
                 maxItems: 3
                 minItems: 2
+              maxItems: 10000000
     MultiPolygon:
       allOf:
         - $ref: '#/components/schemas/Geometry'
@@ -2017,6 +2044,9 @@ components:
                     maxItems: 3
                     minItems: 2
                   minItems: 4
+                  maxItems: 10000000
+                maxItems: 10000000
+              maxItems: 10000000
     Nullable:
       type: object
       nullable: true
@@ -2049,6 +2079,8 @@ components:
                   maxItems: 3
                   minItems: 2
                 minItems: 4
+                maxItems: 10000000
+              maxItems: 10000000
     Storage:
       type: object
       description: A physical storage to perform read/write interaction with collections.
@@ -2086,6 +2118,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PsqlInstanceConfig'
+          maxItems: 100
         appName:
           description: >-
             The application name to be used when connecting to the database.
@@ -2152,7 +2185,7 @@ components:
             id: "custom_collection_id"
             type: "NakshaCollection"
             maxAge: 0
-            history: true
+            disableHistory: false
             autoPurge: false
           autoCreateCollection: true
           autoDeleteCollection: true
@@ -2179,6 +2212,7 @@ components:
           type: array
           items:
             type: string
+          maxItems: 100
         properties:
           $ref: '#/components/schemas/SpaceProperties'
     SpaceProperties:
@@ -2226,8 +2260,8 @@ components:
         maxAge:
           description: The maximum age of the history entries in days. Zero means no history.
           type: number
-        history:
-          description: Toggle if the history is enabled.
+        disableHistory:
+          description: Toggle if the history is disabled.
           type: boolean
         deletedAt:
           description: A value greater than zero implies that the collection shall be treated as deleted and represents the UTC Epoch timestamp in
@@ -2248,6 +2282,7 @@ components:
           items:
             type: string
           type: array
+          maxItems: 10000000
         createdAt:
           description: >-
             The UNIX Epoch time of when this feature has been created (in

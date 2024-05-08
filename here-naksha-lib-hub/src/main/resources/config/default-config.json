@@ -4,9 +4,12 @@
 
   "httpPort": 8080,
   "env": "local",
+  "requestBodyLimit": 25,
+  "authMode": "JWT",
   "jwtName": "jwt",
   "maintenanceInitialDelayInMins": 60,
   "maintenanceIntervalInMins": 720,
   "maintenancePoolCoreSize": 5,
-  "maintenancePoolMaxSize": 20
+  "maintenancePoolMaxSize": 20,
+  "extensionConfigParams": null
 }

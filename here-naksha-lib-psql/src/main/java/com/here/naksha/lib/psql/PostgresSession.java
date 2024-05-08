@@ -462,9 +462,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       if (props_where.length() > 0) {
         query.add(props_where);
       }
-      if (limit != null) {
-        query.add(" LIMIT ").add(limit);
-      }
+    }
+    if (limit != null) {
+      query.add(" LIMIT ").add(limit);
     }
     query.add(")");
     return query;
@@ -534,7 +534,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       final String props_where = sql.toString();
       sql.setLength(0);
       for (final String collection : collections) {
-        SQL headQuery = prepareQuery(collection, spatial_where, props_where, readFeatures.limit);
+        SQL headQuery = prepareQuery(collection, spatial_where, props_where, readFeatures.getLimit());
         sql.add(headQuery);
         if (readFeatures.isReturnAllVersions()) {
           sql.add(" UNION ALL ");
@@ -579,7 +579,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     if (propertyOp != null) {
       addPropertyQuery(hst_props_where, propertyOp, parametersHst, true);
     }
-    return prepareQuery(historyCollection, spatial_where, hst_props_where.toString(), readFeatures.limit);
+    return prepareQuery(historyCollection, spatial_where, hst_props_where.toString(), readFeatures.getLimit());
   }
 
   @NotNull
