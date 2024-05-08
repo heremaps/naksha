@@ -492,9 +492,7 @@ FROM ns, txn_seq;"""
         }
     }
 
-    fun writeCollections(
-            writeRequest: NakWriteCollections
-    ): ITable {
+    fun writeCollections(writeRequest: NakWriteCollections): ITable {
         val table = sql.newTable()
         val writer = NakshaFeaturesWriter(NKC_TABLE, this)
         try {
@@ -628,7 +626,7 @@ FROM ns, txn_seq;"""
         val row = NakRow()
         row.setFeature(transaction.toBytes())
         val writeOp = NakWriteRow.fromRow(XYZ_OP_UPSERT, row )
-        writeOp.setUuid(txn().toUuid(storageId).toString())
+        writeOp.setId(txn().toUuid(storageId).toString())
         transactionWriteReq.setRows(Base.newArray(writeOp))
         transactionWriter.writeFeatures(transactionWriteReq)
     }

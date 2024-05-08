@@ -1,3 +1,6 @@
+import com.here.naksha.lib.base.Base
+import com.here.naksha.lib.base.NakWriteRow
+import com.here.naksha.lib.base.iterator
 import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
 import com.here.naksha.lib.jbon.SQL_INT16
@@ -9,7 +12,6 @@ import com.here.naksha.lib.jbon.XYZ_OP_DELETE
 import com.here.naksha.lib.jbon.XYZ_OP_PURGE
 import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
 import com.here.naksha.lib.jbon.XyzBuilder
-import com.here.naksha.lib.jbon.XyzOp
 import com.here.naksha.lib.jbon.asMap
 import com.here.naksha.lib.jbon.get
 import com.here.naksha.lib.jbon.getAny
@@ -23,6 +25,9 @@ import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.RET_ERR_MSG
 import com.here.naksha.lib.plv8.RET_ERR_NO
 import com.here.naksha.lib.plv8.RET_OP
+import com.here.naksha.lib.plv8.ReqHelper.prepareCollectionReq
+import com.here.naksha.lib.plv8.ReqHelper.prepareFeatureReqForOperations
+import com.here.naksha.lib.plv8.ReqHelper.prepareOperation
 import com.here.naksha.lib.plv8.Static
 import com.here.naksha.lib.plv8.Static.PARTITION_ID
 import com.here.naksha.lib.plv8.Static.SC_CONSISTENT
@@ -143,16 +148,14 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         val session = NakshaSession.get()
         val builder = XyzBuilder.create(65536)
 
-        var op = builder.buildXyzOp(XYZ_OP_DELETE, "v2_perf_test", null, GRID)
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
-        var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
+        var result = session.writeCollections(prepareCollectionReq(XYZ_OP_DELETE, "v2_perf_test", feature))
         var table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
-        op = builder.buildXyzOp(XYZ_OP_CREATE, "v2_perf_test", null, GRID)
         feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
-        result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(GEO_TYPE_NULL), arrayOf(null), arrayOf(null))
+        result = session.writeCollections(prepareCollectionReq(XYZ_OP_CREATE, "v2_perf_test", feature))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_CREATED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
@@ -250,19 +253,17 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
     private var featureBytes: ByteArray? = null
 
-    private fun createBulkFeature(): BulkFeature {
+    private fun createBulkFeature(): NakWriteRow {
         val id = env.randomString(12)
         val topology = if (UseSmallFeatures) getSmallTopologyFeature() else getTopologyFeature()
         topology["id"] = id
-        val partId = Static.partitionNumber(id, PARTITION_COUNT)
-        val op = xyzBuilder.buildXyzOp(XYZ_OP_CREATE, id, null, GRID)
         var featureBytes = this.featureBytes
         if (featureBytes == null) {
             featureBytes = xyzBuilder.buildFeatureFromMap(topology)
             this.featureBytes = featureBytes
             println("---------- Create feature of size ${featureBytes.size} -----------")
         }
-        return BulkFeature(id, partId, op, featureBytes)
+        return prepareOperation(XYZ_OP_CREATE, featureId = id, featureBytes = featureBytes)
     }
 
     @Order(3)
@@ -273,7 +274,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         createCollection(tableName, partitionCount = PARTITION_COUNT, disableHistory = true, storageClass = SC_CONSISTENT)
 
         // Run for bulk threads in virtual partitions.
-        val featuresByVp = Array<ArrayList<BulkFeature>>(BulkLoadThreads) { ArrayList() }
+        val featuresByVp = Array<ArrayList<NakWriteRow>>(BulkLoadThreads) { ArrayList() }
         val partNameByVp = Array<String?>(BulkLoadThreads) { null }
         val featuresDoneByVp = AtomicReferenceArray<Boolean>(BulkLoadThreads)
         var i = 0
@@ -281,12 +282,11 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
             val f = createBulkFeature()
 
             // Verify physical partition
-            val p = f.partId
+            val p = Static.partitionNumber(f.getId()!!, PARTITION_COUNT)
             check(p in 0..<PARTITION_COUNT)
-            check(p == Static.partitionNumber(f.id, PARTITION_COUNT))
 
             // Assign to virtual partition.
-            val vp = Static.partitionIndex(f.id, BulkLoadThreads)
+            val vp = Static.partitionIndex(f.getId()!!, BulkLoadThreads)
             check(vp in 0..<BulkLoadThreads)
             partNameByVp[vp] = PARTITION_ID[p]
             featuresDoneByVp.setRelease(vp, false)
@@ -325,22 +325,9 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
                         threadSession.sql.execute("SET LOCAL session_replication_role = replica;")
                         if (featuresDoneByVp.compareAndSet(vp, false, true)) {
                             val features = featuresByVp[vp]
-                            var j = 0
                             try {
-                                val opArr = ArrayList<ByteArray>(features.size)
-                                val fArr = ArrayList<ByteArray?>(features.size)
-                                val flagsArr = ArrayList<Int>(features.size)
-                                val geoArr = ArrayList<ByteArray?>(features.size)
-                                val tagsArr = ArrayList<ByteArray?>(features.size)
-                                while (j < features.size) {
-                                    val f = features[j++]
-                                    opArr.add(f.op)
-                                    fArr.add(f.feature)
-                                    geoArr.add(f.geometry)
-                                    tagsArr.add(f.tags)
-                                    flagsArr.add(f.flags)
-                                }
-                                val result = threadSession.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), flagsArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+                                val writeReq = prepareFeatureReqForOperations(tableName, *features.toTypedArray())
+                                val result = threadSession.writeFeatures(writeReq)
                                 if (result is JvmPlv8Table && result.rows.size > 0) {
                                     val err = result.rows[0]
                                     println("Error: ${err.getAny(RET_ERR_NO) as String} - ${err.getAny(RET_ERR_MSG) as String}")
@@ -379,24 +366,17 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         // We only run with a single thread!
         var i = 0
-        val opArr = ArrayList<ByteArray>(BulkWriteSize)
-        val fArr = ArrayList<ByteArray?>(BulkWriteSize)
-        val flagsArr = ArrayList<Int>(BulkWriteSize)
-        val geoArr = ArrayList<ByteArray?>(BulkWriteSize)
-        val tagsArr = ArrayList<ByteArray?>(BulkWriteSize)
+        val features = mutableListOf<NakWriteRow>()
 
         // insert features
         while (i < BulkWriteSize) {
             val f = createBulkFeature()
-            opArr.add(f.op)
-            fArr.add(f.feature)
-            geoArr.add(f.geometry)
-            tagsArr.add(f.tags)
-            flagsArr.add(f.flags)
+            features.add(f)
             i++
         }
         val insertsStart = currentMicros()
-        val insertResult = session.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), flagsArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray())
+        val writeReq = prepareFeatureReqForOperations(tableName, *features.toTypedArray())
+        val insertResult = session.writeFeatures(writeReq)
         assertTrue(session.sql.rows(insertResult).isNullOrEmpty())
         session.sql.execute("commit")
         val insertEnd = currentMicros()
@@ -407,14 +387,13 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         // update features
         var updateCount = 0
-        for (o in opArr.withIndex()) {
-            val xyzOp = XyzOp().mapBytes(o.value)
-            opArr[o.index] = XyzBuilder().buildXyzOp(XYZ_OP_UPDATE, xyzOp.id(), xyzOp.uuid(), xyzOp.grid())
+        for (o in writeReq.getRows()) {
+            Base.assign(o.value!!, NakWriteRow.klass).setOp(XYZ_OP_UPDATE)
             updateCount++
         }
         val updateStart = currentMicros()
-        val rowsUpdated = session.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), flagsArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
-        assertEquals(0, rowsUpdated.rows.size)
+        val rowsUpdated = session.writeFeatures(writeReq) as JvmPlv8Table
+        assertEquals(BulkWriteSize, rowsUpdated.rows.size)
         session.sql.execute("commit")
         val updateEnd = currentMicros()
         session.clear()
@@ -424,14 +403,13 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         // delete features
         var deleteCount = 0
-        for (o in opArr.withIndex()) {
-            val xyzOp = XyzOp().mapBytes(o.value)
-            opArr[o.index] = XyzBuilder().buildXyzOp(XYZ_OP_DELETE, xyzOp.id(), xyzOp.uuid(), xyzOp.grid())
+        for (o in writeReq.getRows()) {
+            Base.assign(o.value!!, NakWriteRow.klass).setOp(XYZ_OP_DELETE)
             deleteCount++
         }
         val delStart = currentMicros()
-        val rowsDeleted = session.writeFeatures(tableName, opArr.toTypedArray(), fArr.toTypedArray(), flagsArr.toTypedArray(), geoArr.toTypedArray(), tagsArr.toTypedArray()) as JvmPlv8Table
-        assertEquals(0, rowsDeleted.rows.size)
+        val rowsDeleted = session.writeFeatures(writeReq) as JvmPlv8Table
+        assertEquals(BulkWriteSize, rowsDeleted.rows.size)
         session.sql.execute("commit")
         val delEnd = currentMicros()
         session.clear()
@@ -446,25 +424,22 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         // executed after bulkInsertFeatures
         val tableName = "v2_bulk_write"
         val f = createBulkFeature()
-        val opArr: Array<ByteArray> = arrayOf(f.op)
-        val fArr: Array<ByteArray?> = arrayOf(f.feature)
-        val flagsArr: Array<Int?> = arrayOf(f.flags)
-        val geoArr: Array<ByteArray?> = arrayOf(f.geometry)
-        val tagsArr: Array<ByteArray?> = arrayOf(f.tags)
 
         // insert features
-        val insertResult = session.writeFeatures(tableName, opArr, fArr, flagsArr, geoArr, tagsArr)
+        val writeReq = prepareFeatureReqForOperations(tableName, f)
+        val insertResult = session.writeFeatures(writeReq)
         assertTrue(session.sql.rows(insertResult).isNullOrEmpty())
         session.sql.execute("commit")
         session.clear()
 
 
         val operationWithInvalidUuidToCheck: (Int) -> Unit = { operation ->
-            for (o in opArr.withIndex()) {
-                val xyzOp = XyzOp().mapBytes(o.value)
-                opArr[o.index] = XyzBuilder().buildXyzOp(operation, xyzOp.id(), "invalid:uid:2024:1:1:1:1", xyzOp.grid())
+            for (o in writeReq.getRows()) {
+                val op = Base.assign(o.value!!, NakWriteRow.klass)
+                op.setOp(operation)
+                op.setUuid("invalid:uid:2024:1:1:1:1")
             }
-            val operationResult = session.writeFeatures(tableName, opArr, fArr, flagsArr, geoArr, tagsArr) as JvmPlv8Table
+            val operationResult =  session.writeFeatures(writeReq) as JvmPlv8Table
             val cols = asMap(operationResult.rows[0])
             assertEquals("ERROR", cols[RET_OP])
             assertEquals(ERR_CHECK_VIOLATION, cols[RET_ERR_NO])
@@ -482,17 +457,15 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
     private fun createCollection(tableName: String, partitionCount: Int, disableHistory: Boolean, storageClass: String?=null) {
         val builder = XyzBuilder.create(65536)
-        var op = builder.buildXyzOp(XYZ_OP_DELETE, tableName, null, GRID)
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
-        var result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(null), arrayOf(null), arrayOf(null))
+        var result = session.writeCollections(prepareCollectionReq(XYZ_OP_DELETE, tableName, feature))
         var table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
-        op = builder.buildXyzOp(XYZ_OP_CREATE, tableName, null, GRID)
         val sc = if (storageClass==null) "null" else "\"$storageClass\""
         feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partitionCount":$partitionCount,"disableHistory":$disableHistory,"storageClass":$sc}""")))
-        result = session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(null), arrayOf(null), arrayOf(null))
+        result = session.writeCollections(prepareCollectionReq(XYZ_OP_CREATE, tableName, feature))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_CREATED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }

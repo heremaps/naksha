@@ -30,6 +30,8 @@ import com.here.naksha.lib.plv8.NakshaCollection
 import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.PARTITION_COUNT_NONE
 import com.here.naksha.lib.plv8.PgTrigger
+import com.here.naksha.lib.plv8.ReqHelper
+import com.here.naksha.lib.plv8.ReqHelper.prepareCollectionReqCreate
 import com.here.naksha.lib.plv8.Static
 import com.here.naksha.lib.plv8.TG_LEVEL_ROW
 import com.here.naksha.lib.plv8.TG_OP_INSERT
@@ -231,11 +233,8 @@ class Plv8Test : JbTest() {
         builder.startTags()
         builder.writeTag("age:=23")
         builder.writeTag("featureType=NakshaCollection")
-        val tagsBytes = builder.buildTags()
-        val geoBytes = "01010000A0E6100000000000000000144000000000000018400000000000000040".decodeHex()
         val collectionBytes = builder.buildFeatureFromMap(collectionMap)
-        val opBytes = builder.buildXyzOp(XYZ_OP_CREATE, "bar", null, 1)
-        val table = session.writeCollections(arrayOf(opBytes), arrayOf(collectionBytes), arrayOf(GEO_TYPE_EWKB), arrayOf(geoBytes), arrayOf(tagsBytes))
+        val table = session.writeCollections(prepareCollectionReqCreate("bar", collectionBytes))
         val result = assertInstanceOf(JvmPlv8Table::class.java, table)
         assertEquals(1, result.rows.size)
         val row = result.rows[0]

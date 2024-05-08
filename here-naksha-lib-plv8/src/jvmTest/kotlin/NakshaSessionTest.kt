@@ -13,6 +13,10 @@ import com.here.naksha.lib.plv8.NKC_PARTITION_COUNT
 import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.PARTITION_COUNT_NONE
 import com.here.naksha.lib.plv8.RET_ERR_MSG
+import com.here.naksha.lib.plv8.ReqHelper
+import com.here.naksha.lib.plv8.ReqHelper.prepareFeatureReq
+import com.here.naksha.lib.plv8.ReqHelper.prepareFeatureReqForOperations
+import com.here.naksha.lib.plv8.ReqHelper.prepareOperation
 import com.here.naksha.lib.plv8.getCollectionPartitionCount
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -59,21 +63,16 @@ class NakshaSessionTest : JbTest() {
         createCollection(session = session, collectionId = otherCollection, partitionCount = 8, disableHistory = false)
         session.clear()
 
-        val builder = XyzBuilder.create(65536)
-        val op1 = builder.buildXyzOp(XYZ_OP_CREATE, "feature1")
-        val op2 = builder.buildXyzOp(XYZ_OP_CREATE, "feature2")
-        val op3 = builder.buildXyzOp(XYZ_OP_CREATE, "feature3")
-
         // when
-        session.writeFeatures(collectionId, arrayOf(op1))
+        session.writeFeatures(prepareFeatureReq(XYZ_OP_CREATE, collectionId, "feature1"))
 
         // then
         assertEquals(1, session.transaction.modifiedFeatureCount)
         assertEquals(1, session.transaction.collectionCounters[collectionId])
 
         // when executed again in same session
-        session.writeFeatures(collectionId, arrayOf(op2))
-        session.writeFeatures(otherCollection, arrayOf(op3))
+        session.writeFeatures(prepareFeatureReq(XYZ_OP_CREATE, collectionId, "feature2"))
+        session.writeFeatures(prepareFeatureReq(XYZ_OP_CREATE, otherCollection, "feature3"))
 
         // then
         assertEquals(3, session.transaction.modifiedFeatureCount)
@@ -88,12 +87,12 @@ class NakshaSessionTest : JbTest() {
         val session = NakshaSession.get()
         session.collectionConfiguration.put(collectionId, newMap())
 
-        val builder = XyzBuilder.create(65536)
-        val op1 = builder.buildXyzOp(XYZ_OP_CREATE, "someId")
-        val op2 = builder.buildXyzOp(XYZ_OP_UPDATE, "someId")
+        val op1 = prepareOperation(XYZ_OP_CREATE, "someId")
+        val op2 = prepareOperation(XYZ_OP_UPDATE, "someId")
 
         // when
-        val result = session.writeFeatures(collectionId, arrayOf(op1, op2)) as JvmPlv8Table
+
+        val result = session.writeFeatures(prepareFeatureReqForOperations(collectionId, op1, op2)) as JvmPlv8Table
 
         // then
         val error: String? = result.rows[0][RET_ERR_MSG]
@@ -103,9 +102,8 @@ class NakshaSessionTest : JbTest() {
     private fun createCollection(session: NakshaSession, collectionId: String, partitionCount: Int = PARTITION_COUNT_NONE, disableHistory: Boolean = true) {
         val collectionJson = """{"id":"$collectionId","type":"NakshaCollection","maxAge":3560,"partitionCount":$partitionCount,"properties":{},"disableHistory":$disableHistory}"""
         val builder = XyzBuilder.create(65536)
-        val op = builder.buildXyzOp(XYZ_OP_UPSERT, collectionId, null, 1111)
         val feature = builder.buildFeatureFromMap(asMap(env.parse(collectionJson)))
-        session.writeCollections(arrayOf(op), arrayOf(feature), arrayOf(null), arrayOf(null), arrayOf(null))
+        session.writeCollections(ReqHelper.prepareCollectionReq(XYZ_OP_UPSERT, collectionId, feature))
     }
 
     private fun doesTableExist(session: NakshaSession, tableName: String): Boolean {

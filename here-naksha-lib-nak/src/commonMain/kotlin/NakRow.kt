@@ -69,21 +69,21 @@ class NakRow(vararg args: Any?) : BaseObject(*args) {
     fun setFeature(value: PDataView?) = set(FEATURE, value)
 
     @JsName("setFeatureBytes")
-    fun setFeature(value: ByteArray) = set(FEATURE, Klass.dataViewKlass.newInstance(value))
+    fun setFeature(value: ByteArray?) = set(FEATURE, value?.let { Klass.dataViewKlass.newInstance(it) })
 
     fun getTags(): PDataView? = toElement(get(TAGS), Klass.dataViewKlass)
 
     fun setTags(value: PDataView?) = set(TAGS, value)
 
     @JsName("setTagsBytes")
-    fun setTags(value: ByteArray) = set(TAGS, Klass.dataViewKlass.newInstance(value))
+    fun setTags(value: ByteArray?) = set(TAGS, value?.let { Klass.dataViewKlass.newInstance(it) })
 
     fun getGeo(): PDataView? = toElement(get(GEO), Klass.dataViewKlass)
 
     fun setGeo(value: PDataView?) = set(GEO, value)
 
     @JsName("setGeoBytes")
-    fun setGeo(value: ByteArray) = set(GEO, Klass.dataViewKlass.newInstance(value))
+    fun setGeo(value: ByteArray?) = set(GEO, value?.let { Klass.dataViewKlass.newInstance(it) })
 
     fun getGeoRef(): PDataView? = toElement(get(GEO_REF), Klass.dataViewKlass)
 

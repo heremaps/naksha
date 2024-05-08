@@ -36,7 +36,7 @@ internal class NakshaRequestOp(
             val idsToDel = ArrayList<String>()
             val uniqueIds = HashSet<String>(size)
             for (rowOb in writeRequest.getRows()) {
-                val nakWriteOp = Base.assign(rowOb, NakWriteRow.klass)
+                val nakWriteOp = Base.assign(rowOb.value!!, NakWriteRow.klass)
 
                 val id = nakWriteOp.getId()
                         ?: nakWriteOp.getFeature()?.getId()

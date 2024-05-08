@@ -129,7 +129,7 @@ internal class NakshaBulkLoaderPlan(
     fun addUpdate(op: NakshaRequestOp, existingFeature: IMap?) {
         val featureRowMap = op.rowMap
         val headBeforeUpdate: IMap = existingFeature!!
-        checkStateForAtomicOp(op.xyzOp.uuid(), headBeforeUpdate)
+        checkStateForAtomicOp(op.writeRow.getUuid(), headBeforeUpdate)
 
         addToRemoveFromDel(op.id)
         addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
@@ -160,7 +160,7 @@ internal class NakshaBulkLoaderPlan(
     fun addPurge(op: NakshaRequestOp, existingFeature: IMap?, existingInDelFeature: IMap?) {
         addDeleteInternal(op, existingFeature)
         val deletedFeatureRow: IMap? = existingInDelFeature ?: existingFeature
-        checkStateForAtomicOp(op.xyzOp.uuid(), deletedFeatureRow)
+        checkStateForAtomicOp(op.writeRow.getUuid(), deletedFeatureRow)
         if (!autoPurge) // it's not in $del, so we don't have to purge
             featuresToPurgeFromDel.add(op.id)
         if (!minResult) {
@@ -194,7 +194,7 @@ internal class NakshaBulkLoaderPlan(
         if (existingFeature != null) {
             // this may throw exception (if we try to delete non-existing feature - that was deleted before)
             val headBeforeDelete: IMap = existingFeature
-            checkStateForAtomicOp(op.xyzOp.uuid(), headBeforeDelete)
+            checkStateForAtomicOp(op.writeRow.getUuid(), headBeforeDelete)
             addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
 
             featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
