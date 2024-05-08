@@ -21,7 +21,7 @@ abstract class BaseKlass<out T : BaseType> : Klass<T>() {
      * Returns the symbol to which the type is bound by default.
      * @return platform symbol.
      */
-    open fun symbol(): PSymbol = Base.BASE_SYM
+    open fun symbol(): Symbol = Base.BASE_SYM
 
     /**
      * Returns _true_ if this type is abstract (which means, no instance can be created, trying to do so will

@@ -128,15 +128,15 @@ abstract class Klass<out T> {
         }
 
        /**
-         * The Klass for [PSymbol].
+         * The Klass for [Symbol].
          */
         @JvmStatic
-        var symbolKlass = object : Klass<PSymbol>() {
+        var symbolKlass = object : Klass<Symbol>() {
             override fun isArray(): Boolean = false
 
-            override fun isInstance(o: Any?): Boolean = o is PSymbol
+            override fun isInstance(o: Any?): Boolean = o is Symbol
 
-            override fun newInstance(vararg args: Any?): PSymbol {
+            override fun newInstance(vararg args: Any?): Symbol {
                 if (args.isEmpty()) return Base.symbol(null)
                 val a = args[0]
                 require(a is String) {"Symbols can only be found to strings in the global registry"}

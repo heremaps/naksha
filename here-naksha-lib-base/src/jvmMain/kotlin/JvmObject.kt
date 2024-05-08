@@ -87,7 +87,7 @@ open class JvmObject {
     /**
      * The map for additional symbols; if any.
      */
-    var symbols: HashMap<PSymbol, Any?>? = null
+    var symbols: HashMap<Symbol, Any?>? = null
 
     /**
      * Returns the number of assigned symbols.
@@ -102,7 +102,7 @@ open class JvmObject {
      * Returns the symbols map.
      * @return The symbols map.
      */
-    fun symbols(): HashMap<PSymbol, Any?> {
+    fun symbols(): HashMap<Symbol, Any?> {
         var s = symbols
         if (s == null) {
             s = HashMap()
@@ -120,7 +120,7 @@ open class JvmObject {
      * @param sym The symbol to test for.
      * @return _true_ if the object has such a symbol assignment; _false_ otherwise.
      */
-    open operator fun contains(sym: PSymbol): Boolean {
+    open operator fun contains(sym: Symbol): Boolean {
         val s = symbols
         if (s != null) return s.containsKey(sym)
         return sym === BASE_SYM && baseSym != undefined
@@ -131,7 +131,7 @@ open class JvmObject {
      * @param sym The symbol to query.
      * @return The value assigned to the symbol or [Base.undefined].
      */
-    open operator fun get(sym: PSymbol): Any? {
+    open operator fun get(sym: Symbol): Any? {
         val s = symbols
         if (s != null) return s[sym] ?: undefined
         if (sym === BASE_SYM) return baseSym
@@ -143,7 +143,7 @@ open class JvmObject {
      * @param sym The symbol to remove.
      * @return The value that was assigned to the symbol or [Base.undefined].
      */
-    open fun remove(sym: PSymbol): Any? {
+    open fun remove(sym: Symbol): Any? {
         val s = symbols
         if (s != null) {
             return if (s.containsKey(sym)) s.remove(sym) else undefined
@@ -162,7 +162,7 @@ open class JvmObject {
      * @param value The value to assign.
      * @return The previously assigned value or [Base.undefined].
      */
-    open operator fun set(sym: PSymbol, value: Any?): Any? {
+    open operator fun set(sym: Symbol, value: Any?): Any? {
         if (value === undefined) return remove(sym)
         var s = symbols
         if (s == null && sym === BASE_SYM) {

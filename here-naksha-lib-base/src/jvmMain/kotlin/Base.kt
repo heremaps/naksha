@@ -22,7 +22,7 @@ actual class Base {
          * The cache for all declared symbols.
          */
         @JvmStatic
-        internal val symbolsCache = ConcurrentHashMap<String, PSymbol>()
+        internal val symbolsCache = ConcurrentHashMap<String, Symbol>()
 
         /**
          * The constant for undefined.
@@ -34,7 +34,7 @@ actual class Base {
          * The symbol (_com.here.naksha.lib.nak_) to store the default Naksha multi-platform types in.
          */
         @JvmStatic
-        actual val BASE_SYM: PSymbol = symbol("com.here.naksha.lib.nak")
+        actual val BASE_SYM: Symbol = symbol("com.here.naksha.lib.nak")
 
         /**
          * The maximum value of a 64-bit integer.
@@ -101,7 +101,7 @@ actual class Base {
         actual fun intern(s: String, cd: Boolean): String = s
 
         @JvmStatic
-        actual fun <T : BaseType> getAssignment(o: Any?, symbol: PSymbol): T? = toJvmObject(o)?.get(symbol) as? T
+        actual fun <T : BaseType> getAssignment(o: Any?, symbol: Symbol): T? = toJvmObject(o)?.get(symbol) as? T
 
         @JvmStatic
         actual fun <T : BaseType> assign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
@@ -137,11 +137,11 @@ actual class Base {
         }
 
         @JvmStatic
-        actual fun symbol(key: String?): PSymbol {
-            if (key == null) return JvmPSymbol()
+        actual fun symbol(key: String?): Symbol {
+            if (key == null) return JvmSymbol()
             var symbol = symbolsCache[key]
             if (symbol == null) {
-                symbol = JvmPSymbol(key)
+                symbol = JvmSymbol(key)
                 val existing = symbolsCache.putIfAbsent(key, symbol)
                 if (existing != null) return existing
             }
@@ -240,7 +240,7 @@ actual class Base {
         actual fun isArray(o: Any?): Boolean = o is JvmPArray
 
         @JvmStatic
-        actual fun isSymbol(o: Any?): Boolean = o is JvmPSymbol
+        actual fun isSymbol(o: Any?): Boolean = o is JvmSymbol
 
         @JvmStatic
         actual fun isByteArray(o: Any?): Boolean = o is ByteArray
@@ -251,7 +251,7 @@ actual class Base {
         @JvmStatic
         actual fun has(o: Any?, key: Any?): Boolean {
             val p = toJvmObject(o) ?: return false
-            if (key is JvmPSymbol) return p.contains(key)
+            if (key is JvmSymbol) return p.contains(key)
             if (key is String) return p.contains(key)
             if (key is Int && p is JvmPArray) return key >= 0 && key < p.size
             return false
@@ -260,7 +260,7 @@ actual class Base {
         @JvmStatic
         actual fun get(o: Any, key: Any): Any? {
             val p = toJvmObject(o) ?: return undefined
-            if (key is JvmPSymbol) return p[key]
+            if (key is JvmSymbol) return p[key]
             if (key is String) return if (p.contains(key)) p[key] else undefined
             if (key is Int && p is JvmPArray) return if (key >= 0 && key < p.size) p[key] else undefined
             return undefined
@@ -270,7 +270,7 @@ actual class Base {
         actual fun set(o: Any, key: Any, value: Any?): Any? {
             val p = toJvmObject(o)
             require(p != null) { "The given object is not backed by a native base object" }
-            if (key is JvmPSymbol) return p.set(key, value)
+            if (key is JvmSymbol) return p.set(key, value)
             if (key is String) return p.set(key, value)
             if (key is Int && p is JvmPArray) return p.set(key, value)
             throw IllegalArgumentException("The given key is invalid, must be symbol, string or integer (only for array)")
@@ -279,7 +279,7 @@ actual class Base {
         @JvmStatic
         actual fun delete(o: Any, key: Any): Any? {
             val p = toJvmObject(o) ?: return undefined
-            if (key is PSymbol) return p.remove(key)
+            if (key is Symbol) return p.remove(key)
             if (key is String) return p.remove(key)
             if (key is Int && p is JvmPArray) return p.remove(key)
             return undefined
@@ -299,7 +299,7 @@ actual class Base {
 
         private val EMPTY_KEYS = arrayOf<String>()
         private val EMPTY_VALUES = arrayOf<Any?>()
-        private val EMPTY_SYMBOLS = arrayOf<PSymbol>()
+        private val EMPTY_SYMBOLS = arrayOf<Symbol>()
         private val NAK_ONLY_SYMBOLS = arrayOf(BASE_SYM)
 
         @JvmStatic
@@ -308,7 +308,7 @@ actual class Base {
                         ?: EMPTY_KEYS else throw IllegalArgumentException("Invalid object given")
 
         @JvmStatic
-        actual fun symbols(o: Any): Array<PSymbol> {
+        actual fun symbols(o: Any): Array<Symbol> {
             require(o is JvmObject)
             val symbols = o.symbols
             if (symbols != null) return symbols.keys.toTypedArray()

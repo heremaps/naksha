@@ -39,4 +39,16 @@ class JvmBasicTest {
         assertEquals("test", o["id"])
     }
 
+    @Test
+    fun testArray() {
+        // BaseList.of(Klass.stringKlass)
+        val array = BaseList<String>()
+        array.componentKlass = Klass.stringKlass
+        array[0] = "hello"
+        for (x in KtIterator<Int, String>(Base.arrayIterator(array.data()) as PIterator<Int,String>)) {
+            assertEquals(0, x.key)
+            assertEquals("hello", x.value)
+        }
+    }
+
 }

@@ -3,34 +3,34 @@
 package com.here.naksha.lib.base
 
 inline operator fun PObject.contains(key: String): Boolean = Base.has(this, key)
-inline operator fun PObject.contains(key: PSymbol): Boolean = Base.has(this, key)
+inline operator fun PObject.contains(key: Symbol): Boolean = Base.has(this, key)
 
 inline operator fun PArray.contains(key: String): Boolean = Base.has(this, key)
-inline operator fun PArray.contains(key: PSymbol): Boolean = Base.has(this, key)
+inline operator fun PArray.contains(key: Symbol): Boolean = Base.has(this, key)
 inline operator fun PArray.contains(key: Int): Boolean = Base.has(this, key)
 
 inline operator fun PObject.get(key: String): Any? = Base.get(this, key)
-inline operator fun PObject.get(key: PSymbol): Any? = Base.get(this, key)
+inline operator fun PObject.get(key: Symbol): Any? = Base.get(this, key)
 
 inline operator fun PArray.get(key: String): Any? = Base.get(this, key)
-inline operator fun PArray.get(key: PSymbol): Any? = Base.get(this, key)
+inline operator fun PArray.get(key: Symbol): Any? = Base.get(this, key)
 inline operator fun PArray.get(key: Int): Any? = Base.get(this, key)
 
 inline operator fun PObject.set(key: String, value: Any?) = Base.set(this, key, value)
-inline operator fun PObject.set(key: PSymbol, value: Any?) = Base.set(this, key, value)
+inline operator fun PObject.set(key: Symbol, value: Any?) = Base.set(this, key, value)
 
 inline operator fun PArray.set(key: String, value: Any?) = Base.set(this, key, value)
-inline operator fun PArray.set(key: PSymbol, value: Any?) = Base.set(this, key, value)
+inline operator fun PArray.set(key: Symbol, value: Any?) = Base.set(this, key, value)
 inline operator fun PArray.set(key: Int, value: Any?) = Base.set(this, key, value)
 
 inline fun PObject.delete(key: String): Any? = Base.delete(this, key)
-inline fun PObject.delete(key: PSymbol): Any? = Base.delete(this, key)
+inline fun PObject.delete(key: Symbol): Any? = Base.delete(this, key)
 
 inline fun PArray.delete(key: Int): Any? = Base.delete(this, key)
 inline fun PArray.delete(key: String): Any? = Base.delete(this, key)
-inline fun PArray.delete(key: PSymbol): Any? = Base.delete(this, key)
+inline fun PArray.delete(key: Symbol): Any? = Base.delete(this, key)
 
-inline fun symbol(key: String): PSymbol = Base.symbol(key)
+inline fun symbol(key: String): Symbol = Base.symbol(key)
 
 //inline operator fun PObject.iterator() : Iterator<String> = JsObjectIterator(this)
 //inline operator fun PArray.iterator() : Iterator<Int> = JsArrayIterator(this)

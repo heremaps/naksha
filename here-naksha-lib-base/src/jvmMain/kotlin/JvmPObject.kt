@@ -17,7 +17,7 @@ open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, PO
             val value = if (i < entries.size) entries[i++] else null
             when (key) {
                 is String -> set(key, value)
-                is PSymbol -> set(key, value)
+                is Symbol -> set(key, value)
                 else -> throw IllegalArgumentException("key at index $keyIndex is no string and no symbol")
             }
         }
@@ -29,7 +29,7 @@ open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, PO
 
     override fun containsKey(key: Any?): Boolean {
         if (key is String) return contains(key)
-        if (key is PSymbol) return contains(key)
+        if (key is Symbol) return contains(key)
         return false
     }
 
@@ -41,7 +41,7 @@ open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, PO
 
     override fun get(key: Any?): Any? {
         if (key is String) return get(key)
-        if (key is PSymbol) return get(key)
+        if (key is Symbol) return get(key)
         return undefined
     }
 
@@ -52,7 +52,7 @@ open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, PO
 
     override fun remove(key: Any?): Any? {
         if (key is String) return remove(key)
-        if (key is PSymbol) return remove(key)
+        if (key is Symbol) return remove(key)
         return undefined
     }
 

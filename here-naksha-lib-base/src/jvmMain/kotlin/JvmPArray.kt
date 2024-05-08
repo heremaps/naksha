@@ -52,7 +52,7 @@ open class JvmPArray(vararg entries: Any?) : JvmObject(), MutableList<Any?>, PAr
     override operator fun contains(element: Any?): Boolean {
         if (data?.contains(element) == true) return true
         if (element is String) return super.contains(element)
-        if (element is PSymbol) return super.contains(element)
+        if (element is Symbol) return super.contains(element)
         return false
     }
 
@@ -87,7 +87,7 @@ open class JvmPArray(vararg entries: Any?) : JvmObject(), MutableList<Any?>, PAr
     override fun remove(element: Any?): Boolean {
         if (element is Int) return data?.remove(element) ?: false
         if (element is String) return super.remove(element) !== undefined
-        if (element is PSymbol) return super.remove(element) !== undefined
+        if (element is Symbol) return super.remove(element) !== undefined
         return false
     }
 

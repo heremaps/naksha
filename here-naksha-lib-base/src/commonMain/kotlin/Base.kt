@@ -13,7 +13,7 @@ expect class Base {
          * The symbol to store the default Naksha multi-platform types in.
          */
         @JvmStatic
-        val BASE_SYM: PSymbol
+        val BASE_SYM: Symbol
 
         /**
          * The maximum value of a 64-bit integer.
@@ -77,7 +77,7 @@ expect class Base {
          * @return The assignment or _null_, if this symbol is not yet assigned.
          */
         @JvmStatic
-        fun <T : BaseType> getAssignment(o: Any?, symbol: PSymbol = BASE_SYM): T?
+        fun <T : BaseType> getAssignment(o: Any?, symbol: Symbol = BASE_SYM): T?
 
         /**
          * Assigns the given assignment type to the given platform object. This method will fail when [BaseKlass.isAssignable]
@@ -124,7 +124,7 @@ expect class Base {
          * @return The existing symbol, if no such symbol exist yet, creates a new one.
          */
         @JvmStatic
-        fun symbol(key: String?): PSymbol
+        fun symbol(key: String?): Symbol
 
         /**
          * Creates a new platform object.
@@ -304,9 +304,9 @@ expect class Base {
         fun isArray(o: Any?): Boolean
 
         /**
-         * Tests if the given object is a [PSymbol].
+         * Tests if the given object is a [Symbol].
          * @param o The object to test.
-         * @return _true_ if the object is a [PSymbol]; _false_ otherwise.
+         * @return _true_ if the object is a [Symbol]; _false_ otherwise.
          */
         @JvmStatic
         fun isSymbol(o: Any?): Boolean
@@ -329,7 +329,7 @@ expect class Base {
 
         /**
          * Tests if the given object contains the given key. Possible objects are [PObject], [PArray] and [PDataView].
-         * All of them support [Int], [String] and [PSymbol] as keys. Note that all, except [PArray], will convert an [Int] into a string
+         * All of them support [Int], [String] and [Symbol] as keys. Note that all, except [PArray], will convert an [Int] into a string
          * and query for the serialized integer.
          * @param o The object to test.
          * @param key The key to test.
@@ -340,7 +340,7 @@ expect class Base {
 
         /**
          * Read the value assigned to the given key. Possible objects are [PObject], [PArray] and [PDataView].
-         * All of them support [Int], [String] and [PSymbol] as keys. Note that all, except [PArray], will convert an [Int] into a string
+         * All of them support [Int], [String] and [Symbol] as keys. Note that all, except [PArray], will convert an [Int] into a string
          * and query for the serialized integer.
          * @param o The object to access.
          * @param key The key to access.
@@ -351,7 +351,7 @@ expect class Base {
 
         /**
          * Assigns the given value to the given key. Possible objects are [PObject], [PArray] and [PDataView].
-         * All of them support [Int], [String] and [PSymbol] as keys. Note that all, except [PArray], will convert an [Int] into a string
+         * All of them support [Int], [String] and [Symbol] as keys. Note that all, except [PArray], will convert an [Int] into a string
          * and query for the serialized integer.
          * @param o The object to access.
          * @param key The key to access.
@@ -364,7 +364,7 @@ expect class Base {
 
         /**
          * Delete the given key form the given object. Possible objects are [PObject], [PArray] and [PDataView].
-         * All of them support [Int], [String] and [PSymbol] as keys. Note that all, except [PArray], will convert an [Int] into a string
+         * All of them support [Int], [String] and [Symbol] as keys. Note that all, except [PArray], will convert an [Int] into a string
          * and query for the serialized integer.
          * @param o The object to access.
          * @param key The key to access.
@@ -419,7 +419,7 @@ expect class Base {
          * @return All symbols of the object.
          */
         @JvmStatic
-        fun symbols(o: Any): Array<PSymbol>
+        fun symbols(o: Any): Array<Symbol>
 
         /**
          * Collect all the values of the object properties. For [PArray] this does not contain the values of the array, only the values

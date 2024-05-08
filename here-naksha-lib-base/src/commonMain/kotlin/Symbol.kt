@@ -11,4 +11,4 @@ import kotlin.js.JsName
  */
 @JsExport
 @JsName("Symbol")
-interface PSymbol
+interface Symbol

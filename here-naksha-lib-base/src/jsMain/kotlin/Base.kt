@@ -10,7 +10,7 @@ actual class Base {
 
         val arrayTemplate = object : PArray {}
         val objectTemplate = object : PObject {}
-        val symbolTemplate = object : PSymbol {}
+        val symbolTemplate = object : Symbol {}
         val bigIntTemplate = object : Int64 {
             override fun hashCode(): Int = js("BigInt.hashCode(this)").unsafeCast<Int>()
         }
@@ -114,7 +114,7 @@ Object.assign(BigInt, {
 
         actual fun intern(s: String, cd: Boolean): String = js("(cd ? s.normalize('NFC') : s.normalize('NFKC'))").unsafeCast<String>()
 
-        actual fun <T : BaseType> getAssignment(o: Any?, symbol: PSymbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
+        actual fun <T : BaseType> getAssignment(o: Any?, symbol: Symbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
 
         @Suppress("UNUSED_VARIABLE")
         actual fun <T : BaseType> assign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
@@ -144,7 +144,7 @@ Object.assign(BigInt, {
 
         actual fun isAssignable(o: Any?, klass: BaseKlass<*>): Boolean = klass.isAssignable(unbox(o))
 
-        actual fun symbol(key: String?): PSymbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<PSymbol>()
+        actual fun symbol(key: String?): Symbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<Symbol>()
 
         @Suppress("UNUSED_VARIABLE")
         actual fun newObject(vararg entries: Any?): PObject {
@@ -267,7 +267,7 @@ return new DataView(byteArray.buffer, offset, size);
 
         actual fun keys(o: Any): Array<String> = js("var k=Object.keys(o); (Array.isArray(o) ? k.splice(o.length) : k)").unsafeCast<Array<String>>()
 
-        actual fun symbols(o: Any): Array<PSymbol> = js("Object.getOwnPropertySymbols(o)").unsafeCast<Array<PSymbol>>()
+        actual fun symbols(o: Any): Array<Symbol> = js("Object.getOwnPropertySymbols(o)").unsafeCast<Array<Symbol>>()
 
         actual fun values(o: Any): Array<Any?> = js("var v=Object.values(o); if (Array.isArray(o)) v.splice(o.length,v.length); v").unsafeCast<Array<Any?>>()
 
