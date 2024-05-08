@@ -312,7 +312,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     } else if (pRef.equals(PRef.app_id())) {
       sql.add("author");
     } else if (pRef.equals(PRef.grid())) {
-      sql.add("grid");
+      sql.add("geo_grid");
     } else if (pRef.getTagName() != null) {
       sql.add("tags_to_jsonb(tags)");
     } else {
