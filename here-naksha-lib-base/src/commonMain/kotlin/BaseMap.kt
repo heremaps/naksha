@@ -22,6 +22,7 @@ open class BaseMap<E>(vararg args: Any?) : BasePairs<E>(*args) {
 
     override fun klass(): BaseKlass<*> = klass
 
+    // TODO: discuss - if all of these functions are calling super directly, why do we have to define them?
     public override fun <T> getOr(key: String, klass: Klass<T>, alternative: T): T = super.getOr(key, klass, alternative)
     public override fun <T> getOrNull(key: String, klass: Klass<T>): T? = super.getOrNull(key, klass)
     public override fun <T> getOrCreate(key: String, klass: Klass<T>, vararg args: Any?): T = super.getOrCreate(key, klass, *args)
