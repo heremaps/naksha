@@ -18,9 +18,25 @@ open class BaseList<E> : BaseArray<E>() {
 
             override fun newInstance(vararg args: Any?): BaseList<Any?> = BaseList()
         }
+
+        /**
+         * Create a new list with the given component-type.
+         * @param <E> The component-type.
+         * @param componentKlass The [Klass] of the component-type.
+         * @return An empty list with the given component-type being set.
+         */
+        @JvmStatic
+        fun <E> of(componentKlass: Klass<E>) : BaseList<E> {
+            val array = BaseList<E>()
+            array.componentKlass = componentKlass
+            return array
+        }
     }
 
     override fun klass(): BaseKlass<*> = klass
-    override operator fun get(i: Int): E? = super.get(i)
-    override operator fun set(i: Int, value: E?): E? = super.set(i, value)
+    public override operator fun get(i: Int): E? = super.get(i)
+    public override operator fun set(i: Int, value: E?): E? = super.set(i, value)
+    public override fun size(): Int = super.size()
+    @Suppress("NON_EXPORTABLE_TYPE")
+    operator fun iterator(): Iterator<RawPair<Int, E>> = KtIterator(Base.arrayIterator(data()) as PIterator<Int,E>)
 }

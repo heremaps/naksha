@@ -8,7 +8,7 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 /**
- * The Naksha type for an object.
+ * The Naksha type for a flexible array.
  * @param <E> The element type.
  */
 @Suppress("MemberVisibilityCanBePrivate")
@@ -48,4 +48,5 @@ open class BaseArray<E>(vararg args: E?) : BaseElementType<E>() {
         data[i] = unbox(value)
         return old
     }
+    protected open fun size(): Int = Base.length(data as PArray)
 }

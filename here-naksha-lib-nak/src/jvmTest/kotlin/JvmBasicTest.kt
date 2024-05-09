@@ -45,9 +45,9 @@ class JvmBasicTest {
         val array = BaseList<String>()
         array.componentKlass = Klass.stringKlass
         array[0] = "hello"
-        for (x in KtIterator<Int, String>(Base.arrayIterator(array.data()) as PIterator<Int,String>)) {
-            assertEquals(0, x.key)
-            assertEquals("hello", x.value)
+        for (entry in array) {
+            assertEquals(0, entry.key)
+            assertEquals("hello", entry.value)
         }
     }
 

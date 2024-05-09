@@ -22,11 +22,11 @@ open class BaseMap<E>(vararg args: Any?) : BasePairs<E>(*args) {
 
     override fun klass(): BaseKlass<*> = klass
 
-    override fun <T> getOr(key: String, klass: Klass<T>, alternative: T): T = super.getOr(key, klass, alternative)
-    override fun <T> getOrNull(key: String, klass: Klass<T>): T? = super.getOrNull(key, klass)
-    override fun <T> getOrCreate(key: String, klass: Klass<T>, vararg args: Any?): T = super.getOrCreate(key, klass, *args)
+    public override fun <T> getOr(key: String, klass: Klass<T>, alternative: T): T = super.getOr(key, klass, alternative)
+    public override fun <T> getOrNull(key: String, klass: Klass<T>): T? = super.getOrNull(key, klass)
+    public override fun <T> getOrCreate(key: String, klass: Klass<T>, vararg args: Any?): T = super.getOrCreate(key, klass, *args)
 
-    override operator fun get(key: String): E? = super.get(key)
+    public override operator fun get(key: String): E? = super.get(key)
 
-    override operator fun set(key: String, value: E?): E? = super.set(key, value)
+    public override operator fun set(key: String, value: E?): E? = super.set(key, value)
 }

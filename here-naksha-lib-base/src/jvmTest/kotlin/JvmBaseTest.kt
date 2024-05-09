@@ -49,6 +49,12 @@ class JvmBaseTest {
             assertEquals(0, entry.key)
             assertEquals(2, entry.value)
         }
+
+        val list = Base.assign(a, BaseList.klass)
+        for (entry in list) {
+            assertEquals(0, entry.key)
+            assertEquals(2, entry.value)
+        }
     }
 //
 //    @Test
