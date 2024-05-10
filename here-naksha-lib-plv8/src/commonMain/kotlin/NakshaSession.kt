@@ -3,6 +3,10 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.base.Base
+import com.here.naksha.lib.base.BaseList
+import com.here.naksha.lib.base.BaseMap
+import com.here.naksha.lib.base.NakCollection
+import com.here.naksha.lib.base.NakFeature
 import com.here.naksha.lib.base.NakRow
 import com.here.naksha.lib.base.NakWriteCollections
 import com.here.naksha.lib.base.NakWriteFeatures
@@ -332,8 +336,8 @@ SET SESSION enable_seqscan = OFF;
      */
     internal fun copyToDel(collectionId: String, OLD: IMap) {
         val collectionConfig = getCollectionConfig(collectionId)
-        val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
-        if (autoPurge != true) {
+        val autoPurge: Boolean = collectionConfig.isAutoPurge()
+        if (autoPurge) {
             val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
             sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_FLAGS], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
         }
@@ -557,6 +561,25 @@ FROM ns, txn_seq;"""
         return "Feature"
     }
 
+    fun getFeatureAsJbon(feature: NakFeature?, flags: Flags, collectionId: String): ByteArray? {
+        if (feature == null) {
+            flags.turnOffGzipOnFeatureEncoding()
+            return null
+        }
+
+        // FIXME TODO get global dictionary
+        val builder = JbBuilder(newDataView(65536), globalDictManager.getDictionary(collectionId))
+        val featureBytes = builder.buildFeatureFromObject(feature.data())
+
+        return if (sql.info().gzipSupported) {
+            flags.forceGzipOnFeatureEncoding()
+            sql.gzipCompress(featureBytes)
+        } else {
+            flags.turnOffGzipOnFeatureEncoding()
+            featureBytes
+        }
+    }
+
     /**
      * Returns collectionId without partition part.
      * For `topology_p0` it will return `topology`.
@@ -573,7 +596,7 @@ FROM ns, txn_seq;"""
         }
     }
 
-    fun getCollectionConfig(collectionId: String): IMap {
+    fun getCollectionConfig(collectionId: String): NakCollection {
         return if (collectionConfiguration.containsKey(collectionId)) {
             collectionConfiguration[collectionId]!!
         } else {
@@ -586,15 +609,15 @@ FROM ns, txn_seq;"""
             val flags = Flags(cols[COL_FLAGS])
             val rawFeatureBytes: ByteArray? = if (bytes != null && flags.isFeatureEncodedWithGZip()) sql.gzipDecompress(bytes) else bytes
             val jbFeature = JbFeature(getDictManager(collectionId)).mapBytes(rawFeatureBytes)
-            val featureAsMap = JbMap().mapReader(jbFeature.reader).toIMap()
-            collectionConfiguration.put(collectionId, featureAsMap)
-            featureAsMap
+            val featureAsMap = JbMap().mapReader(jbFeature.reader).toMap()
+            val config = Base.assign(featureAsMap, NakCollection.klass)
+            collectionConfiguration.put(collectionId, config)
+            config
         }
     }
 
     internal fun isHistoryEnabled(collectionId: String): Boolean {
-        val isDisabled: Boolean? = getCollectionConfig(collectionId)[NKC_DISABLE_HISTORY]
-        return isDisabled != true
+        return !getCollectionConfig(collectionId).isDisableHistory()
     }
 
     /**
@@ -627,7 +650,7 @@ FROM ns, txn_seq;"""
         row.setFeature(transaction.toBytes())
         val writeOp = NakWriteRow.fromRow(XYZ_OP_UPSERT, row )
         writeOp.setId(txn().toUuid(storageId).toString())
-        transactionWriteReq.setRows(Base.newArray(writeOp))
+        transactionWriteReq.setRows(BaseList(writeOp))
         transactionWriter.writeFeatures(transactionWriteReq)
     }
 

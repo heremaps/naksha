@@ -20,7 +20,8 @@ abstract class NakWriteRequest(vararg args: Any?) : NakRequest(*args) {
 
     fun setNoResults(value: Boolean) = set(NO_RESULTS, value)
 
-    fun setRows(values: PArray) = set(ROWS, values)
+    fun setRows(values: BaseList<NakWriteRow>) = set(ROWS, values)
 
-    fun getRows(): PArray = toElement(get(ROWS), Klass.arrayKlass, Klass.arrayKlass.newInstance())!!
+    @Suppress("UNCHECKED_CAST")
+    fun getRows(): BaseList<NakWriteRow> = toElement(get(ROWS), BaseList.klass, BaseList<NakWriteRow>())!! as BaseList<NakWriteRow>
 }

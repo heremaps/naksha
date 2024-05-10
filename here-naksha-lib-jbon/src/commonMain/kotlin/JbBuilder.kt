@@ -2,6 +2,9 @@
 
 package com.here.naksha.lib.jbon;
 
+import com.here.naksha.lib.base.PObject
+import com.here.naksha.lib.base.get
+import com.here.naksha.lib.base.iterator
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -851,6 +854,32 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
         xyz = null
         val start = startMap()
         for (entry in map) {
+            val key = entry.key
+            val value = entry.value
+            if ("id" == key || "geometry" == key) continue
+            writeKey(entry.key)
+            if ("properties" == key) {
+                writeMap(asMap(value), true)
+            } else {
+                if (isMap(value)) writeValue(asMap(value)) else writeValue(value)
+            }
+        }
+        endMap(start)
+        return buildFeature(id)
+    }
+
+    /**
+     * Expects a GeoJSON feature as input and convert it into JBON. The first being the JBON feature,
+     * the second being the XYZ namespace, the third being the geometry.
+     * @param p The GeoJSON feature to convert into JBON.
+     * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
+     */
+    fun buildFeatureFromObject(p: PObject): ByteArray {
+        clear()
+        val id: String? = p["id"]?.toString()
+        xyz = null
+        val start = startMap()
+        for (entry in p) {
             val key = entry.key
             val value = entry.value
             if ("id" == key || "geometry" == key) continue

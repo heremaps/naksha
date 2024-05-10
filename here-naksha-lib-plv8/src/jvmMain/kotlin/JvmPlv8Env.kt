@@ -1,12 +1,14 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.base.Base
-import com.here.naksha.lib.base.NakRow
-import com.here.naksha.lib.base.NakWriteCollections
-import com.here.naksha.lib.base.NakWriteFeatures
-import com.here.naksha.lib.base.NakWriteRow
-import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.plv8.ReqHelper.prepareCollectionReqCreate
+import com.here.naksha.lib.base.NakCollection
+import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.JbSession
+import com.here.naksha.lib.jbon.JvmEnv
+import com.here.naksha.lib.jbon.XYZ_EXEC_CREATED
+import com.here.naksha.lib.jbon.asArray
+import com.here.naksha.lib.jbon.asMap
+import com.here.naksha.lib.jbon.get
+import com.here.naksha.lib.plv8.ReqHelper.prepareCollectionReqCreateFromFeature
 import com.here.naksha.lib.plv8.Static.SC_DICTIONARIES
 import com.here.naksha.lib.plv8.Static.SC_INDICES
 import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
@@ -202,7 +204,6 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
     }
 
 
-
     private fun createInternalsIfNotExists(conn: Connection, schema: String, appName: String) {
         val verifyCreation: (ITable) -> Unit = {
             val table = it as JvmPlv8Table
@@ -213,33 +214,14 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
         startSession(conn, schema, appName, "", appName, null)
         val nakshaSession = NakshaSession.get()
 
-        val xyzBuilder = XyzBuilder.create()
-        val scTransactionMap = newMap()
-        scTransactionMap[NKC_ID] = SC_TRANSACTIONS
-        scTransactionMap[NKC_PARTITION_COUNT] = PARTITION_COUNT_NONE
-        scTransactionMap[NKC_AUTO_PURGE] = true
-        scTransactionMap[NKC_DISABLE_HISTORY] = true
-        scTransactionMap[NKC_STORAGE_CLASS] = SC_TRANSACTIONS
-        val scTransactionFeature = xyzBuilder.buildFeatureFromMap(scTransactionMap)
-        nakshaSession.writeCollections(prepareCollectionReqCreate(SC_TRANSACTIONS, scTransactionFeature)).let(verifyCreation)
+        val scTransaction = NakCollection(id = SC_TRANSACTIONS, partitions = PARTITION_COUNT_NONE, storageClass = SC_TRANSACTIONS, autoPurge = true, disableHistory = true)
+        nakshaSession.writeCollections(prepareCollectionReqCreateFromFeature(SC_TRANSACTIONS, scTransaction)).let(verifyCreation)
 
-        val scDictionariesMap = newMap()
-        scTransactionMap[NKC_ID] = SC_DICTIONARIES
-        scDictionariesMap[NKC_PARTITION_COUNT] = PARTITION_COUNT_NONE
-        scDictionariesMap[NKC_AUTO_PURGE] = false
-        scDictionariesMap[NKC_DISABLE_HISTORY] = false
-        scDictionariesMap[NKC_STORAGE_CLASS] = SC_DICTIONARIES
-        val scDictionariesFeature = xyzBuilder.buildFeatureFromMap(scDictionariesMap)
-        nakshaSession.writeCollections(prepareCollectionReqCreate(SC_DICTIONARIES, scDictionariesFeature)).let(verifyCreation)
+        val scDictionaries = NakCollection(id = SC_DICTIONARIES, partitions = PARTITION_COUNT_NONE, storageClass = SC_DICTIONARIES, autoPurge = false, disableHistory = false)
+        nakshaSession.writeCollections(prepareCollectionReqCreateFromFeature(SC_DICTIONARIES, scDictionaries)).let(verifyCreation)
 
-        val scIndicesMap = newMap()
-        scTransactionMap[NKC_ID] = SC_INDICES
-        scIndicesMap[NKC_PARTITION_COUNT] = PARTITION_COUNT_NONE
-        scIndicesMap[NKC_AUTO_PURGE] = false
-        scIndicesMap[NKC_DISABLE_HISTORY] = false
-        scIndicesMap[NKC_STORAGE_CLASS] = SC_INDICES
-        val scIndicesFeature = xyzBuilder.buildFeatureFromMap(scIndicesMap)
-        nakshaSession.writeCollections(prepareCollectionReqCreate(SC_INDICES, scIndicesFeature)).let(verifyCreation)
+        val scIndices = NakCollection(id = SC_INDICES, partitions = PARTITION_COUNT_NONE, storageClass = SC_INDICES, autoPurge = false, disableHistory = false)
+        nakshaSession.writeCollections(prepareCollectionReqCreateFromFeature(SC_INDICES, scIndices)).let(verifyCreation)
 
         endSession()
     }

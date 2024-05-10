@@ -1,14 +1,13 @@
+import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.Jb
 import com.here.naksha.lib.jbon.JvmMap
 import com.here.naksha.lib.jbon.SQL_STRING
 import com.here.naksha.lib.jbon.XYZ_EXEC_CREATED
-import com.here.naksha.lib.jbon.XYZ_OP_CREATE
 import com.here.naksha.lib.jbon.XyzBuilder
 import com.here.naksha.lib.jbon.XyzVersion
 import com.here.naksha.lib.jbon.asMap
 import com.here.naksha.lib.jbon.get
-import com.here.naksha.lib.jbon.newMap
 import com.here.naksha.lib.jbon.put
 import com.here.naksha.lib.jbon.set
 import com.here.naksha.lib.jbon.shl
@@ -16,29 +15,29 @@ import com.here.naksha.lib.jbon.toInt
 import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_EWKB
 import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_NULL
 import com.here.naksha.lib.plv8.COL_FEATURE
-import com.here.naksha.lib.plv8.COL_GEOMETRY
 import com.here.naksha.lib.plv8.COL_FLAGS
+import com.here.naksha.lib.plv8.COL_GEOMETRY
 import com.here.naksha.lib.plv8.COL_ID
 import com.here.naksha.lib.plv8.COL_TAGS
 import com.here.naksha.lib.plv8.COL_TXN
 import com.here.naksha.lib.plv8.COL_TXN_NEXT
 import com.here.naksha.lib.plv8.COL_UID
 import com.here.naksha.lib.plv8.JvmPlv8Table
-import com.here.naksha.lib.plv8.NKC_DISABLE_HISTORY
 import com.here.naksha.lib.plv8.NKC_TABLE_ESC
 import com.here.naksha.lib.plv8.NakshaCollection
 import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.PARTITION_COUNT_NONE
 import com.here.naksha.lib.plv8.PgTrigger
-import com.here.naksha.lib.plv8.ReqHelper
-import com.here.naksha.lib.plv8.ReqHelper.prepareCollectionReqCreate
+import com.here.naksha.lib.plv8.ReqHelper.prepareCollectionReqCreateFromFeature
 import com.here.naksha.lib.plv8.Static
 import com.here.naksha.lib.plv8.TG_LEVEL_ROW
 import com.here.naksha.lib.plv8.TG_OP_INSERT
 import com.here.naksha.lib.plv8.TG_OP_UPDATE
 import com.here.naksha.lib.plv8.TG_WHEN_BEFORE
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -225,16 +224,10 @@ class Plv8Test : JbTest() {
     fun testCreateBarCollection() {
         val session = NakshaSession.get()
         // TODO: We need a test for this case, that is a general issue with empty local dictionaries!
-        //val collectionJson = """{"id":"bar"}"""
-        val collectionJson = """{"id":"bar","type":"NakshaCollection","minAge":3560,"unlogged":false,"partitionCount":${PARTITION_COUNT_NONE},"pointsOnly":false,"properties":{},"disableHistory":false,"estimatedFeatureCount": -1,"estimatedDeletedFeatures":-1}"""
-        val collectionMap = asMap(env.parse(collectionJson))
-        val builder = XyzBuilder.create()
-        builder.clear()
-        builder.startTags()
-        builder.writeTag("age:=23")
-        builder.writeTag("featureType=NakshaCollection")
-        val collectionBytes = builder.buildFeatureFromMap(collectionMap)
-        val table = session.writeCollections(prepareCollectionReqCreate("bar", collectionBytes))
+        val nakCol = NakCollection()
+        nakCol.setId("bar")
+        nakCol.setPartitions(PARTITION_COUNT_NONE)
+        val table = session.writeCollections(prepareCollectionReqCreateFromFeature("bar", nakCol))
         val result = assertInstanceOf(JvmPlv8Table::class.java, table)
         assertEquals(1, result.rows.size)
         val row = result.rows[0]
@@ -283,8 +276,8 @@ class Plv8Test : JbTest() {
     @Test
     fun triggerAfter() {
         val session = NakshaSession.get()
-        val topologyCollectionConfig = newMap()
-        topologyCollectionConfig.put(NKC_DISABLE_HISTORY, true)
+        val topologyCollectionConfig = NakCollection()
+        topologyCollectionConfig.setDisableHistory(true)
         session.collectionConfiguration.put("foo", topologyCollectionConfig)
 
         val builderFeature = XyzBuilder.create(65536)

@@ -1,3 +1,4 @@
+import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.jbon.XYZ_OP_CREATE
 import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
 import com.here.naksha.lib.jbon.XYZ_OP_UPSERT
@@ -46,9 +47,9 @@ class NakshaSessionTest : JbTest() {
 
         // then
         val collectionConfig = session.getCollectionConfig(collectionId)
-        val isHistoryDisabled: Boolean = collectionConfig[NKC_DISABLE_HISTORY]!!
+        val isHistoryDisabled: Boolean = collectionConfig.isDisableHistory()
         assertFalse(isHistoryDisabled)
-        val partitionCount: Int = collectionConfig.getCollectionPartitionCount()
+        val partitionCount: Int = collectionConfig.getPartitions()
         assertEquals(8, partitionCount)
         val expectedPartitionName = "${collectionId}\$hst_${session.txn().year()}"
         assertTrue(doesTableExist(session, expectedPartitionName))
@@ -85,7 +86,7 @@ class NakshaSessionTest : JbTest() {
         // given
         val collectionId = "foo"
         val session = NakshaSession.get()
-        session.collectionConfiguration.put(collectionId, newMap())
+        session.collectionConfiguration.put(collectionId, NakCollection())
 
         val op1 = prepareOperation(XYZ_OP_CREATE, "someId")
         val op2 = prepareOperation(XYZ_OP_UPDATE, "someId")
@@ -100,10 +101,11 @@ class NakshaSessionTest : JbTest() {
     }
 
     private fun createCollection(session: NakshaSession, collectionId: String, partitionCount: Int = PARTITION_COUNT_NONE, disableHistory: Boolean = true) {
-        val collectionJson = """{"id":"$collectionId","type":"NakshaCollection","maxAge":3560,"partitionCount":$partitionCount,"properties":{},"disableHistory":$disableHistory}"""
-        val builder = XyzBuilder.create(65536)
-        val feature = builder.buildFeatureFromMap(asMap(env.parse(collectionJson)))
-        session.writeCollections(ReqHelper.prepareCollectionReq(XYZ_OP_UPSERT, collectionId, feature))
+        val feature = NakCollection()
+        feature.setId(collectionId)
+        feature.setPartitions(partitionCount)
+        feature.setDisableHistory(disableHistory)
+        session.writeCollections(ReqHelper.prepareCollectionReq(XYZ_OP_UPSERT, collectionId, collectionFeature = feature))
     }
 
     private fun doesTableExist(session: NakshaSession, tableName: String): Boolean {

@@ -2,6 +2,7 @@
 
 package com.here.naksha.lib.jbon
 
+import com.here.naksha.lib.base.BaseMap
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -178,12 +179,12 @@ open class JbReader {
          * @return The platform native map.
          */
         @JvmStatic
-        internal fun readMap(jbMap: JbMap): IMap {
-            val imap = newMap()
+        internal fun readMap(jbMap: JbMap): BaseMap<Any?> {
+            val map = BaseMap.klass.newInstance()
             while (jbMap.next()) {
-                imap.put(jbMap.key(), jbMap.value().readValue())
+                map[jbMap.key()] = jbMap.value().readValue()
             }
-            return imap
+            return map
         }
 
         /**

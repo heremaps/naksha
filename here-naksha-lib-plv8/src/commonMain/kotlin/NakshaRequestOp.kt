@@ -1,13 +1,11 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.base.Base
-import com.here.naksha.lib.base.NakWriteFeatures
 import com.here.naksha.lib.base.NakWriteRequest
 import com.here.naksha.lib.base.NakWriteRow
 import com.here.naksha.lib.base.iterator
 import com.here.naksha.lib.base.size
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.plv8.Static.DEBUG
 
 internal class NakshaRequestOp(
         val writeRow: NakWriteRow,
@@ -25,7 +23,7 @@ internal class NakshaRequestOp(
         fun mapToOperations(
                 collectionId: String,
                 writeRequest: NakWriteRequest,
-                sql: IPlv8Sql,
+                session: NakshaSession,
                 collectionPartitionCount: Int
         ): NakshaWriteOps {
             var partition: Int = -2
@@ -36,7 +34,7 @@ internal class NakshaRequestOp(
             val idsToDel = ArrayList<String>()
             val uniqueIds = HashSet<String>(size)
             for (rowOb in writeRequest.getRows()) {
-                val nakWriteOp = Base.assign(rowOb.value!!, NakWriteRow.klass)
+                val nakWriteOp = Base.assign(rowOb.value, NakWriteRow.klass)
 
                 val id = nakWriteOp.getId()
                         ?: nakWriteOp.getFeature()?.getId()
@@ -61,14 +59,8 @@ internal class NakshaRequestOp(
                 row[COL_TAGS] = nakWriteOp.getRow()?.getTags()?.getByteArray()
                 row[COL_GEOMETRY] = nakWriteOp.getRow()?.getGeo()?.getByteArray()
                 val flags = nakWriteOp.getFlagsObject()
-                val featureBytes = nakWriteOp.getRow()?.getFeature()?.getByteArray()
-                row[COL_FEATURE] = if (sql.info().gzipSupported && featureBytes != null) {
-                    flags.forceGzipOnFeatureEncoding()
-                    sql.gzipCompress(featureBytes)
-                } else {
-                    flags.turnOffGzipOnFeatureEncoding()
-                    featureBytes
-                }
+
+                row[COL_FEATURE] = session.getFeatureAsJbon(nakWriteOp.getFeature(), flags, collectionId)
                 row[COL_FLAGS] = flags.toCombinedFlags()
                 if (nakWriteOp.getGrid() != null) {
                     // we don't want it to be null, as null would override calculated value later in response

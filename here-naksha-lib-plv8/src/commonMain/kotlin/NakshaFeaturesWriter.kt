@@ -1,6 +1,8 @@
 package com.here.naksha.lib.plv8
 
 import NakshaBulkLoaderPlan
+import com.here.naksha.lib.base.Base
+import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakWriteCollections
 import com.here.naksha.lib.base.NakWriteFeatures
 import com.here.naksha.lib.base.size
@@ -32,7 +34,7 @@ class NakshaFeaturesWriter(
     fun writeFeatures(writeRequest: NakWriteFeatures): ITable {
         val START = currentMillis()
         val START_MAPPING = currentMillis()
-        val operations = mapToOperations(headCollectionId, writeRequest, session.sql, collectionConfig.getCollectionPartitionCount())
+        val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.getPartitions())
         val END_MAPPING = currentMillis()
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
@@ -42,7 +44,7 @@ class NakshaFeaturesWriter(
         val END_LOADING = currentMillis()
 
         val START_PREPARE = currentMillis()
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.isNoResults(), collectionConfig[NKC_DISABLE_HISTORY], collectionConfig.isNkcAutoPurge())
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.isNoResults(), collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
         for (op in operations.operations) {
             val existingFeature: IMap? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
@@ -73,17 +75,16 @@ class NakshaFeaturesWriter(
     }
 
     fun writeCollections(writeRequest: NakWriteCollections): ITable {
-        val operations = mapToOperations(headCollectionId, writeRequest, session.sql, collectionConfig.getCollectionPartitionCount())
+        val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.getPartitions())
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
         val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.isNoResults())
         val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.isNoResults())
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.isNoResults(), collectionConfig[NKC_DISABLE_HISTORY], collectionConfig.isNkcAutoPurge())
-        val newCollection = NakshaCollection(session.globalDictManager)
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.isNoResults(), collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
 
         for (op in operations.operations) {
-            newCollection.mapBytes(op.writeRow.getRow()?.getFeature()?.getByteArray())
+            val newCollection = Base.assign(op.writeRow.getFeature()!!, NakCollection.klass)
 
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
             val schemaOid = asMap(asArray(session.sql.execute(query, arrayOf(session.schema)))[0]).getAny("oid") as Int
@@ -93,7 +94,7 @@ class NakshaFeaturesWriter(
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
             when (opType) {
                 XYZ_OP_CREATE -> {
-                    Static.collectionCreate(session.sql, newCollection.storageClass(), session.schema, schemaOid, op.id, newCollection.geoIndex(), newCollection.partitionCount())
+                    Static.collectionCreate(session.sql, newCollection.getStorageClass(), session.schema, schemaOid, op.id, newCollection.getGeoIndex(), newCollection.getPartitions())
                     plan.addCreate(op)
                 }
 
@@ -121,7 +122,7 @@ class NakshaFeaturesWriter(
     }
 
     private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?, autoPurge: Boolean): NakshaBulkLoaderPlan {
-        val isCollectionPartitioned: Boolean = collectionConfig.isCollectionPartitioned()
+        val isCollectionPartitioned: Boolean = collectionConfig.hasPartitions()
         return if (isCollectionPartitioned && partition != null) {
             if (DEBUG) println("Insert into a single partition #$partition (isCollectionPartitioned: ${isCollectionPartitioned})")
             NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(true, partition), session, isHistoryDisabled, autoPurge, minResult)
@@ -134,14 +135,14 @@ class NakshaFeaturesWriter(
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
             if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else session.sql.quoteIdent(collectionId)
 
-    internal fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: IMap?, collectionConfig: IMap): Int {
+    internal fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: IMap?, collectionConfig: NakCollection): Int {
         return if (row.writeRow.getOp() == XYZ_OP_UPSERT) {
             if (existingFeature != null) {
                 XYZ_OP_UPDATE
             } else {
                 XYZ_OP_CREATE
             }
-        } else if (row.writeRow.getOp() == XYZ_OP_DELETE && collectionConfig.isNkcAutoPurge()) {
+        } else if (row.writeRow.getOp() == XYZ_OP_DELETE && collectionConfig.isAutoPurge()) {
             XYZ_OP_PURGE
         } else {
             row.writeRow.getOp()

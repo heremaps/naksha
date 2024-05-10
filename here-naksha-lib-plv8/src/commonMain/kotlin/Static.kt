@@ -2,6 +2,7 @@
 
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.Fnv1a32
 import com.here.naksha.lib.jbon.Fnv1a64
@@ -11,8 +12,6 @@ import com.here.naksha.lib.jbon.asArray
 import com.here.naksha.lib.jbon.asMap
 import com.here.naksha.lib.jbon.div
 import com.here.naksha.lib.jbon.getAny
-import com.here.naksha.lib.jbon.newMap
-import com.here.naksha.lib.jbon.put
 import com.here.naksha.lib.jbon.toLong
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -35,15 +34,7 @@ object Static {
      * Config for naksha_collection
      */
     @JvmStatic
-    internal val nakshaCollectionConfig = newMap()
-
-    init {
-        nakshaCollectionConfig.put(NKC_GEO_INDEX, null)
-        nakshaCollectionConfig.put(NKC_STORAGE_CLASS, null)
-        nakshaCollectionConfig.put(NKC_PARTITION_COUNT, PARTITION_COUNT_NONE)
-        nakshaCollectionConfig.put(NKC_AUTO_PURGE, false)
-        nakshaCollectionConfig.put(NKC_DISABLE_HISTORY, false)
-    }
+    internal val nakshaCollectionConfig = NakCollection()
 
     /**
      * Array to create a pseudo GeoHash, which is BASE-32 encoded.

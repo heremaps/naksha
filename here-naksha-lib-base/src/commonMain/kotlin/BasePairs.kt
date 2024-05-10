@@ -81,6 +81,10 @@ open class BasePairs<E>(vararg args: Any?) : BaseElementType<E>() {
         return value!!
     }
 
+    protected open fun put(key: String, value: E?): E? {
+        return set(key, value)
+    }
+
     protected open operator fun get(key: String): E? {
         val data = this.data
         if (data == null || data === undefined) return null

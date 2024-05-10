@@ -1,4 +1,5 @@
 import com.here.naksha.lib.base.Base
+import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakWriteRow
 import com.here.naksha.lib.base.iterator
 import com.here.naksha.lib.jbon.IMap
@@ -456,16 +457,20 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
     }
 
     private fun createCollection(tableName: String, partitionCount: Int, disableHistory: Boolean, storageClass: String?=null) {
-        val builder = XyzBuilder.create(65536)
-        var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName"}""")))
-        var result = session.writeCollections(prepareCollectionReq(XYZ_OP_DELETE, tableName, feature))
+        var feature = NakCollection()
+        feature.setId(tableName)
+        var result = session.writeCollections(prepareCollectionReq(XYZ_OP_DELETE, tableName, collectionFeature = feature))
         var table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
 
         val sc = if (storageClass==null) "null" else "\"$storageClass\""
-        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"$tableName","partitionCount":$partitionCount,"disableHistory":$disableHistory,"storageClass":$sc}""")))
-        result = session.writeCollections(prepareCollectionReq(XYZ_OP_CREATE, tableName, feature))
+        feature = NakCollection()
+        feature.setId(tableName)
+        feature.setPartitions(partitionCount)
+        feature.setDisableHistory(disableHistory)
+        feature.setStorageClass(sc)
+        result = session.writeCollections(prepareCollectionReq(XYZ_OP_CREATE, tableName, collectionFeature = feature))
         table = assertInstanceOf(JvmPlv8Table::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_CREATED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }

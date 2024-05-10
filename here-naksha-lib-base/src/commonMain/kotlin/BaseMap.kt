@@ -26,6 +26,10 @@ open class BaseMap<E>(vararg args: Any?) : BasePairs<E>(*args) {
     public override fun <T> getOrNull(key: String, klass: Klass<T>): T? = super.getOrNull(key, klass)
     public override fun <T> getOrCreate(key: String, klass: Klass<T>, vararg args: Any?): T = super.getOrCreate(key, klass, *args)
 
+    public override fun put(key: String, value: E?): E? = super.put(key, value)
+
+    fun containsKey(key: String): Boolean = data().contains(key)
+
     public override operator fun get(key: String): E? = super.get(key)
 
     public override operator fun set(key: String, value: E?): E? = super.set(key, value)
