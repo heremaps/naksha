@@ -1,8 +1,10 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package com.here.naksha.lib.base
+package com.here.naksha.lib.base.com.here.naksha.lib.auth
 
-import com.here.naksha.lib.base.Klass.Companion.stringKlass
+import com.here.naksha.lib.base.BaseKlass
+import com.here.naksha.lib.base.BaseObject
+import com.here.naksha.lib.base.BaseObjectKlass
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
