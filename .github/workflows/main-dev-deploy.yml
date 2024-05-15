@@ -51,7 +51,7 @@ jobs:
     uses: ./.github/workflows/reusable-codedeploy-deployment.yml
     with:
       aws-region: ${{ vars.AWS_REGION }}
-      codedeploy-app-name: ${{ vars.CODEDEPLOY_APP_NAME }}
+      codedeploy-app-name: Naksha_v2_App
       codedeploy-group-name: ${{ vars.CODEDEPLOY_DEV_GROUP_NAME }}
       deployment-description: 'Deployment triggered by ${{ github.triggering_actor }} from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
       s3-bucket-name: ${{ vars.RELEASE_S3_BUCKET_NAME }}
