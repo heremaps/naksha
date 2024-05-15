@@ -10,13 +10,14 @@ import kotlin.jvm.JvmStatic
  * @param <E> The element type.
  */
 @JsExport
-open class BaseList<E> : BaseArray<E>() {
+open class BaseList<E>(vararg args: E?) : BaseArray<E>(*args) {
+
     companion object {
         @JvmStatic
         val klass = object : BaseArrayKlass<Any?, BaseList<Any?>>() {
             override fun isInstance(o: Any?): Boolean = o is BaseArray<*>
 
-            override fun newInstance(vararg args: Any?): BaseList<Any?> = BaseList()
+            override fun newInstance(vararg args: Any?): BaseList<Any?> = BaseList(args)
         }
 
         /**

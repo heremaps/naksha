@@ -18,4 +18,10 @@ class RawPair<K, V>(var key: K, var value: V) : Raw() {
     fun copy(): RawPair<K, V> = RawPair(key, value)
 
     override fun toPlatform(): PObject = Base.newObject("key", key, "value", value)
+
+    operator fun component1(): K =
+        key
+
+    operator fun component2(): V =
+        value
 }

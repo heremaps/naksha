@@ -5,7 +5,7 @@ package com.here.naksha.lib.base
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
-/**
+/**e
  * The Naksha type for an object.
  */
 @JsExport
