@@ -27,17 +27,16 @@ internal class NakshaRequestOp(
                 collectionPartitionCount: Int
         ): NakshaWriteOps {
             var partition: Int = -2
-            val size = writeRequest.getRows().size()
+            val size = writeRequest.rows.size
             val operations = ArrayList<NakshaRequestOp>(size)
             val idsToModify = ArrayList<String>(size)
             val idsToPurge = ArrayList<String>()
             val idsToDel = ArrayList<String>()
             val uniqueIds = HashSet<String>(size)
-            for (rowOb in writeRequest.getRows()) {
-                val nakWriteOp = Base.assign(rowOb.value, NakWriteRow.klass)
+            for (nakWriteOp in writeRequest.rows) {
 
-                val id = nakWriteOp.getId()
-                        ?: nakWriteOp.getFeature()?.getId()
+                val id = nakWriteOp.id
+                        ?: nakWriteOp.feature?.getId()
                         ?: throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", null)
 
                 if (uniqueIds.contains(id)) {
@@ -46,25 +45,25 @@ internal class NakshaRequestOp(
                     uniqueIds.add(id)
                 }
 
-                if (nakWriteOp.getOp() != XYZ_OP_CREATE) {
+                if (nakWriteOp.op != XYZ_OP_CREATE) {
                     idsToModify.add(id)
-                    if (nakWriteOp.getOp() == XYZ_OP_PURGE) {
+                    if (nakWriteOp.op == XYZ_OP_PURGE) {
                         idsToPurge.add(id)
-                    } else if (nakWriteOp.getOp() == XYZ_OP_DELETE) {
+                    } else if (nakWriteOp.op == XYZ_OP_DELETE) {
                         idsToDel.add(id)
                     }
                 }
                 val row = newMap()
                 row[COL_ID] = id
-                row[COL_TAGS] = nakWriteOp.getRow()?.getTags()?.getByteArray()
-                row[COL_GEOMETRY] = nakWriteOp.getRow()?.getGeo()?.getByteArray()
-                val flags = nakWriteOp.getFlagsObject()
+                row[COL_TAGS] = nakWriteOp.row?.tags
+                row[COL_GEOMETRY] = nakWriteOp.row?.geo
+                val flags = nakWriteOp.flags
 
-                row[COL_FEATURE] = session.getFeatureAsJbon(nakWriteOp.getFeature(), flags, collectionId)
+                row[COL_FEATURE] = session.getFeatureAsJbon(nakWriteOp.feature, flags, collectionId)
                 row[COL_FLAGS] = flags.toCombinedFlags()
-                if (nakWriteOp.getGrid() != null) {
+                if (nakWriteOp.grid != null) {
                     // we don't want it to be null, as null would override calculated value later in response
-                    row[COL_GEO_GRID] = nakWriteOp.getGrid()
+                    row[COL_GEO_GRID] = nakWriteOp.grid
                 }
 
                 val op = NakshaRequestOp(nakWriteOp, row, collectionId = collectionId, collectionPartitionCount)

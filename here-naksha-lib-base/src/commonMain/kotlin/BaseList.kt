@@ -39,4 +39,5 @@ open class BaseList<E>(vararg args: E?) : BaseArray<E>(*args) {
     public override fun size(): Int = super.size()
     @Suppress("NON_EXPORTABLE_TYPE")
     operator fun iterator(): Iterator<RawPair<Int, E>> = KtIterator(Base.arrayIterator(data()) as PIterator<Int,E>)
+    fun add(value: E?) = set(size(), value)
 }

@@ -102,9 +102,10 @@ open class NakCollection(vararg args: Any?) : NakFeature(*args) {
 
     fun setAutoPurge(value: Boolean) = set(AUTO_PURGE, value)
 
-    fun setIndices(values: PArray) = set(INDICES, values)
+    fun setIndices(values: BaseList<String>) = set(INDICES, values)
 
-    fun getIndices(): PArray = toElement(get(INDICES), Klass.arrayKlass, Klass.arrayKlass.newInstance())!!
+    @Suppress("UNCHECKED_CAST")
+    fun getIndices(): BaseList<String> = toElement(get(INDICES), BaseList.klass, BaseList.klass.newInstance())!! as BaseList<String>
 
     fun setMaxAge(value: Int64) = set(MAX_AGE, value)
 

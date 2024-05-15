@@ -1,4 +1,5 @@
 import com.here.naksha.lib.base.NakCollection
+import com.here.naksha.lib.base.NakErrorResponse
 import com.here.naksha.lib.jbon.XYZ_OP_CREATE
 import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
 import com.here.naksha.lib.jbon.XYZ_OP_UPSERT
@@ -93,10 +94,10 @@ class NakshaSessionTest : JbTest() {
 
         // when
 
-        val result = session.writeFeatures(prepareFeatureReqForOperations(collectionId, op1, op2)) as JvmPlv8Table
+        val result = session.writeFeatures(prepareFeatureReqForOperations(collectionId, op1, op2)) as NakErrorResponse
 
         // then
-        val error: String? = result.rows[0][RET_ERR_MSG]
+        val error: String = result.message
         assertEquals("Cannot perform multiple operations on single feature in one transaction", error)
     }
 

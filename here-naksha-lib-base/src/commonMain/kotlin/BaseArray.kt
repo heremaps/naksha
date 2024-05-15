@@ -48,5 +48,5 @@ open class BaseArray<E>(vararg args: E?) : BaseElementType<E>() {
         data[i] = unbox(value)
         return old
     }
-    protected open fun size(): Int = Base.length(data as PArray)
+    protected open fun size(): Int = Base.length(data())
 }

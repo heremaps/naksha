@@ -1,4 +1,5 @@
 import com.here.naksha.lib.base.NakCollection
+import com.here.naksha.lib.base.NakSuccessResponse
 import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.Jb
 import com.here.naksha.lib.jbon.JvmMap
@@ -228,10 +229,10 @@ class Plv8Test : JbTest() {
         nakCol.setId("bar")
         nakCol.setPartitions(PARTITION_COUNT_NONE)
         val table = session.writeCollections(prepareCollectionReqCreateFromFeature("bar", nakCol))
-        val result = assertInstanceOf(JvmPlv8Table::class.java, table)
+        val result = assertInstanceOf(NakSuccessResponse::class.java, table)
         assertEquals(1, result.rows.size)
         val row = result.rows[0]
-        assertEquals(XYZ_EXEC_CREATED, row["op"])
+        assertEquals(XYZ_EXEC_CREATED, row.op)
         session.sql.execute("COMMIT")
     }
 

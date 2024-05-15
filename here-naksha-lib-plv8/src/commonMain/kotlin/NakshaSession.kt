@@ -3,10 +3,10 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.base.Base
-import com.here.naksha.lib.base.BaseList
-import com.here.naksha.lib.base.BaseMap
 import com.here.naksha.lib.base.NakCollection
+import com.here.naksha.lib.base.NakErrorResponse
 import com.here.naksha.lib.base.NakFeature
+import com.here.naksha.lib.base.NakResponse
 import com.here.naksha.lib.base.NakRow
 import com.here.naksha.lib.base.NakWriteCollections
 import com.here.naksha.lib.base.NakWriteFeatures
@@ -479,35 +479,33 @@ FROM ns, txn_seq;"""
         return _txts!!
     }
 
-    private fun handleFeatureException(e: Throwable, table: ITable, id: String?) {
+    private fun handleFeatureException(e: Throwable, id: String?): NakErrorResponse {
         val err = asMap(e)
         // available fields (only on server): sqlerrcode, schema_name, table_name, column_name, datatype_name, constraint_name, detail, hint, context, internalquery, code
         val errCode: String? = err["sqlerrcode"] ?: err["sqlstate"]
-        when {
+        return when {
             errCode != null -> {
-                table.returnErr(errCode, e.cause?.message ?: errCode, id)
+                NakErrorResponse(errCode, e.cause?.message ?: errCode, id)
             }
 
             else -> {
                 if (Static.PRINT_STACK_TRACES)
                     Jb.log.info(e.cause?.message!!)
-                table.returnErr(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}", id)
+                NakErrorResponse(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}", id)
             }
         }
     }
 
-    fun writeCollections(writeRequest: NakWriteCollections): ITable {
-        val table = sql.newTable()
+    fun writeCollections(writeRequest: NakWriteCollections): NakResponse {
         val writer = NakshaFeaturesWriter(NKC_TABLE, this)
-        try {
-            return writer.writeCollections(writeRequest)
+        return try {
+            writer.writeCollections(writeRequest)
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-            table.returnException(e)
+            NakErrorResponse(e.errNo, e.errMsg)
         } catch (e: Throwable) {
-            handleFeatureException(e, table, null)
+            handleFeatureException(e, null)
         }
-        return table;
     }
 
     private lateinit var featureReader: JbMapFeature
@@ -624,33 +622,28 @@ FROM ns, txn_seq;"""
      * Single threaded all-or-nothing bulk write operation.
      * As result there is row with success or error returned.
      */
-    fun writeFeatures(writeRequest: NakWriteFeatures): ITable {
-        val table = sql.newTable()
-        val featureWriter = NakshaFeaturesWriter(writeRequest.getCollectionId(), this)
+    fun writeFeatures(writeRequest: NakWriteFeatures): NakResponse {
+        val featureWriter = NakshaFeaturesWriter(writeRequest.collectionId, this)
 
-        try {
+        return try {
             saveCurrentTransactionLog()
             val writeFeaturesResult = featureWriter.writeFeatures(writeRequest)
             saveCurrentTransactionLog()
-            return writeFeaturesResult
+            writeFeaturesResult
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-            table.returnException(e)
+            NakErrorResponse(e.errNo, e.errMsg)
         } catch (e: Throwable) {
-            handleFeatureException(e, table, null)
+            handleFeatureException(e, null)
         }
-        return table;
     }
 
     internal fun saveCurrentTransactionLog() {
         val transactionWriter = NakshaFeaturesWriter(SC_TRANSACTIONS, this, modifyCounters = false)
-        val transactionWriteReq = NakWriteFeatures()
-        transactionWriteReq.setNoResults(true)
-        val row = NakRow()
-        row.setFeature(transaction.toBytes())
-        val writeOp = NakWriteRow.fromRow(XYZ_OP_UPSERT, row )
-        writeOp.setId(txn().toUuid(storageId).toString())
-        transactionWriteReq.setRows(BaseList(writeOp))
+
+        val row = NakRow(feature = transaction.toBytes())
+        val writeOp = NakWriteRow(XYZ_OP_UPSERT, row = row, id = txn().toUuid(storageId).toString())
+        val transactionWriteReq = NakWriteFeatures(SC_TRANSACTIONS, noResults = true, rows = arrayOf(writeOp))
         transactionWriter.writeFeatures(transactionWriteReq)
     }
 

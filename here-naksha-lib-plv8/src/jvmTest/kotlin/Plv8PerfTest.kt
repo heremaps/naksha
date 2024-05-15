@@ -1,7 +1,7 @@
-import com.here.naksha.lib.base.Base
 import com.here.naksha.lib.base.NakCollection
+import com.here.naksha.lib.base.NakErrorResponse
+import com.here.naksha.lib.base.NakSuccessResponse
 import com.here.naksha.lib.base.NakWriteRow
-import com.here.naksha.lib.base.iterator
 import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
 import com.here.naksha.lib.jbon.SQL_INT16
@@ -14,18 +14,12 @@ import com.here.naksha.lib.jbon.XYZ_OP_PURGE
 import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
 import com.here.naksha.lib.jbon.XyzBuilder
 import com.here.naksha.lib.jbon.asMap
-import com.here.naksha.lib.jbon.get
-import com.here.naksha.lib.jbon.getAny
 import com.here.naksha.lib.jbon.set
 import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_NULL
 import com.here.naksha.lib.plv8.ERR_CHECK_VIOLATION
 import com.here.naksha.lib.plv8.JvmPlv8Env
 import com.here.naksha.lib.plv8.JvmPlv8Sql
-import com.here.naksha.lib.plv8.JvmPlv8Table
 import com.here.naksha.lib.plv8.NakshaSession
-import com.here.naksha.lib.plv8.RET_ERR_MSG
-import com.here.naksha.lib.plv8.RET_ERR_NO
-import com.here.naksha.lib.plv8.RET_OP
 import com.here.naksha.lib.plv8.ReqHelper.prepareCollectionReq
 import com.here.naksha.lib.plv8.ReqHelper.prepareFeatureReqForOperations
 import com.here.naksha.lib.plv8.ReqHelper.prepareOperation
@@ -151,15 +145,15 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
         var result = session.writeCollections(prepareCollectionReq(XYZ_OP_DELETE, "v2_perf_test", feature))
-        var table = assertInstanceOf(JvmPlv8Table::class.java, result)
-        assertEquals(1, table.rows.size)
-        assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
+        var nakResponse = assertInstanceOf(NakSuccessResponse::class.java, result)
+        assertEquals(1, nakResponse.rows.size)
+        assertTrue(XYZ_EXEC_RETAINED == nakResponse.rows[0].op || XYZ_EXEC_DELETED == nakResponse.rows[0].op)
 
         feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
         result = session.writeCollections(prepareCollectionReq(XYZ_OP_CREATE, "v2_perf_test", feature))
-        table = assertInstanceOf(JvmPlv8Table::class.java, result)
-        assertEquals(1, table.rows.size)
-        assertTrue(XYZ_EXEC_CREATED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
+        nakResponse = assertInstanceOf(nakResponse::class.java, result)
+        assertEquals(1, nakResponse.rows.size)
+        assertTrue(XYZ_EXEC_CREATED == nakResponse.rows[0].op)
 
         session.sql.execute("commit")
 
@@ -283,11 +277,11 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
             val f = createBulkFeature()
 
             // Verify physical partition
-            val p = Static.partitionNumber(f.getId()!!, PARTITION_COUNT)
+            val p = Static.partitionNumber(f.id!!, PARTITION_COUNT)
             check(p in 0..<PARTITION_COUNT)
 
             // Assign to virtual partition.
-            val vp = Static.partitionIndex(f.getId()!!, BulkLoadThreads)
+            val vp = Static.partitionIndex(f.id!!, BulkLoadThreads)
             check(vp in 0..<BulkLoadThreads)
             partNameByVp[vp] = PARTITION_ID[p]
             featuresDoneByVp.setRelease(vp, false)
@@ -329,9 +323,8 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
                             try {
                                 val writeReq = prepareFeatureReqForOperations(tableName, *features.toTypedArray())
                                 val result = threadSession.writeFeatures(writeReq)
-                                if (result is JvmPlv8Table && result.rows.size > 0) {
-                                    val err = result.rows[0]
-                                    println("Error: ${err.getAny(RET_ERR_NO) as String} - ${err.getAny(RET_ERR_MSG) as String}")
+                                if (result is NakErrorResponse) {
+                                    println("Error: ${result.error} - ${result.message}")
                                 }
                                 threadSession.sql.execute("commit")
                             } catch (e: Exception) {
@@ -387,13 +380,14 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         printStatistics(BulkWriteSize, 1, (insertEnd - insertsStart), baseLine)
 
         // update features
+        val updateOps = mutableListOf<NakWriteRow>()
         var updateCount = 0
-        for (o in writeReq.getRows()) {
-            Base.assign(o.value!!, NakWriteRow.klass).setOp(XYZ_OP_UPDATE)
+        for (o in writeReq.rows) {
+            updateOps.add(o.copy(op = XYZ_OP_UPDATE))
             updateCount++
         }
         val updateStart = currentMicros()
-        val rowsUpdated = session.writeFeatures(writeReq) as JvmPlv8Table
+        val rowsUpdated = session.writeFeatures(prepareFeatureReqForOperations(tableName, *updateOps.toTypedArray())) as NakSuccessResponse
         assertEquals(BulkWriteSize, rowsUpdated.rows.size)
         session.sql.execute("commit")
         val updateEnd = currentMicros()
@@ -404,12 +398,13 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         // delete features
         var deleteCount = 0
-        for (o in writeReq.getRows()) {
-            Base.assign(o.value!!, NakWriteRow.klass).setOp(XYZ_OP_DELETE)
+        val deleteOps = mutableListOf<NakWriteRow>()
+        for (o in writeReq.rows) {
+            deleteOps.add(o.copy(op = XYZ_OP_DELETE))
             deleteCount++
         }
         val delStart = currentMicros()
-        val rowsDeleted = session.writeFeatures(writeReq) as JvmPlv8Table
+        val rowsDeleted = session.writeFeatures(prepareFeatureReqForOperations(tableName, *updateOps.toTypedArray())) as NakSuccessResponse
         assertEquals(BulkWriteSize, rowsDeleted.rows.size)
         session.sql.execute("commit")
         val delEnd = currentMicros()
@@ -435,15 +430,12 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
 
         val operationWithInvalidUuidToCheck: (Int) -> Unit = { operation ->
-            for (o in writeReq.getRows()) {
-                val op = Base.assign(o.value!!, NakWriteRow.klass)
-                op.setOp(operation)
-                op.setUuid("invalid:uid:2024:1:1:1:1")
+            val newOps = mutableListOf<NakWriteRow>()
+            for (o in writeReq.rows) {
+                newOps.add(o.copy(op = operation, uuid = "invalid:uid:2024:1:1:1:1"))
             }
-            val operationResult =  session.writeFeatures(writeReq) as JvmPlv8Table
-            val cols = asMap(operationResult.rows[0])
-            assertEquals("ERROR", cols[RET_OP])
-            assertEquals(ERR_CHECK_VIOLATION, cols[RET_ERR_NO])
+            val operationResult = session.writeFeatures(prepareFeatureReqForOperations(tableName, *newOps.toTypedArray())) as NakErrorResponse
+            assertEquals(ERR_CHECK_VIOLATION, operationResult.error)
             session.sql.execute("rollback")
             session.clear()
         }
@@ -456,24 +448,24 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         operationWithInvalidUuidToCheck(XYZ_OP_PURGE)
     }
 
-    private fun createCollection(tableName: String, partitionCount: Int, disableHistory: Boolean, storageClass: String?=null) {
+    private fun createCollection(tableName: String, partitionCount: Int, disableHistory: Boolean, storageClass: String? = null) {
         var feature = NakCollection()
         feature.setId(tableName)
         var result = session.writeCollections(prepareCollectionReq(XYZ_OP_DELETE, tableName, collectionFeature = feature))
-        var table = assertInstanceOf(JvmPlv8Table::class.java, result)
+        var table = assertInstanceOf(NakSuccessResponse::class.java, result)
         assertEquals(1, table.rows.size)
-        assertTrue(XYZ_EXEC_RETAINED == table.rows[0][RET_OP] || XYZ_EXEC_DELETED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
+        assertTrue(XYZ_EXEC_RETAINED == table.rows[0].op || XYZ_EXEC_DELETED == table.rows[0].op)
 
-        val sc = if (storageClass==null) "null" else "\"$storageClass\""
+        val sc = if (storageClass == null) "null" else "\"$storageClass\""
         feature = NakCollection()
         feature.setId(tableName)
         feature.setPartitions(partitionCount)
         feature.setDisableHistory(disableHistory)
         feature.setStorageClass(sc)
         result = session.writeCollections(prepareCollectionReq(XYZ_OP_CREATE, tableName, collectionFeature = feature))
-        table = assertInstanceOf(JvmPlv8Table::class.java, result)
+        table = assertInstanceOf(NakSuccessResponse::class.java, result)
         assertEquals(1, table.rows.size)
-        assertTrue(XYZ_EXEC_CREATED == table.rows[0][RET_OP]) { table.rows[0][RET_ERR_MSG] }
+        assertTrue(XYZ_EXEC_CREATED == table.rows[0].op)
 
         session.sql.execute("commit")
     }

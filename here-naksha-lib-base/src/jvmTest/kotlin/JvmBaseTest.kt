@@ -74,4 +74,11 @@ class JvmBaseTest {
         assertEquals(100, bytes.size)
         val view = newDataView(bytes)
     }
+
+    @Test
+    fun testList() {
+        val list = BaseList<String>()
+        list[0] = "p"
+        assertEquals("p", list[0])
+    }
 }

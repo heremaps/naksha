@@ -3,6 +3,8 @@ package com.here.naksha.lib.plv8
 import NakshaBulkLoaderPlan
 import com.here.naksha.lib.base.Base
 import com.here.naksha.lib.base.NakCollection
+import com.here.naksha.lib.base.NakResponse
+import com.here.naksha.lib.base.NakSuccessResponse
 import com.here.naksha.lib.base.NakWriteCollections
 import com.here.naksha.lib.base.NakWriteFeatures
 import com.here.naksha.lib.base.size
@@ -31,7 +33,7 @@ class NakshaFeaturesWriter(
 
     private val collectionConfig = session.getCollectionConfig(headCollectionId)
 
-    fun writeFeatures(writeRequest: NakWriteFeatures): ITable {
+    fun writeFeatures(writeRequest: NakWriteFeatures): NakSuccessResponse {
         val START = currentMillis()
         val START_MAPPING = currentMillis()
         val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.getPartitions())
@@ -39,12 +41,12 @@ class NakshaFeaturesWriter(
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
-        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.isNoResults())
-        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.isNoResults())
+        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
+        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.noResults)
         val END_LOADING = currentMillis()
 
         val START_PREPARE = currentMillis()
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.isNoResults(), collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
         for (op in operations.operations) {
             val existingFeature: IMap? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
@@ -62,29 +64,29 @@ class NakshaFeaturesWriter(
         plan.executeAll()
         if (modifyCounters) {
             // no exception was thrown - execution succeeded, we can increase transaction counter
-            session.transaction.addModifiedCount(writeRequest.getRows().size())
-            session.transaction.addCollectionCounts(collectionId, writeRequest.getRows().size())
+            session.transaction.addModifiedCount(writeRequest.rows.size)
+            session.transaction.addCollectionCounts(collectionId, writeRequest.rows.size)
         }
         val END_EXECUTION = currentMillis()
 
         val END = currentMillis()
         if (DEBUG) {
-            println("[${writeRequest.getRows().size()} feature]: ${END!! - START!!}ms, loading: ${END_LOADING!! - START}ms, execution: ${END_EXECUTION!! - START_EXECUTION!!}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
+            println("[${writeRequest.rows.size} feature]: ${END!! - START!!}ms, loading: ${END_LOADING!! - START}ms, execution: ${END_EXECUTION!! - START_EXECUTION!!}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
         }
-        return plan.result
+        return NakSuccessResponse(rows = plan.result.toTypedArray())
     }
 
-    fun writeCollections(writeRequest: NakWriteCollections): ITable {
+    fun writeCollections(writeRequest: NakWriteCollections): NakSuccessResponse {
         val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.getPartitions())
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
-        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.isNoResults())
-        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.isNoResults())
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.isNoResults(), collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
+        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
+        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.noResults)
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
 
         for (op in operations.operations) {
-            val newCollection = Base.assign(op.writeRow.getFeature()!!, NakCollection.klass)
+            val newCollection = Base.assign(op.writeRow.feature!!, NakCollection.klass)
 
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
             val schemaOid = asMap(asArray(session.sql.execute(query, arrayOf(session.schema)))[0]).getAny("oid") as Int
@@ -118,7 +120,7 @@ class NakshaFeaturesWriter(
             }
         }
         plan.executeAll()
-        return plan.result
+        return NakSuccessResponse(rows = plan.result.toTypedArray())
     }
 
     private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?, autoPurge: Boolean): NakshaBulkLoaderPlan {
@@ -136,16 +138,16 @@ class NakshaFeaturesWriter(
             if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else session.sql.quoteIdent(collectionId)
 
     internal fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: IMap?, collectionConfig: NakCollection): Int {
-        return if (row.writeRow.getOp() == XYZ_OP_UPSERT) {
+        return if (row.writeRow.op == XYZ_OP_UPSERT) {
             if (existingFeature != null) {
                 XYZ_OP_UPDATE
             } else {
                 XYZ_OP_CREATE
             }
-        } else if (row.writeRow.getOp() == XYZ_OP_DELETE && collectionConfig.isAutoPurge()) {
+        } else if (row.writeRow.op == XYZ_OP_DELETE && collectionConfig.isAutoPurge()) {
             XYZ_OP_PURGE
         } else {
-            row.writeRow.getOp()
+            row.writeRow.op
         }
     }
 }

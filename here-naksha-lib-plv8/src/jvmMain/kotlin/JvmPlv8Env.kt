@@ -1,6 +1,9 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.base.NakCollection
+import com.here.naksha.lib.base.NakErrorResponse
+import com.here.naksha.lib.base.NakResponse
+import com.here.naksha.lib.base.NakSuccessResponse
 import com.here.naksha.lib.jbon.Jb
 import com.here.naksha.lib.jbon.JbSession
 import com.here.naksha.lib.jbon.JvmEnv
@@ -205,10 +208,9 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
 
 
     private fun createInternalsIfNotExists(conn: Connection, schema: String, appName: String) {
-        val verifyCreation: (ITable) -> Unit = {
-            val table = it as JvmPlv8Table
-            val opPerformed: String? = table.rows[0][RET_OP]
-            assert(opPerformed == XYZ_EXEC_CREATED) { table.rows[0][RET_ERR_MSG]!! }
+        val verifyCreation: (NakResponse) -> Unit = {
+            assert(it is NakSuccessResponse) { (it as NakErrorResponse).error }
+            assert((it as NakSuccessResponse).rows.first().getOp() == XYZ_EXEC_CREATED)
         }
 
         startSession(conn, schema, appName, "", appName, null)

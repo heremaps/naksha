@@ -31,7 +31,8 @@ open class JvmPArray(vararg entries: Any?) : JvmObject(), MutableList<Any?>, PAr
         return d
     }
 
-    override val size: Int = data?.size ?: 0
+    override val size: Int
+        get() = data?.size ?: 0
 
     override fun clear() {
         data = null

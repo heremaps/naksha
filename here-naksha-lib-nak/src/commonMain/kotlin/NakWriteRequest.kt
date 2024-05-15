@@ -2,26 +2,15 @@ package com.here.naksha.lib.base
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class NakWriteRequest(vararg args: Any?) : NakRequest(*args) {
-
-    companion object {
-        @JvmStatic
-        val NO_RESULTS = Base.intern("noResults")
-
-        @JvmStatic
-        val ROWS = Base.intern("rows")
-    }
-
-    fun isNoResults(): Boolean = toElement(get(NO_RESULTS), Klass.boolKlass, false)!!
-
-    fun setNoResults(value: Boolean) = set(NO_RESULTS, value)
-
-    fun setRows(values: BaseList<NakWriteRow>) = set(ROWS, values)
-
-    @Suppress("UNCHECKED_CAST")
-    fun getRows(): BaseList<NakWriteRow> = toElement(get(ROWS), BaseList.klass, BaseList<NakWriteRow>())!! as BaseList<NakWriteRow>
-}
+abstract class NakWriteRequest(
+        val noResults: Boolean = false,
+        val rows: Array<NakWriteRow>,
+        noFeature: Boolean = false,
+        noGeometry: Boolean = false,
+        noMeta: Boolean = false,
+        noTags: Boolean = false,
+        resultFilter: Array<IReadRowFilter> = emptyArray()
+) : NakRequest(noFeature, noGeometry, noMeta, noTags, resultFilter)

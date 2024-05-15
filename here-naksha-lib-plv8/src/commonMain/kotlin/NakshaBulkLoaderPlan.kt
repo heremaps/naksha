@@ -1,3 +1,5 @@
+import com.here.naksha.lib.base.NakReadRow
+import com.here.naksha.lib.base.NakRow
 import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.NakshaUuid
 import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
@@ -5,9 +7,15 @@ import com.here.naksha.lib.jbon.SQL_INT16
 import com.here.naksha.lib.jbon.SQL_INT32
 import com.here.naksha.lib.jbon.SQL_INT64
 import com.here.naksha.lib.jbon.SQL_STRING
+import com.here.naksha.lib.jbon.XYZ_EXEC_CREATED
+import com.here.naksha.lib.jbon.XYZ_EXEC_DELETED
+import com.here.naksha.lib.jbon.XYZ_EXEC_PURGED
+import com.here.naksha.lib.jbon.XYZ_EXEC_RETAINED
+import com.here.naksha.lib.jbon.XYZ_EXEC_UPDATED
 import com.here.naksha.lib.jbon.get
 import com.here.naksha.lib.jbon.plus
 import com.here.naksha.lib.jbon.set
+import com.here.naksha.lib.nak.Flags
 import com.here.naksha.lib.plv8.COL_ACTION
 import com.here.naksha.lib.plv8.COL_ALL
 import com.here.naksha.lib.plv8.COL_ALL_TYPES
@@ -16,10 +24,10 @@ import com.here.naksha.lib.plv8.COL_AUTHOR
 import com.here.naksha.lib.plv8.COL_AUTHOR_TS
 import com.here.naksha.lib.plv8.COL_CREATED_AT
 import com.here.naksha.lib.plv8.COL_FEATURE
+import com.here.naksha.lib.plv8.COL_FLAGS
 import com.here.naksha.lib.plv8.COL_GEOMETRY
 import com.here.naksha.lib.plv8.COL_GEO_GRID
 import com.here.naksha.lib.plv8.COL_GEO_REF
-import com.here.naksha.lib.plv8.COL_FLAGS
 import com.here.naksha.lib.plv8.COL_ID
 import com.here.naksha.lib.plv8.COL_PTXN
 import com.here.naksha.lib.plv8.COL_PUID
@@ -54,7 +62,7 @@ internal class NakshaBulkLoaderPlan(
 
     internal val featureIdsToDeleteFromDel = mutableListOf<String>()
     internal val featuresToPurgeFromDel = mutableListOf<String>()
-    internal val result = session.sql.newTable()
+    internal val result = mutableListOf<NakReadRow>()
 
     internal val insertToHeadBulkParams = mutableListOf<Array<Param>>()
     internal val copyHeadToDelBulkParams = mutableListOf<Array<Param>>()
@@ -122,21 +130,21 @@ internal class NakshaBulkLoaderPlan(
         session.xyzInsert(op.collectionId, op.rowMap)
         addInsertParams(op.rowMap)
         if (!minResult) {
-            result.returnCreated(op.id, session.xyzNsFromRow(collectionId, op.rowMap))
+            addRow(XYZ_EXEC_CREATED, op.id, session.xyzNsFromRow(collectionId, op.rowMap))
         }
     }
 
     fun addUpdate(op: NakshaRequestOp, existingFeature: IMap?) {
         val featureRowMap = op.rowMap
         val headBeforeUpdate: IMap = existingFeature!!
-        checkStateForAtomicOp(op.writeRow.getUuid(), headBeforeUpdate)
+        checkStateForAtomicOp(op.writeRow.uuid, headBeforeUpdate)
 
         addToRemoveFromDel(op.id)
         addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
         session.xyzUpdateHead(op.collectionId, featureRowMap, headBeforeUpdate)
         addUpdateHeadParams(featureRowMap)
         if (!minResult) {
-            result.returnUpdated(op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
+            addRow(XYZ_EXEC_UPDATED, op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
         }
     }
 
@@ -149,10 +157,11 @@ internal class NakshaBulkLoaderPlan(
         addDeleteInternal(op, existingFeature)
         if (!minResult) {
             if (existingFeature == null) {
-                result.returnRetained(op.id)
+                addRow(XYZ_EXEC_RETAINED, op.id)
             } else {
                 val headBeforeDelete: IMap = existingFeature
-                result.returnDeleted(headBeforeDelete, session.xyzNsFromRow(collectionId, headBeforeDelete + op.rowMap))
+                val row = mapToNakRow(headBeforeDelete, session.xyzNsFromRow(collectionId, headBeforeDelete + op.rowMap))
+                addFullRow(XYZ_EXEC_DELETED, op.id, row)
             }
         }
     }
@@ -160,14 +169,15 @@ internal class NakshaBulkLoaderPlan(
     fun addPurge(op: NakshaRequestOp, existingFeature: IMap?, existingInDelFeature: IMap?) {
         addDeleteInternal(op, existingFeature)
         val deletedFeatureRow: IMap? = existingInDelFeature ?: existingFeature
-        checkStateForAtomicOp(op.writeRow.getUuid(), deletedFeatureRow)
+        checkStateForAtomicOp(op.writeRow.uuid, deletedFeatureRow)
         if (!autoPurge) // it's not in $del, so we don't have to purge
             featuresToPurgeFromDel.add(op.id)
         if (!minResult) {
             if (deletedFeatureRow == null) {
-                result.returnRetained(op.id)
+                addRow(XYZ_EXEC_RETAINED, op.id)
             } else {
-                result.returnPurged(deletedFeatureRow, session.xyzNsFromRow(collectionId, deletedFeatureRow))
+                val row = mapToNakRow(deletedFeatureRow, session.xyzNsFromRow(collectionId, deletedFeatureRow))
+                addFullRow(XYZ_EXEC_PURGED, op.id, row)
             }
         }
     }
@@ -194,7 +204,7 @@ internal class NakshaBulkLoaderPlan(
         if (existingFeature != null) {
             // this may throw exception (if we try to delete non-existing feature - that was deleted before)
             val headBeforeDelete: IMap = existingFeature
-            checkStateForAtomicOp(op.writeRow.getUuid(), headBeforeDelete)
+            checkStateForAtomicOp(op.writeRow.uuid, headBeforeDelete)
             addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
 
             featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
@@ -230,7 +240,7 @@ internal class NakshaBulkLoaderPlan(
         ))
     }
 
-    private fun addDelParams(params: MutableList<Array<Param>>, row :IMap) {
+    private fun addDelParams(params: MutableList<Array<Param>>, row: IMap) {
         params.add(arrayOf(
                 Param(1, SQL_INT64, row[COL_TXN_NEXT]),
                 Param(2, SQL_INT64, row[COL_TXN]),
@@ -315,5 +325,25 @@ internal class NakshaBulkLoaderPlan(
                 )
             }
         }
+    }
+
+    private fun mapToNakRow(imap: IMap, xyz: ByteArray): NakRow {
+        return NakRow(
+                id = imap[COL_ID]!!,
+                tags = imap[COL_TAGS],
+                flags = Flags(imap[COL_FLAGS]),
+                geo = imap[COL_GEOMETRY],
+                feature = imap[COL_FEATURE],
+                xyz = xyz
+        )
+    }
+
+    private fun addRow(op: String, id: String? = null, xyz: ByteArray? = null) {
+        addFullRow(op, id, NakRow(id = id, xyz = xyz))
+    }
+
+    private fun addFullRow(op: String, id: String? = null, row: NakRow) {
+        val readRow = NakReadRow(row = row, op = op, id = id)
+        result.add(readRow)
     }
 }
