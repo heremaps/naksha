@@ -28,23 +28,27 @@ All tables used in the Naksha PostgresQL implementation have the same general la
 | updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                                                              |
 | author_ts  | int8  | yes |           | `f.p.xyz->authorTs` - `COALESCE(author_ts, updated_at)`                                           |
 | txn_next   | int8  | yes |           | `f.p.xyz->uuid_next` - **Only in history**.                                                       |
-| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Primary row identifier.                                                         |
-| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Row identifier.                                                                |
-| uid        | int4  | yes |           | `f.p.xyz->uuid` - Primary row identifier - `COALESCE(uid, 0)`                                     |
-| puid       | int4  | yes |           | `f.p.xyz->puuid` - Row identifier                                                                 |
+| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Transaction number.                                                             |
+| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Transaction number of the previous state.                                      |
+| uid        | int4  | yes |           | `f.p.xyz->uuid` - Transaction local unique ID - `COALESCE(uid, 0)`                                |
+| puid       | int4  | yes |           | `f.p.xyz->puuid` - Transaction local unique ID - `COALESCE(puid, 0)`                              |
 | version    | int4  | yes |           | `f.p.xyz->version` - `COALESCE(version, 1)`                                                       |
 | geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                                  |
-| flags      | int4  | no  |           | The geometry encoding (NULL = TWKB, 0 = undefined, 1 = WKB, 2 = EWKB, 3 = TWKB).                  |
+| flags      | int4  | no  |           | Options like feature and geometry encoding.                                                       |
 | action     | int2  | yes |           | `f.p.xyz->action` - CREATE (0), UPDATE (1), DELETE (2) - `COALESCE(action, 0)`                    |
-| app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                                 |
+| origin     | text  | yes |           | `f.p.xyz->origin` - Origin GUID from which forked; only set if forked.                            |
+| app_id     | text  | yes | NOT NULL  | `f.p.xyz->appId`                                                                                  |
 | author     | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                                    |
 | type       | text  | yes |           | `COALESCE(f.momType, f.type)` - The **type** of the feature, `NULL` means collection.defaultType. |
 | id         | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                                               |
 | feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.                                |
-| tags       | bytea | no  |           | `f.p.xyz->tags`                                                                                   |
+| tags       | bytea | no  |           | `f.p.xyz->tags` - Tags are labels attached to features to filter features.                        |
 | geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                                                      |
 | geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`).                                    |
+
 In the table above `f` refers to the feature root, `f.p` refers to the content of the `properties` of the feature, and `f.p.xyz` refers to the `@ns:com:here:xyz` key in the `properties` of the feature (which is called XYZ namespace for historical reason).
+
+The **origin** is set automatically, if a feature is inserted into a collection with a `uuid` that refers to another collection or where the `id` of the feature changed (the GUID contains the **id**, therefore this change can be detected). This is used for get 3-way-merge, which is essential for automatic re-basing. Assume a topology is split in the editor into two parts, the editor should clone the original topology two times, then modify the geometry and properties (this is basically the natural thing expected). Actually the original topology will be deleted. When storing these three features (delete for the cloned one and the two new ones), all of them will have the same cloned XYZ namespace with the same `uuid`. The `lib-psql` will detect this situation and copy the `uuid` into the `origin` column. This is done before updating the other XYZ properties (in the before-trigger). If the original topology is modified later, all related features need to be re-based accordingly, this can be done by searching for all features having the same `origin` as the modified topology. Actually, first search for the prefix `urn:here:naksha:guid:{storage}:{collection}:{id}:`. All found features then need to be updated, for this purpose the concrete state based upon which the new feature state was generated is fetched, then a 3-way-merge is done and applied, last the `origin` is adjusted to the `uuid` of the new state upon which the rebase was done, so that it is clear that the feature is now up-to-date.
 
 All **text** columns and all **btree** indices should always be created with `COLLATE "C"` to ensure deterministic ordering in the table, long term stable determinism and default support for _like_ operation. Basically, `text_pattern_ops` is exactly doing the same thing (can be set additionally to be explicit about this). This improves as well deduplication. All queries should always enforce `COLLATE "C"` too. When text is encoded, we should use `normalize(text, 'NFKC')` to ensure the same binary encoding for all values, no matter if written from Java or directly inside the database. Available collations can be queried using `SELECT * FROM pg_collation;` and `ucs_basic` may be another option, but not recommended so far.
 
@@ -138,7 +142,7 @@ Traditionally XYZ-Hub used UUIDs as state-identifiers, but exposed them as strin
 
 The new format is called GUID (global unique identifier), returning to the roots of the Geo-Space-API. The syntax for a GUID in the PSQL-storage is:
 
-`urn:here:naksha:guid:{storageId}:{collectionId}:{txn.year}:{txn.month}:{txn.day}:{txn.seq}:{uid}`
+`urn:here:naksha:guid:{storageId}:{collectionId}:{id}:{txn.year}:{txn.month}:{txn.day}:{txn.seq}:{uid}`
 
 **Note**: This format holds all information needed for Naksha to know in which storage a feature is located, of which it only has the _GUID_. The PSQL storage knows from this _GUID_ exactly in which database table the features is located, even taking partitioning into account. The reason is, that partitioning is done by transaction start date, which is contained in the _GUID_. Therefore, providing a _GUID_, directly identifies the storage location of a feature, which in itself holds the information to which transaction it belongs to (`txn`). Beware that the transaction-number as well encodes the transaction start time and therefore allows as well to know exactly where the features of a transaction are located (including finding the transaction details itself).
 
@@ -236,7 +240,7 @@ For the PostgresQL implementation we follow the general concept of PostgresQL da
 Note that this design allow access to internal data using the same general methods that are used for all other tables too, which simplifies testing, reliability and usage. Only when creating internal tables, some additional special code is requires that creates additional indices needed.
 
 ### Transactions Table (`naksha~transactions`)
-The transaction logs are stored in the `naksha~transactions` table. Actually, the only difference to any other table is that the table is partitioned by `txn` and some columns have a different usage:
+The transaction logs are stored in the `naksha~transactions` table. Actually, the only difference to any other table is that the table is partitioned by `txn` and some columns have a different meaning:
 
 | Column     | Type  | RO  | Modifiers | Description                                                                               |
 |------------|-------|-----|-----------|-------------------------------------------------------------------------------------------|
@@ -252,6 +256,7 @@ The transaction logs are stored in the `naksha~transactions` table. Actually, th
 | geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                          |
 | flags      | int4  | no  |           | Always `NULL` (TWKB).                                                                     |
 | action     | int2  | yes |           | Always `NULL`.                                                                            |
+| origin     | text  | yes |           | Always `NULL`.                                                                            |
 | app_id     | text  | yes | NOT NULL  | `f.p.xyz->app_id`                                                                         |
 | author     | text  | yes |           | `f.p.xyz->author`                                                                         |
 | type       | text  | yes |           | Always `NULL`, basically translated into `naksha.Transaction`.                            |
