@@ -62,7 +62,7 @@ jobs:
       - name: Set extension s3 bucket name in cloud-config.json
         run: |
           export ACTUAL_BUCKET=${{ inputs.extension-s3-bucket-name }}
-          sed -i ".bck" "s+SOME_S3_BUCKET+${ACTUAL_BUCKET}+g" download/cloud-config.json
+          sed -i "s+SOME_S3_BUCKET+${ACTUAL_BUCKET}+g" download/cloud-config.json
       - name: Preparing S3 artifact bundle
         run: |
           cd download
