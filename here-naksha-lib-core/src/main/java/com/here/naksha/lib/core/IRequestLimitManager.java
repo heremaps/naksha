@@ -18,8 +18,22 @@
  */
 package com.here.naksha.lib.core;
 
+/**
+ * The IRequestLimitManager interface defines methods for retrieving request limits
+ * at different levels - instance level and actor level.
+ */
 public interface IRequestLimitManager {
+  /**
+   * Retrieves the instance-level request limit.
+   *
+   * @return The instance-level request limit.
+   */
   long getInstanceLevelLimit();
-
+  /**
+   * Retrieves the request limit for a specific actor within the given context.
+   *
+   * @param context The NakshaContext representing the context in which the actor operates.
+   * @return The request limit for the actor within the given context.
+   */
   long getActorLevelLimit(NakshaContext context);
 }

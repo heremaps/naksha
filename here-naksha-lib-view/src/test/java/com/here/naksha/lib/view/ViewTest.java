@@ -238,7 +238,7 @@ public class ViewTest {
   void shouldThrowTooManyTasksException() {
     IStorage mockStorage = mock(IStorage.class);
     IRequestLimitManager requestLimitManager= new DefaultRequestLimitManager(30,100);
-    AbstractTask.initConcurrencyLimits(requestLimitManager);
+    AbstractTask.setConcurrencyLimitManager(requestLimitManager);
     long limit = requestLimitManager.getInstanceLevelLimit();
     ViewLayer[] layerDS = new ViewLayer[(int) (limit + 10)];
     //Create ThreadFactory Limit + 10 layers
