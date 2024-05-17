@@ -20,19 +20,20 @@ package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
-import static com.here.naksha.lib.jbon.IMapKt.get;
-import static com.here.naksha.lib.psql.XyzErrorMapper.psqlCodeToXyzError;
 import static com.here.naksha.lib.psql.sql.SqlGeometryTransformationResolver.addTransformation;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.here.naksha.lib.base.NakErrorResponse;
+import com.here.naksha.lib.base.NakResponse;
+import com.here.naksha.lib.base.NakWriteCollections;
+import com.here.naksha.lib.base.NakWriteFeatures;
+import com.here.naksha.lib.base.NakWriteRequest;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
-import com.here.naksha.lib.core.models.storage.HeapCacheCursor;
 import com.here.naksha.lib.core.models.storage.Notification;
 import com.here.naksha.lib.core.models.storage.OpType;
 import com.here.naksha.lib.core.models.storage.POp;
@@ -43,25 +44,16 @@ import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.SOpType;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.WriteCollections;
-import com.here.naksha.lib.core.models.storage.WriteFeatures;
-import com.here.naksha.lib.core.models.storage.WriteRequest;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodecFactory;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.util.ClosableChildResource;
-import com.here.naksha.lib.core.util.IndexHelper;
 import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.jbon.IMap;
 import com.here.naksha.lib.jbon.JbSession;
 import com.here.naksha.lib.jbon.NakshaTxn;
 import com.here.naksha.lib.jbon.NakshaUuid;
 import com.here.naksha.lib.plv8.JvmPlv8Env;
 import com.here.naksha.lib.plv8.JvmPlv8Sql;
-import com.here.naksha.lib.plv8.JvmPlv8Table;
 import com.here.naksha.lib.plv8.NakshaSession;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -69,7 +61,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -647,140 +638,17 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   }
 
   @NotNull
-  <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
-      @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
-    if (writeRequest instanceof WriteCollections) {
-      final PreparedStatement stmt = prepareStatement(
-          "SELECT op, id, xyz, tags, feature, flags, geo, err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
-      try {
-        final List<@NotNull CODEC> features = writeRequest.features;
-        final int SIZE = writeRequest.features.size();
-        final byte[][] reqOps = new byte[SIZE][];
-        final byte[][] reqFeatures = new byte[SIZE][];
-        final Integer[] reqFlags = new Integer[SIZE];
-        final byte[][] reqGeo = new byte[SIZE][];
-        final byte[][] reqTags = new byte[SIZE][];
-        for (int i = 0; i < SIZE; i++) {
-          final CODEC codec = features.get(i);
-          codec.decodeParts(false);
-          reqOps[i] = codec.getXyzOp();
-          reqFeatures[i] = codec.getFeatureBytes();
-          reqGeo[i] = codec.getGeometryBytes();
-          reqFlags[i] = codec.getCombinedFlags();
-          reqTags[i] = codec.getTagsBytes();
-        }
-        stmt.setArray(1, psqlConnection.createArrayOf("bytea", reqOps));
-        stmt.setArray(2, psqlConnection.createArrayOf("bytea", reqFeatures));
-        stmt.setArray(3, psqlConnection.createArrayOf("int2", reqFlags));
-        stmt.setArray(4, psqlConnection.createArrayOf("bytea", reqGeo));
-        stmt.setArray(5, psqlConnection.createArrayOf("bytea", reqTags));
-
-        JvmPlv8Table table =
-            (JvmPlv8Table) nakshaSession.writeCollections(reqOps, reqFeatures, reqFlags, reqGeo, reqTags);
-        ArrayList<IMap> rows = table.getRows();
-        List<XyzCollectionCodec> codecRows = PsqlResultMapper.mapRowToCodec(
-            XyzCollectionCodecFactory.get(), features, rows, nakshaSession.getSql());
-        return new PsqlSuccess(new HeapCacheCursor<>(XyzCollectionCodecFactory.get(), codecRows, null), null);
-      } catch (Throwable e) {
-        try {
-          stmt.close();
-        } catch (Throwable ce) {
-          log.atInfo()
-              .setMessage("Failed to close statement")
-              .setCause(ce)
-              .log();
-        }
-        throw unchecked(e);
-      }
+  NakResponse executeWrite(@NotNull NakWriteRequest writeRequest) {
+    if (writeRequest instanceof NakWriteCollections) {
+      NakWriteCollections nakWriteCollections = (NakWriteCollections) writeRequest;
+      return nakshaSession.writeCollections(nakWriteCollections);
     }
-    if (writeRequest instanceof WriteFeatures<?, ?, ?>) {
-      final WriteFeatures<?, ?, ?> writeFeatures = (WriteFeatures<?, ?, ?>) writeRequest;
-      try {
-        // new array list, so we don't modify original order
-        final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
-        features.forEach(codec -> codec.decodeParts(false));
-        final Map<String, Integer> originalFeaturesOrder =
-            IndexHelper.createKeyIndexMap(features, CODEC::getId);
-
-        final int SIZE = writeRequest.features.size();
-        final String collection_id = writeFeatures.getCollectionId();
-        final byte[][] op_arr = new byte[SIZE][];
-        final byte[][] feature_arr = new byte[SIZE][];
-        final Integer[] flags_arr = new Integer[SIZE];
-        final byte[][] geo_arr = new byte[SIZE][];
-        final byte[][] tags_arr = new byte[SIZE][];
-
-        for (int i = 0; i < SIZE; i++) {
-          final CODEC codec = features.get(i);
-          op_arr[i] = codec.getXyzOp();
-          feature_arr[i] = codec.getFeatureBytes();
-          flags_arr[i] = codec.getCombinedFlags();
-          geo_arr[i] = codec.getGeometryBytes();
-          tags_arr[i] = codec.getTagsBytes();
-        }
-        JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
-            collection_id, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, false);
-        ArrayList<IMap> rows = table.getRows();
-        XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
-        List<XyzFeatureCodec> codecRows =
-            PsqlResultMapper.mapRowToCodec(codecFactory, features, rows, nakshaSession.getSql());
-        HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor =
-            new HeapCacheCursor<>(codecFactory, codecRows, originalFeaturesOrder);
-
-        if (!codecRows.isEmpty() && codecRows.get(0).hasError()) {
-          XyzFeatureCodec firstRow = codecRows.get(0);
-          return new PsqlError(firstRow.getError().err, firstRow.getError().msg);
-        }
-        return new PsqlSuccess(cursor, originalFeaturesOrder);
-      } catch (Throwable e) {
-        throw unchecked(e);
-      }
+    if (writeRequest instanceof NakWriteFeatures) {
+      NakWriteFeatures nakWriteCollections = (NakWriteFeatures) writeRequest;
+      return nakshaSession.writeFeatures(nakWriteCollections);
     }
-    return new ErrorResult(XyzError.NOT_IMPLEMENTED, "The supplied write-request is not yet implemented");
-  }
-
-  @NotNull
-  <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeBulkWrite(
-      @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
-
-    if (writeRequest instanceof WriteFeatures<?, ?, ?>) {
-      final WriteFeatures<?, ?, ?> writeFeatures = (WriteFeatures<?, ?, ?>) writeRequest;
-      try {
-        // new array list, so we don't modify original order
-        final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
-        features.forEach(codec -> codec.decodeParts(false));
-
-        final int SIZE = writeRequest.features.size();
-        final String collection_id = writeFeatures.getCollectionId();
-        // partition_id
-        final byte[][] op_arr = new byte[SIZE][];
-        final byte[][] feature_arr = new byte[SIZE][];
-        final Integer[] flags_arr = new Integer[SIZE];
-        final byte[][] geo_arr = new byte[SIZE][];
-        final byte[][] tags_arr = new byte[SIZE][];
-
-        for (int i = 0; i < SIZE; i++) {
-          final CODEC codec = features.get(i);
-          op_arr[i] = codec.getXyzOp();
-          feature_arr[i] = codec.getFeatureBytes();
-          flags_arr[i] = codec.getCombinedFlags();
-          geo_arr[i] = codec.getGeometryBytes();
-          tags_arr[i] = codec.getTagsBytes();
-        }
-        JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
-            collection_id, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, true);
-        ArrayList<IMap> rows = table.getRows();
-        if (!rows.isEmpty()) {
-          IMap err = rows.get(0);
-          return new PsqlError(psqlCodeToXyzError(get(err, "err_no")), get(err, "err_msg"));
-        } else {
-          return new SuccessResult();
-        }
-      } catch (Throwable e) {
-        throw unchecked(e);
-      }
-    }
-    return new ErrorResult(XyzError.NOT_IMPLEMENTED, "The supplied write-request is not yet implemented");
+    return new NakErrorResponse(
+        XyzError.NOT_IMPLEMENTED.toString(), "The supplied write-request is not yet implemented", null);
   }
 
   @NotNull

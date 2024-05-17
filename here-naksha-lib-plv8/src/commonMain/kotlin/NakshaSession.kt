@@ -8,9 +8,11 @@ import com.here.naksha.lib.base.NakErrorResponse
 import com.here.naksha.lib.base.NakFeature
 import com.here.naksha.lib.base.NakResponse
 import com.here.naksha.lib.base.NakRow
+import com.here.naksha.lib.base.NakTransaction
 import com.here.naksha.lib.base.NakWriteCollections
 import com.here.naksha.lib.base.NakWriteFeatures
-import com.here.naksha.lib.base.NakWriteRow
+import com.here.naksha.lib.base.PObject
+import com.here.naksha.lib.base.WriteFeature
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.nak.Flags
 import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
@@ -103,7 +105,7 @@ class NakshaSession(
     /**
      * Keeps transaction's counters.
      */
-    var transaction: NakshaTransaction = NakshaTransaction(dictManager = globalDictManager)
+    var transaction: NakTransaction = NakTransaction()
 
     /**
      * A cache to remember collections configuration <collectionId, configMap>
@@ -144,7 +146,7 @@ SET SESSION enable_seqscan = OFF;
         errMsg = null
         collectionConfiguration = Jb.map.newMap()
         collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
-        transaction = NakshaTransaction(globalDictManager)
+        transaction = NakTransaction()
     }
 
     /**
@@ -559,7 +561,7 @@ FROM ns, txn_seq;"""
         return "Feature"
     }
 
-    fun getFeatureAsJbon(feature: NakFeature?, flags: Flags, collectionId: String): ByteArray? {
+    fun getFeatureAsJbon(feature: PObject?, flags: Flags, collectionId: String): ByteArray? {
         if (feature == null) {
             flags.turnOffGzipOnFeatureEncoding()
             return null
@@ -567,7 +569,7 @@ FROM ns, txn_seq;"""
 
         // FIXME TODO get global dictionary
         val builder = JbBuilder(newDataView(65536), globalDictManager.getDictionary(collectionId))
-        val featureBytes = builder.buildFeatureFromObject(feature.data())
+        val featureBytes = builder.buildFeatureFromObject(feature)
 
         return if (sql.info().gzipSupported) {
             flags.forceGzipOnFeatureEncoding()
@@ -640,9 +642,7 @@ FROM ns, txn_seq;"""
 
     internal fun saveCurrentTransactionLog() {
         val transactionWriter = NakshaFeaturesWriter(SC_TRANSACTIONS, this, modifyCounters = false)
-
-        val row = NakRow(feature = transaction.toBytes())
-        val writeOp = NakWriteRow(XYZ_OP_UPSERT, row = row, id = txn().toUuid(storageId).toString())
+        val writeOp = WriteFeature(XYZ_OP_UPSERT, feature = transaction, id = txn().toUuid(storageId).toString())
         val transactionWriteReq = NakWriteFeatures(SC_TRANSACTIONS, noResults = true, rows = arrayOf(writeOp))
         transactionWriter.writeFeatures(transactionWriteReq)
     }

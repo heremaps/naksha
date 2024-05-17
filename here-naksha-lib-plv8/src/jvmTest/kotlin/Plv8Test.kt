@@ -1,7 +1,12 @@
+import com.here.naksha.lib.base.Base
 import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakSuccessResponse
+import com.here.naksha.lib.base.toInt
 import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.Jb
+import com.here.naksha.lib.jbon.JbDictManager
+import com.here.naksha.lib.jbon.JbFeature
+import com.here.naksha.lib.jbon.JbMap
 import com.here.naksha.lib.jbon.JvmMap
 import com.here.naksha.lib.jbon.SQL_STRING
 import com.here.naksha.lib.jbon.XYZ_EXEC_CREATED
@@ -12,7 +17,6 @@ import com.here.naksha.lib.jbon.get
 import com.here.naksha.lib.jbon.put
 import com.here.naksha.lib.jbon.set
 import com.here.naksha.lib.jbon.shl
-import com.here.naksha.lib.jbon.toInt
 import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_EWKB
 import com.here.naksha.lib.nak.Flags.Companion.GEO_TYPE_NULL
 import com.here.naksha.lib.plv8.COL_FEATURE
@@ -23,9 +27,7 @@ import com.here.naksha.lib.plv8.COL_TAGS
 import com.here.naksha.lib.plv8.COL_TXN
 import com.here.naksha.lib.plv8.COL_TXN_NEXT
 import com.here.naksha.lib.plv8.COL_UID
-import com.here.naksha.lib.plv8.JvmPlv8Table
 import com.here.naksha.lib.plv8.NKC_TABLE_ESC
-import com.here.naksha.lib.plv8.NakshaCollection
 import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.PARTITION_COUNT_NONE
 import com.here.naksha.lib.plv8.PgTrigger
@@ -249,7 +251,7 @@ class Plv8Test : JbTest() {
             "geoIndex":"sp-gist",
             "properties":{},
             "disableHistory": true,
-            "partitionCount":32,
+            "partitions":32,
             "estimatedFeatureCount": 50,
             "estimatedDeletedFeatures":100,
             "temporary":true,
@@ -259,17 +261,19 @@ class Plv8Test : JbTest() {
         val collectionBytes = XyzBuilder.create().buildFeatureFromMap(collectionMap)
 
         // when
-        val restoredCollection = NakshaCollection(dictManager)
-        restoredCollection.mapBytes(collectionBytes)
+        val jbFeature = JbFeature(JbDictManager()).mapBytes(collectionBytes)
+        // FIXME TODO this test will fail, because we need better reader, current reader ignores 'id' field from header and doesn't add it to final map.
+        val featureAsMap = JbMap().mapReader(jbFeature.reader).toMap()
+        val restoredCollection = Base.assign(featureAsMap, NakCollection.klass)
 
         // then
-        assertEquals(32, restoredCollection.partitionCount())
-        assertTrue(restoredCollection.disableHistory())
-        assertEquals(Static.GEO_INDEX_SP_GIST, restoredCollection.geoIndex())
-        assertEquals(Static.SC_TEMPORARY, restoredCollection.storageClass())
-        assertEquals("bar", restoredCollection.id())
-        assertEquals(3560, restoredCollection.maxAge().toInt())
-        assertEquals(50, restoredCollection.estimatedFeatureCount().toInt())
+        assertEquals(32, restoredCollection.getPartitions())
+        assertTrue(restoredCollection.isDisableHistory())
+        assertEquals(Static.GEO_INDEX_SP_GIST, restoredCollection.getGeoIndex())
+        assertEquals(Static.SC_TEMPORARY, restoredCollection.getStorageClass())
+        assertEquals("bar", restoredCollection.getId())
+        assertEquals(3560, restoredCollection.getMaxAge().toInt())
+        assertEquals(50, restoredCollection.getEstimatedFeatureCount()?.toInt())
     }
 
     @Order(12)

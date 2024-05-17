@@ -130,14 +130,15 @@ internal class NakshaBulkLoaderPlan(
         session.xyzInsert(op.collectionId, op.rowMap)
         addInsertParams(op.rowMap)
         if (!minResult) {
-            addRow(XYZ_EXEC_CREATED, op.id, session.xyzNsFromRow(collectionId, op.rowMap))
+            val row = mapToNakRow(op.rowMap, session.xyzNsFromRow(collectionId, op.rowMap))
+            addFullRow(XYZ_EXEC_CREATED, op.id, row)
         }
     }
 
     fun addUpdate(op: NakshaRequestOp, existingFeature: IMap?) {
         val featureRowMap = op.rowMap
         val headBeforeUpdate: IMap = existingFeature!!
-        checkStateForAtomicOp(op.writeRow.uuid, headBeforeUpdate)
+        checkStateForAtomicOp(op.writeReq.uuid, headBeforeUpdate)
 
         addToRemoveFromDel(op.id)
         addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
@@ -169,7 +170,7 @@ internal class NakshaBulkLoaderPlan(
     fun addPurge(op: NakshaRequestOp, existingFeature: IMap?, existingInDelFeature: IMap?) {
         addDeleteInternal(op, existingFeature)
         val deletedFeatureRow: IMap? = existingInDelFeature ?: existingFeature
-        checkStateForAtomicOp(op.writeRow.uuid, deletedFeatureRow)
+        checkStateForAtomicOp(op.writeReq.uuid, deletedFeatureRow)
         if (!autoPurge) // it's not in $del, so we don't have to purge
             featuresToPurgeFromDel.add(op.id)
         if (!minResult) {
@@ -204,7 +205,7 @@ internal class NakshaBulkLoaderPlan(
         if (existingFeature != null) {
             // this may throw exception (if we try to delete non-existing feature - that was deleted before)
             val headBeforeDelete: IMap = existingFeature
-            checkStateForAtomicOp(op.writeRow.uuid, headBeforeDelete)
+            checkStateForAtomicOp(op.writeReq.uuid, headBeforeDelete)
             addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
 
             featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]

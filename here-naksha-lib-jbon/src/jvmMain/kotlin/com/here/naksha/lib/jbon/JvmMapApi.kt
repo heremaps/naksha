@@ -7,7 +7,7 @@ class JvmMapApi : IMapApi {
     override fun asMap(any: Any?): IMap = if (isMap(any)) {
         any as IMap
     } else {
-        any?.let { JvmEnv.get().convert(it, JvmMap::class.java) } as IMap
+        any?.let { JvmEnv.get().convert(it, JvmMap::class.java) }?: newMap()
     }
 
     override fun newMap(): IMap = JvmMap()

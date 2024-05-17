@@ -7,7 +7,7 @@ import kotlin.js.JsExport
 @JsExport
 class NakWriteCollections(
         noResults: Boolean = false,
-        rows: Array<NakWriteRow>,
+        rows: Array<AbstractWrite>,
         noFeature: Boolean = false,
         noGeometry: Boolean = false,
         noMeta: Boolean = false,

@@ -1,14 +1,13 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.base.Base
+import com.here.naksha.lib.base.AbstractWrite
 import com.here.naksha.lib.base.NakWriteRequest
-import com.here.naksha.lib.base.NakWriteRow
-import com.here.naksha.lib.base.iterator
-import com.here.naksha.lib.base.size
+import com.here.naksha.lib.base.WriteFeature
+import com.here.naksha.lib.base.WriteRow
 import com.here.naksha.lib.jbon.*
 
 internal class NakshaRequestOp(
-        val writeRow: NakWriteRow,
+        val writeReq: AbstractWrite,
         val rowMap: IMap,
         val collectionId: String,
         val collectionPartitionCount: Int
@@ -36,7 +35,7 @@ internal class NakshaRequestOp(
             for (nakWriteOp in writeRequest.rows) {
 
                 val id = nakWriteOp.id
-                        ?: nakWriteOp.feature?.getId()
+                        ?: nakWriteOp.takeIf { it is WriteFeature }?.let { it as WriteFeature }?.feature?.getId()
                         ?: throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", null)
 
                 if (uniqueIds.contains(id)) {
@@ -53,13 +52,23 @@ internal class NakshaRequestOp(
                         idsToDel.add(id)
                     }
                 }
+                val flags = nakWriteOp.flags
                 val row = newMap()
                 row[COL_ID] = id
-                row[COL_TAGS] = nakWriteOp.row?.tags
-                row[COL_GEOMETRY] = nakWriteOp.row?.geo
-                val flags = nakWriteOp.flags
+                when (nakWriteOp) {
+                    is WriteFeature -> {
+                        row[COL_TAGS] = session.getFeatureAsJbon(nakWriteOp.feature?.getProperties()?.getXyz()?.getTags()?.data(), flags, collectionId)
+                        // TODO FIXME write geo as jbon
+                        row[COL_GEOMETRY] = null // nakWriteOp.feature?.getCoordinates<BaseArray<Any?>>()
+                        row[COL_FEATURE] = session.getFeatureAsJbon(nakWriteOp.feature?.data(), flags, collectionId)
+                    }
+                    is WriteRow -> {
+                        row[COL_TAGS] = nakWriteOp.row?.tags
+                        row[COL_GEOMETRY] = nakWriteOp.row?.geo
+                        row[COL_FEATURE] = nakWriteOp.row?.feature
+                    }
+                }
 
-                row[COL_FEATURE] = session.getFeatureAsJbon(nakWriteOp.feature, flags, collectionId)
                 row[COL_FLAGS] = flags.toCombinedFlags()
                 if (nakWriteOp.grid != null) {
                     // we don't want it to be null, as null would override calculated value later in response

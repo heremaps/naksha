@@ -7,7 +7,7 @@ import kotlin.js.JsExport
 @JsExport
 abstract class NakWriteRequest(
         val noResults: Boolean = false,
-        val rows: Array<NakWriteRow>,
+        val rows: Array<AbstractWrite>,
         noFeature: Boolean = false,
         noGeometry: Boolean = false,
         noMeta: Boolean = false,

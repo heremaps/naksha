@@ -315,6 +315,7 @@ project(":here-naksha-lib-core") {
         implementation(google_flatbuffers)
         implementation(project(":here-naksha-lib-jbon"))
         implementation(project(":here-naksha-lib-base"))
+        implementation(project(":here-naksha-lib-nak"))
         implementation(spatial4j)
         testImplementation(mockito)
         testImplementation(json_assert)

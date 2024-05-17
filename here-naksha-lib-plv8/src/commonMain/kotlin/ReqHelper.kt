@@ -2,11 +2,13 @@
 
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.base.AbstractWrite
 import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakRow
 import com.here.naksha.lib.base.NakWriteCollections
 import com.here.naksha.lib.base.NakWriteFeatures
-import com.here.naksha.lib.base.NakWriteRow
+import com.here.naksha.lib.base.WriteFeature
+import com.here.naksha.lib.base.WriteRow
 import com.here.naksha.lib.jbon.XYZ_OP_CREATE
 import com.here.naksha.lib.nak.Flags
 import kotlin.js.ExperimentalJsExport
@@ -25,8 +27,12 @@ object ReqHelper {
     fun prepareCollectionReq(action: Int, id: String, collectionBytes: ByteArray? = null, collectionFeature: NakCollection? = null): NakWriteCollections {
         check(collectionFeature != null || collectionBytes != null)
 
-        val row = NakRow(feature = collectionBytes)
-        val writeOp = NakWriteRow(action, row = row, id = id, feature = collectionFeature)
+
+        val writeOp = if (collectionBytes != null) {
+            WriteRow(action, row = NakRow(feature = collectionBytes), id = id)
+        } else {
+            WriteFeature(action, feature = collectionFeature, id = id)
+        }
         val collectionWriteReq = NakWriteCollections(rows = arrayOf(writeOp))
         return collectionWriteReq
     }
@@ -36,18 +42,18 @@ object ReqHelper {
         return prepareFeatureReqForOperations(collectionId, writeOp)
     }
 
-    fun prepareFeatureReqForOperations(collectionId: String, vararg operations: NakWriteRow): NakWriteFeatures {
+    fun prepareFeatureReqForOperations(collectionId: String, vararg operations: AbstractWrite): NakWriteFeatures {
         val nakWriteFeatures = NakWriteFeatures(collectionId, rows = arrayOf(*operations))
         return nakWriteFeatures
     }
 
-    fun prepareOperation(action: Int, featureId: String? = null, featureBytes: ByteArray? = null, geo: ByteArray? = null, tags: ByteArray? = null, flags: Int? = null): NakWriteRow {
+    fun prepareOperation(action: Int, featureId: String? = null, featureBytes: ByteArray? = null, geo: ByteArray? = null, tags: ByteArray? = null, flags: Int? = null): WriteRow {
         val row = NakRow(
                 feature = featureBytes,
                 geo = geo,
                 tags = tags,
                 flags = Flags(flags)
         )
-        return NakWriteRow(action, row = row, id = featureId)
+        return WriteRow(action, row = row, id = featureId)
     }
 }

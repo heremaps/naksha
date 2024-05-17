@@ -3,11 +3,11 @@ package com.here.naksha.lib.plv8
 import NakshaBulkLoaderPlan
 import com.here.naksha.lib.base.Base
 import com.here.naksha.lib.base.NakCollection
-import com.here.naksha.lib.base.NakResponse
 import com.here.naksha.lib.base.NakSuccessResponse
 import com.here.naksha.lib.base.NakWriteCollections
 import com.here.naksha.lib.base.NakWriteFeatures
-import com.here.naksha.lib.base.size
+import com.here.naksha.lib.base.WriteFeature
+import com.here.naksha.lib.base.WriteRow
 import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.XYZ_OP_CREATE
 import com.here.naksha.lib.jbon.XYZ_OP_DELETE
@@ -86,7 +86,10 @@ class NakshaFeaturesWriter(
         val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
 
         for (op in operations.operations) {
-            val newCollection = Base.assign(op.writeRow.feature!!, NakCollection.klass)
+            val newCollection = when (op.writeReq) {
+                is WriteFeature -> Base.assign(op.writeReq.feature!!, NakCollection.klass)
+                else -> throw RuntimeException("add support for WriteRow collection")
+            }
 
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
             val schemaOid = asMap(asArray(session.sql.execute(query, arrayOf(session.schema)))[0]).getAny("oid") as Int
@@ -138,16 +141,16 @@ class NakshaFeaturesWriter(
             if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else session.sql.quoteIdent(collectionId)
 
     internal fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: IMap?, collectionConfig: NakCollection): Int {
-        return if (row.writeRow.op == XYZ_OP_UPSERT) {
+        return if (row.writeReq.op == XYZ_OP_UPSERT) {
             if (existingFeature != null) {
                 XYZ_OP_UPDATE
             } else {
                 XYZ_OP_CREATE
             }
-        } else if (row.writeRow.op == XYZ_OP_DELETE && collectionConfig.isAutoPurge()) {
+        } else if (row.writeReq.op == XYZ_OP_DELETE && collectionConfig.isAutoPurge()) {
             XYZ_OP_PURGE
         } else {
-            row.writeRow.op
+            row.writeReq.op
         }
     }
 }

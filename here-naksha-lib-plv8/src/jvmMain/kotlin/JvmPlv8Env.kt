@@ -210,7 +210,7 @@ module.exports = module.exports["here-naksha-lib-plv8"].com.here.naksha.lib.plv8
     private fun createInternalsIfNotExists(conn: Connection, schema: String, appName: String) {
         val verifyCreation: (NakResponse) -> Unit = {
             assert(it is NakSuccessResponse) { (it as NakErrorResponse).error }
-            assert((it as NakSuccessResponse).rows.first().getOp() == XYZ_EXEC_CREATED)
+            assert((it as NakSuccessResponse).rows.first().op == XYZ_EXEC_CREATED)
         }
 
         startSession(conn, schema, appName, "", appName, null)

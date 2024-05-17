@@ -20,12 +20,13 @@ package com.here.naksha.lib.psql;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
+import com.here.naksha.lib.base.NakResponse;
+import com.here.naksha.lib.base.NakWriteRequest;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.storage.Notification;
 import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteRequest;
 import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import java.sql.SQLException;
@@ -85,13 +86,8 @@ public final class PsqlWriteSession extends PsqlSession implements IWriteSession
   }
 
   @Override
-  public @NotNull Result execute(@NotNull WriteRequest<?, ?, ?> writeRequest) {
+  public @NotNull NakResponse execute(@NotNull NakWriteRequest writeRequest) {
     return session().executeWrite(writeRequest);
-  }
-
-  @Override
-  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
-    return session().executeBulkWrite(writeRequest);
   }
 
   @Override

@@ -18,45 +18,30 @@
  */
 package com.here.naksha.lib.psql;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectReader;
+import com.here.naksha.lib.base.Base;
+import com.here.naksha.lib.base.NakFeature;
+import com.here.naksha.lib.base.NakPoint;
+import com.here.naksha.lib.base.NakProperties;
+import com.here.naksha.lib.base.NakReadRow;
+import com.here.naksha.lib.base.NakResponse;
+import com.here.naksha.lib.base.NakSuccessResponse;
+import com.here.naksha.lib.base.NakTags;
+import com.here.naksha.lib.base.NakWriteFeatures;
+import com.here.naksha.lib.base.WriteFeature;
+import com.here.naksha.lib.base.NakXyz;
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
-import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates;
-import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzLineString;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzMultiPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
-import com.here.naksha.lib.core.models.naksha.NakshaFeature;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.models.storage.MutableCursor;
-import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SOp;
-import com.here.naksha.lib.core.models.storage.SeekableCursor;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.WriteFeatures;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
-import com.here.naksha.lib.jbon.BigInt64Kt;
 import com.here.naksha.lib.jbon.JvmEnv;
-import com.here.naksha.lib.jbon.NakshaTxn;
+import com.here.naksha.lib.plv8.ReqHelper;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -65,35 +50,24 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.operation.buffer.BufferOp;
 import org.locationtech.spatial4j.distance.DistanceUtils;
-import org.postgresql.util.PSQLException;
 
-import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.function.Consumer;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.models.storage.POp.and;
 import static com.here.naksha.lib.core.models.storage.POp.eq;
-import static com.here.naksha.lib.core.models.storage.POp.exists;
-import static com.here.naksha.lib.core.models.storage.POp.not;
 import static com.here.naksha.lib.core.models.storage.PRef.id;
 import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInMeters;
 import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInRadius;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createBBoxEnvelope;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.deleteFeatureByIdRequest;
+import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_CREATE;
 import static java.lang.String.format;
-import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -129,36 +103,40 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   @Test
   @Order(50)
   @EnabledIf("runTest")
-  void singleFeatureCreate() throws NoCursor {
+  void singleFeatureCreate() {
     assertNotNull(storage);
     assertNotNull(session);
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
-    feature.setGeometry(new XyzPoint(5.0d, 6.0d, 2.0d));
-    feature.xyz().addTag(SINGLE_FEATURE_INITIAL_TAG, false);
-    request.add(EWriteOp.CREATE, feature);
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
-      assertTrue(cursor.next());
-      final EExecutedOp op = cursor.getOp();
-      assertSame(EExecutedOp.CREATED, op);
-      final String id = cursor.getId();
+    final NakFeature feature = new NakFeature();
+    feature.setId(SINGLE_FEATURE_ID);
+    feature.setCoordinates(new NakPoint(5.0d, 6.0d, 2.0d));
+    NakXyz nakXyz = new NakXyz();
+    nakXyz.setTags(new NakTags(SINGLE_FEATURE_INITIAL_TAG));
+    NakProperties nakProperties = new NakProperties(nakXyz);
+    nakProperties.setXyz(nakXyz);
+    feature.setProperties(nakProperties);
+    WriteFeature nakWriteFeature = new WriteFeature(ACTION_CREATE, feature);
+    NakWriteFeatures request = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), nakWriteFeature);
+    try {
+      final NakResponse response = session.execute(request);
+      assertInstanceOf(NakSuccessResponse.class, response);
+      final NakSuccessResponse successResp = (NakSuccessResponse) response;
+      assertEquals(1, successResp.getRows().length);
+      NakReadRow first = Arrays.stream(successResp.getRows()).findFirst().get();
+      assertSame(EExecutedOp.CREATED.toString(), first.getOp());
+      final String id = first.getId();
       assertEquals(SINGLE_FEATURE_ID, id);
-      final String uuid = cursor.getUuid();
+      final String uuid = first.getUuid();
       assertNotNull(uuid);
-      final Geometry geometry = cursor.getGeometry();
-      assertNotNull(geometry);
-      final Coordinate coordinate = geometry.getCoordinate();
-      assertEquals(5.0d, coordinate.getOrdinate(0));
-      assertEquals(6.0d, coordinate.getOrdinate(1));
-      assertEquals(2.0d, coordinate.getOrdinate(2));
-      final XyzFeature f = cursor.getFeature();
-      assertNotNull(f);
+      NakFeature f = first.getFeature();
+      NakPoint point = Base.assign(f.getCoordinates(), NakPoint.getKlass());
+      assertNotNull(point);
+      assertEquals(5.0d, point.getLongitude());
+      assertEquals(6.0d, point.getLatitude());
+      assertEquals(2.0d, point.getAltitude());
       assertEquals(SINGLE_FEATURE_ID, f.getId());
-      assertEquals(uuid, f.xyz().getUuid());
-      assertSame(EXyzAction.CREATE, f.xyz().getAction());
-      assertEquals(List.of(SINGLE_FEATURE_INITIAL_TAG), f.xyz().getTags());
-      assertFalse(cursor.hasNext());
+      assertEquals(1, f.getProperties().getXyz().getUid());
+      assertSame(EXyzAction.CREATE.toString(), f.getProperties().getXyz().getAction());
+      assertEquals(List.of(SINGLE_FEATURE_INITIAL_TAG), f.getProperties().getXyz().getTags());
     } finally {
       session.commit(true);
     }

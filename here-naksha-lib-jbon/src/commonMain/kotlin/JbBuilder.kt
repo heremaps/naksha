@@ -2,6 +2,7 @@
 
 package com.here.naksha.lib.jbon;
 
+import com.here.naksha.lib.base.BaseMap
 import com.here.naksha.lib.base.PObject
 import com.here.naksha.lib.base.get
 import com.here.naksha.lib.base.iterator

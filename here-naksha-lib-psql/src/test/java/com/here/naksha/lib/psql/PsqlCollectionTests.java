@@ -1,5 +1,12 @@
 package com.here.naksha.lib.psql;
 
+import com.here.naksha.lib.base.Base;
+import com.here.naksha.lib.base.NakCollection;
+import com.here.naksha.lib.base.NakFeature;
+import com.here.naksha.lib.base.NakReadRow;
+import com.here.naksha.lib.base.NakResponse;
+import com.here.naksha.lib.base.NakSuccessResponse;
+import com.here.naksha.lib.base.NakWriteCollections;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
@@ -15,6 +22,7 @@ import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.jbon.JvmBigInt64Api;
 import com.here.naksha.lib.plv8.ConstantsKt;
 import com.here.naksha.lib.plv8.NakshaSession;
+import com.here.naksha.lib.plv8.ReqHelper;
 import com.here.naksha.lib.plv8.Static;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -51,35 +59,29 @@ abstract class PsqlCollectionTests extends PsqlTests {
   @Test
   @Order(30)
   @EnabledIf("runTest")
-  void createCollection() throws NoCursor {
+  void createCollection() {
     assertNotNull(storage);
     assertNotNull(session);
-    final WriteXyzCollections request = new WriteXyzCollections();
-    request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partitionCount(), false, true));
-    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(request).getXyzCollectionCursor()) {
-      assertNotNull(cursor);
-      assertTrue(cursor.hasNext());
-      assertTrue(cursor.next());
-      assertEquals(collectionId(), cursor.getId());
-      assertNotNull(cursor.getUuid());
-      assertNull(cursor.getGeometry());
-      assertSame(EExecutedOp.CREATED, cursor.getOp());
-      final XyzCollection collection = cursor.getFeature();
+    NakCollection nakCollection = new NakCollection(collectionId(), partitionCount(), null, null, false, false);
+    NakWriteCollections collectionWriteReq = ReqHelper.INSTANCE.prepareCollectionReqCreateFromFeature(collectionId(), nakCollection);
+    try {
+      NakResponse response = session.execute(collectionWriteReq);
+      assertInstanceOf(NakSuccessResponse.class, response);
+      NakSuccessResponse successResponse = (NakSuccessResponse) response;
+      NakReadRow responseRow = successResponse.getRows()[0];
+      assertEquals(collectionId(), responseRow.getId());
+      assertNotNull(responseRow.getUuid());
+      assertSame(EExecutedOp.CREATED.toString(), responseRow.getOp());
+      NakCollection collection = Base.assign(responseRow.getFeature(), NakCollection.getKlass());
       assertNotNull(collection);
       assertEquals(collectionId(), collection.getId());
-      assertFalse(collection.pointsOnly());
-      if (partition()) {
-        assertTrue(collection.isPartitioned());
-      } else {
-        assertFalse(collection.isPartitioned());
-      }
+      assertFalse(collection.isDisableHistory());
+      assertEquals(partition(), collection.hasPartitions());
       assertNotNull(collection.getProperties());
-      assertNotNull(collection.getProperties().getXyzNamespace());
+      assertNotNull(collection.getProperties().getXyz());
       assertSame(
-          EXyzAction.CREATE,
-          collection.getProperties().getXyzNamespace().getAction());
-      assertFalse(cursor.hasNext());
+          EXyzAction.CREATE.toString(),
+          collection.getProperties().getXyz().getAction());
     } finally {
       session.commit(true);
     }

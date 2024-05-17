@@ -1,7 +1,8 @@
+import com.here.naksha.lib.base.AbstractWrite
 import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakErrorResponse
 import com.here.naksha.lib.base.NakSuccessResponse
-import com.here.naksha.lib.base.NakWriteRow
+import com.here.naksha.lib.base.WriteFeature
 import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
 import com.here.naksha.lib.jbon.SQL_INT16
@@ -248,7 +249,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
     private var featureBytes: ByteArray? = null
 
-    private fun createBulkFeature(): NakWriteRow {
+    private fun createBulkFeature(): AbstractWrite {
         val id = env.randomString(12)
         val topology = if (UseSmallFeatures) getSmallTopologyFeature() else getTopologyFeature()
         topology["id"] = id
@@ -269,7 +270,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         createCollection(tableName, partitionCount = PARTITION_COUNT, disableHistory = true, storageClass = SC_CONSISTENT)
 
         // Run for bulk threads in virtual partitions.
-        val featuresByVp = Array<ArrayList<NakWriteRow>>(BulkLoadThreads) { ArrayList() }
+        val featuresByVp = Array<ArrayList<AbstractWrite>>(BulkLoadThreads) { ArrayList() }
         val partNameByVp = Array<String?>(BulkLoadThreads) { null }
         val featuresDoneByVp = AtomicReferenceArray<Boolean>(BulkLoadThreads)
         var i = 0
@@ -360,7 +361,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         // We only run with a single thread!
         var i = 0
-        val features = mutableListOf<NakWriteRow>()
+        val features = mutableListOf<AbstractWrite>()
 
         // insert features
         while (i < BulkWriteSize) {
@@ -380,14 +381,13 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         printStatistics(BulkWriteSize, 1, (insertEnd - insertsStart), baseLine)
 
         // update features
-        val updateOps = mutableListOf<NakWriteRow>()
         var updateCount = 0
         for (o in writeReq.rows) {
-            updateOps.add(o.copy(op = XYZ_OP_UPDATE))
+            o.op =  XYZ_OP_UPDATE
             updateCount++
         }
         val updateStart = currentMicros()
-        val rowsUpdated = session.writeFeatures(prepareFeatureReqForOperations(tableName, *updateOps.toTypedArray())) as NakSuccessResponse
+        val rowsUpdated = session.writeFeatures(writeReq) as NakSuccessResponse
         assertEquals(BulkWriteSize, rowsUpdated.rows.size)
         session.sql.execute("commit")
         val updateEnd = currentMicros()
@@ -398,13 +398,12 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         // delete features
         var deleteCount = 0
-        val deleteOps = mutableListOf<NakWriteRow>()
         for (o in writeReq.rows) {
-            deleteOps.add(o.copy(op = XYZ_OP_DELETE))
+            o.op = XYZ_OP_DELETE
             deleteCount++
         }
         val delStart = currentMicros()
-        val rowsDeleted = session.writeFeatures(prepareFeatureReqForOperations(tableName, *updateOps.toTypedArray())) as NakSuccessResponse
+        val rowsDeleted = session.writeFeatures(writeReq) as NakSuccessResponse
         assertEquals(BulkWriteSize, rowsDeleted.rows.size)
         session.sql.execute("commit")
         val delEnd = currentMicros()
@@ -430,11 +429,12 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
 
         val operationWithInvalidUuidToCheck: (Int) -> Unit = { operation ->
-            val newOps = mutableListOf<NakWriteRow>()
+            val newOps = mutableListOf<AbstractWrite>()
             for (o in writeReq.rows) {
-                newOps.add(o.copy(op = operation, uuid = "invalid:uid:2024:1:1:1:1"))
+                o.op = operation
+                o.uuid = "invalid:uid:2024:1:1:1:1"
             }
-            val operationResult = session.writeFeatures(prepareFeatureReqForOperations(tableName, *newOps.toTypedArray())) as NakErrorResponse
+            val operationResult = session.writeFeatures(writeReq) as NakErrorResponse
             assertEquals(ERR_CHECK_VIOLATION, operationResult.error)
             session.sql.execute("rollback")
             session.clear()

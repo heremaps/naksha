@@ -69,17 +69,17 @@ class NakshaSessionTest : JbTest() {
         session.writeFeatures(prepareFeatureReq(XYZ_OP_CREATE, collectionId, "feature1"))
 
         // then
-        assertEquals(1, session.transaction.modifiedFeatureCount)
-        assertEquals(1, session.transaction.collectionCounters[collectionId])
+        assertEquals(1, session.transaction.getModifiedFeatureCount())
+        assertEquals(1, session.transaction.getCollectionCounters()[collectionId])
 
         // when executed again in same session
         session.writeFeatures(prepareFeatureReq(XYZ_OP_CREATE, collectionId, "feature2"))
         session.writeFeatures(prepareFeatureReq(XYZ_OP_CREATE, otherCollection, "feature3"))
 
         // then
-        assertEquals(3, session.transaction.modifiedFeatureCount)
-        assertEquals(2, session.transaction.collectionCounters[collectionId])
-        assertEquals(1, session.transaction.collectionCounters[otherCollection])
+        assertEquals(3, session.transaction.getModifiedFeatureCount())
+        assertEquals(2, session.transaction.getCollectionCounters()[collectionId])
+        assertEquals(1, session.transaction.getCollectionCounters()[otherCollection])
     }
 
     @Test

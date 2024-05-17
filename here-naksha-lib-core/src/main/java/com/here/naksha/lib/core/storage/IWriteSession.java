@@ -18,10 +18,10 @@
  */
 package com.here.naksha.lib.core.storage;
 
+import com.here.naksha.lib.base.NakResponse;
+import com.here.naksha.lib.base.NakWriteRequest;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteRequest;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -42,26 +42,7 @@ public interface IWriteSession extends IReadSession {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @NotNull
-  Result execute(@NotNull WriteRequest<?, ?, ?> writeRequest);
-
-  /**
-   * Execute the given write-request in bulk. It doesn't return inserted/modified rows.
-   * Important!
-   * - If you want to get the best performance out of this method - execute it
-   * in parallel in separate threads where each thread process data only from 1 partition (if collection is partitioned)
-   * <br>
-   * - even if you use partitioned bulk - use head table name without partition suffix as collectionId
-   * <br>
-   * - you can call this method with mixed IDs (from different partitions) the bulk will be split into
-   * n-bulks (one bulk per partition) and then executed, but it's not recommended to use mixed IDs with
-   * parallel execution.
-   *
-   * @param writeRequest the write-request to execute.
-   * @return the result.
-   */
-  @AvailableSince(NakshaVersion.v2_0_13)
-  @NotNull
-  Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest);
+  NakResponse execute(@NotNull NakWriteRequest writeRequest);
 
   /**
    * Acquire a lock to a specific feature in the HEAD state.

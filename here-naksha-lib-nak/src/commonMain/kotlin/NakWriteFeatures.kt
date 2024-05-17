@@ -8,7 +8,7 @@ import kotlin.js.JsExport
 class NakWriteFeatures(
         val collectionId: String,
         noResults: Boolean = false,
-        rows: Array<NakWriteRow>,
+        rows: Array<AbstractWrite>,
         noFeature: Boolean = false,
         noGeometry: Boolean = false,
         noMeta: Boolean = false,
