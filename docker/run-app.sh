@@ -25,10 +25,8 @@ else
 fi
 
 
-# TODO Remove below commands
+# TODO Remove below command
 cat $NAKSHA_CONFIG_PATH/cloud-config.json
-cat $NAKSHA_CONFIG_PATH/auth/jwt.key
-cat $NAKSHA_CONFIG_PATH/auth/jwt.pub
 
 # Start the application
 java -jar /home/naksha/app/naksha-*-all.jar $NAKSHA_CONFIG_ID $NAKSHA_ADMIN_DB_URL
