@@ -2,11 +2,10 @@ package com.here.naksha.lib.psql;
 
 import com.here.naksha.lib.base.Base;
 import com.here.naksha.lib.base.NakCollection;
-import com.here.naksha.lib.base.NakFeature;
-import com.here.naksha.lib.base.NakReadRow;
+import com.here.naksha.lib.base.ReadRow;
 import com.here.naksha.lib.base.NakResponse;
 import com.here.naksha.lib.base.NakSuccessResponse;
-import com.here.naksha.lib.base.NakWriteCollections;
+import com.here.naksha.lib.base.WriteCollections;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
@@ -21,7 +20,6 @@ import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.jbon.JvmBigInt64Api;
 import com.here.naksha.lib.plv8.ConstantsKt;
-import com.here.naksha.lib.plv8.NakshaSession;
 import com.here.naksha.lib.plv8.ReqHelper;
 import com.here.naksha.lib.plv8.Static;
 import org.jetbrains.annotations.NotNull;
@@ -63,12 +61,12 @@ abstract class PsqlCollectionTests extends PsqlTests {
     assertNotNull(storage);
     assertNotNull(session);
     NakCollection nakCollection = new NakCollection(collectionId(), partitionCount(), null, null, false, false);
-    NakWriteCollections collectionWriteReq = ReqHelper.INSTANCE.prepareCollectionReqCreateFromFeature(collectionId(), nakCollection);
+    WriteCollections collectionWriteReq = ReqHelper.INSTANCE.prepareCollectionReqCreateFromFeature(collectionId(), nakCollection);
     try {
       NakResponse response = session.execute(collectionWriteReq);
       assertInstanceOf(NakSuccessResponse.class, response);
       NakSuccessResponse successResponse = (NakSuccessResponse) response;
-      NakReadRow responseRow = successResponse.getRows()[0];
+      ReadRow responseRow = successResponse.getRows()[0];
       assertEquals(collectionId(), responseRow.getId());
       assertNotNull(responseRow.getUuid());
       assertSame(EExecutedOp.CREATED.toString(), responseRow.getOp());

@@ -1,25 +1,21 @@
+import com.here.naksha.lib.base.InsertFeature
+import com.here.naksha.lib.base.InsertRow
 import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakErrorResponse
-import com.here.naksha.lib.jbon.XYZ_OP_CREATE
-import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
-import com.here.naksha.lib.jbon.XYZ_OP_UPSERT
-import com.here.naksha.lib.jbon.XyzBuilder
+import com.here.naksha.lib.base.Row
+import com.here.naksha.lib.base.UpdateRow
+import com.here.naksha.lib.base.WriteCollections
+import com.here.naksha.lib.base.WriteFeature
+import com.here.naksha.lib.base.WriteRow
 import com.here.naksha.lib.jbon.asArray
 import com.here.naksha.lib.jbon.asMap
 import com.here.naksha.lib.jbon.get
-import com.here.naksha.lib.jbon.newMap
 import com.here.naksha.lib.jbon.put
-import com.here.naksha.lib.plv8.JvmPlv8Table
-import com.here.naksha.lib.plv8.NKC_DISABLE_HISTORY
-import com.here.naksha.lib.plv8.NKC_PARTITION_COUNT
+import com.here.naksha.lib.nak.Flags
 import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.PARTITION_COUNT_NONE
-import com.here.naksha.lib.plv8.RET_ERR_MSG
-import com.here.naksha.lib.plv8.ReqHelper
-import com.here.naksha.lib.plv8.ReqHelper.prepareFeatureReq
+import com.here.naksha.lib.plv8.ReqHelper.prepareCollectionReqCreateFromFeature
 import com.here.naksha.lib.plv8.ReqHelper.prepareFeatureReqForOperations
-import com.here.naksha.lib.plv8.ReqHelper.prepareOperation
-import com.here.naksha.lib.plv8.getCollectionPartitionCount
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -66,20 +62,20 @@ class NakshaSessionTest : JbTest() {
         session.clear()
 
         // when
-        session.writeFeatures(prepareFeatureReq(XYZ_OP_CREATE, collectionId, "feature1"))
+        session.writeFeatures(prepareFeatureReqForOperations(collectionId, WriteRow(collectionId, Row(id = "feature1"))))
 
         // then
-        assertEquals(1, session.transaction.getModifiedFeatureCount())
-        assertEquals(1, session.transaction.getCollectionCounters()[collectionId])
+        assertEquals(1, session.transaction.modifiedFeatureCount)
+        assertEquals(1, session.transaction.collectionCounters[collectionId])
 
         // when executed again in same session
-        session.writeFeatures(prepareFeatureReq(XYZ_OP_CREATE, collectionId, "feature2"))
-        session.writeFeatures(prepareFeatureReq(XYZ_OP_CREATE, otherCollection, "feature3"))
+        session.writeFeatures(prepareFeatureReqForOperations(collectionId, WriteRow(collectionId, Row(id = "feature2"))))
+        session.writeFeatures(prepareFeatureReqForOperations(otherCollection, WriteRow(otherCollection, Row(id = "feature3"))))
 
         // then
-        assertEquals(3, session.transaction.getModifiedFeatureCount())
-        assertEquals(2, session.transaction.getCollectionCounters()[collectionId])
-        assertEquals(1, session.transaction.getCollectionCounters()[otherCollection])
+        assertEquals(3, session.transaction.modifiedFeatureCount)
+        assertEquals(2, session.transaction.collectionCounters[collectionId])
+        assertEquals(1, session.transaction.collectionCounters[otherCollection])
     }
 
     @Test
@@ -88,9 +84,10 @@ class NakshaSessionTest : JbTest() {
         val collectionId = "foo"
         val session = NakshaSession.get()
         session.collectionConfiguration.put(collectionId, NakCollection())
+        val featureRow = Row(id = "someId")
 
-        val op1 = prepareOperation(XYZ_OP_CREATE, "someId")
-        val op2 = prepareOperation(XYZ_OP_UPDATE, "someId")
+        val op1 = InsertRow(collectionId, featureRow)
+        val op2 = UpdateRow(collectionId, featureRow)
 
         // when
 
@@ -106,7 +103,8 @@ class NakshaSessionTest : JbTest() {
         feature.setId(collectionId)
         feature.setPartitions(partitionCount)
         feature.setDisableHistory(disableHistory)
-        session.writeCollections(ReqHelper.prepareCollectionReq(XYZ_OP_UPSERT, collectionId, collectionFeature = feature))
+        val writeCollection = WriteFeature(collectionId = collectionId, feature = feature, flags = Flags())
+        session.writeCollections(WriteCollections(rows = arrayOf(writeCollection)))
     }
 
     private fun doesTableExist(session: NakshaSession, tableName: String): Boolean {

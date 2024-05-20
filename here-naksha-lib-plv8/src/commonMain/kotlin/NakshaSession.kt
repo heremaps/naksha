@@ -2,17 +2,18 @@
 
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.base.ACTION_DELETE
+import com.here.naksha.lib.base.ACTION_UPDATE
 import com.here.naksha.lib.base.Base
+import com.here.naksha.lib.base.Metadata
 import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakErrorResponse
-import com.here.naksha.lib.base.NakFeature
 import com.here.naksha.lib.base.NakResponse
-import com.here.naksha.lib.base.NakRow
-import com.here.naksha.lib.base.NakTransaction
-import com.here.naksha.lib.base.NakWriteCollections
-import com.here.naksha.lib.base.NakWriteFeatures
 import com.here.naksha.lib.base.PObject
-import com.here.naksha.lib.base.WriteFeature
+import com.here.naksha.lib.base.Row
+import com.here.naksha.lib.base.WriteCollections
+import com.here.naksha.lib.base.WriteFeatures
+import com.here.naksha.lib.base.WriteRow
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.nak.Flags
 import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
@@ -105,7 +106,7 @@ class NakshaSession(
     /**
      * Keeps transaction's counters.
      */
-    var transaction: NakTransaction = NakTransaction()
+    var transaction: NakshaTransaction = NakshaTransaction(globalDictManager)
 
     /**
      * A cache to remember collections configuration <collectionId, configMap>
@@ -146,7 +147,7 @@ SET SESSION enable_seqscan = OFF;
         errMsg = null
         collectionConfiguration = Jb.map.newMap()
         collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
-        transaction = NakTransaction()
+        transaction = NakshaTransaction(globalDictManager)
     }
 
     /**
@@ -228,6 +229,46 @@ SET SESSION enable_seqscan = OFF;
         val geo_grid: Int? = row[COL_GEO_GRID]
         check(geo_grid != null) { "Missing $COL_GEO_GRID, please invoke naksha_start_session" }
         return xyzBuilder.buildXyzNs(createdAt, updatedAt, txn, action, version, authorTs, puuid, uuid.toString(), app_id, author, geo_grid)
+    }
+
+    fun metaFromRow(collectionId: String, row: IMap): Metadata {
+        val createdAt: BigInt64? = row[COL_CREATED_AT] ?: row[COL_UPDATE_AT]
+        check(createdAt != null) { "Missing $COL_CREATED_AT in row" }
+        // for transactions update might be null, for features created at might be null
+        val updatedAt: BigInt64 = row[COL_UPDATE_AT] ?: row[COL_CREATED_AT]!!
+        val txn: BigInt64? = row[COL_TXN]
+        check(txn != null) { "Missing $COL_TXN in row" }
+        val uid: Int? = row[COL_UID]
+        check(uid != null) { "Missing $COL_UID in row" }
+        val ptxn: BigInt64? = row[COL_PTXN]
+        val puid: Int? = row[COL_PUID]
+        val action: Short = row[COL_ACTION] ?: 0
+        val version: Int = row[COL_VERSION] ?: 1
+        val authorTs: BigInt64 = row[COL_AUTHOR_TS] ?: updatedAt
+        val app_id: String? = row[COL_APP_ID]
+        check(app_id != null) { "Missing $COL_APP_ID, please invoke naksha_start_session" }
+        val author: String = row[COL_AUTHOR] ?: app_id
+        val geo_grid: Int? = row[COL_GEO_GRID]
+        val txnNext: BigInt64? = row[COL_TXN_NEXT]
+        check(geo_grid != null) { "Missing $COL_GEO_GRID, please invoke naksha_start_session" }
+        return Metadata(
+                id = row[COL_ID]!!,
+                txnNext = txnNext.toInt64(),
+                txn = txn.toInt64()!!, // FIXME - remove BigInt
+                ptxn = ptxn.toInt64(),
+                fnva1 = null, // TODO calculate hash
+                uid = uid,
+                puid = puid,
+                version = version,
+                geoGrid = geo_grid,
+                flags = row[COL_FLAGS]!!,
+                action = action,
+                appId = app_id,
+                author = author,
+                createdAt = createdAt.toInt64(),
+                updatedAt = updatedAt.toInt64()!!,
+                authorTs = authorTs.toInt64()
+        )
     }
 
     /**
@@ -498,7 +539,7 @@ FROM ns, txn_seq;"""
         }
     }
 
-    fun writeCollections(writeRequest: NakWriteCollections): NakResponse {
+    fun writeCollections(writeRequest: WriteCollections): NakResponse {
         val writer = NakshaFeaturesWriter(NKC_TABLE, this)
         return try {
             writer.writeCollections(writeRequest)
@@ -570,8 +611,16 @@ FROM ns, txn_seq;"""
         // FIXME TODO get global dictionary
         val builder = JbBuilder(newDataView(65536), globalDictManager.getDictionary(collectionId))
         val featureBytes = builder.buildFeatureFromObject(feature)
+        return getFinalFeatureBytes(flags, featureBytes)
+    }
 
-        return if (sql.info().gzipSupported) {
+    /**
+     *  Compress bytes if necessary, and modify Flags.
+     */
+    fun getFinalFeatureBytes(flags: Flags, featureBytes: ByteArray?): ByteArray? {
+        return if (featureBytes == null) {
+            null
+        } else if (sql.info().gzipSupported) {
             flags.forceGzipOnFeatureEncoding()
             sql.gzipCompress(featureBytes)
         } else {
@@ -624,7 +673,7 @@ FROM ns, txn_seq;"""
      * Single threaded all-or-nothing bulk write operation.
      * As result there is row with success or error returned.
      */
-    fun writeFeatures(writeRequest: NakWriteFeatures): NakResponse {
+    fun writeFeatures(writeRequest: WriteFeatures): NakResponse {
         val featureWriter = NakshaFeaturesWriter(writeRequest.collectionId, this)
 
         return try {
@@ -642,8 +691,8 @@ FROM ns, txn_seq;"""
 
     internal fun saveCurrentTransactionLog() {
         val transactionWriter = NakshaFeaturesWriter(SC_TRANSACTIONS, this, modifyCounters = false)
-        val writeOp = WriteFeature(XYZ_OP_UPSERT, feature = transaction, id = txn().toUuid(storageId).toString())
-        val transactionWriteReq = NakWriteFeatures(SC_TRANSACTIONS, noResults = true, rows = arrayOf(writeOp))
+        val writeOp = WriteRow(SC_TRANSACTIONS, row = Row(id = txn().toUuid(storageId).toString(), feature = transaction.toBytes()))
+        val transactionWriteReq = WriteFeatures(SC_TRANSACTIONS, noResults = true, rows = arrayOf(writeOp))
         transactionWriter.writeFeatures(transactionWriteReq)
     }
 

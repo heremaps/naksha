@@ -5,18 +5,15 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
-/**
- * PUT operation
- */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class WriteFeature(
+class UpdateFeature(
         collectionId: String,
         flags: Flags,
         feature: NakFeature,
         val atomic: Boolean = false,
         grid: Int? = null
-) : FeatureOp(XYZ_OP_UPSERT, collectionId, flags, feature, grid) {
-    @JsName("WriteFeatureDefault")
+) : FeatureOp(XYZ_OP_UPDATE, collectionId, flags, feature, grid) {
+    @JsName("UpdateFeatureDefault")
     constructor(collectionId: String, flags: Flags, feature: NakFeature) : this(collectionId = collectionId, flags = flags, feature = feature, grid = null, atomic = false)
 }

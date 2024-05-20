@@ -8,7 +8,7 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class NakRequest(
+abstract class Request(
         val noFeature: Boolean = false,
         val noGeometry: Boolean = false,
         val noMeta: Boolean = false,

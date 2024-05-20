@@ -2,6 +2,13 @@
 
 package com.here.naksha.lib.plv8
 
+import com.here.naksha.lib.base.XYZ_EXEC_CREATED
+import com.here.naksha.lib.base.XYZ_EXEC_DELETED
+import com.here.naksha.lib.base.XYZ_EXEC_ERROR
+import com.here.naksha.lib.base.XYZ_EXEC_PURGED
+import com.here.naksha.lib.base.XYZ_EXEC_READ
+import com.here.naksha.lib.base.XYZ_EXEC_RETAINED
+import com.here.naksha.lib.base.XYZ_EXEC_UPDATED
 import com.here.naksha.lib.jbon.*
 import com.here.naksha.lib.nak.Flags
 import kotlin.js.ExperimentalJsExport

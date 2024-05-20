@@ -1,8 +1,17 @@
+@file:Suppress("OPT_IN_USAGE")
 package com.here.naksha.lib.base
 
+import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
 
+@JsExport
 class NakTransaction(vararg args: Any?) : NakFeature(*args) {
+
+    @JsName("NakTransactionById")
+    constructor(id: String) : this() {
+        setId(id)
+    }
 
     companion object {
         @JvmStatic

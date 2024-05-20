@@ -5,7 +5,7 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class NakReadFeatures(
+class ReadFeatures(
         val queryDeleted: Boolean = false,
         val queryHistory: Boolean = false,
         val limitVersions: Int = 1,
@@ -18,4 +18,4 @@ class NakReadFeatures(
         noMeta: Boolean = false,
         noTags: Boolean = false,
         resultFilter: Array<IReadRowFilter> = emptyArray()
-) : NakReadRequest(limit, noFeature, noGeometry, noMeta, noTags, resultFilter)
+) : ReadRequest(limit, noFeature, noGeometry, noMeta, noTags, resultFilter)

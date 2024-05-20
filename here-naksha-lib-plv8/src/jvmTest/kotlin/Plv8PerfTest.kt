@@ -1,18 +1,19 @@
-import com.here.naksha.lib.base.AbstractWrite
+import com.here.naksha.lib.base.DeleteFeature
+import com.here.naksha.lib.base.InsertRow
 import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakErrorResponse
 import com.here.naksha.lib.base.NakSuccessResponse
-import com.here.naksha.lib.base.WriteFeature
+import com.here.naksha.lib.base.PurgeFeature
+import com.here.naksha.lib.base.Row
+import com.here.naksha.lib.base.RowOp
+import com.here.naksha.lib.base.UpdateRow
+import com.here.naksha.lib.base.WriteOp
+import com.here.naksha.lib.base.XYZ_EXEC_CREATED
+import com.here.naksha.lib.base.XYZ_EXEC_DELETED
+import com.here.naksha.lib.base.XYZ_EXEC_RETAINED
 import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
 import com.here.naksha.lib.jbon.SQL_INT16
-import com.here.naksha.lib.jbon.XYZ_EXEC_CREATED
-import com.here.naksha.lib.jbon.XYZ_EXEC_DELETED
-import com.here.naksha.lib.jbon.XYZ_EXEC_RETAINED
-import com.here.naksha.lib.jbon.XYZ_OP_CREATE
-import com.here.naksha.lib.jbon.XYZ_OP_DELETE
-import com.here.naksha.lib.jbon.XYZ_OP_PURGE
-import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
 import com.here.naksha.lib.jbon.XyzBuilder
 import com.here.naksha.lib.jbon.asMap
 import com.here.naksha.lib.jbon.set
@@ -21,9 +22,10 @@ import com.here.naksha.lib.plv8.ERR_CHECK_VIOLATION
 import com.here.naksha.lib.plv8.JvmPlv8Env
 import com.here.naksha.lib.plv8.JvmPlv8Sql
 import com.here.naksha.lib.plv8.NakshaSession
-import com.here.naksha.lib.plv8.ReqHelper.prepareCollectionReq
+import com.here.naksha.lib.plv8.ReqHelper.deleteCollection
+import com.here.naksha.lib.plv8.ReqHelper.prepareCreateCollectionReq
 import com.here.naksha.lib.plv8.ReqHelper.prepareFeatureReqForOperations
-import com.here.naksha.lib.plv8.ReqHelper.prepareOperation
+import com.here.naksha.lib.plv8.ReqHelper.prepareInsertOperation
 import com.here.naksha.lib.plv8.Static
 import com.here.naksha.lib.plv8.Static.PARTITION_ID
 import com.here.naksha.lib.plv8.Static.SC_CONSISTENT
@@ -102,7 +104,7 @@ class Plv8PerfTest : JbTest() {
             val id: String = env.randomString(12)
             topology["id"] = id
             idArr[i] = id
-            opArr[i] = builder.buildXyzOp(XYZ_OP_CREATE, id, null, GRID)
+//            opArr[i] = builder.buildXyzOp(XYZ_OP_CREATE, id, null, GRID)
             featureArr[i] = builder.buildFeatureFromMap(topology)
             i++
         }
@@ -144,14 +146,13 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         val session = NakshaSession.get()
         val builder = XyzBuilder.create(65536)
 
-        var feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
-        var result = session.writeCollections(prepareCollectionReq(XYZ_OP_DELETE, "v2_perf_test", feature))
+        var result = session.writeCollections(deleteCollection("v2_perf_test"))
         var nakResponse = assertInstanceOf(NakSuccessResponse::class.java, result)
         assertEquals(1, nakResponse.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == nakResponse.rows[0].op || XYZ_EXEC_DELETED == nakResponse.rows[0].op)
 
-        feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
-        result = session.writeCollections(prepareCollectionReq(XYZ_OP_CREATE, "v2_perf_test", feature))
+        val feature = builder.buildFeatureFromMap(asMap(env.parse("""{"id":"v2_perf_test"}""")))
+        result = session.writeCollections(prepareCreateCollectionReq("v2_perf_test", feature))
         nakResponse = assertInstanceOf(nakResponse::class.java, result)
         assertEquals(1, nakResponse.rows.size)
         assertTrue(XYZ_EXEC_CREATED == nakResponse.rows[0].op)
@@ -249,7 +250,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
     private var featureBytes: ByteArray? = null
 
-    private fun createBulkFeature(): AbstractWrite {
+    private fun createBulkFeature(collectionId: String): InsertRow {
         val id = env.randomString(12)
         val topology = if (UseSmallFeatures) getSmallTopologyFeature() else getTopologyFeature()
         topology["id"] = id
@@ -259,7 +260,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
             this.featureBytes = featureBytes
             println("---------- Create feature of size ${featureBytes.size} -----------")
         }
-        return prepareOperation(XYZ_OP_CREATE, featureId = id, featureBytes = featureBytes)
+        return prepareInsertOperation(collectionId = collectionId, featureId = id, featureBytes = featureBytes)
     }
 
     @Order(3)
@@ -270,19 +271,19 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         createCollection(tableName, partitionCount = PARTITION_COUNT, disableHistory = true, storageClass = SC_CONSISTENT)
 
         // Run for bulk threads in virtual partitions.
-        val featuresByVp = Array<ArrayList<AbstractWrite>>(BulkLoadThreads) { ArrayList() }
+        val featuresByVp = Array<ArrayList<WriteOp>>(BulkLoadThreads) { ArrayList() }
         val partNameByVp = Array<String?>(BulkLoadThreads) { null }
         val featuresDoneByVp = AtomicReferenceArray<Boolean>(BulkLoadThreads)
         var i = 0
         while (i < BulkLoadSize) {
-            val f = createBulkFeature()
+            val f = createBulkFeature(tableName)
 
             // Verify physical partition
-            val p = Static.partitionNumber(f.id!!, PARTITION_COUNT)
+            val p = Static.partitionNumber(f.getId(), PARTITION_COUNT)
             check(p in 0..<PARTITION_COUNT)
 
             // Assign to virtual partition.
-            val vp = Static.partitionIndex(f.id!!, BulkLoadThreads)
+            val vp = Static.partitionIndex(f.getId(), BulkLoadThreads)
             check(vp in 0..<BulkLoadThreads)
             partNameByVp[vp] = PARTITION_ID[p]
             featuresDoneByVp.setRelease(vp, false)
@@ -361,11 +362,11 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         // We only run with a single thread!
         var i = 0
-        val features = mutableListOf<AbstractWrite>()
+        val features = mutableListOf<InsertRow>()
 
         // insert features
         while (i < BulkWriteSize) {
-            val f = createBulkFeature()
+            val f = createBulkFeature(tableName)
             features.add(f)
             i++
         }
@@ -382,12 +383,13 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         // update features
         var updateCount = 0
-        for (o in writeReq.rows) {
-            o.op =  XYZ_OP_UPDATE
+        val updateOperations = mutableListOf<RowOp>()
+        for (o in features) {
+            updateOperations.add(UpdateRow(collectionId = o.collectionId, row = o.row))
             updateCount++
         }
         val updateStart = currentMicros()
-        val rowsUpdated = session.writeFeatures(writeReq) as NakSuccessResponse
+        val rowsUpdated = session.writeFeatures(prepareFeatureReqForOperations(tableName, *updateOperations.toTypedArray())) as NakSuccessResponse
         assertEquals(BulkWriteSize, rowsUpdated.rows.size)
         session.sql.execute("commit")
         val updateEnd = currentMicros()
@@ -398,12 +400,13 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
 
         // delete features
         var deleteCount = 0
+        val deleteOperations = mutableListOf<DeleteFeature>()
         for (o in writeReq.rows) {
-            o.op = XYZ_OP_DELETE
+            deleteOperations.add(DeleteFeature(collectionId = o.collectionId, id = o.getId()))
             deleteCount++
         }
         val delStart = currentMicros()
-        val rowsDeleted = session.writeFeatures(writeReq) as NakSuccessResponse
+        val rowsDeleted = session.writeFeatures(prepareFeatureReqForOperations(tableName, *deleteOperations.toTypedArray())) as NakSuccessResponse
         assertEquals(BulkWriteSize, rowsDeleted.rows.size)
         session.sql.execute("commit")
         val delEnd = currentMicros()
@@ -418,7 +421,8 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
     fun bulkAtomicsCheck() {
         // executed after bulkInsertFeatures
         val tableName = "v2_bulk_write"
-        val f = createBulkFeature()
+        val f = createBulkFeature(tableName)
+        createCollection(tableName, partitionCount = PARTITION_COUNT, disableHistory = false, storageClass = SC_CONSISTENT)
 
         // insert features
         val writeReq = prepareFeatureReqForOperations(tableName, f)
@@ -428,30 +432,26 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         session.clear()
 
 
-        val operationWithInvalidUuidToCheck: (Int) -> Unit = { operation ->
-            val newOps = mutableListOf<AbstractWrite>()
-            for (o in writeReq.rows) {
-                o.op = operation
-                o.uuid = "invalid:uid:2024:1:1:1:1"
-            }
-            val operationResult = session.writeFeatures(writeReq) as NakErrorResponse
+        val operationWithInvalidUuidToCheck: (WriteOp) -> Unit = { operation ->
+            val operationResult = session.writeFeatures(prepareFeatureReqForOperations(tableName, operation)) as NakErrorResponse
             assertEquals(ERR_CHECK_VIOLATION, operationResult.error)
             session.sql.execute("rollback")
             session.clear()
         }
 
+        val invalidUuid = "invalid:uid:2024:1:1:1:1"
         // update using wrong state
-        operationWithInvalidUuidToCheck(XYZ_OP_UPDATE)
+        operationWithInvalidUuidToCheck(UpdateRow(tableName, row = Row(id = f.row.id, uuid = invalidUuid), atomic = true))
         // delete using wrong state
-        operationWithInvalidUuidToCheck(XYZ_OP_DELETE)
+        operationWithInvalidUuidToCheck(DeleteFeature(tableName, f.row.id, invalidUuid))
         // purge using wrong state
-        operationWithInvalidUuidToCheck(XYZ_OP_PURGE)
+        operationWithInvalidUuidToCheck(PurgeFeature(tableName, f.row.id, invalidUuid))
     }
 
     private fun createCollection(tableName: String, partitionCount: Int, disableHistory: Boolean, storageClass: String? = null) {
         var feature = NakCollection()
         feature.setId(tableName)
-        var result = session.writeCollections(prepareCollectionReq(XYZ_OP_DELETE, tableName, collectionFeature = feature))
+        var result = session.writeCollections(deleteCollection(tableName))
         var table = assertInstanceOf(NakSuccessResponse::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_RETAINED == table.rows[0].op || XYZ_EXEC_DELETED == table.rows[0].op)
@@ -462,7 +462,7 @@ CREATE TABLE baseline_test (uid int8, txn_next int8, flags int4, id text, xyz by
         feature.setPartitions(partitionCount)
         feature.setDisableHistory(disableHistory)
         feature.setStorageClass(sc)
-        result = session.writeCollections(prepareCollectionReq(XYZ_OP_CREATE, tableName, collectionFeature = feature))
+        result = session.writeCollections(prepareCreateCollectionReq(tableName, collectionFeature = feature))
         table = assertInstanceOf(NakSuccessResponse::class.java, result)
         assertEquals(1, table.rows.size)
         assertTrue(XYZ_EXEC_CREATED == table.rows[0].op)

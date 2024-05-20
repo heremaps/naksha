@@ -2,18 +2,18 @@ package com.here.naksha.lib.plv8
 
 import NakshaBulkLoaderPlan
 import com.here.naksha.lib.base.Base
+import com.here.naksha.lib.base.FeatureOp
+import com.here.naksha.lib.base.InsertFeature
 import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakSuccessResponse
-import com.here.naksha.lib.base.NakWriteCollections
-import com.here.naksha.lib.base.NakWriteFeatures
-import com.here.naksha.lib.base.WriteFeature
-import com.here.naksha.lib.base.WriteRow
+import com.here.naksha.lib.base.WriteCollections
+import com.here.naksha.lib.base.WriteFeatures
+import com.here.naksha.lib.base.XYZ_OP_CREATE
+import com.here.naksha.lib.base.XYZ_OP_DELETE
+import com.here.naksha.lib.base.XYZ_OP_PURGE
+import com.here.naksha.lib.base.XYZ_OP_UPDATE
+import com.here.naksha.lib.base.XYZ_OP_UPSERT
 import com.here.naksha.lib.jbon.IMap
-import com.here.naksha.lib.jbon.XYZ_OP_CREATE
-import com.here.naksha.lib.jbon.XYZ_OP_DELETE
-import com.here.naksha.lib.jbon.XYZ_OP_PURGE
-import com.here.naksha.lib.jbon.XYZ_OP_UPDATE
-import com.here.naksha.lib.jbon.XYZ_OP_UPSERT
 import com.here.naksha.lib.jbon.asArray
 import com.here.naksha.lib.jbon.asMap
 import com.here.naksha.lib.jbon.get
@@ -33,7 +33,7 @@ class NakshaFeaturesWriter(
 
     private val collectionConfig = session.getCollectionConfig(headCollectionId)
 
-    fun writeFeatures(writeRequest: NakWriteFeatures): NakSuccessResponse {
+    fun writeFeatures(writeRequest: WriteFeatures): NakSuccessResponse {
         val START = currentMillis()
         val START_MAPPING = currentMillis()
         val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.getPartitions())
@@ -76,7 +76,7 @@ class NakshaFeaturesWriter(
         return NakSuccessResponse(rows = plan.result.toTypedArray())
     }
 
-    fun writeCollections(writeRequest: NakWriteCollections): NakSuccessResponse {
+    fun writeCollections(writeRequest: WriteCollections): NakSuccessResponse {
         val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.getPartitions())
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
@@ -86,11 +86,6 @@ class NakshaFeaturesWriter(
         val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
 
         for (op in operations.operations) {
-            val newCollection = when (op.writeReq) {
-                is WriteFeature -> Base.assign(op.writeReq.feature!!, NakCollection.klass)
-                else -> throw RuntimeException("add support for WriteRow collection")
-            }
-
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
             val schemaOid = asMap(asArray(session.sql.execute(query, arrayOf(session.schema)))[0]).getAny("oid") as Int
             session.verifyCache(schemaOid)
@@ -99,6 +94,10 @@ class NakshaFeaturesWriter(
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
             when (opType) {
                 XYZ_OP_CREATE -> {
+                    val newCollection = when (op.writeReq) {
+                        is FeatureOp -> Base.assign(op.writeReq.feature, NakCollection.klass)
+                        else -> throw RuntimeException("add support for WriteRow collection")
+                    }
                     Static.collectionCreate(session.sql, newCollection.getStorageClass(), session.schema, schemaOid, op.id, newCollection.getGeoIndex(), newCollection.getPartitions())
                     plan.addCreate(op)
                 }

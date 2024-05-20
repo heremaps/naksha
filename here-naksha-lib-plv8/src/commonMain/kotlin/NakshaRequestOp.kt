@@ -1,14 +1,22 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.base.AbstractWrite
-import com.here.naksha.lib.base.NakWriteRequest
-import com.here.naksha.lib.base.WriteFeature
-import com.here.naksha.lib.base.WriteRow
+import com.here.naksha.lib.base.DeleteFeature
+import com.here.naksha.lib.base.FeatureOp
+import com.here.naksha.lib.base.WriteOp
+import com.here.naksha.lib.base.WriteRequest
+import com.here.naksha.lib.base.PurgeFeature
+import com.here.naksha.lib.base.RowOp
+import com.here.naksha.lib.base.UpdateRow
+import com.here.naksha.lib.base.UploadOp
+import com.here.naksha.lib.base.XYZ_OP_CREATE
+import com.here.naksha.lib.base.XYZ_OP_DELETE
+import com.here.naksha.lib.base.XYZ_OP_PURGE
 import com.here.naksha.lib.jbon.*
 
 internal class NakshaRequestOp(
-        val writeReq: AbstractWrite,
+        val writeReq: WriteOp,
         val rowMap: IMap,
+        val atomicUUID: String?,
         val collectionId: String,
         val collectionPartitionCount: Int
 ) {
@@ -19,13 +27,16 @@ internal class NakshaRequestOp(
     val key = "${Static.PARTITION_ID[partition]}_${id}"
 
     companion object {
+        private const val UNDETERMINED_PARTITION = -2
+        private const val MULTIPLE_DIFFERENT_PARTITIONS = -1
+
         fun mapToOperations(
                 collectionId: String,
-                writeRequest: NakWriteRequest,
+                writeRequest: WriteRequest,
                 session: NakshaSession,
                 collectionPartitionCount: Int
         ): NakshaWriteOps {
-            var partition: Int = -2
+            var partition: Int = UNDETERMINED_PARTITION
             val size = writeRequest.rows.size
             val operations = ArrayList<NakshaRequestOp>(size)
             val idsToModify = ArrayList<String>(size)
@@ -34,9 +45,7 @@ internal class NakshaRequestOp(
             val uniqueIds = HashSet<String>(size)
             for (nakWriteOp in writeRequest.rows) {
 
-                val id = nakWriteOp.id
-                        ?: nakWriteOp.takeIf { it is WriteFeature }?.let { it as WriteFeature }?.feature?.getId()
-                        ?: throw NakshaException.forId(ERR_FEATURE_NOT_EXISTS, "Missing id", null)
+                val id = nakWriteOp.getId()
 
                 if (uniqueIds.contains(id)) {
                     throw NakshaException.forId(ERR_UNIQUE_VIOLATION, "Cannot perform multiple operations on single feature in one transaction", id)
@@ -52,39 +61,54 @@ internal class NakshaRequestOp(
                         idsToDel.add(id)
                     }
                 }
-                val flags = nakWriteOp.flags
-                val row = newMap()
-                row[COL_ID] = id
-                when (nakWriteOp) {
-                    is WriteFeature -> {
-                        row[COL_TAGS] = session.getFeatureAsJbon(nakWriteOp.feature?.getProperties()?.getXyz()?.getTags()?.data(), flags, collectionId)
-                        // TODO FIXME write geo as jbon
-                        row[COL_GEOMETRY] = null // nakWriteOp.feature?.getCoordinates<BaseArray<Any?>>()
-                        row[COL_FEATURE] = session.getFeatureAsJbon(nakWriteOp.feature?.data(), flags, collectionId)
-                    }
-                    is WriteRow -> {
-                        row[COL_TAGS] = nakWriteOp.row?.tags
-                        row[COL_GEOMETRY] = nakWriteOp.row?.geo
-                        row[COL_FEATURE] = nakWriteOp.row?.feature
-                    }
-                }
 
-                row[COL_FLAGS] = flags.toCombinedFlags()
-                if (nakWriteOp.grid != null) {
-                    // we don't want it to be null, as null would override calculated value later in response
-                    row[COL_GEO_GRID] = nakWriteOp.grid
-                }
+                val row = prepareRow(session, nakWriteOp, collectionId)
 
-                val op = NakshaRequestOp(nakWriteOp, row, collectionId = collectionId, collectionPartitionCount)
+                val op = NakshaRequestOp(nakWriteOp, row, collectionId = collectionId, atomicUUID = requestedUUID(nakWriteOp), collectionPartitionCount = collectionPartitionCount)
                 operations.add(op)
-                if (partition == -2) {
+                if (partition == UNDETERMINED_PARTITION) {
                     partition = op.partition
                 } else if (partition != op.partition) {
-                    partition = -1
+                    partition = MULTIPLE_DIFFERENT_PARTITIONS
                 }
             }
 
             return NakshaWriteOps(collectionId, operations.sortedBy { it.key }, idsToModify, idsToPurge, idsToDel, if (partition >= 0) partition else null)
+        }
+
+
+        private fun prepareRow(session: NakshaSession, nakWriteOp: WriteOp, collectionId: String): IMap {
+            val row = newMap()
+            row[COL_ID] = nakWriteOp.getId()
+            when (nakWriteOp) {
+                is FeatureOp -> {
+                    row[COL_TAGS] = session.getFeatureAsJbon(nakWriteOp.feature.getProperties().getXyz()?.getTags()?.data(), nakWriteOp.getFlags(), collectionId)
+                    // TODO FIXME write geo as bytea
+                    row[COL_GEOMETRY] = null // nakWriteOp.feature?.getCoordinates<BaseArray<Any?>>()
+                    row[COL_FEATURE] = session.getFeatureAsJbon(nakWriteOp.feature.data(), nakWriteOp.getFlags(), collectionId)
+                    row[COL_FLAGS] = nakWriteOp.getFlags().toCombinedFlags()
+                }
+                is RowOp -> {
+                    row[COL_TAGS] = session.getFinalFeatureBytes(nakWriteOp.getFlags(), nakWriteOp.row.tags)
+                    row[COL_GEOMETRY] = nakWriteOp.row.geo
+                    row[COL_FEATURE] = session.getFinalFeatureBytes(nakWriteOp.getFlags(), nakWriteOp.row.feature)
+                    row[COL_FLAGS] = nakWriteOp.getFlags().toCombinedFlags()
+                }
+            }
+            if (nakWriteOp is UploadOp && nakWriteOp.getGrid() != null) {
+                // we don't want it to be null, as null would override calculated value later in response
+                row[COL_GEO_GRID] = nakWriteOp.getGrid()
+            }
+            return row
+        }
+
+        private fun requestedUUID(writeOp: WriteOp): String? {
+            return when (writeOp) {
+                is UpdateRow -> if (writeOp.atomic) writeOp.row.uuid!! else null
+                is DeleteFeature -> writeOp.uuid
+                is PurgeFeature -> writeOp.uuid
+                else -> null
+            }
         }
     }
 }

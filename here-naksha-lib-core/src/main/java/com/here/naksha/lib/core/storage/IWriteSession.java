@@ -19,7 +19,7 @@
 package com.here.naksha.lib.core.storage;
 
 import com.here.naksha.lib.base.NakResponse;
-import com.here.naksha.lib.base.NakWriteRequest;
+import com.here.naksha.lib.base.WriteRequest;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import java.util.concurrent.TimeUnit;
@@ -42,7 +42,7 @@ public interface IWriteSession extends IReadSession {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @NotNull
-  NakResponse execute(@NotNull NakWriteRequest writeRequest);
+  NakResponse execute(@NotNull WriteRequest writeRequest);
 
   /**
    * Acquire a lock to a specific feature in the HEAD state.

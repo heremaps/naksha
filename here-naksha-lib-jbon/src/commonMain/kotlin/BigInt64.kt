@@ -3,6 +3,7 @@
 
 package com.here.naksha.lib.jbon
 
+import com.here.naksha.lib.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -75,4 +76,5 @@ inline fun BigInt64.toInt(): Int = Jb.int64.toInt(this)
 inline fun BigInt64.toLong(): Long = Jb.int64.toLong(this)
 inline fun BigInt64.toFloat(): Float = toDouble().toFloat()
 inline fun BigInt64.toDouble(): Double = Jb.int64.toDouble(this)
+inline fun BigInt64?.toInt64(): Int64? = this?.let { Jb.int64.toInt64(it) }
 inline fun BigInt64.toDoubleRawBits(): Double = Jb.int64.toDoubleRawBits(this)

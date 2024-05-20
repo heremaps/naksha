@@ -5,9 +5,11 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class WriteRow(
+abstract class RemoveOp(
+        op: Int,
         collectionId: String,
-        row: Row,
-        val atomic: Boolean = false,
-        grid: Int? = null
-) : RowOp(XYZ_OP_UPSERT, collectionId, row, grid)
+        private val id: String,
+        val uuid: String?
+): WriteOp(op, collectionId) {
+    override fun getId(): String = id
+}

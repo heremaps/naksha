@@ -1,5 +1,15 @@
-import com.here.naksha.lib.base.NakReadRow
-import com.here.naksha.lib.base.NakRow
+import com.here.naksha.lib.base.Metadata
+import com.here.naksha.lib.base.ReadRow
+import com.here.naksha.lib.base.RemoveOp
+import com.here.naksha.lib.base.Row
+import com.here.naksha.lib.base.UpdateFeature
+import com.here.naksha.lib.base.XYZ_EXEC_CREATED
+import com.here.naksha.lib.base.XYZ_EXEC_DELETED
+import com.here.naksha.lib.base.XYZ_EXEC_PURGED
+import com.here.naksha.lib.base.XYZ_EXEC_RETAINED
+import com.here.naksha.lib.base.XYZ_EXEC_UPDATED
+import com.here.naksha.lib.base.get
+import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.NakshaUuid
 import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
@@ -7,11 +17,6 @@ import com.here.naksha.lib.jbon.SQL_INT16
 import com.here.naksha.lib.jbon.SQL_INT32
 import com.here.naksha.lib.jbon.SQL_INT64
 import com.here.naksha.lib.jbon.SQL_STRING
-import com.here.naksha.lib.jbon.XYZ_EXEC_CREATED
-import com.here.naksha.lib.jbon.XYZ_EXEC_DELETED
-import com.here.naksha.lib.jbon.XYZ_EXEC_PURGED
-import com.here.naksha.lib.jbon.XYZ_EXEC_RETAINED
-import com.here.naksha.lib.jbon.XYZ_EXEC_UPDATED
 import com.here.naksha.lib.jbon.get
 import com.here.naksha.lib.jbon.plus
 import com.here.naksha.lib.jbon.set
@@ -62,7 +67,7 @@ internal class NakshaBulkLoaderPlan(
 
     internal val featureIdsToDeleteFromDel = mutableListOf<String>()
     internal val featuresToPurgeFromDel = mutableListOf<String>()
-    internal val result = mutableListOf<NakReadRow>()
+    internal val result = mutableListOf<ReadRow>()
 
     internal val insertToHeadBulkParams = mutableListOf<Array<Param>>()
     internal val copyHeadToDelBulkParams = mutableListOf<Array<Param>>()
@@ -130,22 +135,23 @@ internal class NakshaBulkLoaderPlan(
         session.xyzInsert(op.collectionId, op.rowMap)
         addInsertParams(op.rowMap)
         if (!minResult) {
-            val row = mapToNakRow(op.rowMap, session.xyzNsFromRow(collectionId, op.rowMap))
-            addFullRow(XYZ_EXEC_CREATED, op.id, row)
+            val row = mapToNakRow(op.rowMap, session.metaFromRow(collectionId, op.rowMap))
+            addRow(XYZ_EXEC_CREATED, op.id, row)
         }
     }
 
     fun addUpdate(op: NakshaRequestOp, existingFeature: IMap?) {
         val featureRowMap = op.rowMap
         val headBeforeUpdate: IMap = existingFeature!!
-        checkStateForAtomicOp(op.writeReq.uuid, headBeforeUpdate)
+        checkStateForAtomicOp(op.atomicUUID, headBeforeUpdate)
 
         addToRemoveFromDel(op.id)
         addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
         session.xyzUpdateHead(op.collectionId, featureRowMap, headBeforeUpdate)
         addUpdateHeadParams(featureRowMap)
         if (!minResult) {
-            addRow(XYZ_EXEC_UPDATED, op.id, session.xyzNsFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
+            val row = mapToNakRow(featureRowMap, session.metaFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
+            addRow(XYZ_EXEC_UPDATED, op.id, row)
         }
     }
 
@@ -161,8 +167,8 @@ internal class NakshaBulkLoaderPlan(
                 addRow(XYZ_EXEC_RETAINED, op.id)
             } else {
                 val headBeforeDelete: IMap = existingFeature
-                val row = mapToNakRow(headBeforeDelete, session.xyzNsFromRow(collectionId, headBeforeDelete + op.rowMap))
-                addFullRow(XYZ_EXEC_DELETED, op.id, row)
+                val row = mapToNakRow(headBeforeDelete, session.metaFromRow(collectionId, headBeforeDelete + op.rowMap))
+                addRow(XYZ_EXEC_DELETED, op.id, row)
             }
         }
     }
@@ -170,15 +176,15 @@ internal class NakshaBulkLoaderPlan(
     fun addPurge(op: NakshaRequestOp, existingFeature: IMap?, existingInDelFeature: IMap?) {
         addDeleteInternal(op, existingFeature)
         val deletedFeatureRow: IMap? = existingInDelFeature ?: existingFeature
-        checkStateForAtomicOp(op.writeReq.uuid, deletedFeatureRow)
+        checkStateForAtomicOp(op.atomicUUID, deletedFeatureRow)
         if (!autoPurge) // it's not in $del, so we don't have to purge
             featuresToPurgeFromDel.add(op.id)
         if (!minResult) {
             if (deletedFeatureRow == null) {
                 addRow(XYZ_EXEC_RETAINED, op.id)
             } else {
-                val row = mapToNakRow(deletedFeatureRow, session.xyzNsFromRow(collectionId, deletedFeatureRow))
-                addFullRow(XYZ_EXEC_PURGED, op.id, row)
+                val row = mapToNakRow(deletedFeatureRow, session.metaFromRow(collectionId, deletedFeatureRow))
+                addRow(XYZ_EXEC_PURGED, op.id, row)
             }
         }
     }
@@ -205,7 +211,7 @@ internal class NakshaBulkLoaderPlan(
         if (existingFeature != null) {
             // this may throw exception (if we try to delete non-existing feature - that was deleted before)
             val headBeforeDelete: IMap = existingFeature
-            checkStateForAtomicOp(op.writeReq.uuid, headBeforeDelete)
+            checkStateForAtomicOp(op.atomicUUID, headBeforeDelete)
             addCopyHeadToHstParams(featureRowMap, isHistoryDisabled)
 
             featureRowMap[COL_VERSION] = headBeforeDelete[COL_VERSION]
@@ -328,23 +334,24 @@ internal class NakshaBulkLoaderPlan(
         }
     }
 
-    private fun mapToNakRow(imap: IMap, xyz: ByteArray): NakRow {
-        return NakRow(
+    private fun mapToNakRow(imap: IMap, metadata: Metadata): Row {
+        val txn: BigInt64 = imap[COL_TXN]!!
+        val uid: Int = imap[COL_UID]!!
+        val uuid = NakshaUuid.from(session.storageId, collectionId, txn, uid)
+        return Row(
                 id = imap[COL_ID]!!,
                 tags = imap[COL_TAGS],
                 flags = Flags(imap[COL_FLAGS]),
                 geo = imap[COL_GEOMETRY],
                 feature = imap[COL_FEATURE],
-                xyz = xyz
+                type = imap[COL_TYPE],
+                uuid = uuid.toString(),
+                meta = metadata
         )
     }
 
-    private fun addRow(op: String, id: String? = null, xyz: ByteArray? = null) {
-        addFullRow(op, id, NakRow(id = id, xyz = xyz))
-    }
-
-    private fun addFullRow(op: String, id: String? = null, row: NakRow) {
-        val readRow = NakReadRow(row = row, op = op, id = id)
+    private fun addRow(op: String, id: String? = null, row: Row? = null) {
+        val readRow = ReadRow(row = row, op = op, id = id)
         result.add(readRow)
     }
 }

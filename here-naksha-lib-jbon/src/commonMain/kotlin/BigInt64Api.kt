@@ -2,6 +2,7 @@
 
 package com.here.naksha.lib.jbon
 
+import com.here.naksha.lib.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -69,6 +70,7 @@ interface BigInt64Api {
     fun toInt(t: BigInt64): Int = bigInt64ToInt(t)
     fun toLong(t: BigInt64): Long = bigInt64ToLong(t)
     fun toDouble(t: BigInt64): Double = bigInt64ToDouble(t, false)
+    fun toInt64(t: BigInt64): Int64 = Int64(bigInt64ToLong(t))
     fun toDoubleRawBits(t: BigInt64): Double = bigInt64ToDouble(t, true)
 
     /**

@@ -5,12 +5,13 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class NakWriteCollections(
+class WriteFeatures(
+        val collectionId: String,
         noResults: Boolean = false,
-        rows: Array<AbstractWrite>,
+        rows: Array<WriteOp>,
         noFeature: Boolean = false,
         noGeometry: Boolean = false,
         noMeta: Boolean = false,
         noTags: Boolean = false,
         resultFilter: Array<IReadRowFilter> = emptyArray()
-) : NakWriteRequest(noResults, rows, noFeature, noGeometry, noMeta, noTags, resultFilter)
+) : WriteRequest(noResults, rows, noFeature, noGeometry, noMeta, noTags, resultFilter)

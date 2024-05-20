@@ -26,9 +26,9 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.lib.base.NakErrorResponse;
 import com.here.naksha.lib.base.NakResponse;
-import com.here.naksha.lib.base.NakWriteCollections;
-import com.here.naksha.lib.base.NakWriteFeatures;
-import com.here.naksha.lib.base.NakWriteRequest;
+import com.here.naksha.lib.base.WriteCollections;
+import com.here.naksha.lib.base.WriteFeatures;
+import com.here.naksha.lib.base.WriteRequest;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.XyzError;
@@ -638,13 +638,13 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   }
 
   @NotNull
-  NakResponse executeWrite(@NotNull NakWriteRequest writeRequest) {
-    if (writeRequest instanceof NakWriteCollections) {
-      NakWriteCollections nakWriteCollections = (NakWriteCollections) writeRequest;
+  NakResponse executeWrite(@NotNull WriteRequest writeRequest) {
+    if (writeRequest instanceof WriteCollections) {
+      WriteCollections nakWriteCollections = (WriteCollections) writeRequest;
       return nakshaSession.writeCollections(nakWriteCollections);
     }
-    if (writeRequest instanceof NakWriteFeatures) {
-      NakWriteFeatures nakWriteCollections = (NakWriteFeatures) writeRequest;
+    if (writeRequest instanceof WriteFeatures) {
+      WriteFeatures nakWriteCollections = (WriteFeatures) writeRequest;
       return nakshaSession.writeFeatures(nakWriteCollections);
     }
     return new NakErrorResponse(

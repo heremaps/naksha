@@ -5,9 +5,9 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class WriteRow(
+class UpdateRow(
         collectionId: String,
         row: Row,
         val atomic: Boolean = false,
         grid: Int? = null
-) : RowOp(XYZ_OP_UPSERT, collectionId, row, grid)
+) : RowOp(XYZ_OP_UPDATE, collectionId, row, grid)

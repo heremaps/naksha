@@ -5,12 +5,12 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class NakWriteRequest(
+abstract class WriteRequest(
         val noResults: Boolean = false,
-        val rows: Array<AbstractWrite>,
+        val rows: Array<WriteOp>,
         noFeature: Boolean = false,
         noGeometry: Boolean = false,
         noMeta: Boolean = false,
         noTags: Boolean = false,
         resultFilter: Array<IReadRowFilter> = emptyArray()
-) : NakRequest(noFeature, noGeometry, noMeta, noTags, resultFilter)
+) : Request(noFeature, noGeometry, noMeta, noTags, resultFilter)

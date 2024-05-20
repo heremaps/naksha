@@ -5,9 +5,8 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class WriteRow(
+class PurgeFeature(
         collectionId: String,
-        row: Row,
-        val atomic: Boolean = false,
-        grid: Int? = null
-) : RowOp(XYZ_OP_UPSERT, collectionId, row, grid)
+        id: String,
+        uuid: String?
+) : RemoveOp(XYZ_OP_PURGE, collectionId, id, uuid)

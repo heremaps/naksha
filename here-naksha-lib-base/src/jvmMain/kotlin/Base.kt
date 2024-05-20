@@ -210,7 +210,10 @@ actual class Base {
         }
 
         @JvmStatic
-        actual fun int64ToLong(value: Int64): Long = value.toLong()
+        actual fun int64ToLong(value: Int64): Long {
+            check(value is JvmInt64)
+            return value.toLong()
+        }
 
         @JvmStatic
         actual fun isNative(o: Any?): Boolean = o is JvmObject || o is Number || o is JvmInt64 || o is String || o is Boolean

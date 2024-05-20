@@ -28,7 +28,7 @@ open class NakProperties(vararg args: Any?) : BaseObject(*args) {
     override fun klass(): BaseKlass<*> = klass
 
     open fun getXyz(): NakXyz? = getOrNull(XYZ_NS, NakXyz.klass)
-    open fun setXyz(value: NakXyz?) = set(XYZ_NS, value)
+    open fun setXyz(value: Metadata?) = set(XYZ_NS, value)
     open fun getDelta(): NakDelta? = getOrNull(DELTA_NS, NakDelta.klass)
     open fun setDelta(value: NakDelta?) = set(DELTA_NS, value)
 }

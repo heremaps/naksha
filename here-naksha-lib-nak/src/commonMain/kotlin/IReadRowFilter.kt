@@ -7,5 +7,5 @@ import kotlin.js.JsExport
 @JsExport
 interface IReadRowFilter {
 
-    fun filterRow(row: NakReadRow): NakReadRow
+    fun filterRow(row: ReadRow): ReadRow
 }
