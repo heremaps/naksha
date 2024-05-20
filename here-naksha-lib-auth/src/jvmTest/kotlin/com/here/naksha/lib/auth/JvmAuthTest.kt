@@ -1,3 +1,5 @@
+package com.here.naksha.lib.auth
+
 import com.here.naksha.lib.base.symbol
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
