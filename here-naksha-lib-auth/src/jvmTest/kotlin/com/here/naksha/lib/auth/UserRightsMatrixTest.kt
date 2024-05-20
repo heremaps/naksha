@@ -1,4 +1,5 @@
-import com.here.naksha.lib.auth.AccessRightsMatrix
+package com.here.naksha.lib.auth
+
 import com.here.naksha.lib.base.Base
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
 import org.junit.jupiter.api.Test
