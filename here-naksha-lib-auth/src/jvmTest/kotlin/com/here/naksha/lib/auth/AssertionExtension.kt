@@ -1,3 +1,5 @@
+package com.here.naksha.lib.auth
+
 import org.junit.jupiter.api.Assertions
 
 fun Boolean.assertTrue() =
