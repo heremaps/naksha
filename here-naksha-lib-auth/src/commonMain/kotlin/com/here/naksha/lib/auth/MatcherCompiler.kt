@@ -1,6 +1,6 @@
 package com.here.naksha.lib.base.com.here.naksha.lib.auth
 
-import com.here.naksha.lib.auth.AccessAttributes
+import com.here.naksha.lib.auth.AccessAttributeMap
 import com.here.naksha.lib.auth.AccessMatcher
 import com.here.naksha.lib.auth.MatcherSelector
 import com.here.naksha.lib.base.get
@@ -8,7 +8,7 @@ import com.here.naksha.lib.base.iterator
 
 object MatcherCompiler {
 
-    fun compile(urmAttributes: UserAttributes): CompiledUserAttributesMap {
+    fun compile(urmAttributes: UserAttributeMap): CompiledUserAttributesMap {
         return urmAttributes.data().iterator()
             .asSequence()
             .associate { (key, value) -> key to MatcherSelector.selectMatcherFor(value) }
@@ -19,7 +19,7 @@ object MatcherCompiler {
 class CompiledUserAttributesMap(raw: Map<String, AccessMatcher>) :
     Map<String, AccessMatcher> by raw {
 
-    fun matches(accessAttributes: AccessAttributes): Boolean {
+    fun matches(accessAttributes: AccessAttributeMap): Boolean {
         val rawAccessAttributes = accessAttributes.data()
         return all { (userKey, matcher) ->
             rawAccessAttributes[userKey]
