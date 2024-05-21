@@ -10,9 +10,6 @@ on:
       - synchronize
     branches:
       - v2
-  push:
-    branches:
-      - v2_dpsetup
 
 permissions:
   checks: write         # for junit reporting
