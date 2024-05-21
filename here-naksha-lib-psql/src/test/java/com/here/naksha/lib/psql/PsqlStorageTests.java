@@ -57,6 +57,7 @@ import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.jbon.BigInt64Kt;
 import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.NakshaTxn;
+import com.here.naksha.lib.nak.HereTile;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -232,9 +233,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
       assertEquals(xyz.getCreatedAt(), xyz.getUpdatedAt());
 
-      // FIXME after merge
-//      assertEquals(encodeLatLon(coordinate.y, coordinate.x, 14), xyz.get("grid"));
-      assertEquals(0, xyz.get("grid"));
+      assertEquals(new HereTile(coordinate.y, coordinate.x).getIntKey(), xyz.get("grid"));
 
       assertEquals(List.of(SINGLE_FEATURE_INITIAL_TAG), xyz.getTags());
 
@@ -467,9 +466,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertEquals(TEST_AUTHOR, xyz.getAuthor());
 
       Point centroid = geometry.getJTSGeometry().getCentroid();
-      // FIXME after merge of grid heretile feature
-//      assertEquals(encodeLatLon(centroid.getY(), centroid.getX(), 14), xyz.get("grid"));
-      assertEquals(0, xyz.get("grid"));
+      assertEquals(new HereTile(centroid.getY(), centroid.getX()).getIntKey(), xyz.get("grid"));
       assertFalse(cursor.hasNext());
     }
   }
