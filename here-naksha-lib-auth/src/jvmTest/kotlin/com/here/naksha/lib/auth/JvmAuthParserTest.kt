@@ -33,11 +33,11 @@ class JvmAuthParserTest {
         val parsedUrm = JvmAuthParser.parseUrm(rawUrm)
 
         // Then: 'naksha' service is defined
-        val naksha = parsedUrm.getAccessMatrixForService("naksha")
+        val naksha = parsedUrm.getService("naksha")
         assertNotNull(naksha)
 
         // And: attributes for action 'readFeatures` of 'naksha` are defined
-        val readFeaturesAttributeMaps = naksha?.getAttributesForAction("readFeatures")
+        val readFeaturesAttributeMaps = naksha?.getActionAttributeMaps("readFeatures")
         assertNotNull(readFeaturesAttributeMaps)
 
         // And: attributes match json payload
@@ -77,11 +77,11 @@ class JvmAuthParserTest {
         val parsedArm = JvmAuthParser.parseArm(rawArm)
 
         // Then: 'naksha' service is defined
-        val naksha = parsedArm.getAccessMatrixForService("naksha")
+        val naksha = parsedArm.getService("naksha")
         assertNotNull(naksha)
 
         // And: attributes for action 'readFeatures` of 'naksha` are defined
-        val readFeaturesAttributeMaps = naksha?.getAttributesForAction("readFeatures")
+        val readFeaturesAttributeMaps = naksha?.getActionAttributeMaps("readFeatures")
         assertNotNull(readFeaturesAttributeMaps)
 
         // And: attributes match json payload
