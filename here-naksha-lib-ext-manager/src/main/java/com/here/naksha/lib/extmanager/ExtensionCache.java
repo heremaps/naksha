@@ -134,7 +134,7 @@ public class ExtensionCache {
       loaderCache.put(extension.getId(), new KVPair<Extension, ClassLoader>(extension, loader));
       PluginCache.removeExtensionCache(extension.getId());
       logger.info(
-          "Extension [ID,VERSION,JAR,ENV] {},{},{},{} is successfully loaded into the cache.",
+          "Extension id={}, version={} is successfully loaded into the cache, using Jar at {} for env={}.",
           extension.getId(),
           extension.getVersion(),
           extension.getUrl().substring(extension.getUrl().lastIndexOf("/") + 1),
