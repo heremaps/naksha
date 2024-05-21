@@ -22,7 +22,7 @@
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Tile ids">
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Tile ids" enabled="true">
           <stringProp name="delimiter">,</stringProp>
           <stringProp name="fileEncoding"></stringProp>
           <stringProp name="filename">/Users/phmai/xyz-hub/here-naksha-app-service/src/test/resources/ingest_data/topology/tile_ids.csv</stringProp>
@@ -34,7 +34,7 @@
           <stringProp name="variableNames"></stringProp>
         </CSVDataSet>
         <hashTree/>
-        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
           <collectionProp name="HeaderManager.headers">
             <elementProp name="" elementType="Header">
               <stringProp name="Header.name">accept</stringProp>
@@ -61,13 +61,13 @@
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Response body extractor">
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Response body extractor" enabled="true">
             <stringProp name="JSONPostProcessor.referenceNames">getTileBodyResponse</stringProp>
             <stringProp name="JSONPostProcessor.jsonPathExprs">$</stringProp>
             <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
           </JSONPostProcessor>
           <hashTree/>
-          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Feature ID Extractor">
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Feature ID Extractor" enabled="true">
             <stringProp name="JSONPostProcessor.referenceNames">idGeneratedFeature</stringProp>
             <stringProp name="JSONPostProcessor.jsonPathExprs">$.features[*].id </stringProp>
             <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
@@ -98,19 +98,19 @@
           <stringProp name="HTTPSampler.response_timeout">${__P(timeout,)}</stringProp>
           <stringProp name="HTTPSampler.domain">localhost</stringProp>
           <stringProp name="HTTPSampler.port">8080</stringProp>
-          <stringProp name="HTTPSampler.path">hub/spaces/ingest_test_space/search</stringProp>
+          <stringProp name="HTTPSampler.path">hub/spaces/activity_history_space_load_test/search</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">GET</stringProp>
           <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments">
-              <elementProp name="f.id" elementType="HTTPArgument">
+              <elementProp name="properties.@ns:com:here:xyz:log.id" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">true</boolProp>
                 <stringProp name="Argument.value">${idGeneratedFeature}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                <stringProp name="Argument.name">f.id</stringProp>
+                <stringProp name="Argument.name">properties.@ns:com:here:xyz:log.id</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>

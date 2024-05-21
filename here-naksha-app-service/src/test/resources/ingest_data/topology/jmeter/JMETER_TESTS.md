@@ -173,6 +173,39 @@ curl -XPOST localhost:8080/hub/spaces -H "content-type: application/json" -d '
 ' -v
 ```
 
+Activity history handler:
+```shell
+curl -XPOST localhost:8080/hub/handlers -H "content-type: application/json" -d '
+{
+  "id": "activity_history_test_handler",
+  "type": "EventHandler",
+  "title": "Sample Activity History Handler",
+  "description": "Activity History Handler used for tests",
+  "className": "com.here.naksha.handler.activitylog.ActivityLogHandler",
+  "active": true,
+  "extensionId": null,
+  "properties": {
+    "spaceId": "ingest_test_space"
+  }
+}
+' -v
+```
+
+Activity history space:
+```shell
+curl -XPOST localhost:8080/hub/spaces -H "content-type: application/json" -d '
+{
+  "id": "activity_history_space_load_test",
+  "type": "Space",
+  "title": "Activity space for performance test using jmeter",
+  "description": "Activity space for performance test using jmeter",
+  "eventHandlerIds": [
+    "activity_history_test_handler"
+  ]
+}
+' -v
+```
+
 #### Populate the space with fake data
 
 Run `ingestRandomFeatures` method
