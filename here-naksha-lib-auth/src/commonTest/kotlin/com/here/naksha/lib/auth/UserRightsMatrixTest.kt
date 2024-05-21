@@ -2,12 +2,13 @@ package com.here.naksha.lib.auth
 
 import com.here.naksha.lib.base.Base
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class UserRightsMatrixTest {
 
     @Test
-    fun `URM should match ARM - simple scenario`(){
+    fun shouldMatchSimpleArm() {
         // Given: URM
         val rawUrm = Base.newObject(
             // service:
@@ -42,6 +43,6 @@ class UserRightsMatrixTest {
         val arm = Base.assign(rawArm, AccessRightsMatrix.klass)
 
         // Then:
-        urm.matches(arm).assertTrue()
+        assertTrue { urm.matches(arm) }
     }
 }

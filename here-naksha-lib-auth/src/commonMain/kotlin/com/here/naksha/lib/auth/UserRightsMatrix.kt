@@ -1,9 +1,6 @@
 package com.here.naksha.lib.base.com.here.naksha.lib.auth
 
-import com.here.naksha.lib.auth.AccessAttributes
-import com.here.naksha.lib.auth.AccessRightsMatrix
-import com.here.naksha.lib.auth.AccessServiceRights
-import com.here.naksha.lib.auth.toObjectList
+import com.here.naksha.lib.auth.*
 import com.here.naksha.lib.base.*
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -23,18 +20,24 @@ class UserRightsMatrix(vararg args: Any?) : BaseObject(*args) {
 
     override fun klass(): BaseKlass<*> = klass
 
+    fun getService(serviceName: String): UserServiceMatrix? =
+        getOrNull(serviceName, UserServiceMatrix.klass)
+
+    fun withService(serviceName: String, serviceMatrix: UserServiceMatrix): UserRightsMatrix =
+        apply { set(serviceName, serviceMatrix) }
+
     fun matches(accessRightsMatrix: AccessRightsMatrix): Boolean {
         return getServices()
             .map { (serviceName, userServiceRights) ->
-                val accessServiceRights = accessRightsMatrix.getAccessMatrixForService(serviceName)
+                val accessServiceRights = accessRightsMatrix.getService(serviceName)
                 serviceAccessAllowed(userServiceRights, accessServiceRights)
             }
             .all { serviceAccess -> serviceAccess }
     }
 
     private fun serviceAccessAllowed(
-        userServiceRights: UserServiceRights?,
-        accessServiceRights: AccessServiceRights?
+        userServiceRights: UserServiceMatrix?,
+        accessServiceRights: AccessServiceMatrix?
     ): Boolean {
         if (userServiceRights == null || accessServiceRights == null) {
             return false
@@ -42,45 +45,55 @@ class UserRightsMatrix(vararg args: Any?) : BaseObject(*args) {
         return userServiceRights.matches(accessServiceRights)
     }
 
-    fun getAccessMatrixForService(serviceName: String): UserServiceRights? =
-        getOrNull(serviceName, UserServiceRights.klass)
 
-    private fun getServices(): Map<String, UserServiceRights?> {
+    private fun getServices(): Map<String, UserServiceMatrix?> {
         return data().iterator()
             .asSequence()
             .associate { (serviceName, rawServiceData) -> serviceName to convertServiceData(rawServiceData) }
     }
 
-    private fun convertServiceData(raw: Any?): UserServiceRights? =
-        raw?.let { Base.assign(it, UserServiceRights.klass) }
+    private fun convertServiceData(raw: Any?): UserServiceMatrix? =
+        raw?.let { Base.assign(it, UserServiceMatrix.klass) }
 }
 
-class UserServiceRights(vararg args: Any?) : BaseObject(*args) {
+class UserServiceMatrix(vararg args: Any?) : BaseObject(*args) {
 
     companion object {
         @JvmStatic
-        val klass = object : BaseObjectKlass<UserServiceRights>() {
-            override fun isInstance(o: Any?): Boolean = o is UserServiceRights
+        val klass = object : BaseObjectKlass<UserServiceMatrix>() {
+            override fun isInstance(o: Any?): Boolean = o is UserServiceMatrix
 
-            override fun newInstance(vararg args: Any?): UserServiceRights =
-                UserServiceRights()
+            override fun newInstance(vararg args: Any?): UserServiceMatrix =
+                UserServiceMatrix()
         }
     }
 
     override fun klass(): BaseKlass<*> = klass
 
-    fun matches(accessServiceRights: AccessServiceRights): Boolean {
+    fun getActionAttributeMaps(actionName: String): List<UserAttributeMap>? =
+        getOrNull(actionName, BaseList.klass)?.toObjectList(UserAttributeMap.klass)
+
+
+    fun matches(accessServiceRights: AccessServiceMatrix): Boolean {
         return attributeMapsByAction()
             .map { (action, userAttributesList) ->
-                val accessAttributesList = accessServiceRights.getAttributesForAction(action)
+                val accessAttributesList = accessServiceRights.getActionAttributeMaps(action)
                 actionAccessAllowed(userAttributesList, accessAttributesList)
             }
             .all { actionAccess -> actionAccess }
     }
 
+    private fun attributeMapsByAction(): Map<String, Array<UserAttributeMap>?> {
+        return data().iterator()
+            .asSequence()
+            .associate { (actionName, rawAttributeMaps) ->
+                actionName to convertUserAttributesList(rawAttributeMaps)
+            }
+    }
+
     private fun actionAccessAllowed(
-        userAttributesList: List<UserAttributes>?,
-        accessAttributesList: List<AccessAttributes>?
+        userAttributesList: Array<UserAttributeMap>?,
+        accessAttributesList: Array<AccessAttributeMap>?
     ): Boolean {
         if (userAttributesList == null || accessAttributesList == null) {
             return false
@@ -92,39 +105,28 @@ class UserServiceRights(vararg args: Any?) : BaseObject(*args) {
         }
     }
 
-    fun getAttributesForAction(actionName: String): List<UserAttributes>? =
-        getOrNull(actionName, BaseList.klass)?.toObjectList(UserAttributes.klass)
-
-    private fun attributeMapsByAction(): Map<String, List<UserAttributes>?> {
-        return data().iterator()
-            .asSequence()
-            .associate { (actionName, rawAttributeMaps) ->
-                actionName to convertUserAttributesList(rawAttributeMaps)
-            }
-    }
-
-    private fun convertUserAttributesList(rawList: Any?): List<UserAttributes>? {
+    private fun convertUserAttributesList(rawList: Any?): Array<UserAttributeMap>? {
         return rawList
             ?.let { Base.assign(it, BaseList.klass) }
-            ?.toObjectList(UserAttributes.klass)
+            ?.toObjectArray(UserAttributeMap.klass)
     }
 }
 
 
-class UserAttributes(vararg args: Any?) : BaseObject(*args) {
+class UserAttributeMap(vararg args: Any?) : BaseObject(*args) {
 
     companion object {
         @JvmStatic
-        val klass = object : BaseObjectKlass<UserAttributes>() {
-            override fun isInstance(o: Any?): Boolean = o is UserAttributes
+        val klass = object : BaseObjectKlass<UserAttributeMap>() {
+            override fun isInstance(o: Any?): Boolean = o is UserAttributeMap
 
-            override fun newInstance(vararg args: Any?): UserAttributes =
-                UserAttributes()
+            override fun newInstance(vararg args: Any?): UserAttributeMap =
+                UserAttributeMap()
         }
     }
 
     override fun klass(): BaseKlass<*> = klass
 
-    fun matches(accessAttributes: AccessAttributes): Boolean =
+    fun matches(accessAttributes: AccessAttributeMap): Boolean =
         MatcherCompiler.compile(this).matches(accessAttributes)
 }
