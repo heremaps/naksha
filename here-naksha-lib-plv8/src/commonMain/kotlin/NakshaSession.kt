@@ -598,6 +598,27 @@ FROM ns, txn_seq;"""
         return isDisabled != true
     }
 
+    private inner class TransactionAction internal constructor(collectionId: String, transaction: NakshaTransaction) {
+        private val transactionWriter: NakshaFeaturesWriter?
+        private val transactionOp: ByteArray?
+
+        init {
+            if (collectionId != SC_TRANSACTIONS) {
+                val xyzBuilder = XyzBuilder.create()
+                transactionOp = xyzBuilder.buildXyzOp(XYZ_OP_UPSERT, txn().toUuid(storageId).toString(), null, null)
+                transactionWriter = NakshaFeaturesWriter(SC_TRANSACTIONS, this@NakshaSession, modifyCounters = false)
+            } else {
+                transactionWriter = null
+                transactionOp = null
+            }
+        }
+
+        fun write() {
+            if (transactionOp != null)
+                transactionWriter?.writeFeatures(arrayOf(transactionOp), arrayOf(transaction.toBytes()), minResult = true)
+        }
+    }
+
     /**
      * Single threaded all-or-nothing bulk write operation.
      * As result there is row with success or error returned.
@@ -613,13 +634,11 @@ FROM ns, txn_seq;"""
     ): ITable {
         val table = sql.newTable()
         val featureWriter = NakshaFeaturesWriter(collectionId, this)
-        val xyzBuilder = XyzBuilder.create()
-        val transactionWriter = NakshaFeaturesWriter(SC_TRANSACTIONS, this, modifyCounters = false)
+        val transactionAction = TransactionAction(collectionId, transaction)
         try {
-            val op = xyzBuilder.buildXyzOp(XYZ_OP_UPSERT, txn().toUuid(storageId).toString(), null, null)
-            transactionWriter.writeFeatures(arrayOf(op), arrayOf(transaction.toBytes()), minResult = true)
+            transactionAction.write()
             val writeFeaturesResult = featureWriter.writeFeatures(op_arr, feature_arr, flags_arr, geo_arr, tags_arr, minResult)
-            transactionWriter.writeFeatures(arrayOf(op), arrayOf(transaction.toBytes()), minResult = true)
+            transactionAction.write()
             return writeFeaturesResult
         } catch (e: NakshaException) {
             if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
