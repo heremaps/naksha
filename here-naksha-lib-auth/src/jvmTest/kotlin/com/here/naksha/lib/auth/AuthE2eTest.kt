@@ -1,11 +1,14 @@
 package com.here.naksha.lib.auth
 
+import com.here.naksha.lib.auth.action.ReadFeatures
+import com.here.naksha.lib.auth.attribute.XyzFeatureAttributes
+import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
 import org.junit.jupiter.api.Test
 
 class AuthE2eTest {
 
     @Test
-    fun `should parse and match URM and AMR combination`(){
+    fun `should parse and match URM and AMR combination`() {
         // Given: raw URM json
         val rawUrm = """
         {
@@ -24,7 +27,7 @@ class AuthE2eTest {
         }
         """.trimIndent()
 
-        // Given: raw ARM json
+        // And: raw ARM json
         val rawArm = """
         {
             "naksha": {
@@ -45,8 +48,19 @@ class AuthE2eTest {
         """.trimIndent()
 
         // When: parsing both Auth matrices
-        val urm = JvmAuthParser.parseUrm(rawUrm)
-        val arm = JvmAuthParser.parseArm(rawArm)
+        val urm: UserRightsMatrix = com.here.naksha.lib.auth.JvmAuthParser.parseUrm(rawUrm)
+        val arm: AccessRightsMatrix = com.here.naksha.lib.auth.JvmAuthParser.parseArm(rawArm)
+
+        val goodArm = NakshaArmBuilder()
+            .withAction(
+                ReadFeatures()
+                    .withAttributes(
+                        XyzFeatureAttributes()
+                            .id("my-unique-id")
+                            .storageId("asda")
+                    )
+            )
+            .buildArm()
 
         // And: checking the access-match between them
         val access = urm.matches(arm)
