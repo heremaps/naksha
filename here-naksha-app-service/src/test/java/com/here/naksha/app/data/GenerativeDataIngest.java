@@ -37,7 +37,7 @@ class GenerativeDataIngest extends AbstractDataIngest {
 
   private static final String TILE_IDS_FILE = "topology/tile_ids.csv";
 
-  private static final boolean GENERATED_FEATURES_INGEST_ENABLED = true;
+  private static final boolean GENERATED_FEATURES_INGEST_ENABLED = false;
 
   private final List<String> tileIds;
 
