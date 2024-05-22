@@ -6,7 +6,7 @@ import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class NakTransaction(vararg args: Any?) : NakFeature(*args) {
+class NakTransaction() : NakFeature() {
 
     @JsName("NakTransactionById")
     constructor(id: String) : this() {
@@ -18,7 +18,7 @@ class NakTransaction(vararg args: Any?) : NakFeature(*args) {
         val klass = object : BaseObjectKlass<NakTransaction>() {
             override fun isInstance(o: Any?): Boolean = o is NakTransaction
 
-            override fun newInstance(vararg args: Any?): NakTransaction = NakTransaction(*args)
+            override fun newInstance(vararg args: Any?): NakTransaction = NakTransaction()
         }
 
         @JvmStatic

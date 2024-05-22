@@ -12,5 +12,6 @@ class WriteCollections(
         noGeometry: Boolean = false,
         noMeta: Boolean = false,
         noTags: Boolean = false,
+        restoreInputOrder: Boolean = false,
         resultFilter: Array<IReadRowFilter> = emptyArray()
-) : WriteRequest(noResults, rows, noFeature, noGeometry, noMeta, noTags, resultFilter)
+) : WriteRequest(noResults, rows, noFeature, noGeometry, noMeta, noTags, restoreInputOrder, resultFilter)

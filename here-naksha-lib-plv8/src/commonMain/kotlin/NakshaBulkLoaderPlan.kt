@@ -1,14 +1,14 @@
+package com.here.naksha.lib.plv8
+
+import com.here.naksha.lib.base.FeatureOp
 import com.here.naksha.lib.base.Metadata
 import com.here.naksha.lib.base.ReadRow
-import com.here.naksha.lib.base.RemoveOp
 import com.here.naksha.lib.base.Row
-import com.here.naksha.lib.base.UpdateFeature
 import com.here.naksha.lib.base.XYZ_EXEC_CREATED
 import com.here.naksha.lib.base.XYZ_EXEC_DELETED
 import com.here.naksha.lib.base.XYZ_EXEC_PURGED
 import com.here.naksha.lib.base.XYZ_EXEC_RETAINED
 import com.here.naksha.lib.base.XYZ_EXEC_UPDATED
-import com.here.naksha.lib.base.get
 import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.IMap
 import com.here.naksha.lib.jbon.NakshaUuid
@@ -21,35 +21,6 @@ import com.here.naksha.lib.jbon.get
 import com.here.naksha.lib.jbon.plus
 import com.here.naksha.lib.jbon.set
 import com.here.naksha.lib.nak.Flags
-import com.here.naksha.lib.plv8.COL_ACTION
-import com.here.naksha.lib.plv8.COL_ALL
-import com.here.naksha.lib.plv8.COL_ALL_TYPES
-import com.here.naksha.lib.plv8.COL_APP_ID
-import com.here.naksha.lib.plv8.COL_AUTHOR
-import com.here.naksha.lib.plv8.COL_AUTHOR_TS
-import com.here.naksha.lib.plv8.COL_CREATED_AT
-import com.here.naksha.lib.plv8.COL_FEATURE
-import com.here.naksha.lib.plv8.COL_FLAGS
-import com.here.naksha.lib.plv8.COL_GEOMETRY
-import com.here.naksha.lib.plv8.COL_GEO_GRID
-import com.here.naksha.lib.plv8.COL_GEO_REF
-import com.here.naksha.lib.plv8.COL_ID
-import com.here.naksha.lib.plv8.COL_PTXN
-import com.here.naksha.lib.plv8.COL_PUID
-import com.here.naksha.lib.plv8.COL_TAGS
-import com.here.naksha.lib.plv8.COL_TXN
-import com.here.naksha.lib.plv8.COL_TXN_NEXT
-import com.here.naksha.lib.plv8.COL_TYPE
-import com.here.naksha.lib.plv8.COL_UID
-import com.here.naksha.lib.plv8.COL_UPDATE_AT
-import com.here.naksha.lib.plv8.COL_VERSION
-import com.here.naksha.lib.plv8.ERR_CHECK_VIOLATION
-import com.here.naksha.lib.plv8.ERR_FATAL
-import com.here.naksha.lib.plv8.IPlv8Plan
-import com.here.naksha.lib.plv8.NakshaException
-import com.here.naksha.lib.plv8.NakshaRequestOp
-import com.here.naksha.lib.plv8.NakshaSession
-import com.here.naksha.lib.plv8.Param
 import kotlin.reflect.KFunction0
 
 internal class NakshaBulkLoaderPlan(
@@ -136,7 +107,7 @@ internal class NakshaBulkLoaderPlan(
         addInsertParams(op.rowMap)
         if (!minResult) {
             val row = mapToNakRow(op.rowMap, session.metaFromRow(collectionId, op.rowMap))
-            addRow(XYZ_EXEC_CREATED, op.id, row)
+            addRow(XYZ_EXEC_CREATED, op, row)
         }
     }
 
@@ -151,7 +122,7 @@ internal class NakshaBulkLoaderPlan(
         addUpdateHeadParams(featureRowMap)
         if (!minResult) {
             val row = mapToNakRow(featureRowMap, session.metaFromRow(collectionId, headBeforeUpdate.plus(featureRowMap)))
-            addRow(XYZ_EXEC_UPDATED, op.id, row)
+            addRow(XYZ_EXEC_UPDATED, op, row)
         }
     }
 
@@ -164,11 +135,11 @@ internal class NakshaBulkLoaderPlan(
         addDeleteInternal(op, existingFeature)
         if (!minResult) {
             if (existingFeature == null) {
-                addRow(XYZ_EXEC_RETAINED, op.id)
+                addRow(XYZ_EXEC_RETAINED, op)
             } else {
                 val headBeforeDelete: IMap = existingFeature
                 val row = mapToNakRow(headBeforeDelete, session.metaFromRow(collectionId, headBeforeDelete + op.rowMap))
-                addRow(XYZ_EXEC_DELETED, op.id, row)
+                addRow(XYZ_EXEC_DELETED, op, row)
             }
         }
     }
@@ -181,10 +152,10 @@ internal class NakshaBulkLoaderPlan(
             featuresToPurgeFromDel.add(op.id)
         if (!minResult) {
             if (deletedFeatureRow == null) {
-                addRow(XYZ_EXEC_RETAINED, op.id)
+                addRow(XYZ_EXEC_RETAINED, op)
             } else {
                 val row = mapToNakRow(deletedFeatureRow, session.metaFromRow(collectionId, deletedFeatureRow))
-                addRow(XYZ_EXEC_PURGED, op.id, row)
+                addRow(XYZ_EXEC_PURGED, op, row)
             }
         }
     }
@@ -350,8 +321,11 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun addRow(op: String, id: String? = null, row: Row? = null) {
-        val readRow = ReadRow(row = row, op = op, id = id)
+    private fun addRow(op: String, nakRequestOp: NakshaRequestOp, row: Row? = null) {
+        val feature = if (nakRequestOp.writeReq is FeatureOp) {
+            ResponseMapper.fillFeature(nakRequestOp.writeReq.feature, row!!)
+        } else null
+        val readRow = ReadRow(row = row, op = op, id = nakRequestOp.id, feature = feature)
         result.add(readRow)
     }
 }

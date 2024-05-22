@@ -3,13 +3,19 @@
 package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
 
 /**
  * The Naksha Feature extending the default [GeoFeature].
  */
 @JsExport
-open class NakFeature(vararg args: Any?) : GeoFeature(*args) {
+open class NakFeature() : GeoFeature() {
+
+    @JsName("NakFeatureWithId")
+    constructor(id: String): this() {
+        setId(id)
+    }
 
     companion object {
         @JvmStatic

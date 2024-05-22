@@ -27,7 +27,7 @@ open class GeoFeature(vararg args: Any?) : BaseObject(*args) {
         val PROPERTIES = Base.intern("properties")
 
         @JvmStatic
-        val COORDINATES = Base.intern("coordinates")
+        val GEOMETRY = Base.intern("geometry")
     }
 
     override fun klass(): BaseKlass<*> = klass
@@ -39,6 +39,6 @@ open class GeoFeature(vararg args: Any?) : BaseObject(*args) {
     open fun getProperties(): BaseObject? = getOr(PROPERTIES, BaseObject.klass, null)
     open fun setProperties(p: BaseObject?) = set(PROPERTIES, p)
 
-    open fun <T: BaseArray<*>> getCoordinates(): T? = getOrNull(COORDINATES, BaseArray.klass) as T
-    open fun <T: BaseArray<*>> setCoordinates(value: T) = set(COORDINATES, value)
+    open fun getGeometry(): Geometry? = getOrNull(GEOMETRY, Geometry.klass)
+    open fun setGeometry(value: Geometry) = set(GEOMETRY, value)
 }

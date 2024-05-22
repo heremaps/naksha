@@ -1,9 +1,7 @@
 package com.here.naksha.lib.plv8
 
-import NakshaBulkLoaderPlan
 import com.here.naksha.lib.base.Base
 import com.here.naksha.lib.base.FeatureOp
-import com.here.naksha.lib.base.InsertFeature
 import com.here.naksha.lib.base.NakCollection
 import com.here.naksha.lib.base.NakSuccessResponse
 import com.here.naksha.lib.base.WriteCollections

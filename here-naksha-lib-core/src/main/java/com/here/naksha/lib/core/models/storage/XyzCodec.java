@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
 import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
@@ -33,7 +32,6 @@ import com.here.naksha.lib.jbon.JbDictManager;
 import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.jbon.JvmMap;
 import com.here.naksha.lib.jbon.XyzBuilder;
-import com.here.naksha.lib.jbon.XyzNs;
 import com.here.naksha.lib.nak.Flags;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -128,38 +126,38 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     }
     feature.setGeometry(JTSHelper.fromGeometry(getGeometry()));
     if (xyzNsBytes != null) {
-      XyzNamespace xyzNs = getXyzNamespaceFromFromJbon();
-      feature.getProperties().setXyzNamespace(xyzNs);
-      if (uuid == null) {
-        uuid = xyzNs.getUuid();
-      }
+      //      XyzNamespace xyzNs = getXyzNamespaceFromFromJbon();
+      //      feature.getProperties().setXyzNamespace(xyzNs);
+      //      if (uuid == null) {
+      //        uuid = xyzNs.getUuid();
+      //      }
     }
     isEncoded = true;
     return self();
   }
-
+  /*
   private XyzNamespace getXyzNamespaceFromFromJbon() {
-    XyzNs xyzNs = new XyzNs();
-    xyzNs.mapBytes(xyzNsBytes, 0, xyzNsBytes.length);
+  XyzNs xyzNs = new XyzNs();
+  xyzNs.mapBytes(xyzNsBytes, 0, xyzNsBytes.length);
 
-    XyzNamespace retNs = new XyzNamespace();
-    retNs.setUuid(xyzNs.uuid());
-    retNs.setAction(xyzNs.actionAsString());
-    retNs.setAuthor(xyzNs.author());
-    retNs.setPuuid(xyzNs.puuid());
-    retNs.setTxn(toLong(xyzNs.txn().getValue()));
-    retNs.setCreatedAt(toLong(xyzNs.createdAt()));
-    retNs.setUpdatedAt(toLong(xyzNs.updatedAt()));
-    retNs.setAppId(xyzNs.appId());
-    retNs.setAuthorTime(toLong(xyzNs.authorTs()));
-    retNs.setRealTimeUpdatedAt(toLong(xyzNs.updatedAt()));
-    retNs.setVersion(xyzNs.version());
-    retNs.setTags(getXyzTagsFromJbon(), false);
-    retNs.setGrid(xyzNs.grid());
+  XyzNamespace retNs = new XyzNamespace();
+  retNs.setUuid(xyzNs.uuid());
+  retNs.setAction(xyzNs.actionAsString());
+  retNs.setAuthor(xyzNs.author());
+  retNs.setPuuid(xyzNs.puuid());
+  retNs.setTxn(toLong(xyzNs.txn().getValue()));
+  retNs.setCreatedAt(toLong(xyzNs.createdAt()));
+  retNs.setUpdatedAt(toLong(xyzNs.updatedAt()));
+  retNs.setAppId(xyzNs.appId());
+  retNs.setAuthorTime(toLong(xyzNs.authorTs()));
+  retNs.setRealTimeUpdatedAt(toLong(xyzNs.updatedAt()));
+  retNs.setVersion(xyzNs.version());
+  retNs.setTags(getXyzTagsFromJbon(), false);
+  retNs.setGrid(xyzNs.grid());
 
-    return retNs;
+  return retNs;
   }
-
+  */
   private XyzTags getXyzTagsFromJbon() {
     if (tagsBytes == null) {
       return null;

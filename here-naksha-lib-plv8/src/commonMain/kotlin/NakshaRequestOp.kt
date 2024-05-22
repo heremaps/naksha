@@ -82,7 +82,7 @@ internal class NakshaRequestOp(
             row[COL_ID] = nakWriteOp.getId()
             when (nakWriteOp) {
                 is FeatureOp -> {
-                    row[COL_TAGS] = session.getFeatureAsJbon(nakWriteOp.feature.getProperties().getXyz()?.getTags()?.data(), nakWriteOp.getFlags(), collectionId)
+                    row[COL_TAGS] = session.getTagsAsJbon(nakWriteOp.feature.getProperties().getXyz()?.getTags(), collectionId)
                     // TODO FIXME write geo as bytea
                     row[COL_GEOMETRY] = null // nakWriteOp.feature?.getCoordinates<BaseArray<Any?>>()
                     row[COL_FEATURE] = session.getFeatureAsJbon(nakWriteOp.feature.data(), nakWriteOp.getFlags(), collectionId)

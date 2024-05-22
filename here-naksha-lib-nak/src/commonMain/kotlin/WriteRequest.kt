@@ -12,5 +12,6 @@ abstract class WriteRequest(
         noGeometry: Boolean = false,
         noMeta: Boolean = false,
         noTags: Boolean = false,
+        restoreInputOrder: Boolean = false,
         resultFilter: Array<IReadRowFilter> = emptyArray()
 ) : Request(noFeature, noGeometry, noMeta, noTags, resultFilter)

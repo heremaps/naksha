@@ -2,9 +2,11 @@ package com.here.naksha.lib.psql;
 
 import com.here.naksha.lib.base.Base;
 import com.here.naksha.lib.base.NakCollection;
+import com.here.naksha.lib.base.NakErrorResponse;
 import com.here.naksha.lib.base.ReadRow;
 import com.here.naksha.lib.base.NakResponse;
 import com.here.naksha.lib.base.NakSuccessResponse;
+import com.here.naksha.lib.base.Row;
 import com.here.naksha.lib.base.WriteCollections;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
@@ -68,11 +70,12 @@ abstract class PsqlCollectionTests extends PsqlTests {
       NakSuccessResponse successResponse = (NakSuccessResponse) response;
       ReadRow responseRow = successResponse.getRows()[0];
       assertEquals(collectionId(), responseRow.getId());
-      assertNotNull(responseRow.getUuid());
+      Row row = responseRow.getRow();
+      assertNotNull(row.getUuid());
       assertSame(EExecutedOp.CREATED.toString(), responseRow.getOp());
       NakCollection collection = Base.assign(responseRow.getFeature(), NakCollection.getKlass());
       assertNotNull(collection);
-      assertEquals(collectionId(), collection.getId());
+      assertEquals(collectionId(), row.getId());
       assertFalse(collection.isDisableHistory());
       assertEquals(partition(), collection.hasPartitions());
       assertNotNull(collection.getProperties());
@@ -91,13 +94,13 @@ abstract class PsqlCollectionTests extends PsqlTests {
   void createExistingCollection() throws NoCursor, SQLException {
     assertNotNull(storage);
     assertNotNull(session);
-    final WriteXyzCollections request = new WriteXyzCollections();
-    request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partitionCount(), false, true));
-    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(request).getXyzCollectionCursor()) {
-      assertTrue(cursor.next());
-      assertSame(EExecutedOp.ERROR, cursor.getOp());
-      assertEquals(XyzError.CONFLICT.value(), cursor.getError().err.value());
+    NakCollection nakCollection = new NakCollection(collectionId(), partitionCount(), null, null, false, false);
+    WriteCollections collectionWriteReq = ReqHelper.INSTANCE.prepareCollectionReqCreateFromFeature(collectionId(), nakCollection);
+    try {
+      NakResponse response = session.execute(collectionWriteReq);
+      assertInstanceOf(NakErrorResponse.class, response);
+      NakErrorResponse errorResponse = (NakErrorResponse) response;
+      assertEquals(XyzError.CONFLICT.value(),errorResponse.getError());
     } finally {
       session.commit(true);
     }
@@ -123,25 +126,12 @@ abstract class PsqlCollectionTests extends PsqlTests {
 
     // WRITE COLLECTION THAT SHOULD BE TEMPORARY
     String collectionId = "foo_temp";
-    final WriteXyzCollections request = new WriteXyzCollections();
-    XyzCollection xyzCollection = new XyzCollection(collectionId, 8, false, true);
-    xyzCollection.setStorageClass("brittle");
-    request.add(EWriteOp.CREATE, xyzCollection);
 
-    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(request).getXyzCollectionCursor()) {
-      assertTrue(cursor.next());
-      assertNull(cursor.getError(), () -> cursor.getError().msg);
-    }
+    NakCollection nakCollection = new NakCollection(collectionId, partitionCount(), null, "brittle", false, false);
+    WriteCollections collectionWriteReq = ReqHelper.INSTANCE.prepareCollectionReqCreateFromFeature(collectionId(), nakCollection);
+    NakResponse response = session.execute(collectionWriteReq);
+    assertInstanceOf(NakSuccessResponse.class, response);
 
-    // WRITE AND UPDATE FEATURE TO CREATE _hst PARTITIONS
-    XyzFeature feature = new XyzFeature();
-    try (final @NotNull Result result = session.execute(createFeatureRequest(collectionId, feature))) {
-      assertInstanceOf(SuccessResult.class, result);
-    }
-    try (final @NotNull Result result = session.execute(updateFeatureRequest(collectionId, feature))) {
-      assertInstanceOf(SuccessResult.class, result);
-    }
     session.commit(true);
 
     // then

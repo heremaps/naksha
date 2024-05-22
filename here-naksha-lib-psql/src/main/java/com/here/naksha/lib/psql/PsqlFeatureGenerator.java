@@ -18,11 +18,12 @@
  */
 package com.here.naksha.lib.psql;
 
+import com.here.naksha.lib.base.GeometryHelper;
+import com.here.naksha.lib.base.JvmPObject;
+import com.here.naksha.lib.base.NakFeature;
+import com.here.naksha.lib.base.NakTags;
+import com.here.naksha.lib.base.NakXyz;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
-import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -385,14 +386,13 @@ public class PsqlFeatureGenerator {
    *
    * @return A new random feature.
    */
-  public @NotNull XyzFeature newRandomFeature() {
+  public @NotNull NakFeature newRandomFeature() {
     final ThreadLocalRandom rand = ThreadLocalRandom.current();
     final String featureId = RandomStringUtils.randomAlphanumeric(20);
-    final XyzFeature feature = new XyzFeature(featureId);
+    final NakFeature feature = new NakFeature(featureId);
     final double longitude = rand.nextDouble(-180, +180);
     final double latitude = rand.nextDouble(-90, +90);
-    final XyzGeometry geometry = new XyzPoint(longitude, latitude);
-    feature.setGeometry(geometry);
+    feature.setGeometry(GeometryHelper.INSTANCE.pointGeometry(longitude, latitude, null));
 
     final String firstName = firstNames[rand.nextInt(0, firstNames.length)];
     final String lastName = lastNames[rand.nextInt(0, lastNames.length)];
@@ -405,12 +405,13 @@ public class PsqlFeatureGenerator {
       middleName = null;
       name = firstName + " " + lastName;
     }
-    feature.getProperties().put("firstName", firstName);
+    JvmPObject pObject = (JvmPObject) feature.data();
+    pObject.put("firstName", firstName);
     if (middleName != null) {
-      feature.getProperties().put("middleName", middleName);
+      pObject.put("middleName", middleName);
     }
-    feature.getProperties().put("lastName", lastName);
-    feature.getProperties().put("name", name);
+    pObject.put("lastName", lastName);
+    pObject.put("name", name);
 
     // We want a pyramid like distribution between 5/10 and 95/100.
     int maxAge = 5;
@@ -419,19 +420,20 @@ public class PsqlFeatureGenerator {
       maxAge += 5;
       age = rand.nextInt(5, 100); // first around max-age is 10, next 15 aso.
     } while (age > maxAge);
-    feature.getProperties().put("age", age);
+    pObject.put("age", age);
 
     // 33% to get tags
     if (rand.nextInt(3) == 0) { // can be 0, 1 and 2
-      final XyzNamespace xyz = feature.xyz();
-      final ArrayList<String> tags = new ArrayList<>();
+      final NakXyz xyz = new NakXyz();
+      final NakTags tags = new NakTags();
       // We add between 1 and 4 tags.
       for (int j = 0; j < 4; j++) {
         int i = rand.nextInt(0, adverbs.length);
         while (true) {
           final String tag = adverbs[i];
-          if (!tags.contains(tag)) {
-            tags.add(tag);
+          if (!tags.containsKey(tag)) {
+            // FIXME split tag key + value
+            tags.set(tag, tag);
             break;
           }
           i = (i + 1) % adverbs.length;
@@ -445,13 +447,14 @@ public class PsqlFeatureGenerator {
           break;
         }
       }
-      tags.add("@:firstName:" + firstName);
+      tags.put("@:firstName:", firstName);
       if (middleName != null) {
-        tags.add("@:middleName:" + middleName);
+        tags.put("@:middleName:", middleName);
       }
-      tags.add("@:lastName:" + lastName);
-      tags.add("@:age:" + age);
-      xyz.setTags(tags, false);
+      tags.put("@:lastName:", lastName);
+      tags.put("@:age:", age);
+      xyz.setTags(tags);
+      feature.getProperties().setXyz(xyz);
     }
     return feature;
   }

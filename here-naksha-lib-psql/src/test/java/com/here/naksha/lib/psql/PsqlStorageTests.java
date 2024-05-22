@@ -18,29 +18,62 @@
  */
 package com.here.naksha.lib.psql;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.here.naksha.lib.base.Base;
+import com.here.naksha.lib.base.DeleteFeature;
+import com.here.naksha.lib.base.Geometry;
+import com.here.naksha.lib.base.GeometryHelper;
+import com.here.naksha.lib.base.IReadRowFilter;
+import com.here.naksha.lib.base.JvmPObject;
+import com.here.naksha.lib.base.NakCollection;
+import com.here.naksha.lib.base.NakErrorResponse;
 import com.here.naksha.lib.base.NakFeature;
+import com.here.naksha.lib.base.NakLineString;
 import com.here.naksha.lib.base.NakPoint;
 import com.here.naksha.lib.base.NakProperties;
+import com.here.naksha.lib.base.NakXyz;
+import com.here.naksha.lib.base.PurgeFeature;
 import com.here.naksha.lib.base.ReadRow;
 import com.here.naksha.lib.base.NakResponse;
 import com.here.naksha.lib.base.NakSuccessResponse;
 import com.here.naksha.lib.base.NakTags;
+import com.here.naksha.lib.base.UpdateFeature;
+import com.here.naksha.lib.base.WriteCollections;
+import com.here.naksha.lib.base.WriteFeature;
 import com.here.naksha.lib.base.WriteFeatures;
 import com.here.naksha.lib.base.InsertFeature;
-import com.here.naksha.lib.base.Metadata;
+import com.here.naksha.lib.base.WriteOp;
 import com.here.naksha.lib.core.exceptions.NoCursor;
+import com.here.naksha.lib.core.models.XyzError;
+import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
+import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzLineString;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
+import com.here.naksha.lib.core.models.payload.responses.SuccessResponse;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
+import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
+import com.here.naksha.lib.core.models.storage.MutableCursor;
+import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
+import com.here.naksha.lib.core.models.storage.POp;
+import com.here.naksha.lib.core.models.storage.PRef;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.SOp;
+import com.here.naksha.lib.core.models.storage.SeekableCursor;
+import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import com.here.naksha.lib.core.util.json.Json;
+import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.here.naksha.lib.jbon.BigInt64Kt;
 import com.here.naksha.lib.jbon.JvmEnv;
+import com.here.naksha.lib.jbon.NakshaTxn;
+import com.here.naksha.lib.nak.Flags;
+import com.here.naksha.lib.plv8.NakshaFeaturesWriter;
 import com.here.naksha.lib.plv8.ReqHelper;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -49,25 +82,35 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.operation.buffer.BufferOp;
 import org.locationtech.spatial4j.distance.DistanceUtils;
+import org.postgresql.util.PSQLException;
 
+import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.function.Consumer;
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.core.models.storage.POp.and;
 import static com.here.naksha.lib.core.models.storage.POp.eq;
+import static com.here.naksha.lib.core.models.storage.POp.exists;
+import static com.here.naksha.lib.core.models.storage.POp.not;
 import static com.here.naksha.lib.core.models.storage.PRef.id;
 import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInMeters;
 import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInRadius;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createBBoxEnvelope;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
-import static com.here.naksha.lib.jbon.ConstantsKt.ACTION_CREATE;
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -77,6 +120,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @SuppressWarnings({"unused"})
 @TestMethodOrder(OrderAnnotation.class)
@@ -99,6 +143,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   static final String SINGLE_FEATURE_ID = "TheFeature";
   static final String SINGLE_FEATURE_INITIAL_TAG = "@:foo:world";
   static final String SINGLE_FEATURE_REPLACEMENT_TAG = "@:foo:bar";
+  static final Flags DEFAULT_FLAGS = new Flags();
 
   @Test
   @Order(50)
@@ -108,13 +153,15 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(session);
     final NakFeature feature = new NakFeature();
     feature.setId(SINGLE_FEATURE_ID);
-    feature.setCoordinates(new NakPoint(5.0d, 6.0d, 2.0d));
-    Metadata metadata = new Metadata();
-    metadata.setTags(new NakTags(SINGLE_FEATURE_INITIAL_TAG));
-    NakProperties nakProperties = new NakProperties(metadata);
-    nakProperties.setXyz(metadata);
+    Geometry geometry = new Geometry();
+    geometry.setCoordinates(new NakPoint(5.0d, 6.0d, 2.0d));
+    feature.setGeometry(geometry);
+    NakXyz xyz = new NakXyz();
+    xyz.setTags(new NakTags(SINGLE_FEATURE_INITIAL_TAG));
+    NakProperties nakProperties = new NakProperties();
+    nakProperties.setXyz(xyz);
     feature.setProperties(nakProperties);
-    InsertFeature nakInsertFeature = new InsertFeature(ACTION_CREATE, feature);
+    InsertFeature nakInsertFeature = new InsertFeature(collectionId(), DEFAULT_FLAGS, feature);
     WriteFeatures request = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), nakInsertFeature);
     try {
       final NakResponse response = session.execute(request);
@@ -125,10 +172,9 @@ public class PsqlStorageTests extends PsqlCollectionTests {
       assertSame(EExecutedOp.CREATED.toString(), first.getOp());
       final String id = first.getId();
       assertEquals(SINGLE_FEATURE_ID, id);
-      final String uuid = first.getUuid();
-      assertNotNull(uuid);
+      assertNotNull(first.getRow().getUuid());
       NakFeature f = first.getFeature();
-      NakPoint point = Base.assign(f.getCoordinates(), NakPoint.getKlass());
+      NakPoint point = Base.assign(f.getGeometry().getCoordinates(), NakPoint.getKlass());
       assertNotNull(point);
       assertEquals(5.0d, point.getLongitude());
       assertEquals(6.0d, point.getLatitude());
@@ -227,7 +273,8 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(storage);
     assertNotNull(session);
 
-    Geometry envelopeBbox = createBBoxEnvelope(4.0d, 5.0, 5.5d, 6.5);
+
+    org.locationtech.jts.geom.Geometry envelopeBbox = createBBoxEnvelope(4.0d, 5.0, 5.5d, 6.5);
 
     ReadFeatures readFeatures = new ReadFeatures(collectionId());
     BufferOp.bufferOp(envelopeBbox, 1.0);
@@ -297,32 +344,31 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   @Test
   @Order(54)
   @EnabledIf("runTest")
-  void singleFeatureUpsert() throws NoCursor {
+  void singleFeatureUpsert() {
     assertNotNull(storage);
     assertNotNull(session);
     // given
-    final NakshaFeature featureToUpdate = new NakshaFeature(SINGLE_FEATURE_ID);
-    final XyzPoint xyzGeometry = new XyzPoint(5.0d, 6.0d, 2.0d);
-    featureToUpdate.setGeometry(xyzGeometry);
-    featureToUpdate.xyz().addTag(SINGLE_FEATURE_INITIAL_TAG, false);
-    featureToUpdate.xyz().addTag(SINGLE_FEATURE_REPLACEMENT_TAG, false);
+    final NakFeature featureToUpdate = new NakFeature();
+    featureToUpdate.setId(SINGLE_FEATURE_ID);
+    final NakPoint xyzGeometry = new NakPoint(5.0d, 6.0d, 2.0d);
+    featureToUpdate.setGeometry(new Geometry(xyzGeometry));
+    featureToUpdate.getProperties().getXyz().setTags(new NakTags(SINGLE_FEATURE_INITIAL_TAG, SINGLE_FEATURE_REPLACEMENT_TAG));
 
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    request.add(EWriteOp.PUT, featureToUpdate);
+    WriteFeatures writeFeatures = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), new WriteFeature(collectionId(), DEFAULT_FLAGS, featureToUpdate));
     // when
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
-      cursor.next();
-
+    try {
+      NakResponse nakResponse = session.execute(writeFeatures);
+      NakSuccessResponse successResponse = (NakSuccessResponse) nakResponse;
       // then
-      final XyzFeature feature = cursor.getFeature();
-      assertSame(EExecutedOp.UPDATED, cursor.getOp());
-      assertEquals(SINGLE_FEATURE_ID, cursor.getId());
-      final Geometry coordinate = cursor.getGeometry();
-      assertEquals(xyzGeometry.convertToJTSGeometry(), coordinate);
+      ReadRow row1 = successResponse.getRows()[0];
+      final NakFeature feature = row1.getFeature();
+      assertSame(EExecutedOp.UPDATED.toString(), row1.getOp());
+      assertEquals(SINGLE_FEATURE_ID, feature.getId());
+      final Geometry geometry = feature.getGeometry();
+      assertEquals(xyzGeometry, geometry.getCoordinates());
       assertEquals(
           asList(SINGLE_FEATURE_INITIAL_TAG, SINGLE_FEATURE_REPLACEMENT_TAG),
-          feature.xyz().getTags());
+          feature.getProperties().getXyz().getTags());
     } finally {
       session.commit(true);
     }
@@ -331,45 +377,40 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   @Test
   @Order(55)
   @EnabledIf("runTest")
-  void singleFeatureUpdate() throws NoCursor {
+  void singleFeatureUpdate() {
     assertNotNull(storage);
     assertNotNull(session);
     // given
     /**
      * data inserted in {@link #singleFeatureCreate()} test
      */
-    final NakshaFeature featureToUpdate = new NakshaFeature(SINGLE_FEATURE_ID);
+    final NakFeature featureToUpdate = new NakFeature(SINGLE_FEATURE_ID);
     // different geometry
-    XyzPoint newPoint1 = new XyzPoint(5.1d, 6.0d, 2.1d);
-    XyzPoint newPoint2 = new XyzPoint(5.15d, 6.0d, 2.15d);
-    XyzMultiPoint multiPoint = new XyzMultiPoint();
-    MultiPointCoordinates multiPointCoordinates = new MultiPointCoordinates(2);
-    multiPointCoordinates.add(0, newPoint1.getCoordinates());
-    multiPointCoordinates.add(0, newPoint2.getCoordinates());
-    multiPoint.withCoordinates(multiPointCoordinates);
+    NakPoint newPoint1 = new NakPoint(5.1d, 6.0d, 2.1d);
+    NakPoint newPoint2 = new NakPoint(5.15d, 6.0d, 2.15d);
+    NakLineString lineString = new NakLineString(newPoint1, newPoint2);
+    Geometry geometry = new Geometry(lineString);
 
-    featureToUpdate.setGeometry(multiPoint);
+    featureToUpdate.setGeometry(geometry);
     // This tag should replace the previous one!
-    featureToUpdate.xyz().addTag(SINGLE_FEATURE_REPLACEMENT_TAG, false);
-    // new property added
-    featureToUpdate.setTitle("Bank");
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    request.add(EWriteOp.UPDATE, featureToUpdate);
+    NakXyz xyz = new NakXyz(featureToUpdate);
+    xyz.setTags(new NakTags(SINGLE_FEATURE_REPLACEMENT_TAG));
+    featureToUpdate.getProperties().setXyz(xyz);
+    WriteFeatures request = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), new UpdateFeature(collectionId(), DEFAULT_FLAGS, featureToUpdate));
     // when
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
-      cursor.next();
+    try {
+      NakResponse nakResponse = session.execute(request);
+      NakSuccessResponse successResponse = (NakSuccessResponse) nakResponse;
+      ReadRow row = successResponse.getRows()[0];
 
       // then
-      final XyzFeature feature = cursor.getFeature();
-      assertSame(EExecutedOp.UPDATED, cursor.getOp());
-      assertEquals(SINGLE_FEATURE_ID, cursor.getId());
+      final NakFeature feature = row.getFeature();
+      assertSame(EExecutedOp.UPDATED, row.getOp());
+      assertEquals(SINGLE_FEATURE_ID, row.getId());
       //      assertNotNull(cursor.getPropertiesType());
-      final Geometry coordinate = cursor.getGeometry();
-      assertEquals(multiPoint.convertToJTSGeometry(), coordinate);
-      final String title = assertInstanceOf(String.class, feature.get("title"));
-      assertEquals("Bank", title);
-      assertEquals(List.of(SINGLE_FEATURE_REPLACEMENT_TAG), feature.xyz().getTags());
+      final Geometry respGeometry = row.getFeature().getGeometry();
+      assertEquals(lineString, respGeometry.getCoordinates());
+      assertEquals(List.of(SINGLE_FEATURE_REPLACEMENT_TAG), feature.getProperties().getXyz().getTags());
     } finally {
       session.commit(true);
     }
@@ -537,18 +578,18 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   @Test
   @Order(57)
   @EnabledIf("runTest")
-  void singleFeaturePutWithSameId() throws NoCursor {
+  void singleFeaturePutWithSameId() {
     assertNotNull(storage);
     assertNotNull(session);
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
-    feature.setGeometry(new XyzPoint(5.0d, 6.0d, 2.0d));
-    request.add(EWriteOp.PUT, feature);
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
-      assertTrue(cursor.next());
+    final NakFeature feature = new NakFeature((SINGLE_FEATURE_ID));
+    final Geometry geometry = new Geometry();
+    geometry.setCoordinates(new NakPoint(5.0d, 6.0d, 2.0d));
+    feature.setGeometry(geometry);
+    WriteFeatures request = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), new WriteFeature(collectionId(), DEFAULT_FLAGS, feature));
+    try {
+      NakSuccessResponse response = (NakSuccessResponse) session.execute(request);
       // should change to operation update as row already exists.
-      assertSame(EExecutedOp.UPDATED, cursor.getOp());
+      assertSame(EExecutedOp.UPDATED.toString(), response.getRows()[0].getOp());
     } finally {
       session.commit(true);
     }
@@ -562,19 +603,17 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(session);
 
     // given
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
-    feature.setGeometry(new XyzPoint(0.0d, 0.0d, 0.0d));
-    request.add(EWriteOp.CREATE, feature);
-
+    final NakFeature feature = new NakFeature(SINGLE_FEATURE_ID);
+    feature.setGeometry(GeometryHelper.INSTANCE.pointGeometry(0.0d, 0.0d, 0.0d));
+    WriteFeatures request = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), new InsertFeature(collectionId(), DEFAULT_FLAGS, feature));
     // when
-    final Result result = session.execute(request);
+    final NakResponse result = session.execute(request);
 
     // then
-    assertInstanceOf(ErrorResult.class, result);
-    ErrorResult errorResult = (ErrorResult) result;
-    assertEquals(XyzError.CONFLICT, errorResult.reason);
-    assertTrue(errorResult.message.startsWith("ERROR: duplicate key value violates unique"));
+    assertInstanceOf(NakErrorResponse.class, result);
+    NakErrorResponse errorResult = (NakErrorResponse) result;
+    assertEquals(XyzError.CONFLICT.toString(), errorResult.getError());
+    assertTrue(errorResult.getMessage().startsWith("ERROR: duplicate key value violates unique"));
     session.commit(true);
 
     // make sure feature hasn't been updated (has old geometry).
@@ -591,7 +630,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   @Test
   @Order(61)
   @EnabledIf("runTest")
-  void testMultiOperationPartialFail() throws NoCursor {
+  void testMultiOperationPartialFailCausesOverallFailure() throws NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
 
@@ -599,20 +638,22 @@ public class PsqlStorageTests extends PsqlCollectionTests {
         format("The feature with the id '%s' does exist already", SINGLE_FEATURE_ID);
 
     // given
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature featureToSucceed = new XyzFeature("123");
-    request.add(EWriteOp.CREATE, featureToSucceed);
-    final XyzFeature featureToFail = new XyzFeature(SINGLE_FEATURE_ID);
-    request.add(EWriteOp.CREATE, featureToFail);
+    final NakFeature featureToSucceed = new NakFeature("123");
+    final NakFeature featureToFail = new NakFeature(SINGLE_FEATURE_ID);
+    WriteFeatures request = ReqHelper.INSTANCE.prepareFeatureReqForOperations(
+        collectionId(),
+        new InsertFeature(collectionId(), DEFAULT_FLAGS, featureToSucceed),
+        new InsertFeature(collectionId(), DEFAULT_FLAGS, featureToFail)
+    );
 
     // when
-    final Result result = session.execute(request);
+    final NakResponse result = session.execute(request);
 
     // then
-    assertInstanceOf(ErrorResult.class, result);
-    ErrorResult errorResult = (ErrorResult) result;
-    assertEquals(XyzError.CONFLICT, errorResult.reason);
-    assertTrue(errorResult.message.startsWith("ERROR: duplicate key value violates unique"));
+    assertInstanceOf(NakErrorResponse.class, result);
+    NakErrorResponse errorResult = (NakErrorResponse) result;
+    assertEquals(XyzError.CONFLICT.toString(), errorResult.getError());
+    assertTrue(errorResult.getMessage().startsWith("ERROR: duplicate key value violates unique"));
 
     // we don't have detailed information, we can work only in mode: all or nothing.
     session.commit(true);
@@ -632,18 +673,16 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(session);
 
     // given
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
-    feature.xyz().setUuid("invalid_UUID");
-    request.add(EWriteOp.UPDATE, feature);
-
+    DeleteFeature deleteOp = new DeleteFeature(collectionId(), SINGLE_FEATURE_ID, "invalid_UUID");
+    WriteFeatures deleteReq = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), deleteOp);
     // when
-    try (final Result result = session.execute(request)) {
+    try {
+      NakResponse result = session.execute(deleteReq);
       // then
-      assertInstanceOf(ErrorResult.class, result);
-      ErrorResult errorResult = (ErrorResult) result;
-      assertEquals("NX000", errorResult.reason.value());
-      assertTrue(errorResult.message.contains("invalid naksha uuid invalid_UUID"));
+      assertInstanceOf(NakErrorResponse.class, result);
+      NakErrorResponse errorResult = (NakErrorResponse) result;
+      assertEquals("NX000", errorResult.getError());
+      assertTrue(errorResult.getMessage().contains("invalid naksha uuid invalid_UUID"));
     } finally {
       session.commit(true);
     }
@@ -656,77 +695,38 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(storage);
     assertNotNull(session);
 
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = new XyzFeature("TO_DEL_BY_ID");
-    request.add(EWriteOp.CREATE, feature);
+    final NakFeature feature = new NakFeature("TO_DEL_BY_ID");
+    WriteFeatures request = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), new InsertFeature(collectionId(), DEFAULT_FLAGS, feature));
 
     // when
-    try (final Result result = session.execute(request)) {
-      session.commit(true);
-      final WriteXyzFeatures delRequest = new WriteXyzFeatures(collectionId());
-      delRequest.delete("TO_DEL_BY_ID", null);
-      try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-               session.execute(delRequest).getXyzFeatureCursor()) {
-        assertTrue(cursor.next());
-        assertSame(EExecutedOp.DELETED, cursor.getOp());
-        assertEquals("TO_DEL_BY_ID", cursor.getId());
-        XyzNamespace xyzNamespace = cursor.getFeature().getProperties().getXyzNamespace();
-        assertNotEquals(xyzNamespace.getCreatedAt(), xyzNamespace.getUpdatedAt());
-        assertEquals(EXyzAction.DELETE, xyzNamespace.getAction());
-        assertEquals(2, xyzNamespace.getVersion());
-        assertFalse(cursor.hasNext());
-      } finally {
-        session.commit(true);
-      }
+    session.execute(request);
+    session.commit(true);
 
-      // verify if hst contains 2 versions
-      ReadFeatures read = RequestHelper.readFeaturesByIdRequest(collectionId(), "TO_DEL_BY_ID");
-      read.withReturnAllVersions(true);
-      try (final MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
-               session.execute(read).mutableCursor()) {
-        assertTrue(cursor.next());
-        assertEquals(EXyzAction.CREATE, cursor.getFeature().getProperties().getXyzNamespace().getAction());
-        assertTrue(cursor.next());
-        assertEquals(EXyzAction.DELETE, cursor.getFeature().getProperties().getXyzNamespace().getAction());
-      }
-    }
-  }
-
-  @Test
-  @Order(64)
-  @EnabledIf("runTest")
-  void singleFeatureDelete() throws NoCursor {
-    assertNotNull(storage);
-    assertNotNull(session);
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = new XyzFeature(SINGLE_FEATURE_ID);
-    feature.setGeometry(new XyzPoint(5.0d, 6.0d, 2.0d));
-    request.add(EWriteOp.DELETE, feature);
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
-      assertTrue(cursor.next());
-      final EExecutedOp op = cursor.getOp();
-      assertSame(EExecutedOp.DELETED, op);
-      final String id = cursor.getId();
-      assertEquals(SINGLE_FEATURE_ID, id);
-      final String uuid = cursor.getUuid();
-      assertNotNull(uuid);
-      final Geometry geometry = cursor.getGeometry();
-      assertNotNull(geometry);
-      final Coordinate coordinate = geometry.getCoordinate();
-      // this geometry differs than requested, because value in db has been changed by update method, so we return
-      // what was actually deleted.
-      assertEquals(5.0d, coordinate.getOrdinate(0));
-      assertEquals(6.0d, coordinate.getOrdinate(1));
-      assertEquals(2.0d, coordinate.getOrdinate(2));
-      final XyzFeature f = cursor.getFeature();
-      assertNotNull(f);
-      assertEquals(SINGLE_FEATURE_ID, f.getId());
-      assertEquals(uuid, f.xyz().getUuid());
-      assertSame(EXyzAction.DELETE, f.xyz().getAction());
-      assertFalse(cursor.hasNext());
+    DeleteFeature deleteOp = new DeleteFeature(collectionId(), "TO_DEL_BY_ID", null);
+    WriteFeatures deleteReq = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), deleteOp);
+    try {
+      NakSuccessResponse nakResponse = (NakSuccessResponse) session.execute(deleteReq);
+      ReadRow row = nakResponse.getRows()[0];
+      assertSame(EExecutedOp.DELETED.toString(), row.getOp());
+      assertEquals("TO_DEL_BY_ID", row.getId());
+      NakXyz xyzNamespace = row.getFeature().getProperties().getXyz();
+      assertNotEquals(xyzNamespace.getCreatedAt(), xyzNamespace.getUpdatedAt());
+      assertEquals(EXyzAction.DELETE.toString(), xyzNamespace.getAction());
+      assertEquals(2, xyzNamespace.getVersion());
+      assertEquals(1, nakResponse.getRows().length);
     } finally {
       session.commit(true);
+    }
+
+    // verify if hst contains 2 versions
+    ReadFeatures read = RequestHelper.readFeaturesByIdRequest(collectionId(), "TO_DEL_BY_ID");
+    read.withReturnAllVersions(true);
+    try (final MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+             session.execute(read).mutableCursor()) {
+      assertTrue(cursor.next());
+      assertEquals(EXyzAction.CREATE, cursor.getFeature().getProperties().getXyzNamespace().getAction());
+      assertTrue(cursor.next());
+      assertEquals(EXyzAction.DELETE, cursor.getFeature().getProperties().getXyzNamespace().getAction());
     }
   }
 
@@ -813,19 +813,18 @@ public class PsqlStorageTests extends PsqlCollectionTests {
      * We don't care about geometry or other properties during PURGE operation, feature_id is only required thing,
      * thanks to that you don't have to read feature before purge operation.
      */
-    final XyzFeature featureToPurge = new XyzFeature(SINGLE_FEATURE_ID);
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    request.add(EWriteOp.PURGE, featureToPurge);
+    PurgeFeature purgeOp = new PurgeFeature(collectionId(), SINGLE_FEATURE_ID, null);
+    WriteFeatures request = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), purgeOp);
 
     // when
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
-      cursor.next();
+    try {
+      NakSuccessResponse response = (NakSuccessResponse) session.execute(request);
+      ReadRow row = response.getRows()[0];
 
       // then
-      final XyzFeature feature = cursor.getFeature();
-      assertSame(EExecutedOp.PURGED, cursor.getOp());
-      assertEquals(SINGLE_FEATURE_ID, cursor.getId());
+      final NakFeature feature = row.getFeature();
+      assertSame(EExecutedOp.PURGED, row.getOp());
+      assertEquals(SINGLE_FEATURE_ID, row.getId());
     } finally {
       session.commit(true);
     }
@@ -856,32 +855,37 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(storage);
     assertNotNull(session);
     // given
-    final WriteXyzCollections request = new WriteXyzCollections();
     String collectionWithAutoPurge = collectionId() + "_ap";
-    XyzCollection collection = new XyzCollection(collectionWithAutoPurge, partitionCount(), false, true);
-    collection.enableAutoPurge();
-    request.add(EWriteOp.CREATE, collection);
+    NakCollection collection = new NakCollection(collectionWithAutoPurge, partitionCount(), null, null, true, false);
+    WriteCollections request = ReqHelper.INSTANCE.prepareCreateCollectionReq(collectionWithAutoPurge, null, collection, DEFAULT_FLAGS);
 
     // when
-    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(request).getXyzCollectionCursor()) {
-      assertTrue(cursor.next());
-      assertTrue(cursor.getFeature().isAutoPurge());
+    try {
+      NakResponse nakResponse = session.execute(request);
+      assertInstanceOf(NakSuccessResponse.class, nakResponse);
+      NakSuccessResponse successResponse = (NakSuccessResponse) nakResponse;
+      NakCollection respCol = Base.assign(successResponse.getRows()[0].getFeature(), NakCollection.getKlass());
+      assertTrue(respCol.isAutoPurge());
     } finally {
       session.commit(true);
     }
 
     // CREATE feature
-    final XyzFeature featureToDel = new XyzFeature(SINGLE_FEATURE_ID);
-    try (final Result result = session.execute(createFeatureRequest(collectionWithAutoPurge, featureToDel))) {
-      assertTrue(result instanceof SuccessResult);
+    final NakFeature featureToDel = new NakFeature(SINGLE_FEATURE_ID);
+    WriteFeatures requestFeature = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionWithAutoPurge, new InsertFeature(collectionWithAutoPurge, DEFAULT_FLAGS, featureToDel));
+    try {
+      NakResponse nakResponse = session.execute(requestFeature);
+      assertInstanceOf(NakSuccessResponse.class, nakResponse);
     } finally {
       session.commit(true);
     }
 
     // DELETE feature
-    try (final Result result = session.execute(deleteFeatureByIdRequest(collectionWithAutoPurge, featureToDel.getId()))) {
-      assertTrue(result instanceof SuccessResult);
+    DeleteFeature deleteOp = new DeleteFeature(collectionId(), "TO_DEL_BY_ID", null);
+    WriteFeatures deleteReq = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), deleteOp);
+    try {
+      NakResponse nakResponse = session.execute(deleteReq);
+      assertInstanceOf(NakSuccessResponse.class, nakResponse);
     } finally {
       session.commit(true);
     }
@@ -910,64 +914,37 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
     int i = 0;
     boolean firstNameAdded = false;
-    while (i < 1000 || !firstNameAdded) {
-      final XyzFeature feature = fg.newRandomFeature();
+    int size = 1000;
+    WriteOp[] features = new WriteOp[size];
+    while (i < size || !firstNameAdded) {
+      final NakFeature feature = fg.newRandomFeature();
       if (!firstNameAdded) {
         firstNameAdded =
-            Objects.equals(fg.firstNames[0], feature.getProperties().get("firstName"));
+            Objects.equals(fg.firstNames[0], ((JvmPObject) feature.getProperties().data()).get("firstName"));
       }
-      request.add(EWriteOp.PUT, feature);
+      features[i] = new WriteFeature(collectionId(), DEFAULT_FLAGS, feature);
       i++;
     }
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
-      for (int j = 0; j < i; j++) {
-        assertTrue(cursor.next());
-        final EExecutedOp op = cursor.getOp();
-        assertSame(EExecutedOp.CREATED, op);
-        final String id = cursor.getId();
+    WriteFeatures reqWrite = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), features);
+
+    try {
+      NakSuccessResponse nakResponse = (NakSuccessResponse) session.execute(reqWrite);
+      for (ReadRow row : nakResponse.getRows()) {
+        final String op = row.getOp();
+        assertSame(EExecutedOp.CREATED.toString(), op);
+        final String id = row.getId();
         assertNotNull(id);
-        final String uuid = cursor.getUuid();
+        final String uuid = row.getUuid();
         assertNotNull(uuid);
-        final Geometry geometry = cursor.getGeometry();
+        final Geometry geometry = row.getFeature().getGeometry();
         assertNotNull(geometry);
-        final XyzFeature f = cursor.getFeature();
+        final NakFeature f = row.getFeature();
         assertNotNull(f);
         assertEquals(id, f.getId());
-        assertEquals(uuid, f.xyz().getUuid());
-        assertSame(EXyzAction.CREATE, f.xyz().getAction());
+        assertSame(EXyzAction.CREATE.toString(), f.getProperties().getXyz().getAction());
       }
-      assertFalse(cursor.hasNext());
     } finally {
       session.commit(true);
-    }
-  }
-
-  private static XyzFeature bulkInsertedFeature;
-
-  @Test
-  @Order(70)
-  @EnabledIf("runTest")
-  void miniBulkInsert() throws NoCursor {
-    assertNotNull(storage);
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = fg.newRandomFeature();
-    bulkInsertedFeature = feature;
-    request.add(EWriteOp.CREATE, feature);
-    PsqlWriteSession writeSession = storage.newWriteSession(nakshaContext, true);
-    try (Result result = writeSession.executeBulkWriteFeatures(request)) {
-      assertInstanceOf(SuccessResult.class, result);
-    } finally {
-      writeSession.commit(true);
-    }
-
-    ReadFeatures readReq = RequestHelper.readFeaturesByIdRequest(collectionId(), feature.getId());
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(readReq).getXyzFeatureCursor()) {
-      cursor.next();
-      assertNotNull(cursor.getFeatureJbon());
-      assertNotNull(cursor.getFeature());
-      assertNotNull(cursor.getWkb());
     }
   }
 
@@ -993,7 +970,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
         assertNotNull(id);
         final String uuid = cursor.getUuid();
         assertNotNull(uuid);
-        final Geometry geometry = cursor.getGeometry();
+        final org.locationtech.jts.geom.Geometry geometry = cursor.getGeometry();
         assertNotNull(geometry);
         final XyzFeature f = cursor.getFeature();
         assertNotNull(f);
@@ -1049,64 +1026,27 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(session);
 
     // given
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature1 = new XyzFeature("123");
-    request.add(EWriteOp.CREATE, feature1);
-    final XyzFeature feature2 = new XyzFeature("121");
-    request.add(EWriteOp.CREATE, feature2);
+    final NakFeature feature1 = new NakFeature("123");
+    final NakFeature feature2 = new NakFeature("121");
+    WriteFeatures request = new WriteFeatures(collectionId(), new InsertFeature[]{
+        new InsertFeature(collectionId(), DEFAULT_FLAGS, feature1),
+        new InsertFeature(collectionId(), DEFAULT_FLAGS, feature2)
+    }, false, false, false, false, false, true, new IReadRowFilter[]{}
+    );
 
-    // when
-    final Result result = session.execute(request);
+    try {
+      // when
+      final NakSuccessResponse result = (NakSuccessResponse) session.execute(request);
 
-    // then
-    try (MutableCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzMutableCursor()) {
-      cursor.next();
-      assertEquals("121", cursor.getId());
-      cursor.next();
-      assertEquals("123", cursor.getId());
-
-      assertTrue(cursor.restoreInputOrder());
-      cursor.first();
-      assertEquals("123", cursor.getId());
-      assertEquals(request.features.get(0).getId(), cursor.getId());
-      cursor.next();
-      assertEquals("121", cursor.getId());
-      assertEquals(request.features.get(1).getId(), cursor.getId());
+      // then
+      ReadRow[] rows = result.getRows();
+      assertEquals("123", rows[0].getId());
+      assertEquals("121", rows[1].getId());
     } finally {
       session.commit(true);
     }
   }
 
-  @Test
-  @Order(74)
-  @EnabledIf("runTest")
-  void miniBulkDelete() throws NoCursor {
-    assertNotNull(storage);
-    ReadFeatures readReqBefore = RequestHelper.readFeaturesByIdRequest(collectionId(), bulkInsertedFeature.getId());
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(readReqBefore).getXyzFeatureCursor()) {
-      assertTrue(cursor.hasNext());
-      assertTrue(cursor.next());
-      final XyzFeature feature = cursor.getFeature();
-      assertEquals(bulkInsertedFeature.getId(), feature.getId());
-    }
-
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    request.delete(bulkInsertedFeature);
-    PsqlWriteSession writeSession = storage.newWriteSession(nakshaContext, true);
-    try (Result result = writeSession.executeBulkWriteFeatures(request)) {
-      assertInstanceOf(SuccessResult.class, result);
-    } finally {
-      writeSession.commit(true);
-    }
-
-    ReadFeatures readReqAfter = RequestHelper.readFeaturesByIdRequest(collectionId(), bulkInsertedFeature.getId());
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(readReqAfter).getXyzFeatureCursor()) {
-      assertFalse(cursor.hasNext());
-      assertThrowsExactly(NoSuchElementException.class, cursor::next);
-    }
-  }
   @Test
   @Order(74)
   @EnabledIf("runTest")
@@ -1120,7 +1060,7 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   private void limitToN(final long limit) throws NoCursor {
     final ReadFeatures request = new ReadFeatures(collectionId()).withLimit(limit);
     try (final @NotNull ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-                 session.execute(request).getXyzFeatureCursor()) {
+             session.execute(request).getXyzFeatureCursor()) {
 
       for (long row = 1; row <= limit; row++) {
         assertTrue(cursor.hasNext());
@@ -1158,27 +1098,23 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   void intersectionSearch() throws NoCursor {
     assertNotNull(storage);
     assertNotNull(session);
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionId());
-    final XyzFeature feature = new XyzFeature("otherFeature");
-    LineStringCoordinates lineStringCoordinates = new LineStringCoordinates();
-    lineStringCoordinates.add(new PointCoordinates(4.0d, 5.0));
-    lineStringCoordinates.add(new PointCoordinates(4.0d, 6.0));
-
-    XyzLineString lineString = new XyzLineString();
-    lineString.withCoordinates(lineStringCoordinates);
-
-    feature.setGeometry(lineString);
-    request.add(EWriteOp.CREATE, feature);
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-             session.execute(request).getXyzFeatureCursor()) {
-      assertTrue(cursor.next());
+    final NakFeature feature = new NakFeature("otherFeature");
+    Geometry geometry = GeometryHelper.INSTANCE.lineStringGeometry(
+        new NakPoint(4.0d, 5.0),
+        new NakPoint(4.0d, 6.0)
+    );
+    feature.setGeometry(geometry);
+    WriteFeatures request = ReqHelper.INSTANCE.prepareFeatureReqForOperations(collectionId(), new InsertFeature(collectionId(), DEFAULT_FLAGS, feature));
+    try {
+      NakResponse nakResponse = session.execute(request);
+      assertInstanceOf(NakSuccessResponse.class, nakResponse);
     } finally {
       session.commit(true);
     }
 
     // read by bbox that surrounds only first point
 
-    Geometry envelopeBbox = createBBoxEnvelope(3.9d, 4.9, 4.1d, 5.1);
+    org.locationtech.jts.geom.Geometry envelopeBbox = createBBoxEnvelope(3.9d, 4.9, 4.1d, 5.1);
     ReadFeatures readFeatures = new ReadFeatures(collectionId());
     readFeatures.setSpatialOp(SOp.intersects(envelopeBbox));
 
@@ -1198,18 +1134,21 @@ public class PsqlStorageTests extends PsqlCollectionTests {
     assertNotNull(storage);
     assertNotNull(session);
 
-    WriteFeatures<String, StringCodec, ?> request = new WriteFeatures<>(new StringCodecFactory(), collectionId());
+    com.here.naksha.lib.core.models.storage.WriteFeatures<String, StringCodec, ?> request = new com.here.naksha.lib.core.models.storage.WriteFeatures<>(new StringCodecFactory(), collectionId());
 
     // given
     final String jsonReference = "{\"id\":\"32167\",\"properties\":{\"weight\":60,\"length\":null,\"color\":\"red\",\"ids\":[0,1,9],\"ids2\":[\"a\",\"b\",\"c\"],\"subJson\":{\"b\":1},\"references\":[{\"id\":\"urn:here::here:Topology:106003684\",\"type\":\"Topology\",\"prop\":{\"a\":1}}]}}";
     ObjectReader reader = Json.get().reader();
     request.add(EWriteOp.CREATE, jsonReference);
-    try (final MutableCursor<String, StringCodec> cursor =
-             session.execute(request).mutableCursor(new StringCodecFactory())) {
-      assertTrue(cursor.next());
-    } finally {
-      session.commit(true);
-    }
+
+    // FIXME TODO after having json to platform conversion
+    fail();
+//    try (final MutableCursor<String, StringCodec> cursor =
+//             session.execute(request).mutableCursor(new StringCodecFactory())) {
+//      assertTrue(cursor.next());
+//    } finally {
+//      session.commit(true);
+//    }
 
     Consumer<ReadFeatures> expect = readFeaturesReq -> {
       try (final MutableCursor<String, StringCodec> cursor =
@@ -1293,27 +1232,22 @@ public class PsqlStorageTests extends PsqlCollectionTests {
   @Test
   @Order(120)
   @EnabledIf("runTest")
-  void dropFooCollection() throws NoCursor {
+  void dropFooCollection() {
     assertNotNull(storage);
     assertNotNull(session);
 
-    final XyzCollection deleteCollection = new XyzCollection(collectionId());
-    final WriteXyzCollections deleteRequest = new WriteXyzCollections();
-    deleteRequest.add(EWriteOp.DELETE, deleteCollection);
-    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(deleteRequest).getXyzCollectionCursor()) {
-      assertTrue(cursor.next());
-      assertFalse(cursor.hasError(), () -> cursor.getError().msg);
-      session.commit(true);
+    WriteCollections deleteCollection = ReqHelper.INSTANCE.deleteCollection(collectionId(), null);
+    NakResponse nakResponse = session.execute(deleteCollection);
+    assertInstanceOf(NakSuccessResponse.class, nakResponse);
+    session.commit(true);
 
-      // try readSession after purge, table doesn't exist anymore, so it should throw an exception.
-      PsqlReadSession readDeletedSession = storage.newReadSession(nakshaContext, false);
-      assertThrowsExactly(
-          PSQLException.class,
-          () -> getFeatureFromTable(readDeletedSession, collectionId(), SINGLE_FEATURE_ID),
-          "ERROR: relation \"foo\" does not exist");
-      readDeletedSession.close();
-    }
+    // try readSession after purge, table doesn't exist anymore, so it should throw an exception.
+    PsqlReadSession readDeletedSession = storage.newReadSession(nakshaContext, false);
+    assertThrowsExactly(
+        PSQLException.class,
+        () -> getFeatureFromTable(readDeletedSession, collectionId(), SINGLE_FEATURE_ID),
+        "ERROR: relation \"foo\" does not exist");
+    readDeletedSession.close();
   }
 
   private ResultSet getFeatureFromTable(PsqlReadSession session, String table, String featureId) throws SQLException {

@@ -7,11 +7,13 @@ import kotlin.js.JsExport
 @JsExport
 class WriteFeatures(
         val collectionId: String,
-        noResults: Boolean = false,
         rows: Array<WriteOp>,
+        noResults: Boolean = false,
         noFeature: Boolean = false,
         noGeometry: Boolean = false,
         noMeta: Boolean = false,
         noTags: Boolean = false,
+        // keeps same order of rows in result as was in request.
+        restoreInputOrder: Boolean = false,
         resultFilter: Array<IReadRowFilter> = emptyArray()
-) : WriteRequest(noResults, rows, noFeature, noGeometry, noMeta, noTags, resultFilter)
+) : WriteRequest(noResults, rows, noFeature, noGeometry, noMeta, noTags, restoreInputOrder, resultFilter)

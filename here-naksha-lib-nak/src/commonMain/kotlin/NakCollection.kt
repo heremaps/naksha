@@ -8,7 +8,7 @@ import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
 
 @JsExport
-open class NakCollection(vararg args: Any?) : NakFeature(*args) {
+open class NakCollection() : NakFeature() {
 
     @JsName("NakCollectionWithValues")
     constructor(id: String, partitions: Int, geoIndex: String? = null, storageClass: String? = null, autoPurge: Boolean, disableHistory: Boolean) : this() {
@@ -25,7 +25,7 @@ open class NakCollection(vararg args: Any?) : NakFeature(*args) {
         val klass = object : BaseObjectKlass<NakCollection>() {
             override fun isInstance(o: Any?): Boolean = o is NakCollection
 
-            override fun newInstance(vararg args: Any?): NakCollection = NakCollection(*args)
+            override fun newInstance(vararg args: Any?): NakCollection = NakCollection()
         }
 
         @JvmStatic
