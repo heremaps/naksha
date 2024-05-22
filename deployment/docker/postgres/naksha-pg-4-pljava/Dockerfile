@@ -1,7 +1,7 @@
-ARG DR_NAKSHA_POSTGRES=hcr.data.here.com/naksha-devops/naksha-postgres
+ARG DR_NAKSHA_POSTGRES=hcr.data.here.com/naksha/postgres
 ARG ARCH
 ARG VERSION
-FROM ${DR_NAKSHA_POSTGRES}:base-${ARCH}-${VERSION}
+FROM ${DR_NAKSHA_POSTGRES}:misc-${ARCH}-${VERSION}
 
 # PL/Java (https://tada.github.io/pljava/)
 # https://github.com/tada/pljava
