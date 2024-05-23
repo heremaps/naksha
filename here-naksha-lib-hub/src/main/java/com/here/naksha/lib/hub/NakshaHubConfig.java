@@ -157,9 +157,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
       }
       assert __endpoint != null;
     }
-    if (env == null) {
-      env = getEnv();
-    }
+    env = getEnv(env);
 
     this.hubClassName = (hubClassName != null && !hubClassName.isEmpty()) ? hubClassName : defaultHubClassName();
     this.appId = appId != null && appId.length() > 0 ? appId : "naksha";
@@ -202,12 +200,13 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
         : defaultMaxPctParallelRequestsPerActor();
   }
 
-  private String getEnv() {
+  private String getEnv(String env) {
     // This is only to be backward compatible to support EC2 based deployment
     String envVal = System.getenv(EC2_ENV);
     if (envVal != null && !envVal.isEmpty() && !"null".equalsIgnoreCase(envVal)) return envVal;
     envVal = System.getenv(NAKSHA_ENV);
     if (envVal != null && !envVal.isEmpty() && !"null".equalsIgnoreCase(envVal)) return envVal;
+    if (env != null && !env.isEmpty() && !"null".equalsIgnoreCase(env)) return env;
     return "local";
   }
 
