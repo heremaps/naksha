@@ -26,13 +26,14 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.lib.base.NakErrorResponse;
 import com.here.naksha.lib.base.NakResponse;
+import com.here.naksha.lib.base.NakSuccessResponse;
+import com.here.naksha.lib.base.ReadRow;
 import com.here.naksha.lib.base.WriteCollections;
 import com.here.naksha.lib.base.WriteFeatures;
 import com.here.naksha.lib.base.WriteRequest;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Notification;
 import com.here.naksha.lib.core.models.storage.OpType;
@@ -44,8 +45,6 @@ import com.here.naksha.lib.core.models.storage.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SOp;
 import com.here.naksha.lib.core.models.storage.SOpType;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.core.storage.IStorageLock;
 import com.here.naksha.lib.core.util.ClosableChildResource;
 import com.here.naksha.lib.core.util.json.Json;
@@ -53,8 +52,10 @@ import com.here.naksha.lib.jbon.JbSession;
 import com.here.naksha.lib.jbon.NakshaTxn;
 import com.here.naksha.lib.jbon.NakshaUuid;
 import com.here.naksha.lib.plv8.JvmPlv8Env;
+import com.here.naksha.lib.plv8.JvmPlv8ResultSet;
 import com.here.naksha.lib.plv8.JvmPlv8Sql;
 import com.here.naksha.lib.plv8.NakshaSession;
+import com.here.naksha.lib.plv8.ResponseMapper;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -565,12 +566,12 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   }
 
   @NotNull
-  Result executeRead(@NotNull ReadRequest<?> readRequest) {
+  NakResponse executeRead(@NotNull ReadRequest<?> readRequest) {
     if (readRequest instanceof ReadFeatures) {
       final ReadFeatures readFeatures = (ReadFeatures) readRequest;
       final List<@NotNull String> collections = readFeatures.getCollections();
       if (collections.size() == 0) {
-        return new PsqlSuccess(null);
+        return new NakSuccessResponse(null, new ReadRow[] {});
       }
       final SQL sql = sql();
       final ArrayList<byte[]> wkbs = new ArrayList<>();
@@ -605,9 +606,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           fillStatementWithParams(stmt, wkbs, parametersHst, lastParamIdx, 1);
         }
         final ResultSet rs = stmt.executeQuery();
-        final PsqlCursor<XyzFeature, XyzFeatureCodec> cursor =
-            new PsqlCursor<>(XyzFeatureCodecFactory.get(), null, this, stmt, rs);
-        return new PsqlSuccess(cursor);
+        return ResponseMapper.INSTANCE.map(new JvmPlv8ResultSet(rs).toArray());
       } catch (SQLException e) {
         try {
           stmt.close();
@@ -620,7 +619,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         throw unchecked(e);
       }
     }
-    return new ErrorResult(XyzError.NOT_IMPLEMENTED, "executeRead");
+    return new NakErrorResponse(XyzError.NOT_IMPLEMENTED.toString(), "executeRead", null);
   }
 
   private SQL prepareHstSql(

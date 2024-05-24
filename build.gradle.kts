@@ -316,6 +316,7 @@ project(":here-naksha-lib-core") {
         implementation(project(":here-naksha-lib-jbon"))
         implementation(project(":here-naksha-lib-base"))
         implementation(project(":here-naksha-lib-nak"))
+        implementation(project(":here-naksha-lib-geo"))
         implementation(spatial4j)
         testImplementation(mockito)
         testImplementation(json_assert)

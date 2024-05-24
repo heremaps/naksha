@@ -80,6 +80,8 @@ class NakXyz(vararg args: Any?) : BaseObject(*args) {
     fun setAction(value: String?) = set(ACTION, value)
     fun getTxnNext(): Int64? = getOrNull(TXN_NEXT, Klass.int64Klass)
     fun setTxnNext(value: Int64?) = set(TXN_NEXT, value)
+    fun getTxn(): Int64 = getOrNull(TXN_NEXT, Klass.int64Klass)!!
+    fun setTxn(value: Int64) = set(TXN_NEXT, value)
     fun getPtxn(): Int64? = getOrNull(PTXN, Klass.int64Klass)
     fun setPtxn(value: Int64?) = set(PTXN, value)
     fun getUid(): Int? = getOrNull(UID, Klass.intKlass)
@@ -100,4 +102,6 @@ class NakXyz(vararg args: Any?) : BaseObject(*args) {
     fun setUpdatedAt(value: Int64) = set(UPDATED_AT, value)
     fun getAuthorTs(): Int64? = getOrNull(AUTHOR_TS, Klass.int64Klass)
     fun setAuthorTs(value: Int64) = set(AUTHOR_TS, value)
+    fun getGeoGrid(): Int? = getOrNull(GEO_GRID, Klass.intKlass)
+    fun setGeoGrid(value: Int) = set(GEO_GRID, value)
 }

@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.psql;
 
+import com.here.naksha.lib.base.NakResponse;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.storage.Notification;
 import com.here.naksha.lib.core.models.storage.ReadRequest;
@@ -32,7 +33,7 @@ public final class PsqlReadSession extends PsqlSession {
   }
 
   @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
+  public @NotNull NakResponse execute(@NotNull ReadRequest<?> readRequest) {
     return session().executeRead(readRequest);
   }
 

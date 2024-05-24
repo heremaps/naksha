@@ -81,7 +81,7 @@ public final class PsqlWriteSession extends PsqlSession implements IWriteSession
   }
 
   @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
+  public @NotNull NakResponse execute(@NotNull ReadRequest<?> readRequest) {
     return session().executeRead(readRequest);
   }
 

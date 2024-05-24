@@ -24,6 +24,24 @@ class Geometry(vararg args: Any?)  : BaseObject(*args) {
 
         @JvmStatic
         val COORDINATES = Base.intern("coordinates")
+
+        @JvmStatic
+        val POINT_TYPE = "Point"
+
+        @JvmStatic
+        val LINE_STRING_TYPE = "LineString"
+
+        @JvmStatic
+        val MULTI_POINT_TYPE = "MultiPoint"
+
+        @JvmStatic
+        val MULTI_LINE_STRING_TYPE = "MultiLineString"
+
+        @JvmStatic
+        val MULTI_POLYGON_TYPE = "MultiPolygon"
+
+        @JvmStatic
+        val POLYGON_TYPE = "Polygon"
     }
 
     fun getType(): String = getOrNull(TYPE, Klass.stringKlass)!!

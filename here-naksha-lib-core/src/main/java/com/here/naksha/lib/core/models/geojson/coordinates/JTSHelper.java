@@ -18,6 +18,10 @@
  */
 package com.here.naksha.lib.core.models.geojson.coordinates;
 
+import com.here.naksha.lib.base.NakLineString;
+import com.here.naksha.lib.base.NakMultiPoint;
+import com.here.naksha.lib.base.NakPoint;
+import com.here.naksha.lib.base.RawPair;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometryCollection;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometryItem;
@@ -28,7 +32,10 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzMultiPolygon;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPolygon;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+
+import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
@@ -51,6 +58,7 @@ public class JTSHelper {
   public static GeometryFactory factory = new GeometryFactory(new PrecisionModel(), 4326);
 
   /** Creates a Point. */
+  @Deprecated(forRemoval = true)
   public static Point toPoint(PointCoordinates coords) {
     if (coords == null) {
       return null;
@@ -65,6 +73,7 @@ public class JTSHelper {
   }
 
   /** Creates a MultiPoint. */
+  @Deprecated(forRemoval = true)
   public static MultiPoint toMultiPoint(MultiPointCoordinates coords) {
     if (coords == null) {
       return null;
@@ -377,5 +386,70 @@ public class JTSHelper {
     }
 
     return geometryCollection.withGeometries(geometries);
+  }
+
+  // ----- Methods to convert base geometry to JTS.
+
+  /** Creates a MultiPoint. */
+  public static MultiPoint toMultiPoint(NakMultiPoint coords) {
+    if (coords == null) {
+      return null;
+    }
+
+    ArrayList<Point> pointsList = new ArrayList<>();
+
+    for (Iterator<RawPair<Integer, NakPoint>> it = coords.iterator(); it.hasNext(); ) {
+      RawPair<Integer, NakPoint> pointCoords = it.next();
+      pointsList.add(toPoint(pointCoords.getValue()));
+    }
+
+    return factory.createMultiPoint(pointsList.toArray(EMPTY_POINT_ARRAY));
+  }
+
+  /** Creates a LineString. */
+  public static LineString toLineString(NakLineString coords) {
+    if (coords == null) {
+      return null;
+    }
+
+    Coordinate[] jtsCoords = new Coordinate[coords.size()];
+
+    for (int i = 0; i < jtsCoords.length; i++) {
+      jtsCoords[i] = toCoordinate(coords.get(i));
+    }
+
+    return JTSHelper.factory.createLineString(jtsCoords);
+  }
+
+  public static Coordinate toCoordinate(NakPoint pos) {
+    return (pos.getAltitude() == null)
+               ? new Coordinate(pos.getLongitude(), pos.getLatitude())
+               : new Coordinate(pos.getLongitude(), pos.getLatitude(), pos.getAltitude());
+  }
+
+  /** Creates a Point. From platform */
+  public static Point toPoint(NakPoint coords) {
+    if (coords == null) {
+      return null;
+    }
+
+    if (coords.getAltitude() != null) {
+      return factory.createPoint(
+          new Coordinate(coords.getLongitude(), coords.getLatitude(), coords.getAltitude()));
+    }
+
+    return factory.createPoint(new Coordinate(coords.getLongitude(), coords.getLatitude()));
+  }
+
+  public static Geometry toJtsGeometry(com.here.naksha.lib.base.Geometry baseGeometry) {
+    if (com.here.naksha.lib.base.Geometry.getPOINT_TYPE().equals(baseGeometry.getType())) {
+      return toPoint(baseGeometry.getCoordinates());
+    } else if (com.here.naksha.lib.base.Geometry.getLINE_STRING_TYPE().equals(baseGeometry.getType())) {
+      return toLineString(baseGeometry.getCoordinates());
+    } else if (com.here.naksha.lib.base.Geometry.getMULTI_POINT_TYPE().equals(baseGeometry.getType())) {
+      return toMultiPoint(baseGeometry.getCoordinates());
+    } else {
+      throw new NotImplementedException("Implement type: " + baseGeometry.getType());
+    }
   }
 }

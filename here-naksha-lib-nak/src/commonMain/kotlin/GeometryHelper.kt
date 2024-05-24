@@ -1,14 +1,13 @@
 package com.here.naksha.lib.base
 
+import com.here.naksha.lib.base.Geometry.Companion.LINE_STRING_TYPE
+import com.here.naksha.lib.base.Geometry.Companion.POINT_TYPE
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 object GeometryHelper {
-
-    const val POINT_TYPE = "Point"
-    const val LINE_STRING_TYPE = "LineString"
 
     fun pointGeometry(long: Double, lat: Double, alt: Double?): Geometry {
         val nakPoint = NakPoint(long, lat, alt)
@@ -25,4 +24,6 @@ object GeometryHelper {
         geometry.setType(LINE_STRING_TYPE)
         return geometry
     }
+
+    // TODO implement other types
 }

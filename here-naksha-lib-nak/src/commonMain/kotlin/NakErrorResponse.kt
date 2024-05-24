@@ -9,4 +9,5 @@ import kotlin.js.JsExport
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 class NakErrorResponse(val error: String, val message: String, val id: String? = null) : NakResponse() {
+    override fun size(): Int = 0
 }

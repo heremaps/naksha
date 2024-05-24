@@ -3,7 +3,6 @@
 package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 
 /**
  * The XYZ namespace stored in the `@ns:com:here:xyz` property of the [NakFeature].

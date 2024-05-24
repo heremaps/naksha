@@ -9,6 +9,8 @@ import kotlin.js.JsExport
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 class NakSuccessResponse(
-        val handle: String? = null,
-        val rows: Array<ReadRow>
-): NakResponse()
+    val handle: String? = null,
+    val rows: Array<ReadRow>
+) : NakResponse() {
+    override fun size(): Int = rows.size
+}

@@ -5,7 +5,7 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class NakLineString(vararg args: NakPoint): BaseArray<NakPoint>(*args) {
+class NakLineString(vararg args: NakPoint): BaseList<NakPoint>(*args) {
 
     companion object {
         @JvmStatic

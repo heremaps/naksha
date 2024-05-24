@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core.storage;
 
+import com.here.naksha.lib.base.NakResponse;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.storage.Notification;
@@ -109,9 +110,9 @@ public interface IReadSession extends ISession {
    *
    * @return the result.
    */
-  @AvailableSince(NakshaVersion.v2_0_7)
+  @AvailableSince(NakshaVersion.v3_0_0)
   @NotNull
-  Result execute(@NotNull ReadRequest<?> readRequest);
+  NakResponse execute(@NotNull ReadRequest<?> readRequest);
 
   /**
    * Process the given notification.

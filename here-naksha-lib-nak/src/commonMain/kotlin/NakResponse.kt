@@ -7,4 +7,5 @@ import kotlin.js.JsExport
 @JsExport
 abstract class NakResponse {
 
+    abstract fun size(): Int
 }
