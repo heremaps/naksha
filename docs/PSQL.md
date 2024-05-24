@@ -283,6 +283,9 @@ The `type` of the feature in here is always `naksha.Dictionary`.
 ### Collections Table (`naksha~collections`)
 This internal tables stores the configuration of all collections. The type of the features in this table is always `naksha.Collection`.
 
+### Locks Table (`naksha~locks`)
+TBD
+
 ### Indices Table (`naksha~indices`)
 This internal tables stores the available and supported indices. Currently, no new indices can be created, but maybe in the future manual index creation will be supported. The type for the feature is always `naksha.Index`.
 
