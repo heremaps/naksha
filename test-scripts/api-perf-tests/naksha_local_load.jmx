@@ -26,10 +26,15 @@
             <stringProp name="Argument.value">${__P(WEB_PORT,8080)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="g_resource_files_path" elementType="Argument">
+            <stringProp name="Argument.name">g_resource_files_path</stringProp>
+            <stringProp name="Argument.value">${__P(RESOURCE_FILES_PATH,/Users/phmai/xyz-hub/test-scripts/api-perf-tests)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
         <collectionProp name="HeaderManager.headers">
           <elementProp name="" elementType="Header">
             <stringProp name="Header.name">accept</stringProp>
@@ -42,7 +47,7 @@
         </collectionProp>
       </HeaderManager>
       <hashTree/>
-      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group">
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group" enabled="false">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -69,7 +74,7 @@
         <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Tile ids">
           <stringProp name="delimiter">,</stringProp>
           <stringProp name="fileEncoding"></stringProp>
-          <stringProp name="filename">/Users/phmai/xyz-hub/here-naksha-app-service/src/test/resources/ingest_data/topology/tile_ids.csv</stringProp>
+          <stringProp name="filename">${g_resource_files_path}/tile_ids.csv</stringProp>
           <boolProp name="ignoreFirstLine">true</boolProp>
           <boolProp name="quotedData">false</boolProp>
           <boolProp name="recycle">true</boolProp>
@@ -109,9 +114,22 @@
             <stringProp name="parameters"></stringProp>
             <stringProp name="script">//read the response, extract one random feature, modify one field of that feature, push modified feature into a variable
 // extract also feature id
-var actualResString = prev.getResponseDataAsString();
-vars.put(&quot;v_get_tile_response&quot;, actualResString);</stringProp>
-            <stringProp name="scriptLanguage">javascript</stringProp>
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+
+String response = prev.getResponseDataAsString()
+
+def jsonResponse = new JsonSlurper().parseText(response)
+
+// Keep only the first feature for the next test
+jsonResponse.features = [jsonResponse.features[0]]
+
+jsonResponse.features[0].properties.&quot;@ns:com:here:xyz&quot;.version=1412
+
+String modifiedFeature = JsonOutput.toJson(jsonResponse)
+vars.put(&quot;v_modified_tile&quot;, modifiedFeature)
+vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223PostProcessor>
           <hashTree/>
         </hashTree>
@@ -129,7 +147,7 @@ vars.put(&quot;v_get_tile_response&quot;, actualResString);</stringProp>
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">${v_get_tile_response}</stringProp>
+                <stringProp name="Argument.value">${v_modified_tile}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
@@ -146,12 +164,6 @@ vars.put(&quot;v_get_tile_response&quot;, actualResString);</stringProp>
             <intProp name="Assertion.test_type">8</intProp>
           </ResponseAssertion>
           <hashTree/>
-          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Feature ID Extractor">
-            <stringProp name="JSONPostProcessor.referenceNames">idGeneratedFeature</stringProp>
-            <stringProp name="JSONPostProcessor.jsonPathExprs">$.features[*].id </stringProp>
-            <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
-          </JSONPostProcessor>
-          <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Search history of previously modified features">
           <stringProp name="HTTPSampler.response_timeout">${__P(timeout,)}</stringProp>
@@ -167,7 +179,7 @@ vars.put(&quot;v_get_tile_response&quot;, actualResString);</stringProp>
             <collectionProp name="Arguments.arguments">
               <elementProp name="properties.@ns:com:here:xyz:log.id" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                <stringProp name="Argument.value">${idGeneratedFeature}</stringProp>
+                <stringProp name="Argument.value">${v_modified_feature_id}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.use_equals">true</boolProp>
                 <stringProp name="Argument.name">properties.@ns:com:here:xyz:log.id</stringProp>
@@ -188,7 +200,7 @@ vars.put(&quot;v_get_tile_response&quot;, actualResString);</stringProp>
           <hashTree/>
         </hashTree>
       </hashTree>
-      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="tearDown Thread Group">
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="tearDown Thread Group" enabled="false">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>

@@ -261,7 +261,7 @@ Parameters explanation:
 
 ### Working with helper script
 
-There's a small bash script: [test_naksha.sh](./test_naksha.sh) which aims to ease the process of the jmeter load testing.\
+There's a small bash script: [test_naksha.sh](test_naksha.sh) which aims to ease the process of the jmeter load testing.\
 Please have in mind that this was just a local tool tailored for specific environment, treat it as such.\
 
 What it does:
