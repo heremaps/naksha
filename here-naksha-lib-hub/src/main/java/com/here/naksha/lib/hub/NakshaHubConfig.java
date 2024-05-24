@@ -51,8 +51,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
    */
   public static final @NotNull String APP_NAME = "naksha";
 
-  private static final String EC2_ENV = "EC2_ENV";
-  private static final String NAKSHA_ENV = "ENV";
+  private static final String NAKSHA_ENV = "NAKSHA_ENV";
 
   /**
    * The default Http request body limit in MB.
@@ -202,9 +201,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
 
   private String getEnv(String env) {
     // This is only to be backward compatible to support EC2 based deployment
-    String envVal = System.getenv(EC2_ENV);
-    if (envVal != null && !envVal.isEmpty() && !"null".equalsIgnoreCase(envVal)) return envVal;
-    envVal = System.getenv(NAKSHA_ENV);
+    String envVal = System.getenv(NAKSHA_ENV);
     if (envVal != null && !envVal.isEmpty() && !"null".equalsIgnoreCase(envVal)) return envVal;
     if (env != null && !env.isEmpty() && !"null".equalsIgnoreCase(env)) return env;
     return "local";
