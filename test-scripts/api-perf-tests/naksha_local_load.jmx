@@ -5,11 +5,9 @@
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
         <collectionProp name="Arguments.arguments"/>
       </elementProp>
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Naksha config">
         <collectionProp name="Arguments.arguments">
           <elementProp name="g_naksha_host_url" elementType="Argument">
             <stringProp name="Argument.name">g_naksha_host_url</stringProp>
@@ -34,7 +32,37 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Test config">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="g_psql_host" elementType="Argument">
+            <stringProp name="Argument.name">g_psql_host</stringProp>
+            <stringProp name="Argument.value">${__P(PSQL_HOST,host.docker.internal)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="g_psql_db" elementType="Argument">
+            <stringProp name="Argument.name">g_psql_db</stringProp>
+            <stringProp name="Argument.value">${__P(PSQL_DB,postgres)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="g_psql_user" elementType="Argument">
+            <stringProp name="Argument.name">g_psql_user</stringProp>
+            <stringProp name="Argument.value">${__P(PSQL_USER,postgres)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="g_psql_password" elementType="Argument">
+            <stringProp name="Argument.name">g_psql_password</stringProp>
+            <stringProp name="Argument.value">${__P(PSQL_PASSWORD,password)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="g_psql_schema" elementType="Argument">
+            <stringProp name="Argument.name">g_psql_schema</stringProp>
+            <stringProp name="Argument.value">${__P(PSQL_SCHEMA,naksha)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
         <collectionProp name="HeaderManager.headers">
           <elementProp name="" elementType="Header">
             <stringProp name="Header.name">accept</stringProp>
@@ -47,17 +75,242 @@
         </collectionProp>
       </HeaderManager>
       <hashTree/>
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Tile ids">
+        <stringProp name="delimiter">,</stringProp>
+        <stringProp name="fileEncoding"></stringProp>
+        <stringProp name="filename">${g_resource_files_path}/tile_ids.csv</stringProp>
+        <boolProp name="ignoreFirstLine">true</boolProp>
+        <boolProp name="quotedData">false</boolProp>
+        <boolProp name="recycle">true</boolProp>
+        <stringProp name="shareMode">shareMode.group</stringProp>
+        <boolProp name="stopThread">false</boolProp>
+        <stringProp name="variableNames">v_tile_id</stringProp>
+      </CSVDataSet>
+      <hashTree/>
       <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group" enabled="false">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
           <stringProp name="LoopController.loops">1</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
       </SetupThreadGroup>
-      <hashTree/>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create storage">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/storages</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&#xd;
+  &quot;id&quot;: &quot;ingest_test_storage&quot;,&#xd;
+  &quot;type&quot;: &quot;Storage&quot;,&#xd;
+  &quot;title&quot;: &quot;Test PSQL storage&quot;,&#xd;
+  &quot;description&quot;: &quot;PSQL storage instance for testing purpose&quot;,&#xd;
+  &quot;className&quot;: &quot;com.here.naksha.lib.psql.PsqlStorage&quot;,&#xd;
+  &quot;properties&quot;: {&#xd;
+    &quot;master&quot;: {&#xd;
+      &quot;host&quot;: &quot;${g_psql_host}&quot;,&#xd;
+      &quot;db&quot;: &quot;${g_psql_db}&quot;,&#xd;
+      &quot;user&quot;: &quot;${g_psql_user}&quot;,&#xd;
+      &quot;password&quot;: &quot;${g_psql_password}&quot;,&#xd;
+      &quot;readOnly&quot;: false&#xd;
+    },&#xd;
+    &quot;appName&quot;: &quot;ingest-test&quot;,&#xd;
+    &quot;schema&quot;: &quot;${g_psql_schema}&quot;&#xd;
+  }&#xd;
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create handler">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/handlers</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&#xd;
+  &quot;id&quot;: &quot;ingest_test_handler&quot;,&#xd;
+  &quot;type&quot;: &quot;EventHandler&quot;,&#xd;
+  &quot;title&quot;: &quot;Storage Handler for UniMap Moderation Dev Storage&quot;,&#xd;
+  &quot;description&quot;: &quot;Default Naksha Storage Handler for operations on UniMap Moderation Dev Storage&quot;,&#xd;
+  &quot;className&quot;: &quot;com.here.naksha.lib.handlers.DefaultStorageHandler&quot;,&#xd;
+  &quot;active&quot;: true,&#xd;
+  &quot;extensionId&quot;: null,&#xd;
+  &quot;properties&quot;: {&#xd;
+    &quot;storageId&quot;: &quot;ingest_test_storage&quot;&#xd;
+  }&#xd;
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create space">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/spaces</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&#xd;
+  &quot;id&quot;: &quot;ingest_test_space&quot;,&#xd;
+  &quot;type&quot;: &quot;Space&quot;,&#xd;
+  &quot;title&quot;: &quot;Topology Space for UniMap Moderation Dev Storage&quot;,&#xd;
+  &quot;description&quot;: &quot;Space for managing Topology Feature collection in UniMap Moderation Dev Storage&quot;,&#xd;
+  &quot;eventHandlerIds&quot;: [&#xd;
+    &quot;ingest_test_handler&quot;&#xd;
+  ],&#xd;
+  &quot;properties&quot;: {&#xd;
+  }&#xd;
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create activity history handler">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/handlers</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&#xd;
+  &quot;id&quot;: &quot;activity_history_test_handler&quot;,&#xd;
+  &quot;type&quot;: &quot;EventHandler&quot;,&#xd;
+  &quot;title&quot;: &quot;Sample Activity History Handler&quot;,&#xd;
+  &quot;description&quot;: &quot;Activity History Handler used for tests&quot;,&#xd;
+  &quot;className&quot;: &quot;com.here.naksha.handler.activitylog.ActivityLogHandler&quot;,&#xd;
+  &quot;active&quot;: true,&#xd;
+  &quot;extensionId&quot;: null,&#xd;
+  &quot;properties&quot;: {&#xd;
+    &quot;spaceId&quot;: &quot;ingest_test_space&quot;&#xd;
+  }&#xd;
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create activity history space">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/spaces</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&#xd;
+  &quot;id&quot;: &quot;activity_history_space_load_test&quot;,&#xd;
+  &quot;type&quot;: &quot;Space&quot;,&#xd;
+  &quot;title&quot;: &quot;Activity space for performance test using jmeter&quot;,&#xd;
+  &quot;description&quot;: &quot;Activity space for performance test using jmeter&quot;,&#xd;
+  &quot;eventHandlerIds&quot;: [&#xd;
+    &quot;activity_history_test_handler&quot;&#xd;
+  ]&#xd;
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="API performance tests">
         <stringProp name="ThreadGroup.num_threads">${__P(threads,5)}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${__P(rampUp,2)}</stringProp>
@@ -71,18 +324,6 @@
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Tile ids">
-          <stringProp name="delimiter">,</stringProp>
-          <stringProp name="fileEncoding"></stringProp>
-          <stringProp name="filename">${g_resource_files_path}/tile_ids.csv</stringProp>
-          <boolProp name="ignoreFirstLine">true</boolProp>
-          <boolProp name="quotedData">false</boolProp>
-          <boolProp name="recycle">true</boolProp>
-          <stringProp name="shareMode">shareMode.group</stringProp>
-          <boolProp name="stopThread">false</boolProp>
-          <stringProp name="variableNames">v_tile_id</stringProp>
-        </CSVDataSet>
-        <hashTree/>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get features in tile">
           <stringProp name="HTTPSampler.response_timeout">${__P(timeout,)}</stringProp>
           <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
@@ -210,7 +451,133 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
       </PostThreadGroup>
-      <hashTree/>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete activity history space">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/spaces/activity_history_space_load_test</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">DELETE</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete activity history handler">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/handlers/activity_history_test_handler</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">DELETE</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete space">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/spaces/ingest_test_space</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">DELETE</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete handler">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/handlers/ingest_test_handler</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">DELETE</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete storage">
+          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">hub/storages/ingest_test_storage</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">DELETE</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
       <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
