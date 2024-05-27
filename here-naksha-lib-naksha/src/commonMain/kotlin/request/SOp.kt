@@ -1,10 +1,10 @@
-package com.here.naksha.lib.base.request
+package com.here.naksha.lib.naksha.request
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class POp {
+class SOp {
     // TODO
 }

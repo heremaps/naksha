@@ -1,4 +1,4 @@
-package com.here.naksha.lib.base.request
+package com.here.naksha.lib.naksha.request
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport

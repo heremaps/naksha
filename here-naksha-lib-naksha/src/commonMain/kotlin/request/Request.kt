@@ -1,6 +1,6 @@
-package com.here.naksha.lib.base.request
+package com.here.naksha.lib.naksha.request
 
-import com.here.naksha.lib.base.IReadRowFilter
+import com.here.naksha.lib.naksha.IReadRowFilter
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
