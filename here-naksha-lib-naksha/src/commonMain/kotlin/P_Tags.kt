@@ -5,7 +5,7 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class P_Tags() : BaseList<String>() {
+class P_Tags : BaseList<String>() {
 
     companion object {
         @JvmStatic

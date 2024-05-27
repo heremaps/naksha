@@ -7,7 +7,9 @@ import com.here.naksha.lib.naksha.Flags.GEOMETRY_FLAG_ENCODER
 import com.here.naksha.lib.naksha.Flags.GEO_TYPE_EWKB
 import com.here.naksha.lib.naksha.Flags.GEO_TYPE_NULL
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class FlagsTest {
@@ -124,5 +126,12 @@ class FlagsTest {
 
         // then
         assertEquals(FEATURE_ENCODING_JBON_GZIP, Flags.readFeatureEncoding(flags))
+        assertTrue(Flags.isFeatureEncodedWithGZip(flags))
+
+        // when
+        flags = Flags.turnOffGzipOnFeatureEncoding(flags)
+
+        assertEquals(FEATURE_ENCODING_JBON, Flags.readFeatureEncoding(flags))
+        assertFalse(Flags.isFeatureEncodedWithGZip(flags))
     }
 }

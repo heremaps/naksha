@@ -4,7 +4,6 @@ package com.here.naksha.lib.naksha
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 import kotlin.math.pow
 
 /**
@@ -39,23 +38,49 @@ object Flags {
     const val DEFAULT_FEATURE_ENCODING = FEATURE_ENCODING_JBON
     const val DEFAULT_GEOMETRY_ENCODING = GEO_TYPE_NULL
 
-
     fun readGeometryEncoding(flags: Int) = GEOMETRY_FLAG_ENCODER.read(flags)
 
-    fun encodeGeometryFlag(flags: Int, flag: Int) = GEOMETRY_FLAG_ENCODER.encodeNew(flags, flag)
+    /**
+     * Returns new flags value with geometry encoding partset to new value.
+     * @param flags - current flags value
+     * @param ge new geometry encoding value
+     * @return flags with new value included.
+     */
+    fun encodeGeometryFlag(flags: Int, ge: Int) = GEOMETRY_FLAG_ENCODER.encodeNew(flags, ge)
 
     fun readFeatureEncoding(flags: Int) = FEATURE_FLAG_ENCODER.read(flags)
 
-    fun encodeFeatureFlag(flags: Int, flag: Int) = FEATURE_FLAG_ENCODER.encodeNew(flags, flag)
+    /**
+     * Returns new flags value with feature encoding part set to new value.
+     * @param flags - current flags value
+     * @param fe - new feature encoding value
+     * @return flags with new value included.
+     */
+    fun encodeFeatureFlag(flags: Int, fe: Int) = FEATURE_FLAG_ENCODER.encodeNew(flags, fe)
 
     fun readTagsEncoding(flags: Int) = TAGS_FLAG_ENCODER.read(flags)
 
-    fun encodeTagsFlag(flags: Int, flag: Int) = TAGS_FLAG_ENCODER.encodeNew(flags, flag)
+    /**
+     * Returns new flags value with tags encoding part set to new value.
+     * @param flags - current flags value
+     * @param te - new tags encoding value
+     * @return flags with new value included.
+     */
+    fun encodeTagsFlag(flags: Int, te: Int) = TAGS_FLAG_ENCODER.encodeNew(flags, te)
 
     fun readAction(flags: Int) = ACTION_FLAG_ENCODER.read(flags)
 
+    /**
+     * Returns new flags value with `action` part set to new value.
+     * @param flags - current flags value
+     * @param action - new tags encoding value
+     * @return flags with new value included.
+     */
     fun encodeAction(flags: Int, action: Int) = ACTION_FLAG_ENCODER.encodeNew(flags, action)
 
+    /**
+     * Returns new flags with feature encoding set to _GZIP.
+     */
     fun forceGzipOnFeatureEncoding(flags: Int): Int {
         return when (readFeatureEncoding(flags)) {
             FEATURE_ENCODING_JSON -> encodeFeatureFlag(flags, FEATURE_ENCODING_JSON_GZIP)
@@ -64,6 +89,9 @@ object Flags {
         }
     }
 
+    /**
+     * Returns new flags with feature encoding without _GZIP.
+     */
     fun turnOffGzipOnFeatureEncoding(flags: Int): Int {
         return when (readFeatureEncoding(flags)) {
             FEATURE_ENCODING_JSON_GZIP -> encodeFeatureFlag(flags, FEATURE_ENCODING_JSON)
