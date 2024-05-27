@@ -34,7 +34,7 @@ class JvmBasicTest {
         assertEquals("world", TEST2["hello"])
         assertEquals(10, TEST2["beta"])
 
-        val feature = Base.assign(o, NakFeature.klass)
+        val feature = Base.assign(o, P_NakshaFeature.klass)
         feature.setId("test")
         assertEquals("test", o["id"])
     }
