@@ -1,4 +1,4 @@
-package com.here.naksha.lib.base.request
+package com.here.naksha.lib.naksha.request
 
 import com.here.naksha.lib.base.response.Row
 import com.here.naksha.lib.nak.Flags

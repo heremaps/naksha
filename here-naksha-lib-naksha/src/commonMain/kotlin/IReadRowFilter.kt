@@ -1,6 +1,6 @@
-package com.here.naksha.lib.base
+package com.here.naksha.lib.naksha
 
-import com.here.naksha.lib.base.request.ResultRow
+import com.here.naksha.lib.naksha.request.ResultRow
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
