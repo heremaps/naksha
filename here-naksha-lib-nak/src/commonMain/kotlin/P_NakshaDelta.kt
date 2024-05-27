@@ -6,13 +6,13 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class NakDelta(vararg args:Any?) : BaseObject(*args) {
+class P_NakshaDelta(vararg args:Any?) : BaseObject(*args) {
     companion object {
         @JvmStatic
-        val klass = object : BaseObjectKlass<NakDelta>() {
-            override fun isInstance(o: Any?): Boolean = o is NakDelta
+        val klass = object : BaseObjectKlass<P_NakshaDelta>() {
+            override fun isInstance(o: Any?): Boolean = o is P_NakshaDelta
 
-            override fun newInstance(vararg args: Any?): NakDelta = NakDelta()
+            override fun newInstance(vararg args: Any?): P_NakshaDelta = P_NakshaDelta()
 
         }
 
@@ -24,4 +24,6 @@ class NakDelta(vararg args:Any?) : BaseObject(*args) {
     }
 
     override fun klass(): BaseKlass<*> = klass
+
+    // TODO implement review state
 }
