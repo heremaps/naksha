@@ -14,24 +14,27 @@
             <stringProp name="Argument.value">${__P(NAKSHA_HOST_URL,localhost)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="g_web_protocol" elementType="Argument">
-            <stringProp name="Argument.name">g_web_protocol</stringProp>
-            <stringProp name="Argument.value">${__P(WEB_PROTOCOL,http)}</stringProp>
+          <elementProp name="g_naksha_protocol" elementType="Argument">
+            <stringProp name="Argument.name">g_naksha_protocol</stringProp>
+            <stringProp name="Argument.value">${__P(NAKSHA_PROTOCOL,http)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc"></stringProp>
           </elementProp>
-          <elementProp name="g_web_port" elementType="Argument">
-            <stringProp name="Argument.name">g_web_port</stringProp>
-            <stringProp name="Argument.value">${__P(WEB_PORT,8080)}</stringProp>
+          <elementProp name="g_naksha_port" elementType="Argument">
+            <stringProp name="Argument.name">g_naksha_port</stringProp>
+            <stringProp name="Argument.value">${__P(NAKSHA_PORT,8080)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc"></stringProp>
           </elementProp>
           <elementProp name="g_naksha_jwt" elementType="Argument">
             <stringProp name="Argument.name">g_naksha_jwt</stringProp>
-            <stringProp name="Argument.value">${__P(NAKSHA_JWT,)}</stringProp>
+            <stringProp name="Argument.value">${__P(NAKSHA_JWT,eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6Im5ha3NoYSIsInVzZXJJZCI6Im1hc3Rlci10ZXN0LXVzZXIiLCJ1cm0iOnsibmFrc2hhIjp7InVzZVN0b3JhZ2VzIjpbe31dLCJtYW5hZ2VTdG9yYWdlcyI6W3t9XSwidXNlRXZlbnRIYW5kbGVycyI6W3t9XSwibWFuYWdlRXZlbnRIYW5kbGVycyI6W3t9XSwidXNlU3BhY2VzIjpbe31dLCJtYW5hZ2VTcGFjZXMiOlt7fV0sInJlYWRGZWF0dXJlcyI6W3t9XSwiY3JlYXRlRmVhdHVyZXMiOlt7fV0sInVwZGF0ZUZlYXR1cmVzIjpbe31dLCJkZWxldGVGZWF0dXJlcyI6W3t9XSwicmVhZENvbGxlY3Rpb25zIjpbe31dLCJjcmVhdGVDb2xsZWN0aW9ucyI6W3t9XSwidXBkYXRlQ29sbGVjdGlvbnMiOlt7fV0sImRlbGV0ZUNvbGxlY3Rpb25zIjpbe31dfX0sImlhdCI6MTU3NzgzMzIwMCwiZXhwIjo0MDAwMDAwMDAwfQ.oYh8HIyTCou43AoRbIfk62XlAfz7hjBAYis8u1t77ojRcl_IbB-P3xpkSlHLA4Umia4g3nVkRqKR4kZJ-esZxq6qkR4FTcxS-Blq1bVw9iCd-kkuLcYOJgJ_zgU3wrH-rV8_wHfMzw1G4fJOJtSomZrpAgLFnmV6hMeuxw9o0HqfNj5fRBqsMXVhhLO7-LA2n4H2QqU-bu8UFRzpIgI5fUZ376i6XjXFA8_bfMx5eHCMWnUWHDnppmmaSwECqpYu8i4mH8flvFDy9bC1Wd9yvwahL5A9RJKRpKV9izSl_JTEKZiy0QIZ2h-42OrC99PtM-gXI6Rza4KLoLpGca0_aw)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc"></stringProp>
           </elementProp>
           <elementProp name="g_resource_files_path" elementType="Argument">
             <stringProp name="Argument.name">g_resource_files_path</stringProp>
-            <stringProp name="Argument.value">${__P(RESOURCE_FILES_PATH,/Users/phmai/xyz-hub/test-scripts/api-perf-tests)}</stringProp>
+            <stringProp name="Argument.value">${__P(RESOURCE_FILES_PATH,./)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="g_psql_host" elementType="Argument">
@@ -57,6 +60,11 @@
           <elementProp name="g_psql_schema" elementType="Argument">
             <stringProp name="Argument.name">g_psql_schema</stringProp>
             <stringProp name="Argument.value">${__P(PSQL_SCHEMA,naksha)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="g_psql_port" elementType="Argument">
+            <stringProp name="Argument.name">g_psql_port</stringProp>
+            <stringProp name="Argument.value">${__P(PSQL_PORT,5432)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="g_execute_time" elementType="Argument">
@@ -92,34 +100,32 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add HTTP Authorization header">
-        <stringProp name="cacheKey">true</stringProp>
-        <stringProp name="filename"></stringProp>
-        <stringProp name="parameters"></stringProp>
-        <stringProp name="script">// Retrieve the authorization parameter value
-String authHeader = ${g_naksha_jwt}
-
-// Check if the authorization parameter is provided
-if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
-    // Add the Authorization header to the HTTP Header Manager
-    sampler.getHeaderManager().add(new org.apache.jmeter.protocol.http.control.Header(&quot;Authorization&quot;, authHeader))
-}
-</stringProp>
-        <stringProp name="scriptLanguage">groovy</stringProp>
-      </JSR223PreProcessor>
-      <hashTree/>
       <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
         <collectionProp name="HeaderManager.headers">
           <elementProp name="" elementType="Header">
-            <stringProp name="Header.name">accept</stringProp>
+            <stringProp name="Header.name">Accept</stringProp>
             <stringProp name="Header.value">application/geo+json</stringProp>
           </elementProp>
           <elementProp name="" elementType="Header">
             <stringProp name="Header.name">Content-Type</stringProp>
             <stringProp name="Header.value">application/geo+json</stringProp>
           </elementProp>
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Authorization</stringProp>
+            <stringProp name="Header.value">Bearer ${g_naksha_jwt}</stringProp>
+          </elementProp>
         </collectionProp>
       </HeaderManager>
+      <hashTree/>
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults">
+        <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
+        <stringProp name="HTTPSampler.port">${g_naksha_port}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${g_naksha_protocol}</stringProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+        <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+      </ConfigTestElement>
       <hashTree/>
       <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Tile ids">
         <stringProp name="delimiter">,</stringProp>
@@ -145,9 +151,6 @@ if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
       </SetupThreadGroup>
       <hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create storage">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/storages</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
@@ -169,6 +172,7 @@ if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
       &quot;db&quot;: &quot;${g_psql_db}&quot;,&#xd;
       &quot;user&quot;: &quot;${g_psql_user}&quot;,&#xd;
       &quot;password&quot;: &quot;${g_psql_password}&quot;,&#xd;
+      &quot;port&quot;: ${g_psql_port},&#xd;
       &quot;readOnly&quot;: false&#xd;
     },&#xd;
     &quot;appName&quot;: &quot;ingest-test&quot;,&#xd;
@@ -193,9 +197,6 @@ if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
           <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create handler">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/handlers</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
@@ -236,9 +237,6 @@ if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
           <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create space">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/spaces</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
@@ -281,9 +279,6 @@ if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
           <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create activity history handler">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/handlers</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
@@ -323,9 +318,6 @@ if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
           <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create activity history space">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/spaces</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
@@ -377,9 +369,6 @@ if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
       <hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get features in tile">
           <stringProp name="HTTPSampler.response_timeout">${__P(timeout,)}</stringProp>
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/spaces/${g_naksha_test_space}/tile/quadkey/${v_tile_id}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">GET</stringProp>
@@ -404,24 +393,25 @@ if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
             <stringProp name="cacheKey">true</stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="parameters"></stringProp>
-            <stringProp name="script">//read the response, extract one random feature, modify one field of that feature, push modified feature into a variable
-// extract also feature id
+            <stringProp name="script">// Read the response, extract one random feature, modify that feature
+// Extract also feature id
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
+import java.util.Random
 
 String response = prev.getResponseDataAsString()
 
 def jsonResponse = new JsonSlurper().parseText(response)
 
-// Keep only the first feature for the next test
-jsonResponse.features = [jsonResponse.features[0]]
+// Keep only one random feature for the next test
+int randomIndex = new Random().nextInt(jsonResponse.features.size())
+jsonResponse.features = [jsonResponse.features[randomIndex]]
 
-jsonResponse.features[0].properties.&quot;@ns:com:here:xyz&quot;.version=1412
 jsonResponse.features[0].properties.&quot;@ns:com:here:xyz&quot;.tags=[&quot;${g_execute_time}&quot;]
 
-
 String modifiedFeature = JsonOutput.toJson(jsonResponse)
-vars.put(&quot;v_modified_tile&quot;, modifiedFeature)
+// Use the modified feature and ID for the next tests
+vars.put(&quot;v_modified_feature_collection&quot;, modifiedFeature)
 vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223PostProcessor>
@@ -429,9 +419,6 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Patch features from previous step">
           <stringProp name="HTTPSampler.response_timeout">${__P(timeout,)}</stringProp>
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/spaces/${g_naksha_test_space}/features</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
@@ -441,14 +428,14 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">${v_modified_tile}</stringProp>
+                <stringProp name="Argument.value">${v_modified_feature_collection}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="49586">200</stringProp>
             </collectionProp>
@@ -461,9 +448,6 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Search history of previously modified features">
           <stringProp name="HTTPSampler.response_timeout">${__P(timeout,)}</stringProp>
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/spaces/${g_naksha_test_activity_log_space}/search</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">GET</stringProp>
@@ -482,7 +466,7 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="49586">200</stringProp>
             </collectionProp>
@@ -506,9 +490,6 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
       </PostThreadGroup>
       <hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete activity history space">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/spaces/${g_naksha_test_activity_log_space}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">DELETE</stringProp>
@@ -519,7 +500,7 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="49586">200</stringProp>
             </collectionProp>
@@ -531,9 +512,6 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
           <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete activity history handler">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/handlers/${g_naksha_test_activity_log_handler}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">DELETE</stringProp>
@@ -556,9 +534,6 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
           <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete space">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/spaces/${g_naksha_test_space}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">DELETE</stringProp>
@@ -581,9 +556,6 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
           <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete handler">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/handlers/${g_naksha_test_handler}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">DELETE</stringProp>
@@ -606,9 +578,6 @@ vars.put(&quot;v_modified_feature_id&quot;, jsonResponse.features[0].id)</string
           <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete storage">
-          <stringProp name="HTTPSampler.domain">${g_naksha_host_url}</stringProp>
-          <stringProp name="HTTPSampler.port">${g_web_port}</stringProp>
-          <stringProp name="HTTPSampler.protocol">${g_web_protocol}</stringProp>
           <stringProp name="HTTPSampler.path">hub/storages/${g_naksha_test_storage}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">DELETE</stringProp>
