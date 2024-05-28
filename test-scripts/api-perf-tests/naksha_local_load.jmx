@@ -92,6 +92,22 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
+      <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add HTTP Authorization header">
+        <stringProp name="cacheKey">true</stringProp>
+        <stringProp name="filename"></stringProp>
+        <stringProp name="parameters"></stringProp>
+        <stringProp name="script">// Retrieve the authorization parameter value
+String authHeader = ${g_naksha_jwt}
+
+// Check if the authorization parameter is provided
+if (authHeader &amp;&amp; !authHeader.isEmpty() &amp;&amp; authHeader!=1) {
+    // Add the Authorization header to the HTTP Header Manager
+    sampler.getHeaderManager().add(new org.apache.jmeter.protocol.http.control.Header(&quot;Authorization&quot;, authHeader))
+}
+</stringProp>
+        <stringProp name="scriptLanguage">groovy</stringProp>
+      </JSR223PreProcessor>
+      <hashTree/>
       <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
         <collectionProp name="HeaderManager.headers">
           <elementProp name="" elementType="Header">
@@ -101,10 +117,6 @@
           <elementProp name="" elementType="Header">
             <stringProp name="Header.name">Content-Type</stringProp>
             <stringProp name="Header.value">application/geo+json</stringProp>
-          </elementProp>
-          <elementProp name="" elementType="Header">
-            <stringProp name="Header.name"></stringProp>
-            <stringProp name="Header.value"></stringProp>
           </elementProp>
         </collectionProp>
       </HeaderManager>
