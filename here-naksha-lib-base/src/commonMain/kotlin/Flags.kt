@@ -15,7 +15,7 @@ import kotlin.js.JsExport
  * [00000000000000000000][000000][00000]
  */
 @JsExport
-@Deprecated(message = "Use flags from lib-naksha, becasue it support action and tags")
+@Deprecated(message = "Use flags from lib-naksha, because it supports actions and tags")
 class Flags(initialFlags: Int? = null) {
     private var featureEncoding = initialFlags?.let { (it and 0b0000000000000000000_111111_000000).shr(6) } ?: DEFAULT_FEATURE_ENCODING
     private var geometryEncoding = initialFlags?.let { it and 0b0000000000000000000_000000_111111 } ?: DEFAULT_GEOMETRY_ENCODING
