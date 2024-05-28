@@ -149,7 +149,8 @@ curl -XPOST localhost:8080/hub/handlers -H "content-type: application/json" -d '
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "ingest_test_storage"
+    "storageId": "ingest_test_storage",
+    "autoDeleteCollection": false
   }
 }
 ' -v
@@ -173,7 +174,7 @@ curl -XPOST localhost:8080/hub/spaces -H "content-type: application/json" -d '
 ' -v
 ```
 
-Activity history handler:
+Activity history handler (not needed, skip to [features creation](#populate-the-space-with-fake-data):
 ```shell
 curl -XPOST localhost:8080/hub/handlers -H "content-type: application/json" -d '
 {
@@ -191,7 +192,7 @@ curl -XPOST localhost:8080/hub/handlers -H "content-type: application/json" -d '
 ' -v
 ```
 
-Activity history space:
+Activity history space (not needed, skip to [features creation](#populate-the-space-with-fake-data):
 ```shell
 curl -XPOST localhost:8080/hub/spaces -H "content-type: application/json" -d '
 {
@@ -216,6 +217,7 @@ Take a look at the `ingest_data/topology/tile_ids.csv` file - it contains all ti
 features were generated (generator logic takes `tileId` as arg and creates matching geometry
 for feature to contain).
 
+The latest JMeter test suite already includes ramping up and tearing down all Naksha resources, EXCEPT for populating these features for the first time. After this populating step, you can run the suite once, with the `setUp` thread group in mode `Continue` while encountering Sampler error, to clean up all the resources like Naksha storage, handlers, and spaces. Then toggle the mode back to `Stop test`. From now on the suite can just be executed directly, without worrying about setting up the resources above. A future work will solve this issue, by including this features populating step into the jmeter suite.
 #### Prepare your  JMeter scenario
 
 1) If you don't have JMeter, install it: `brew install jmeter`
