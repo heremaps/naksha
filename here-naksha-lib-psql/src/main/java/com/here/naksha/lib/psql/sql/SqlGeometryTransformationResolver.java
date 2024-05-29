@@ -42,7 +42,7 @@ public class SqlGeometryTransformationResolver {
       sql.add(" ST_Buffer(")
           .add(variableSql)
           .add(",")
-          .add(bufferT.distance)
+          .add(bufferT.getDistance())
           .add(",")
           .addLiteral(bufferT.getProperties())
           .add(") ");
