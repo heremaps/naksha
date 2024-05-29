@@ -10,7 +10,10 @@ import kotlin.js.JsName
  */
 @Suppress("UNCHECKED_CAST")
 @JsExport
-class P_Entry<K, V>() : P() {
+class P_Entry<K, V>() : Proxy() {
+    // TODO: Fix this, we need the keyKlass and valueKlass, otherwise automatic casting will not work!
+    //       Therefore this needs as well to become an abstract class, we need concrete types!
+
     override fun createData(): N_Array = N.newArray()
     override fun data(): N_Array = super.data() as N_Array
 
