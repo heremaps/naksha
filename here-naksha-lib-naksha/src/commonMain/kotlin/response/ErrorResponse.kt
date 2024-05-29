@@ -8,7 +8,7 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class ErrorResponse(
+open class ErrorResponse(
     val reason: NakshaError
 ) : Response(ERROR_TYPE) {
     override fun size(): Int = 0
