@@ -43,8 +43,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ParallelQueryExecutor {
+  private static final Logger log = LoggerFactory.getLogger(ParallelQueryExecutor.class);
   private final long defaultTimeoutMillis = 1000 * 60 * 10L; // 10 minutes
   private final View viewRef;
 
@@ -108,6 +111,9 @@ public class ParallelQueryExecutor {
       @NotNull IReadSession session,
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       @NotNull ReadFeatures request) {
+    long startTime = System.currentTimeMillis();
+    String status = "OK";
+    int featureCnt = 0;
     int layerPriority = viewRef.getViewCollection().priorityOf(layer);
 
     // prepare request
@@ -116,9 +122,20 @@ public class ParallelQueryExecutor {
 
     try (MutableCursor<FEATURE, CODEC> cursor =
         session.execute(clonedRequest).mutableCursor(codecFactory)) {
+      featureCnt = cursor.asList().size();
       return cursor.asList().stream().map(row -> new ViewLayerRow<>(row, layerPriority, layer));
     } catch (NoCursor e) {
+      status = "NOK";
       throw unchecked(e);
+    } finally {
+      log.info(
+          "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
+          NakshaContext.currentContext().getStreamId(),
+          layer.getCollectionId(),
+          "READ",
+          status,
+          System.currentTimeMillis() - startTime,
+          featureCnt);
     }
   }
 }
