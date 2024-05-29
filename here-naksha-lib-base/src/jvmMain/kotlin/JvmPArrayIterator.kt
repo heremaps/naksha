@@ -1,6 +1,6 @@
 package com.here.naksha.lib.base
 
-class JvmPArrayIterator(private val arr: JvmPArray) : PIterator<Int, Any?> {
+class JvmPArrayIterator(private val arr: JvmPArray) : N_Iterator<Int, Any?> {
     private var index = -1
 
     @Suppress("NOTHING_TO_INLINE")

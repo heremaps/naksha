@@ -1,11 +1,11 @@
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Base.Companion.undefined
+import com.here.naksha.lib.base.N.Companion.undefined
 
 /**
- * The JVM implementation of a [PArray].
+ * The JVM implementation of a [N_Array].
  */
-open class JvmPArray(vararg entries: Any?) : JvmObject(), MutableList<Any?>, PArray {
+open class JvmPArray(vararg entries: Any?) : JvmObject(), MutableList<Any?>, N_Array {
     /**
      * The payload of the array.
      */

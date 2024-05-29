@@ -5,9 +5,9 @@ package com.here.naksha.lib.base
  * @param <K> The key-type.
  * @param <V> The value-type.
  */
-class KtIterator<K, V>(private val it: PIterator<K, V>) : Iterator<RawPair<K, V>> {
+class KtIterator<K, V>(private val it: N_Iterator<K, V>) : Iterator<P_Entry<K, V>> {
     private var _loaded: Boolean? = null
-    private lateinit var _element: RawPair<K, V>
+    private lateinit var _element: P_Entry<K, V>
 
     override fun hasNext(): Boolean {
         var loaded = _loaded
@@ -15,7 +15,7 @@ class KtIterator<K, V>(private val it: PIterator<K, V>) : Iterator<RawPair<K, V>
             loaded = it.loadNext()
             if (loaded) {
                 if (!this::_element.isInitialized) {
-                    _element = RawPair(it.getKey(), it.getValue())
+                    _element = P_Entry(it.getKey(), it.getValue())
                 } else {
                     _element.key = it.getKey()
                     _element.value = it.getValue()
@@ -26,7 +26,7 @@ class KtIterator<K, V>(private val it: PIterator<K, V>) : Iterator<RawPair<K, V>
         return loaded
     }
 
-    override fun next(): RawPair<K, V> {
+    override fun next(): P_Entry<K, V> {
         require(hasNext())
         _loaded = null
         return _element

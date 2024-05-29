@@ -2,14 +2,24 @@
 
 package com.here.naksha.lib.base
 
+import kotlinx.js.JsPlainObject
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+
+@JsPlainObject
+external interface Foo<E> : N_Iterator<E> {
+
+}
+
 @Suppress("MemberVisibilityCanBePrivate", "ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT")
 @JsExport
-actual class Base {
+actual class N {
+
     actual companion object {
         private var isInitialized: Boolean = false
 
-        val arrayTemplate = object : PArray {}
-        val objectTemplate = object : PObject {}
+        val arrayTemplate = object : N_Array {}
+        val objectTemplate = object : N_Object {}
         val symbolTemplate = object : Symbol {}
         val bigIntTemplate = object : Int64 {
             override fun hashCode(): Int = js("BigInt.hashCode(this)").unsafeCast<Int>()
@@ -35,7 +45,7 @@ for (i in keys) {
 };
 """)
 
-        actual fun initNak(vararg parameters: Any?): Boolean {
+        actual fun initialize(vararg parameters: Any?): Boolean {
             if (!isInitialized) {
                 isInitialized = true
                 copy(arrayTemplate, js("[]").unsafeCast<Any>())
@@ -105,7 +115,7 @@ Object.assign(BigInt, {
             return false
         }
 
-        actual val BASE_SYM = symbol("com.here.naksha.lib.nak")
+        actual val DEFAULT_SYMBOL = symbol("com.here.naksha.lib.nak")
         actual val undefined: Any = js("undefined").unsafeCast<Any>()
         actual val INT64_MAX_VALUE: Int64 = js("BigInt('9223372036854775807')").unsafeCast<Int64>()
         actual val INT64_MIN_VALUE: Int64 = js("BigInt('9223372036854775808')").unsafeCast<Int64>()
@@ -114,10 +124,10 @@ Object.assign(BigInt, {
 
         actual fun intern(s: String, cd: Boolean): String = js("(cd ? s.normalize('NFC') : s.normalize('NFKC'))").unsafeCast<String>()
 
-        actual fun <T : BaseType> getAssignment(o: Any?, symbol: Symbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
+        actual fun <T : P> getAssignment(o: Any?, symbol: Symbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun <T : BaseType> assign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
+        actual fun <T : P> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
             val sym = klass.symbol()
             val raw = unbox(o)
             var nakType: Any? = js("raw[sym]")
@@ -130,7 +140,7 @@ Object.assign(BigInt, {
         }
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun <T : BaseType> forceAssign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
+        actual fun <T : P> forceAssign(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
             val sym = klass.symbol()
             val raw = unbox(o)
             var nakType: Any? = js("raw[sym]")
@@ -142,13 +152,13 @@ Object.assign(BigInt, {
             return nakType
         }
 
-        actual fun isAssignable(o: Any?, klass: BaseKlass<*>): Boolean = klass.isAssignable(unbox(o))
+        actual fun isAssignable(o: Any?, klass: OldBaseKlass<*>): Boolean = klass.isAssignable(unbox(o))
 
         actual fun symbol(key: String?): Symbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<Symbol>()
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun newObject(vararg entries: Any?): PObject {
-            val o = js("{}").unsafeCast<PObject>()
+        actual fun newObject(vararg entries: Any?): N_Object {
+            val o = js("{}").unsafeCast<N_Object>()
             if (entries.isNotEmpty()) {
                 var i = 0
                 while (i < entries.size) {
@@ -160,11 +170,11 @@ Object.assign(BigInt, {
             return o
         }
 
-        actual fun newArray(vararg entries: Any?): PArray {
-            val a = js("[]").unsafeCast<PArray>()
-            if (entries.isNotEmpty()) {
+        actual fun newArray(vararg elementClass: Any?): N_Array {
+            val a = js("[]").unsafeCast<N_Array>()
+            if (elementClass.isNotEmpty()) {
                 var i = 0
-                while (i < entries.size) {
+                while (i < elementClass.size) {
                     js("o[i]=value")
                     i++
                 }
@@ -174,13 +184,13 @@ Object.assign(BigInt, {
 
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
 
-        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PDataView = js("""
+        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): N_DataView = js("""
 offset = offset ? Math.ceil(offset) : 0;
 size = size ? Math.floor(size) : byteArray.byteLength - offset;
 return new DataView(byteArray.buffer, offset, size);
-""").unsafeCast<PDataView>()
+""").unsafeCast<N_DataView>()
 
-        actual fun unbox(o: Any?): Any? = if (o is BaseType) o.data else o
+        actual fun unbox(o: Any?): Any? = if (o is P) o.__data else o
 
         actual fun toInt(value: Any): Int = js("Number(value) >> 0").unsafeCast<Int>()
 
@@ -219,7 +229,7 @@ return new DataView(byteArray.buffer, offset, size);
             return js("view.getFloat64(0)").unsafeCast<Double>()
         }
 
-         actual fun isNative(o: Any?): Boolean = o !is BaseType
+         actual fun isNative(o: Any?): Boolean = o !is P
 
         actual fun isString(o: Any?): Boolean = o is String
 
@@ -247,7 +257,7 @@ return new DataView(byteArray.buffer, offset, size);
 
         actual fun isByteArray(o: Any?): Boolean = o is ByteArray
 
-        actual fun isDataView(o: Any?): Boolean = o is PDataView
+        actual fun isDataView(o: Any?): Boolean = o is N_DataView
 
         actual fun has(o: Any?, key: Any?): Boolean = js("Object.hasOwn(o, key)").unsafeCast<Boolean>()
 
@@ -257,19 +267,19 @@ return new DataView(byteArray.buffer, offset, size);
 
         actual fun delete(o: Any, key: Any): Any? = js("var old=o[key]; delete o[key]; old")
 
-        actual fun arrayIterator(o: PArray): PIterator<Int,Any?> = JsArrayIterator(o)
+        actual fun arrayIterator(o: N_Array): N_Iterator<Int,Any?> = JsArrayIterator(o)
 
-        actual fun objectIterator(o: PObject): PIterator<String,Any?> = JsObjectIterator(o)
+        actual fun objectIterator(o: N_Object): N_Iterator<String,Any?> = JsObjectIterator(o)
 
-        actual fun size(o: Any?): Int = if (o != null) keys(o).size else 0
+        actual fun count(obj: Any?): Int = if (obj != null) keys(obj).size else 0
 
-        actual fun length(a: PArray?): Int = js("(Array.isArray(a) ? a.length : 0)").unsafeCast<Int>()
+        actual fun length(a: N_Array?): Int = js("(Array.isArray(a) ? a.length : 0)").unsafeCast<Int>()
 
-        actual fun keys(o: Any): Array<String> = js("var k=Object.keys(o); (Array.isArray(o) ? k.splice(o.length) : k)").unsafeCast<Array<String>>()
+        actual fun keys(obj: Any): Array<String> = js("var k=Object.keys(o); (Array.isArray(o) ? k.splice(o.length) : k)").unsafeCast<Array<String>>()
 
-        actual fun symbols(o: Any): Array<Symbol> = js("Object.getOwnPropertySymbols(o)").unsafeCast<Array<Symbol>>()
+        actual fun keysOfMembers(obj: Any): Array<Symbol> = js("Object.getOwnPropertySymbols(o)").unsafeCast<Array<Symbol>>()
 
-        actual fun values(o: Any): Array<Any?> = js("var v=Object.values(o); if (Array.isArray(o)) v.splice(o.length,v.length); v").unsafeCast<Array<Any?>>()
+        actual fun values(obj: Any): Array<Any?> = js("var v=Object.values(o); if (Array.isArray(o)) v.splice(o.length,v.length); v").unsafeCast<Array<Any?>>()
 
         actual fun eq(t: Int64, o: Int64): Boolean = js("t == o").unsafeCast<Boolean>()
         actual fun eqi(t: Int64, o: Int): Boolean = js("t == o").unsafeCast<Boolean>()
@@ -305,16 +315,23 @@ return new DataView(byteArray.buffer, offset, size);
 
         actual fun hashCodeOf(o: Any?): Int {
             if (o == null) return 0
-            val S = BASE_SYM
+            val S = DEFAULT_SYMBOL
             val nak : dynamic = o
             if (js("nak[S] && typeof nak[S].hashCode === 'function'").unsafeCast<Boolean>()) {
                 try {
-                    return nak[BASE_SYM].hashCode().unsafeCast<Int>()
+                    return nak[DEFAULT_SYMBOL].hashCode().unsafeCast<Int>()
                 } catch (ignore: Throwable) {
                 }
             }
             // TODO: Fix me, see documentation!
             return Fnv1a32.string(Fnv1a32.start(), nak.toString())
         }
+
+        actual fun <T : Any> klassOf(o: T) : KClass<out T> = o::class
+
+        actual fun <T : Any> klassOf(constructor: KFunction<T>) : KClass<out T> = js("""
+            // TODO: Find the constructor in namespace of module.
+            return require('module_name').package.full.path.ClassName").unsafeCast<JsClass<*>>().kotlin
+        """).unsafeCast(JsClass<*>)
     }
 }

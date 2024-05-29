@@ -2,13 +2,13 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Base.Companion.undefined
+import com.here.naksha.lib.base.N.Companion.undefined
 import java.util.Map
 
 /**
- * The JVM implementation of a [PObject].
+ * The JVM implementation of a [N_Object].
  */
-open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, PObject {
+open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, N_Object {
     init {
         var i = 0
         while (i < entries.size) {

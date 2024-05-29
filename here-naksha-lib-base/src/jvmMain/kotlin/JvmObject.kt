@@ -1,7 +1,7 @@
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Base.Companion.BASE_SYM
-import com.here.naksha.lib.base.Base.Companion.undefined
+import com.here.naksha.lib.base.N.Companion.DEFAULT_SYMBOL
+import com.here.naksha.lib.base.N.Companion.undefined
 
 /**
  * The base class of all other platform objects.
@@ -51,16 +51,16 @@ open class JvmObject {
     open operator fun contains(name: String): Boolean = properties?.containsKey(name) == true
 
     /**
-     * Returns the value of the property with the given name or [Base.undefined].
+     * Returns the value of the property with the given name or [N.undefined].
      * @param name The name of the property.
-     * @return The value of the property or [Base.undefined].
+     * @return The value of the property or [N.undefined].
      */
     open operator fun get(name: String): Any? = if (properties?.containsKey(name) == true) properties?.get(name) else undefined
 
     /**
      * Removes the property with the given name.
      * @param name The name of the property.
-     * @return The value that was removed or [Base.undefined].
+     * @return The value that was removed or [N.undefined].
      */
     open fun remove(name: String): Any? = if (properties?.containsKey(name) == true) properties?.remove(name) else undefined
 
@@ -68,7 +68,7 @@ open class JvmObject {
      * Set the value of the property.
      * @param name The name of the property.
      * @param value The value to set.
-     * @return The previous value or [Base.undefined].
+     * @return The previous value or [N.undefined].
      */
     open operator fun set(name: String, value: Any?): Any? {
         // Note: This is incompatible with JavaScript default behavior, but makes Kotlin code better!
@@ -107,7 +107,7 @@ open class JvmObject {
         if (s == null) {
             s = HashMap()
             if (baseSym != undefined) {
-                s[BASE_SYM] = baseSym
+                s[DEFAULT_SYMBOL] = baseSym
                 baseSym = undefined
             }
             symbols = s
@@ -123,32 +123,32 @@ open class JvmObject {
     open operator fun contains(sym: Symbol): Boolean {
         val s = symbols
         if (s != null) return s.containsKey(sym)
-        return sym === BASE_SYM && baseSym != undefined
+        return sym === DEFAULT_SYMBOL && baseSym != undefined
     }
 
     /**
      * Returns the value assigned to the given symbol.
      * @param sym The symbol to query.
-     * @return The value assigned to the symbol or [Base.undefined].
+     * @return The value assigned to the symbol or [N.undefined].
      */
     open operator fun get(sym: Symbol): Any? {
         val s = symbols
         if (s != null) return s[sym] ?: undefined
-        if (sym === BASE_SYM) return baseSym
+        if (sym === DEFAULT_SYMBOL) return baseSym
         return undefined
     }
 
     /**
      * Removes the assigned to the given symbol.
      * @param sym The symbol to remove.
-     * @return The value that was assigned to the symbol or [Base.undefined].
+     * @return The value that was assigned to the symbol or [N.undefined].
      */
     open fun remove(sym: Symbol): Any? {
         val s = symbols
         if (s != null) {
             return if (s.containsKey(sym)) s.remove(sym) else undefined
         }
-        if (sym === BASE_SYM) {
+        if (sym === DEFAULT_SYMBOL) {
             val old = baseSym
             baseSym = undefined
             return old
@@ -160,12 +160,12 @@ open class JvmObject {
      * Assigns the given symbol to the given value.
      * @param sym The symbol to assign.
      * @param value The value to assign.
-     * @return The previously assigned value or [Base.undefined].
+     * @return The previously assigned value or [N.undefined].
      */
     open operator fun set(sym: Symbol, value: Any?): Any? {
         if (value === undefined) return remove(sym)
         var s = symbols
-        if (s == null && sym === BASE_SYM) {
+        if (s == null && sym === DEFAULT_SYMBOL) {
             val old = baseSym
             baseSym = value
             return old

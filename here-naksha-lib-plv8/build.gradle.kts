@@ -1,12 +1,12 @@
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
-    kotlin("multiplatform").version("1.9.21")
+    id("org.jetbrains.kotlin.multiplatform")
 }
 
 kotlin {
     jvm {
-        jvmToolchain(11)
+        //jvmToolchain(11)
         withJava()
     }
 
@@ -16,6 +16,10 @@ kotlin {
             webpackTask {
                 output.libraryTarget = "commonjs2"
             }
+        }
+        useEsModules()
+        compilerOptions {
+            target.set("es2015")
         }
         nodejs {
         }
