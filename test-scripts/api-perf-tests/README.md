@@ -16,7 +16,7 @@ The test suite consists of:
 
 Currently the step to populate features for this test is not automated yet, and is already planned as a future work item. Hence this step needs to be performed manually once, so that the Naksha DB is ready.
 
-Refer to the file `JMETER_TESTS.md`, at the 'Setup' section, and follow the instruction.
+Refer to the file `TEST_DATA_SETUP.md`, at the 'Setup' section, and follow the instruction.
 
 ## Execute the test
 
