@@ -3,13 +3,57 @@
 package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
+import kotlin.reflect.KClass
 
 /**
- * A list is just a [OldBaseArray], but with all getters and setters being public.
+ * A list.
  * @param <E> The element type.
  */
+@Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-open class P_List<E>() : P(), MutableList<E> {
+abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E> {
+
+    /**
+     * Convert the given value into an element.
+     * @param value The value to convert.
+     * @param alt The alternative to return when the value can't be cast to the element.
+     * @return The given value as element.
+     */
+    @Suppress("UNCHECKED_CAST")
+    protected open fun toElement(value: Any?, alt: E? = null): E? {
+        if (elementKlass.isInstance(value)) return value as E
+        val data = N.unbox(value)
+        if (N.isNil(data)) return alt
+        if (elementKlass.isInstance(value)) return value as E
+        if (N.isProxyKlass(elementKlass)) return N.proxy(value, elementKlass as KClass<Proxy>) as E
+        return alt
+    }
+
+    /**
+     * Returns the element at the given index. If no such index exists or the element is not of the specified type,
+     * returns the given alternative.
+     * @param index The index to query.
+     * @param alternative The alternative to return, when the element is not of the specified type.
+     * @return The element.
+     */
+    protected open fun getOr(index: Int, alternative: E): E = toElement(data()[index], alternative)!!
+
+    /**
+     * Returns the element at the given index. If no such key element exists or the element is not of the specified type,
+     * creates a new element, assigns it and returns it.
+     * @param index The key to query.
+     * @return The element.
+     */
+    protected open fun getOrCreate(index: Int): E {
+        val data = data()
+        val raw = data[index]
+        var value = toElement(raw, null)
+        if (value == null) {
+            value = N.newInstanceOf(elementKlass)
+            data[index] = N.unbox(value)
+        }
+        return value
+    }
 
     override fun createData(): N_Array = N.newArray()
     override fun data(): N_Array = super.data() as N_Array

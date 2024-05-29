@@ -5,12 +5,10 @@ package com.here.naksha.lib.base
 import kotlin.js.JsExport
 
 /**
- * The base class for proxy types. A proxy type refers to a native object and is bound to the native object using a symbol. The proxy
- * itself is a native object.
- * @param <DATA> The native type, being one of: [N_Object], [N_Array], [N_Map], [N_ConcurrentMap] or [N_DataView].
+ * The base class for proxy types bound to [N_Object], [N_Array], [N_Map], [N_ConcurrentMap] or [N_DataView].
  */
 @JsExport
-abstract class P : N_Object {
+abstract class Proxy : N_Object {
     /**
      * The symbol though which this proxy is linked to the native object.
      */

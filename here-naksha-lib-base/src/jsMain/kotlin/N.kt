@@ -124,10 +124,10 @@ Object.assign(BigInt, {
 
         actual fun intern(s: String, cd: Boolean): String = js("(cd ? s.normalize('NFC') : s.normalize('NFKC'))").unsafeCast<String>()
 
-        actual fun <T : P> getAssignment(o: Any?, symbol: Symbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
+        actual fun <T : Proxy> getAssignment(o: Any?, symbol: Symbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun <T : P> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
+        actual fun <T : Proxy> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
             val sym = klass.symbol()
             val raw = unbox(o)
             var nakType: Any? = js("raw[sym]")
@@ -140,7 +140,7 @@ Object.assign(BigInt, {
         }
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun <T : P> forceAssign(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
+        actual fun <T : Proxy> forceAssign(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
             val sym = klass.symbol()
             val raw = unbox(o)
             var nakType: Any? = js("raw[sym]")
@@ -190,7 +190,7 @@ size = size ? Math.floor(size) : byteArray.byteLength - offset;
 return new DataView(byteArray.buffer, offset, size);
 """).unsafeCast<N_DataView>()
 
-        actual fun unbox(o: Any?): Any? = if (o is P) o.__data else o
+        actual fun unbox(o: Any?): Any? = if (o is Proxy) o.__data else o
 
         actual fun toInt(value: Any): Int = js("Number(value) >> 0").unsafeCast<Int>()
 
@@ -229,7 +229,7 @@ return new DataView(byteArray.buffer, offset, size);
             return js("view.getFloat64(0)").unsafeCast<Double>()
         }
 
-         actual fun isNative(o: Any?): Boolean = o !is P
+         actual fun isNative(o: Any?): Boolean = o !is Proxy
 
         actual fun isString(o: Any?): Boolean = o is String
 
