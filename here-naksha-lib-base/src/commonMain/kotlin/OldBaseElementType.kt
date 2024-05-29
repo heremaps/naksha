@@ -2,8 +2,8 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Base.Companion.unbox
-import com.here.naksha.lib.base.Base.Companion.undefined
+import com.here.naksha.lib.base.N.Companion.unbox
+import com.here.naksha.lib.base.N.Companion.undefined
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
@@ -12,24 +12,24 @@ import kotlin.jvm.JvmStatic
  * @param <E> The element type.
  */
 @JsExport
-abstract class BaseElementType<E> : BaseType() {
+abstract class OldBaseElementType<E> : P() {
 
     companion object {
         @JvmStatic
-        val klass = object : BaseKlass<BaseElementType<*>>() {
+        val klass = object : OldBaseKlass<OldBaseElementType<*>>() {
             override fun getPlatformKlass(): Klass<*> = anyKlass
 
             override fun isAbstract(): Boolean = true
 
             override fun isArray(): Boolean = false
 
-            override fun isInstance(o: Any?): Boolean = o is BaseElementType<*>
+            override fun isInstance(o: Any?): Boolean = o is OldBaseElementType<*>
 
-            override fun newInstance(vararg args: Any?): BaseElementType<Any?> = throw UnsupportedOperationException()
+            override fun newInstance(vararg args: Any?): OldBaseElementType<Any?> = throw UnsupportedOperationException()
         }
     }
 
-    override fun klass(): BaseKlass<*> = klass
+    override fun klass(): OldBaseKlass<*> = klass
 
     /**
      * Returns the component klass (the klass of the elements stored in this array).
@@ -53,7 +53,7 @@ abstract class BaseElementType<E> : BaseType() {
     open fun isElement(value: Any?, klass: Klass<*> = this.componentKlass): Boolean {
         val data = unbox(value)
         if (data == null || data !== undefined) return false
-        if (klass !is BaseKlass<*>) { // The component is a platform type like Double, String, ...
+        if (klass !is OldBaseKlass<*>) { // The component is a platform type like Double, String, ...
             return klass.isInstance(data)
         }
         return klass.isAssignable(data)
@@ -70,8 +70,8 @@ abstract class BaseElementType<E> : BaseType() {
     protected open fun <T>toElement(value: Any?, klass: Klass<T>, alt: T? = null): T? {
         val data = unbox(value)
         if (data === null || data === undefined) return alt
-        if (klass !is BaseKlass<*>) return if (klass.isInstance(data)) data as T else alt
-        return if (klass.isAssignable(data)) Base.assign(data, klass) as T else alt
+        if (klass !is OldBaseKlass<*>) return if (klass.isInstance(data)) data as T else alt
+        return if (klass.isAssignable(data)) N.proxy(data, klass) as T else alt
     }
 
 }

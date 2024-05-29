@@ -5,10 +5,12 @@ package com.here.naksha.lib.base
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
-
+/**
+ * A view that allows to read and mutate the underlying byte-array.
+ */
 @JsExport
 @JsName("DataView")
-interface PDataView {
+interface N_DataView : N_Object {
     /**
      * Returns the byte-array below the view.
      */
@@ -20,12 +22,12 @@ interface PDataView {
     fun getStart(): Int
 
     /**
-     * Returns the offset in the underlying byte-array where the view starts.
+     * Returns the offset in the underlying byte-array where the view end, so the offset that must **not** be read.
      */
     fun getEnd(): Int
 
     /**
-     * Returns the amount of byte in the view.
+     * Returns the amount of byte being available in the view.
      */
     fun getSize(): Int
 

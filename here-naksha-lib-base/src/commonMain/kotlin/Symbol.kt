@@ -6,8 +6,9 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * Symbols represent namespaces that can be attached to platform objects to manage multi-platform data models and business logic.
- * The symbols coexist with the real data, but are not serialized or deserialized, they are meta-data added to the in-memory data.
+ * Symbols represent private members of [N_Object]'s, which are invisible when being serialized. They differ from fields in Java in
+ * that symbols can be created and removed at runtime. Proxies are added to native objects using symbols. A symbol is a primitive value
+ * and managed by the platform code via the [N] singleton.
  */
 @JsExport
 @JsName("Symbol")

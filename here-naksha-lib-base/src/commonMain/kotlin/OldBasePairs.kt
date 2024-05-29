@@ -2,39 +2,39 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Base.Companion.unbox
-import com.here.naksha.lib.base.Base.Companion.undefined
+import com.here.naksha.lib.base.N.Companion.unbox
+import com.here.naksha.lib.base.N.Companion.undefined
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 @Suppress("MemberVisibilityCanBePrivate")
 @JsExport
-open class BasePairs<E>(vararg args: Any?) : BaseElementType<E>() {
+open class OldBasePairs<E>(vararg args: Any?) : OldBaseElementType<E>() {
     init {
         @Suppress("SENSELESS_COMPARISON")
         if (args !== null && args !== undefined && args.isNotEmpty()) {
-            this.data = Base.newObject(*args)
+            this.data = N.newObject(*args)
         }
     }
 
     companion object {
         @JvmStatic
-        val klass = object : BasePairsKlass<Any?, BasePairs<Any?>>() {
-            override fun isInstance(o: Any?): Boolean = o is BasePairs<*>
+        val klass = object : OldBasePairsKlass<Any?, OldBasePairs<Any?>>() {
+            override fun isInstance(o: Any?): Boolean = o is OldBasePairs<*>
 
-            override fun newInstance(vararg args: Any?): BasePairs<Any?> = BasePairs(*args)
+            override fun newInstance(vararg args: Any?): OldBasePairs<Any?> = OldBasePairs(*args)
         }
     }
 
-    override fun klass(): BaseKlass<*> = klass
+    override fun klass(): OldBaseKlass<*> = klass
 
-    override fun data(): PObject {
+    override fun data(): N_Object {
         var data = this.data
         if (data == null) {
-            data = Base.newObject()
+            data = N.newObject()
             this.data = data
         }
-        return data as PObject
+        return data as N_Object
     }
 
     /**

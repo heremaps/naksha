@@ -8,10 +8,10 @@ import kotlin.js.JsExport
  * The base class for all Naksha array types.
  */
 @JsExport
-abstract class BaseArrayKlass<E, out T : BaseArray<E>> : BaseKlass<T>() {
+abstract class OldBaseArrayKlass<E, out T : OldBaseArray<E>> : OldBaseKlass<T>() {
     override fun isAbstract(): Boolean = false
 
     override fun isArray(): Boolean = true
 
-    override fun getPlatformKlass(): Klass<PArray> = arrayKlass
+    override fun getPlatformKlass(): Klass<N_Array> = arrayKlass
 }

@@ -5,4 +5,6 @@ package com.here.naksha.lib.base
 import kotlin.js.JsExport
 
 @JsExport
-abstract class BaseObjectKlass<out T : BaseObject> : BasePairsKlass<Any?, T>()
+interface Fn1<R, A> : Fn {
+    fun call(a: A): R
+}

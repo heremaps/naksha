@@ -2,17 +2,17 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Base.Companion.isArray
-import com.here.naksha.lib.base.Base.Companion.isDataView
-import com.here.naksha.lib.base.Base.Companion.isDouble
-import com.here.naksha.lib.base.Base.Companion.isInt64
-import com.here.naksha.lib.base.Base.Companion.isObject
-import com.here.naksha.lib.base.Base.Companion.isString
-import com.here.naksha.lib.base.Base.Companion.newArray
-import com.here.naksha.lib.base.Base.Companion.newObject
-import com.here.naksha.lib.base.Base.Companion.toDouble
-import com.here.naksha.lib.base.Base.Companion.toInt64
-import com.here.naksha.lib.base.Base.Companion.undefined
+import com.here.naksha.lib.base.N.Companion.isArray
+import com.here.naksha.lib.base.N.Companion.isDataView
+import com.here.naksha.lib.base.N.Companion.isDouble
+import com.here.naksha.lib.base.N.Companion.isInt64
+import com.here.naksha.lib.base.N.Companion.isObject
+import com.here.naksha.lib.base.N.Companion.isString
+import com.here.naksha.lib.base.N.Companion.newArray
+import com.here.naksha.lib.base.N.Companion.newObject
+import com.here.naksha.lib.base.N.Companion.toDouble
+import com.here.naksha.lib.base.N.Companion.toInt64
+import com.here.naksha.lib.base.N.Companion.undefined
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
@@ -52,7 +52,7 @@ abstract class Klass<out T> {
                     is Boolean -> a
                     is String -> a.isNotEmpty() && a.lowercase() != "false"
                     is Byte, Short, Int -> a != 0
-                    is Int64 -> !Base.eqi(a, 0)
+                    is Int64 -> !N.eqi(a, 0)
                     is Float, Double -> a != 0.0
                     else -> false
                 }
@@ -72,7 +72,7 @@ abstract class Klass<out T> {
                 if (args.isEmpty()) return 0
                 val a = args[0]
                 if (a == null || a == undefined) return 0
-                return Base.toInt(a)
+                return N.toInt(a)
             }
         }
 
@@ -137,56 +137,56 @@ abstract class Klass<out T> {
             override fun isInstance(o: Any?): Boolean = o is Symbol
 
             override fun newInstance(vararg args: Any?): Symbol {
-                if (args.isEmpty()) return Base.symbol(null)
+                if (args.isEmpty()) return N.symbol(null)
                 val a = args[0]
                 require(a is String) {"Symbols can only be found to strings in the global registry"}
-                return Base.symbol(a)
+                return N.symbol(a)
             }
         }
 
         /**
-         * The Klass for [PArray].
+         * The Klass for [N_Array].
          */
         @JvmStatic
-        var arrayKlass = object : Klass<PArray>() {
+        var arrayKlass = object : Klass<N_Array>() {
             override fun isArray(): Boolean = false
 
             override fun isInstance(o: Any?): Boolean = isArray(o)
 
-            override fun newInstance(vararg args: Any?): PArray = newArray(args)
+            override fun newInstance(vararg args: Any?): N_Array = newArray(args)
         }
 
         /**
-         * The Klass for [PObject].
+         * The Klass for [N_Object].
          */
         @JvmStatic
-        var objectKlass = object : Klass<PObject>() {
+        var objectKlass = object : Klass<N_Object>() {
             override fun isArray(): Boolean = false
 
             override fun isInstance(o: Any?): Boolean = isObject(o)
 
-            override fun newInstance(vararg args: Any?): PObject = newObject(args)
+            override fun newInstance(vararg args: Any?): N_Object = newObject(args)
         }
 
         /**
-         * The Klass for [PDataView].
+         * The Klass for [N_DataView].
          */
         @JvmStatic
-        var dataViewKlass = object : Klass<PDataView>() {
+        var dataViewKlass = object : Klass<N_DataView>() {
             override fun isArray(): Boolean = false
 
             override fun isInstance(o: Any?): Boolean = isDataView(o)
 
-            override fun newInstance(vararg args: Any?): PDataView {
+            override fun newInstance(vararg args: Any?): N_DataView {
                 require(args.isNotEmpty()) { "To create a view a ByteArray must be given as first argument to the constructor" }
                 val byteArray = args[0]
                 require(byteArray is ByteArray) { "Invalid first argument, must be ByteArray" }
                 return when (args.size) {
-                    1 -> Base.newDataView(byteArray)
+                    1 -> N.newDataView(byteArray)
                     2 -> {
                         val offset = args[1]
                         require(offset is Int) { "Invalid second argument, offset must be Int" }
-                        Base.newDataView(byteArray, offset)
+                        N.newDataView(byteArray, offset)
                     }
 
                     3 -> {
@@ -194,7 +194,7 @@ abstract class Klass<out T> {
                         require(offset is Int) { "Invalid second argument, offset must be Int" }
                         val length = args[2]
                         require(length is Int) { "Invalid third argument, length must be Int" }
-                        Base.newDataView(byteArray, offset, length)
+                        N.newDataView(byteArray, offset, length)
                     }
 
                     else -> throw IllegalArgumentException("DataView constructor has maximal 3 arguments: byteArray, offset, length")
@@ -204,8 +204,8 @@ abstract class Klass<out T> {
     }
 
     /**
-     * Returns _true_ if this is an [PArray] or [BaseArray].
-     * @return _true_ if this is an [PArray] or [BaseArray].
+     * Returns _true_ if this is an [N_Array] or [OldBaseArray].
+     * @return _true_ if this is an [N_Array] or [OldBaseArray].
      */
     abstract fun isArray(): Boolean
 
