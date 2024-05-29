@@ -3,8 +3,8 @@
 package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 @JsExport
-@JsName("Object")
-interface PObject
+interface Fn2<R, A, B> : Fn {
+    fun call(a: A, b: B): R
+}

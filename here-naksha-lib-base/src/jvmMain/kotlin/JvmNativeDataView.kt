@@ -3,26 +3,26 @@ package com.here.naksha.lib.base
 import java.nio.ByteOrder
 
 /**
- * The JVM implementation of [PDataView].
+ * The JVM implementation of [N_DataView].
  * @param byteArray The byte-array to map.
  * @param offset The offset of the first byte
  * @param length The amount of byte to map.
  */
-open class JvmPDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset) : JvmObject(), PDataView {
+open class JvmNativeDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset) : JvmObject(), N_DataView {
     private val buffer: ByteArray = byteArray
-    private val startOffset: Int = Base.baseOffset + offset
-    private val endOffset: Int = Base.baseOffset + startOffset + length
+    private val startOffset: Int = N.baseOffset + offset
+    private val endOffset: Int = N.baseOffset + startOffset + length
 
     override fun getByteArray(): ByteArray {
         return buffer
     }
 
     override fun getStart(): Int {
-        return startOffset - Base.baseOffset
+        return startOffset - N.baseOffset
     }
 
     override fun getEnd(): Int {
-        return endOffset - Base.baseOffset
+        return endOffset - N.baseOffset
     }
 
     override fun getSize(): Int {
@@ -75,56 +75,56 @@ open class JvmPDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byt
     }
 
     override fun getFloat32(pos: Int, littleEndian: Boolean): Float {
-        val value = Base.unsafe.getFloat(buffer, offset(pos,4))
+        val value = N.unsafe.getFloat(buffer, offset(pos,4))
         return ordered(value, littleEndian)
     }
 
     override fun setFloat32(pos: Int, value: Float, littleEndian: Boolean) {
-        Base.unsafe.putFloat(buffer, offset(pos, 4), ordered(value, littleEndian))
+        N.unsafe.putFloat(buffer, offset(pos, 4), ordered(value, littleEndian))
     }
 
     override fun getFloat64(pos: Int, littleEndian: Boolean): Double {
-        val value = Base.unsafe.getDouble(buffer, offset(pos, 8))
+        val value = N.unsafe.getDouble(buffer, offset(pos, 8))
         return ordered(value, littleEndian)
     }
 
     override fun setFloat64(pos: Int, value: Double, littleEndian: Boolean) {
-        Base.unsafe.putDouble(buffer, offset(pos, 8), ordered(value, littleEndian))
+        N.unsafe.putDouble(buffer, offset(pos, 8), ordered(value, littleEndian))
     }
 
     override fun getInt8(pos: Int): Byte {
-        return Base.unsafe.getByte(buffer, offset(pos, 1))
+        return N.unsafe.getByte(buffer, offset(pos, 1))
     }
 
     override fun setInt8(pos: Int, value: Byte) {
-        Base.unsafe.putByte(buffer, offset(pos, 1), value)
+        N.unsafe.putByte(buffer, offset(pos, 1), value)
     }
 
     override fun getInt16(pos: Int, littleEndian: Boolean): Short {
-        val value = Base.unsafe.getShort(buffer, offset(pos, 2))
+        val value = N.unsafe.getShort(buffer, offset(pos, 2))
         return ordered(value, littleEndian)
     }
 
     override fun setInt16(pos: Int, value: Short, littleEndian: Boolean) {
-        Base.unsafe.putShort(buffer, offset(pos, 2), ordered(value, littleEndian))
+        N.unsafe.putShort(buffer, offset(pos, 2), ordered(value, littleEndian))
     }
 
     override fun getInt32(pos: Int, littleEndian: Boolean): Int {
-        val value = Base.unsafe.getInt(buffer, offset(pos, 4))
+        val value = N.unsafe.getInt(buffer, offset(pos, 4))
         return ordered(value, littleEndian)
     }
 
     override fun setInt32(pos: Int, value: Int, littleEndian: Boolean) {
-        Base.unsafe.putInt(buffer, offset(pos, 4), ordered(value, littleEndian))
+        N.unsafe.putInt(buffer, offset(pos, 4), ordered(value, littleEndian))
     }
 
     override fun getInt64(pos: Int, littleEndian: Boolean): Int64 {
-        val value = Base.unsafe.getLong(buffer, offset(pos, 8))
+        val value = N.unsafe.getLong(buffer, offset(pos, 8))
         return JvmInt64(ordered(value, littleEndian))
     }
 
     override fun setInt64(pos: Int, value: Int64, littleEndian: Boolean) {
         check(value is JvmInt64)
-        Base.unsafe.putLong(buffer, offset(pos, 8), ordered(value.toLong(), littleEndian))
+        N.unsafe.putLong(buffer, offset(pos, 8), ordered(value.toLong(), littleEndian))
     }
 }

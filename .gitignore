@@ -3,6 +3,7 @@ gradlew.bat
 gradle
 gradle/
 .gradle
+.kotlin
 *.iml
 *.iws
 *.ipr

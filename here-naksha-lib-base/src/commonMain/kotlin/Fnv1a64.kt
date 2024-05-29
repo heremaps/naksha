@@ -14,12 +14,12 @@ object Fnv1a64 {
     /**
      * The multiplier used.
      */
-    private val MUL = Base.toInt64(1099511628211L)
+    private val MUL = N.toInt64(1099511628211L)
 
     /**
      * The initial value.
      */
-    private val INITIAL_VALUE = Base.toInt64(0xCBF29CE484222325uL.toLong())
+    private val INITIAL_VALUE = N.toInt64(0xCBF29CE484222325uL.toLong())
 
     /**
      * Reset the hash to the default initial value.
@@ -67,7 +67,7 @@ object Fnv1a64 {
      * @return the updated hash.
      */
     fun int8(hashCode:Int64, v: Byte): Int64 {
-        var hash = hashCode xor Base.toInt64(v.toInt() and 0xff)
+        var hash = hashCode xor N.toInt64(v.toInt() and 0xff)
         hash *= MUL
         return hash
     }

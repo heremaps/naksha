@@ -8,10 +8,10 @@ import kotlin.js.JsExport
  * The base class for all Naksha map types.
  */
 @JsExport
-abstract class BasePairsKlass<E, out T : BasePairs<E>> : BaseKlass<T>() {
+abstract class OldBasePairsKlass<E, out T : OldBasePairs<E>> : OldBaseKlass<T>() {
     override fun isAbstract(): Boolean = false
 
     override fun isArray(): Boolean = false
 
-    override fun getPlatformKlass(): Klass<PObject> = objectKlass
+    override fun getPlatformKlass(): Klass<N_Object> = objectKlass
 }

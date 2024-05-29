@@ -6,9 +6,8 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 repositories {
-    maven {
-        url = uri("https://plugins.gradle.org/m2/")
-    }
+    maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap")
+    maven("https://plugins.gradle.org/m2/")
 }
 
 plugins {
@@ -21,10 +20,13 @@ plugins {
     id("com.diffplug.spotless").version("6.22.0")
     // https://github.com/johnrengelman/shadow
     id("com.github.johnrengelman.shadow") version "8.1.1"
-    //kotlin("multiplatform") version "1.9.21"
     // overall code coverage
     //jacoco
     id("jacoco-report-aggregation")
+    // For latest dev version:
+    // https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap/org/jetbrains/kotlin/kotlin-compiler/maven-metadata.xml
+    id("org.jetbrains.kotlin.multiplatform").version("2.0.20-dev-4579").apply(false)
+    kotlin("plugin.js-plain-objects").version("2.0.20-dev-4579")
 }
 
 group = "com.here.naksha"
@@ -123,16 +125,14 @@ val minOverallCoverageKey: String = "minOverallCoverage"
 val defaultOverallMinCoverage: Double = 0.8 // Don't decrease me!
 
 /*
-
     IMPORTANT: api vs implementation
 
     We need to differ between libraries (starting with "here-naksha-lib") and other parts of
     the project. For the Naksha libraries we need to select "api" for any dependency, that is
     needed for the public API (should be usable by the user of the library), while
     “implementation” should be used for all test dependencies, or dependencies that must not be
-    used by the final users.
-
- */
+    used by the users of the library.
+*/
 
 // Apply general settings to all sub-projects
 subprojects {
@@ -140,20 +140,16 @@ subprojects {
     group = rootProject.group
     version = rootProject.version
 
-    apply(plugin = "java")
-    apply(plugin = "com.diffplug.spotless")
-    apply(plugin = "java-library")
-    apply(plugin = "java-test-fixtures")
-    apply(plugin = "jacoco")
-
     repositories {
-        maven(uri("https://repo.osgeo.org/repository/release/"))
+        maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap")
+        maven("https://repo.osgeo.org/repository/release/")
         mavenCentral()
     }
 
     apply(plugin = "java")
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "java-library")
+    apply(plugin = "java-test-fixtures")
     apply(plugin = "jacoco")
 
     // https://github.com/diffplug/spotless/tree/main/plugin-gradle
@@ -162,7 +158,9 @@ subprojects {
             // excluding tests where Builder pattern gets broken by palantir
             targetExclude("src/test/**")
             encoding("UTF-8")
-            val YEAR = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy"))
+            // TODO - Hardcoding it to 2023 for now to avoid all the files conflicting with open PRs
+            // val YEAR = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy"))
+            val YEAR = 2024
             licenseHeader("""
 /*
  * Copyright (C) 2017-$YEAR HERE Europe B.V.

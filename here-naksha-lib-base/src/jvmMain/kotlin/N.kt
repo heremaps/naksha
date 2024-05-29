@@ -5,11 +5,12 @@ package com.here.naksha.lib.base
 import sun.misc.Unsafe
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.reflect.KClass
 
 /**
  * The JVM implementation of the static Naksha multi-platform singleton.
  */
-actual class Base {
+actual class N {
     actual companion object {
         /**
          * The cache stores the 64-bit integers between -1024 and +1023 with 0 being at index 0, 1023 at index 1023, -1024 at index 1024
@@ -34,7 +35,7 @@ actual class Base {
          * The symbol (_com.here.naksha.lib.nak_) to store the default Naksha multi-platform types in.
          */
         @JvmStatic
-        actual val BASE_SYM: Symbol = symbol("com.here.naksha.lib.nak")
+        actual val DEFAULT_SYMBOL: Symbol = symbol("com.here.naksha.lib.nak")
 
         /**
          * The maximum value of a 64-bit integer.
@@ -88,7 +89,7 @@ actual class Base {
         }
 
         @JvmStatic
-        actual fun initNak(vararg parameters: Any?): Boolean {
+        actual fun initialize(vararg parameters: Any?): Boolean {
             if (initialized.compareAndSet(false, true)) {
                 // TODO: Do we need to do anything?
                 return true
@@ -101,10 +102,10 @@ actual class Base {
         actual fun intern(s: String, cd: Boolean): String = s
 
         @JvmStatic
-        actual fun <T : BaseType> getAssignment(o: Any?, symbol: Symbol): T? = toJvmObject(o)?.get(symbol) as? T
+        actual fun <T : P> getAssignment(o: Any?, symbol: Symbol): T? = toJvmObject(o)?.get(symbol) as? T
 
         @JvmStatic
-        actual fun <T : BaseType> assign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
+        actual fun <T : P> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
             val data = toJvmObject(o)
             require(data != null)
             val sym = klass.symbol()
@@ -118,7 +119,7 @@ actual class Base {
         }
 
         @JvmStatic
-        actual fun <T : BaseType> forceAssign(o: Any, klass: BaseKlass<T>, vararg args: Any?): T {
+        actual fun <T : P> forceAssign(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
             val data = toJvmObject(o)
             require(data != null)
             val sym = klass.symbol()
@@ -131,7 +132,7 @@ actual class Base {
         }
 
         @JvmStatic
-        actual fun isAssignable(o: Any?, klass: BaseKlass<*>): Boolean {
+        actual fun isAssignable(o: Any?, klass: OldBaseKlass<*>): Boolean {
             val data = toJvmObject(o)
             return data != null && klass.isAssignable(data)
         }
@@ -149,19 +150,19 @@ actual class Base {
         }
 
         @JvmStatic
-        actual fun newObject(vararg entries: Any?): PObject = JvmPObject(*entries)
+        actual fun newObject(vararg entries: Any?): N_Object = JvmPObject(*entries)
 
         @JvmStatic
-        actual fun newArray(vararg entries: Any?): PArray = JvmPArray(*entries)
+        actual fun newArray(vararg elementClass: Any?): N_Array = JvmPArray(*elementClass)
 
         @JvmStatic
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
 
         @JvmStatic
-        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PDataView = JvmPDataView(byteArray, offset, size)
+        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): N_DataView = JvmNativeDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun unbox(o: Any?): Any? = if (o is BaseType) o.data as? JvmObject else o
+        actual fun unbox(o: Any?): Any? = if (o is P) o.__data as? JvmObject else o
 
         /**
          * Returns the [JvmObject] of the given object. This method uses the same implementation as [unbox].
@@ -169,7 +170,7 @@ actual class Base {
          * @return The [JvmObject] or _null_.
          */
         @JvmStatic
-        fun toJvmObject(o: Any?): JvmObject? = if (o is BaseType) o.data as? JvmObject else if (o is JvmObject) o else null
+        fun toJvmObject(o: Any?): JvmObject? = if (o is P) o.__data as? JvmObject else if (o is JvmObject) o else null
 
         @JvmStatic
         actual fun toInt(value: Any): Int = when (value) {
@@ -246,7 +247,7 @@ actual class Base {
         actual fun isByteArray(o: Any?): Boolean = o is ByteArray
 
         @JvmStatic
-        actual fun isDataView(o: Any?): Boolean = o is JvmPDataView
+        actual fun isDataView(o: Any?): Boolean = o is JvmNativeDataView
 
         @JvmStatic
         actual fun has(o: Any?, key: Any?): Boolean {
@@ -286,40 +287,40 @@ actual class Base {
         }
 
         @JvmStatic
-        actual fun arrayIterator(o: PArray): PIterator<Int, Any?> = JvmPArrayIterator(o as JvmPArray)
+        actual fun arrayIterator(o: N_Array): N_Iterator<Int, Any?> = JvmPArrayIterator(o as JvmPArray)
 
         @JvmStatic
-        actual fun objectIterator(o: PObject): PIterator<String, Any?> = JvmPObjectIterator(o as JvmPObject)
+        actual fun objectIterator(o: N_Object): N_Iterator<String, Any?> = JvmPObjectIterator(o as JvmPObject)
 
         @JvmStatic
-        actual fun size(o: Any?): Int = if (o is JvmObject) o.properties?.size ?: 0 else 0
+        actual fun count(obj: Any?): Int = if (obj is JvmObject) obj.properties?.size ?: 0 else 0
 
         @JvmStatic
-        actual fun length(a: PArray?): Int = if (a is JvmPArray) a.size else 0
+        actual fun length(a: N_Array?): Int = if (a is JvmPArray) a.size else 0
 
         private val EMPTY_KEYS = arrayOf<String>()
         private val EMPTY_VALUES = arrayOf<Any?>()
         private val EMPTY_SYMBOLS = arrayOf<Symbol>()
-        private val NAK_ONLY_SYMBOLS = arrayOf(BASE_SYM)
+        private val NAK_ONLY_SYMBOLS = arrayOf(DEFAULT_SYMBOL)
 
         @JvmStatic
-        actual fun keys(o: Any): Array<String> =
-                if (o is JvmObject) o.properties?.keys?.toTypedArray()
-                        ?: EMPTY_KEYS else throw IllegalArgumentException("Invalid object given")
+        actual fun keys(obj: Any): Array<String> =
+            if (obj is JvmObject) obj.properties?.keys?.toTypedArray()
+                ?: EMPTY_KEYS else throw IllegalArgumentException("Invalid object given")
 
         @JvmStatic
-        actual fun symbols(o: Any): Array<Symbol> {
-            require(o is JvmObject)
-            val symbols = o.symbols
+        actual fun keysOfMembers(obj: Any): Array<Symbol> {
+            require(obj is JvmObject)
+            val symbols = obj.symbols
             if (symbols != null) return symbols.keys.toTypedArray()
-            if (o.baseSym != undefined) return NAK_ONLY_SYMBOLS
+            if (obj.baseSym != undefined) return NAK_ONLY_SYMBOLS
             return EMPTY_SYMBOLS
         }
 
         @JvmStatic
-        actual fun values(o: Any): Array<Any?> =
-                if (o is JvmObject) o.properties?.values?.toTypedArray()
-                        ?: EMPTY_VALUES else throw IllegalArgumentException("Invalid object given")
+        actual fun values(obj: Any): Array<Any?> =
+            if (obj is JvmObject) obj.properties?.values?.toTypedArray()
+                ?: EMPTY_VALUES else throw IllegalArgumentException("Invalid object given")
 
         @Suppress("NOTHING_TO_INLINE")
         private inline fun l(lo: Int64): Long = if (lo is JvmInt64) lo.toLong() else 0L
@@ -413,5 +414,21 @@ actual class Base {
 
         @JvmStatic
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
+
+        /**
+         * Returns the Kotlin class for the given JAVA class.
+         * @param javaClass The JAVA class.
+         * @return The Kotlin class.
+         */
+        @JvmStatic
+        fun <T : Any> klassOf(javaClass: Class<T>): KClass<T> = javaClass.kotlin
+
+        /**
+         * Returns the Kotlin class for the given JAVA class.
+         * @param javaClass The JAVA class.
+         * @return The Kotlin class.
+         */
+        @JvmStatic
+        fun <T : Any> klassOf(javaClass: Class<T>): KClass<T> = javaClass.kotlin
     }
 }

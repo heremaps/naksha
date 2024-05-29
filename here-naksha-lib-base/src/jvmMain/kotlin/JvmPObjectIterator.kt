@@ -1,6 +1,6 @@
 package com.here.naksha.lib.base
 
-class JvmPObjectIterator(obj: JvmPObject) : PIterator<String, Any?> {
+class JvmPObjectIterator(obj: JvmPObject) : N_Iterator<String, Any?> {
     private val it = obj.properties?.iterator()
     private var _loaded : Boolean? = null
     private var _entry:  MutableMap.MutableEntry<String, Any?>? = null
