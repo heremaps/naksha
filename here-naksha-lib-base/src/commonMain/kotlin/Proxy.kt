@@ -2,13 +2,54 @@
 
 package com.here.naksha.lib.base
 
+import kotlin.DeprecationLevel.ERROR
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
+import kotlin.reflect.KClass
 
 /**
- * The base class for proxy types bound to [N_Object], [N_Array], [N_Map], [N_ConcurrentMap] or [N_DataView].
+ * The base class for proxy types bound to [N_Object], [N_Array], [N_Map], [N_ConcurrentMap] or [N_DataView]. Note that
+ * native objects have generally all members and attributes. Generally members are only used to bind proxies. Attributes
+ * are technically support, but need to be discussed, if we want to support them and for what purpose. Since the introduction
+ * of [N_Map] the should not be needed anymore.
  */
+@Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 abstract class Proxy : N_Object {
+    companion object {
+        /**
+         * Convert the given raw value into a value of the given type.
+         * @param <T> The type to convert into.
+         * @param raw The raw value to convert.
+         * @param alternative The alternative to return when the raw can't be converted.
+         * @return The given raw as given type or the [alternative].
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        @JsStatic
+        fun <T : Any> convert(raw: Any?, klass: KClass<out T>, alternative: T? = null): T? {
+            val data = N.unbox(raw)
+            if (N.isNil(data)) return alternative
+            if (klass.isInstance(raw)) return raw as T
+            if (N.isProxyKlass(klass)) return N.proxy(raw, klass as KClass<Proxy>) as T
+            return alternative
+        }
+
+        /**
+         * Returns the raw value converted to the given type. If the convert fails, a new instance of the type is
+         * created and returned.
+         * @param <T> The type to convert into.
+         * @param raw The raw value to convert.
+         * @param klass The [KClass] of the type.
+         * @return The value.
+         */
+        @JvmStatic
+        @JsStatic
+        fun <T : Any> convertOrCreate(raw: Any?, klass: KClass<out T>): T = convert(raw, klass, null) ?: N.newInstanceOf(klass)
+
+    }
+
     /**
      * The symbol though which this proxy is linked to the native object.
      */
@@ -72,15 +113,15 @@ abstract class Proxy : N_Object {
     /**
      * Returns the value of a member field, stored with the underlying native object.
      * @param key The key of the member.
-     * @return The member value or [N.undefined] if no such member exist.
+     * @return The member value or _undefined_ if no such member exist.
      */
     protected fun getMember(key: Symbol): Any? = N.getMember(data(), key)
 
     /**
      * Sets the value of a protected member field, stored with the underlying native object.
      * @param key The key of the member.
-     * @param value The value to assign, if being [N.undefined], then the member is removed.
-     * @return The previously assigned member value; [N.undefined] if no such member existed.
+     * @param value The value to assign, if being _undefined_, then the member is removed.
+     * @return The previously assigned member value; _undefined_ if no such member existed.
      */
     protected fun setMember(key: Symbol, value: Any?): Any? = N.setMember(data(), key, value)
 
@@ -94,36 +135,40 @@ abstract class Proxy : N_Object {
     /**
      * Removes the protected member.
      * @param key The key of the member.
-     * @return The value being removed; [N.undefined] if no such member existed.
+     * @return The value being removed; _undefined_ if no such member existed.
      */
-    protected fun removeMember(key: Symbol): Any? = N.setMember(data(), key, N.undefined)
+    protected fun removeMember(key: Symbol): Any? = N.setMember(data(), key, N.undefinedOf(N.anyKlass))
 
     /**
-     * Returns the value of a property, stored with the underlying native object.
-     * @param key The key of the property.
-     * @return The property value or [N.undefined] if no such property exist.
+     * Returns the value of an attribute, stored with the underlying native object.
+     * @param key The key of the attribute.
+     * @return The attribute value or _undefined_ if no such attribute exist.
      */
-    protected fun getProperty(key: String): Any? = N.get(data(), key)
+    @Deprecated("To be discussed if we want to support this at all!", ReplaceWith(""), ERROR)
+    protected fun getAttribute(key: String): Any? = N.get(data(), key)
 
     /**
-     * Sets the value of a property, stored with the underlying native object.
-     * @param key The key of the property.
-     * @param value The value to assign, if being [N.undefined], then the property is removed.
-     * @return The previously assigned property value; [N.undefined] if no such property existed.
+     * Sets the value of an attribute, stored with the underlying native object.
+     * @param key The key of the attribute.
+     * @param value The value to assign, if being _undefined_, then the attribute is removed.
+     * @return The previously assigned attribute value; _undefined_ if no such attribute existed.
      */
-    protected fun setProperty(key: String, value: Any?): Any? = N.set(data(), key, value)
+    @Deprecated("To be discussed if we want to support this at all!", ReplaceWith(""), ERROR)
+    protected fun setAttribute(key: String, value: Any?): Any? = N.set(data(), key, value)
 
     /**
-     * Tests if the property exists, stored with the underlying native object.
-     * @param key The key of the property.
-     * @return _true_ if the property exists; _false_ otherwise.
+     * Tests if the attribute exists, stored with the underlying native object.
+     * @param key The key of the attribute.
+     * @return _true_ if the attribute exists; _false_ otherwise.
      */
-    protected fun hasProperty(key: String): Boolean = N.has(data(), key)
+    @Deprecated("To be discussed if we want to support this at all!", ReplaceWith(""), ERROR)
+    protected fun hasAttribute(key: String): Boolean = N.has(data(), key)
 
     /**
-     * Removes the property, stored with the underlying native object.
-     * @param key The key of the property.
-     * @return The value being removed; [N.undefined] if no such property existed.
+     * Removes the attribute, stored with the underlying native object.
+     * @param key The key of the attribute.
+     * @return The value being removed; _undefined_ if no such attribute existed.
      */
-    protected fun removeProperty(key: String): Any? = N.remove(data(), key)
+    @Deprecated("To be discussed if we want to support this at all!", ReplaceWith(""), ERROR)
+    protected fun removeAttribute(key: String): Any? = N.remove(data(), key)
 }

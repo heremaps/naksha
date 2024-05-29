@@ -60,13 +60,6 @@ expect class N {
         val MIN_SAFE_INT: Double
 
         /**
-         * The undefined value of the type [Any].
-         */
-        @JvmStatic
-        @JsStatic
-        val undefined: Any
-
-        /**
          * The KClass for [Any].
          */
         @JvmStatic
@@ -109,6 +102,13 @@ expect class N {
         val doubleKlass: KClass<Double>
 
         /**
+         * The KClass for [String].
+         */
+        @JvmStatic
+        @JsStatic
+        val stringKlass: KClass<String>
+
+        /**
          * The KClass for [N_Object].
          */
         @JvmStatic
@@ -137,18 +137,18 @@ expect class N {
         val dataViewKlass: KClass<N_DataView>
 
         /**
-         * Tests if the given value is [undefined].
+         * Tests if the given value is _undefined_.
          * @param any The value to test.
-         * @return _true_ if the value is [undefined]; false otherwise.
+         * @return _true_ if the value is _undefined_; false otherwise.
          */
         @JvmStatic
         @JsStatic
         fun isUndefined(any: Any?): Boolean
 
         /**
-         * Tests if the given value is _null_ or [undefined].
+         * Tests if the given value is _null_ or _undefined_.
          * @param any The value to test.
-         * @return _true_ if the value is _null_ or [undefined]; false otherwise.
+         * @return _true_ if the value is _null_ or _undefined_; false otherwise.
          */
         @JvmStatic
         @JsStatic
@@ -218,7 +218,7 @@ expect class N {
         @JvmStatic
         @JsStatic
         fun <T : Any> klassOf(o: T): KClass<out T>
-        // TODO: In Java, add klassOf(Class<T>)
+        // TODO: In Java add: fun <T: Any> klassOf(javaClass: Class<T>): KClass<out T>
 
         /**
          * Returns the default symbol to bind the given [KClass] against. If no symbol is returned by the registered symbol resolvers,
@@ -464,7 +464,7 @@ expect class N {
          * Returns the value of a member field, stored with the underlying native object.
          * @param obj The object to access.
          * @param key The key of the member.
-         * @return The member value or [N.undefined] if no such member exist.
+         * @return The member value or _undefined_ if no such member exist.
          */
         @JvmStatic
         @JsStatic
@@ -474,8 +474,8 @@ expect class N {
          * Sets the value of a protected member field, stored with the underlying native object.
          * @param obj The object to access.
          * @param key The key of the member.
-         * @param value The value to assign, if being [N.undefined], then the member is removed.
-         * @return The previously assigned member value; [N.undefined] if no such member existed.
+         * @param value The value to assign, if being _undefined_, then the member is removed.
+         * @return The previously assigned member value; _undefined_ if no such member existed.
          */
         @JvmStatic
         @JsStatic
@@ -485,7 +485,7 @@ expect class N {
          * Returns the value of a property, stored with the underlying native object.
          * @param obj The object to access.
          * @param key The key of the property.
-         * @return The property value or [N.undefined] if no such property exist.
+         * @return The property value or _undefined_ if no such property exist.
          */
         fun get(obj: N_Object, key: String): Any?
 
@@ -493,8 +493,8 @@ expect class N {
          * Sets the value of a property, stored with the underlying native object.
          * @param obj The object to access.
          * @param key The key of the property.
-         * @param value The value to assign, if being [N.undefined], then the property is removed.
-         * @return The previously assigned property value; [N.undefined] if no such property existed.
+         * @param value The value to assign, if being _undefined_, then the property is removed.
+         * @return The previously assigned property value; _undefined_ if no such property existed.
          */
         fun set(obj: N_Object, key: String, value: Any?): Any?
 
@@ -510,7 +510,7 @@ expect class N {
          * Removes the property, stored with the underlying native object.
          * @param obj The object to access.
          * @param key The key of the property.
-         * @return The value being removed; [N.undefined] if no such property existed.
+         * @return The value being removed; _undefined_ if no such property existed.
          */
         fun remove(obj: N_Object, key: String): Any?
 
@@ -689,5 +689,68 @@ expect class N {
         @JvmStatic
         @JsStatic
         fun <T : Any> newInstanceOf(klass: KClass<T>): T
+
+        /**
+         * Serialize the given value to JSON.
+         * @param obj The object to serialize.
+         * @return The JSON.
+         */
+        @JvmStatic
+        @JsStatic
+        fun toJSON(obj: Any?) : String
+
+        /**
+         * Deserialize the given JSON.
+         * @param json The JSON string to parse.
+         * @return The parsed JSON.
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromJSON(json: String) : Any?
+
+        /**
+         * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [N_Map],
+         * all strings starting with `data:bigint,` or Java `Long`'s are converted into [Int64]'s, lists are corrected to [N_Array],
+         * and so on. This can be used after a JSON was parsed from an arbitrary platform tool into some platform specific standard
+         * objects or when exchanging data with a platform specific library that does not like the multi-platform objects.
+         * @param obj The platform native objects to convert recursively.
+         * @return The given platform native objects converted into multi-platform objects.
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromPlatform(obj: Any?) : Any? // TODO: Better name?
+
+        /**
+         * Convert the given multi-platform objects recursively into the default platform native objects, for example [N_Map] may
+         * become a pure `Object` in JavaScript. This is often useful when exchanging code with libraries that do not support `Map`.
+         * In Java this will convert to [N_Map] to [LinkedHashMap].
+         * @param obj The multi-platform objects to be converted into platform native objects.
+         * @return The platform native objects.
+         */
+        @JvmStatic
+        @JsStatic
+        fun toPlatform(obj: Any?) : Any? // TODO: Better name?
+        // TODO: in Java add: <T> toPlatform(obj: Any?, javaClass: Class<T>): T
     }
 }
+/*
+
+The code for "fromJSON" and "toJSON" Map and BigInt's:
+
+var m = JSON.parse('{"a":{"b":1231232131231231321323213,"c":5,"big":"data:bigint,18446744073709551615"}}', (key, value) => {
+  if (!value) return value;
+  if (typeof value === "string" && value.startsWith("data:bigint,")) return BigInt(value.substring("data:bigint,".length));
+  if (!Array.isArray(value) && !(value instanceof Map) && typeof value === "object") return new Map(Object.entries(value));
+  return value;
+});
+
+var s = JSON.stringify(m, function(k, v) {
+  if (!v) return v;
+  if (v.valueOf() instanceof Map) return Object.fromEntries(v.valueOf().entries());
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs
+  // data:[<mediatype>][;base64],<data>
+  if (typeof v.valueOf() === "bigint") return "data:bigint,"+String(v);
+  return v;
+})
+
+*/
