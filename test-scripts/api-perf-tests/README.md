@@ -1,6 +1,10 @@
 # INSTRUCTION FOR NAKSHA API PERFORMANCE TEST SUITE
 
-This test suite will perform a set of API calls against a running Naksha server, to see how well it handles a simulated situation where multiple principals (users/bots) interact with it.
+This test suite will perform a set of API calls in parallel against a running Naksha server and measure performance throughput. Currently employed APIs includes:
+
+- GET features by tile ID `/hub/spaces/{spaceId}/tile/{type}/{tileId}`
+- POST to patch one random feature from the previous call `/hub/spaces/{spaceId}/features`
+- GET to query history of the patched feature `/hub/spaces/{spaceId}/search`
 
 JMeter is required for this.
 
