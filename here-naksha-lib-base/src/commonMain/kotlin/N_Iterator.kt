@@ -6,8 +6,8 @@ import kotlin.js.JsExport
 
 /**
  * A platform iterator.
- * @property done Set to _false_ if the iterator has no more values; _true_ if this is the end ([value] will be [N.undefined]).
- * @property value The value or [N.undefined], if [done] is _false_.
+ * @property done Set to _false_ if the iterator has no more values; _true_ if this is the end ([value] will be _undefined_).
+ * @property value The value or _undefined_, if [done] is _false_.
  */
 @JsExport
 abstract class N_Iterator<VALUE>(var done: Boolean, var value: VALUE?) {
