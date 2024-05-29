@@ -697,7 +697,7 @@ expect class N {
          */
         @JvmStatic
         @JsStatic
-        fun toJSON(obj: Any?) : String
+        fun toJSON(obj: Any?): String
 
         /**
          * Deserialize the given JSON.
@@ -706,7 +706,7 @@ expect class N {
          */
         @JvmStatic
         @JsStatic
-        fun fromJSON(json: String) : Any?
+        fun fromJSON(json: String): Any?
 
         /**
          * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [N_Map],
@@ -714,23 +714,24 @@ expect class N {
          * and so on. This can be used after a JSON was parsed from an arbitrary platform tool into some platform specific standard
          * objects or when exchanging data with a platform specific library that does not like the multi-platform objects.
          * @param obj The platform native objects to convert recursively.
+         * @param importers The importers to use.
          * @return The given platform native objects converted into multi-platform objects.
          */
         @JvmStatic
         @JsStatic
-        fun fromPlatform(obj: Any?) : Any? // TODO: Better name?
+        fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any?
 
         /**
          * Convert the given multi-platform objects recursively into the default platform native objects, for example [N_Map] may
          * become a pure `Object` in JavaScript. This is often useful when exchanging code with libraries that do not support `Map`.
          * In Java this will convert to [N_Map] to [LinkedHashMap].
          * @param obj The multi-platform objects to be converted into platform native objects.
+         * @param exporters The exporters to use.
          * @return The platform native objects.
          */
         @JvmStatic
         @JsStatic
-        fun toPlatform(obj: Any?) : Any? // TODO: Better name?
-        // TODO: in Java add: <T> toPlatform(obj: Any?, javaClass: Class<T>): T
+        fun toPlatform(obj: Any?, exporters: List<PlatformExporter>): Any?
     }
 }
 /*
