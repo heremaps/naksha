@@ -146,6 +146,15 @@ expect class N {
         fun isUndefined(any: Any?): Boolean
 
         /**
+         * Tests if the given value is _null_ or [undefined].
+         * @param any The value to test.
+         * @return _true_ if the value is _null_ or [undefined]; false otherwise.
+         */
+        @JvmStatic
+        @JsStatic
+        fun isNil(any: Any?): Boolean
+
+        /**
          * Creates an undefined value for the given type or returns the cached one.
          * @param klass The type for which to create an undefined value.
          * @return The undefined value.
@@ -163,6 +172,30 @@ expect class N {
         @JvmStatic
         @JsStatic
         fun initialize(vararg parameters: Any?): Boolean
+
+        /**
+         * Tests if the [fromSource] class or interface is either the same as, or is a superclass or superinterface of, the class
+         * or interface represented by the specified [toTarget] parameter.
+         *
+         * For example `isAssignableForm(CharSequence, String)` would be _true_, while
+         * `isAssignableForm(String, CharSequence)` would be _false_.
+         *
+         * @param fromSource The type that should be cast.
+         * @param toTarget The target type to which to cast.
+         * @return _true_ if the [fromSource] type can be cast to the [toTarget] type; _false_ otherwise.
+         */
+        @JvmStatic
+        @JsStatic
+        fun isAssignableFrom(fromSource: KClass<*>, toTarget: KClass<*>): Boolean
+
+        /**
+         * Tests if the given type is any [Proxy]. This is necessary to be used with [proxy].
+         * @param klass The type to test.
+         * @return _true_ if the given type is a [Proxy] type; _false_ otherwise.
+         */
+        @JvmStatic
+        @JsStatic
+        fun isProxyKlass(klass: KClass<*>): Boolean
 
         /**
          * Returns the [KClass] created **by** the given constructor. This is mainly for JavaScript, it will simply query a cached and if not
@@ -203,7 +236,7 @@ expect class N {
          */
         @JvmStatic
         @JsStatic
-        fun getSymbolResolvers(): List<Fn1<Symbol, Klass<*>>>
+        fun getSymbolResolvers(): List<SymbolResolver>
 
         /**
          * Compares and sets the symbol resolvers in an atomic way.
@@ -213,7 +246,7 @@ expect class N {
          */
         @JvmStatic
         @JsStatic
-        fun compareAndSetSymbolResolvers(expect: List<Fn1<Symbol, Klass<*>>>, value: List<Fn1<Symbol, Klass<*>>>): Boolean
+        fun compareAndSetSymbolResolvers(expect: List<SymbolResolver>, value: List<SymbolResolver>): Boolean
 
         /**
          * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
@@ -230,8 +263,8 @@ expect class N {
 
         /**
          * Create a proxy of the given type or return the existing proxy. If a proxy of a not compatible type exists already, either
-         * override it or throw an _IllegalStateException_. The method will automatically [unbox] all [P] instances, when given.
-         * @param <T> The proxy type.
+         * override it or throw an _IllegalStateException_. The method will automatically [unbox] all [Proxy] instances, when given.
+         * @param <T> The proxy type, must extend [Proxy].
          * @param o The native object to query, should be an instance of [N_Object].
          * @param klass The proxy class.
          * @param override If an existing incompatible proxy should be overridden; if _false_, an exception is thrown.
@@ -241,21 +274,7 @@ expect class N {
          */
         @JvmStatic
         @JsStatic
-        fun <T : P> proxy(o: Any?, klass: KClass<T>, override: Boolean = false): T
-
-        @JvmStatic
-        @JsStatic
-        fun <K : Any, V : Any, T : P_Map<K, V>> proxyMap(
-            o: Any?,
-            key: KClass<K>,
-            value: KClass<V>,
-            klass: Klass<T>? = null,
-            override: Boolean = false
-        ): T
-
-        @JvmStatic
-        @JsStatic
-        fun <E : Any, T : P_List<E>> proxyList(o: Any?, value: KClass<E>, klass: Klass<T>? = null, override: Boolean = false): T
+        fun <T : Proxy> proxy(o: Any?, klass: KClass<out T>, override: Boolean = false): T
 
         /**
          * Returns the symbol for the given string from the global registry. It is recommended to use a package name, for example
@@ -431,6 +450,15 @@ expect class N {
         @JvmStatic
         @JsStatic
         fun isDouble(o: Any?): Boolean
+
+        /**
+         * Tests if the given object is a [Proxy].
+         * @param o The object to test.
+         * @return _true_ if the object is a [Proxy]; _false_ otherwise.
+         */
+        @JvmStatic
+        @JsStatic
+        fun isProxy(o: Any?): Boolean
 
         /**
          * Returns the value of a member field, stored with the underlying native object.
@@ -653,6 +681,11 @@ expect class N {
         @JsStatic
         fun hashCodeOf(o: Any?): Int
 
+        /**
+         * Creates a new instance of the given type.
+         * @param klass The type of which to create a new instance.
+         * @return The new instance.
+         */
         @JvmStatic
         @JsStatic
         fun <T : Any> newInstanceOf(klass: KClass<T>): T

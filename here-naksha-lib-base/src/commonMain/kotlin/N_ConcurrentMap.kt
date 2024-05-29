@@ -10,19 +10,8 @@ import kotlin.js.JsExport
  * [Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map).
  */
 @JsExport
-interface N_ConcurrentMap : N_Object, Iterable<Map.Entry<Any, Any?>> {
-    fun size(): Int
-    fun clear()
-    fun delete(key: Any): Boolean
-    operator fun contains(key: Any): Boolean
-    operator fun get(key: Any): Any?
-    operator fun set(key: Any, value: Any?)
+interface N_ConcurrentMap : N_Map, Iterable<Map.Entry<Any, Any?>> {
     fun setIfAbsent(key: Any, value: Any?): Any?
     fun compareAndDelete(key: Any, expected: Any?): Boolean
     fun compareAndSet(key: Any, expected: Any?, value: Any?): Boolean
-    fun entries() : N_Iterator<N_Array>
-    // TODO:
-    // fun keys()
-    // fun values()
-    // fun forEach()
 }

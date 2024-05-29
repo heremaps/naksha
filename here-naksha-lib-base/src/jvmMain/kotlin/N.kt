@@ -102,10 +102,10 @@ actual class N {
         actual fun intern(s: String, cd: Boolean): String = s
 
         @JvmStatic
-        actual fun <T : P> getAssignment(o: Any?, symbol: Symbol): T? = toJvmObject(o)?.get(symbol) as? T
+        actual fun <T : Proxy> getAssignment(o: Any?, symbol: Symbol): T? = toJvmObject(o)?.get(symbol) as? T
 
         @JvmStatic
-        actual fun <T : P> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
+        actual fun <T : Proxy> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
             val data = toJvmObject(o)
             require(data != null)
             val sym = klass.symbol()
@@ -119,7 +119,7 @@ actual class N {
         }
 
         @JvmStatic
-        actual fun <T : P> forceAssign(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
+        actual fun <T : Proxy> forceAssign(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
             val data = toJvmObject(o)
             require(data != null)
             val sym = klass.symbol()
@@ -162,7 +162,7 @@ actual class N {
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): N_DataView = JvmNativeDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun unbox(o: Any?): Any? = if (o is P) o.__data as? JvmObject else o
+        actual fun unbox(o: Any?): Any? = if (o is Proxy) o.__data as? JvmObject else o
 
         /**
          * Returns the [JvmObject] of the given object. This method uses the same implementation as [unbox].
@@ -170,7 +170,7 @@ actual class N {
          * @return The [JvmObject] or _null_.
          */
         @JvmStatic
-        fun toJvmObject(o: Any?): JvmObject? = if (o is P) o.__data as? JvmObject else if (o is JvmObject) o else null
+        fun toJvmObject(o: Any?): JvmObject? = if (o is Proxy) o.__data as? JvmObject else if (o is JvmObject) o else null
 
         @JvmStatic
         actual fun toInt(value: Any): Int = when (value) {

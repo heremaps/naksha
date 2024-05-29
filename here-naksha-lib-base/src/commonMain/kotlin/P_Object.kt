@@ -9,7 +9,7 @@ import kotlin.js.JsName
  * The Naksha type for an object.
  */
 @JsExport
-open class P_Object() : P() {
+open class P_Object() : Proxy() {
 
     /**
      * Create an object from a list of entries.
