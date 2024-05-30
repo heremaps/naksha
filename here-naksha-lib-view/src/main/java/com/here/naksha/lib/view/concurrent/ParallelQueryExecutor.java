@@ -111,27 +111,28 @@ public class ParallelQueryExecutor {
       @NotNull IReadSession session,
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       @NotNull ReadFeatures request) {
-    long startTime = System.currentTimeMillis();
+    final long startTime = System.currentTimeMillis();
     String status = "OK";
     int featureCnt = 0;
     int layerPriority = viewRef.getViewCollection().priorityOf(layer);
+    final String collectionId = layer.getCollectionId();
 
     // prepare request
     ReadFeatures clonedRequest = request.shallowClone();
-    clonedRequest.withCollections(List.of(layer.getCollectionId()));
+    clonedRequest.withCollections(List.of(collectionId));
 
     try (MutableCursor<FEATURE, CODEC> cursor =
         session.execute(clonedRequest).mutableCursor(codecFactory)) {
-      featureCnt = cursor.asList().size();
-      return cursor.asList().stream().map(row -> new ViewLayerRow<>(row, layerPriority, layer));
+      List<CODEC> featureList = cursor.asList();
+      featureCnt = featureList.size();
+      return featureList.stream().map(row -> new ViewLayerRow<>(row, layerPriority, layer));
     } catch (NoCursor e) {
       status = "NOK";
       throw unchecked(e);
     } finally {
       log.info(
           "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
-          NakshaContext.currentContext().getStreamId(),
-          layer.getCollectionId(),
+          NakshaContext.currentContext().getStreamId(),collectionId,
           "READ",
           status,
           System.currentTimeMillis() - startTime,

@@ -648,7 +648,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           "SELECT r_op, r_id, r_uuid, r_type, r_ptype, r_feature, ST_AsEWKB(r_geometry), r_err\n"
               + "FROM nk_write_features(?,?,?,?,?,?,?,?,?);");
       final int SIZE = writeRequest.features.size();
-      String collection_id = null;
+      final String collection_id = writeFeatures.getCollectionId();
       // nk_write_features(col_id, part_id, ops, ids, uuids, features, geometries, min_result, errors_only
       try (final Json json = Json.get()) {
         // new array list, so we don't modify original order
@@ -658,8 +658,6 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
             IndexHelper.createKeyIndexMap(features, CODEC::getId);
         // sort to avoid deadlock
         features.sort(comparing(FeatureCodec::getId));
-
-        collection_id = writeFeatures.getCollectionId();
         // partition_id
         final String[] op_arr = new String[SIZE];
         final String[] id_arr = new String[SIZE];
