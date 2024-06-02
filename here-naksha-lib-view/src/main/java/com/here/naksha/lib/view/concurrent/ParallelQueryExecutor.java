@@ -132,7 +132,8 @@ public class ParallelQueryExecutor {
     } finally {
       log.info(
           "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
-          NakshaContext.currentContext().getStreamId(),collectionId,
+          NakshaContext.currentContext().getStreamId(),
+          collectionId,
           "READ",
           status,
           System.currentTimeMillis() - startTime,
