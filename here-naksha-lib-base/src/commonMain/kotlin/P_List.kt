@@ -61,7 +61,7 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
         return value
     }
 
-    override fun createData(): PlatformList = Platform.newArray()
+    override fun createData(): PlatformList = Platform.newList()
     override fun data(): PlatformList = super.data() as PlatformList
     override val size: Int
         get() = TODO("Not yet implemented")
