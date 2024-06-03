@@ -7,16 +7,9 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 @JsExport
-open class P_NakshaCollection() : GeoFeature() {
+open class P_NakshaCollection : GeoFeature() {
 
     companion object {
-        @JvmStatic
-        val klass = object : BaseObjectKlass<P_NakshaCollection>() {
-            override fun isInstance(o: Any?): Boolean = o is P_NakshaCollection
-
-            override fun newInstance(vararg args: Any?): P_NakshaCollection = P_NakshaCollection()
-        }
-
         @JvmStatic
         val PARTITIONS = "partitions"
 
@@ -82,7 +75,7 @@ open class P_NakshaCollection() : GeoFeature() {
     /**
      * @see setPartitions
      */
-    fun getPartitions(): Int = toElement(get(PARTITIONS), Klass.intKlass, 1)!!
+    fun getPartitions(): Int = getAs(PARTITIONS, Platform.intKlass, 1)
 
     /**
      * @see hasPartitions
@@ -101,7 +94,7 @@ open class P_NakshaCollection() : GeoFeature() {
     /**
      * @see setGeoIndex
      */
-    fun getGeoIndex(): String = toElement(get(GEO_INDEX), Klass.stringKlass, "gist")!!
+    fun getGeoIndex(): String = getAs(GEO_INDEX, Platform.stringKlass, "gist")
 
     /**
      * The storageClass decides where the collection is created.
@@ -118,7 +111,7 @@ open class P_NakshaCollection() : GeoFeature() {
     /**
      * @see setStorageClass
      */
-    fun getStorageClass(): String? = toElement(get(STORAGE_CLASS), Klass.stringKlass)
+    fun getStorageClass(): String? = getOrNull(STORAGE_CLASS, Platform.stringKlass)
 
     /**
      * The protectionClass defines how collections should be protected.
@@ -132,7 +125,7 @@ open class P_NakshaCollection() : GeoFeature() {
     /**
      * @see setProtectionClass
      */
-    fun getProtectionClass(): String? = toElement(get(PROTECTION_CLASS), Klass.stringKlass)
+    fun getProtectionClass(): String? = getOrNull(PROTECTION_CLASS, Platform.stringKlass)
 
     /**
      * Default value of `null` in `feature.type` column.
@@ -144,7 +137,7 @@ open class P_NakshaCollection() : GeoFeature() {
     /**
      * @see setDefaultType
      */
-    fun getDefaultType(): String = toElement(get(DEFAULT_TYPE), Klass.stringKlass, "Feature")!!
+    fun getDefaultType(): String = getAs(DEFAULT_TYPE, Platform.stringKlass, "Feature")
 
     /**
      * Default value of `feature.flags`.
@@ -156,12 +149,12 @@ open class P_NakshaCollection() : GeoFeature() {
     /**
      * @see setDefaultFlags
      */
-    fun getDefaultFlags(): Int = toElement(get(DEFAULT_FLAGS), Klass.intKlass, Flags().toCombinedFlags())!!
+    fun getDefaultFlags(): Int = getAs(DEFAULT_FLAGS, Platform.intKlass, Flags().toCombinedFlags())
 
     /**
      * @see setDisableHistory
      */
-    fun isDisableHistory(): Boolean = toElement(get(DISABLE_HISTORY), Klass.boolKlass, false)!!
+    fun isDisableHistory(): Boolean = getAs(DISABLE_HISTORY, Platform.booleanKlass, false)
 
     /**
      * true - disables history of features' modifications.
@@ -171,7 +164,7 @@ open class P_NakshaCollection() : GeoFeature() {
     /**
      * @see setAutoPurge
      */
-    fun isAutoPurge(): Boolean = toElement(get(AUTO_PURGE), Klass.boolKlass, false)!!
+    fun isAutoPurge(): Boolean = getAs(AUTO_PURGE, Platform.booleanKlass, false)
 
     /**
      * If autoPurge is enabled, deleted features are automatically purged and no shadow state is kept available.
@@ -184,13 +177,13 @@ open class P_NakshaCollection() : GeoFeature() {
      * If set to null, default indices are created.
      * The available indices are exposed through the virtual table naksha~indices.
      */
-    fun setIndices(values: BaseList<String>) = set(INDICES, values)
+    fun setIndices(values: P_List<String>) = set(INDICES, values)
 
     /**
      * @see setIndices
      */
     @Suppress("UNCHECKED_CAST")
-    fun getIndices(): BaseList<String> = toElement(get(INDICES), BaseList.klass, BaseList.klass.newInstance())!! as BaseList<String>
+    fun getIndices(): P_List<String> = getOrCreate(INDICES, P_List::class) as P_List<String>
 
     /**
      * The maxAge decides about the maximum age of features in the history in days.
@@ -202,7 +195,7 @@ open class P_NakshaCollection() : GeoFeature() {
     /**
      * @see setMaxAge
      */
-    fun getMaxAge(): Int64 = toElement(get(MAX_AGE), Klass.int64Klass, Int64(-1))!!
+    fun getMaxAge(): Int64 = getAs(MAX_AGE, Platform.int64Klass, Int64(-1))
 
     /**
      * The quadPartitionSize decides (for the optimal partitioning algorithm) how many features should be placed into each "optimal" tile.
@@ -212,10 +205,9 @@ open class P_NakshaCollection() : GeoFeature() {
     /**
      * @see setQuadPartitionSize
      */
-    fun getQuadPartitionSize(): Int = toElement(get(QUAD_PARTITION_SIZE), Klass.intKlass, 10_485_760)!!
+    fun getQuadPartitionSize(): Int = getAs(QUAD_PARTITION_SIZE, Platform.intKlass, 10_485_760)
 
-    fun getEstimatedFeatureCount(): Int64? = toElement(get(ESTIMATED_FEATURE_COUNT), Klass.int64Klass)
+    fun getEstimatedFeatureCount(): Int64? = getOrNull(ESTIMATED_FEATURE_COUNT, Platform.int64Klass)
 
-    fun getEstimatedDeletedFeatures(): Int64? = toElement(get(ESTIMATED_DELETED_FEATURES), Klass.int64Klass)
-
+    fun getEstimatedDeletedFeatures(): Int64? = getOrNull(ESTIMATED_DELETED_FEATURES, Platform.int64Klass)
 }

@@ -13,19 +13,10 @@ open class P_NakshaFeature() : GeoFeature() {
 
     companion object {
         @JvmStatic
-        val klass = object : BaseObjectKlass<P_NakshaFeature>() {
-            override fun isInstance(o: Any?): Boolean = o is P_NakshaFeature
-
-            override fun newInstance(vararg args: Any?): P_NakshaFeature = P_NakshaFeature()
-        }
-
-        @JvmStatic
-        val REFERENCE_POINT = Base.intern("referencePoint")
+        val REFERENCE_POINT = Platform.intern("referencePoint")
     }
 
-    override fun klass(): BaseKlass<*> = klass
-
-    override fun getProperties(): P_NakshaProperties = getOrCreate(PROPERTIES, P_NakshaProperties.klass)
+    override fun getProperties(): P_NakshaProperties = getOrCreate(PROPERTIES, P_NakshaProperties::class)
 
     /**
      * Set reference point of the feature. Used for grid calculation.
@@ -35,5 +26,5 @@ open class P_NakshaFeature() : GeoFeature() {
     /**
      * Reference point of the feature. Used for grid calculation.
      */
-    fun getReferencePint(): P_Point? = getOrNull(REFERENCE_POINT, P_Point.klass)
+    fun getReferencePint(): P_Point? = getOrNull(REFERENCE_POINT, P_Point::class)
 }
