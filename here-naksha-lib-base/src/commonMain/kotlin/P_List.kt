@@ -2,10 +2,13 @@
 
 package com.here.naksha.lib.base
 
+import com.here.naksha.lib.base.PlatformListApi.Companion.array_delete
+import com.here.naksha.lib.base.PlatformListApi.Companion.array_get
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_get_length
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_index_of
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_last_index_of
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_push
+import com.here.naksha.lib.base.PlatformListApi.Companion.array_set
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_set_length
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_splice
 import kotlin.js.JsExport
@@ -21,13 +24,25 @@ import kotlin.reflect.KClass
 open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
 
     /**
+     * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
+     * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
+     * @param <T> The type to proxy, must extend [Proxy].
+     * @param klass The proxy class.
+     * @param elementKlass The element class, can be _null_, if the proxy type has a fixed element.
+     * @param doNotOverride If _true_ and the symbol is already
+     * @return The proxy instance.
+     */
+    fun <V : Any, T : P_List<V>> proxy(klass: KClass<out T>, elementKlass: KClass<out V>? = null, doNotOverride: Boolean = false): T
+    = data().proxy(klass, elementKlass, doNotOverride)
+
+    /**
      * Returns the element at the given index. If no such index exists or the element is not of the specified type,
      * returns the given alternative.
      * @param index The index to query.
      * @param alternative The alternative to return, when the element is not of the specified type.
      * @return The element.
      */
-    protected open fun getOr(index: Int, alternative: E?): E? = proxy(data()[index], elementKlass, alternative)
+    protected open fun getOr(index: Int, alternative: E?): E? = box(array_get(data(), index), elementKlass, alternative)
 
     /**
      * Returns the element at the given index. If no such key element exists or the element is not of the specified type,
@@ -37,11 +52,11 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
      */
     protected open fun getOrCreate(index: Int): E {
         val data = data()
-        val raw = data[index]
-        var value = proxy(raw, elementKlass, null)
+        val raw = array_get(data, index)
+        var value = box(raw, elementKlass, null)
         if (value == null) {
             value = Platform.newInstanceOf(elementKlass)
-            data[index] = Platform.unbox(value)
+            PlatformListApi.array_set(data, index, Platform.unbox(value))
         }
         return value
     }
@@ -53,7 +68,7 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
 
     override fun clear() = array_set_length(data(), 0)
 
-    override fun get(index: Int): E? = proxy(data()[index], elementKlass)
+    override fun get(index: Int): E? = box(array_get(data(), index), elementKlass)
 
     override fun isEmpty(): Boolean = array_get_length(data()) == 0
 
@@ -72,9 +87,7 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
     override fun removeAt(index: Int): E? {
         val data = data()
         if (index < 0 || index >= array_get_length(data)) return Platform.undefinedOf(elementKlass)
-        val removed = data[index]
-        data.delete(index)
-        return proxy(removed, elementKlass)
+        return box(array_delete(data, index), elementKlass)
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<E?> {
@@ -83,9 +96,7 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
 
     override fun set(index: Int, element: E?): E? {
         val data = data()
-        val old = data[index]
-        data[index] = element
-        return proxy(old, elementKlass)
+        return box(array_set(data, index, unbox(element)), elementKlass)
     }
 
     override fun retainAll(elements: Collection<E?>): Boolean {
@@ -100,7 +111,7 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
         val data = data()
         val i = array_index_of(data, element)
         if (i >= 0) {
-            data.delete(i)
+            array_delete(data(), i)
             return true
         }
         return false

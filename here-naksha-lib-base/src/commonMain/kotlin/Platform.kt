@@ -120,7 +120,7 @@ expect class Platform {
          */
         @JvmStatic
         @JsStatic
-        val arrayKlass: KClass<PlatformList>
+        val listKlass: KClass<PlatformList>
 
         /**
          * The KClass for [PlatformMap].
@@ -286,16 +286,6 @@ expect class Platform {
         @JvmStatic
         @JsStatic
         fun newMap(vararg entries: Any?): PlatformMap
-
-        /**
-         * Creates a new concurrent (thread-safe) map.
-         * @param entries The entries to add into the map. Can be a list of [P_MapEntry] of just alternating (_key_, _value_)'s,
-         * where _key_ need to a string and _value_ can be anything.
-         * @return The created map.
-         */
-        @JvmStatic
-        @JsStatic
-        fun newConcurrentMap(vararg entries: Any?): PlatformConcurrentMap
 
         /**
          * Creates a new byte-array of the given size.

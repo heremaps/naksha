@@ -18,7 +18,7 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @param alt The alternative to return when the value can't be cast.
      * @return The given value as key.
      */
-    protected open fun toKey(value: Any?, alt: K? = null): K? = proxy(value, keyKlass, alt)
+    protected open fun toKey(value: Any?, alt: K? = null): K? = box(value, keyKlass, alt)
 
     /**
      * Convert the given value into a value.
@@ -26,7 +26,7 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @param alt The alternative to return when the value can't be cast.
      * @return The given value as value.
      */
-    protected open fun toValue(value: Any?, alt: V? = null): V? = proxy(value, valueKlass, alt)
+    protected open fun toValue(value: Any?, alt: V? = null): V? = box(value, valueKlass, alt)
 
     override fun createData(): PlatformMap = Platform.newMap()
     override fun data(): PlatformMap = super.data() as PlatformMap
