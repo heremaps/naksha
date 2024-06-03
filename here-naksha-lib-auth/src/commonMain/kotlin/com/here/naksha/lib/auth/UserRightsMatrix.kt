@@ -34,14 +34,8 @@ class UserRightsMatrix(vararg args: Any?) : P_Object(*args) {
     }
 
 
-    private fun getServices(): Map<String, UserServiceMatrix?> {
-        return data().iterator()
-            .asSequence()
-            .associate { (serviceName, rawServiceData) -> serviceName to convertServiceData(rawServiceData) }
-    }
-
-    private fun convertServiceData(raw: Any?): UserServiceMatrix? =
-        raw?.let { Base.assign(it, UserServiceMatrix.klass) }
+    private fun getServices(): Map<String, UserServiceMatrix?> =
+        mapValues { (_, serviceMatrix) -> box(serviceMatrix, UserServiceMatrix::class) }
 }
 
 class UserServiceMatrix(vararg args: Any?) : P_Object(*args) {
@@ -59,49 +53,30 @@ class UserServiceMatrix(vararg args: Any?) : P_Object(*args) {
             .all { actionAccess -> actionAccess }
     }
 
-    private fun attributeMapsByAction(): Map<String, Array<UserAttributeMap>?> {
-        return data().iterator()
-            .asSequence()
-            .associate { (actionName, rawAttributeMaps) ->
-                actionName to convertUserAttributesList(rawAttributeMaps)
-            }
-    }
+    private fun attributeMapsByAction(): Map<String, P_List<UserAttributeMap>?> =
+        mapValues { (_, actionAttributeMaps) -> box(actionAttributeMaps, P_List::class) as P_List<UserAttributeMap> }
 
     private fun actionAccessAllowed(
-        userAttributesList: Array<UserAttributeMap>?,
-        accessAttributesList: Array<AccessAttributeMap>?
+        userAttributesList: P_List<UserAttributeMap>?,
+        accessAttributesList: P_List<AccessAttributeMap>?
     ): Boolean {
         if (userAttributesList == null || accessAttributesList == null) {
             return false
         }
         return userAttributesList.any { userAttributes ->
             accessAttributesList.any { accessAttributes ->
-                userAttributes.matches(accessAttributes)
+                if(userAttributes == null || accessAttributes == null){
+                    false
+                } else {
+                    userAttributes.matches(accessAttributes)
+                }
             }
         }
-    }
-
-    private fun convertUserAttributesList(rawList: Any?): Array<UserAttributeMap>? {
-        return rawList
-            ?.let { Base.assign(it, BaseList.klass) }
-            ?.toObjectArray(UserAttributeMap.klass)
     }
 }
 
 
-class UserAttributeMap(vararg args: Any?) : BaseObject(*args) {
-
-    companion object {
-        @JvmStatic
-        val klass = object : BaseObjectKlass<UserAttributeMap>() {
-            override fun isInstance(o: Any?): Boolean = o is UserAttributeMap
-
-            override fun newInstance(vararg args: Any?): UserAttributeMap =
-                UserAttributeMap()
-        }
-    }
-
-    override fun klass(): BaseKlass<*> = klass
+class UserAttributeMap(vararg args: Any?) : P_Object(*args) {
 
     fun matches(accessAttributes: AccessAttributeMap): Boolean =
         MatcherCompiler.compile(this).matches(accessAttributes)

@@ -1,11 +1,13 @@
 package com.here.naksha.lib.auth.attribute
 
-import com.here.naksha.lib.auth.toBaseArray
+import com.here.naksha.lib.base.P_List
 
 class SpaceAttributes(vararg args: Any) : CommonAttributes<StorageAttributes>(*args) {
 
     fun eventHandlerIds(eventHandlerIds: List<String>) =
-        apply { set(EVENT_HANDLER_IDS_KEY, eventHandlerIds.toBaseArray()) }
+        apply {
+            box(eventHandlerIds, P_List::class)?.let { set(EVENT_HANDLER_IDS_KEY, it) }
+        }
 
     companion object {
         const val EVENT_HANDLER_IDS_KEY = "eventHandlerIds"
