@@ -1,10 +1,8 @@
 package com.here.naksha.lib.auth
 
 import com.here.naksha.lib.auth.action.AccessAction
-import com.here.naksha.lib.base.N_Array
 import com.here.naksha.lib.base.P_List
 import com.here.naksha.lib.base.P_Object
-import com.here.naksha.lib.base.set
 import kotlin.js.JsExport
 
 @JsExport
@@ -31,8 +29,8 @@ class AccessServiceMatrix(vararg args: Any?) : P_Object(*args) {
     fun withAction(action: AccessAction<*>): AccessServiceMatrix =
         withActionAttributeMaps(action.name, *action.getAttributes())
 
-    fun getActionAttributeMaps(actionName: String): List<AccessAttributeMap>? =
-        getOrNull(actionName, P_List::class) as List<AccessAttributeMap>
+    fun getActionAttributeMaps(actionName: String): P_List<AccessAttributeMap>? =
+        getOrNull(actionName, P_List::class) as P_List<AccessAttributeMap>?
 
     fun mergeActionsFrom(otherService: AccessServiceMatrix): AccessServiceMatrix {
         otherService
@@ -79,20 +77,22 @@ class AccessServiceMatrix(vararg args: Any?) : P_Object(*args) {
         actionName: String,
         vararg attributeMaps: AccessAttributeMap
     ): AccessServiceMatrix {
-        val currentAttributeMaps = getOrNull(actionName, N_Array::class)
-        if (currentAttributeMaps == null || currentAttributeMaps.size() == 0) {
-            set(actionName, attributeMaps)
-        } else {
-            val combinedAttributes =
-                Array(currentAttributeMaps.size() + attributeMaps.size) { ind ->
-                    if (ind < currentAttributeMaps.size()) {
-                        currentAttributeMaps[ind]
-                    } else {
-                        attributeMaps[ind - currentAttributeMaps.size()]
-                    }
-                }
-            set(actionName, combinedAttributes)
-        }
+        val currentAttributeMaps = getActionAttributeMaps(actionName) ?: emptyList()
+        val finalAttributeMaps = currentAttributeMaps + attributeMaps
+        set(actionName, box(finalAttributeMaps, P_List::class) as P_List<AccessAttributeMap>)
+//        if (currentAttributeMaps.isNullOrEmpty()) {
+//            set(actionName, attributeMaps)
+//        } else {
+//            val combinedAttributes =
+//                Array(currentAttributeMaps.size + attributeMaps.size) { ind ->
+//                    if (ind < currentAttributeMaps.size) {
+//                        currentAttributeMaps[ind]
+//                    } else {
+//                        attributeMaps[ind - currentAttributeMaps.size]
+//                    }
+//                }
+//            set(actionName, combinedAttributes)
+//        }
         return this
     }
 }

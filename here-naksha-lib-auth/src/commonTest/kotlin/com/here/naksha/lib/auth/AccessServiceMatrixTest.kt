@@ -3,14 +3,14 @@ package com.here.naksha.lib.auth
 import com.here.naksha.lib.auth.action.ReadFeatures
 import com.here.naksha.lib.auth.action.ReadFeatures.Companion.READ_FEATURES_ACTION_NAME
 import com.here.naksha.lib.auth.attribute.XyzFeatureAttributes
-import com.here.naksha.lib.base.get
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class AccessServiceMatrixTest {
 
-    @Test fun shouldAddAttributesToAnAction() {
+    @Test
+    fun shouldAddAttributesToAnAction() {
         // Given
         val serviceMatrix = AccessServiceMatrix()
             .withAction(
@@ -36,19 +36,19 @@ class AccessServiceMatrixTest {
         assertNotNull(attributeMaps)
         assertEquals(5, attributeMaps.size)
         listOf(
-             "id" to "id_123",
-             "storageId" to "storage_1",
-             "one" to "A",
-             "two" to "B",
-             "three" to "C"
+            "id" to "id_123",
+            "storageId" to "storage_1",
+            "one" to "A",
+            "two" to "B",
+            "three" to "C"
         ).forEachIndexed { index, (expectedKey, expectedValue) ->
-            val attributeData = attributeMaps[index].data()
+            val attributeData = attributeMaps[index]!!
             assertEquals(expectedValue, attributeData[expectedKey])
         }
     }
 
     @Test
-    fun shouldMergeActionsProperly(){
+    fun shouldMergeActionsProperly() {
         // Given:
         val leftService = AccessServiceMatrix()
             .withAction(
