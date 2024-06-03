@@ -22,43 +22,36 @@ class P_NakshaLock : GeoFeature() {
 
     companion object {
         @JvmStatic
-        val klass = object : BaseObjectKlass<P_NakshaLock>() {
-            override fun isInstance(o: Any?): Boolean = o is P_NakshaLock
-
-            override fun newInstance(vararg args: Any?): P_NakshaLock = P_NakshaLock()
-        }
+        val TYPE = Platform.intern("type")
 
         @JvmStatic
-        val TYPE = Base.intern("type")
+        val MAX_OWNERS = Platform.intern("maxOwners")
 
         @JvmStatic
-        val MAX_OWNERS = Base.intern("maxOwners")
+        val OWNER = Platform.intern("owner")
 
         @JvmStatic
-        val OWNER = Base.intern("owner")
+        val EXPIRES = Platform.intern("expires")
 
         @JvmStatic
-        val EXPIRES = Base.intern("expires")
-
-        @JvmStatic
-        val OWNERS = Base.intern("owners")
+        val OWNERS = Platform.intern("owners")
     }
 
     fun getType(): String = "naksha.Lock"
 
-    fun getMaxOwners(): Int = getOr(MAX_OWNERS, Klass.intKlass, 1)
+    fun getMaxOwners(): Int = getAs(MAX_OWNERS, Platform.intKlass, 1)
 
     fun setMaxOwners(maxOwners: Int) = set(MAX_OWNERS, maxOwners)
 
-    fun getOwner(): String? = getOrNull(OWNER, Klass.stringKlass)
+    fun getOwner(): String? = getOrNull(OWNER, Platform.stringKlass)
 
     fun setOwner(value: String?) = set(OWNER, value)
 
     fun setExpires(value: Int64?) = set(EXPIRES, value)
 
-    fun getExpires(): Int64? = getOrNull(EXPIRES, Klass.int64Klass)
+    fun getExpires(): Int64? = getOrNull(EXPIRES, Platform.int64Klass)
 
-    fun setOwners(value: BaseMap<Int64?>?) = set(OWNERS, value)
+    fun setOwners(value: P_Map<String, Int64>?) = set(OWNERS, value)
 
-    fun getOwners(): BaseMap<Int64?>? = getOrNull(OWNERS, BaseMap.klass) as BaseMap<Int64?>?
+    fun getOwners(): P_Map<String, Int64>? = getOrNull(OWNERS, P_Map::class) as P_Map<String, Int64>?
 }

@@ -2,7 +2,7 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Klass.Companion.stringKlass
+import com.here.naksha.lib.base.Platform.Companion.stringKlass
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
@@ -10,29 +10,20 @@ import kotlin.jvm.JvmStatic
  *
  */
 @JsExport
-open class GeoFeature(vararg args: Any?) : BaseObject(*args) {
+open class GeoFeature(vararg args: Any?) : P_Object(*args) {
 
     companion object {
         @JvmStatic
-        val klass = object : BaseObjectKlass<GeoFeature>() {
-            override fun isInstance(o: Any?): Boolean = o is GeoFeature
-
-            override fun newInstance(vararg args: Any?): GeoFeature = GeoFeature()
-        }
+        val ID = Platform.intern("id")
 
         @JvmStatic
-        val ID = Base.intern("id")
-
-        @JvmStatic
-        val PROPERTIES = Base.intern("properties")
+        val PROPERTIES = Platform.intern("properties")
     }
 
-    override fun klass(): BaseKlass<*> = klass
-
-    open fun getId(): String? = toElement(get(ID), stringKlass, null)
+    open fun getId(): String? = getOrNull(ID, stringKlass)
     open fun setId(id: String?) = set(ID, id)
 
-    open fun useProperties(): BaseObject  = getOrCreate(PROPERTIES, BaseObject.klass)
-    open fun getProperties(): BaseObject? = getOr(PROPERTIES, BaseObject.klass, null)
-    open fun setProperties(p: BaseObject?) = set(PROPERTIES, p)
+    open fun useProperties(): P_Object  = getOrCreate(PROPERTIES, P_Object::class)
+    open fun getProperties(): P_Object? = getOrNull(PROPERTIES, P_Object::class)
+    open fun setProperties(p: P_Object?) = set(PROPERTIES, p)
 }
