@@ -9,7 +9,7 @@ internal expect class PlatformListApi {
         fun array_set_length(array: PlatformList?, length: Int)
         fun array_clear(array: PlatformList?)
         fun array_get(array: PlatformList?, i: Int): Any?
-        fun array_set(array: PlatformList?, i: Int, value: Any?)
+        fun array_set(array: PlatformList?, i: Int, value: Any?): Any?
         fun array_delete(array: PlatformList?, i: Int): Any?
         fun array_splice(array: PlatformList?, start: Int, deleteCount: Int = 0, vararg add: Any?): PlatformList
 

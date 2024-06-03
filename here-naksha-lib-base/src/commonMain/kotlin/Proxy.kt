@@ -4,7 +4,6 @@ package com.here.naksha.lib.base
 
 import com.here.naksha.lib.base.Platform.Companion.isNil
 import com.here.naksha.lib.base.Platform.Companion.isProxyKlass
-import com.here.naksha.lib.base.Platform.Companion.unbox
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
@@ -28,13 +27,22 @@ abstract class Proxy : PlatformObject {
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         @JsStatic
-        protected fun <E : Any> proxy(raw: Any?, klass: KClass<out E>, alternative: E? = null): E? {
+        protected fun <E : Any> box(raw: Any?, klass: KClass<out E>, alternative: E? = null): E? {
             val data = unbox(raw)
             if (isNil(data)) return alternative
             if (klass.isInstance(raw)) return raw as E
             if (isProxyKlass(klass)) return Platform.proxy(raw, klass as KClass<Proxy>) as E
             return alternative
         }
+
+        /**
+         * Unboxes the given object so that the underlying native value is returned.
+         * @param value The object to unbox.
+         * @return The unboxed value.
+         */
+        @JvmStatic
+        @JsStatic
+        protected fun unbox(value: Any?): Any? = Platform.unbox(value)
     }
 
     /**
