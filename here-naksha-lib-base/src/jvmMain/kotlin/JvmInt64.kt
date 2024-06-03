@@ -1,7 +1,7 @@
 package com.here.naksha.lib.base
 
 /**
- * The JVM Int64 implementation. If an instance is needed use [N.longToInt64], otherwise create an instance and let the compiler
+ * The JVM Int64 implementation. If an instance is needed use [Platform.longToInt64], otherwise create an instance and let the compiler
  * eliminate it.
  */
 @JvmInline

@@ -3,8 +3,6 @@
 package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
-import kotlin.js.JsName
-import kotlin.jvm.JvmStatic
 
 /**
  * The Naksha type for a data view.
@@ -13,15 +11,15 @@ import kotlin.jvm.JvmStatic
 @JsExport
 open class P_DataView(byteArray: ByteArray? = null, offset: Int? = null, length: Int? = null) : Proxy() {
     init {
-        if (!N.isNil(byteArray)) {
+        if (!Platform.isNil(byteArray)) {
             val off = offset ?: 0
             val len = length ?: (byteArray!!.size - off)
-            bind(N.newDataView(byteArray!!, off, len), N.symbolOf(this::class))
+            bind(Platform.newDataView(byteArray!!, off, len), Platform.symbolOf(this::class))
         }
     }
 
-    override fun data(): N_DataView = super.data() as N_DataView
-    override fun createData(): N_DataView = N.newDataView(ByteArray(1024))
+    override fun data(): PlatformDataViewApi = super.data() as PlatformDataViewApi
+    override fun createData(): PlatformDataViewApi = Platform.newDataView(ByteArray(1024))
 
     /**
      * Returns the byte-array below the view.

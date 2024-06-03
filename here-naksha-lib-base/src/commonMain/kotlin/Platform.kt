@@ -8,10 +8,10 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
 /**
- * The native abstraction, implemented for each platform to support the multi-platform code. All methods in this singleton are by
- * definition thread safe.
+ * The platform abstraction, implemented for each platform to support the multi-platform code. All methods in this singleton are
+ * by definition thread safe.
  */
-expect class N {
+expect class Platform {
     companion object {
         /**
          * The default symbol used for all proxies for which no explicit symbol is returned by the symbol resolvers.
@@ -109,32 +109,32 @@ expect class N {
         val stringKlass: KClass<String>
 
         /**
-         * The KClass for [N_Object].
+         * The KClass for [PlatformObject].
          */
         @JvmStatic
         @JsStatic
-        val objectKlass: KClass<N_Object>
+        val objectKlass: KClass<PlatformObject>
 
         /**
-         * The KClass for [N_Array].
+         * The KClass for [PlatformList].
          */
         @JvmStatic
         @JsStatic
-        val arrayKlass: KClass<N_Array>
+        val arrayKlass: KClass<PlatformList>
 
         /**
-         * The KClass for [N_Map].
+         * The KClass for [PlatformMap].
          */
         @JvmStatic
         @JsStatic
-        val mapKlass: KClass<N_Map>
+        val mapKlass: KClass<PlatformMap>
 
         /**
-         * The KClass for [N_DataView].
+         * The KClass for [PlatformDataViewApi].
          */
         @JvmStatic
         @JsStatic
-        val dataViewKlass: KClass<N_DataView>
+        val dataViewKlass: KClass<PlatformDataView>
 
         /**
          * Tests if the given value is _undefined_.
@@ -231,24 +231,6 @@ expect class N {
         fun <T : Any> symbolOf(klass: KClass<out T>): Symbol
 
         /**
-         * Returns a read-only list of all currently registered symbol resolvers.
-         * @return The list of all currently registered symbol resolvers.
-         */
-        @JvmStatic
-        @JsStatic
-        fun getSymbolResolvers(): List<SymbolResolver>
-
-        /**
-         * Compares and sets the symbol resolvers in an atomic way.
-         * @param expect The list that was read.
-         * @param value The new list that should be set, a read-only copy will be done.
-         * @return _true_ if the set was successful; _false_ if it failed (another thread modified the list concurrently).
-         */
-        @JvmStatic
-        @JsStatic
-        fun compareAndSetSymbolResolvers(expect: List<SymbolResolver>, value: List<SymbolResolver>): Boolean
-
-        /**
          * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
          * followed by Canonical Composition). Optionally, if [cd] is set to _true_, perform a Compatibility Decomposition,
          * followed by Canonical Composition. Beware that this is only good for search or special cases, the recommended
@@ -265,11 +247,11 @@ expect class N {
          * Create a proxy of the given type or return the existing proxy. If a proxy of a not compatible type exists already, either
          * override it or throw an _IllegalStateException_. The method will automatically [unbox] all [Proxy] instances, when given.
          * @param <T> The proxy type, must extend [Proxy].
-         * @param o The native object to query, should be an instance of [N_Object].
+         * @param o The native object to query, should be an instance of [PlatformObject].
          * @param klass The proxy class.
          * @param override If an existing incompatible proxy should be overridden; if _false_, an exception is thrown.
          * @return The proxy type.
-         * @throws IllegalArgumentException If the given class is no instance of [N_Object].
+         * @throws IllegalArgumentException If the given class is no instance of [PlatformObject].
          * @throws IllegalStateException If the given object binds an incompatible proxy and [override] is _false_.
          */
         @JvmStatic
@@ -277,24 +259,14 @@ expect class N {
         fun <T : Proxy> proxy(o: Any?, klass: KClass<out T>, override: Boolean = false): T
 
         /**
-         * Returns the symbol for the given string from the global registry. It is recommended to use a package name, for example
-         * _com.here.naksha_ is used for [DEFAULT_SYMBOL], the default Naksha multi-platform library.
-         * @param key The symbol key; if _null_, a random symbol not part of the registry is created.
-         * @return The existing symbol, if no such symbol exist yet, creates a new one.
-         */
-        @JvmStatic
-        @JsStatic
-        fun symbol(key: String?): Symbol
-
-        /**
          * Creates a new object.
-         * @param entries The entries to add into the object. Can be a list of [P_Entry] of just alternating (_key_, _value_)'s,
+         * @param entries The entries to add into the object. Can be a list of [P_MapEntry] of just alternating (_key_, _value_)'s,
          * where _key_ need to a string and _value_ can be anything.
          * @return The created object.
          */
         @JvmStatic
         @JsStatic
-        fun newObject(vararg entries: Any?): N_Object
+        fun newObject(vararg entries: Any?): PlatformObject
 
         /**
          * Creates a new array.
@@ -303,27 +275,27 @@ expect class N {
          */
         @JvmStatic
         @JsStatic
-        fun newArray(vararg entries: Any?): N_Array
+        fun newArray(vararg entries: Any?): PlatformList
 
         /**
          * Creates a new map.
-         * @param entries The entries to add into the map. Can be a list of [P_Entry] of just alternating (_key_, _value_)'s,
+         * @param entries The entries to add into the map. Can be a list of [P_MapEntry] of just alternating (_key_, _value_)'s,
          * where _key_ need to a string and _value_ can be anything.
          * @return The created map.
          */
         @JvmStatic
         @JsStatic
-        fun newMap(vararg entries: Any?): N_Map
+        fun newMap(vararg entries: Any?): PlatformMap
 
         /**
          * Creates a new concurrent (thread-safe) map.
-         * @param entries The entries to add into the map. Can be a list of [P_Entry] of just alternating (_key_, _value_)'s,
+         * @param entries The entries to add into the map. Can be a list of [P_MapEntry] of just alternating (_key_, _value_)'s,
          * where _key_ need to a string and _value_ can be anything.
          * @return The created map.
          */
         @JvmStatic
         @JsStatic
-        fun newConcurrentMap(vararg entries: Any?): N_ConcurrentMap
+        fun newConcurrentMap(vararg entries: Any?): PlatformConcurrentMap
 
         /**
          * Creates a new byte-array of the given size.
@@ -344,16 +316,16 @@ expect class N {
          */
         @JvmStatic
         @JsStatic
-        fun newDataView(byteArray: ByteArray, offset: Int = 0, size: Int = byteArray.size - offset): N_DataView
+        fun newDataView(byteArray: ByteArray, offset: Int = 0, size: Int = byteArray.size - offset): PlatformDataView
 
         /**
          * Unboxes the given object so that the underlying native value is returned.
-         * @param o The object to unbox.
+         * @param value The object to unbox.
          * @return The unboxed value.
          */
         @JvmStatic
         @JsStatic
-        fun unbox(o: Any?): N_Object
+        fun unbox(value: Any?): Any?
 
         /**
          * Create a 32-bit integer from the given value.
@@ -416,7 +388,7 @@ expect class N {
         fun longToInt64(value: Long): Int64
 
         /**
-         * Converts a platform specific 64-bit integer into an internal one to be used for example with the [N_DataView].
+         * Converts a platform specific 64-bit integer into an internal one to be used for example with the [PlatformDataViewApi].
          * @param value The platform specific 64-bit integer.
          * @return The internal 64-bit integer.
          */
@@ -459,205 +431,6 @@ expect class N {
         @JvmStatic
         @JsStatic
         fun isProxy(o: Any?): Boolean
-
-        /**
-         * Returns the value of a member field, stored with the underlying native object.
-         * @param obj The object to access.
-         * @param key The key of the member.
-         * @return The member value or _undefined_ if no such member exist.
-         */
-        @JvmStatic
-        @JsStatic
-        fun getMember(obj: N_Object, key: Symbol): Any?
-
-        /**
-         * Sets the value of a protected member field, stored with the underlying native object.
-         * @param obj The object to access.
-         * @param key The key of the member.
-         * @param value The value to assign, if being _undefined_, then the member is removed.
-         * @return The previously assigned member value; _undefined_ if no such member existed.
-         */
-        @JvmStatic
-        @JsStatic
-        fun setMember(obj: N_Object, key: Symbol, value: Any?): Any?
-
-        /**
-         * Returns the value of a property, stored with the underlying native object.
-         * @param obj The object to access.
-         * @param key The key of the property.
-         * @return The property value or _undefined_ if no such property exist.
-         */
-        fun get(obj: N_Object, key: String): Any?
-
-        /**
-         * Sets the value of a property, stored with the underlying native object.
-         * @param obj The object to access.
-         * @param key The key of the property.
-         * @param value The value to assign, if being _undefined_, then the property is removed.
-         * @return The previously assigned property value; _undefined_ if no such property existed.
-         */
-        fun set(obj: N_Object, key: String, value: Any?): Any?
-
-        /**
-         * Tests if the property exists, stored with the underlying native object.
-         * @param obj The object to access.
-         * @param key The key of the property.
-         * @return _true_ if the property exists; _false_ otherwise.
-         */
-        fun has(obj: N_Object, key: String): Boolean
-
-        /**
-         * Removes the property, stored with the underlying native object.
-         * @param obj The object to access.
-         * @param key The key of the property.
-         * @return The value being removed; _undefined_ if no such property existed.
-         */
-        fun remove(obj: N_Object, key: String): Any?
-
-        /**
-         * Returns an iterator above all properties of an object.
-         * @param obj The object to iterate.
-         * @return The iterator above all properties, where the value is an array with element at index 0 being the key (a string)
-         * and element at index 1 being the value.
-         */
-        @JvmStatic
-        @JsStatic
-        fun iterate(obj: N_Object): N_Iterator<N_Array>
-
-        /**
-         * Collect all the keys of the object properties (being [String]).
-         * @param obj The object from which to get all property keys.
-         * @return The keys of the object properties.
-         */
-        @JvmStatic
-        @JsStatic
-        fun keys(obj: N_Object): Array<String>
-
-        /**
-         * Collect all the values of the object properties.
-         * @param obj The object from which to get all property values.
-         * @return All values of the object properties.
-         */
-        @JvmStatic
-        @JsStatic
-        fun values(obj: N_Object): Array<Any?>
-
-        /**
-         * Returns the amount of properties assigned to the given object.
-         * @param obj The object for which to count the properties.
-         * @return The amount of properties.
-         */
-        @JvmStatic
-        @JsStatic
-        fun count(obj: N_Object): Int
-
-        @JvmStatic
-        @JsStatic
-        fun eq(t: Int64, o: Int64): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun eqi(t: Int64, o: Int): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun lt(t: Int64, o: Int64): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun lti(t: Int64, o: Int): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun lte(t: Int64, o: Int64): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun ltei(t: Int64, o: Int): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun gt(t: Int64, o: Int64): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun gti(t: Int64, o: Int): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun gte(t: Int64, o: Int64): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun gtei(t: Int64, o: Int): Boolean
-
-        @JvmStatic
-        @JsStatic
-        fun shr(t: Int64, bits: Int): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun ushr(t: Int64, bits: Int): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun shl(t: Int64, bits: Int): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun add(t: Int64, o: Int64): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun addi(t: Int64, o: Int): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun sub(t: Int64, o: Int64): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun subi(t: Int64, o: Int): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun mul(t: Int64, o: Int64): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun muli(t: Int64, o: Int): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun mod(t: Int64, o: Int64): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun modi(t: Int64, o: Int): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun div(t: Int64, o: Int64): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun divi(t: Int64, o: Int): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun and(t: Int64, o: Int64): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun or(t: Int64, o: Int64): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun xor(t: Int64, o: Int64): Int64
-
-        @JvmStatic
-        @JsStatic
-        fun inv(t: Int64): Int64
 
         /**
          * Compare the two given objects. If object a support the "compareTo" method it is invoked, if not or comparing fails with an
@@ -709,8 +482,8 @@ expect class N {
         fun fromJSON(json: String): Any?
 
         /**
-         * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [N_Map],
-         * all strings starting with `data:bigint,` or Java `Long`'s are converted into [Int64]'s, lists are corrected to [N_Array],
+         * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap],
+         * all strings starting with `data:bigint,` or Java `Long`'s are converted into [Int64]'s, lists are corrected to [PlatformList],
          * and so on. This can be used after a JSON was parsed from an arbitrary platform tool into some platform specific standard
          * objects or when exchanging data with a platform specific library that does not like the multi-platform objects.
          * @param obj The platform native objects to convert recursively.
@@ -722,9 +495,9 @@ expect class N {
         fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any?
 
         /**
-         * Convert the given multi-platform objects recursively into the default platform native objects, for example [N_Map] may
+         * Convert the given multi-platform objects recursively into the default platform native objects, for example [PlatformMap] may
          * become a pure `Object` in JavaScript. This is often useful when exchanging code with libraries that do not support `Map`.
-         * In Java this will convert to [N_Map] to [LinkedHashMap].
+         * In Java this will convert to [PlatformMap] to [LinkedHashMap].
          * @param obj The multi-platform objects to be converted into platform native objects.
          * @param exporters The exporters to use.
          * @return The platform native objects.

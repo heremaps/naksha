@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
 /**
  * The JVM implementation of the static Naksha multi-platform singleton.
  */
-actual class N {
+actual class Platform {
     actual companion object {
         /**
          * The cache stores the 64-bit integers between -1024 and +1023 with 0 being at index 0, 1023 at index 1023, -1024 at index 1024
@@ -150,19 +150,19 @@ actual class N {
         }
 
         @JvmStatic
-        actual fun newObject(vararg entries: Any?): N_Object = JvmPObject(*entries)
+        actual fun newObject(vararg entries: Any?): PlatformObject = JvmPObject(*entries)
 
         @JvmStatic
-        actual fun newArray(vararg elementClass: Any?): N_Array = JvmPArray(*elementClass)
+        actual fun newArray(vararg elementClass: Any?): PlatformList = JvmPList(*elementClass)
 
         @JvmStatic
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
 
         @JvmStatic
-        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): N_DataView = JvmNativeDataView(byteArray, offset, size)
+        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataViewApi = JvmNativeDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun unbox(o: Any?): Any? = if (o is Proxy) o.__data as? JvmObject else o
+        actual fun unbox(value: Any?): Any? = if (value is Proxy) value.__data as? JvmObject else value
 
         /**
          * Returns the [JvmObject] of the given object. This method uses the same implementation as [unbox].
@@ -238,7 +238,7 @@ actual class N {
         actual fun isObject(o: Any?): Boolean = o is JvmPObject
 
         @JvmStatic
-        actual fun isArray(o: Any?): Boolean = o is JvmPArray
+        actual fun isArray(o: Any?): Boolean = o is JvmPList
 
         @JvmStatic
         actual fun isSymbol(o: Any?): Boolean = o is JvmSymbol
@@ -254,7 +254,7 @@ actual class N {
             val p = toJvmObject(o) ?: return false
             if (key is JvmSymbol) return p.contains(key)
             if (key is String) return p.contains(key)
-            if (key is Int && p is JvmPArray) return key >= 0 && key < p.size
+            if (key is Int && p is JvmPList) return key >= 0 && key < p.size
             return false
         }
 
@@ -263,7 +263,7 @@ actual class N {
             val p = toJvmObject(o) ?: return undefined
             if (key is JvmSymbol) return p[key]
             if (key is String) return if (p.contains(key)) p[key] else undefined
-            if (key is Int && p is JvmPArray) return if (key >= 0 && key < p.size) p[key] else undefined
+            if (key is Int && p is JvmPList) return if (key >= 0 && key < p.size) p[key] else undefined
             return undefined
         }
 
@@ -273,7 +273,7 @@ actual class N {
             require(p != null) { "The given object is not backed by a native base object" }
             if (key is JvmSymbol) return p.set(key, value)
             if (key is String) return p.set(key, value)
-            if (key is Int && p is JvmPArray) return p.set(key, value)
+            if (key is Int && p is JvmPList) return p.set(key, value)
             throw IllegalArgumentException("The given key is invalid, must be symbol, string or integer (only for array)")
         }
 
@@ -282,21 +282,21 @@ actual class N {
             val p = toJvmObject(o) ?: return undefined
             if (key is Symbol) return p.remove(key)
             if (key is String) return p.remove(key)
-            if (key is Int && p is JvmPArray) return p.remove(key)
+            if (key is Int && p is JvmPList) return p.remove(key)
             return undefined
         }
 
         @JvmStatic
-        actual fun arrayIterator(o: N_Array): N_Iterator<Int, Any?> = JvmPArrayIterator(o as JvmPArray)
+        actual fun arrayIterator(o: PlatformList): PlatformIterator<Int, Any?> = JvmPArrayIterator(o as JvmPList)
 
         @JvmStatic
-        actual fun objectIterator(o: N_Object): N_Iterator<String, Any?> = JvmPObjectIterator(o as JvmPObject)
+        actual fun objectIterator(o: PlatformObject): PlatformIterator<String, Any?> = JvmPObjectIterator(o as JvmPObject)
 
         @JvmStatic
         actual fun count(obj: Any?): Int = if (obj is JvmObject) obj.properties?.size ?: 0 else 0
 
         @JvmStatic
-        actual fun length(a: N_Array?): Int = if (a is JvmPArray) a.size else 0
+        actual fun length(a: PlatformList?): Int = if (a is JvmPList) a.size else 0
 
         private val EMPTY_KEYS = arrayOf<String>()
         private val EMPTY_VALUES = arrayOf<Any?>()
