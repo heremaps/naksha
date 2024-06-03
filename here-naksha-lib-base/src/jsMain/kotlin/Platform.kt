@@ -7,19 +7,19 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
 @JsPlainObject
-external interface Foo<E> : N_Iterator<E> {
+external interface Foo<E> : PlatformIterator<E> {
 
 }
 
 @Suppress("MemberVisibilityCanBePrivate", "ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT")
 @JsExport
-actual class N {
+actual class Platform {
 
     actual companion object {
         private var isInitialized: Boolean = false
 
-        val arrayTemplate = object : N_Array {}
-        val objectTemplate = object : N_Object {}
+        val arrayTemplate = object : PlatformList {}
+        val objectTemplate = object : PlatformObject {}
         val symbolTemplate = object : Symbol {}
         val bigIntTemplate = object : Int64 {
             override fun hashCode(): Int = js("BigInt.hashCode(this)").unsafeCast<Int>()
@@ -157,8 +157,8 @@ Object.assign(BigInt, {
         actual fun symbol(key: String?): Symbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<Symbol>()
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun newObject(vararg entries: Any?): N_Object {
-            val o = js("{}").unsafeCast<N_Object>()
+        actual fun newObject(vararg entries: Any?): PlatformObject {
+            val o = js("{}").unsafeCast<PlatformObject>()
             if (entries.isNotEmpty()) {
                 var i = 0
                 while (i < entries.size) {
@@ -170,8 +170,8 @@ Object.assign(BigInt, {
             return o
         }
 
-        actual fun newArray(vararg elementClass: Any?): N_Array {
-            val a = js("[]").unsafeCast<N_Array>()
+        actual fun newArray(vararg elementClass: Any?): PlatformList {
+            val a = js("[]").unsafeCast<PlatformList>()
             if (elementClass.isNotEmpty()) {
                 var i = 0
                 while (i < elementClass.size) {
@@ -184,13 +184,13 @@ Object.assign(BigInt, {
 
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
 
-        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): N_DataView = js("""
+        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataViewApi = js("""
 offset = offset ? Math.ceil(offset) : 0;
 size = size ? Math.floor(size) : byteArray.byteLength - offset;
 return new DataView(byteArray.buffer, offset, size);
-""").unsafeCast<N_DataView>()
+""").unsafeCast<PlatformDataViewApi>()
 
-        actual fun unbox(o: Any?): Any? = if (o is Proxy) o.__data else o
+        actual fun unbox(value: Any?): Any? = if (value is Proxy) value.__data else value
 
         actual fun toInt(value: Any): Int = js("Number(value) >> 0").unsafeCast<Int>()
 
@@ -257,7 +257,7 @@ return new DataView(byteArray.buffer, offset, size);
 
         actual fun isByteArray(o: Any?): Boolean = o is ByteArray
 
-        actual fun isDataView(o: Any?): Boolean = o is N_DataView
+        actual fun isDataView(o: Any?): Boolean = o is PlatformDataViewApi
 
         actual fun has(o: Any?, key: Any?): Boolean = js("Object.hasOwn(o, key)").unsafeCast<Boolean>()
 
@@ -267,13 +267,13 @@ return new DataView(byteArray.buffer, offset, size);
 
         actual fun delete(o: Any, key: Any): Any? = js("var old=o[key]; delete o[key]; old")
 
-        actual fun arrayIterator(o: N_Array): N_Iterator<Int,Any?> = JsArrayIterator(o)
+        actual fun arrayIterator(o: PlatformList): PlatformIterator<Int,Any?> = JsArrayIterator(o)
 
-        actual fun objectIterator(o: N_Object): N_Iterator<String,Any?> = JsObjectIterator(o)
+        actual fun objectIterator(o: PlatformObject): PlatformIterator<String,Any?> = JsObjectIterator(o)
 
         actual fun count(obj: Any?): Int = if (obj != null) keys(obj).size else 0
 
-        actual fun length(a: N_Array?): Int = js("(Array.isArray(a) ? a.length : 0)").unsafeCast<Int>()
+        actual fun length(a: PlatformList?): Int = js("(Array.isArray(a) ? a.length : 0)").unsafeCast<Int>()
 
         actual fun keys(obj: Any): Array<String> = js("var k=Object.keys(o); (Array.isArray(o) ? k.splice(o.length) : k)").unsafeCast<Array<String>>()
 

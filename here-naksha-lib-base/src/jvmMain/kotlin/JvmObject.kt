@@ -1,7 +1,7 @@
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.N.Companion.DEFAULT_SYMBOL
-import com.here.naksha.lib.base.N.Companion.undefined
+import com.here.naksha.lib.base.Platform.Companion.DEFAULT_SYMBOL
+import com.here.naksha.lib.base.Platform.Companion.undefined
 
 /**
  * The base class of all other platform objects.
@@ -51,16 +51,16 @@ open class JvmObject {
     open operator fun contains(name: String): Boolean = properties?.containsKey(name) == true
 
     /**
-     * Returns the value of the property with the given name or [N.undefined].
+     * Returns the value of the property with the given name or [Platform.undefined].
      * @param name The name of the property.
-     * @return The value of the property or [N.undefined].
+     * @return The value of the property or [Platform.undefined].
      */
     open operator fun get(name: String): Any? = if (properties?.containsKey(name) == true) properties?.get(name) else undefined
 
     /**
      * Removes the property with the given name.
      * @param name The name of the property.
-     * @return The value that was removed or [N.undefined].
+     * @return The value that was removed or [Platform.undefined].
      */
     open fun remove(name: String): Any? = if (properties?.containsKey(name) == true) properties?.remove(name) else undefined
 
@@ -68,7 +68,7 @@ open class JvmObject {
      * Set the value of the property.
      * @param name The name of the property.
      * @param value The value to set.
-     * @return The previous value or [N.undefined].
+     * @return The previous value or [Platform.undefined].
      */
     open operator fun set(name: String, value: Any?): Any? {
         // Note: This is incompatible with JavaScript default behavior, but makes Kotlin code better!
@@ -129,7 +129,7 @@ open class JvmObject {
     /**
      * Returns the value assigned to the given symbol.
      * @param sym The symbol to query.
-     * @return The value assigned to the symbol or [N.undefined].
+     * @return The value assigned to the symbol or [Platform.undefined].
      */
     open operator fun get(sym: Symbol): Any? {
         val s = symbols
@@ -141,7 +141,7 @@ open class JvmObject {
     /**
      * Removes the assigned to the given symbol.
      * @param sym The symbol to remove.
-     * @return The value that was assigned to the symbol or [N.undefined].
+     * @return The value that was assigned to the symbol or [Platform.undefined].
      */
     open fun remove(sym: Symbol): Any? {
         val s = symbols
@@ -160,7 +160,7 @@ open class JvmObject {
      * Assigns the given symbol to the given value.
      * @param sym The symbol to assign.
      * @param value The value to assign.
-     * @return The previously assigned value or [N.undefined].
+     * @return The previously assigned value or [Platform.undefined].
      */
     open operator fun set(sym: Symbol, value: Any?): Any? {
         if (value === undefined) return remove(sym)

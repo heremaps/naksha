@@ -1,6 +1,6 @@
 package com.here.naksha.lib.base
 
-class JsArrayIterator(private val a: dynamic) : N_Iterator<Int, Any?> {
+class JsArrayIterator(private val a: dynamic) : PlatformIterator<Int, Any?> {
     private val last = a.length.unsafeCast<Int>()
     private var i = 0
 
