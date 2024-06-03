@@ -1,16 +1,38 @@
-@file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE", "unused", "UNUSED_VARIABLE")
-
 package com.here.naksha.lib.base
 
-@Suppress("MemberVisibilityCanBePrivate", "ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT")
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+
+@OptIn(ExperimentalJsExport::class)
+@Suppress("MemberVisibilityCanBePrivate", "NON_EXPORTABLE_TYPE", "EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 @JsExport
 actual class Platform {
 
+    @OptIn(ExperimentalJsStatic::class)
     actual companion object {
         private var isInitialized: Boolean = false
 
-        val arrayTemplate = object : PlatformList {}
         val objectTemplate = object : PlatformObject {}
+        val listTemplate = object : PlatformList {
+            override fun <V : Any, T : P_List<V>> proxy(klass: KClass<out T>, elementKlass: KClass<out V>?, doNotOverride: Boolean): T {
+                TODO("Not yet implemented")
+            }
+        }
+        val mapTemplate = object : PlatformMap {
+            override fun <K : Any, V : Any, T : P_Map<K, V>> proxy(
+                klass: KClass<out T>,
+                keyKlass: KClass<out K>?,
+                valueKlass: KClass<out V>?,
+                doNotOverride: Boolean
+            ): T {
+                TODO("Not yet implemented")
+            }
+        }
+        val dataViewTemplate = object : PlatformDataView {
+            override fun <T : P_DataView> proxy(klass: KClass<out T>, doNotOverride: Boolean): T {
+                TODO("Not yet implemented")
+            }
+        }
         val symbolTemplate = object : Symbol {}
         val bigIntTemplate = object : Int64 {
             override fun hashCode(): Int = js("BigInt.hashCode(this)").unsafeCast<Int>()
@@ -39,7 +61,8 @@ for (i in keys) {
         actual fun initialize(vararg parameters: Any?): Boolean {
             if (!isInitialized) {
                 isInitialized = true
-                copy(arrayTemplate, js("[]").unsafeCast<Any>())
+                copy(listTemplate, js("[]").unsafeCast<Any>())
+                copy(mapTemplate, js("new Map()").unsafeCast<Any>())
                 copy(objectTemplate, js("{}").unsafeCast<Any>())
                 copy(symbolTemplate, js("Symbol()").unsafeCast<Any>())
                 copy(bigIntTemplate, js("BigInt(0)").unsafeCast<Any>())
@@ -106,48 +129,53 @@ Object.assign(BigInt, {
             return false
         }
 
+        @JsStatic
         actual val DEFAULT_SYMBOL = symbol("com.here.naksha.lib.nak")
-        actual val undefined: Any = js("undefined").unsafeCast<Any>()
+        @JsStatic
+        actual val ITERATOR: Symbol = js("Symbol.iterator").unsafeCast<Symbol>()
+        @JsStatic
         actual val INT64_MAX_VALUE: Int64 = js("BigInt('9223372036854775807')").unsafeCast<Int64>()
+        @JsStatic
         actual val INT64_MIN_VALUE: Int64 = js("BigInt('9223372036854775808')").unsafeCast<Int64>()
+        @JsStatic
         actual val MAX_SAFE_INT: Double = 9007199254740991.0
+        @JsStatic
         actual val MIN_SAFE_INT: Double = -9007199254740991.0
 
+        @JsStatic
         actual fun intern(s: String, cd: Boolean): String = js("(cd ? s.normalize('NFC') : s.normalize('NFKC'))").unsafeCast<String>()
 
-        actual fun <T : Proxy> getAssignment(o: Any?, symbol: Symbol): T? = js("o ? o[symbol] : undefined").unsafeCast<T?>()
+//        @Suppress("UNUSED_VARIABLE")
+//        actual fun <T : Proxy> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
+//            val sym = klass.symbol()
+//            val raw = unbox(o)
+//            var nakType: Any? = js("raw[sym]")
+//            if (klass.isInstance(nakType)) return nakType.unsafeCast<T>()
+//            require(klass.isAssignable(raw))
+//            nakType = klass.newInstance(*args)
+//            nakType.data = raw
+//            js("raw[sym]=t")
+//            return nakType
+//        }
+//
+//        @Suppress("UNUSED_VARIABLE")
+//        actual fun <T : Proxy> forceAssign(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
+//            val sym = klass.symbol()
+//            val raw = unbox(o)
+//            var nakType: Any? = js("raw[sym]")
+//            if (klass.isInstance(nakType)) return nakType.unsafeCast<T>()
+//            require(klass.getPlatformKlass().isInstance(raw))
+//            nakType = klass.newInstance(*args)
+//            nakType.data = raw
+//            js("raw[sym]=t")
+//            return nakType
+//        }
+
+        @JsStatic
+        private fun symbol(key: String?): Symbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<Symbol>()
 
         @Suppress("UNUSED_VARIABLE")
-        actual fun <T : Proxy> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
-            val sym = klass.symbol()
-            val raw = unbox(o)
-            var nakType: Any? = js("raw[sym]")
-            if (klass.isInstance(nakType)) return nakType.unsafeCast<T>()
-            require(klass.isAssignable(raw))
-            nakType = klass.newInstance(*args)
-            nakType.data = raw
-            js("raw[sym]=t")
-            return nakType
-        }
-
-        @Suppress("UNUSED_VARIABLE")
-        actual fun <T : Proxy> forceAssign(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
-            val sym = klass.symbol()
-            val raw = unbox(o)
-            var nakType: Any? = js("raw[sym]")
-            if (klass.isInstance(nakType)) return nakType.unsafeCast<T>()
-            require(klass.getPlatformKlass().isInstance(raw))
-            nakType = klass.newInstance(*args)
-            nakType.data = raw
-            js("raw[sym]=t")
-            return nakType
-        }
-
-        actual fun isAssignable(o: Any?, klass: OldBaseKlass<*>): Boolean = klass.isAssignable(unbox(o))
-
-        actual fun symbol(key: String?): Symbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<Symbol>()
-
-        @Suppress("UNUSED_VARIABLE")
+        @JsStatic
         actual fun newObject(vararg entries: Any?): PlatformObject {
             val o = js("{}").unsafeCast<PlatformObject>()
             if (entries.isNotEmpty()) {
@@ -161,11 +189,12 @@ Object.assign(BigInt, {
             return o
         }
 
-        actual fun newArray(vararg elementClass: Any?): PlatformList {
+        @JsStatic
+        actual fun newList(vararg entries: Any?): PlatformList {
             val a = js("[]").unsafeCast<PlatformList>()
-            if (elementClass.isNotEmpty()) {
+            if (entries.isNotEmpty()) {
                 var i = 0
-                while (i < elementClass.size) {
+                while (i < entries.size) {
                     js("o[i]=value")
                     i++
                 }
@@ -173,23 +202,33 @@ Object.assign(BigInt, {
             return a
         }
 
+        @JsStatic
+        actual fun newMap(vararg entries: Any?): PlatformMap = TODO("Implement me")
+
+        @JsStatic
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
 
-        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataViewApi = js("""
+        @JsStatic
+        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView = js("""
 offset = offset ? Math.ceil(offset) : 0;
 size = size ? Math.floor(size) : byteArray.byteLength - offset;
 return new DataView(byteArray.buffer, offset, size);
-""").unsafeCast<PlatformDataViewApi>()
+""").unsafeCast<PlatformDataView>()
 
-        actual fun unbox(value: Any?): Any? = if (value is Proxy) value.__data else value
+        @JsStatic
+        actual fun unbox(value: Any?): Any? = if (value is Proxy) value.data() else value
 
+        @JsStatic
         actual fun toInt(value: Any): Int = js("Number(value) >> 0").unsafeCast<Int>()
 
+        @JsStatic
         actual fun toInt64(value: Any): Int64 = js("BigInt(value)").unsafeCast<Int64>()
 
+        @JsStatic
         actual fun toDouble(value: Any): Double = js("Number(value)").unsafeCast<Double>()
 
         @Suppress("NON_EXPORTABLE_TYPE")
+        @JsStatic
         actual fun longToInt64(value: Long): Int64 {
             val view = convertDV
             view.setInt32(0, (value ushr 32).toInt())
@@ -198,6 +237,7 @@ return new DataView(byteArray.buffer, offset, size);
         }
 
         @Suppress("NON_EXPORTABLE_TYPE")
+        @JsStatic
         actual fun int64ToLong(value: Int64): Long {
             val view = convertDV
             js("view.setBigInt64(0, value)")
@@ -206,77 +246,60 @@ return new DataView(byteArray.buffer, offset, size);
             return ((hi.toLong() and 0xffff_ffff) shl 32) or (lo.toLong() and 0xffff_ffff).unsafeCast<Long>()
         }
 
+        @JsStatic
         val convertDV = js("new DataView(new ArrayBuffer(16))")
 
+        @JsStatic
         actual fun toInt64RawBits(d: Double): Int64 {
             val view = convertDV
             js("view.setFloat64(0, value)")
             return js("view.getInt64(0)").unsafeCast<Int64>()
         }
 
+        @JsStatic
         actual fun toDoubleRawBits(i: Int64): Double {
             val view = convertDV
             js("view.setInt64(0, value)")
             return js("view.getFloat64(0)").unsafeCast<Double>()
         }
 
-         actual fun isNative(o: Any?): Boolean = o !is Proxy
+        @JsStatic
+        actual fun isNumber(o: Any?): Boolean = js("o && (typeof o.valueOf()==='number' || typeof o.valueOf()==='bigint')").unsafeCast<Boolean>()
 
-        actual fun isString(o: Any?): Boolean = o is String
+        @JsStatic
+        actual fun isInteger(o: Any?): Boolean = js("o && (Number.isInteger(o) || typeof o.valueOf()==='bigint')").unsafeCast<Boolean>()
 
-        actual fun isNumber(o: Any?): Boolean = o is Number || isInt64(o)
-
-        actual fun isInteger(o: Any?): Boolean = isInt(o) || isInt64(o)
-
+        @JsStatic
         actual fun isDouble(o: Any?): Boolean = o is Number
 
-        actual fun isInt(o: Any?): Boolean = js("Number.isInteger(o)").unsafeCast<Boolean>()
+//        actual fun has(o: Any?, key: Any?): Boolean = js("Object.hasOwn(o, key)").unsafeCast<Boolean>()
+//
+//        actual fun get(o: Any, key: Any): Any? = js("o[key]")
+//
+//        actual fun set(o: Any, key: Any, value: Any?): Any? = js("var old=o[key]; value===undefined ? delete o[key] : o[key]=value; old")
+//
+//        actual fun delete(o: Any, key: Any): Any? = js("var old=o[key]; delete o[key]; old")
+//
+//        actual fun arrayIterator(o: PlatformList): PlatformIterator<Int,Any?> = JsArrayIterator(o)
+//
+//        actual fun objectIterator(o: PlatformObject): PlatformIterator<String,Any?> = JsObjectIterator(o)
+//
+//        actual fun count(obj: Any?): Int = if (obj != null) keys(obj).size else 0
+//
+//        actual fun length(a: PlatformList?): Int = js("(Array.isArray(a) ? a.length : 0)").unsafeCast<Int>()
+//
+//        actual fun keys(obj: Any): Array<String> = js("var k=Object.keys(o); (Array.isArray(o) ? k.splice(o.length) : k)").unsafeCast<Array<String>>()
+//
+//        actual fun keysOfMembers(obj: Any): Array<Symbol> = js("Object.getOwnPropertySymbols(o)").unsafeCast<Array<Symbol>>()
+//
+//        actual fun values(obj: Any): Array<Any?> = js("var v=Object.values(o); if (Array.isArray(o)) v.splice(o.length,v.length); v").unsafeCast<Array<Any?>>()
 
-        actual fun isInt64(o: Any?): Boolean = js("typeof o === 'bigint'").unsafeCast<Boolean>() || o is Int64
-
-        actual fun isObject(o: Any?): Boolean = o != null
-                && !isNumber(o)
-                && !isString(o)
-                && !isArray(o)
-                && !isSymbol(o)
-                && !isByteArray(o)
-                && !isDataView(o)
-
-        actual fun isArray(o: Any?): Boolean = js("Array.isArray(o)").unsafeCast<Boolean>()
-
-        actual fun isSymbol(o: Any?): Boolean = js("typeof o === 'symbol'").unsafeCast<Boolean>()
-
-        actual fun isByteArray(o: Any?): Boolean = o is ByteArray
-
-        actual fun isDataView(o: Any?): Boolean = o is PlatformDataViewApi
-
-        actual fun has(o: Any?, key: Any?): Boolean = js("Object.hasOwn(o, key)").unsafeCast<Boolean>()
-
-        actual fun get(o: Any, key: Any): Any? = js("o[key]")
-
-        actual fun set(o: Any, key: Any, value: Any?): Any? = js("var old=o[key]; value===undefined ? delete o[key] : o[key]=value; old")
-
-        actual fun delete(o: Any, key: Any): Any? = js("var old=o[key]; delete o[key]; old")
-
-        actual fun arrayIterator(o: PlatformList): PlatformIterator<Int,Any?> = JsArrayIterator(o)
-
-        actual fun objectIterator(o: PlatformObject): PlatformIterator<String,Any?> = JsObjectIterator(o)
-
-        actual fun count(obj: Any?): Int = if (obj != null) keys(obj).size else 0
-
-        actual fun length(a: PlatformList?): Int = js("(Array.isArray(a) ? a.length : 0)").unsafeCast<Int>()
-
-        actual fun keys(obj: Any): Array<String> = js("var k=Object.keys(o); (Array.isArray(o) ? k.splice(o.length) : k)").unsafeCast<Array<String>>()
-
-        actual fun keysOfMembers(obj: Any): Array<Symbol> = js("Object.getOwnPropertySymbols(o)").unsafeCast<Array<Symbol>>()
-
-        actual fun values(obj: Any): Array<Any?> = js("var v=Object.values(o); if (Array.isArray(o)) v.splice(o.length,v.length); v").unsafeCast<Array<Any?>>()
-
-
+        @JsStatic
         actual fun compare(a: Any?, b: Any?): Int {
             TODO("Fix me, see documentation!")
         }
 
+        @JsStatic
         actual fun hashCodeOf(o: Any?): Int {
             if (o == null) return 0
             val S = DEFAULT_SYMBOL
@@ -291,11 +314,183 @@ return new DataView(byteArray.buffer, offset, size);
             return Fnv1a32.string(Fnv1a32.start(), nak.toString())
         }
 
-        actual fun <T : Any> klassOf(o: T) : KClass<out T> = o::class
+        @JsStatic
+        actual fun isAssignableFrom(fromSource: KClass<*>, toTarget: KClass<*>): Boolean = TODO("Fix me, see documentation!")
 
-        actual fun <T : Any> klassOf(constructor: KFunction<T>) : KClass<out T> = js("""
+        @JsStatic
+        actual fun isProxyKlass(klass: KClass<*>): Boolean = TODO("Fix me, see documentation!")
+
+        @JsStatic
+        actual fun <T : Any> klassBy(constructor: KFunction<T>): KClass<out T> = js("""
             // TODO: Find the constructor in namespace of module.
             return require('module_name').package.full.path.ClassName").unsafeCast<JsClass<*>>().kotlin
-        """).unsafeCast(JsClass<*>)
+        """).unsafeCast<KClass<T>>()
+
+        @JsStatic
+        actual fun <T : Any> klassOf(o: T) : KClass<out T> = o::class
+
+        /**
+         * The KClass for [Any].
+         */
+        @JsStatic
+        actual val anyKlass: KClass<Any> = Any::class
+
+        /**
+         * The KClass for [Boolean].
+         */
+        @JsStatic
+        actual val booleanKlass: KClass<Boolean> = Boolean::class
+
+        /**
+         * The KClass for [Short].
+         */
+        @JsStatic
+        actual val shortKlass: KClass<Short> = Short::class
+
+        /**
+         * The KClass for [Int].
+         */
+        @JsStatic
+        actual val intKlass: KClass<Int> = Int::class
+
+        /**
+         * The KClass for [Int64].
+         */
+        @JsStatic
+        actual val int64Klass: KClass<Int64> = Int64::class
+
+        /**
+         * The KClass for [Double].
+         */
+        @JsStatic
+        actual val doubleKlass: KClass<Double> = Double::class
+
+        /**
+         * The KClass for [String].
+         */
+        @JsStatic
+        actual val stringKlass: KClass<String> = String::class
+
+        /**
+         * The KClass for [PlatformObject].
+         */
+        @JsStatic
+        actual val objectKlass: KClass<PlatformObject> = PlatformObject::class
+
+        /**
+         * The KClass for [PlatformList].
+         */
+        @JsStatic
+        actual val listKlass: KClass<PlatformList> = PlatformList::class
+
+        /**
+         * The KClass for [PlatformMap].
+         */
+        @JsStatic
+        actual val mapKlass: KClass<PlatformMap> = PlatformMap::class
+
+        /**
+         * The KClass for [PlatformDataViewApi].
+         */
+        @JsStatic
+        actual val dataViewKlass: KClass<PlatformDataView> = PlatformDataView::class
+
+        /**
+         * Tests if the given value is _undefined_.
+         * @param any The value to test.
+         * @return _true_ if the value is _undefined_; false otherwise.
+         */
+        @JsStatic
+        actual fun isUndefined(any: Any?): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Tests if the given value is _null_ or _undefined_.
+         * @param any The value to test.
+         * @return _true_ if the value is _null_ or _undefined_; false otherwise.
+         */
+        @JsStatic
+        actual fun isNil(any: Any?): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Creates an undefined value for the given type or returns the cached one.
+         * @param klass The type for which to create an undefined value.
+         * @return The undefined value.
+         */
+        @JsStatic
+        actual fun <T : Any> undefinedOf(klass: KClass<T>): T {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Returns the default symbol to bind the given [KClass] against. If no symbol is returned by the registered symbol resolvers,
+         * it returns [DEFAULT_SYMBOL].
+         * @param klass The [KClass] for which to return the default symbol.
+         * @return The default symbol to bind the given [KClass] against.
+         */
+        actual fun <T : Any> symbolOf(klass: KClass<out T>): Symbol {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Creates a new instance of the given type.
+         * @param klass The type of which to create a new instance.
+         * @return The new instance.
+         */
+        actual fun <T : Any> newInstanceOf(klass: KClass<T>): T {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Serialize the given value to JSON.
+         * @param obj The object to serialize.
+         * @return The JSON.
+         */
+        actual fun toJSON(obj: Any?): String {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Deserialize the given JSON.
+         * @param json The JSON string to parse.
+         * @return The parsed JSON.
+         */
+        actual fun fromJSON(json: String): Any? {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap],
+         * all strings starting with `data:bigint,` or Java `Long`'s are converted into [Int64]'s, lists are corrected to [PlatformList],
+         * and so on. This can be used after a JSON was parsed from an arbitrary platform tool into some platform specific standard
+         * objects or when exchanging data with a platform specific library that does not like the multi-platform objects.
+         * @param obj The platform native objects to convert recursively.
+         * @param importers The importers to use.
+         * @return The given platform native objects converted into multi-platform objects.
+         */
+        actual fun fromPlatform(
+            obj: Any?,
+            importers: List<PlatformImporter>
+        ): Any? {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Convert the given multi-platform objects recursively into the default platform native objects, for example [PlatformMap] may
+         * become a pure `Object` in JavaScript. This is often useful when exchanging code with libraries that do not support `Map`.
+         * In Java this will convert to [PlatformMap] to [LinkedHashMap].
+         * @param obj The multi-platform objects to be converted into platform native objects.
+         * @param exporters The exporters to use.
+         * @return The platform native objects.
+         */
+        actual fun toPlatform(
+            obj: Any?,
+            exporters: List<PlatformExporter>
+        ): Any? {
+            TODO("Not yet implemented")
+        }
     }
 }

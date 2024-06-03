@@ -1,5 +1,3 @@
-@file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "unused", "UNCHECKED_CAST")
-
 package com.here.naksha.lib.base
 
 import sun.misc.Unsafe
@@ -10,6 +8,7 @@ import kotlin.reflect.KClass
 /**
  * The JVM implementation of the static Naksha multi-platform singleton.
  */
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Platform {
     actual companion object {
         /**
@@ -24,12 +23,6 @@ actual class Platform {
          */
         @JvmStatic
         internal val symbolsCache = ConcurrentHashMap<String, Symbol>()
-
-        /**
-         * The constant for undefined.
-         */
-        @JvmStatic
-        actual val undefined: Any = Object()
 
         /**
          * The symbol (_com.here.naksha.lib.nak_) to store the default Naksha multi-platform types in.
@@ -153,7 +146,7 @@ actual class Platform {
         actual fun newObject(vararg entries: Any?): PlatformObject = JvmPObject(*entries)
 
         @JvmStatic
-        actual fun newArray(vararg elementClass: Any?): PlatformList = JvmPList(*elementClass)
+        actual fun newList(vararg elementClass: Any?): PlatformList = JvmPList(*elementClass)
 
         @JvmStatic
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)

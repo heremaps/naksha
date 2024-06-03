@@ -16,124 +16,90 @@ expect class Platform {
         /**
          * The default symbol used for all proxies for which no explicit symbol is returned by the symbol resolvers.
          */
-        @JvmStatic
-        @JsStatic
-        var DEFAULT_SYMBOL: Symbol
+        val DEFAULT_SYMBOL: Symbol
 
         /**
          * The iterator member.
          */
-        @JvmStatic
-        @JsStatic
-        var ITERATOR: Symbol
+        val ITERATOR: Symbol
 
         /**
          * The maximum value of a 64-bit integer.
          * @return The maximum value of a 64-bit integer.
          */
-        @JvmStatic
-        @JsStatic
         val INT64_MAX_VALUE: Int64
 
         /**
          * The minimum value of a 64-bit integer.
          * @return The minimum value of a 64-bit integer.
          */
-        @JvmStatic
-        @JsStatic
         val INT64_MIN_VALUE: Int64
 
         /**
          * The minimum integer that can safely stored in a double.
          * @return The minimum integer that can safely stored in a double.
          */
-        @JvmStatic
-        @JsStatic
         val MAX_SAFE_INT: Double
 
         /**
          * The maximum integer that can safely stored in a double.
          * @return The maximum integer that can safely stored in a double.
          */
-        @JvmStatic
-        @JsStatic
         val MIN_SAFE_INT: Double
 
         /**
          * The KClass for [Any].
          */
-        @JvmStatic
-        @JsStatic
         val anyKlass: KClass<Any>
 
         /**
          * The KClass for [Boolean].
          */
-        @JvmStatic
-        @JsStatic
         val booleanKlass: KClass<Boolean>
 
         /**
          * The KClass for [Short].
          */
-        @JvmStatic
-        @JsStatic
         val shortKlass: KClass<Short>
 
         /**
          * The KClass for [Int].
          */
-        @JvmStatic
-        @JsStatic
         val intKlass: KClass<Int>
 
         /**
          * The KClass for [Int64].
          */
-        @JvmStatic
-        @JsStatic
         val int64Klass: KClass<Int64>
 
         /**
          * The KClass for [Double].
          */
-        @JvmStatic
-        @JsStatic
         val doubleKlass: KClass<Double>
 
         /**
          * The KClass for [String].
          */
-        @JvmStatic
-        @JsStatic
         val stringKlass: KClass<String>
 
         /**
          * The KClass for [PlatformObject].
          */
-        @JvmStatic
-        @JsStatic
         val objectKlass: KClass<PlatformObject>
 
         /**
          * The KClass for [PlatformList].
          */
-        @JvmStatic
-        @JsStatic
         val listKlass: KClass<PlatformList>
 
         /**
          * The KClass for [PlatformMap].
          */
-        @JvmStatic
-        @JsStatic
         val mapKlass: KClass<PlatformMap>
 
         /**
          * The KClass for [PlatformDataViewApi].
          */
-        @JvmStatic
-        @JsStatic
         val dataViewKlass: KClass<PlatformDataView>
 
         /**
@@ -141,8 +107,6 @@ expect class Platform {
          * @param any The value to test.
          * @return _true_ if the value is _undefined_; false otherwise.
          */
-        @JvmStatic
-        @JsStatic
         fun isUndefined(any: Any?): Boolean
 
         /**
@@ -150,8 +114,6 @@ expect class Platform {
          * @param any The value to test.
          * @return _true_ if the value is _null_ or _undefined_; false otherwise.
          */
-        @JvmStatic
-        @JsStatic
         fun isNil(any: Any?): Boolean
 
         /**
@@ -159,8 +121,6 @@ expect class Platform {
          * @param klass The type for which to create an undefined value.
          * @return The undefined value.
          */
-        @JvmStatic
-        @JsStatic
         fun <T : Any> undefinedOf(klass: KClass<T>): T
 
         /**
@@ -169,8 +129,6 @@ expect class Platform {
          * @param parameters Some arbitrary platform specific parameters to be forwarded.
          * @return _true_ if this was the first call and the platform was initialized; _false_ if the platform is already initialized.
          */
-        @JvmStatic
-        @JsStatic
         fun initialize(vararg parameters: Any?): Boolean
 
         /**
@@ -184,8 +142,6 @@ expect class Platform {
          * @param toTarget The target type to which to cast.
          * @return _true_ if the [fromSource] type can be cast to the [toTarget] type; _false_ otherwise.
          */
-        @JvmStatic
-        @JsStatic
         fun isAssignableFrom(fromSource: KClass<*>, toTarget: KClass<*>): Boolean
 
         /**
@@ -193,8 +149,6 @@ expect class Platform {
          * @param klass The type to test.
          * @return _true_ if the given type is a [Proxy] type; _false_ otherwise.
          */
-        @JvmStatic
-        @JsStatic
         fun isProxyKlass(klass: KClass<*>): Boolean
 
         /**
@@ -205,8 +159,6 @@ expect class Platform {
          * @return The [KClass] that is created **by** this constructor.
          * @throws IllegalArgumentException If the given constructor does not create any valid Kotlin object.
          */
-        @JvmStatic
-        @JsStatic
         fun <T : Any> klassBy(constructor: KFunction<T>): KClass<out T>
 
         /**
@@ -215,8 +167,6 @@ expect class Platform {
          * @return The [KClass] **of** the given object.
          * @throws IllegalArgumentException If the given object has no valid [KClass].
          */
-        @JvmStatic
-        @JsStatic
         fun <T : Any> klassOf(o: T): KClass<out T>
         // TODO: In Java add: fun <T: Any> klassOf(javaClass: Class<T>): KClass<out T>
 
@@ -226,8 +176,6 @@ expect class Platform {
          * @param klass The [KClass] for which to return the default symbol.
          * @return The default symbol to bind the given [KClass] against.
          */
-        @JvmStatic
-        @JsStatic
         fun <T : Any> symbolOf(klass: KClass<out T>): Symbol
 
         /**
@@ -239,8 +187,6 @@ expect class Platform {
          * @param cd If _true_, then perform a Compatibility Decomposition instead of the Canonical Decomposition.
          * @return The new interned string or the given one, if it is already in the right form.
          */
-        @JvmStatic
-        @JsStatic
         fun intern(s: String, cd: Boolean = false): String
 
         /**
@@ -254,9 +200,7 @@ expect class Platform {
          * @throws IllegalArgumentException If the given class is no instance of [PlatformObject].
          * @throws IllegalStateException If the given object binds an incompatible proxy and [override] is _false_.
          */
-        @JvmStatic
-        @JsStatic
-        fun <T : Proxy> proxy(o: Any?, klass: KClass<out T>, override: Boolean = false): T
+//////        fun <T : Proxy> proxy(o: Any?, klass: KClass<out T>, override: Boolean = false): T
 
         /**
          * Creates a new object.
@@ -264,8 +208,6 @@ expect class Platform {
          * where _key_ need to a string and _value_ can be anything.
          * @return The created object.
          */
-        @JvmStatic
-        @JsStatic
         fun newObject(vararg entries: Any?): PlatformObject
 
         /**
@@ -273,9 +215,7 @@ expect class Platform {
          * @param entries The entries to initialize the array with.
          * @return The created array.
          */
-        @JvmStatic
-        @JsStatic
-        fun newArray(vararg entries: Any?): PlatformList
+        fun newList(vararg entries: Any?): PlatformList
 
         /**
          * Creates a new map.
@@ -283,8 +223,6 @@ expect class Platform {
          * where _key_ need to a string and _value_ can be anything.
          * @return The created map.
          */
-        @JvmStatic
-        @JsStatic
         fun newMap(vararg entries: Any?): PlatformMap
 
         /**
@@ -292,8 +230,6 @@ expect class Platform {
          * @param size The size in byte.
          * @return The byte-array of the given size.
          */
-        @JvmStatic
-        @JsStatic
         fun newByteArray(size: Int): ByteArray
 
         /**
@@ -304,8 +240,6 @@ expect class Platform {
          * @return The data view.
          * @throws IllegalArgumentException If any of the given arguments is invalid.
          */
-        @JvmStatic
-        @JsStatic
         fun newDataView(byteArray: ByteArray, offset: Int = 0, size: Int = byteArray.size - offset): PlatformDataView
 
         /**
@@ -313,8 +247,6 @@ expect class Platform {
          * @param value The object to unbox.
          * @return The unboxed value.
          */
-        @JvmStatic
-        @JsStatic
         fun unbox(value: Any?): Any?
 
         /**
@@ -323,8 +255,6 @@ expect class Platform {
          * @return The value as 32-bit integer.
          * @throws IllegalArgumentException If the given value fails to be converted into a 32-bit integer.
          */
-        @JvmStatic
-        @JsStatic
         fun toInt(value: Any): Int
 
         /**
@@ -333,8 +263,6 @@ expect class Platform {
          * @return The value as 64-bit integer.
          * @throws IllegalArgumentException If the given value fails to be converted into a 64-bit integer.
          */
-        @JvmStatic
-        @JsStatic
         fun toInt64(value: Any): Int64
 
         /**
@@ -343,8 +271,6 @@ expect class Platform {
          * @return The value as 64-bit floating point number.
          * @throws IllegalArgumentException If the given value fails to be converted into a 64-bit floating point number.
          */
-        @JvmStatic
-        @JsStatic
         fun toDouble(value: Any): Double
 
         /**
@@ -354,8 +280,6 @@ expect class Platform {
          * @param i The 64-bit integer.
          * @return The integer converted into a double.
          */
-        @JvmStatic
-        @JsStatic
         fun toDoubleRawBits(i: Int64): Double
 
         /**
@@ -364,8 +288,6 @@ expect class Platform {
          * @param d The 64-bit double in [IEEE-754](https://en.wikipedia.org/wiki/IEEE_754) format.
          * @return The integer converted into a double.
          */
-        @JvmStatic
-        @JsStatic
         fun toInt64RawBits(d: Double): Int64
 
         /**
@@ -373,8 +295,6 @@ expect class Platform {
          * @param value The internal 64-bit.
          * @return The platform specific 64-bit.
          */
-        @JvmStatic
-        @JsStatic
         fun longToInt64(value: Long): Int64
 
         /**
@@ -382,8 +302,6 @@ expect class Platform {
          * @param value The platform specific 64-bit integer.
          * @return The internal 64-bit integer.
          */
-        @JvmStatic
-        @JsStatic
         fun int64ToLong(value: Int64): Long
 
         /**
@@ -391,8 +309,6 @@ expect class Platform {
          * @param o The object to test.
          * @return _true_ if the object is a [Number] or [Int64]; _false_ otherwise.
          */
-        @JvmStatic
-        @JsStatic
         fun isNumber(o: Any?): Boolean
 
         /**
@@ -400,8 +316,6 @@ expect class Platform {
          * @param o The object to test.
          * @return _true_ if the object is a [Byte], [Short], [Int] or [Int64]; _false_ otherwise.
          */
-        @JvmStatic
-        @JsStatic
         fun isInteger(o: Any?): Boolean
 
         /**
@@ -409,18 +323,7 @@ expect class Platform {
          * @param o The object to test.
          * @return _true_ if the object is a [Double]; _false_ otherwise.
          */
-        @JvmStatic
-        @JsStatic
         fun isDouble(o: Any?): Boolean
-
-        /**
-         * Tests if the given object is a [Proxy].
-         * @param o The object to test.
-         * @return _true_ if the object is a [Proxy]; _false_ otherwise.
-         */
-        @JvmStatic
-        @JsStatic
-        fun isProxy(o: Any?): Boolean
 
         /**
          * Compare the two given objects. If object a support the "compareTo" method it is invoked, if not or comparing fails with an
@@ -429,8 +332,6 @@ expect class Platform {
          * @param b The second object to compare.
          * @return -1 if the [a] is less than [b]; 0 if they are equal; 1 if [a] is greater than [b].
          */
-        @JvmStatic
-        @JsStatic
         fun compare(a: Any?, b: Any?): Int
 
         /**
@@ -440,8 +341,6 @@ expect class Platform {
          * @param o The value to calculate the hash-code.
          * @return The 32-bit hash code.
          */
-        @JvmStatic
-        @JsStatic
         fun hashCodeOf(o: Any?): Int
 
         /**
@@ -449,8 +348,6 @@ expect class Platform {
          * @param klass The type of which to create a new instance.
          * @return The new instance.
          */
-        @JvmStatic
-        @JsStatic
         fun <T : Any> newInstanceOf(klass: KClass<T>): T
 
         /**
@@ -458,8 +355,6 @@ expect class Platform {
          * @param obj The object to serialize.
          * @return The JSON.
          */
-        @JvmStatic
-        @JsStatic
         fun toJSON(obj: Any?): String
 
         /**
@@ -467,8 +362,6 @@ expect class Platform {
          * @param json The JSON string to parse.
          * @return The parsed JSON.
          */
-        @JvmStatic
-        @JsStatic
         fun fromJSON(json: String): Any?
 
         /**
@@ -480,8 +373,6 @@ expect class Platform {
          * @param importers The importers to use.
          * @return The given platform native objects converted into multi-platform objects.
          */
-        @JvmStatic
-        @JsStatic
         fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any?
 
         /**
@@ -492,8 +383,6 @@ expect class Platform {
          * @param exporters The exporters to use.
          * @return The platform native objects.
          */
-        @JvmStatic
-        @JsStatic
         fun toPlatform(obj: Any?, exporters: List<PlatformExporter>): Any?
     }
 }
