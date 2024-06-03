@@ -6,5 +6,5 @@ import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class P_SubscriptionState: BaseObject() {
+class P_SubscriptionState: P_Object() {
 }
