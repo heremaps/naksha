@@ -1,11 +1,11 @@
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.N.Companion.undefined
+import com.here.naksha.lib.base.Platform.Companion.undefined
 
 /**
- * The JVM implementation of a [N_Array].
+ * The JVM implementation of a [PlatformList].
  */
-open class JvmPArray(vararg entries: Any?) : JvmObject(), MutableList<Any?>, N_Array {
+open class JvmPList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, PlatformList {
     /**
      * The payload of the array.
      */

@@ -2,11 +2,11 @@ import com.here.naksha.lib.base.symbol
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import com.here.naksha.lib.base.*
-import com.here.naksha.lib.base.N.Companion.initialize
-import com.here.naksha.lib.base.N.Companion.newArray
-import com.here.naksha.lib.base.N.Companion.newByteArray
-import com.here.naksha.lib.base.N.Companion.newDataView
-import com.here.naksha.lib.base.N.Companion.newObject
+import com.here.naksha.lib.base.Platform.Companion.initialize
+import com.here.naksha.lib.base.Platform.Companion.newArray
+import com.here.naksha.lib.base.Platform.Companion.newByteArray
+import com.here.naksha.lib.base.Platform.Companion.newDataView
+import com.here.naksha.lib.base.Platform.Companion.newObject
 import kotlin.test.assertEquals
 
 class JvmBaseTest {
@@ -33,7 +33,7 @@ class JvmBaseTest {
         }
 
         val TEST2 = newObject("hello", "world", "beta", 10)
-        assertEquals(2, N.count(TEST2))
+        assertEquals(2, Platform.count(TEST2))
         assertEquals("world", TEST2["hello"])
         assertEquals(10, TEST2["beta"])
     }
@@ -50,7 +50,7 @@ class JvmBaseTest {
             assertEquals(2, entry.value)
         }
 
-        val list = N.proxy(a, P_List.klass)
+        val list = Platform.proxy(a, P_List.klass)
         for (entry in list) {
             assertEquals(0, entry.key)
             assertEquals(2, entry.value)

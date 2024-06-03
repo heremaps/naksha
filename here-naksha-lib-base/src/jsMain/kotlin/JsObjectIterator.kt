@@ -1,6 +1,6 @@
 package com.here.naksha.lib.base
 
-class JsObjectIterator(private val o: dynamic) : N_Iterator<String, Any?> {
+class JsObjectIterator(private val o: dynamic) : PlatformIterator<String, Any?> {
     private val it = js("Object.keys(o)[Symbol.iterator]()")
     private var n: dynamic = null
 

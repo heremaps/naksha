@@ -3,12 +3,11 @@
 package com.here.naksha.lib.base
 
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.reflect.KClass
 
 /**
  * The Naksha type for an object.
- * @param entries The entries to add into the object. Can be a list of [P_Entry] of just alternating (_key_, _value_)'s,
+ * @param entries The entries to add into the object. Can be a list of [P_MapEntry] of just alternating (_key_, _value_)'s,
  * where _key_ need to a string and _value_ can be anything.
  */
 @Suppress("NON_EXPORTABLE_TYPE", "LeakingThis", "unused")
@@ -16,11 +15,11 @@ import kotlin.reflect.KClass
 abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class, Any::class) {
     init {
         if (entries.isNotEmpty()) {
-            bind(N.newObject(*entries), N.symbolOf(this::class))
+            bind(Platform.newObject(*entries), Platform.symbolOf(this::class))
         }
     }
 
-    override fun createData(): N_Map = N.newMap()
+    override fun createData(): PlatformMap = Platform.newMap()
 
     /**
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, the
@@ -33,10 +32,10 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
     protected fun <T : Any> getOrSet(key: String, alternative: T): T {
         val map = data()
         val raw = map[key]
-        var value = convert(raw, N.klassOf(alternative))
+        var value = proxy(raw, Platform.klassOf(alternative))
         if (value == null) {
             value = alternative
-            map[key] = N.unbox(value)
+            map[key] = Platform.unbox(value)
         }
         return value
     }
@@ -52,10 +51,10 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
     protected fun <T : Any> getOrCreate(key: String, klass: KClass<out T>): T {
         val map = data()
         val raw = map[key]
-        var value = convert(raw, klass)
+        var value = proxy(raw, klass)
         if (value == null) {
-            value = N.newInstanceOf(klass)
-            map[key] = N.unbox(value)
+            value = Platform.newInstanceOf(klass)
+            map[key] = Platform.unbox(value)
         }
         return value
     }
@@ -71,7 +70,7 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
     protected fun <T : Any> getAs(key: String, klass: KClass<out T>, alternative: T): T {
         val map = data()
         val raw = map[key]
-        val value = convert(raw, klass)
+        val value = proxy(raw, klass)
         return value ?: alternative
     }
 
@@ -84,7 +83,7 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
     protected fun <T : Any> getOrNull(key: String, klass: KClass<out T>): T? {
         val map = data()
         val raw = map[key]
-        return convert(raw, klass)
+        return proxy(raw, klass)
     }
 
     /**
@@ -96,6 +95,6 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
     protected fun <T : Any> getOrUndefined(key: String, klass: KClass<out T>): T {
         val map = data()
         val raw = map[key]
-        return convert(raw, klass) ?: N.undefinedOf(klass)
+        return proxy(raw, klass) ?: Platform.undefinedOf(klass)
     }
 }

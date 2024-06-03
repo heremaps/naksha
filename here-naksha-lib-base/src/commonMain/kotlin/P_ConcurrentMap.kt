@@ -14,6 +14,6 @@ import kotlin.reflect.KClass
 abstract class P_ConcurrentMap<K : Any, V : Any>(keyKlass: KClass<out K>, valueKlass: KClass<out V>)
     : P_Map<K, V>(keyKlass, valueKlass), MutableMap<K, V> {
 
-    override fun createData(): N_ConcurrentMap = N.newConcurrentMap()
-    override fun data(): N_ConcurrentMap = super.data() as N_ConcurrentMap
+    override fun createData(): PlatformConcurrentMap = Platform.newConcurrentMap()
+    override fun data(): PlatformConcurrentMap = super.data() as PlatformConcurrentMap
 }
