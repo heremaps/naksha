@@ -3,7 +3,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import com.here.naksha.lib.base.*
 import com.here.naksha.lib.base.Platform.Companion.initialize
-import com.here.naksha.lib.base.Platform.Companion.newArray
+import com.here.naksha.lib.base.Platform.Companion.newList
 import com.here.naksha.lib.base.Platform.Companion.newByteArray
 import com.here.naksha.lib.base.Platform.Companion.newDataView
 import com.here.naksha.lib.base.Platform.Companion.newObject
@@ -41,7 +41,7 @@ class JvmBaseTest {
     @Test
     fun testArray() {
         val TEST = symbol("test")
-        val a = newArray()
+        val a = newList()
         a[TEST] = 6
         assertEquals(6, a[TEST])
         a[0] = 2

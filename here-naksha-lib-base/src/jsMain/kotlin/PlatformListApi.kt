@@ -24,7 +24,8 @@ internal actual class PlatformListApi {
         }
 
         @JsStatic
-        actual fun array_set(array: PlatformList?, i: Int, value: Any?) {
+        actual fun array_set(array: PlatformList?, i: Int, value: Any?): Any? {
+            TODO("Not yet implemented")
         }
 
         @JsStatic
@@ -154,6 +155,5 @@ internal actual class PlatformListApi {
         actual fun array_to_sorted(compareFn: CompareFn<Any>?): PlatformList {
             TODO("Not yet implemented")
         }
-
     }
 }
