@@ -48,6 +48,8 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
 
     override fun createData(): PlatformList = Platform.newArray()
     override fun data(): PlatformList = super.data() as PlatformList
+    override val size: Int
+        get() = TODO("Not yet implemented")
 
     override fun clear() = array_set_length(data(), 0)
 
@@ -123,7 +125,7 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
         return false
     }
 
-    override fun addAll(index: Int, elements: Collection<E>): Boolean {
+    override fun addAll(index: Int, elements: Collection<E?>): Boolean {
         val data = data()
         if (elements.isNotEmpty()) {
             val array = arrayOfNulls<Any?>(elements.size)
@@ -135,11 +137,11 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
         return false
     }
 
-    override fun add(index: Int, element: E) {
+    override fun add(index: Int, element: E?) {
         TODO("Not yet implemented")
     }
 
-    override fun add(element: E): Boolean {
+    override fun add(element: E?): Boolean {
         TODO("Not yet implemented")
     }
 }

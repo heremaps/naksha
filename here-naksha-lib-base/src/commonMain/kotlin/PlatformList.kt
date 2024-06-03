@@ -12,5 +12,4 @@ import kotlin.reflect.KClass
 @JsExport
 @JsName("Array")
 interface PlatformList : PlatformObject {
-
 }
