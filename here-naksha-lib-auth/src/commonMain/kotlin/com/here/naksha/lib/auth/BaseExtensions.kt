@@ -2,6 +2,10 @@ package com.here.naksha.lib.auth
 
 import com.here.naksha.lib.base.*
 
+fun N_Array.toList(): List<T> {
+
+}
+
 fun <T : BaseType> BaseList<Any?>.toObjectList(type: BaseKlass<T>): List<T> {
     return iterator()
         .asSequence()

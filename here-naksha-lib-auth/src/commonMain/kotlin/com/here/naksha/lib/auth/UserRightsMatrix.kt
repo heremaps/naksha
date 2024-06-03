@@ -6,22 +6,10 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class UserRightsMatrix(vararg args: Any?) : BaseObject(*args) {
-
-    companion object {
-        @JvmStatic
-        val klass = object : BaseObjectKlass<UserRightsMatrix>() {
-            override fun isInstance(o: Any?): Boolean = o is UserRightsMatrix
-
-            override fun newInstance(vararg args: Any?): UserRightsMatrix =
-                UserRightsMatrix()
-        }
-    }
-
-    override fun klass(): BaseKlass<*> = klass
+class UserRightsMatrix(vararg args: Any?) : P_Object(*args) {
 
     fun getService(serviceName: String): UserServiceMatrix? =
-        getOrNull(serviceName, UserServiceMatrix.klass)
+        getOrNull(serviceName, UserServiceMatrix::class)
 
     fun withService(serviceName: String, serviceMatrix: UserServiceMatrix): UserRightsMatrix =
         apply { set(serviceName, serviceMatrix) }
@@ -56,22 +44,10 @@ class UserRightsMatrix(vararg args: Any?) : BaseObject(*args) {
         raw?.let { Base.assign(it, UserServiceMatrix.klass) }
 }
 
-class UserServiceMatrix(vararg args: Any?) : BaseObject(*args) {
-
-    companion object {
-        @JvmStatic
-        val klass = object : BaseObjectKlass<UserServiceMatrix>() {
-            override fun isInstance(o: Any?): Boolean = o is UserServiceMatrix
-
-            override fun newInstance(vararg args: Any?): UserServiceMatrix =
-                UserServiceMatrix()
-        }
-    }
-
-    override fun klass(): BaseKlass<*> = klass
+class UserServiceMatrix(vararg args: Any?) : P_Object(*args) {
 
     fun getActionAttributeMaps(actionName: String): List<UserAttributeMap>? =
-        getOrNull(actionName, BaseList.klass)?.toObjectList(UserAttributeMap.klass)
+        getOrNull(actionName, P_List::class) as? List<UserAttributeMap>
 
 
     fun matches(accessServiceRights: AccessServiceMatrix): Boolean {
