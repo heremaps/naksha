@@ -2,15 +2,6 @@
 
 package com.here.naksha.lib.base
 
-import kotlinx.js.JsPlainObject
-import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
-
-@JsPlainObject
-external interface Foo<E> : PlatformIterator<E> {
-
-}
-
 @Suppress("MemberVisibilityCanBePrivate", "ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT")
 @JsExport
 actual class Platform {
@@ -281,33 +272,6 @@ return new DataView(byteArray.buffer, offset, size);
 
         actual fun values(obj: Any): Array<Any?> = js("var v=Object.values(o); if (Array.isArray(o)) v.splice(o.length,v.length); v").unsafeCast<Array<Any?>>()
 
-        actual fun eq(t: Int64, o: Int64): Boolean = js("t == o").unsafeCast<Boolean>()
-        actual fun eqi(t: Int64, o: Int): Boolean = js("t == o").unsafeCast<Boolean>()
-        actual fun lt(t: Int64, o: Int64): Boolean = js("t < o").unsafeCast<Boolean>()
-        actual fun lti(t: Int64, o: Int): Boolean = js("t < o").unsafeCast<Boolean>()
-        actual fun lte(t: Int64, o: Int64): Boolean = js("t <= o").unsafeCast<Boolean>()
-        actual fun ltei(t: Int64, o: Int): Boolean = js("t <= o").unsafeCast<Boolean>()
-        actual fun gt(t: Int64, o: Int64): Boolean = js("t > o").unsafeCast<Boolean>()
-        actual fun gti(t: Int64, o: Int): Boolean = js("t > o").unsafeCast<Boolean>()
-        actual fun gte(t: Int64, o: Int64): Boolean = js("t >= o").unsafeCast<Boolean>()
-        actual fun gtei(t: Int64, o: Int): Boolean = js("t >= o").unsafeCast<Boolean>()
-        actual fun shr(t: Int64, bits: Int): Int64 = js("t >> BigInt(bits)").unsafeCast<Int64>()
-        actual fun ushr(t: Int64, bits: Int): Int64 = js("BigInt.ushr(t, bits)").unsafeCast<Int64>()
-        actual fun shl(t: Int64, bits: Int): Int64 = js("t << BigInt(bits)").unsafeCast<Int64>()
-        actual fun add(t: Int64, o: Int64): Int64 = js("t + o").unsafeCast<Int64>()
-        actual fun addi(t: Int64, o: Int): Int64 = js("t + BigInt(o)").unsafeCast<Int64>()
-        actual fun sub(t: Int64, o: Int64): Int64 = js("t - BigInt(o)").unsafeCast<Int64>()
-        actual fun subi(t: Int64, o: Int): Int64 = js("t - BigInt(o)").unsafeCast<Int64>()
-        actual fun mul(t: Int64, o: Int64): Int64 = js("t * o").unsafeCast<Int64>()
-        actual fun muli(t: Int64, o: Int): Int64 = js("t * BigInt(o)").unsafeCast<Int64>()
-        actual fun mod(t: Int64, o: Int64): Int64 = js("t % o").unsafeCast<Int64>()
-        actual fun modi(t: Int64, o: Int): Int64 = js("t % BigInt(o)").unsafeCast<Int64>()
-        actual fun div(t: Int64, o: Int64): Int64 = js("t / o").unsafeCast<Int64>()
-        actual fun divi(t: Int64, o: Int): Int64 = js("t / BigInt(o)").unsafeCast<Int64>()
-        actual fun and(t: Int64, o: Int64): Int64 = js("BigInt.and(t,o)").unsafeCast<Int64>()
-        actual fun or(t: Int64, o: Int64): Int64 = js("BigInt.or(t,o)").unsafeCast<Int64>()
-        actual fun xor(t: Int64, o: Int64): Int64 = js("BigInt.xor(t,o)").unsafeCast<Int64>()
-        actual fun inv(t: Int64): Int64 = js("BigInt.inv(t)").unsafeCast<Int64>()
 
         actual fun compare(a: Any?, b: Any?): Int {
             TODO("Fix me, see documentation!")
