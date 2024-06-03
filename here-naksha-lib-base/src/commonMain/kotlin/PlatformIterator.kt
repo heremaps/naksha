@@ -1,11 +1,13 @@
 package com.here.naksha.lib.base
 
-import kotlin.js.JsName
+import kotlin.js.JsExport
 
 /**
  * An abstraction of a multi-platform iterator above platform object entries.
  */
-internal abstract class PlatformIterator<VALUE> {
+@Suppress("OPT_IN_USAGE")
+@JsExport
+abstract class PlatformIterator<VALUE> {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterator_protocol
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Iterator
 
@@ -19,6 +21,5 @@ internal abstract class PlatformIterator<VALUE> {
      *
      * @return The iterator with the next value, can be _this_ or a new instance.
      */
-    @JsName("next")
     abstract fun next(): PlatformIteratorResult<VALUE>
 }
