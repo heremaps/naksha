@@ -7,6 +7,7 @@ import com.here.naksha.lib.base.Platform.Companion.DEFAULT_SYMBOL
 /**
  * A singleton that grants access to symbols. Symbols are a way to bind proxies (and other hidden data) to platform objects.
  */
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class Symbols {
     companion object {
         /**

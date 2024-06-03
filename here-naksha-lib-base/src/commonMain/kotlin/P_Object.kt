@@ -2,13 +2,15 @@
 
 package com.here.naksha.lib.base
 
+import com.here.naksha.lib.base.PlatformMapApi.Companion.map_get
+import com.here.naksha.lib.base.PlatformMapApi.Companion.map_set
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 
 /**
  * The Naksha type for an object.
- * @param entries The entries to add into the object. Can be a list of [P_MapEntry] of just alternating (_key_, _value_)'s,
- * where _key_ need to a string and _value_ can be anything.
+ * @param entries The entries to add into the object, being a list alternating _key_, _value_ pairs, where _key_ need to a
+ * string and _value_ can be anything.
  */
 @Suppress("NON_EXPORTABLE_TYPE", "LeakingThis", "unused")
 @JsExport
@@ -30,12 +32,12 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
      * @return The value.
      */
     protected fun <T : Any> getOrSet(key: String, alternative: T): T {
-        val map = data()
-        val raw = map[key]
-        var value = proxy(raw, Platform.klassOf(alternative))
+        val data = data()
+        val raw = map_get(data, key)
+        var value = box(raw, Platform.klassOf(alternative))
         if (value == null) {
             value = alternative
-            map[key] = Platform.unbox(value)
+            map_set(data, key, unbox(value))
         }
         return value
     }
@@ -49,12 +51,12 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
      * @return The value.
      */
     protected fun <T : Any> getOrCreate(key: String, klass: KClass<out T>): T {
-        val map = data()
-        val raw = map[key]
-        var value = proxy(raw, klass)
+        val data = data()
+        val raw = map_get(data, key)
+        var value = box(raw, klass)
         if (value == null) {
             value = Platform.newInstanceOf(klass)
-            map[key] = Platform.unbox(value)
+            map_set(data, key, unbox(value))
         }
         return value
     }
@@ -68,9 +70,9 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
      * @return The value.
      */
     protected fun <T : Any> getAs(key: String, klass: KClass<out T>, alternative: T): T {
-        val map = data()
-        val raw = map[key]
-        val value = proxy(raw, klass)
+        val data = data()
+        val raw = map_get(data, key)
+        val value = box(raw, klass)
         return value ?: alternative
     }
 
@@ -80,11 +82,7 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
      * @param key The key to query.
      * @return The value or _null_.
      */
-    protected fun <T : Any> getOrNull(key: String, klass: KClass<out T>): T? {
-        val map = data()
-        val raw = map[key]
-        return proxy(raw, klass)
-    }
+    protected fun <T : Any> getOrNull(key: String, klass: KClass<out T>): T? = box(map_get(data(), key), klass)
 
     /**
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, _undefined_ is returned.
@@ -92,9 +90,5 @@ abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class
      * @param key The key to query.
      * @return The value or _undefined_.
      */
-    protected fun <T : Any> getOrUndefined(key: String, klass: KClass<out T>): T {
-        val map = data()
-        val raw = map[key]
-        return proxy(raw, klass) ?: Platform.undefinedOf(klass)
-    }
+    protected fun <T : Any> getOrUndefined(key: String, klass: KClass<out T>): T = box(map_get(data(), key), klass) ?: Platform.undefinedOf(klass)
 }

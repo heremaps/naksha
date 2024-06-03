@@ -3,6 +3,7 @@ package com.here.naksha.lib.base
 /**
  * A singleton that grants access to symbols. Symbols are a way to bind proxies (and other hidden data) to platform objects.
  */
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Symbols {
     actual companion object {
         /**
@@ -16,7 +17,7 @@ actual class Symbols {
 
         /**
          * Returns the symbol for the given string from the global registry. It is recommended to use a package name, for example
-         * _com.here.naksha_ is used for [DEFAULT_SYMBOL], the default Naksha multi-platform library.
+         * _com.here.naksha_ is used for [Platform.DEFAULT_SYMBOL], the default Naksha multi-platform library.
          * @param key The symbol key; if _null_, a random symbol not part of the registry is created.
          * @return The existing symbol, if no such symbol exist yet, creates a new one.
          */
