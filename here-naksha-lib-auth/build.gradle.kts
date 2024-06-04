@@ -44,6 +44,7 @@ kotlin {
             }
         }
         jvmMain {
+            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-base"))
@@ -58,7 +59,6 @@ kotlin {
                 implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
             }
-            resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
         jsMain {
             dependencies {
