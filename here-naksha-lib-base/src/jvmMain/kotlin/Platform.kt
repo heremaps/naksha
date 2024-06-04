@@ -153,17 +153,6 @@ actual class Platform {
 //            return data != null && klass.isAssignable(data)
 //        }
 //
-//        @JvmStatic
-//        actual fun symbol(key: String?): Symbol {
-//            if (key == null) return JvmSymbol()
-//            var symbol = symbolsCache[key]
-//            if (symbol == null) {
-//                symbol = JvmSymbol(key)
-//                val existing = symbolsCache.putIfAbsent(key, symbol)
-//                if (existing != null) return existing
-//            }
-//            return symbol
-//        }
 
         @JvmStatic
         actual fun newMap(vararg entries: Any?): PlatformMap = JvmMap(*entries)
