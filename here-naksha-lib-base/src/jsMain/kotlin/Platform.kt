@@ -171,7 +171,7 @@ Object.assign(BigInt, {
 //            return nakType
 //        }
 
-        @JsStatic
+        //@JsStatic
         private fun symbol(key: String?): Symbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<Symbol>()
 
         @Suppress("UNUSED_VARIABLE")
@@ -317,11 +317,9 @@ return new DataView(byteArray.buffer, offset, size);
         @JsStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean = TODO("Fix me, see documentation!")
 
+        // TODO: Find the constructor in namespace of module.
         @JsStatic
-        actual fun <T : Any> klassBy(constructor: KFunction<T>): KClass<out T> = js("""
-            // TODO: Find the constructor in namespace of module.
-            return require('module_name').package.full.path.ClassName").unsafeCast<JsClass<*>>().kotlin
-        """).unsafeCast<KClass<T>>()
+        actual fun <T : Any> klassBy(constructor: KFunction<T>): KClass<out T> = js("""require('module_name').package.full.path.ClassName""").unsafeCast<KClass<T>>()
 
         @JsStatic
         actual fun <T : Any> klassOf(o: T) : KClass<out T> = o::class

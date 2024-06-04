@@ -78,17 +78,17 @@ configure<JavaPluginExtension> {
 tasks {
     val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack")
     val browserDistribution = getByName<Task>("jsBrowserDistribution")
+    getByName<ProcessResources>("jvmProcessResources") {
+        dependsOn(webpackTask, browserDistribution)
+    }
+    getByName<ProcessResources>("jvmTestProcessResources") {
+        dependsOn(webpackTask, browserDistribution)
+    }
     getByName<Test>("jvmTest") {
         useJUnitPlatform()
         maxHeapSize = "8g"
     }
     getByName<Jar>("jvmJar") {
         dependsOn(webpackTask)
-    }
-    getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn(webpackTask)
-    }
-    getByName<ProcessResources>("jvmTestProcessResources") {
-        dependsOn(webpackTask, browserDistribution)
     }
 }

@@ -27,11 +27,12 @@ abstract class Proxy : PlatformObject {
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         @JsStatic
-        protected fun <E : Any> box(raw: Any?, klass: KClass<out E>, alternative: E? = null): E? {
+        fun <E : Any> box(raw: Any?, klass: KClass<out E>, alternative: E? = null): E? {
             val data = unbox(raw)
             if (isNil(data)) return alternative
             if (klass.isInstance(raw)) return raw as E
-            if (isProxyKlass(klass)) return Platform.proxy(raw, klass as KClass<Proxy>) as E
+            // TODO: Fix this, re-introduce the proxy method!
+            //if (isProxyKlass(klass)) return Platform.proxy(raw, klass as KClass<Proxy>) as E
             return alternative
         }
 
@@ -42,7 +43,7 @@ abstract class Proxy : PlatformObject {
          */
         @JvmStatic
         @JsStatic
-        protected fun unbox(value: Any?): Any? = Platform.unbox(value)
+        fun unbox(value: Any?): Any? = Platform.unbox(value)
     }
 
     /**
