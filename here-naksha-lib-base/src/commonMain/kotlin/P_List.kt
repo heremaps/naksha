@@ -3,6 +3,7 @@
 package com.here.naksha.lib.base
 
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_delete
+import com.here.naksha.lib.base.PlatformListApi.Companion.array_entries
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_get
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_get_length
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_index_of
@@ -32,8 +33,11 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
      * @param doNotOverride If _true_ and the symbol is already
      * @return The proxy instance.
      */
-    fun <V : Any, T : P_List<V>> proxy(klass: KClass<out T>, elementKlass: KClass<out V>? = null, doNotOverride: Boolean = false): T
-    = data().proxy(klass, elementKlass, doNotOverride)
+    fun <V : Any, T : P_List<V>> proxy(
+        klass: KClass<out T>,
+        elementKlass: KClass<out V>? = null,
+        doNotOverride: Boolean = false
+    ): T = data().proxy(klass, elementKlass, doNotOverride)
 
     /**
      * Returns the element at the given index. If no such index exists or the element is not of the specified type,
@@ -64,7 +68,7 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
     override fun createData(): PlatformList = Platform.newList()
     override fun data(): PlatformList = super.data() as PlatformList
     override val size: Int
-        get() = TODO("Not yet implemented")
+        get() = array_get_length(data())
 
     override fun clear() = array_set_length(data(), 0)
 
@@ -73,15 +77,15 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
     override fun isEmpty(): Boolean = array_get_length(data()) == 0
 
     override fun iterator(): MutableIterator<E?> {
-        TODO("Not yet implemented")
+        return toMutableList(data()).listIterator()
     }
 
     override fun listIterator(): MutableListIterator<E?> {
-        TODO("Not yet implemented")
+        return toMutableList(data()).listIterator()
     }
 
     override fun listIterator(index: Int): MutableListIterator<E?> {
-        TODO("Not yet implemented")
+        return toMutableList(data()).listIterator(index)
     }
 
     override fun removeAt(index: Int): E? {
@@ -91,7 +95,8 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<E?> {
-        TODO("Not yet implemented")
+        val platformList = array_splice(data(), fromIndex, toIndex)
+        return toMutableList(platformList)
     }
 
     override fun set(index: Int, element: E?): E? {
@@ -100,11 +105,23 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
     }
 
     override fun retainAll(elements: Collection<E?>): Boolean {
-        TODO("Not yet implemented")
+        var dataModified = false
+        val iterator = array_entries(data())
+        do {
+            val next = iterator.next()
+            if (!elements.contains(box(next.value, elementKlass))) {
+                dataModified = dataModified || remove(next.value)
+            }
+        } while (!next.done)
+        return dataModified
     }
 
     override fun removeAll(elements: Collection<E?>): Boolean {
-        TODO("Not yet implemented")
+        var dataModified = false
+        for (element in elements) {
+            dataModified = dataModified || remove(element)
+        }
+        return dataModified
     }
 
     override fun remove(element: E?): Boolean {
@@ -122,7 +139,12 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
     override fun indexOf(element: E?): Int = array_index_of(data(), element)
 
     override fun containsAll(elements: Collection<E?>): Boolean {
-        TODO("Not yet implemented")
+        for (element in elements) {
+            if (!contains(element)) {
+                return false
+            }
+        }
+        return true
     }
 
     override fun contains(element: E?): Boolean = indexOf(element) >= 0
@@ -149,10 +171,21 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
     }
 
     override fun add(index: Int, element: E?) {
-        TODO("Not yet implemented")
+        array_set(data(), index, Platform.unbox(element))
     }
 
     override fun add(element: E?): Boolean {
-        TODO("Not yet implemented")
+        array_push(Platform.unbox(element))
+        return true
+    }
+
+    private fun toMutableList(platformList: PlatformList): MutableList<E?> {
+        val iterator = array_entries(platformList)
+        val mutableList: MutableList<E?> = mutableListOf()
+        do {
+            val next = iterator.next()
+            mutableList.add(box(next.value, elementKlass))
+        } while (!next.done)
+        return mutableList
     }
 }
