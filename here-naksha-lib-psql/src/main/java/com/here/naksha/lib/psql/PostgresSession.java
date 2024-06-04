@@ -103,8 +103,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     this.fetchSize = storage.getFetchSize();
     this.stmtTimeoutMillis = storage.getLockTimeout(MILLISECONDS);
     this.lockTimeoutMillis = storage.getLockTimeout(MILLISECONDS);
-List<String> l = new ArrayList<>();
-l.add();
+
     JvmPlv8Sql sql = new JvmPlv8Sql(psqlConnection);
     this.nakshaSession = new NakshaSession(
         sql,
