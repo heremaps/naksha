@@ -1,7 +1,6 @@
 package com.here.naksha.lib.base
 
 import com.here.naksha.lib.base.Platform.Companion.DEFAULT_SYMBOL
-import com.here.naksha.lib.base.Platform.Companion.undefined
 
 /**
  * The base class of all other platform objects.
@@ -15,6 +14,9 @@ open class JvmObject {
     //       much faster. The compare will be as well very fast for misses, unless they accidentally have the same hash.
     //       For very small sized hash-maps, keeping a simple array is enough, iterating 8 to 16 key-value pairs should be as
     //       fast as a complicated hash-map.
+    companion object {
+        private val undefined = Platform.undefinedCache[Any::class]
+    }
 
     /**
      * The properties of the object; if any.
