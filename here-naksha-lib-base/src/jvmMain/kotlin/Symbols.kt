@@ -1,11 +1,15 @@
 package com.here.naksha.lib.base
 
+import java.util.concurrent.ConcurrentHashMap
+
 /**
  * A singleton that grants access to symbols. Symbols are a way to bind proxies (and other hidden data) to platform objects.
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Symbols {
     actual companion object {
+        private val symbolsCache = ConcurrentHashMap<String, Symbol>()
+
         /**
          * Creates a new symbol with the given description.
          * @param description The optional description.
@@ -21,8 +25,16 @@ actual class Symbols {
          * @param key The symbol key; if _null_, a random symbol not part of the registry is created.
          * @return The existing symbol, if no such symbol exist yet, creates a new one.
          */
+        @JvmStatic
         actual fun forName(key: String?): Symbol {
-            TODO("Not yet implemented")
+            if (key == null) return JvmSymbol()
+            var symbol = symbolsCache[key]
+            if (symbol == null) {
+                symbol = JvmSymbol(key)
+                val existing = symbolsCache.putIfAbsent(key, symbol)
+                if (existing != null) return existing
+            }
+            return symbol
         }
 
         /**

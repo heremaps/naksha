@@ -6,7 +6,8 @@ internal actual class PlatformMapApi {
     actual companion object {
         @JvmStatic
         actual fun map_get(map: PlatformMap?, key: Any?): Any? {
-            TODO("Not yet implemented")
+            if (map is JvmMap) return map[key]
+            return null
         }
 
         @JvmStatic

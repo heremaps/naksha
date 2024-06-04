@@ -18,7 +18,7 @@ open class JvmMap(vararg entries: Any?) : JvmObject(), Map<String, Any?>, Platfo
             val value = if (i < entries.size) entries[i++] else null
             when (key) {
                 is String -> set(key, value)
-                is Symbol -> set(key, value)
+                is Symbol -> set(key, value) // TODO: Fix me!
                 else -> throw IllegalArgumentException("key at index $keyIndex is no string and no symbol")
             }
         }
