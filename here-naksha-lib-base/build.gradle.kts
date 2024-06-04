@@ -60,7 +60,6 @@ kotlin {
                 implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
             }
-            resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
         jsMain {
             dependencies {
