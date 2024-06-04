@@ -23,7 +23,8 @@ internal actual class PlatformListApi {
         }
 
         @JvmStatic
-        actual fun array_set(array: PlatformList?, i: Int, value: Any?) {
+        actual fun array_set(array: PlatformList?, i: Int, value: Any?): Any? {
+            TODO("Not yet implemented")
         }
 
         @JvmStatic

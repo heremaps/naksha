@@ -44,6 +44,7 @@ kotlin {
             }
         }
         jvmMain {
+            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 api("org.lz4:lz4-java:1.8.0")
@@ -51,6 +52,7 @@ kotlin {
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
         jvmTest {
+            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("test"))
                 implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")

@@ -176,34 +176,31 @@ Object.assign(BigInt, {
 
         @Suppress("UNUSED_VARIABLE")
         @JsStatic
-        actual fun newObject(vararg entries: Any?): PlatformObject {
-            val o = js("{}").unsafeCast<PlatformObject>()
+        actual fun newMap(vararg entries: Any?): PlatformMap {
+            val map = js("new Map()").unsafeCast<PlatformMap>()
             if (entries.isNotEmpty()) {
                 var i = 0
                 while (i < entries.size) {
                     val key = entries[i++]
                     val value = if (i < entries.size) entries[i++] else null
-                    js("o[key]=value")
+                    js("map.set(key, value)")
                 }
             }
-            return o
+            return map
         }
 
         @JsStatic
         actual fun newList(vararg entries: Any?): PlatformList {
-            val a = js("[]").unsafeCast<PlatformList>()
+            val array = js("[]").unsafeCast<PlatformList>()
             if (entries.isNotEmpty()) {
                 var i = 0
                 while (i < entries.size) {
-                    js("o[i]=value")
+                    js("array[i]=value")
                     i++
                 }
             }
-            return a
+            return array
         }
-
-        @JsStatic
-        actual fun newMap(vararg entries: Any?): PlatformMap = TODO("Implement me")
 
         @JsStatic
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)

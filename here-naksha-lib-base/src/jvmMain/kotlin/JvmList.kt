@@ -1,11 +1,12 @@
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Platform.Companion.undefined
+import com.here.naksha.lib.base.Platform.Companion.undefinedCache
+import kotlin.reflect.KClass
 
 /**
  * The JVM implementation of a [PlatformList].
  */
-open class JvmPList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, PlatformList {
+open class JvmList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, PlatformList {
     /**
      * The payload of the array.
      */
@@ -58,7 +59,7 @@ open class JvmPList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Plat
 
     override operator fun get(index: Int): Any? {
         val d = data
-        if (d == null || index < 0 || index >= d.size) return undefined
+        if (d == null || index < 0 || index >= d.size) return undefinedCache[Any::class]
         return d[index]
     }
 
@@ -72,7 +73,7 @@ open class JvmPList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Plat
 
     override fun removeAt(index: Int): Any? {
         val d = data
-        if (d == null || index < 0 || index >= d.size) return undefined
+        if (d == null || index < 0 || index >= d.size) return undefinedCache[Any::class]
         return d.remove(index)
     }
 
@@ -86,8 +87,8 @@ open class JvmPList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Plat
 
     override fun remove(element: Any?): Boolean {
         if (element is Int) return data?.remove(element) ?: false
-        if (element is String) return super.remove(element) !== undefined
-        if (element is Symbol) return super.remove(element) !== undefined
+        if (element is String) return super.remove(element) !== undefinedCache[Any::class]
+        if (element is Symbol) return super.remove(element) !== undefinedCache[Any::class]
         return false
     }
 
@@ -98,9 +99,13 @@ open class JvmPList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Plat
     override operator fun set(index: Int, element: Any?): Any? {
         require(index >= 0) { "Illegal index $index, must be positive number" }
         val d = data()
-        val old: Any? = if (index < d.size) d[index] else undefined
+        val old: Any? = if (index < d.size) d[index] else undefinedCache[Any::class]
         while (index >= d.size) d.add(null)
         d[index] = element
         return old
+    }
+
+    override fun <V : Any, T : P_List<V>> proxy(klass: KClass<out T>, elementKlass: KClass<out V>?, doNotOverride: Boolean): T {
+        TODO("Not yet implemented")
     }
 }

@@ -203,14 +203,6 @@ expect class Platform {
 //////        fun <T : Proxy> proxy(o: Any?, klass: KClass<out T>, override: Boolean = false): T
 
         /**
-         * Creates a new object.
-         * @param entries The entries to add into the object. Can be a list of [P_MapEntry] of just alternating (_key_, _value_)'s,
-         * where _key_ need to a string and _value_ can be anything.
-         * @return The created object.
-         */
-        fun newObject(vararg entries: Any?): PlatformObject
-
-        /**
          * Creates a new array.
          * @param entries The entries to initialize the array with.
          * @return The created array.

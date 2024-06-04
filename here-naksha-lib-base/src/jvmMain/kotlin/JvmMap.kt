@@ -2,13 +2,14 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Platform.Companion.undefined
+import com.here.naksha.lib.base.Platform.Companion.undefinedCache
 import java.util.Map
+import kotlin.reflect.KClass
 
 /**
- * The JVM implementation of a [PlatformObject].
+ * The JVM implementation of a [PlatformMap].
  */
-open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, PlatformObject {
+open class JvmMap(vararg entries: Any?) : JvmObject(), Map<String, Any?>, PlatformMap {
     init {
         var i = 0
         while (i < entries.size) {
@@ -42,7 +43,7 @@ open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, Pl
     override fun get(key: Any?): Any? {
         if (key is String) return get(key)
         if (key is Symbol) return get(key)
-        return undefined
+        return undefinedCache[Any::class]
     }
 
     override fun put(key: String?, value: Any?): Any? {
@@ -53,7 +54,7 @@ open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, Pl
     override fun remove(key: Any?): Any? {
         if (key is String) return remove(key)
         if (key is Symbol) return remove(key)
-        return undefined
+        return undefinedCache[Any::class]
     }
 
     override fun clear() {
@@ -68,5 +69,14 @@ open class JvmPObject(vararg entries: Any?) : JvmObject(), Map<String, Any?>, Pl
 
     override fun putAll(m: MutableMap<out String, out Any?>) {
         properties().putAll(m)
+    }
+
+    override fun <K : Any, V : Any, T : P_Map<K, V>> proxy(
+        klass: KClass<out T>,
+        keyKlass: KClass<out K>?,
+        valueKlass: KClass<out V>?,
+        doNotOverride: Boolean
+    ): T {
+        TODO("Not yet implemented")
     }
 }
