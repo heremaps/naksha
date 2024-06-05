@@ -11,7 +11,7 @@ import com.here.naksha.lib.base.Platform.Companion.DEFAULT_SYMBOL
 expect class Symbols {
     companion object {
         /**
-         * Creates a new symbol with the given description.
+         * Creates a new symbol with the given description, does not add the symbol into the global registry.
          * @param description The optional description.
          * @return A new symbol with the given description.
          */
