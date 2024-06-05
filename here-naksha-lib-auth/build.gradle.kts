@@ -48,6 +48,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-base"))
+                implementation(project(":here-naksha-lib-core"))
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
@@ -85,7 +86,7 @@ tasks {
         dependsOn(webpackTask)
     }
     getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn(webpackTask)
+        dependsOn(webpackTask, browserDistribution)
     }
     getByName<ProcessResources>("jvmTestProcessResources") {
         dependsOn(webpackTask, browserDistribution)
