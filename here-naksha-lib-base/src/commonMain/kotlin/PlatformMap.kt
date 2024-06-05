@@ -26,8 +26,8 @@ interface PlatformMap : PlatformObject {
      * @return The proxy instance.
      * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
      */
-    fun <K : Any, V : Any, T : P_Map<K, V>> proxy(
-        klass: KClass<out T>,
+    fun <K : Any, V : Any, T : P_Map<K, V?>, C : P_Map<*,*>> proxy(
+        klass: KClass<C>,
         keyKlass: KClass<out K>? = null,
         valueKlass: KClass<out V>? = null,
         doNotOverride: Boolean = false

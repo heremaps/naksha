@@ -171,14 +171,6 @@ expect class Platform {
         // TODO: In Java add: fun <T: Any> klassOf(javaClass: Class<T>): KClass<out T>
 
         /**
-         * Returns the default symbol to bind the given [KClass] against. If no symbol is returned by the registered symbol resolvers,
-         * it returns [DEFAULT_SYMBOL].
-         * @param klass The [KClass] for which to return the default symbol.
-         * @return The default symbol to bind the given [KClass] against.
-         */
-        fun <T : Any> symbolOf(klass: KClass<out T>): Symbol
-
-        /**
          * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
          * followed by Canonical Composition). Optionally, if [cd] is set to _true_, perform a Compatibility Decomposition,
          * followed by Canonical Composition. Beware that this is only good for search or special cases, the recommended

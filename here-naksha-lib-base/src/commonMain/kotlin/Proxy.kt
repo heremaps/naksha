@@ -100,7 +100,7 @@ abstract class Proxy : PlatformObject {
     fun symbol(): Symbol {
         var symbol = this.symbol
         if (symbol == null) {
-            symbol = Platform.symbolOf(this::class)
+            symbol = Symbols.symbolOf(this::class)
             this.symbol = symbol
         }
         return symbol
