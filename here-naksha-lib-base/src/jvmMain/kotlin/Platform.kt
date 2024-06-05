@@ -443,19 +443,5 @@ actual class Platform {
         actual fun <T : Any> undefinedOf(klass: KClass<T>): T {
             TODO("Not yet implemented")
         }
-
-        internal val undefinedCache = ConcurrentHashMap<KClass<*>, Any>()
-        init {
-            undefinedCache[Any::class] = unsafe.allocateInstance(Any::class.java)
-            undefinedCache[Byte::class] = unsafe.allocateInstance(Byte::class.java)
-            undefinedCache[Short::class] = unsafe.allocateInstance(Short::class.java)
-            undefinedCache[Int::class] = unsafe.allocateInstance(Int::class.java)
-            undefinedCache[Long::class] = unsafe.allocateInstance(Long::class.java)
-            undefinedCache[Int64::class] = unsafe.allocateInstance(JvmInt64::class.java)
-            undefinedCache[JvmInt64::class] = undefinedCache[Int64::class]!!
-            undefinedCache[Float::class] = unsafe.allocateInstance(Float::class.java)
-            undefinedCache[Double::class] = unsafe.allocateInstance(Double::class.java)
-            undefinedCache[String::class] = unsafe.allocateInstance(String::class.java)
-        }
     }
 }
