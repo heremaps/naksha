@@ -2,6 +2,7 @@ package com.here.naksha.lib.base
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.reflect.KClass
 
 /**
  * A singleton that grants access to symbols. Symbols are a way to bind proxies (and other hidden data) to platform objects.
@@ -29,6 +30,18 @@ actual class Symbols {
 
         @JvmStatic
         private val symbolResolver = AtomicReference<List<SymbolResolver>>()
+
+        @JvmStatic
+        actual fun <T : Any> symbolOf(klass: KClass<out T>): Symbol {
+            val resolvers = symbolResolver.get()
+            if (resolvers != null) {
+                for (resolver in resolvers) {
+                    val symbol = resolver.resolve(klass)
+                    if (symbol != null) return symbol
+                }
+            }
+            return Platform.DEFAULT_SYMBOL
+        }
 
         @JvmStatic
         actual fun getSymbolResolvers(): List<SymbolResolver> = symbolResolver.get() ?: emptyList()

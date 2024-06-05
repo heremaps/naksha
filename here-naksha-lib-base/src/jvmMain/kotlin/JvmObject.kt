@@ -57,7 +57,20 @@ open class JvmObject {
      * @param name The name of the property.
      * @return The value that was removed or _null_.
      */
-    open fun remove(name: String): Any? = if (properties?.containsKey(name) == true) properties?.remove(name) else null
+    open fun delete(name: String): Any? = if (properties?.containsKey(name) == true) properties?.remove(name) else null
+
+    /**
+     * Removes the property with the given name.
+     * @param name The name of the property.
+     * @return _true_ if the property was removed; _false_ if no such property existed.
+     */
+    open fun remove(name: String): Boolean {
+        if (properties?.containsKey(name) == true) {
+            properties?.remove(name)
+            return true
+        }
+        return false
+    }
 
     /**
      * Set the value of the property.
@@ -68,7 +81,7 @@ open class JvmObject {
     open operator fun set(name: String, value: Any?): Any? {
         // Note: This is incompatible with JavaScript default behavior, but makes Kotlin code better!
         //       We do not want properties with the value undefined!
-        if (value === undefined) return remove(name)
+        if (value === undefined) return delete(name)
         val old = get(name)
         properties()[name] = value
         return old
@@ -137,17 +150,39 @@ open class JvmObject {
      * @param sym The symbol to remove.
      * @return The value that was assigned to the symbol or _null_.
      */
-    open fun remove(sym: Symbol): Any? {
+    open fun delete(sym: Symbol): Any? {
         val s = symbols
         if (s != null) {
             return if (s.containsKey(sym)) s.remove(sym) else null
         }
         if (sym === DEFAULT_SYMBOL) {
-            val old = baseSym
+            val old = if (baseSym == undefined) null else baseSym
             baseSym = undefined
             return old
         }
-        return undefined
+        return null
+    }
+
+    /**
+     * Removes the assigned to the given symbol.
+     * @param sym The symbol to remove.
+     * @return _true_ if the symbol was removed; _false_ if no such symbol existed.
+     */
+    open fun remove(sym: Symbol): Boolean {
+        val s = symbols
+        if (s != null) {
+            if (s.containsKey(sym)) {
+                s.remove(sym)
+                return true
+            }
+            return false
+        }
+        if (sym === DEFAULT_SYMBOL) {
+            val removed = baseSym != undefined
+            baseSym = undefined
+            return removed
+        }
+        return false
     }
 
     /**
@@ -157,7 +192,7 @@ open class JvmObject {
      * @return The previously assigned value or _null_.
      */
     open operator fun set(sym: Symbol, value: Any?): Any? {
-        if (value === undefined) return remove(sym)
+        if (value === undefined) return delete(sym)
         var s = symbols
         if (s == null && sym === DEFAULT_SYMBOL) {
             val old = if (baseSym == undefined) null else baseSym

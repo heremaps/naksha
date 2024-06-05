@@ -33,6 +33,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
+                implementation(kotlin("reflect"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
@@ -47,6 +48,7 @@ kotlin {
             jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
+                implementation(kotlin("reflect"))
                 api("org.lz4:lz4-java:1.8.0")
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
@@ -64,6 +66,7 @@ kotlin {
         jsMain {
             dependencies {
                 implementation(kotlin("stdlib-js"))
+                implementation(kotlin("reflect"))
             }
         }
     }

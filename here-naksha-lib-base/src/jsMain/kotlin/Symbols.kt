@@ -1,5 +1,8 @@
 package com.here.naksha.lib.base
 
+import com.here.naksha.lib.base.Platform.Companion.DEFAULT_SYMBOL
+import kotlin.reflect.KClass
+
 /**
  * A singleton that grants access to symbols. Symbols are a way to bind proxies (and other hidden data) to platform objects.
  */
@@ -25,6 +28,16 @@ actual class Symbols {
          */
         @JsStatic
         actual fun forName(key: String?): Symbol {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Returns the default symbol to bind the given [KClass] against. If no symbol is returned by the registered symbol resolvers,
+         * it returns [DEFAULT_SYMBOL].
+         * @param klass The [KClass] for which to return the default symbol.
+         * @return The default symbol to bind the given [KClass] against.
+         */
+        actual fun <T : Any> symbolOf(klass: KClass<out T>): Symbol {
             TODO("Not yet implemented")
         }
 

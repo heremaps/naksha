@@ -28,7 +28,7 @@ open class P_DataView(byteArray: ByteArray? = null, offset: Int? = null, length:
         if (!Platform.isNil(byteArray)) {
             val off = offset ?: 0
             val len = length ?: (byteArray!!.size - off)
-            bind(Platform.newDataView(byteArray!!, off, len), Platform.symbolOf(this::class))
+            bind(Platform.newDataView(byteArray!!, off, len), Symbols.symbolOf(this::class))
         }
     }
 
