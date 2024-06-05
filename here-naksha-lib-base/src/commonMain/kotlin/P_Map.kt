@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V> {
+abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
 
     /**
      * Convert the given value into a key.
@@ -31,13 +31,13 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
     override fun createData(): PlatformMap = Platform.newMap()
     override fun data(): PlatformMap = super.data() as PlatformMap
 
-    override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
+    override val entries: MutableSet<MutableMap.MutableEntry<K, V?>>
         get() = TODO("Not yet implemented")
     override val keys: MutableSet<K>
         get() = TODO("Not yet implemented")
     override val size: Int
         get() = TODO("Not yet implemented")
-    override val values: MutableCollection<V>
+    override val values: MutableCollection<V?>
         get() = TODO("Not yet implemented")
 
     override fun clear() {
@@ -52,11 +52,11 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
         TODO("Not yet implemented")
     }
 
-    override fun putAll(from: Map<out K, V>) {
+    override fun putAll(from: Map<out K, V?>) {
         TODO("Not yet implemented")
     }
 
-    override fun put(key: K, value: V): V? {
+    override fun put(key: K, value: V?): V? {
         TODO("Not yet implemented")
     }
 
@@ -64,7 +64,7 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
         TODO("Not yet implemented")
     }
 
-    override fun containsValue(value: V): Boolean {
+    override fun containsValue(value: V?): Boolean {
         TODO("Not yet implemented")
     }
 

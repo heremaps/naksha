@@ -96,9 +96,7 @@ actual class Platform {
         actual fun intern(s: String, cd: Boolean): String = s
 
         @JvmStatic
-        actual fun isAssignableFrom(fromSource: KClass<*>, toTarget: KClass<*>): Boolean {
-            TODO("Implement me!")
-        }
+        actual fun isAssignableFrom(fromSource: KClass<*>, toTarget: KClass<*>): Boolean = fromSource.java.isAssignableFrom(toTarget.java)
 
         @JvmStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean {
@@ -112,11 +110,6 @@ actual class Platform {
 
         @JvmStatic
         actual fun <T : Any> klassOf(o: T): KClass<out T> {
-            TODO("Implement me!")
-        }
-
-        @JvmStatic
-        actual fun <T : Any> symbolOf(klass: KClass<out T>): Symbol {
             TODO("Implement me!")
         }
 

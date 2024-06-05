@@ -17,7 +17,7 @@ import kotlin.reflect.KClass
 abstract class P_Object(vararg entries: Any?) : P_Map<String, Any>(String::class, Any::class) {
     init {
         if (entries.isNotEmpty()) {
-            bind(Platform.newMap(*entries), Platform.symbolOf(this::class))
+            bind(Platform.newMap(*entries), Symbols.symbolOf(this::class))
         }
     }
 

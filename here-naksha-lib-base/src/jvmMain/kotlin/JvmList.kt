@@ -1,7 +1,8 @@
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Platform.Companion.undefinedCache
+import com.here.naksha.lib.base.Platform.Companion.isAssignableFrom
 import kotlin.reflect.KClass
+import kotlin.reflect.jvm.jvmErasure
 
 /**
  * The JVM implementation of a [PlatformList].
@@ -59,7 +60,7 @@ open class JvmList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Platf
 
     override operator fun get(index: Int): Any? {
         val d = data
-        if (d == null || index < 0 || index >= d.size) return undefinedCache[Any::class]
+        if (d == null || index < 0 || index >= d.size) return null
         return d[index]
     }
 
@@ -73,7 +74,7 @@ open class JvmList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Platf
 
     override fun removeAt(index: Int): Any? {
         val d = data
-        if (d == null || index < 0 || index >= d.size) return undefinedCache[Any::class]
+        if (d == null || index < 0 || index >= d.size) return null
         return d.remove(index)
     }
 
@@ -87,8 +88,8 @@ open class JvmList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Platf
 
     override fun remove(element: Any?): Boolean {
         if (element is Int) return data?.remove(element) ?: false
-        if (element is String) return super.remove(element) !== undefinedCache[Any::class]
-        if (element is Symbol) return super.remove(element) !== undefinedCache[Any::class]
+        if (element is String) return super.remove(element)
+        if (element is Symbol) return super.remove(element)
         return false
     }
 
@@ -99,13 +100,34 @@ open class JvmList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Platf
     override operator fun set(index: Int, element: Any?): Any? {
         require(index >= 0) { "Illegal index $index, must be positive number" }
         val d = data()
-        val old: Any? = if (index < d.size) d[index] else undefinedCache[Any::class]
+        val old: Any? = if (index < d.size) d[index] else null
         while (index >= d.size) d.add(null)
         d[index] = element
         return old
     }
 
-    override fun <V : Any, T : P_List<V>> proxy(klass: KClass<out T>, elementKlass: KClass<out V>?, doNotOverride: Boolean): T {
-        TODO("Not yet implemented")
+    override fun <E : Any, T : P_List<E>, C : P_List<*>> proxy(klass: KClass<C>, elementKlass: KClass<out E>?, doNotOverride: Boolean): T {
+        val symbol = Symbols.symbolOf(klass)
+        var proxy = get(symbol)
+        if (proxy != null) {
+            if (isAssignableFrom(klass, proxy::class)) return proxy as T
+            if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
+        }
+        val constructors = klass.constructors
+        for (constructor in constructors) {
+            if (constructor.parameters.isEmpty()) {
+                proxy = constructor.call()
+                break
+            }
+            if (constructor.parameters.size == 1) {
+                val pKlass = constructor.parameters[0].type.jvmErasure
+                if (isAssignableFrom(elementKlass as KClass<*>, pKlass)) {
+                    proxy = constructor.call(elementKlass)
+                    break
+                }
+            }
+        }
+        if (proxy == null) throw IllegalArgumentException("Failed to create instance of $klass($elementKlass)")
+        return proxy as T
     }
 }

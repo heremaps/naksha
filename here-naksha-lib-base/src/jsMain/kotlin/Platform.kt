@@ -14,13 +14,17 @@ actual class Platform {
 
         val objectTemplate = object : PlatformObject {}
         val listTemplate = object : PlatformList {
-            override fun <V : Any, T : P_List<V>> proxy(klass: KClass<out T>, elementKlass: KClass<out V>?, doNotOverride: Boolean): T {
+            override fun <E : Any, T : P_List<E>, C : P_List<*>> proxy(
+                klass: KClass<C>,
+                elementKlass: KClass<out E>?,
+                doNotOverride: Boolean
+            ): T {
                 TODO("Not yet implemented")
             }
         }
         val mapTemplate = object : PlatformMap {
-            override fun <K : Any, V : Any, T : P_Map<K, V>> proxy(
-                klass: KClass<out T>,
+            override fun <K : Any, V : Any, T : P_Map<K, V?>, C : P_Map<*, *>> proxy(
+                klass: KClass<C>,
                 keyKlass: KClass<out K>?,
                 valueKlass: KClass<out V>?,
                 doNotOverride: Boolean
@@ -417,16 +421,6 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun <T : Any> undefinedOf(klass: KClass<T>): T {
-            TODO("Not yet implemented")
-        }
-
-        /**
-         * Returns the default symbol to bind the given [KClass] against. If no symbol is returned by the registered symbol resolvers,
-         * it returns [DEFAULT_SYMBOL].
-         * @param klass The [KClass] for which to return the default symbol.
-         * @return The default symbol to bind the given [KClass] against.
-         */
-        actual fun <T : Any> symbolOf(klass: KClass<out T>): Symbol {
             TODO("Not yet implemented")
         }
 
