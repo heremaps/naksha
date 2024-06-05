@@ -195,6 +195,6 @@ data class HereTile(val intKey: Int) {
      */
     fun hereTileTruncate(level: Int): HereTile {
         assertLevel(level)
-        return HereTile(intKey shr (30 - (2 * level)))
+        return HereTile(intKey shr (2 * (level() - level)))
     }
 }
