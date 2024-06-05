@@ -651,6 +651,26 @@ public class PsqlStorageTests extends PsqlTests {
   }
 
   @Test
+  @Order(62)
+  @EnabledIf("runTest")
+  void multiCollectionRead() throws NoCursor {
+    assertNotNull(storage);
+    assertNotNull(session);
+    // given
+    /**
+     * data inserted in {@link #singleFeatureCreate()} test and updated by {@link #singleFeatureUpdate()}.
+     */
+    final ReadFeatures request = RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
+    request.setCollections(List.of(collectionId(), collectionId()));
+
+    try (final MutableCursor<XyzFeature, XyzFeatureCodec> cursor =
+             session.execute(request).getXyzMutableCursor()) {
+      // then
+      assertEquals(2, cursor.asList().size());
+    }
+  }
+
+  @Test
   @Order(64)
   @EnabledIf("runTest")
   void singleFeatureDeleteById() throws NoCursor {
@@ -742,33 +762,31 @@ public class PsqlStorageTests extends PsqlTests {
     final ReadFeatures requestWithDeleted =
         RequestHelper.readFeaturesByIdRequest(collectionId(), SINGLE_FEATURE_ID);
     requestWithDeleted.withReturnDeleted(true);
-    String featureJsonBeforeDeletion;
+    String featureJsonFromDel;
 
-    /* TODO uncomment it when read with deleted is ready.
-
-    try (final ResultCursor<XyzFeature> cursor =
-    session.execute(requestWithDeleted).cursor()) {
+    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
+             session.execute(requestWithDeleted).getXyzFeatureCursor()) {
     cursor.next();
     final XyzFeature feature = cursor.getFeature();
     XyzNamespace xyz = feature.xyz();
 
     // then
-    assertSame(EExecutedOp.DELETED, cursor.getOp());
+    assertSame(EExecutedOp.READ, cursor.getOp());
     final String id = cursor.getId();
     assertEquals(SINGLE_FEATURE_ID, id);
     final String uuid = cursor.getUuid();
     assertNotNull(uuid);
     final Geometry geometry = cursor.getGeometry();
     assertNotNull(geometry);
-    assertEquals(new Coordinate(5.1d, 6.0d, 2.1d), geometry.getCoordinate());
+    assertEquals(new Coordinate(5.0d, 6.0d, 2.0d), geometry.getCoordinate());
     assertNotNull(feature);
     assertEquals(SINGLE_FEATURE_ID, feature.getId());
     assertEquals(uuid, feature.xyz().getUuid());
     assertSame(EXyzAction.DELETE, feature.xyz().getAction());
-    featureJsonBeforeDeletion = cursor.getJson()
-    assertFalse(cursor.next());
+    featureJsonFromDel = cursor.getJson();
+    assertFalse(cursor.hasNext());
     }
-    */
+
     /**
      * Check directly _del table.
      */
@@ -778,10 +796,7 @@ public class PsqlStorageTests extends PsqlTests {
 
       // feature exists in _del table
       assertTrue(rs.next());
-
-      /* FIXME uncomment this when read with deleted is ready.
-      assertEquals(featureJsonBeforeDeletion, rs.getString(1));
-      */
+      assertEquals(featureJsonFromDel, rs.getString(1));
     }
   }
 

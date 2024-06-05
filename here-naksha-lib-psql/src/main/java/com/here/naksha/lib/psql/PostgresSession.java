@@ -474,10 +474,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       @NotNull PreparedStatement stmt,
       @NotNull List<byte[]> wkbs,
       @NotNull List<Object> parameters,
-      int startParamIdx,
       int repeatCount)
       throws SQLException {
-    int i = startParamIdx;
+    int i = 1;
     for (int repetition = 1; repetition <= repeatCount; repetition++) {
       for (final byte[] wkb : wkbs) {
         stmt.setBytes(i++, wkb);
@@ -518,9 +517,9 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         return new PsqlSuccess(null);
       }
       final SQL sql = sql();
+      final SQL hstWhereSql = new SQL();
       final ArrayList<byte[]> wkbs = new ArrayList<>();
       final ArrayList<Object> parameters = new ArrayList<>();
-      final ArrayList<Object> parametersHst = new ArrayList<>();
       SOp spatialOp = readFeatures.getSpatialOp();
       if (spatialOp != null) {
         addSpatialQuery(sql, spatialOp, wkbs);
@@ -530,6 +529,12 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       POp propertyOp = readFeatures.getPropertyOp();
       if (propertyOp != null) {
         addPropertyQuery(sql, propertyOp, parameters, false);
+        if (readFeatures.isReturnDeleted()) {
+          parameters.addAll(parameters);
+        }
+        if (readFeatures.isReturnAllVersions()) {
+          addPropertyQuery(hstWhereSql, propertyOp, parameters, true);
+        }
       }
       final String props_where = sql.toString();
       sql.setLength(0);
@@ -542,19 +547,21 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         }
         SQL headQuery = prepareQuery(collection, spatial_where, props_where, readFeatures.getLimit());
         sql.add(headQuery);
+        if (readFeatures.isReturnDeleted()) {
+          sql.add(" UNION ALL ");
+          SQL delSql = prepareQuery(collection + "_del", spatial_where, props_where, readFeatures.getLimit());
+          sql.add(delSql);
+        }
         if (readFeatures.isReturnAllVersions()) {
           sql.add(" UNION ALL ");
-          SQL hstSql = prepareHstSql(collection, propertyOp, parametersHst, spatial_where, readFeatures);
+          SQL hstSql = prepareQuery(collection + "_hst", spatial_where, hstWhereSql.toString(), readFeatures.getLimit());
           sql.add(hstSql);
         }
       }
       final String query = sql.toString();
       final PreparedStatement stmt = prepareStatement(query);
       try {
-        int lastParamIdx = fillStatementWithParams(stmt, wkbs, parameters, 1, collections.size());
-        if (readFeatures.isReturnAllVersions()) {
-          fillStatementWithParams(stmt, wkbs, parametersHst, lastParamIdx, 1);
-        }
+        fillStatementWithParams(stmt, wkbs, parameters, collections.size());
         final ResultSet rs = stmt.executeQuery();
         final PsqlCursor<XyzFeature, XyzFeatureCodec> cursor =
             new PsqlCursor<>(XyzFeatureCodecFactory.get(), this, stmt, rs);
@@ -572,20 +579,6 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       }
     }
     return new ErrorResult(XyzError.NOT_IMPLEMENTED, "executeRead");
-  }
-
-  private SQL prepareHstSql(
-      String collection,
-      POp propertyOp,
-      ArrayList<Object> parametersHst,
-      String spatial_where,
-      ReadFeatures readFeatures) {
-    String historyCollection = collection + "_hst";
-    SQL hst_props_where = new SQL();
-    if (propertyOp != null) {
-      addPropertyQuery(hst_props_where, propertyOp, parametersHst, true);
-    }
-    return prepareQuery(historyCollection, spatial_where, hst_props_where.toString(), readFeatures.getLimit());
   }
 
   @NotNull
