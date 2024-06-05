@@ -6,22 +6,15 @@ import com.here.naksha.lib.base.Platform.Companion.DEFAULT_SYMBOL
  * The base class of all other platform objects.
  */
 open class JvmObject {
-    // TODO: Improve the HashMap implementation. We want all keys to be NFC (or NFCK) encoded, and to be interned, and normalized.
-    //       The reason is, that our hash-map should be as fast as accessing native properties, but this requires that we can
-    //       compare the keys with a simple === instead of == (equals), because actually, two strings only equal after comparing
-    //       all bytes of them, because even when they have the same hash, they still may not be the same strings. But if we
-    //       ensure that the same key is always the same instance, the check is, especially when the strings are being equal,
-    //       much faster. The compare will be as well very fast for misses, unless they accidentally have the same hash.
-    //       For very small sized hash-maps, keeping a simple array is enough, iterating 8 to 16 key-value pairs should be as
-    //       fast as a complicated hash-map.
-    companion object {
-        private val undefined = Platform.undefinedCache[Any::class]
+    internal companion object {
+        @JvmStatic
+        internal val undefined = JvmObject()
     }
 
     /**
      * The properties of the object; if any.
      */
-    var properties: HashMap<String, Any?>? = null
+    internal var properties: HashMap<String, Any?>? = null
 
     /**
      * Returns the properties map, if none exists yet, creates a new one.
@@ -53,24 +46,24 @@ open class JvmObject {
     open operator fun contains(name: String): Boolean = properties?.containsKey(name) == true
 
     /**
-     * Returns the value of the property with the given name or [Platform.undefined].
+     * Returns the value of the property with the given name or _null_.
      * @param name The name of the property.
-     * @return The value of the property or [Platform.undefined].
+     * @return The value of the property or _null_.
      */
-    open operator fun get(name: String): Any? = if (properties?.containsKey(name) == true) properties?.get(name) else undefined
+    open operator fun get(name: String): Any? = if (properties?.containsKey(name) == true) properties?.get(name) else null
 
     /**
      * Removes the property with the given name.
      * @param name The name of the property.
-     * @return The value that was removed or [Platform.undefined].
+     * @return The value that was removed or _null_.
      */
-    open fun remove(name: String): Any? = if (properties?.containsKey(name) == true) properties?.remove(name) else undefined
+    open fun remove(name: String): Any? = if (properties?.containsKey(name) == true) properties?.remove(name) else null
 
     /**
      * Set the value of the property.
      * @param name The name of the property.
      * @param value The value to set.
-     * @return The previous value or [Platform.undefined].
+     * @return The previous value or _null_.
      */
     open operator fun set(name: String, value: Any?): Any? {
         // Note: This is incompatible with JavaScript default behavior, but makes Kotlin code better!
@@ -84,12 +77,12 @@ open class JvmObject {
     /**
      * The Naksha default symbol, only used as long as no other symbols are defined.
      */
-    var baseSym: Any? = undefined
+    internal var baseSym: Any? = undefined
 
     /**
      * The map for additional symbols; if any.
      */
-    var symbols: HashMap<Symbol, Any?>? = null
+    internal var symbols: HashMap<Symbol, Any?>? = null
 
     /**
      * Returns the number of assigned symbols.
@@ -97,7 +90,7 @@ open class JvmObject {
      */
     fun symbolsCount() : Int {
         val s = symbols
-        return s?.size ?: if (baseSym != undefined) 1 else 0
+        return s?.size ?: if (baseSym != null) 1 else 0
     }
 
     /**
@@ -131,24 +124,23 @@ open class JvmObject {
     /**
      * Returns the value assigned to the given symbol.
      * @param sym The symbol to query.
-     * @return The value assigned to the symbol or [Platform.undefined].
+     * @return The value assigned to the symbol or _null_
      */
     open operator fun get(sym: Symbol): Any? {
         val s = symbols
-        if (s != null) return s[sym] ?: undefined
-        if (sym === DEFAULT_SYMBOL) return baseSym
-        return undefined
+        if (s != null) return s[sym]
+        return if (sym === DEFAULT_SYMBOL) baseSym else null
     }
 
     /**
      * Removes the assigned to the given symbol.
      * @param sym The symbol to remove.
-     * @return The value that was assigned to the symbol or [Platform.undefined].
+     * @return The value that was assigned to the symbol or _null_.
      */
     open fun remove(sym: Symbol): Any? {
         val s = symbols
         if (s != null) {
-            return if (s.containsKey(sym)) s.remove(sym) else undefined
+            return if (s.containsKey(sym)) s.remove(sym) else null
         }
         if (sym === DEFAULT_SYMBOL) {
             val old = baseSym
@@ -162,18 +154,18 @@ open class JvmObject {
      * Assigns the given symbol to the given value.
      * @param sym The symbol to assign.
      * @param value The value to assign.
-     * @return The previously assigned value or [Platform.undefined].
+     * @return The previously assigned value or _null_.
      */
     open operator fun set(sym: Symbol, value: Any?): Any? {
         if (value === undefined) return remove(sym)
         var s = symbols
         if (s == null && sym === DEFAULT_SYMBOL) {
-            val old = baseSym
+            val old = if (baseSym == undefined) null else baseSym
             baseSym = value
             return old
         }
         if (s == null) s = symbols()
-        val old = if (s.containsKey(sym)) s[sym] else undefined
+        val old = s[sym]
         s[sym] = value
         return old
     }

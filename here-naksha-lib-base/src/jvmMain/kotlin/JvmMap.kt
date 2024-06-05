@@ -2,13 +2,9 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Platform.Companion.undefinedCache
 import java.util.Map
 import kotlin.reflect.KClass
 
-/**
- * The JVM implementation of a [PlatformMap].
- */
 open class JvmMap(vararg entries: Any?) : JvmObject(), Map<String, Any?>, PlatformMap {
     init {
         var i = 0

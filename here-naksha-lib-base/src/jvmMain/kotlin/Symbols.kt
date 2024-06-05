@@ -1,6 +1,7 @@
 package com.here.naksha.lib.base
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * A singleton that grants access to symbols. Symbols are a way to bind proxies (and other hidden data) to platform objects.
@@ -8,23 +9,12 @@ import java.util.concurrent.ConcurrentHashMap
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Symbols {
     actual companion object {
+        @JvmStatic
         private val symbolsCache = ConcurrentHashMap<String, Symbol>()
 
-        /**
-         * Creates a new symbol with the given description.
-         * @param description The optional description.
-         * @return A new symbol with the given description.
-         */
-        actual fun newSymbol(description: String?): Symbol {
-            TODO("Not yet implemented")
-        }
+        @JvmStatic
+        actual fun newSymbol(description: String?): Symbol = JvmSymbol(description?:"")
 
-        /**
-         * Returns the symbol for the given string from the global registry. It is recommended to use a package name, for example
-         * _com.here.naksha_ is used for [Platform.DEFAULT_SYMBOL], the default Naksha multi-platform library.
-         * @param key The symbol key; if _null_, a random symbol not part of the registry is created.
-         * @return The existing symbol, if no such symbol exist yet, creates a new one.
-         */
         @JvmStatic
         actual fun forName(key: String?): Symbol {
             if (key == null) return JvmSymbol()
@@ -37,26 +27,15 @@ actual class Symbols {
             return symbol
         }
 
-        /**
-         * Returns a read-only list of all currently registered symbol resolvers.
-         * @return The list of all currently registered symbol resolvers.
-         */
-        actual fun getSymbolResolvers(): List<SymbolResolver> {
-            TODO("Not yet implemented")
-        }
+        @JvmStatic
+        private val symbolResolver = AtomicReference<List<SymbolResolver>>()
 
-        /**
-         * Compares and sets the symbol resolvers in an atomic way.
-         * @param expect The list that was read.
-         * @param value The new list that should be set, a read-only copy will be done.
-         * @return _true_ if the set was successful; _false_ if it failed (another thread modified the list concurrently).
-         */
-        actual fun compareAndSetSymbolResolvers(
-            expect: List<SymbolResolver>,
-            value: List<SymbolResolver>
-        ): Boolean {
-            TODO("Not yet implemented")
-        }
+        @JvmStatic
+        actual fun getSymbolResolvers(): List<SymbolResolver> = symbolResolver.get() ?: emptyList()
+
+        @JvmStatic
+        actual fun compareAndSetSymbolResolvers(expect: List<SymbolResolver>, value: List<SymbolResolver>): Boolean
+            = symbolResolver.compareAndSet(expect.ifEmpty { null }, value.ifEmpty { null })
 
         /**
          * Returns the value of a symbol, stored with the platform object.
@@ -64,9 +43,7 @@ actual class Symbols {
          * @param key The symbol.
          * @return The value or _undefined_ if no such symbol exist.
          */
-        actual fun get(obj: PlatformObject, key: Symbol): Any? {
-            TODO("Not yet implemented")
-        }
+        actual fun get(obj: PlatformObject, key: Symbol): Any? = if (obj is JvmObject) obj[key] else null
 
         /**
          * Sets the value of a symbol, stored with the platform object.
@@ -75,11 +52,7 @@ actual class Symbols {
          * @param value The value to store, if being _undefined_, then the symbol is removed.
          * @return The previously assigned value; _undefined_ if no such symbol existed.
          */
-        actual fun set(
-            obj: PlatformObject,
-            key: Symbol,
-            value: Any?
-        ): Any? {
+        actual fun set(obj: PlatformObject, key: Symbol, value: Any?): Any? {
             TODO("Not yet implemented")
         }
 
