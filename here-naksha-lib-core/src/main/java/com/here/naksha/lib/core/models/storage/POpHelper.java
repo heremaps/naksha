@@ -32,7 +32,7 @@ public class POpHelper {
    * @param value
    * @return
    */
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_16)
+  @ApiStatus.AvailableSince(NakshaVersion.v2_0_17)
   public static @NotNull POp closestTxnNotGreaterThan(@NotNull Number value) {
     return POp.and(POp.lte(PRef.txn(), value), POp.or(POp.gt(PRef.txn_next(), value), POp.eq(PRef.txn_next(), 0)));
   }
