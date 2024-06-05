@@ -333,8 +333,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     }
   }
 
-  private static void addPropertyQuery(
-      @NotNull SQL sql, @NotNull POp propertyOp, @NotNull List<Object> parameter, boolean isHstQuery) {
+  private static void addPropertyQuery(@NotNull SQL sql, @NotNull POp propertyOp, @NotNull List<Object> parameter) {
     final OpType op = propertyOp.op();
     if (POpType.AND == op || POpType.OR == op || POpType.NOT == op) {
       final List<@NotNull POp> children = propertyOp.children();
@@ -358,7 +357,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         } else {
           sql.add(op_literal);
         }
-        addPropertyQuery(sql, child, parameter, isHstQuery);
+        addPropertyQuery(sql, child, parameter);
       }
       sql.add(")");
       return;
@@ -402,22 +401,6 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         return;
       }
       throw new IllegalArgumentException("STARTS_WITH operator requires a string as value");
-    }
-    if (op == POpType.EQ && pref == PRef.txn()) {
-      sql.add("(");
-      addJsonPath(sql, path, path.size(), false, true);
-      sql.add("::int8 <= ?");
-      if (!(value instanceof Number)) {
-        throw new IllegalArgumentException("Value must be a number");
-      }
-      final Long txn = ((Number) value).longValue();
-      parameter.add(txn);
-      if (isHstQuery) {
-        sql.add(" AND ");
-        addPropertyQuery(sql, POp.gt(PRef.txn_next(), txn), parameter, true);
-      }
-      sql.add(")");
-      return;
     }
     addOp(sql, parameter, path, op, value);
   }
@@ -517,7 +500,6 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         return new PsqlSuccess(null);
       }
       final SQL sql = sql();
-      final SQL hstWhereSql = new SQL();
       final ArrayList<byte[]> wkbs = new ArrayList<>();
       final ArrayList<Object> parameters = new ArrayList<>();
       SOp spatialOp = readFeatures.getSpatialOp();
@@ -527,19 +509,15 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       final String spatial_where = sql.toString();
       sql.setLength(0);
       POp propertyOp = readFeatures.getPropertyOp();
+      int repeatParameters = 0;
       if (propertyOp != null) {
-        addPropertyQuery(sql, propertyOp, parameters, false);
-        if (readFeatures.isReturnDeleted()) {
-          parameters.addAll(parameters);
-        }
-        if (readFeatures.isReturnAllVersions()) {
-          addPropertyQuery(hstWhereSql, propertyOp, parameters, true);
-        }
+        addPropertyQuery(sql, propertyOp, parameters);
       }
       final String props_where = sql.toString();
       sql.setLength(0);
       boolean first = true;
       for (final String collection : collections) {
+        repeatParameters++;
         if (first) {
           first = false;
         } else {
@@ -551,17 +529,19 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           sql.add(" UNION ALL ");
           SQL delSql = prepareQuery(collection + "_del", spatial_where, props_where, readFeatures.getLimit());
           sql.add(delSql);
+          repeatParameters++;
         }
         if (readFeatures.isReturnAllVersions()) {
           sql.add(" UNION ALL ");
-          SQL hstSql = prepareQuery(collection + "_hst", spatial_where, hstWhereSql.toString(), readFeatures.getLimit());
+          SQL hstSql = prepareQuery(collection + "_hst", spatial_where, props_where, readFeatures.getLimit());
           sql.add(hstSql);
+          repeatParameters++;
         }
       }
       final String query = sql.toString();
       final PreparedStatement stmt = prepareStatement(query);
       try {
-        fillStatementWithParams(stmt, wkbs, parameters, collections.size());
+        fillStatementWithParams(stmt, wkbs, parameters, repeatParameters);
         final ResultSet rs = stmt.executeQuery();
         final PsqlCursor<XyzFeature, XyzFeatureCodec> cursor =
             new PsqlCursor<>(XyzFeatureCodecFactory.get(), this, stmt, rs);
