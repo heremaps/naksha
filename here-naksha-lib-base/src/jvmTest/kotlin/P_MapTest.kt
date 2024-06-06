@@ -61,14 +61,22 @@ class P_MapTest {
             var next = entryIt.next()
             assertNotNull(next)
             assertFalse(next.done)
-            assertEquals("foo", next.value!!.proxy(TestStringList::class)[0])
-            assertEquals("world", next.value!!.proxy(TestStringList::class)[1])
+            var value = next.value
+            check(value != null)
+            var proxy = value.proxy(TestStringList::class)
+            assertEquals("foo", proxy[0])
+            assertEquals("world", proxy[1])
 
             next = entryIt.next()
             assertNotNull(next)
-            assertFalse(next.done)
-            assertEquals("bar", next.value!!.proxy(TestStringList::class)[0])
-            assertEquals("hello", next.value!!.proxy(TestStringList::class)[1])
+            value = next.value
+            check(value != null)
+            proxy = value.proxy(TestStringList::class)
+            assertEquals("bar", proxy[0])
+            assertEquals("hello", proxy[1])
+
+            next = entryIt.next()
+            assertTrue(next.done)
         }
     }
 }

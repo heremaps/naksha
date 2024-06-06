@@ -11,6 +11,7 @@ actual class PlatformListApi {
 
         @JvmStatic
         actual fun array_set_length(array: PlatformList?, length: Int) {
+            TODO("Implement array set length")
         }
 
         @JvmStatic

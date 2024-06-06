@@ -140,7 +140,7 @@ open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformM
             if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
         }
         proxy = klass.primaryConstructor!!.call()
-        setSymbol(symbol, proxy)
+        proxy.bind(this, symbol)
         return proxy
     }
 }
