@@ -2,7 +2,7 @@ package com.here.naksha.lib.auth.attribute
 
 import com.here.naksha.lib.base.P_List
 
-class SpaceAttributes(vararg args: Any) : CommonAttributes<StorageAttributes>(*args) {
+class SpaceAttributes : NakshaAttributes<StorageAttributes>() {
 
     fun eventHandlerIds(eventHandlerIds: List<String>) =
         apply {

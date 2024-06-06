@@ -1,44 +1,46 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package com.here.naksha.lib.auth
 
-import com.here.naksha.lib.auth.action.AccessAction
-import com.here.naksha.lib.base.P_List
-import com.here.naksha.lib.base.P_Object
+import com.here.naksha.lib.auth.attribute.AccessRightsService
+import com.here.naksha.lib.auth.service.NakshaService
+import com.here.naksha.lib.base.P_Map
 import kotlin.js.JsExport
 
+/**
+ * The abstract base class for access right matrices. Please use a specific type that is suitable for your service or
+ * create an own new one.
+ */
 @JsExport
-open class AccessRightsMatrix(vararg args: Any?) : P_Object(*args) {
+open class AccessRightsMatrix : P_Map<String, AccessRightsService>(String::class, AccessRightsService::class) {
 
-    //TODO: fix bug in getOrCreate (N sequential invocations return different objects)
-    fun getService(serviceName: String): AccessServiceMatrix =
-        getOrCreate(serviceName, AccessServiceMatrix::class)
+    fun naksha(): NakshaService = getOrCreate(NakshaService.NAME, NakshaService::class)
 
-    fun withService(serviceName: String, serviceMatrix: AccessServiceMatrix): AccessRightsMatrix {
-        val existingService = getOrNull(serviceName, AccessServiceMatrix::class)
-        if (existingService == null) {
-            set(serviceName, serviceMatrix)
+    fun add(name: String, service: AccessRightsService): AccessRightsMatrix = apply {
+        val existing = getOrNull(name, service::class)
+        if (existing == null) {
+            put(name, service)
         } else {
-            existingService.mergeActionsFrom(serviceMatrix)
+            // TODO: Merge existing with given service
+            // existingService.mergeActionsFrom(serviceMatrix)
         }
-        return this
     }
-}
 
-@JsExport
-class AccessServiceMatrix(vararg args: Any?) : P_Object(*args) {
 
-    fun withAction(action: AccessAction<*>): AccessServiceMatrix =
-        withActionAttributeMaps(action.name, *action.getAttributes())
-
-    fun getActionAttributeMaps(actionName: String): P_List<AccessAttributeMap>? =
-        getOrNull(actionName, P_List::class) as P_List<AccessAttributeMap>?
-
-    fun mergeActionsFrom(otherService: AccessServiceMatrix): AccessServiceMatrix {
-        otherService
-            .forEach { (action, attributeMaps) ->
-                withActionAttributeMaps(action, *attributeMaps as Array<out AccessAttributeMap>)
-            }
-        return this
-    }
+//    fun withAction(action: AccessAction<*>): AccessServiceMatrix = apply {
+//        put(action.name, action)
+//    }
+//
+//    fun getActionAttributeMaps(actionName: String): AccessAttributeMapList? =
+//        getOrNull(actionName, AccessAttributeMapList::class)
+//
+//    fun mergeActionsFrom(otherService: AccessServiceMatrix): AccessServiceMatrix {
+//        otherService
+//            .forEach { (action, attributeMaps) ->
+//                addActions(action, *attributeMaps as Array<out AccessAttributeMap>)
+//            }
+//        return this
+//    }
 
 //    private fun getAttributeMapsByAction(): Map<String, List<AccessAttributeMap>> {
 //        return data().iterator()
@@ -73,30 +75,26 @@ class AccessServiceMatrix(vararg args: Any?) : P_Object(*args) {
 //        return this
 //    }
 
-    fun withActionAttributeMaps(
-        actionName: String,
-        vararg attributeMaps: AccessAttributeMap
-    ): AccessServiceMatrix {
-        val currentAttributeMaps = getActionAttributeMaps(actionName) ?: emptyList()
-        val finalAttributeMaps = currentAttributeMaps + attributeMaps
-        set(actionName, box(finalAttributeMaps, P_List::class) as P_List<AccessAttributeMap>)
-//        if (currentAttributeMaps.isNullOrEmpty()) {
-//            set(actionName, attributeMaps)
-//        } else {
-//            val combinedAttributes =
-//                Array(currentAttributeMaps.size + attributeMaps.size) { ind ->
-//                    if (ind < currentAttributeMaps.size) {
-//                        currentAttributeMaps[ind]
-//                    } else {
-//                        attributeMaps[ind - currentAttributeMaps.size]
-//                    }
-//                }
-//            set(actionName, combinedAttributes)
+//    fun addActions(vararg actions: AccessAction<*>): AccessServiceMatrix {
+//        for (attributeMap in actions) {
+//
 //        }
-        return this
-    }
-}
-
-@JsExport
-open class AccessAttributeMap(vararg args: Any?) : P_Object(*args) {
+//        val current = getActionAttributeMaps(actionName) ?: emptyList()
+//        val finalAttributeMaps = current + actions
+//        set(actionName, box(finalAttributeMaps, AccessAttributeMapList::class))
+////        if (currentAttributeMaps.isNullOrEmpty()) {
+////            set(actionName, attributeMaps)
+////        } else {
+////            val combinedAttributes =
+////                Array(currentAttributeMaps.size + attributeMaps.size) { ind ->
+////                    if (ind < currentAttributeMaps.size) {
+////                        currentAttributeMaps[ind]
+////                    } else {
+////                        attributeMaps[ind - currentAttributeMaps.size]
+////                    }
+////                }
+////            set(actionName, combinedAttributes)
+////        }
+//        return this
+//    }
 }

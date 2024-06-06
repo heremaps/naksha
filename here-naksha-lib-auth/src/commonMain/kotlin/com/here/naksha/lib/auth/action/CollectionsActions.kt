@@ -1,32 +1,48 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package com.here.naksha.lib.auth.action
 
-import com.here.naksha.lib.auth.AccessAttributeMap
-import com.here.naksha.lib.auth.attribute.XyzCollectionAttributes
+import com.here.naksha.lib.auth.attribute.CollectionAttributes
+import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
-class ReadCollections : AccessAction<XyzCollectionAttributes>(READ_COLLECTIONS_ACTION_NAME) {
+@JsExport
+class ReadCollections : AccessRightsAction<CollectionAttributes, ReadCollections>(CollectionAttributes::class) {
 
     companion object {
-        const val READ_COLLECTIONS_ACTION_NAME = "readCollections"
+        @JvmStatic
+        @JsStatic
+        val NAME = "readCollections"
     }
 }
 
-class CreateCollections : AccessAction<XyzCollectionAttributes>(CREATE_COLLECTIONS_ACTION_NAME) {
+@JsExport
+class CreateCollections : AccessRightsAction<CollectionAttributes, CreateCollections>(CollectionAttributes::class) {
 
     companion object {
-        const val CREATE_COLLECTIONS_ACTION_NAME = "createCollections"
+        @JvmStatic
+        @JsStatic
+        val NAME = "createCollections"
     }
 }
 
-class UpdateCollections : AccessAction<XyzCollectionAttributes>(UPDATE_COLLECTIONS_ACTION_NAME) {
+@JsExport
+class UpdateCollections : AccessRightsAction<CollectionAttributes, UpdateCollections>(CollectionAttributes::class) {
 
     companion object {
-        const val UPDATE_COLLECTIONS_ACTION_NAME = "updateCollections"
+        @JvmStatic
+        @JsStatic
+        val NAME = "updateCollections"
     }
 }
 
-class DeleteCollections : AccessAction<XyzCollectionAttributes>(DELETE_COLLECTIONS_ACTION_NAME) {
+@JsExport
+class DeleteCollections : AccessRightsAction<CollectionAttributes, DeleteCollections>(CollectionAttributes::class) {
 
     companion object {
-        const val DELETE_COLLECTIONS_ACTION_NAME = "deleteCollections"
+        @JvmStatic
+        @JsStatic
+        val NAME = "deleteCollections"
     }
 }

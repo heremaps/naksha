@@ -5,6 +5,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.full.isSuperclassOf
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * The JVM implementation of the static Naksha multi-platform singleton.
@@ -99,9 +101,7 @@ actual class Platform {
         actual fun isAssignableFrom(fromSource: KClass<*>, toTarget: KClass<*>): Boolean = fromSource.java.isAssignableFrom(toTarget.java)
 
         @JvmStatic
-        actual fun isProxyKlass(klass: KClass<*>): Boolean {
-            TODO("Implement me!")
-        }
+        actual fun isProxyKlass(klass: KClass<*>): Boolean = Proxy::class.isSuperclassOf(klass)
 
         @JvmStatic
         actual fun <T : Any> klassBy(constructor: KFunction<T>): KClass<out T> {
@@ -299,9 +299,7 @@ actual class Platform {
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
 
         @JvmStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<T>): T {
-            TODO("Implement me!")
-        }
+        actual fun <T : Any> newInstanceOf(klass: KClass<T>): T = klass.primaryConstructor!!.call()
 
         @JvmStatic
         actual fun toJSON(obj: Any?): String {
@@ -411,22 +409,11 @@ actual class Platform {
             get() = TODO("Not yet implemented")
 
         /**
-         * Tests if the given value is _undefined_.
-         * @param any The value to test.
-         * @return _true_ if the value is _undefined_; false otherwise.
-         */
-        actual fun isUndefined(any: Any?): Boolean {
-            TODO("Not yet implemented")
-        }
-
-        /**
          * Tests if the given value is _null_ or _undefined_.
          * @param any The value to test.
          * @return _true_ if the value is _null_ or _undefined_; false otherwise.
          */
-        actual fun isNil(any: Any?): Boolean {
-            TODO("Not yet implemented")
-        }
+        actual fun isNil(any: Any?): Boolean = any == null
 
         /**
          * Creates an undefined value for the given type or returns the cached one.

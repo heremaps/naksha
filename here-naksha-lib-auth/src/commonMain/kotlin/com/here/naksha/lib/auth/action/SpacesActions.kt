@@ -1,17 +1,28 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package com.here.naksha.lib.auth.action
 
 import com.here.naksha.lib.auth.attribute.SpaceAttributes
+import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
-class UseSpaces: AccessAction<SpaceAttributes>(USE_SPACES_ACTION_NAME){
+@JsExport
+class UseSpaces: AccessRightsAction<SpaceAttributes, UseSpaces>(SpaceAttributes::class) {
 
     companion object {
-        const val USE_SPACES_ACTION_NAME = "useSpaces"
+        @JvmStatic
+        @JsStatic
+        val NAME = "useSpaces"
     }
 }
 
-class ManageSpaces: AccessAction<SpaceAttributes>(MANAGE_SPACES_ACTION_NAME){
+@JsExport
+class ManageSpaces: AccessRightsAction<SpaceAttributes, ManageSpaces>(SpaceAttributes::class){
 
     companion object {
-        const val MANAGE_SPACES_ACTION_NAME = "manageSpaces"
+        @JvmStatic
+        @JsStatic
+        val NAME = "manageSpaces"
     }
 }

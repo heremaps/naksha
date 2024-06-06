@@ -2,7 +2,7 @@ package com.here.naksha.lib.base
 
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-internal expect class PlatformDataViewApi {
+expect class PlatformDataViewApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
     companion object {
         fun dataview_get_byte_array(view: PlatformDataView): ByteArray

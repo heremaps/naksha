@@ -1,17 +1,26 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package com.here.naksha.lib.auth.action
 
-import com.here.naksha.lib.auth.AccessRightsMatrix
-import com.here.naksha.lib.auth.AccessServiceMatrix
 import com.here.naksha.lib.auth.attribute.StorageAttributes
+import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
-class UseStorages: AccessAction<StorageAttributes>(USE_STORAGES_ACTION_NAME){
+@JsExport
+class UseStorages: AccessRightsAction<StorageAttributes, UseStorages>(StorageAttributes::class){
     companion object {
-        const val USE_STORAGES_ACTION_NAME = "useStorages"
+        @JvmStatic
+        @JsStatic
+        val NAME = "useStorages"
     }
 }
 
-class ManageStorages: AccessAction<StorageAttributes>(MANAGE_STORAGE_ACTION_NAME){
+@JsExport
+class ManageStorages: AccessRightsAction<StorageAttributes, ManageStorages>(StorageAttributes::class){
     companion object {
-        const val MANAGE_STORAGE_ACTION_NAME = "manageStorages"
+        @JvmStatic
+        @JsStatic
+        val NAME = "manageStorages"
     }
 }

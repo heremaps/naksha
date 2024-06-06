@@ -1,7 +1,7 @@
 package com.here.naksha.lib.base
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-internal actual class PlatformListApi {
+actual class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
     actual companion object {
         @JvmStatic

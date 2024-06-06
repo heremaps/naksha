@@ -2,8 +2,8 @@ package com.here.naksha.lib.auth
 
 import com.here.naksha.lib.auth.action.CreateCollections
 import com.here.naksha.lib.auth.action.ReadFeatures
-import com.here.naksha.lib.auth.attribute.XyzCollectionAttributes
-import com.here.naksha.lib.auth.attribute.XyzFeatureAttributes
+import com.here.naksha.lib.auth.attribute.CollectionAttributes
+import com.here.naksha.lib.auth.attribute.FeatureAttributes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -17,17 +17,17 @@ class NakshaArmBuilderTest {
             .withAction(
                 ReadFeatures()
                     .withAttributes(
-                        XyzFeatureAttributes()
+                        FeatureAttributes()
                             .storageId("storage_1")
                             .collectionTags(listOf("c_tag_1", "c_tag_2")),
-                        XyzFeatureAttributes()
+                        FeatureAttributes()
                             .appId("this_app"),
                     )
             )
             .withAction(
                 CreateCollections()
                     .withAttributes(
-                        XyzCollectionAttributes()
+                        CollectionAttributes()
                             .id("collection_1")
                     )
             )
@@ -41,7 +41,7 @@ class NakshaArmBuilderTest {
 
         // And: naksha service contains specified attributes
         val readFeaturesAttributeMaps =
-            nakshaServiceMatrix!!.getActionAttributeMaps(ReadFeatures.READ_FEATURES_ACTION_NAME)
+            nakshaServiceMatrix!!.getActionAttributeMaps(ReadFeatures.NAME)
         assertNotNull(readFeaturesAttributeMaps)
         assertEquals(2, readFeaturesAttributeMaps!!.size)
 //        assertEquals("storage_1", readFeaturesAttributeMaps[0]!!.data()!!["storageId"])
@@ -49,7 +49,7 @@ class NakshaArmBuilderTest {
 
         // And
         val createCollectionsAttributeMaps =
-            nakshaServiceMatrix.getActionAttributeMaps(CreateCollections.CREATE_COLLECTIONS_ACTION_NAME)
+            nakshaServiceMatrix.getActionAttributeMaps(CreateCollections.NAME)
         assertNotNull(createCollectionsAttributeMaps)
         assertEquals(1, createCollectionsAttributeMaps!!.size)
 //        assertEquals("collection_1", createCollectionsAttributeMaps[0].data()["id"])

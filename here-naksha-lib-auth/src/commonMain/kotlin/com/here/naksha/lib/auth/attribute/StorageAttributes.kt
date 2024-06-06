@@ -1,10 +1,15 @@
 package com.here.naksha.lib.auth.attribute
 
-class StorageAttributes(vararg args: Any) : CommonAttributes<StorageAttributes>(*args) {
+class StorageAttributes() : NakshaAttributes<StorageAttributes>() {
 
-    constructor(className: String) : this(*arrayOf(CLASS_NAME_KEY, className))
+    constructor(className: String) : this() {
+        set(CLASS_NAME_KEY, className)
+    }
 
-    constructor(className: String, spaceId: String) : this(CLASS_NAME_KEY, className, SPACE_ID_KEY, spaceId)
+    constructor(className: String, spaceId: String) : this() {
+        set(CLASS_NAME_KEY, className)
+        set(SPACE_ID_KEY, spaceId)
+    }
 
     fun className(className: String) = apply { set(CLASS_NAME_KEY, className) }
 

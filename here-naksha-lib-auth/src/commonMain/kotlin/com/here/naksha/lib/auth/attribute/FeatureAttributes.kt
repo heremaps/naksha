@@ -2,7 +2,7 @@ package com.here.naksha.lib.auth.attribute
 
 import com.here.naksha.lib.base.P_List
 
-class XyzFeatureAttributes(vararg args: Any) : CommonAttributes<XyzFeatureAttributes>(*args) {
+class FeatureAttributes : NakshaAttributes<FeatureAttributes>() {
 
     fun storageId(storageId: String) = apply { set(STORAGE_ID_KEY, storageId) }
 

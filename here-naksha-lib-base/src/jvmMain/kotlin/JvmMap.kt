@@ -2,116 +2,145 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Platform.Companion.isAssignableFrom
+import java.util.LinkedHashMap
 import java.util.Map
 import kotlin.reflect.KClass
-import kotlin.reflect.jvm.jvmErasure
+import kotlin.reflect.full.primaryConstructor
 
-open class JvmMap(vararg entries: Any?) : JvmObject(), Map<String, Any?>, PlatformMap {
+open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformMap {
     init {
         var i = 0
         while (i < entries.size) {
-            val keyIndex = i
             val key = entries[i++]
             val value = if (i < entries.size) entries[i++] else null
-            when (key) {
-                is String -> set(key, value)
-                is Symbol -> set(key, value)
-                else -> throw IllegalArgumentException("key at index $keyIndex is no string and no symbol")
-            }
+            @Suppress("LeakingThis")
+            if (key is Symbol) setSymbol(key, value)
+            else if (key != null) set(key, value)
+            else throw IllegalArgumentException("The key must not be null at index ${i-1}")
         }
     }
 
-    override fun size(): Int = propertiesCount()
+    /**
+     * The key-value pairs; if any.
+     */
+    internal var map: LinkedHashMap<Any, Any?>? = null
 
-    override fun isEmpty(): Boolean = propertiesCount() == 0
+    /**
+     * Returns the internally used map, if none exists yet, creates a new one.
+     * @return The internally used map.
+     */
+    fun map(): LinkedHashMap<Any, Any?> {
+        var p = map
+        if (p == null) {
+            p = LinkedHashMap()
+            map = p
+        }
+        return p
+    }
 
-    override fun containsKey(key: Any?): Boolean {
-        if (key is String) return contains(key)
-        if (key is Symbol) return contains(key)
+    /**
+     * Returns the number of key-value pairs.
+     * @return the number of key-value pairs.
+     */
+    override fun size() : Int = map?.size ?: 0
+
+    /**
+     * Tests if this map contains the given key.
+     * @param key The key to lookup.
+     * @return _true_ if the map contains the given [key]; _false_ otherwise.
+     */
+    open operator fun contains(key: Any?): Boolean = if (key == null) false else map?.containsKey(key) == true
+
+    /**
+     * Searches for the first occurrence of the given value in the map and returns the key.
+     * @param value The value to search for.
+     * @return The key or _null_, if the value is not stored in the map.
+     */
+    fun keyOf(value: Any?): Any? {
+        val properties = this.map ?: return null
+        for ((k, v) in properties) if (value == v) return k
+        return null
+    }
+
+    /**
+     * Returns the value assigned to the given key.
+     * @param key The key to query.
+     * @return The value or _null_.
+     */
+    override operator fun get(key: Any): Any? = if (map?.containsKey(key) == true) map?.get(key) else null
+
+    /**
+     * Removes the given key.
+     * @param key The key to remove.
+     * @return _true_ if the key was removed; _false_ otherwise.
+     */
+    open fun delete(key: Any?): Boolean {
+        if (key != null && map?.containsKey(key) == true) {
+            map?.remove(key)
+            return true
+        }
         return false
     }
 
+    /**
+     * Set the value of the key.
+     * @param key The key to set.
+     * @param value The value to set.
+     * @return The previous value or _null_.
+     */
+    open operator fun set(key: Any, value: Any?): Any? {
+        // Note: This is incompatible with JavaScript default behavior, but makes Kotlin code better!
+        //       We do not want properties with the value undefined!
+        if (value === undefined) return delete(key)
+        val old = get(key)
+        map()[key] = value
+        return old
+    }
+
+    override fun isEmpty(): Boolean = size() == 0
+
+    override fun containsKey(key: Any): Boolean = contains(key)
+
     override fun containsValue(value: Any?): Boolean {
-        val p = properties ?: return false
+        val p = map ?: return false
         for (key in p.keys) if (p[key] == value) return true
         return false
     }
 
-    override fun get(key: Any?): Any? {
-        if (key is String) return get(key)
-        if (key is Symbol) return get(key)
-        return null
-    }
-
-    override fun put(key: String?, value: Any?): Any? {
-        require(key != null)
-        return set(key, value)
-    }
+    override fun put(key: Any, value: Any?): Any? = set(key, value)
 
     override fun remove(key: Any?): Any? {
-        if (key is String) return delete(key)
-        if (key is Symbol) return delete(key)
+        val map = this.map
+        if (map != null && key != null) {
+            return map.remove(key)
+        }
         return null
     }
 
     override fun clear() {
-        properties = null
+        map?.clear()
     }
 
-    override fun keySet(): MutableSet<String> = properties().keys
+    override fun keySet(): MutableSet<Any> = map().keys
 
-    override fun values(): MutableCollection<Any?> = properties().values
+    override fun values(): MutableCollection<Any?> = map().values
 
-    override fun entrySet(): MutableSet<MutableMap.MutableEntry<String, Any?>> = properties().entries
+    override fun entrySet(): MutableSet<MutableMap.MutableEntry<Any, Any?>> = map().entries
 
-    override fun putAll(m: MutableMap<out String, out Any?>) {
-        properties().putAll(m)
+    override fun putAll(m: MutableMap<out Any, out Any?>) {
+        map().putAll(m)
     }
 
-    override fun <K : Any, V : Any, T : P_Map<K, V?>, C : P_Map<*, *>> proxy(
-        klass: KClass<C>,
-        keyKlass: KClass<out K>?,
-        valueKlass: KClass<out V>?,
-        doNotOverride: Boolean
-    ): T {
-        val symbol = Symbols.symbolOf(klass)
-        var proxy = get(symbol)
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : P_Map<*,*>> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
+        val symbol = Symbols.of(klass)
+        var proxy = getSymbol(symbol)
         if (proxy != null) {
-            if (isAssignableFrom(klass, proxy::class)) return proxy as T
+            if (klass.isInstance(proxy)) return proxy as T
             if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
         }
-        val constructors = klass.constructors
-        for (constructor in constructors) {
-            if (constructor.parameters.isEmpty()) {
-                proxy = constructor.call()
-                break
-            }
-            if (constructor.parameters.size == 1) {
-                val p0Klass = constructor.parameters[0].type.jvmErasure
-                if (isAssignableFrom(keyKlass as KClass<*>, p0Klass)) {
-                    proxy = constructor.call(keyKlass)
-                    break
-                }
-                if (isAssignableFrom(valueKlass as KClass<*>, p0Klass)) {
-                    proxy = constructor.call(valueKlass)
-                    break
-                }
-            }
-            if (constructor.parameters.size == 2) {
-                val p0Klass = constructor.parameters[0].type.jvmErasure
-                val p1Klass = constructor.parameters[1].type.jvmErasure
-                if (isAssignableFrom(keyKlass as KClass<*>, p0Klass) && isAssignableFrom(valueKlass as KClass<*>, p1Klass)) {
-                    proxy = constructor.call(keyKlass, valueKlass)
-                    break
-                }
-                if (isAssignableFrom(valueKlass as KClass<*>, p0Klass) && isAssignableFrom(keyKlass as KClass<*>, p1Klass)) {
-                    proxy = constructor.call(valueKlass, keyKlass)
-                    break
-                }
-            }
-        }
-        if (proxy == null) throw IllegalArgumentException("Failed to create instance of $klass($keyKlass, $valueKlass)")
-        return proxy as T
+        proxy = klass.primaryConstructor!!.call()
+        setSymbol(symbol, proxy)
+        return proxy
     }
 }

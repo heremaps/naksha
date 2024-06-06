@@ -16,7 +16,7 @@ actual class Symbols {
          * @return A new symbol with the given description.
          */
         @JsStatic
-        actual fun newSymbol(description: String?): Symbol {
+        actual fun newInstance(description: String?): Symbol {
             TODO("Not yet implemented")
         }
 
@@ -37,7 +37,7 @@ actual class Symbols {
          * @param klass The [KClass] for which to return the default symbol.
          * @return The default symbol to bind the given [KClass] against.
          */
-        actual fun <T : Any> symbolOf(klass: KClass<out T>): Symbol {
+        actual fun <T : Any> of(klass: KClass<out T>): Symbol {
             TODO("Not yet implemented")
         }
 

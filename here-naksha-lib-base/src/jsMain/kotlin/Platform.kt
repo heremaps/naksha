@@ -14,21 +14,12 @@ actual class Platform {
 
         val objectTemplate = object : PlatformObject {}
         val listTemplate = object : PlatformList {
-            override fun <E : Any, T : P_List<E>, C : P_List<*>> proxy(
-                klass: KClass<C>,
-                elementKlass: KClass<out E>?,
-                doNotOverride: Boolean
-            ): T {
+            override fun <T : P_List<*>> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
                 TODO("Not yet implemented")
             }
         }
         val mapTemplate = object : PlatformMap {
-            override fun <K : Any, V : Any, T : P_Map<K, V?>, C : P_Map<*, *>> proxy(
-                klass: KClass<C>,
-                keyKlass: KClass<out K>?,
-                valueKlass: KClass<out V>?,
-                doNotOverride: Boolean
-            ): T {
+            override fun <T : P_Map<*, *>> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
                 TODO("Not yet implemented")
             }
         }
@@ -395,24 +386,12 @@ return new DataView(byteArray.buffer, offset, size);
         actual val dataViewKlass: KClass<PlatformDataView> = PlatformDataView::class
 
         /**
-         * Tests if the given value is _undefined_.
-         * @param any The value to test.
-         * @return _true_ if the value is _undefined_; false otherwise.
-         */
-        @JsStatic
-        actual fun isUndefined(any: Any?): Boolean {
-            TODO("Not yet implemented")
-        }
-
-        /**
          * Tests if the given value is _null_ or _undefined_.
          * @param any The value to test.
          * @return _true_ if the value is _null_ or _undefined_; false otherwise.
          */
         @JsStatic
-        actual fun isNil(any: Any?): Boolean {
-            TODO("Not yet implemented")
-        }
+        actual fun isNil(any: Any?): Boolean = js("any===null || any===undefined").unsafeCast<Boolean>()
 
         /**
          * Creates an undefined value for the given type or returns the cached one.
