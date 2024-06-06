@@ -364,7 +364,7 @@ actual class Platform {
          * The KClass for [Int].
          */
         actual val intKlass: KClass<Int>
-            get() = TODO("Not yet implemented")
+            get() = Int::class
 
         /**
          * The KClass for [Int64].
@@ -382,7 +382,7 @@ actual class Platform {
          * The KClass for [String].
          */
         actual val stringKlass: KClass<String>
-            get() = TODO("Not yet implemented")
+            get() = String::class
 
         /**
          * The KClass for [PlatformObject].

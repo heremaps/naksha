@@ -1,6 +1,7 @@
 import com.here.naksha.lib.base.P_List
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -27,7 +28,7 @@ class P_ListTest {
     }
 
     @Test
-    fun shouldSetElementAtIndex() {
+    fun shouldAddElementAtIndex() {
         // given
         val list = TestListInt()
         list.add(11)
@@ -95,7 +96,8 @@ class P_ListTest {
         list.addAll(1, listOf(10, 11))
 
         // then
-        assertEquals(3, list.size)
+        assertEquals(4, list.size)
+        assertEquals(7, list[0])
         assertEquals(10, list[1])
         assertEquals(11, list[2])
         assertEquals(8, list[3])
@@ -187,6 +189,6 @@ class P_ListTest {
         // then
         assertEquals(7, iterator.next())
         assertEquals(8, iterator.next())
-        assertThrows<NoSuchElementException> { iterator.next() }
+        assertNull(iterator.next())
     }
 }
