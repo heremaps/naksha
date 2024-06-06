@@ -118,7 +118,7 @@ open class JvmList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Platf
             if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
         }
         proxy = klass.primaryConstructor!!.call()
-        setSymbol(symbol, proxy)
+        proxy.bind(this, symbol)
         return proxy
     }
 }
