@@ -12,8 +12,8 @@ expect class PlatformMapApi {
         fun map_contains_key(map: PlatformMap?, key: Any?): Boolean
         fun map_contains_value(map: PlatformMap?, value: Any?): Boolean
         fun map_remove(map: PlatformMap?, key: Any?): Any?
-        fun map_iterator(map: PlatformMap?): PlatformIterator<PlatformList?>?
-        fun map_key_iterator(map: PlatformMap?): PlatformIterator<Any?>?
-        fun map_value_iterator(map: PlatformMap?): PlatformIterator<Any?>?
+        fun map_iterator(map: PlatformMap?): PlatformIterator<PlatformList>
+        fun map_key_iterator(map: PlatformMap?): PlatformIterator<Any>
+        fun map_value_iterator(map: PlatformMap?): PlatformIterator<Any?>
     }
 }

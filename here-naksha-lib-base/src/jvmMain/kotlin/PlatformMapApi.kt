@@ -18,23 +18,25 @@ actual class PlatformMapApi {
         }
 
         @JvmStatic
-        actual fun map_remove(map: PlatformMap?, key: Any?): Any? {
-            TODO("Not yet implemented")
-        }
+        actual fun map_remove(map: PlatformMap?, key: Any?): Any? =
+            if (map is JvmMap && key != null) map.remove(key) else null
 
         actual fun map_clear(map: PlatformMap?) {
+            if (map is JvmMap) map.clear()
         }
 
-        actual fun map_size(map: PlatformMap?): Int {
-            TODO("Not yet implemented")
-        }
+        actual fun map_size(map: PlatformMap?): Int = if (map is JvmMap) map.size() else 0
 
-        actual fun map_contains_key(map: PlatformMap?, key: Any?): Boolean {
-            TODO("Not yet implemented")
-        }
+        actual fun map_contains_key(map: PlatformMap?, key: Any?): Boolean =
+            if (map is JvmMap && key != null) map.containsKey(key) else false
 
-        actual fun map_contains_value(map: PlatformMap?, value: Any?): Boolean {
-            TODO("Not yet implemented")
-        }
+        actual fun map_contains_value(map: PlatformMap?, value: Any?): Boolean =
+            if (map is JvmMap && value != null) map.containsValue(value) else false
+
+        actual fun map_iterator(map: PlatformMap?): PlatformIterator<PlatformList> = JvmMapEntryIterator(map)
+
+        actual fun map_key_iterator(map: PlatformMap?): PlatformIterator<Any> = JvmMapKeyIterator(map)
+
+        actual fun map_value_iterator(map: PlatformMap?): PlatformIterator<Any?> = JvmMapValueIterator(map)
     }
 }

@@ -10,4 +10,4 @@ import kotlin.js.JsExport
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterator_protocol
 @Suppress("OPT_IN_USAGE")
 @JsExport
-abstract class PlatformIteratorResult<VALUE>(var done: Boolean, var value: VALUE?)
+open class PlatformIteratorResult<VALUE>(var done: Boolean, var value: VALUE?)
