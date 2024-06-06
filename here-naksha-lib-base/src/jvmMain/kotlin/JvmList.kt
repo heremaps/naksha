@@ -70,7 +70,7 @@ open class JvmList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, Platf
     override fun removeAt(index: Int): Any? {
         val d = list
         if (d == null || index < 0 || index >= d.size) return null
-        return d.remove(index)
+        return d.removeAt(index)
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<Any?> = list().subList(fromIndex, toIndex)

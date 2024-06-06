@@ -63,6 +63,14 @@ actual class PlatformListApi {
             TODO("Not yet implemented")
         }
 
+        @JsStatic
+        actual fun array_first_index_of(
+            array: PlatformList?,
+            searchElement: Any?
+        ): Int {
+            TODO("Not yet implemented")
+        }
+
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
          * _NaN_ values are never compared as equal, so [array_last_index_of] always returns `-1` when [searchElement] is _NaN_.
@@ -104,11 +112,12 @@ actual class PlatformListApi {
 
         /**
          * Appends values to the end of the array.
+         * @param array Array to operate on.
          * @param elements The elements to append.
          * @return The new length of the array.
          */
         @JsStatic
-        actual fun array_push(vararg elements: Any?): Int {
+        actual fun array_push(array: PlatformList?, vararg elements: Any?): Int {
             TODO("Not yet implemented")
         }
 
@@ -153,6 +162,11 @@ actual class PlatformListApi {
          */
         @JsStatic
         actual fun array_to_sorted(compareFn: CompareFn<Any>?): PlatformList {
+            TODO("Not yet implemented")
+        }
+
+        @JsStatic
+        actual fun array_retain_all(array: PlatformList?, vararg keep: Any?): Boolean {
             TODO("Not yet implemented")
         }
     }

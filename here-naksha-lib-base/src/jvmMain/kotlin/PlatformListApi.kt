@@ -6,7 +6,7 @@ actual class PlatformListApi {
     actual companion object {
         @JvmStatic
         actual fun array_get_length(array: PlatformList?): Int {
-            TODO("Not yet implemented")
+            return (array as JvmList?)?.size ?: 0
         }
 
         @JvmStatic
@@ -15,21 +15,22 @@ actual class PlatformListApi {
 
         @JvmStatic
         actual fun array_clear(array: PlatformList?) {
+            (array as JvmList?)?.clear()
         }
 
         @JvmStatic
         actual fun array_get(array: PlatformList?, i: Int): Any? {
-            TODO("Not yet implemented")
+            return (array as JvmList?)?.get(i)
         }
 
         @JvmStatic
         actual fun array_set(array: PlatformList?, i: Int, value: Any?): Any? {
-            TODO("Not yet implemented")
+            return (array as JvmList?)?.set(i, value)
         }
 
         @JvmStatic
         actual fun array_delete(array: PlatformList?, i: Int): Any? {
-            TODO("Not yet implemented")
+            return (array as JvmList?)?.removeAt(i)
         }
 
         @JvmStatic
@@ -39,7 +40,12 @@ actual class PlatformListApi {
             deleteCount: Int,
             vararg add: Any?
         ): PlatformList {
-            TODO("Not yet implemented")
+            val jvmList = (array as JvmList?) ?: JvmList()
+            for (i in start until deleteCount) {
+                jvmList.removeAt(i)
+            }
+            jvmList.addAll(start, add.asList())
+            return jvmList
         }
 
         /**
@@ -60,6 +66,14 @@ actual class PlatformListApi {
             fromIndex: Int?
         ): Int {
             TODO("Not yet implemented")
+        }
+
+        @JvmStatic
+        actual fun array_first_index_of(
+            array: PlatformList?,
+            searchElement: Any?
+        ): Int {
+            return (array as JvmList?)?.indexOf(searchElement) ?: -1
         }
 
         /**
@@ -88,7 +102,7 @@ actual class PlatformListApi {
          */
         @JvmStatic
         actual fun array_entries(array: PlatformList): PlatformIterator<Any?> {
-            TODO("Not yet implemented")
+            return JvmListIterator(array)
         }
 
         /**
@@ -107,8 +121,9 @@ actual class PlatformListApi {
          * @return The new length of the array.
          */
         @JvmStatic
-        actual fun array_push(vararg elements: Any?): Int {
-            TODO("Not yet implemented")
+        actual fun array_push(array: PlatformList?, vararg elements: Any?): Int {
+            (array as JvmList?)?.addAll(elements)
+            return array?.size ?: 0
         }
 
         /**
@@ -155,5 +170,10 @@ actual class PlatformListApi {
             TODO("Not yet implemented")
         }
 
+        @JvmStatic
+        actual fun array_retain_all(array: PlatformList?, vararg keep: Any?): Boolean {
+            if (array == null) return false
+            return (array as JvmList).retainAll(keep)
+        }
     }
 }
