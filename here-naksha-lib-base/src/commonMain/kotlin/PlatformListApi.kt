@@ -12,6 +12,7 @@ expect class PlatformListApi {
         fun array_set(array: PlatformList?, i: Int, value: Any?): Any?
         fun array_delete(array: PlatformList?, i: Int): Any?
         fun array_splice(array: PlatformList?, start: Int, deleteCount: Int = 0, vararg add: Any?): PlatformList
+        fun array_retain_all(array: PlatformList?, vararg keep: Any?): Boolean
 
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
@@ -25,6 +26,11 @@ expect class PlatformListApi {
          * @return The first index of searchElement in the array; -1 if not found.
          */
         fun array_index_of(array: PlatformList?, searchElement: Any?, fromIndex: Int? = null): Int
+
+        /**
+         * Returns index of searchElement, -1 if not found.
+         */
+        fun array_first_index_of(array: PlatformList?, searchElement: Any?): Int
 
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
@@ -54,10 +60,11 @@ expect class PlatformListApi {
 
         /**
          * Appends values to the end of the array.
+         * @param array Base array to operate on.
          * @param elements The elements to append.
          * @return The new length of the array.
          */
-        fun array_push(vararg elements: Any?): Int
+        fun array_push(array: PlatformList?, vararg elements: Any?): Int
 
         /**
          * Removes the element at the zeroth index and shifts the values at consecutive indexes down, then returns the removed

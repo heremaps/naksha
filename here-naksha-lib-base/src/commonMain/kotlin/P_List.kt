@@ -4,11 +4,12 @@ package com.here.naksha.lib.base
 
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_delete
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_entries
+import com.here.naksha.lib.base.PlatformListApi.Companion.array_first_index_of
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_get
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_get_length
-import com.here.naksha.lib.base.PlatformListApi.Companion.array_index_of
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_last_index_of
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_push
+import com.here.naksha.lib.base.PlatformListApi.Companion.array_retain_all
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_set
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_set_length
 import com.here.naksha.lib.base.PlatformListApi.Companion.array_splice
@@ -81,8 +82,8 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<E?> {
-        val platformList = array_splice(data(), fromIndex, toIndex)
-        return toMutableList(platformList)
+        val mutableList: MutableList<E?> = toMutableList(data())
+        return mutableList.subList(fromIndex, toIndex)
     }
 
     override fun set(index: Int, element: E?): E? {
@@ -91,28 +92,21 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
     }
 
     override fun retainAll(elements: Collection<E?>): Boolean {
-        var dataModified = false
-        val iterator = array_entries(data())
-        do {
-            val next = iterator.next()
-            if (!elements.contains(box(next.value, elementKlass))) {
-                dataModified = dataModified || remove(next.value)
-            }
-        } while (!next.done)
-        return dataModified
+        val unboxed: Array<Any?> = elements.map { Platform.unbox(it) }.toTypedArray()
+        return array_retain_all(data(), *unboxed)
     }
 
     override fun removeAll(elements: Collection<E?>): Boolean {
         var dataModified = false
         for (element in elements) {
-            dataModified = dataModified || remove(element)
+            dataModified = remove(element) || dataModified
         }
         return dataModified
     }
 
     override fun remove(element: E?): Boolean {
         val data = data()
-        val i = array_index_of(data, element)
+        val i = array_first_index_of(data, element)
         if (i >= 0) {
             array_delete(data(), i)
             return true
@@ -122,7 +116,7 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
 
     override fun lastIndexOf(element: E?): Int = array_last_index_of(data(), element)
 
-    override fun indexOf(element: E?): Int = array_index_of(data(), element)
+    override fun indexOf(element: E?): Int = array_first_index_of(data(), element)
 
     override fun containsAll(elements: Collection<E?>): Boolean {
         for (element in elements) {
@@ -157,11 +151,11 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
     }
 
     override fun add(index: Int, element: E?) {
-        array_set(data(), index, Platform.unbox(element))
+        array_splice(data(), index, 0, Platform.unbox(element))
     }
 
     override fun add(element: E?): Boolean {
-        array_push(Platform.unbox(element))
+        array_push(data(), Platform.unbox(element))
         return true
     }
 
