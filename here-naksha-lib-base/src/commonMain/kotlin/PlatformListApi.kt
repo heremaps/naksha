@@ -2,7 +2,7 @@
 
 package com.here.naksha.lib.base
 
-internal expect class PlatformListApi {
+expect class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
     companion object {
         fun array_get_length(array: PlatformList?): Int

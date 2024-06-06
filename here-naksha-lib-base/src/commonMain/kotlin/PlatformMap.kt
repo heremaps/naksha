@@ -20,16 +20,9 @@ interface PlatformMap : PlatformObject {
      * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
      * @param <T> The type to proxy, must extend [Proxy].
      * @param klass The proxy class.
-     * @param keyKlass The key class, can be _null_, if the proxy type has a fixed key type.
-     * @param keyKlass The value class, can be _null_, if the proxy type has a fixed value type.
      * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
      * @return The proxy instance.
      * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
      */
-    fun <K : Any, V : Any, T : P_Map<K, V?>, C : P_Map<*,*>> proxy(
-        klass: KClass<C>,
-        keyKlass: KClass<out K>? = null,
-        valueKlass: KClass<out V>? = null,
-        doNotOverride: Boolean = false
-    ): T
+    fun <T : P_Map<*, *>> proxy(klass: KClass<T>, doNotOverride: Boolean = false): T
 }

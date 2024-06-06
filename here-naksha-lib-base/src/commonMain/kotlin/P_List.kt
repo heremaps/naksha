@@ -22,22 +22,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
-
-    /**
-     * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
-     * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
-     * @param <T> The type to proxy, must extend [Proxy].
-     * @param klass The proxy class.
-     * @param elementKlass The element class, can be _null_, if the proxy type has a fixed element.
-     * @param doNotOverride If _true_ and the symbol is already
-     * @return The proxy instance.
-     */
-    fun <V : Any, T : P_List<V>> proxy(
-        klass: KClass<out T>,
-        elementKlass: KClass<out V>? = null,
-        doNotOverride: Boolean = false
-    ): T = data().proxy(klass, elementKlass, doNotOverride)
+abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
 
     /**
      * Returns the element at the given index. If no such index exists or the element is not of the specified type,
@@ -66,6 +51,7 @@ open class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableLi
     }
 
     override fun createData(): PlatformList = Platform.newList()
+
     override fun data(): PlatformList = super.data() as PlatformList
     override val size: Int
         get() = array_get_length(data())

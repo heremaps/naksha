@@ -16,7 +16,7 @@ expect class Symbols {
          * @param description The optional description.
          * @return A new symbol with the given description.
          */
-        fun newSymbol(description: String? = null): Symbol
+        fun newInstance(description: String? = null): Symbol
 
         /**
          * Returns the symbol for the given string from the global registry. It is recommended to use a package name, for example
@@ -32,7 +32,7 @@ expect class Symbols {
          * @param klass The [KClass] for which to return the default symbol.
          * @return The default symbol to bind the given [KClass] against.
          */
-        fun <T : Any> symbolOf(klass: KClass<out T>): Symbol
+        fun <T : Any> of(klass: KClass<out T>): Symbol
 
         /**
          * Returns a read-only list of all currently registered symbol resolvers.

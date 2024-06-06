@@ -1,9 +1,9 @@
 package com.here.naksha.lib.auth
 
 import com.here.naksha.lib.auth.action.ReadFeatures
-import com.here.naksha.lib.auth.attribute.XyzFeatureAttributes
+import com.here.naksha.lib.auth.attribute.FeatureAttributes
+import com.here.naksha.lib.auth.matrices.UpmMatrix
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
-import org.junit.jupiter.api.Test
 
 class AuthE2eTest {
 
@@ -49,13 +49,13 @@ class AuthE2eTest {
 
         // When: parsing both Auth matrices
         val urm: UserRightsMatrix = com.here.naksha.lib.auth.JvmAuthParser.parseUrm(rawUrm)
-        val arm: AccessRightsMatrix = com.here.naksha.lib.auth.JvmAuthParser.parseArm(rawArm)
+        val arm: UpmMatrix = com.here.naksha.lib.auth.JvmAuthParser.parseArm(rawArm)
 
         val goodArm = NakshaArmBuilder()
             .withAction(
                 ReadFeatures()
                     .withAttributes(
-                        XyzFeatureAttributes()
+                        FeatureAttributes()
                             .id("my-unique-id")
                             .storageId("asda")
                     )

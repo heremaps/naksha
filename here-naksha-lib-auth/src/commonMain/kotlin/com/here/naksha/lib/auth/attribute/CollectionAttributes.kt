@@ -1,6 +1,6 @@
 package com.here.naksha.lib.auth.attribute
 
-class XyzCollectionAttributes(vararg args: Any) : CommonAttributes<XyzCollectionAttributes>(*args) {
+class CollectionAttributes : NakshaAttributes<CollectionAttributes>() {
 
     fun storageId(storageId: String) = apply { set(STORAGE_ID_KEY, storageId) }
 

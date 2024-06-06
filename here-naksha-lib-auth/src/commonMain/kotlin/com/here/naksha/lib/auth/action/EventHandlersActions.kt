@@ -1,17 +1,28 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package com.here.naksha.lib.auth.action
 
 import com.here.naksha.lib.auth.attribute.EventHandlerAttributes
+import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
-class UseEventHandlers: AccessAction<EventHandlerAttributes>(USE_EVENT_HANDLERS_ACTION_NAME) {
+@JsExport
+class UseEventHandlers: AccessRightsAction<EventHandlerAttributes, UseEventHandlers>(EventHandlerAttributes::class) {
 
     companion object {
-        const val USE_EVENT_HANDLERS_ACTION_NAME = "useEventHandlers"
+        @JvmStatic
+        @JsStatic
+        val NAME = "useEventHandlers"
     }
 }
 
-class ManageEventHandlers: AccessAction<EventHandlerAttributes>(MANAGE_EVENT_HANDLERS_ACTION_NAME) {
+@JsExport
+class ManageEventHandlers: AccessRightsAction<EventHandlerAttributes, ManageEventHandlers>(EventHandlerAttributes::class) {
 
     companion object {
-        const val MANAGE_EVENT_HANDLERS_ACTION_NAME = "managerEventHandlers"
+        @JvmStatic
+        @JsStatic
+        val NAME = "managerEventHandlers"
     }
 }

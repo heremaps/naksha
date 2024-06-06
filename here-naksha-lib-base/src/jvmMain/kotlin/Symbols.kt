@@ -14,7 +14,7 @@ actual class Symbols {
         private val symbolsCache = ConcurrentHashMap<String, Symbol>()
 
         @JvmStatic
-        actual fun newSymbol(description: String?): Symbol = JvmSymbol(description?:"")
+        actual fun newInstance(description: String?): Symbol = JvmSymbol(description?:"")
 
         @JvmStatic
         actual fun forName(key: String?): Symbol {
@@ -32,7 +32,7 @@ actual class Symbols {
         private val symbolResolver = AtomicReference<List<SymbolResolver>>()
 
         @JvmStatic
-        actual fun <T : Any> symbolOf(klass: KClass<out T>): Symbol {
+        actual fun <T : Any> of(klass: KClass<out T>): Symbol {
             val resolvers = symbolResolver.get()
             if (resolvers != null) {
                 for (resolver in resolvers) {
@@ -56,7 +56,7 @@ actual class Symbols {
          * @param key The symbol.
          * @return The value or _undefined_ if no such symbol exist.
          */
-        actual fun get(obj: PlatformObject, key: Symbol): Any? = if (obj is JvmObject) obj[key] else null
+        actual fun get(obj: PlatformObject, key: Symbol): Any? = if (obj is JvmObject) obj.getSymbol(key) else null
 
         /**
          * Sets the value of a symbol, stored with the platform object.
@@ -66,7 +66,8 @@ actual class Symbols {
          * @return The previously assigned value; _undefined_ if no such symbol existed.
          */
         actual fun set(obj: PlatformObject, key: Symbol, value: Any?): Any? {
-            TODO("Not yet implemented")
+            if (obj !is JvmObject) throw IllegalArgumentException("Unsupported platform object $obj")
+            return obj.setSymbol(key, value)
         }
 
         /**

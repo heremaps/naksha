@@ -1,8 +1,6 @@
 package com.here.naksha.lib.auth.attribute
 
-import com.here.naksha.lib.auth.AccessAttributeMap
-
-class EventHandlerAttributes(vararg args: Any): AccessAttributeMap(*args) {
+class EventHandlerAttributes: ResourceAttributes() {
 
     fun className(className: String) = apply { set(CLASS_NAME_KEY, className) }
 

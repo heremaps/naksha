@@ -103,13 +103,6 @@ expect class Platform {
         val dataViewKlass: KClass<PlatformDataView>
 
         /**
-         * Tests if the given value is _undefined_.
-         * @param any The value to test.
-         * @return _true_ if the value is _undefined_; false otherwise.
-         */
-        fun isUndefined(any: Any?): Boolean
-
-        /**
          * Tests if the given value is _null_ or _undefined_.
          * @param any The value to test.
          * @return _true_ if the value is _null_ or _undefined_; false otherwise.

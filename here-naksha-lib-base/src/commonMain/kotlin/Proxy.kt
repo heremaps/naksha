@@ -3,7 +3,6 @@
 package com.here.naksha.lib.base
 
 import com.here.naksha.lib.base.Platform.Companion.isNil
-import com.here.naksha.lib.base.Platform.Companion.isProxyKlass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
@@ -27,12 +26,21 @@ abstract class Proxy : PlatformObject {
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         @JsStatic
-        fun <E : Any> box(raw: Any?, klass: KClass<out E>, alternative: E? = null): E? {
+        fun <T : Any> box(raw: Any?, klass: KClass<out T>, alternative: T? = null): T? {
+            if (klass.isInstance(raw)) return raw as T
             val data = unbox(raw)
             if (isNil(data)) return alternative
-            if (klass.isInstance(raw)) return raw as E
-            // TODO: Fix this, re-introduce the proxy method!
-            //if (isProxyKlass(klass)) return Platform.proxy(raw, klass as KClass<Proxy>) as E
+            if (klass.isInstance(raw)) return raw as T
+            if (data is PlatformObject && Platform.isProxyKlass(klass)) {
+                val symbol = Symbols.of(klass)
+                val existing = Symbols.get(data, symbol)
+                if (klass.isInstance(existing)) return existing as T
+                if (existing == null) {
+                    val instance = Platform.newInstanceOf(klass)
+                    Symbols.set(data, symbol, instance)
+                    return instance
+                }
+            }
             return alternative
         }
 
@@ -74,6 +82,7 @@ abstract class Proxy : PlatformObject {
         check(this.data == null)
         this.data = data
         this.symbol = symbol
+        Symbols.set(data, symbol, this)
     }
 
     /**
@@ -100,7 +109,7 @@ abstract class Proxy : PlatformObject {
     fun symbol(): Symbol {
         var symbol = this.symbol
         if (symbol == null) {
-            symbol = Symbols.symbolOf(this::class)
+            symbol = Symbols.of(this::class)
             this.symbol = symbol
         }
         return symbol

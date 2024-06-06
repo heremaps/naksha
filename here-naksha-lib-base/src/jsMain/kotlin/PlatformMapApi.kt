@@ -1,7 +1,7 @@
 package com.here.naksha.lib.base
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-internal actual class PlatformMapApi {
+actual class PlatformMapApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
     @OptIn(ExperimentalJsStatic::class)
     actual companion object {
@@ -16,7 +16,22 @@ internal actual class PlatformMapApi {
         }
 
         @JsStatic
-        actual fun map_delete(map: PlatformMap?, key: Any?): Any? {
+        actual fun map_remove(map: PlatformMap?, key: Any?): Any? {
+            TODO("Not yet implemented")
+        }
+
+        actual fun map_clear(map: PlatformMap?) {
+        }
+
+        actual fun map_size(map: PlatformMap?): Int {
+            TODO("Not yet implemented")
+        }
+
+        actual fun map_contains_key(map: PlatformMap?, key: Any?): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        actual fun map_contains_value(map: PlatformMap?, value: Any?): Boolean {
             TODO("Not yet implemented")
         }
     }

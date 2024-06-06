@@ -1,6 +1,7 @@
 package com.here.naksha.lib.auth
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.here.naksha.lib.auth.matrices.UpmMatrix
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
 
 object JvmAuthParser : AuthJsonParser {
@@ -12,7 +13,7 @@ object JvmAuthParser : AuthJsonParser {
 //        return Base.assign(rawArm, UserRightsMatrix.klass)
     }
 
-    override fun parseArm(json: String): AccessRightsMatrix {
+    override fun parseArm(json: String): UpmMatrix {
         TODO()
 //        val rawArm = parseRawAuthMatrix(json)
 //        return Base.assign(rawArm, AccessRightsMatrix.klass)
