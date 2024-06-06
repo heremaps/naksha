@@ -663,8 +663,8 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
           "SELECT op, id, xyz, tags, feature, flags, geo, err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
-        final int SIZE = writeRequest.features.size();
-        try {
+      final int SIZE = writeRequest.features.size();
+      try {
         final List<@NotNull CODEC> features = writeRequest.features;
         final byte[][] reqOps = new byte[SIZE][];
         final byte[][] reqFeatures = new byte[SIZE][];
@@ -720,16 +720,16 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
     }
     if (writeRequest instanceof WriteFeatures<?, ?, ?>) {
       final WriteFeatures<?, ?, ?> writeFeatures = (WriteFeatures<?, ?, ?>) writeRequest;
-        final int SIZE = writeRequest.features.size();
-        final String collection_id = writeFeatures.getCollectionId();
-        try {
+      final int SIZE = writeRequest.features.size();
+      final String collection_id = writeFeatures.getCollectionId();
+      try {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
         features.forEach(codec -> codec.decodeParts(false));
         final Map<String, Integer> originalFeaturesOrder =
             IndexHelper.createKeyIndexMap(features, CODEC::getId);
         // sort to avoid deadlock
-          features.sort(comparing(FeatureCodec::getId));
+        features.sort(comparing(FeatureCodec::getId));
         final byte[][] op_arr = new byte[SIZE][];
         final byte[][] feature_arr = new byte[SIZE][];
         final Integer[] flags_arr = new Integer[SIZE];
@@ -743,7 +743,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           flags_arr[i] = codec.getCombinedFlags();
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
-            method = codec.getOp();
+          method = codec.getOp();
         }
         JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
             collection_id, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, false);
@@ -759,21 +759,21 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           return new PsqlError(firstRow.getError().err, firstRow.getError().msg);
         }
         return new PsqlSuccess(cursor, originalFeaturesOrder);
-      } catch (Throwable e) {             
-            status = "NOK";
+      } catch (Throwable e) {
+        status = "NOK";
         throw unchecked(e);
-    } finally {
-          log.info(
-                  "[Storage Request stats => type,storageId,host,method,ftype,fCnt,collectionId,status,timeTakenMs] - StorageReqStats {} {} {} {} {} {} {} {} {}",
-                  "PsqlStorage",
-                  parent().storageId,
-                  psqlConnection.postgresConnection.parent().config.host,
-                  method,
-                  "Feature",
-                  SIZE,
-                  collection_id,
-                  status,
-                  System.currentTimeMillis() - startTime);
+      } finally {
+        log.info(
+            "[Storage Request stats => type,storageId,host,method,ftype,fCnt,collectionId,status,timeTakenMs] - StorageReqStats {} {} {} {} {} {} {} {} {}",
+            "PsqlStorage",
+            parent().storageId,
+            psqlConnection.postgresConnection.parent().config.host,
+            method,
+            "Feature",
+            SIZE,
+            collection_id,
+            status,
+            System.currentTimeMillis() - startTime);
       }
     }
     return new ErrorResult(XyzError.NOT_IMPLEMENTED, "The supplied write-request is not yet implemented");
@@ -782,13 +782,13 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   @NotNull
   <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeBulkWrite(
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
-      final long startTime = System.currentTimeMillis();
-      String status = "OK";
-      String method = "";
+    final long startTime = System.currentTimeMillis();
+    String status = "OK";
+    String method = "";
     if (writeRequest instanceof WriteFeatures<?, ?, ?>) {
       final WriteFeatures<?, ?, ?> writeFeatures = (WriteFeatures<?, ?, ?>) writeRequest;
-        final int SIZE = writeRequest.features.size();
-        final String collection_id = writeFeatures.getCollectionId();
+      final int SIZE = writeRequest.features.size();
+      final String collection_id = writeFeatures.getCollectionId();
       try {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
@@ -807,7 +807,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           flags_arr[i] = codec.getCombinedFlags();
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
-            method = codec.getOp();
+          method = codec.getOp();
         }
         JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
             collection_id, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, true);
