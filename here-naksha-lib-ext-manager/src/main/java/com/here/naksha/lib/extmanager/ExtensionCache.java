@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,9 +134,11 @@ public class ExtensionCache {
       loaderCache.put(extension.getId(), new KVPair<Extension, ClassLoader>(extension, loader));
       PluginCache.removeExtensionCache(extension.getId());
       logger.info(
-          "Extension {},{} is successfully loaded into the cache.",
+          "Extension id={}, version={} is successfully loaded into the cache, using Jar at {} for env={}.",
           extension.getId(),
-          extension.getVersion());
+          extension.getVersion(),
+          extension.getUrl().substring(extension.getUrl().lastIndexOf("/") + 1),
+          extensionConfig.getEnv());
     }
   }
 

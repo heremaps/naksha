@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,7 +154,7 @@ public final class ApiParams {
     }
   }
 
-  public static QueryParameterList queryParamsFromRequest(final @NotNull RoutingContext routingContext) {
+  public static @Nullable QueryParameterList queryParamsFromRequest(final @NotNull RoutingContext routingContext) {
     return (routingContext.request().query() != null)
         ? new QueryParameterList(routingContext.request().query())
         : null;

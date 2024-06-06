@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +27,7 @@ import static com.here.naksha.lib.core.util.storage.RequestHelper.upsertFeatures
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
-import com.here.naksha.lib.core.NakshaContext;
-import com.here.naksha.lib.core.NakshaVersion;
+import com.here.naksha.lib.core.*;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
 import com.here.naksha.lib.core.lambdas.Fe1;
@@ -123,6 +120,14 @@ public class NakshaHub implements INaksha {
     } else {
       logger.warn("ExtensionManager is not initialised due to extensionConfigParams not found.");
     }
+    // Setting Concurrency Thresholds
+    logger.info("Value of maxParallelRequestsPerCPU is {}", nakshaHubConfig.maxParallelRequestsPerCPU);
+    logger.info("Value of maxPctParallelRequestsPerActor is {}", nakshaHubConfig.maxPctParallelRequestsPerActor);
+    IRequestLimitManager requestLimitManager = new DefaultRequestLimitManager(
+        nakshaHubConfig.maxParallelRequestsPerCPU, nakshaHubConfig.maxPctParallelRequestsPerActor);
+    logger.info("Instance level limit is {}", requestLimitManager.getInstanceLevelLimit());
+    AbstractTask.setConcurrencyLimitManager(requestLimitManager);
+
     logger.info("NakshaHub initialization done!");
   }
 
@@ -296,7 +301,8 @@ public class NakshaHub implements INaksha {
     return new ExtensionConfig(
         System.currentTimeMillis() + extensionConfigParams.getIntervalMs(),
         extList,
-        extensionConfigParams.getWhiteListClasses());
+        extensionConfigParams.getWhiteListClasses(),
+        this.nakshaHubConfig.env.toLowerCase());
   }
 
   private List<Extension> loadExtensionConfigFromS3(String extensionRootPath) {

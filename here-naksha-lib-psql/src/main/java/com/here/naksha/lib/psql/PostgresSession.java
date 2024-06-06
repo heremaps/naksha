@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
 import static com.here.naksha.lib.jbon.IMapKt.get;
 import static com.here.naksha.lib.psql.XyzErrorMapper.psqlCodeToXyzError;
 import static com.here.naksha.lib.psql.sql.SqlGeometryTransformationResolver.addTransformation;
+import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -217,6 +218,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   }
 
   void commit(boolean autoCloseCursors) throws SQLException {
+    // TODO: Apply autoCloseCursors
     psqlConnection.commit();
     clearSession();
   }
@@ -597,7 +599,13 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
       }
       final String props_where = sql.toString();
       sql.setLength(0);
+      boolean first = true;
       for (final String collection : collections) {
+        if (first) {
+          first = false;
+        } else {
+          sql.add(" UNION ALL ");
+        }
         SQL headQuery = prepareQuery(collection, spatial_where, props_where, readFeatures.getLimit());
         sql.add(headQuery);
         if (readFeatures.isReturnAllVersions()) {
@@ -649,12 +657,15 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   @NotNull
   <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeWrite(
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
+    final long startTime = System.currentTimeMillis();
+    String status = "OK";
+    String method = "";
     if (writeRequest instanceof WriteCollections) {
       final PreparedStatement stmt = prepareStatement(
           "SELECT op, id, xyz, tags, feature, flags, geo, err_no, err_msg FROM naksha_write_collections(?,?,?,?,?);\n");
+      final int SIZE = writeRequest.features.size();
       try {
         final List<@NotNull CODEC> features = writeRequest.features;
-        final int SIZE = writeRequest.features.size();
         final byte[][] reqOps = new byte[SIZE][];
         final byte[][] reqFeatures = new byte[SIZE][];
         final Integer[] reqFlags = new Integer[SIZE];
@@ -668,6 +679,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           reqGeo[i] = codec.getGeometryBytes();
           reqFlags[i] = codec.getCombinedFlags();
           reqTags[i] = codec.getTagsBytes();
+          method = codec.getOp();
         }
         stmt.setArray(1, psqlConnection.createArrayOf("bytea", reqOps));
         stmt.setArray(2, psqlConnection.createArrayOf("bytea", reqFeatures));
@@ -683,6 +695,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         return new PsqlSuccess(new HeapCacheCursor<>(XyzCollectionCodecFactory.get(), codecRows, null), null);
       } catch (Throwable e) {
         try {
+          status = "NOK";
           stmt.close();
         } catch (Throwable ce) {
           log.atInfo()
@@ -691,19 +704,32 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
               .log();
         }
         throw unchecked(e);
+      } finally {
+        log.info(
+            "[Storage Request stats => type,storageId,host,method,ftype,fCnt,collectionId,status,timeTakenMs] - StorageReqStats {} {} {} {} {} {} {} {} {}",
+            "PsqlStorage",
+            parent().storageId,
+            psqlConnection.postgresConnection.parent().config.host,
+            method,
+            "Collection",
+            SIZE,
+            "-", // collectionId skipped for now
+            status,
+            System.currentTimeMillis() - startTime);
       }
     }
     if (writeRequest instanceof WriteFeatures<?, ?, ?>) {
       final WriteFeatures<?, ?, ?> writeFeatures = (WriteFeatures<?, ?, ?>) writeRequest;
+      final int SIZE = writeRequest.features.size();
+      final String collection_id = writeFeatures.getCollectionId();
       try {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
         features.forEach(codec -> codec.decodeParts(false));
         final Map<String, Integer> originalFeaturesOrder =
             IndexHelper.createKeyIndexMap(features, CODEC::getId);
-
-        final int SIZE = writeRequest.features.size();
-        final String collection_id = writeFeatures.getCollectionId();
+        // sort to avoid deadlock
+        features.sort(comparing(FeatureCodec::getId));
         final byte[][] op_arr = new byte[SIZE][];
         final byte[][] feature_arr = new byte[SIZE][];
         final Integer[] flags_arr = new Integer[SIZE];
@@ -717,6 +743,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           flags_arr[i] = codec.getCombinedFlags();
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
+          method = codec.getOp();
         }
         JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
             collection_id, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, false);
@@ -733,7 +760,20 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         }
         return new PsqlSuccess(cursor, originalFeaturesOrder);
       } catch (Throwable e) {
+        status = "NOK";
         throw unchecked(e);
+      } finally {
+        log.info(
+            "[Storage Request stats => type,storageId,host,method,ftype,fCnt,collectionId,status,timeTakenMs] - StorageReqStats {} {} {} {} {} {} {} {} {}",
+            "PsqlStorage",
+            parent().storageId,
+            psqlConnection.postgresConnection.parent().config.host,
+            method,
+            "Feature",
+            SIZE,
+            collection_id,
+            status,
+            System.currentTimeMillis() - startTime);
       }
     }
     return new ErrorResult(XyzError.NOT_IMPLEMENTED, "The supplied write-request is not yet implemented");
@@ -742,16 +782,17 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
   @NotNull
   <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result executeBulkWrite(
       @NotNull WriteRequest<FEATURE, CODEC, ?> writeRequest) {
-
+    final long startTime = System.currentTimeMillis();
+    String status = "OK";
+    String method = "";
     if (writeRequest instanceof WriteFeatures<?, ?, ?>) {
       final WriteFeatures<?, ?, ?> writeFeatures = (WriteFeatures<?, ?, ?>) writeRequest;
+      final int SIZE = writeRequest.features.size();
+      final String collection_id = writeFeatures.getCollectionId();
       try {
         // new array list, so we don't modify original order
         final List<@NotNull CODEC> features = new ArrayList<>(writeRequest.features);
         features.forEach(codec -> codec.decodeParts(false));
-
-        final int SIZE = writeRequest.features.size();
-        final String collection_id = writeFeatures.getCollectionId();
         // partition_id
         final byte[][] op_arr = new byte[SIZE][];
         final byte[][] feature_arr = new byte[SIZE][];
@@ -766,6 +807,7 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
           flags_arr[i] = codec.getCombinedFlags();
           geo_arr[i] = codec.getGeometryBytes();
           tags_arr[i] = codec.getTagsBytes();
+          method = codec.getOp();
         }
         JvmPlv8Table table = (JvmPlv8Table) nakshaSession.writeFeatures(
             collection_id, op_arr, feature_arr, flags_arr, geo_arr, tags_arr, true);
@@ -778,6 +820,18 @@ final class PostgresSession extends ClosableChildResource<PostgresStorage> {
         }
       } catch (Throwable e) {
         throw unchecked(e);
+      } finally {
+        log.info(
+            "[Storage Request stats => type,storageId,host,method,ftype,fCnt,collectionId,status,timeTakenMs] - StorageReqStats {} {} {} {} {} {} {} {} {}",
+            "PsqlStorage",
+            parent().storageId,
+            psqlConnection.postgresConnection.parent().config.host,
+            method,
+            "Feature",
+            SIZE,
+            collection_id,
+            status,
+            System.currentTimeMillis() - startTime);
       }
     }
     return new ErrorResult(XyzError.NOT_IMPLEMENTED, "The supplied write-request is not yet implemented");

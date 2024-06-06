@@ -26,7 +26,7 @@ import com.here.naksha.lib.core.AbstractTask;
  */
 public class TooManyTasks extends RuntimeException {
 
-  public TooManyTasks() {
-    super("Maximum number of concurrent tasks (" + AbstractTask.limit.get() + ") reached");
+  public TooManyTasks(String errorMessage) {
+    super(errorMessage);
   }
 }

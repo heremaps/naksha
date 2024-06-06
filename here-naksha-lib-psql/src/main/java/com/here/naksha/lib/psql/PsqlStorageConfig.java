@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ public class PsqlStorageConfig extends PsqlByUrlBuilder<PsqlStorageConfig> {
     if (password == null || password.isBlank()) {
       password = "password";
     }
-    return new PsqlStorageConfig("jdbc:postgresql://localhost/postgres?user=postgres&password=" + password
+    return new PsqlStorageConfig("jdbc:postgresql://localhost:5432/postgres?user=postgres&password=" + password
         + "&schema=" + sharedSchema
         + "&app=" + "Naksha/v" + NakshaVersion.latest
         + "&id=" + PsqlStorage.ADMIN_STORAGE_ID);

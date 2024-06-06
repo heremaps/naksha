@@ -94,9 +94,9 @@ class PsqlViewTests extends PsqlTests {
     assertNotNull(storage);
     assertNotNull(session);
     final WriteXyzCollections request = new WriteXyzCollections();
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_0, false, false, true));
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_1, false, false, true));
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_2, false, false, true));
+    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_0, 1, false, true));
+    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_1, 1, false, true));
+    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_2, 1, false, true));
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
              session.execute(request).getXyzCollectionCursor()) {
       assertNotNull(cursor);

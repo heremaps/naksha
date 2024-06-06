@@ -86,7 +86,6 @@ class MockResultCursor<T extends XyzFeature> extends ForwardCursor<XyzFeature, X
    * @return the "type" from the root of the feature.
    * @throws NoSuchElementException If the cursor currently is not at a valid result.
    */
-  @Override
   public @NotNull String getFeatureType() throws NoSuchElementException {
     return "Feature";
   }
@@ -97,7 +96,6 @@ class MockResultCursor<T extends XyzFeature> extends ForwardCursor<XyzFeature, X
    * @return the "type" from the "properties" of the feature.
    * @throws NoSuchElementException If the cursor currently is not at a valid result.
    */
-  @Override
   public @Nullable String getPropertiesType() throws NoSuchElementException {
     throw new NotImplementedException();
   }

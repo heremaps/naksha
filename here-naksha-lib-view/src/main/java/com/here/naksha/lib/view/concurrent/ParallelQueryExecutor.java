@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
+import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
@@ -42,8 +43,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ParallelQueryExecutor {
+  private static final Logger log = LoggerFactory.getLogger(ParallelQueryExecutor.class);
   private final long defaultTimeoutMillis = 1000 * 60 * 10L; // 10 minutes
   private final View viewRef;
 
@@ -57,7 +61,8 @@ public class ParallelQueryExecutor {
     List<Future<List<ViewLayerRow<FEATURE, CODEC>>>> futures = new ArrayList<>();
 
     for (LayerReadRequest layerReadRequest : requests) {
-      QueryTask<List<ViewLayerRow<FEATURE, CODEC>>> singleTask = new QueryTask<>();
+      QueryTask<List<ViewLayerRow<FEATURE, CODEC>>> singleTask =
+          new QueryTask<>(null, NakshaContext.currentContext());
 
       Future<List<ViewLayerRow<FEATURE, CODEC>>> futureResult = singleTask.start(() -> executeSingle(
               layerReadRequest.getViewLayer(),
@@ -106,17 +111,33 @@ public class ParallelQueryExecutor {
       @NotNull IReadSession session,
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       @NotNull ReadFeatures request) {
+    final long startTime = System.currentTimeMillis();
+    String status = "OK";
+    int featureCnt = 0;
     int layerPriority = viewRef.getViewCollection().priorityOf(layer);
+    final String collectionId = layer.getCollectionId();
 
     // prepare request
     ReadFeatures clonedRequest = request.shallowClone();
-    clonedRequest.withCollections(List.of(layer.getCollectionId()));
+    clonedRequest.withCollections(List.of(collectionId));
 
     try (MutableCursor<FEATURE, CODEC> cursor =
         session.execute(clonedRequest).mutableCursor(codecFactory)) {
-      return cursor.asList().stream().map(row -> new ViewLayerRow<>(row, layerPriority, layer));
+      List<CODEC> featureList = cursor.asList();
+      featureCnt = featureList.size();
+      return featureList.stream().map(row -> new ViewLayerRow<>(row, layerPriority, layer));
     } catch (NoCursor e) {
+      status = "NOK";
       throw unchecked(e);
+    } finally {
+      log.info(
+          "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
+          NakshaContext.currentContext().getStreamId(),
+          collectionId,
+          "READ",
+          status,
+          System.currentTimeMillis() - startTime,
+          featureCnt);
     }
   }
 }

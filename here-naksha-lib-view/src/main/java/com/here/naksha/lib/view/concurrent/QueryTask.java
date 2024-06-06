@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,15 @@ package com.here.naksha.lib.view.concurrent;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
+import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.SimpleTask;
 import org.jetbrains.annotations.NotNull;
 
 class QueryTask<RESULT> extends SimpleTask<RESULT> {
+  public QueryTask(INaksha naksha, NakshaContext context) {
+    super(naksha, context);
+  }
 
   @Override
   protected @NotNull RESULT errorResponse(@NotNull Throwable throwable) {

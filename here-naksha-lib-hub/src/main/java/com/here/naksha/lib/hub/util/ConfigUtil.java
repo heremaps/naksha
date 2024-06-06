@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,5 +56,15 @@ public class ConfigUtil {
 
   public static NakshaHubConfig readConfigFile(final @NotNull String configId) throws IOException {
     return readConfigFile(configId, "naksha");
+  }
+
+  public static String readAuthKeyFile(final @NotNull String keyFilePath, final @NotNull String appName) {
+    // use the path provided in NAKSHA_CONFIG_PATH (if it is set)
+    final String envVal = System.getenv(DEF_CFG_PATH_ENV);
+    final String path = envVal == null || envVal.isEmpty() || "null".equalsIgnoreCase(envVal) ? null : envVal;
+    // attempt loading key from file
+    final IoHelp.LoadedBytes loaded = IoHelp.readBytesFromHomeOrResource(keyFilePath, false, appName, path);
+    logger.info("Loaded auth key file {}", loaded.getPath());
+    return new String(loaded.getBytes(), StandardCharsets.UTF_8);
   }
 }
