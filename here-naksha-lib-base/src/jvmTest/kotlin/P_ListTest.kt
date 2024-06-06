@@ -25,6 +25,8 @@ class P_ListTest {
         list.add(null)
         // then
         assertEquals(null, list[1])
+
+        assertEquals(2, list.size)
     }
 
     @Test

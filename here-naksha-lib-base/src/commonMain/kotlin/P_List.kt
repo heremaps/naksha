@@ -54,8 +54,9 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
     override fun createData(): PlatformList = Platform.newList()
 
     override fun data(): PlatformList = super.data() as PlatformList
-    override val size: Int
+    override var size: Int
         get() = array_get_length(data())
+        set(newLength) = array_set_length(data(), newLength)
 
     override fun clear() = array_set_length(data(), 0)
 
