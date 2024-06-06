@@ -50,6 +50,7 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   public static final String v2_0_13 = "2.0.13";
   public static final String v2_0_14 = "2.0.14";
   public static final String v2_0_15 = "2.0.15";
+  public static final String v2_0_16 = "2.0.16";
   public static final String v3_0_0 = "3.0.0";
   public static final String v3_0_0_alpha_0 = "3.0.0-alpha.0";
   public static final String v3_0_0_alpha_1 = "3.0.0-alpha.1";

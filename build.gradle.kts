@@ -30,7 +30,6 @@ plugins {
 group = "com.here.naksha"
 version = rootProject.properties["version"] as String
 
-
 val jetbrains_annotations = "org.jetbrains:annotations:24.0.1"
 
 val vertx_version = "4.5.0"
@@ -111,6 +110,7 @@ val otel = "io.opentelemetry:opentelemetry-api:1.28.0"
 
 val cytodynamics = "com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
 
+val projectRepoURI = getRequiredPropertyFromRootProject("projectRepoURI")
 val mavenUrl = getRequiredPropertyFromRootProject("mavenUrl")
 val mavenUser = getRequiredPropertyFromRootProject("mavenUser")
 val mavenPassword = getRequiredPropertyFromRootProject("mavenPassword")
@@ -297,7 +297,6 @@ subprojects {
 //       but if we do that, the shared section at the end (about publishing and shadow-jar) are
 //       not that easy AND, worse: We can't share the constants for the dependencies.
 
-
 project(":here-naksha-lib-core") {
     description = "Naksha Core Library"
     java {
@@ -456,36 +455,6 @@ project(":here-naksha-handler-http") {
 }
 */
 
-/*
-project(":here-naksha-handler-psql") {
-    description = "Naksha PostgresQL Handler"
-    dependencies {
-        implementation(project(":here-naksha-lib-core"))
-        implementation(project(":here-naksha-lib-psql"))
-
-        implementation(commons_lang3)
-        implementation(commons_dbutils)
-        implementation(jts_core)
-        implementation(aws_kms)
-        implementation(mchange_commons)
-        implementation(mchange_c3p0)
-        implementation(postgres)
-        //implementation(zaxxer_hikari)
-        implementation(google_tink)
-        implementation(google_protobuf)
-        implementation(vertx_core)
-
-        testImplementation(jayway_jsonpath)
-    }
-
-    tasks {
-        test {
-            enabled = false
-        }
-    }
-}
-*/
-
 configurations.implementation {
     exclude(module = "commons-logging")
 }
@@ -553,7 +522,6 @@ project(":here-naksha-app-service") {
         implementation(project(":here-naksha-lib-psql"))
         implementation(project(":here-naksha-storage-http"))
         //implementation(project(":here-naksha-lib-extension"))
-        //implementation(project(":here-naksha-handler-psql"))
         implementation(project(":here-naksha-lib-hub"))
         implementation(project(":here-naksha-common-http"))
 
@@ -593,14 +561,27 @@ subprojects {
             }
         }
 
-        if (project.name != "here-naksha-lib-jbon" && project.name != "here-naksha-lib-plv8") {
-            publications {
-                create<MavenPublication>("maven") {
-                    groupId = project.group.toString()
-                    artifactId = project.name
-                    version = project.version.toString()
-                    from(components["java"])
+        publications {
+            create<MavenPublication>("maven") {
+                groupId = project.group.toString()
+                artifactId = project.name
+                version = project.version.toString()
+                from(components["java"])
+                pom {
+                    url = "https://${projectRepoURI}"
+                    licenses {
+                        license {
+                            name = "The Apache License, Version 2.0"
+                            url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                        }
+                    }
+                    scm {
+                        connection = "scm:git:https://${projectRepoURI}.git"
+                        developerConnection = "scm:git:ssh://git@${projectRepoURI}.git"
+                        url = "https://${projectRepoURI}"
+                    }
                 }
+            }
 
                 artifacts {
                     file("build/libs/${project.name}-${project.version}.jar")
@@ -610,7 +591,7 @@ subprojects {
             }
         }
     }
-}
+
 // For publishing root project (including shaded jar)
 publishing {
     repositories {
@@ -627,6 +608,20 @@ publishing {
             artifactId = project.name
             version = project.version.toString()
             from(components["java"])
+            pom {
+                url = "https://${projectRepoURI}"
+                licenses {
+                    license {
+                        name = "The Apache License, Version 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+                scm {
+                    connection = "scm:git:https://${projectRepoURI}.git"
+                    developerConnection = "scm:git:ssh://git@${projectRepoURI}.git"
+                    url = "https://${projectRepoURI}"
+                }
+            }
         }
 
         artifacts {
@@ -641,6 +636,15 @@ rootProject.dependencies {
     //This is needed, otherwise the blank root project will include nothing in the fat jar
     implementation(project(":here-naksha-app-service"))
 }
+// to include license files in Jar
+sourceSets {
+    main {
+        resources {
+            setSrcDirs(listOf(".")).setIncludes(listOf("LICENSE","HERE_NOTICE"))
+        }
+    }
+}
+
 rootProject.tasks.shadowJar {
     //Have all tests run before building the fat jar
     dependsOn(allprojects.flatMap { it.tasks.withType(Test::class) })
