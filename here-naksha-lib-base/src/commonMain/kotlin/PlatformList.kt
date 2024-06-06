@@ -1,6 +1,5 @@
 package com.here.naksha.lib.base
 
-import StringList
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
