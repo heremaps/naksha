@@ -1,5 +1,4 @@
 import com.here.naksha.lib.base.P_List
-import com.here.naksha.lib.base.Platform
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
