@@ -1,7 +1,7 @@
 package com.here.naksha.lib.base
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-internal actual class PlatformDataViewApi {
+actual class PlatformDataViewApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
     @OptIn(ExperimentalJsStatic::class)
     actual companion object {

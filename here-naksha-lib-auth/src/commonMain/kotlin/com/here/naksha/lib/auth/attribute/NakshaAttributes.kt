@@ -1,15 +1,20 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package com.here.naksha.lib.auth.attribute
 
-import com.here.naksha.lib.auth.AccessAttributeMap
+import kotlin.js.JsExport
 
-abstract class CommonAttributes<SELF : CommonAttributes<SELF>> protected constructor(vararg args: Any) :
-    AccessAttributeMap(*args) {
+/**
+ * The base attribute map that all Naksha resources share.
+ */
+@Suppress("UNCHECKED_CAST")
+@JsExport
+abstract class NakshaAttributes<SELF : NakshaAttributes<SELF>> : ResourceAttributes() {
     fun id(id: String): SELF = apply { set(ID_KEY, id) } as SELF
     fun tags(tags: Array<String>): SELF = apply { set(TAGS_KEY, tags) } as SELF
     fun appId(appId: String): SELF = apply { set(APP_ID_KEY, appId) } as SELF
     fun author(author: String): SELF = apply { set(AUTHOR_KEY, author) } as SELF
-
-    fun customAttribute(key: String, value: Any) = apply { set(key, value) } as SELF
+    fun customAttribute(key: String, value: Any): SELF = apply { set(key, value) } as SELF
 
     companion object {
         const val ID_KEY = "id"

@@ -1,31 +1,48 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package com.here.naksha.lib.auth.action
 
-import com.here.naksha.lib.auth.attribute.XyzFeatureAttributes
+import com.here.naksha.lib.auth.attribute.FeatureAttributes
+import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
-class ReadFeatures: AccessAction<XyzFeatureAttributes>(READ_FEATURES_ACTION_NAME){
+@JsExport
+class ReadFeatures: AccessRightsAction<FeatureAttributes, ReadFeatures>(FeatureAttributes::class){
 
     companion object {
-        const val READ_FEATURES_ACTION_NAME = "readFeatures"
+        @JvmStatic
+        @JsStatic
+        val NAME = "readFeatures"
     }
 }
 
-class CreateFeatures: AccessAction<XyzFeatureAttributes>(CREATE_FEATURES_ACTION_NAME){
+@JsExport
+class CreateFeatures: AccessRightsAction<FeatureAttributes, CreateFeatures>(FeatureAttributes::class){
 
     companion object {
-        const val CREATE_FEATURES_ACTION_NAME = "createFeatures"
+        @JvmStatic
+        @JsStatic
+        val NAME = "readFeatures"
     }
 }
 
-class UpdateFeatures: AccessAction<XyzFeatureAttributes>(UPDATE_FEATURES_ACTION_NAME){
+@JsExport
+class UpdateFeatures: AccessRightsAction<FeatureAttributes, UpdateFeatures>(FeatureAttributes::class){
 
     companion object {
-        const val UPDATE_FEATURES_ACTION_NAME = "updateFeatures"
+        @JvmStatic
+        @JsStatic
+        val NAME = "updateFeatures"
     }
 }
 
-class DeleteFeatures: AccessAction<XyzFeatureAttributes>(DELETE_FEATURES_ACTION_NAME){
+@JsExport
+class DeleteFeatures: AccessRightsAction<FeatureAttributes, DeleteFeatures>(FeatureAttributes::class){
 
     companion object {
-        const val DELETE_FEATURES_ACTION_NAME = "deleteFeatures"
+        @JvmStatic
+        @JsStatic
+        val NAME = "deleteFeatures"
     }
 }
