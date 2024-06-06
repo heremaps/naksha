@@ -10,7 +10,7 @@ on:
       - synchronize
     branches:
       - v2
-      - v3
+      #- v3
 
 permissions:
   checks: write         # for junit reporting
