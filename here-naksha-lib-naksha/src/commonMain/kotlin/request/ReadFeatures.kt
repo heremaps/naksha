@@ -1,6 +1,8 @@
 package com.here.naksha.lib.naksha.request
 
 import com.here.naksha.lib.naksha.IReadRowFilter
+import request.condition.POp
+import request.condition.SOp
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

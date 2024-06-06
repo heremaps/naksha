@@ -5,6 +5,7 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class POp {
-    // TODO
+interface Op {
+
+    fun getType(): OpType
 }
