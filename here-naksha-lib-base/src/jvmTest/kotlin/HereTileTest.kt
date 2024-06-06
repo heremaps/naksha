@@ -96,6 +96,9 @@ class HereTileTest {
         assertHereTileTruncate("1", "133333333333333")
         assertHereTileTruncate("13", "133333333333333")
         assertHereTileTruncate("133333", "133333333333333")
+        assertHereTileTruncate("13333", "13333")
+        assertHereTileTruncate("1333", "13333")
+        assertHereTileTruncate("", "13333")
     }
 
     @Test
