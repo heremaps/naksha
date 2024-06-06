@@ -34,5 +34,17 @@ actual class PlatformMapApi {
         actual fun map_contains_value(map: PlatformMap?, value: Any?): Boolean {
             TODO("Not yet implemented")
         }
+
+        actual fun map_iterator(map: PlatformMap?): PlatformIterator<PlatformList> {
+            TODO("Not yet implemented")
+        }
+
+        actual fun map_key_iterator(map: PlatformMap?): PlatformIterator<Any> {
+            TODO("Not yet implemented")
+        }
+
+        actual fun map_value_iterator(map: PlatformMap?): PlatformIterator<Any?> {
+            TODO("Not yet implemented")
+        }
     }
 }

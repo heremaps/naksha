@@ -6,12 +6,15 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
+private class TestListInt : P_List<Int>(Int::class)
+private class TestListString : P_List<String>(String::class)
+
 class P_ListTest {
 
     @Test
     fun shouldAddElements() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
 
         // when
         list.add(11)
@@ -27,7 +30,7 @@ class P_ListTest {
     @Test
     fun shouldSetElementAtIndex() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
         list.add(11)
         list.add(12)
         list.add(13)
@@ -45,7 +48,7 @@ class P_ListTest {
     @Test
     fun testAddIndexOutOfBounds() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
         list.add(11)
 
         // expect
@@ -56,7 +59,7 @@ class P_ListTest {
     @Test
     fun testListSize() {
         // given
-        val list = P_List(Platform.stringKlass)
+        val list = TestListString()
         // expect
         assertEquals(0, list.size)
 
@@ -70,7 +73,7 @@ class P_ListTest {
     @Test
     fun testAddAll() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
         list.add(7)
 
         // when
@@ -85,7 +88,7 @@ class P_ListTest {
     @Test
     fun testAddAllAtIndex() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
         list.add(7)
         list.add(8)
 
@@ -102,7 +105,7 @@ class P_ListTest {
     @Test
     fun testContainsAll() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
         list.add(7)
         list.add(8)
         list.add(9)
@@ -117,7 +120,7 @@ class P_ListTest {
     @Test
     fun testRemoveAll() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
         list.add(7)
         list.add(8)
         list.add(9)
@@ -134,7 +137,7 @@ class P_ListTest {
     @Test
     fun testRetainAll() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
         list.add(7)
         list.add(8)
         list.add(9)
@@ -152,7 +155,7 @@ class P_ListTest {
     @Test
     fun testSubList() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
         list.add(7)
         list.add(8)
         list.add(9)
@@ -175,7 +178,7 @@ class P_ListTest {
     @Test
     fun testMutableIterator() {
         // given
-        val list = P_List(Platform.intKlass)
+        val list = TestListInt()
         list.add(7)
         list.add(8)
 
