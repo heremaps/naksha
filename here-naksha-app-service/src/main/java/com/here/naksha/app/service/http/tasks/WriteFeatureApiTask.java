@@ -357,9 +357,15 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
               spaceId, featuresFromRequest, responseType, addTags, removeTags, retry + 1);
         } catch (NoCursor e) {
           return returnError(
-              XyzError.EXCEPTION,
-              "Unexpected response when trying to persist patched features.",
+              er.reason,
+              er.message,
               "No cursor when analyzing error result, while attempting to write patched features into storage.");
+          /*
+          return returnError(
+          XyzError.EXCEPTION,
+          "Unexpected response when trying to persist patched features.",
+          "No cursor when analyzing error result, while attempting to write patched features into storage.");
+           */
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
