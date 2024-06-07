@@ -1,10 +1,5 @@
 import com.here.naksha.lib.base.P_List
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import kotlin.test.*
 
 private class TestListInt : P_List<Int>(Int::class)
 private class TestListString : P_List<String>(String::class)
@@ -54,8 +49,8 @@ class P_ListTest {
         list.add(11)
 
         // expect
-        assertThrows<RuntimeException> { list.add(-1, 12) }
-        assertThrows<RuntimeException> { list.add(13, 12) }
+        assertFailsWith<RuntimeException> { list.add(-1, 12) }
+        assertFailsWith<RuntimeException> { list.add(13, 12) }
     }
 
     @Test

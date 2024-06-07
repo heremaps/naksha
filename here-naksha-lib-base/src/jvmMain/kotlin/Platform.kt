@@ -304,6 +304,9 @@ actual class Platform {
         @JvmStatic
         actual fun toJSON(obj: Any?): String {
             TODO("Implement me!")
+            // JvmInt64 <-> Long
+            // JvmMap <-> Map
+            // JvmList <-> List
         }
 
         @JvmStatic

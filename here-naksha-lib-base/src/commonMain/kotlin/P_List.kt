@@ -25,6 +25,11 @@ import kotlin.reflect.KClass
 @JsExport
 abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
 
+    override fun bind(data: PlatformObject, symbol: Symbol) {
+        require(data is PlatformList)
+        super.bind(data, symbol)
+    }
+
     /**
      * Returns the element at the given index. If no such index exists or the element is not of the specified type,
      * returns the given alternative.
@@ -46,7 +51,7 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
         var value = box(raw, elementKlass, null)
         if (value == null) {
             value = Platform.newInstanceOf(elementKlass)
-            PlatformListApi.array_set(data, index, Platform.unbox(value))
+            array_set(data, index, Platform.unbox(value))
         }
         return value
     }

@@ -30,6 +30,14 @@ actual class Platform {
         }
         val symbolTemplate = object : Symbol {}
         val bigIntTemplate = object : Int64 {
+            override fun equals(other: Any?): Boolean {
+                TODO("Not yet implemented")
+            }
+
+            override fun eq(other: Any?): Boolean {
+                TODO("Not yet implemented")
+            }
+
             override fun hashCode(): Int = js("BigInt.hashCode(this)").unsafeCast<Int>()
         }
 

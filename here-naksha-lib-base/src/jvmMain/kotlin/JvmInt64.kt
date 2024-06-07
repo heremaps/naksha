@@ -18,5 +18,15 @@ class JvmInt64(private val value: Long) : Number(), Int64 {
 
     override fun toDouble(): Double = value.toDouble()
 
+    override infix fun eq(other: Any?): Boolean = equals(other)
+
+    override fun equals(other: Any?): Boolean {
+        require(other is Number)
+        return value == other.toLong()
+    }
+
+    override fun hashCode(): Int = value.hashCode()
+
     override fun toString(): String = value.toString()
+
 }

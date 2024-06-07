@@ -17,19 +17,32 @@ import com.here.naksha.lib.base.PlatformDataViewApi.Companion.dataview_set_int32
 import com.here.naksha.lib.base.PlatformDataViewApi.Companion.dataview_set_int64
 import com.here.naksha.lib.base.PlatformDataViewApi.Companion.dataview_set_int8
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * The Naksha type for a data view.
  */
-@Suppress("LeakingThis", "OPT_IN_USAGE")
+@Suppress("OPT_IN_USAGE")
 @JsExport
-open class P_DataView(byteArray: ByteArray? = null, offset: Int? = null, length: Int? = null) : Proxy() {
-    init {
-        if (!Platform.isNil(byteArray)) {
-            val off = offset ?: 0
-            val len = length ?: (byteArray!!.size - off)
-            bind(Platform.newDataView(byteArray!!, off, len), Symbols.of(this::class))
-        }
+open class P_DataView() : Proxy() {
+
+    @JsName("new")
+    constructor(size: Int = 1024): this() {
+        @Suppress("LeakingThis")
+        bind(Platform.newDataView(ByteArray(size)), Symbols.of(this::class))
+    }
+
+    @JsName("of")
+    constructor(byteArray: ByteArray, offset: Int? = null, length: Int? = null): this() {
+        val off = offset ?: 0
+        val len = length ?: (byteArray.size - off)
+        @Suppress("LeakingThis")
+        bind(Platform.newDataView(byteArray, off, len), Symbols.of(this::class))
+    }
+
+    override fun bind(data: PlatformObject, symbol: Symbol) {
+        require(data is PlatformDataView)
+        super.bind(data, symbol)
     }
 
     override fun data(): PlatformDataView = super.data() as PlatformDataView

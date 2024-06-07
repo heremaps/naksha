@@ -2,6 +2,7 @@ package com.here.naksha.lib.base
 
 import java.nio.ByteOrder
 import kotlin.reflect.KClass
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * The JVM implementation of [PlatformDataViewApi].
@@ -130,6 +131,14 @@ open class JvmDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byte
     }
 
     override fun <T : P_DataView> proxy(klass: KClass<out T>, doNotOverride: Boolean): T {
-        TODO("Not yet implemented")
+        val symbol = Symbols.of(klass)
+        var proxy = getSymbol(symbol)
+        if (proxy != null) {
+            if (klass.isInstance(proxy)) return proxy as T
+            if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
+        }
+        proxy = klass.primaryConstructor!!.call()
+        proxy.bind(this, symbol)
+        return proxy
     }
 }

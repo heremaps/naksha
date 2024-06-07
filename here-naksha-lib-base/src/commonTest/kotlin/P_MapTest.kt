@@ -1,8 +1,7 @@
 import com.here.naksha.lib.base.P_List
 import com.here.naksha.lib.base.P_Map
 import com.here.naksha.lib.base.PlatformMapApi
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
+import kotlin.test.*
 
 internal class TestMapStringString : P_Map<String, String>(String::class, String::class)
 internal class TestStringList : P_List<String>(String::class)

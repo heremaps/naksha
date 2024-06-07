@@ -2,95 +2,66 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Platform.Companion.longToInt64
-
 actual internal class Int64Api {
     actual companion object {
         @Suppress("NOTHING_TO_INLINE")
-        private inline fun l(lo: Int64): Long = if (lo is JvmInt64) lo.toLong() else 0L
+        private inline fun l(lo: Any?): Long = if (lo is Number) lo.toLong() else throw IllegalArgumentException("Number expected")
 
         @Suppress("NOTHING_TO_INLINE")
         private inline fun l(i: Int): Long = i.toLong()
 
         @JvmStatic
-        actual fun eq(t: Int64, o: Int64): Boolean = l(t) == l(o)
+        actual fun unaryPlus(self: Int64): Int64 = self
 
         @JvmStatic
-        actual fun eqi(t: Int64, o: Int): Boolean = l(t) == l(o)
+        actual fun unaryMinus(self: Int64): Int64 = JvmInt64(-l(self))
 
         @JvmStatic
-        actual fun lt(t: Int64, o: Int64): Boolean = l(t) < l(o)
+        actual fun inc(self: Int64): Int64 = JvmInt64(l(self) + 1)
 
         @JvmStatic
-        actual fun lti(t: Int64, o: Int): Boolean = l(t) < l(o)
+        actual fun dec(self: Int64): Int64 = JvmInt64(l(self) - 1)
 
         @JvmStatic
-        actual fun lte(t: Int64, o: Int64): Boolean = l(t) <= l(o)
+        actual fun plus(self: Int64, other: Any): Int64 = JvmInt64(l(self) + l(other))
 
         @JvmStatic
-        actual fun ltei(t: Int64, o: Int): Boolean = l(t) <= l(o)
+        actual fun minus(self: Int64, other: Any): Int64 = JvmInt64(l(self) - l(other))
 
         @JvmStatic
-        actual fun gt(t: Int64, o: Int64): Boolean = l(t) > l(o)
+        actual fun times(self: Int64, other: Any): Int64 = JvmInt64(l(self) * l(other))
 
         @JvmStatic
-        actual fun gti(t: Int64, o: Int): Boolean = l(t) > l(o)
+        actual fun div(self: Int64, other: Any): Int64 = JvmInt64(l(self) / l(other))
 
         @JvmStatic
-        actual fun gte(t: Int64, o: Int64): Boolean = l(t) >= l(o)
+        actual fun rem(self: Int64, other: Any): Int64 = JvmInt64(l(self) % l(other))
 
         @JvmStatic
-        actual fun gtei(t: Int64, o: Int): Boolean = l(t) >= l(o)
+        actual fun compareTo(self: Int64, other: Any?): Int = l(self).compareTo(l(other))
 
         @JvmStatic
-        actual fun shr(t: Int64, bits: Int): Int64 = longToInt64(l(t) shr bits)
+        actual fun equals(self: Int64, other: Any?): Boolean = l(self) == l(other)
 
         @JvmStatic
-        actual fun ushr(t: Int64, bits: Int): Int64 = longToInt64(l(t) ushr bits)
+        actual fun shr(self: Int64, bits: Int): Int64 = JvmInt64(l(self) shr bits)
 
         @JvmStatic
-        actual fun shl(t: Int64, bits: Int): Int64 = longToInt64(l(t) shl bits)
+        actual fun ushr(self: Int64, bits: Int): Int64 = JvmInt64(l(self) ushr bits)
 
         @JvmStatic
-        actual fun add(t: Int64, o: Int64): Int64 = longToInt64(l(t) + l(o))
+        actual fun shl(self: Int64, bits: Int): Int64 = JvmInt64(l(self) shl bits)
 
         @JvmStatic
-        actual fun addi(t: Int64, o: Int): Int64 = longToInt64(l(t) + l(o))
+        actual fun and(self: Int64, other: Int64): Int64 = JvmInt64(l(self) and l(other))
 
         @JvmStatic
-        actual fun sub(t: Int64, o: Int64): Int64 = longToInt64(l(t) - l(o))
+        actual fun or(self: Int64, other: Int64): Int64 = JvmInt64(l(self) or l(other))
 
         @JvmStatic
-        actual fun subi(t: Int64, o: Int): Int64 = longToInt64(l(t) - l(o))
+        actual fun xor(self: Int64, other: Int64): Int64 = JvmInt64(l(self) xor l(other))
 
         @JvmStatic
-        actual fun mul(t: Int64, o: Int64): Int64 = longToInt64(l(t) * l(o))
-
-        @JvmStatic
-        actual fun muli(t: Int64, o: Int): Int64 = longToInt64(l(t) * l(o))
-
-        @JvmStatic
-        actual fun mod(t: Int64, o: Int64): Int64 = longToInt64(l(t) % l(o))
-
-        @JvmStatic
-        actual fun modi(t: Int64, o: Int): Int64 = longToInt64(l(t) % l(o))
-
-        @JvmStatic
-        actual fun div(t: Int64, o: Int64): Int64 = longToInt64(l(t) / l(o))
-
-        @JvmStatic
-        actual fun divi(t: Int64, o: Int): Int64 = longToInt64(l(t) / l(o))
-
-        @JvmStatic
-        actual fun and(t: Int64, o: Int64): Int64 = longToInt64(l(t) and l(o))
-
-        @JvmStatic
-        actual fun or(t: Int64, o: Int64): Int64 = longToInt64(l(t) or l(o))
-
-        @JvmStatic
-        actual fun xor(t: Int64, o: Int64): Int64 = longToInt64(l(t) xor l(o))
-
-        @JvmStatic
-        actual fun inv(t: Int64): Int64 = longToInt64(l(t).inv())
+        actual fun inv(self: Int64): Int64 = JvmInt64(l(self).inv())
     }
 }

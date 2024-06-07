@@ -7,7 +7,6 @@ plugins {
 
 kotlin {
     jvm {
-        //jvmToolchain(11)
         withJava()
     }
 
@@ -38,6 +37,7 @@ kotlin {
             }
         }
         commonTest {
+            // TODO: https://kotlinlang.org/docs/js-running-tests.html
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))

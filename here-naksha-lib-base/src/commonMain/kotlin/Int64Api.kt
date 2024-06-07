@@ -3,33 +3,27 @@ package com.here.naksha.lib.base
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 internal expect class Int64Api {
     companion object {
+        fun unaryPlus(self: Int64): Int64
+        fun unaryMinus(self: Int64): Int64
 
-        fun eq(t: Int64, o: Int64): Boolean
-        fun eqi(t: Int64, o: Int): Boolean
-        fun lt(t: Int64, o: Int64): Boolean
-        fun lti(t: Int64, o: Int): Boolean
-        fun lte(t: Int64, o: Int64): Boolean
-        fun ltei(t: Int64, o: Int): Boolean
-        fun gt(t: Int64, o: Int64): Boolean
-        fun gti(t: Int64, o: Int): Boolean
-        fun gte(t: Int64, o: Int64): Boolean
-        fun gtei(t: Int64, o: Int): Boolean
-        fun shr(t: Int64, bits: Int): Int64
-        fun ushr(t: Int64, bits: Int): Int64
-        fun shl(t: Int64, bits: Int): Int64
-        fun add(t: Int64, o: Int64): Int64
-        fun addi(t: Int64, o: Int): Int64
-        fun sub(t: Int64, o: Int64): Int64
-        fun subi(t: Int64, o: Int): Int64
-        fun mul(t: Int64, o: Int64): Int64
-        fun muli(t: Int64, o: Int): Int64
-        fun mod(t: Int64, o: Int64): Int64
-        fun modi(t: Int64, o: Int): Int64
-        fun div(t: Int64, o: Int64): Int64
-        fun divi(t: Int64, o: Int): Int64
-        fun and(t: Int64, o: Int64): Int64
-        fun or(t: Int64, o: Int64): Int64
-        fun xor(t: Int64, o: Int64): Int64
-        fun inv(t: Int64): Int64
+        fun inc(self: Int64): Int64
+        fun dec(self: Int64): Int64
+
+        fun plus(self: Int64, other: Any): Int64
+        fun minus(self: Int64, other: Any): Int64
+        fun times(self: Int64, other: Any): Int64
+        fun div(self: Int64, other: Any): Int64
+        fun rem(self: Int64, other: Any): Int64
+
+        fun compareTo(self: Int64, other: Any?): Int
+        fun equals(self: Int64, other: Any?): Boolean
+
+        fun shr(self: Int64, bits: Int): Int64
+        fun ushr(self: Int64, bits: Int): Int64
+        fun shl(self: Int64, bits: Int): Int64
+        fun and(self: Int64, other: Int64): Int64
+        fun or(self: Int64, other: Int64): Int64
+        fun xor(self: Int64, other: Int64): Int64
+        fun inv(self: Int64): Int64
     }
 }

@@ -2,7 +2,6 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Platform.Companion.isNil
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_clear
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_contains_key
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_contains_value
@@ -11,8 +10,6 @@ import com.here.naksha.lib.base.PlatformMapApi.Companion.map_remove
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_set
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_size
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
@@ -21,6 +18,11 @@ import kotlin.reflect.KClass
 @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
 @JsExport
 abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
+    override fun bind(data: PlatformObject, symbol: Symbol) {
+        require(data is PlatformMap)
+        super.bind(data, symbol)
+    }
+
     /**
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, the
      * provided alternative is returned and the key is set to the alternative.
