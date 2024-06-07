@@ -101,6 +101,11 @@ expect class Platform {
         val dataViewKlass: KClass<PlatformDataView>
 
         /**
+         * The [BaseLogger].
+         */
+        val logger: BaseThreadLocal<BaseLogger>
+
+        /**
          * Tests if the given value is _null_ or _undefined_.
          * @param any The value to test.
          * @return _true_ if the value is _null_ or _undefined_; false otherwise.
@@ -216,6 +221,13 @@ expect class Platform {
          * @throws IllegalArgumentException If any of the given arguments is invalid.
          */
         fun newDataView(byteArray: ByteArray, offset: Int = 0, size: Int = byteArray.size - offset): PlatformDataView
+
+        /**
+         * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).
+         * @param initializer An optional lambda to be invoked, when the thread-local is read for the first time.
+         * @return The thread local.
+         */
+        fun <T> newThreadLocal(initializer: (() -> T)? = null): BaseThreadLocal<T>
 
         /**
          * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]

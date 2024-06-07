@@ -37,7 +37,7 @@ actual class Symbols {
             if (resolvers != null) {
                 for (resolver in resolvers) {
                     try {
-                        val symbol = resolver.resolve(klass)
+                        val symbol = resolver.call(klass)
                         if (symbol != null) return symbol
                     } catch (e: Exception) {
                         // TODO: Log an error

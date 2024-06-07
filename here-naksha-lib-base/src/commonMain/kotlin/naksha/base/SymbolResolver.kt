@@ -16,5 +16,5 @@ interface SymbolResolver {
      * @param klass The [KClass] for which to return the default symbol.
      * @return The default symbol or _null_, if this resolver is not responsible for the given [KClass].
      */
-    fun resolve(klass: KClass<*>): Symbol?
+    fun call(klass: KClass<*>): Symbol?
 }

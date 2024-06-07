@@ -54,6 +54,9 @@ kotlin {
                 implementation(kotlin("reflect"))
                 api("org.lz4:lz4-java:1.8.0")
                 implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
+                // https://mvnrepository.com/artifact/org.slf4j
+                implementation("org.slf4j:slf4j-api:2.0.13")
+                implementation("org.slf4j:slf4j-simple:2.0.13")
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }

@@ -3,6 +3,7 @@ package naksha.base
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import org.slf4j.LoggerFactory
 import sun.misc.Unsafe
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -18,6 +19,7 @@ import kotlin.reflect.full.primaryConstructor
 actual class Platform {
     actual companion object {
         internal val module = SimpleModule().apply {
+            @Suppress("UNCHECKED_CAST")
             addAbstractTypeMapping(Map::class.java, JvmMap::class.java as Class<Map<*, *>>)
             addAbstractTypeMapping(List::class.java, JvmList::class.java)
         }
@@ -451,5 +453,48 @@ actual class Platform {
             require(pobject is JvmObject)
             return pobject.proxy(klass, doNotOverride)
         }
+
+        private val defaultBaseLogger = object : BaseLogger {
+            private val logger = LoggerFactory.getLogger("com.here.naksha.lib.base")
+            override fun debug(msg: String?, msgFn: ((msg: String?) -> String?)?) {
+                if (logger.isDebugEnabled) {
+                    val log = msgFn?.invoke(msg) ?: msg
+                    if (log != null) logger.debug(log)
+                }
+            }
+
+            override fun info(msg: String?, msgFn: ((msg: String?) -> String?)?) {
+                if (logger.isInfoEnabled) {
+                    val log = msgFn?.invoke(msg) ?: msg
+                    if (log != null) logger.info(log)
+                }
+            }
+
+            override fun warn(msg: String?, msgFn: ((msg: String?) -> String?)?) {
+                if (logger.isWarnEnabled) {
+                    val log = msgFn?.invoke(msg) ?: msg
+                    if (log != null) logger.warn(log)
+                }
+            }
+
+            override fun error(msg: String?, msgFn: ((msg: String?) -> String?)?) {
+                if (logger.isErrorEnabled) {
+                    val log = msgFn?.invoke(msg) ?: msg
+                    if (log != null) logger.error(log)
+                }
+            }
+        }
+
+        /**
+         * The [BaseLogger].
+         */
+        actual val logger: BaseThreadLocal<BaseLogger> = newThreadLocal { defaultBaseLogger }
+
+        /**
+         * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).
+         * @param initializer An optional lambda to be invoked, when the thread-local is read for the first time.
+         * @return The thread local.
+         */
+        actual fun <T> newThreadLocal(initializer: (() -> T)?): BaseThreadLocal<T> = JvmThreadLocal(initializer)
     }
 }

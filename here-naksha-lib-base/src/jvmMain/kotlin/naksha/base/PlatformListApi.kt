@@ -155,7 +155,7 @@ actual class PlatformListApi {
          * @return _this_.
          */
         @JvmStatic
-        actual fun array_sort(compareFn: CompareFn<Any>?): PlatformList {
+        actual fun array_sort(compareFn: ((Any?, Any?) -> Int)?): PlatformList {
             TODO("Not yet implemented")
         }
 
@@ -167,7 +167,7 @@ actual class PlatformListApi {
          * @return A copy of this array, but sorted.
          */
         @JvmStatic
-        actual fun array_to_sorted(compareFn: CompareFn<Any>?): PlatformList {
+        actual fun array_to_sorted(compareFn: ((Any?, Any?) -> Int)?): PlatformList {
             TODO("Not yet implemented")
         }
 

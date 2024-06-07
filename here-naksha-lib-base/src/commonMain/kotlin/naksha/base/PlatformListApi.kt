@@ -2,6 +2,8 @@
 
 package naksha.base
 
+import naksha.base.PlatformListApi.Companion.toString
+
 expect class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
     companion object {
@@ -84,18 +86,40 @@ expect class PlatformListApi {
          * The time and space complexity of the sort cannot be guaranteed as it depends on the implementation.
          *
          * To sort the elements in an array without mutating the original array, use [array_to_sorted].
-         * @param compareFn The (optional) function to compare; if _null_ sorting will be ascending by [toString] UTF-16 code units.
+         * @param compareFn The (optional) compare function; if _null_ sorting will be ascending by [toString] UTF-16 code units.
+         * A function that determines the order of the elements. The function is called with the following arguments:
+         * - a: The first element for comparison. Will never be _undefined_.
+         * - b: The second element for comparison. Will never be _undefined_.
+         *
+         * It should return a number where:
+         *
+         * - A negative value indicates that a should come before b.
+         * - A positive value indicates that a should come after b.
+         * - Zero or NaN indicates that a and b are considered equal.
+         *
+         * To memorize this, remember that (a, b) => a - b sorts numbers in ascending order.
          * @return _this_.
          */
-        fun array_sort(compareFn: CompareFn<Any>? = null): PlatformList
+        fun array_sort(compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
 
         /**
          * This is the copying version of the [array_sort] method. It returns a new array with the elements sorted in ascending order
          * or sorting using the given compare-function.
          *
-         * @param compareFn The (optional) function to compare; if _null_ sorting will be ascending by [toString] UTF-16 code units.
+         * @param compareFn The (optional) compare function; if _null_ sorting will be ascending by [toString] UTF-16 code units.
+         * A function that determines the order of the elements. The function is called with the following arguments:
+         * - a: The first element for comparison. Will never be _undefined_.
+         * - b: The second element for comparison. Will never be _undefined_.
+         *
+         * It should return a number where:
+         *
+         * - A negative value indicates that a should come before b.
+         * - A positive value indicates that a should come after b.
+         * - Zero or NaN indicates that a and b are considered equal.
+         *
+         * To memorize this, remember that (a, b) => a - b sorts numbers in ascending order.
          * @return A copy of this array, but sorted.
          */
-        fun array_to_sorted(compareFn: CompareFn<Any>? = null): PlatformList
+        fun array_to_sorted(compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
     }
 }
