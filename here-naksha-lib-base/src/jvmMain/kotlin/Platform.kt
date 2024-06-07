@@ -1,5 +1,8 @@
 package com.here.naksha.lib.base
 
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import sun.misc.Unsafe
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -14,6 +17,16 @@ import kotlin.reflect.full.primaryConstructor
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Platform {
     actual companion object {
+        internal val module = SimpleModule().apply {
+            addAbstractTypeMapping(Map::class.java, JvmMap::class.java as Class<Map<*, *>>)
+            addAbstractTypeMapping(List::class.java, JvmList::class.java)
+        }
+
+        internal val mapper = jacksonObjectMapper().apply {
+            registerKotlinModule()
+            registerModule(module)
+        }
+
         /**
          * The cache stores the 64-bit integers between -1024 and +1023 with 0 being at index 0, 1023 at index 1023, -1024 at index 1024
          * and -1 at index 2047. To query, do: `cached[(value.toInt() shl 21) ushr 21)]`
@@ -303,15 +316,13 @@ actual class Platform {
 
         @JvmStatic
         actual fun toJSON(obj: Any?): String {
-            TODO("Implement me!")
+            return mapper.writeValueAsString(obj)
             // JvmInt64 <-> Long
-            // JvmMap <-> Map
-            // JvmList <-> List
         }
 
         @JvmStatic
         actual fun fromJSON(json: String): Any? {
-            TODO("Implement me!")
+            return mapper.readValue(json,Any::class.java)
         }
 
         @JvmStatic

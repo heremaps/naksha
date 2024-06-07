@@ -50,6 +50,7 @@ kotlin {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(kotlin("reflect"))
                 api("org.lz4:lz4-java:1.8.0")
+                implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
