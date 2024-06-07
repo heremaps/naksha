@@ -31,7 +31,7 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @param alternative The alternative to set and return, when the key does not exist or the value is not of the expected type.
      * @return The value.
      */
-    protected fun <T : Any> getOrSet(key: K, alternative: T): T {
+    fun <T : Any> getOrSet(key: K, alternative: T): T {
         val data = data()
         val raw = map_get(data, key)
         var value = box(raw, Platform.klassOf(alternative))
@@ -50,7 +50,7 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @param klass The [KClass] of the expected value.
      * @return The value.
      */
-    protected fun <T : Any> getOrCreate(key: K, klass: KClass<out T>): T {
+    fun <T : Any> getOrCreate(key: K, klass: KClass<out T>): T {
         val data = data()
         val raw = map_get(data, key)
         var value = box(raw, klass)
@@ -66,15 +66,9 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * provided alternative is returned.
      * @param <T> The expected type.
      * @param key The key to query.
-     * @param alternative The alternative to return, when the key does not exist or the value is not of the expected type.
      * @return The value.
      */
-    protected fun <T : Any> getAs(key: K, klass: KClass<out T>, alternative: T): T {
-        val data = data()
-        val raw = map_get(data, key)
-        val value = box(raw, klass)
-        return value ?: alternative
-    }
+    fun <T : Any> getAs(key: K, klass: KClass<out T>): T? = box(map_get(data(), key), klass)
 
     /**
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, _null_ is returned.
@@ -82,7 +76,8 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @param key The key to query.
      * @return The value or _null_.
      */
-    protected fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? = box(map_get(data(), key), klass)
+    @Deprecated("Does the same as getAs()", ReplaceWith("getAs(key, klass)"))
+    fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? = box(map_get(data(), key), klass)
 
     /**
      * Convert the given value into a key.
@@ -90,7 +85,7 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @param alt The alternative to return when the value can't be cast.
      * @return The given value as key.
      */
-    protected open fun toKey(value: Any?, alt: K? = null): K? = box(value, keyKlass, alt)
+    open fun toKey(value: Any?, alt: K? = null): K? = box(value, keyKlass, alt)
 
     /**
      * Convert the given value into a value.
@@ -99,7 +94,7 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @param alt The alternative to return when the value can't be cast.
      * @return The given value as value.
      */
-    protected open fun toValue(key: K, value: Any?, alt: V? = null): V? = box(value, valueKlass, alt)
+    open fun toValue(key: K, value: Any?, alt: V? = null): V? = box(value, valueKlass, alt)
 
     override fun createData(): PlatformMap = Platform.newMap()
     override fun data(): PlatformMap = super.data() as PlatformMap
