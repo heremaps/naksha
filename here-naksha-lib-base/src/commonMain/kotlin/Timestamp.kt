@@ -1,10 +1,13 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.jbon
+package com.here.naksha.lib.base
 
 import kotlinx.datetime.*
 import kotlin.js.ExperimentalJsExport
+import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
 /**
  * A timestamp split into the values.
@@ -19,24 +22,36 @@ import kotlin.js.JsExport
  */
 @JsExport
 class JbTimestamp(
-        val ts: BigInt64,
-        val year: Int,
-        val month: Int,
-        val day: Int,
-        val hour: Int,
-        val minute: Int,
-        val second: Int,
-        val millis: Int
+    val ts: Int64,
+    val year: Int,
+    val month: Int,
+    val day: Int,
+    val hour: Int,
+    val minute: Int,
+    val second: Int,
+    val millis: Int
 ) {
+    @OptIn(ExperimentalJsStatic::class)
     companion object {
         /**
          * Returns the current timestamp.
          * @return The current timestamp.
          */
+        @JvmStatic
+        @JsStatic
         fun now() : JbTimestamp {
             val instant = Clock.System.now()
             val ldt = instant.toLocalDateTime(TimeZone.UTC)
-            return JbTimestamp(BigInt64(instant.toEpochMilliseconds()), ldt.year, ldt.monthNumber, ldt.dayOfMonth, ldt.hour, ldt.minute, ldt.second, ldt.nanosecond/1000_0000)
+            return JbTimestamp(
+                Int64(instant.toEpochMilliseconds()),
+                ldt.year,
+                ldt.monthNumber,
+                ldt.dayOfMonth,
+                ldt.hour,
+                ldt.minute,
+                ldt.second,
+                ldt.nanosecond / 1000_0000
+            )
         }
 
         /**
@@ -44,10 +59,12 @@ class JbTimestamp(
          * @param ts The epoch-millis.
          * @return The timestamp.
          */
-        fun fromMillis(ts: BigInt64) : JbTimestamp {
+        @JvmStatic
+        @JsStatic
+        fun fromMillis(ts: Int64) : JbTimestamp {
             val instant = Instant.fromEpochMilliseconds(ts.toLong())
             val ldt = instant.toLocalDateTime(TimeZone.UTC)
-            return JbTimestamp(ts, ldt.year, ldt.monthNumber, ldt.dayOfMonth, ldt.hour, ldt.minute, ldt.second, ldt.nanosecond/1_000_000)
+            return JbTimestamp(ts, ldt.year, ldt.monthNumber, ldt.dayOfMonth, ldt.hour, ldt.minute, ldt.second, ldt.nanosecond / 1_000_000)
         }
 
         /**
@@ -60,10 +77,12 @@ class JbTimestamp(
          * @param second The second of the minute, between 0 and 60.
          * @param millis The milliseconds of the second, between 0 and 999.
          */
+        @JvmStatic
+        @JsStatic
         fun fromDate(year:Int, month:Int, day:Int, hour:Int, minute:Int, second:Int, millis:Int) : JbTimestamp {
             val ldt = LocalDateTime(year, month, day, hour, minute, second, millis*1_000_000)
             val instant = ldt.toInstant(TimeZone.UTC)
-            return JbTimestamp(BigInt64(instant.toEpochMilliseconds()), year, month, day, hour, minute, second, millis)
+            return JbTimestamp(Int64(instant.toEpochMilliseconds()), year, month, day, hour, minute, second, millis)
         }
     }
 }
