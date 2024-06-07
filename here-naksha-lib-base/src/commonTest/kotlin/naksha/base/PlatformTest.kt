@@ -3,6 +3,7 @@ package naksha.base
 import kotlin.test.*
 
 class PlatformTest {
+    // TODO: Fix the JSON parsing in [Platform], then enable the test again
     @Ignore
     @Test
     fun fromJSON() {

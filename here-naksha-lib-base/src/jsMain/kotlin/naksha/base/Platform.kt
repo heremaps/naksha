@@ -1,5 +1,6 @@
 package naksha.base
 
+import kotlin.math.round
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
@@ -512,6 +513,7 @@ return new DataView(byteArray.buffer, offset, size);
          * @param klass The type of which to create a new instance.
          * @return The new instance.
          */
+        @JsStatic
         actual fun <T : Any> newInstanceOf(klass: KClass<T>): T {
             TODO("Not yet implemented")
         }
@@ -521,6 +523,7 @@ return new DataView(byteArray.buffer, offset, size);
          * @param obj The object to serialize.
          * @return The JSON.
          */
+        @JsStatic
         actual fun toJSON(obj: Any?): String {
             TODO("Not yet implemented")
         }
@@ -530,6 +533,7 @@ return new DataView(byteArray.buffer, offset, size);
          * @param json The JSON string to parse.
          * @return The parsed JSON.
          */
+        @JsStatic
         actual fun fromJSON(json: String): Any? {
             TODO("Not yet implemented")
         }
@@ -543,10 +547,8 @@ return new DataView(byteArray.buffer, offset, size);
          * @param importers The importers to use.
          * @return The given platform native objects converted into multi-platform objects.
          */
-        actual fun fromPlatform(
-            obj: Any?,
-            importers: List<PlatformImporter>
-        ): Any? {
+        @JsStatic
+        actual fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any? {
             TODO("Not yet implemented")
         }
 
@@ -558,10 +560,8 @@ return new DataView(byteArray.buffer, offset, size);
          * @param exporters The exporters to use.
          * @return The platform native objects.
          */
-        actual fun toPlatform(
-            obj: Any?,
-            exporters: List<PlatformExporter>
-        ): Any? {
+        @JsStatic
+        actual fun toPlatform(obj: Any?, exporters: List<PlatformExporter>): Any? {
             TODO("Not yet implemented")
         }
 
@@ -574,13 +574,79 @@ return new DataView(byteArray.buffer, offset, size);
          * @return The proxy instance.
          * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
          */
+        @JsStatic
         actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
             TODO("Not yet implemented")
+        }
+
+        private val defaultBaseLogger = object : BaseLogger {
+            // https://developer.mozilla.org/en-US/docs/Web/API/console
+            // TODO: When the argument is a scalar, directly concat, only leave objects as own arguments.
+            //       So, we expect that ("Hello {}", "World") returns ["Hello World"] and not ["Hello ", "World"]!
+            private fun argsToArray(msg: String, vararg args: Any?): Array<Any?> {
+                val result: Array<Any?> = js("[]").unsafeCast<Array<Any?>>()
+                js("""
+var a = 0;
+var msg_arr = msg.split(/(?={})/g);
+console.log(msg_arr);
+var t = 0;
+for (i=0; i < msg_arr.length; i++) {
+  var m = msg_arr[i];
+  if (m.startsWith("{}")) {
+    result[t++]=args[a++];
+    if (m.length > 2) result[t++]=m.substring(2);
+  } else {
+    result[t++]=m;
+  }
+}""")
+                return result
+            }
+
+            override fun debug(msg: String, vararg args: Any?) {
+                val a = argsToArray(msg, *args)
+                js("eval('console.debug(...a)')")
+            }
+
+            override fun atDebug(msgFn: () -> String?) {
+                val msg = msgFn.invoke()
+                js("console.debug(msg)")
+            }
+
+            override fun info(msg: String, vararg args: Any?) {
+                val a = argsToArray(msg, *args)
+                js("eval('console.log(...a)')")
+            }
+
+            override fun atInfo(msgFn: () -> String?) {
+                val msg = msgFn.invoke()
+                js("console.log(msg)")
+            }
+
+            override fun warn(msg: String, vararg args: Any?) {
+                val a = argsToArray(msg, *args)
+                js("eval('console.warn(...a)')")
+            }
+
+            override fun atWarn(msgFn: () -> String?) {
+                val msg = msgFn.invoke()
+                js("console.warn(msg)")
+            }
+
+            override fun error(msg: String, vararg args: Any?) {
+                val a = argsToArray(msg, *args)
+                js("eval('console.error(...a)')")
+            }
+
+            override fun atError(msgFn: () -> String?) {
+                val msg = msgFn.invoke()
+                js("console.error(msg)")
+            }
         }
 
         /**
          * The [BaseLogger].
          */
+        @JsStatic
         actual val logger: BaseThreadLocal<BaseLogger>
             get() = TODO("Not yet implemented")
 
@@ -589,7 +655,140 @@ return new DataView(byteArray.buffer, offset, size);
          * @param initializer An optional lambda to be invoked, when the thread-local is read for the first time.
          * @return The thread local.
          */
+        @JsStatic
         actual fun <T> newThreadLocal(initializer: (() -> T)?): BaseThreadLocal<T> {
+            TODO("Not yet implemented")
+        }
+
+        // TODO: Implement high resolution timer, when available (sadly, not in PLV8):
+        //       https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
+
+        /**
+         * Returns the current epoch milliseconds.
+         * @return The current epoch milliseconds.
+         */
+        @JsStatic
+        actual fun currentMillis(): Int64 = js("BigInt(Date.now())").unsafeCast<Int64>()
+
+        /**
+         * Returns the current epoch microseconds.
+         * @return current epoch microseconds.
+         */
+        @JsStatic
+        actual fun currentMicros(): Int64 = js("BigInt(Date.now()*1000)").unsafeCast<Int64>()
+
+        /**
+         * Returns the current epoch nanoseconds.
+         * @return current epoch nanoseconds.
+         */
+        actual fun currentNanos(): Int64 = js("BigInt(Date.now()*1000*1000)").unsafeCast<Int64>()
+
+        /**
+         * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).
+         * @return The new random number between 0 and 1.
+         */
+        @JsStatic
+        actual fun random(): Double = js("Math.random()").unsafeCast<Double>()
+
+        /**
+         * Tests if the given 64-bit floating point number can be converted into a 32-bit floating point number without losing information.
+         * @param value The 64-bit floating point number.
+         * @return _true_ if the given 64-bit float can be converted into a 32-bit one without losing information; _false_ otherwise.
+         */
+        @JsStatic
+        actual fun canBeFloat32(value: Double): Boolean {
+            TODO("Fix me!")
+//            // IEEE-754, 32-bit = One sign-bit, 8-bit exponent biased by 127, then 23-bit mantissa
+//            // IEEE-754, 64-bit = One sign-bit, 11-bit exponent biased by 1023, then 52-bit mantissa
+//            // E = 0 means denormalized number (M>0) or null (M=0)
+//            // E = 255|2047 means either endless (M=0) or not a number (M>0)
+//            val view = view()
+//            view.setFloat64(0, value)
+//            var exponent = (view.getInt16(0).toInt() ushr 4) and 0x7ff
+//            if (exponent == 0 || exponent == 2047) return false
+//            // Remove bias: -1023 (0) .. 1024 (2047)
+//            exponent -= 1023
+//            // 32-bit exponent is 8-bit with bias 127: -127 (0) .. 128 (255)
+//            // We want to avoid extremes as they encode special states.
+//            if (exponent < -126 || exponent > 127) return false
+//            // We do not want to lose precision in mantissa either.
+//            // Either the lower 29-bit of mantissa are zero (only 23-bit used) or all bits are set.
+//            val mantissaHi = view.getInt32(0) and 0x000f_ffff
+//            val mantissaLo = view.getInt32(4)
+//            return mantissaLo and 0x1fff_ffff == 0 || (mantissaHi == 0x000f_ffff && mantissaLo == 0xffff_ffffu.toInt())
+        }
+
+        private const val MIN_INT_VALUE_AS_DOUBLE = Int.MIN_VALUE.toDouble()
+        private const val MAX_INT_VALUE_AS_DOUBLE = Int.MAX_VALUE.toDouble()
+
+        /**
+         * Tests if the given 64-bit floating point number can be converted into a 32-bit integer without losing information.
+         * @param value The 64-bit floating point number.
+         * @return _true_ if the given 64-bit float can be converted into a 32-bit integer without losing information; _false_ otherwise.
+         */
+        @JsStatic
+        actual fun canBeInt32(value: Double): Boolean {
+            val rounded = round(value)
+            return rounded == value && (rounded in MIN_INT_VALUE_AS_DOUBLE..MAX_INT_VALUE_AS_DOUBLE)
+        }
+
+        /**
+         * Compress bytes.
+         * @param raw The bytes to compress.
+         * @param offset The offset of the first byte to compress.
+         * @param size The amount of bytes to compress.
+         * @return The deflated (compressed) bytes.
+         */
+        @JsStatic
+        actual fun lz4Deflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Decompress bytes.
+         * @param compressed The bytes to decompress.
+         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
+         * @param offset The offset of the first byte to decompress.
+         * @param size The amount of bytes to decompress.
+         * @return The inflated (decompress) bytes.
+         */
+        @JsStatic
+        actual fun lz4Inflate(
+            compressed: ByteArray,
+            bufferSize: Int,
+            offset: Int,
+            size: Int
+        ): ByteArray {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Compress bytes.
+         * @param raw The bytes to compress.
+         * @param offset The offset of the first byte to compress.
+         * @param size The amount of bytes to compress.
+         * @return The deflated (compressed) bytes.
+         */
+        @JsStatic
+        actual fun gzipDeflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Decompress bytes.
+         * @param compressed The bytes to decompress.
+         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
+         * @param offset The offset of the first byte to decompress.
+         * @param size The amount of bytes to decompress.
+         * @return The inflated (decompress) bytes.
+         */
+        @JsStatic
+        actual fun gzipInflate(
+            compressed: ByteArray,
+            bufferSize: Int,
+            offset: Int,
+            size: Int
+        ): ByteArray {
             TODO("Not yet implemented")
         }
     }

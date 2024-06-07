@@ -1,12 +1,25 @@
 package naksha.base
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.PropertyAccessor
+import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.core.JsonFactoryBuilder
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.MapperFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import com.fasterxml.jackson.module.kotlin.kotlinModule
+import net.jpountz.lz4.LZ4Factory
 import org.slf4j.LoggerFactory
 import sun.misc.Unsafe
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.round
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.isSuperclassOf
@@ -18,15 +31,38 @@ import kotlin.reflect.full.primaryConstructor
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Platform {
     actual companion object {
-        internal val module = SimpleModule().apply {
+        @JvmStatic
+        private val module = SimpleModule().apply {
             @Suppress("UNCHECKED_CAST")
             addAbstractTypeMapping(Map::class.java, JvmMap::class.java as Class<Map<*, *>>)
             addAbstractTypeMapping(List::class.java, JvmList::class.java)
         }
 
-        internal val mapper = jacksonObjectMapper().apply {
-            registerKotlinModule()
-            registerModule(module)
+        @JvmStatic
+        private val objectMapper: ThreadLocal<ObjectMapper> = ThreadLocal.withInitial {
+            val jsonFactory = JsonFactoryBuilder()
+                .configure(JsonFactory.Feature.INTERN_FIELD_NAMES, false)
+                .configure(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES, false)
+                .configure(JsonFactory.Feature.USE_THREAD_LOCAL_FOR_BUFFER_RECYCLING, true)
+                .build()
+            jsonFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false)
+            jsonFactory.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, false)
+            JsonMapper.builder(jsonFactory)
+                .enable(MapperFeature.DEFAULT_VIEW_INCLUSION)
+                .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+                .enable(MapperFeature.SORT_CREATOR_PROPERTIES_FIRST)
+                .serializationInclusion(JsonInclude.Include.NON_NULL)
+                .visibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.ANY)
+                .visibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.PUBLIC_ONLY)
+                .visibility(PropertyAccessor.IS_GETTER, JsonAutoDetect.Visibility.NONE)
+                .visibility(PropertyAccessor.CREATOR, JsonAutoDetect.Visibility.ANY)
+                .configure(SerializationFeature.CLOSE_CLOSEABLE, false)
+                .addModule(kotlinModule())
+                // TODO: Fix the module.
+                //       If this is removed, JSON parsing works, but returns LinkedHashMap.
+                //       When enabled, Jackson fails to parse a complex JSON, see [PlatformTest]
+                .addModule(module)
+                .build()
         }
 
         /**
@@ -317,15 +353,10 @@ actual class Platform {
         actual fun <T : Any> newInstanceOf(klass: KClass<T>): T = klass.primaryConstructor!!.call()
 
         @JvmStatic
-        actual fun toJSON(obj: Any?): String {
-            return mapper.writeValueAsString(obj)
-            // JvmInt64 <-> Long
-        }
+        actual fun toJSON(obj: Any?): String = objectMapper.get().writeValueAsString(obj)
 
         @JvmStatic
-        actual fun fromJSON(json: String): Any? {
-            return mapper.readValue(json,Any::class.java)
-        }
+        actual fun fromJSON(json: String): Any? = objectMapper.get().readValue(json, Any::class.java)
 
         @JvmStatic
         actual fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any? {
@@ -355,72 +386,84 @@ actual class Platform {
         /**
          * The iterator member.
          */
+        @JvmStatic
         actual val ITERATOR: Symbol
             get() = TODO("Not yet implemented")
 
         /**
          * The KClass for [Any].
          */
+        @JvmStatic
         actual val anyKlass: KClass<Any>
             get() = TODO("Not yet implemented")
 
         /**
          * The KClass for [Boolean].
          */
+        @JvmStatic
         actual val booleanKlass: KClass<Boolean>
             get() = TODO("Not yet implemented")
 
         /**
          * The KClass for [Short].
          */
+        @JvmStatic
         actual val shortKlass: KClass<Short>
             get() = TODO("Not yet implemented")
 
         /**
          * The KClass for [Int].
          */
+        @JvmStatic
         actual val intKlass: KClass<Int>
             get() = Int::class
 
         /**
          * The KClass for [Int64].
          */
+        @JvmStatic
         actual val int64Klass: KClass<Int64>
             get() = TODO("Not yet implemented")
 
         /**
          * The KClass for [Double].
          */
+        @JvmStatic
         actual val doubleKlass: KClass<Double>
             get() = TODO("Not yet implemented")
 
         /**
          * The KClass for [String].
          */
+        @JvmStatic
         actual val stringKlass: KClass<String>
             get() = String::class
 
         /**
          * The KClass for [PlatformObject].
          */
+        @JvmStatic
         actual val objectKlass: KClass<PlatformObject>
             get() = TODO("Not yet implemented")
 
         /**
          * The KClass for [PlatformList].
          */
+        @JvmStatic
         actual val listKlass: KClass<PlatformList>
             get() = TODO("Not yet implemented")
 
         /**
          * The KClass for [PlatformMap].
          */
+        @JvmStatic
         actual val mapKlass: KClass<PlatformMap>
             get() = TODO("Not yet implemented")
 
         /**
          * The KClass for [PlatformDataViewApi].
          */
+        @JvmStatic
         actual val dataViewKlass: KClass<PlatformDataView>
             get() = TODO("Not yet implemented")
 
@@ -429,6 +472,7 @@ actual class Platform {
          * @param any The value to test.
          * @return _true_ if the value is _null_ or _undefined_; false otherwise.
          */
+        @JvmStatic
         actual fun isNil(any: Any?): Boolean = any == null
 
         /**
@@ -436,6 +480,7 @@ actual class Platform {
          * @param klass The type for which to create an undefined value.
          * @return The undefined value.
          */
+        @JvmStatic
         actual fun <T : Any> undefinedOf(klass: KClass<T>): T {
             TODO("Not yet implemented")
         }
@@ -449,38 +494,56 @@ actual class Platform {
          * @return The proxy instance.
          * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
          */
+        @JvmStatic
         actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
             require(pobject is JvmObject)
             return pobject.proxy(klass, doNotOverride)
         }
 
+        @JvmStatic
         private val defaultBaseLogger = object : BaseLogger {
             private val logger = LoggerFactory.getLogger("com.here.naksha.lib.base")
-            override fun debug(msg: String?, msgFn: ((msg: String?) -> String?)?) {
+            override fun debug(msg: String, vararg args: Any?) {
+                if (logger.isDebugEnabled) logger.debug(msg, *args)
+            }
+
+            override fun atDebug(msgFn: () -> String?) {
                 if (logger.isDebugEnabled) {
-                    val log = msgFn?.invoke(msg) ?: msg
-                    if (log != null) logger.debug(log)
+                    val msg = msgFn.invoke()
+                    if (msg != null) logger.debug(msg)
                 }
             }
 
-            override fun info(msg: String?, msgFn: ((msg: String?) -> String?)?) {
+            override fun info(msg: String, vararg args: Any?) {
+                if (logger.isInfoEnabled) logger.info(msg, *args)
+            }
+
+            override fun atInfo(msgFn: () -> String?) {
                 if (logger.isInfoEnabled) {
-                    val log = msgFn?.invoke(msg) ?: msg
-                    if (log != null) logger.info(log)
+                    val msg = msgFn.invoke()
+                    if (msg != null) logger.info(msg)
                 }
             }
 
-            override fun warn(msg: String?, msgFn: ((msg: String?) -> String?)?) {
+            override fun warn(msg: String, vararg args: Any?) {
+                if (logger.isWarnEnabled) logger.warn(msg, *args)
+            }
+
+            override fun atWarn(msgFn: () -> String?) {
                 if (logger.isWarnEnabled) {
-                    val log = msgFn?.invoke(msg) ?: msg
-                    if (log != null) logger.warn(log)
+                    val msg = msgFn.invoke()
+                    if (msg != null) logger.warn(msg)
                 }
             }
 
-            override fun error(msg: String?, msgFn: ((msg: String?) -> String?)?) {
+            override fun error(msg: String, vararg args: Any?) {
+                if (logger.isErrorEnabled) logger.error(msg, *args)
+            }
+
+            override fun atError(msgFn: () -> String?) {
                 if (logger.isErrorEnabled) {
-                    val log = msgFn?.invoke(msg) ?: msg
-                    if (log != null) logger.error(log)
+                    val msg = msgFn.invoke()
+                    if (msg != null) logger.error(msg)
                 }
             }
         }
@@ -488,6 +551,7 @@ actual class Platform {
         /**
          * The [BaseLogger].
          */
+        @JvmStatic
         actual val logger: BaseThreadLocal<BaseLogger> = newThreadLocal { defaultBaseLogger }
 
         /**
@@ -495,6 +559,178 @@ actual class Platform {
          * @param initializer An optional lambda to be invoked, when the thread-local is read for the first time.
          * @return The thread local.
          */
+        @JvmStatic
         actual fun <T> newThreadLocal(initializer: (() -> T)?): BaseThreadLocal<T> = JvmThreadLocal(initializer)
+
+        /**
+         * The nano-time when the class is initialized.
+         */
+        @JvmStatic
+        private val startNanos = System.nanoTime()
+
+        /**
+         * The epoch microseconds when the class is initialized.
+         */
+        @JvmStatic
+        private val epochMicros = (System.currentTimeMillis() * 1000) + ((startNanos / 1000) % 1000)
+
+        /**
+         * The epoch nanoseconds when the class is initialized.
+         */
+        @JvmStatic
+        private val epochNanos = (System.currentTimeMillis() * 1_000_000) + (startNanos % 1_000_000)
+
+        /**
+         * Returns the current epoch milliseconds.
+         * @return The current epoch milliseconds.
+         */
+        @JvmStatic
+        actual fun currentMillis(): Int64 = JvmInt64(System.currentTimeMillis())
+
+        /**
+         * Returns the current epoch microseconds.
+         * @return current epoch microseconds.
+         */
+        @JvmStatic
+        actual fun currentMicros(): Int64 = JvmInt64(epochMicros + ((System.nanoTime() - startNanos) / 1000))
+
+        /**
+         * Returns the current epoch nanoseconds.
+         * @return current epoch nanoseconds.
+         */
+        actual fun currentNanos(): Int64 = JvmInt64(epochNanos + (System.nanoTime() - startNanos))
+
+        /**
+         * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).
+         * @return The new random number between 0 and 1.
+         */
+        @JvmStatic
+        actual fun random(): Double = ThreadLocalRandom.current().nextDouble()
+
+        /**
+         * Tests if the given 64-bit floating point number can be converted into a 32-bit floating point number without losing information.
+         * @param value The 64-bit floating point number.
+         * @return _true_ if the given 64-bit float can be converted into a 32-bit one without losing information; _false_ otherwise.
+         */
+        @JvmStatic
+        actual fun canBeFloat32(value: Double): Boolean {
+            // IEEE-754, 32-bit = One sign-bit, 8-bit exponent biased by 127, then 23-bit mantissa
+            // IEEE-754, 64-bit = One sign-bit, 11-bit exponent biased by 1023, then 52-bit mantissa
+            // E = 0 means denormalized number (M>0) or null (M=0)
+            // E = 255|2047 means either endless (M=0) or not a number (M>0)
+            val binary = value.toRawBits()
+            var exponent = (binary ushr 52).toInt() and 0x7ff
+            if (exponent == 0 || exponent == 2047) return false
+            // Remove bias: -1023 (0) .. 1024 (2047)
+            exponent -= 1023
+            // 32-bit exponent is 8-bit with bias 127: -127 (0) .. 128 (255)
+            // We want to avoid extremes as they encode special states.
+            if (exponent < -126 || exponent > 127) return false
+            // We do not want to lose precision in mantissa either.
+            // Either the lower 29-bit of mantissa are zero (only 23-bit used) or all bits are set.
+            val mantissa = binary and 0x000f_ffff_ffff_ffff
+            return (mantissa and 0x0000_0000_1fff_ffff) == 0L || mantissa == 0x000f_ffff_ffff_ffff
+        }
+
+        private const val MIN_INT_VALUE_AS_DOUBLE = Int.MIN_VALUE.toDouble()
+        private const val MAX_INT_VALUE_AS_DOUBLE = Int.MAX_VALUE.toDouble()
+
+        /**
+         * Tests if the given 64-bit floating point number can be converted into a 32-bit integer without losing information.
+         * @param value The 64-bit floating point number.
+         * @return _true_ if the given 64-bit float can be converted into a 32-bit integer without losing information; _false_ otherwise.
+         */
+        @JvmStatic
+        actual fun canBeInt32(value: Double): Boolean {
+            val rounded = round(value)
+            return rounded == value && (rounded in MIN_INT_VALUE_AS_DOUBLE..MAX_INT_VALUE_AS_DOUBLE)
+        }
+
+        /**
+         * Clip the end, so that the end is already greater/equal [offset].
+         * @param bytes The byte-array to clip to.
+         * @param offset The first byte that should be used.
+         * @param size The size.
+         * @return The end-offset (the first byte not to use), greater or equal to offset and not larger than [ByteArray.size].
+         */
+        @JvmStatic
+        private fun endOf(bytes: ByteArray, offset: Int, size: Int): Int {
+            if (offset < 0) throw IllegalArgumentException("offset must not be less than zero")
+            if (offset >= bytes.size) throw IllegalArgumentException("offset must be within the given byte-array")
+            if (size < 0) throw IllegalArgumentException("size must not be less than zero")
+            val end = offset + size
+            return if (end > bytes.size) bytes.size else end
+        }
+
+        @JvmStatic
+        private val lz4Factory: LZ4Factory = LZ4Factory.fastestInstance()
+
+        /**
+         * Compress bytes.
+         * @param raw The bytes to compress.
+         * @param offset The offset of the first byte to compress.
+         * @param size The amount of bytes to compress.
+         * @return The deflated (compressed) bytes.
+         */
+        actual fun lz4Deflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
+            val end = endOf(raw, offset, size)
+            val compressor = lz4Factory.fastCompressor()
+            val maxCompressedLength = compressor.maxCompressedLength(end - offset)
+            val compressed = ByteArray(maxCompressedLength)
+            val compressedLength = compressor.compress(raw, offset, end - offset, compressed, 0, maxCompressedLength)
+            return compressed.copyOf(compressedLength)
+        }
+
+        /**
+         * Decompress bytes.
+         * @param compressed The bytes to decompress.
+         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
+         * @param offset The offset of the first byte to decompress.
+         * @param size The amount of bytes to decompress.
+         * @return The inflated (decompress) bytes.
+         */
+        actual fun lz4Inflate(
+            compressed: ByteArray,
+            bufferSize: Int,
+            offset: Int,
+            size: Int
+        ): ByteArray {
+            val end = endOf(compressed, offset, size)
+            val decompressor = lz4Factory.fastDecompressor()
+            val restored = if (bufferSize <= 0) ByteArray((end - offset) * 10) else ByteArray(bufferSize)
+            val decompressedLength = decompressor.decompress(compressed, offset, restored, 0, restored.size)
+            if (decompressedLength < restored.size) {
+                return restored.copyOf(decompressedLength)
+            }
+            return restored
+        }
+
+        /**
+         * Compress bytes.
+         * @param raw The bytes to compress.
+         * @param offset The offset of the first byte to compress.
+         * @param size The amount of bytes to compress.
+         * @return The deflated (compressed) bytes.
+         */
+        actual fun gzipDeflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Decompress bytes.
+         * @param compressed The bytes to decompress.
+         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
+         * @param offset The offset of the first byte to decompress.
+         * @param size The amount of bytes to decompress.
+         * @return The inflated (decompress) bytes.
+         */
+        actual fun gzipInflate(
+            compressed: ByteArray,
+            bufferSize: Int,
+            offset: Int,
+            size: Int
+        ): ByteArray {
+            TODO("Not yet implemented")
+        }
     }
 }

@@ -10,33 +10,57 @@ import kotlin.js.JsExport
 interface BaseLogger {
     /**
      * Writes an debug log.
-     * @param msg The message.
-     * @param msgFn A function that is invoked if info-logging is enabled, and that should return either the
-     * final message to log or _null_ to suppress logging for some other reason.
+     * @param msg The message with optional placeholders `{}` for the varargs.
+     * @param args Arguments to be injected into the message.
      */
-    fun debug(msg: String? = null, msgFn: ((msg: String?) -> String?)? = null)
+    fun debug(msg: String, vararg args: Any?)
 
     /**
-     * Writes an info.
-     * @param msg The message.
-     * @param msgFn A function that is invoked if info-logging is enabled, and that should return either the
+     * Writes an debug log.
+     * @param msgFn A function that is invoked if logging is enabled, and that should return either the
      * final message to log or _null_ to suppress logging for some other reason.
      */
-    fun info(msg: String? = null, msgFn: ((msg: String?) -> String?)? = null)
+    fun atDebug(msgFn: () -> String?)
 
     /**
-     * Writes a warning.
-     * @param msg The message.
-     * @param msgFn A function that is invoked if info-logging is enabled, and that should return either the
-     * final message to log or _null_ to suppress logging for some other reason.
+     * Writes an info log.
+     * @param msg The message with optional placeholders `{}` for the varargs.
+     * @param args Arguments to be injected into the message.
      */
-    fun warn(msg: String? = null, msgFn: ((msg: String?) -> String?)? = null)
+    fun info(msg: String, vararg args: Any?)
 
     /**
-     * Writes an error.
-     * @param msg The message.
-     * @param msgFn A function that is invoked if info-logging is enabled, and that should return either the
+     * Writes an info log.
+     * @param msgFn A function that is invoked if logging is enabled, and that should return either the
      * final message to log or _null_ to suppress logging for some other reason.
      */
-    fun error(msg: String? = null, msgFn: ((msg: String?) -> String?)? = null)
+    fun atInfo(msgFn: () -> String?)
+
+    /**
+     * Writes a warn log.
+     * @param msg The message with optional placeholders `{}` for the varargs.
+     * @param args Arguments to be injected into the message.
+     */
+    fun warn(msg: String, vararg args: Any?)
+
+    /**
+     * Writes a warn log.
+     * @param msgFn A function that is invoked if logging is enabled, and that should return either the
+     * final message to log or _null_ to suppress logging for some other reason.
+     */
+    fun atWarn(msgFn: () -> String?)
+
+    /**
+     * Writes an error log.
+     * @param msg The message with optional placeholders `{}` for the varargs.
+     * @param args Arguments to be injected into the message.
+     */
+    fun error(msg: String, vararg args: Any?)
+
+    /**
+     * Writes an error log.
+     * @param msgFn A function that is invoked if logging is enabled, and that should return either the
+     * final message to log or _null_ to suppress logging for some other reason.
+     */
+    fun atError(msgFn: () -> String?)
 }

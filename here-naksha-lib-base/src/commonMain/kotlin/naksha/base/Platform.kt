@@ -382,6 +382,82 @@ expect class Platform {
          * @return The platform native objects.
          */
         fun toPlatform(obj: Any?, exporters: List<PlatformExporter>): Any?
+
+        /**
+         * Returns the current epoch milliseconds.
+         * @return The current epoch milliseconds.
+         */
+        fun currentMillis(): Int64
+
+        /**
+         * Returns the current epoch microseconds.
+         * @return current epoch microseconds.
+         */
+        fun currentMicros() : Int64
+
+        /**
+         * Returns the current epoch nanoseconds.
+         * @return current epoch nanoseconds.
+         */
+        fun currentNanos() : Int64
+
+        /**
+         * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).
+         * @return The new random number between 0 and 1.
+         */
+        fun random(): Double
+
+        /**
+         * Tests if the given 64-bit floating point number can be converted into a 32-bit floating point number without losing information.
+         * @param value The 64-bit floating point number.
+         * @return _true_ if the given 64-bit float can be converted into a 32-bit one without losing information; _false_ otherwise.
+         */
+        fun canBeFloat32(value: Double): Boolean
+
+        /**
+         * Tests if the given 64-bit floating point number can be converted into a 32-bit integer without losing information.
+         * @param value The 64-bit floating point number.
+         * @return _true_ if the given 64-bit float can be converted into a 32-bit integer without losing information; _false_ otherwise.
+         */
+        fun canBeInt32(value: Double): Boolean
+
+        /**
+         * Compress bytes.
+         * @param raw The bytes to compress.
+         * @param offset The offset of the first byte to compress.
+         * @param size The amount of bytes to compress.
+         * @return The deflated (compressed) bytes.
+         */
+        fun lz4Deflate(raw: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+
+        /**
+         * Decompress bytes.
+         * @param compressed The bytes to decompress.
+         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
+         * @param offset The offset of the first byte to decompress.
+         * @param size The amount of bytes to decompress.
+         * @return The inflated (decompress) bytes.
+         */
+        fun lz4Inflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+
+        /**
+         * Compress bytes.
+         * @param raw The bytes to compress.
+         * @param offset The offset of the first byte to compress.
+         * @param size The amount of bytes to compress.
+         * @return The deflated (compressed) bytes.
+         */
+        fun gzipDeflate(raw: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+
+        /**
+         * Decompress bytes.
+         * @param compressed The bytes to decompress.
+         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
+         * @param offset The offset of the first byte to decompress.
+         * @param size The amount of bytes to decompress.
+         * @return The inflated (decompress) bytes.
+         */
+        fun gzipInflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
     }
 }
 /*
