@@ -1,19 +1,22 @@
 package com.here.naksha.lib.base
 
 import com.here.naksha.lib.base.Platform.Companion.DEFAULT_SYMBOL
+import kotlin.reflect.KClass
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * The base class of all other platform objects.
  */
-open class JvmObject {
+open class JvmObject : PlatformObject {
     internal companion object {
         @JvmStatic
         internal val undefined = JvmObject()
     }
+
     /**
      * The Naksha default symbol, only used as long as no other symbols are defined.
      */
-    internal var baseSym: Any? = undefined
+    private var baseSym: Any? = undefined
 
     /**
      * The map for additional symbols; if any.
@@ -123,5 +126,26 @@ open class JvmObject {
         val old = s[sym]
         s[sym] = value
         return old
+    }
+
+    /**
+     * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
+     * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
+     * @param klass The proxy class.
+     * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
+     * @return The proxy instance.
+     * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
+        val symbol = Symbols.of(klass)
+        var proxy = getSymbol(symbol)
+        if (proxy != null) {
+            if (klass.isInstance(proxy)) return proxy as T
+            if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
+        }
+        proxy = klass.primaryConstructor!!.call()
+        proxy.bind(this, symbol)
+        return proxy
     }
 }

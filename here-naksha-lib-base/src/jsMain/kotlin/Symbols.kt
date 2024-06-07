@@ -67,25 +67,25 @@ actual class Symbols {
         /**
          * Returns the value of a symbol, stored with the platform object.
          * @param obj The object to access.
-         * @param key The symbol.
+         * @param symbol The symbol.
          * @return The value or _undefined_ if no such symbol exist.
          */
         @JsStatic
-        actual fun get(obj: PlatformObject, key: Symbol): Any? {
+        actual fun get(obj: PlatformObject, symbol: Symbol): Any? {
             TODO("Not yet implemented")
         }
 
         /**
          * Sets the value of a symbol, stored with the platform object.
          * @param obj The object to access.
-         * @param key The symbol.
+         * @param symbol The symbol.
          * @param value The value to store, if being _undefined_, then the symbol is removed.
          * @return The previously assigned value; _undefined_ if no such symbol existed.
          */
         @JsStatic
         actual fun set(
             obj: PlatformObject,
-            key: Symbol,
+            symbol: Symbol,
             value: Any?
         ): Any? {
             TODO("Not yet implemented")
@@ -94,22 +94,22 @@ actual class Symbols {
         /**
          * Tests if the symbol exists, stored with the platform object.
          * @param obj The object to access.
-         * @param key The symbol to test.
+         * @param symbol The symbol to test.
          * @return _true_ if the symbol exists; _false_ otherwise.
          */
         @JsStatic
-        actual fun has(obj: PlatformObject, key: Symbol): Boolean {
+        actual fun has(obj: PlatformObject, symbol: Symbol): Boolean {
             TODO("Not yet implemented")
         }
 
         /**
          * Removes the symbol, stored with the platform object.
          * @param obj The object to access.
-         * @param key The symbol.
+         * @param symbol The symbol.
          * @return The value being removed; _undefined_ if no such symbol existed.
          */
         @JsStatic
-        actual fun remove(obj: PlatformObject, key: String): Any? {
+        actual fun remove(obj: PlatformObject, symbol: Symbol): Any? {
             TODO("Not yet implemented")
         }
 
@@ -142,6 +142,20 @@ actual class Symbols {
         @JsStatic
         actual fun count(obj: PlatformObject): Int {
             TODO("Not yet implemented")
+        }
+
+        /**
+         * A simple helper that adds the given symbol resolver to the end of the resolver list.
+         * @param symbolResolver The symbol resolved to add.
+         */
+        actual fun pushSymbolResolver(symbolResolver: SymbolResolver) {
+        }
+
+        /**
+         * A simple helper that adds the given symbol resolver to the start of the resolver list.
+         * @param symbolResolver The symbol resolved to add.
+         */
+        actual fun unshiftSymbolResolver(symbolResolver: SymbolResolver) {
         }
 
     }

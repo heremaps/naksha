@@ -30,11 +30,107 @@ actual class Platform {
         }
         val symbolTemplate = object : Symbol {}
         val bigIntTemplate = object : Int64 {
+            override fun unaryPlus(): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun unaryMinus(): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun inc(): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun dec(): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun plus(other: Any): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun minus(other: Any): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun times(other: Any): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun div(other: Any): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun rem(other: Any): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun compareTo(other: Any?): Int {
+                TODO("Not yet implemented")
+            }
+
             override fun equals(other: Any?): Boolean {
                 TODO("Not yet implemented")
             }
 
             override fun eq(other: Any?): Boolean {
+                TODO("Not yet implemented")
+            }
+
+            override fun shr(bits: Int): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun ushr(bits: Int): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun shl(bits: Int): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun and(other: Int64): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun or(other: Int64): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun xor(other: Int64): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun inv(): Int64 {
+                TODO("Not yet implemented")
+            }
+
+            override fun toByte(): Byte {
+                TODO("Not yet implemented")
+            }
+
+            override fun toShort(): Short {
+                TODO("Not yet implemented")
+            }
+
+            override fun toInt(): Int {
+                TODO("Not yet implemented")
+            }
+
+            override fun toLong(): Long {
+                TODO("Not yet implemented")
+            }
+
+            override fun toFloat(): Float {
+                TODO("Not yet implemented")
+            }
+
+            override fun toDouble(): Double {
+                TODO("Not yet implemented")
+            }
+
+            override fun toDoubleRawBits(): Double {
                 TODO("Not yet implemented")
             }
 
@@ -322,7 +418,7 @@ return new DataView(byteArray.buffer, offset, size);
 
         // TODO: Find the constructor in namespace of module.
         @JsStatic
-        actual fun <T : Any> klassBy(constructor: KFunction<T>): KClass<out T> = js("""require('module_name').package.full.path.ClassName""").unsafeCast<KClass<T>>()
+        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T> = js("""require('module_name').package.full.path.ClassName""").unsafeCast<KClass<T>>()
 
         @JsStatic
         actual fun <T : Any> klassOf(o: T) : KClass<out T> = o::class
@@ -468,5 +564,19 @@ return new DataView(byteArray.buffer, offset, size);
         ): Any? {
             TODO("Not yet implemented")
         }
+
+        /**
+         * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
+         * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
+         * @param pobject The object at which to query for the proxy.
+         * @param klass The proxy class.
+         * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
+         * @return The proxy instance.
+         * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
+         */
+        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
+            TODO("Not yet implemented")
+        }
+
     }
 }

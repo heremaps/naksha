@@ -104,7 +104,7 @@ actual class Platform {
         actual fun isProxyKlass(klass: KClass<*>): Boolean = Proxy::class.isSuperclassOf(klass)
 
         @JvmStatic
-        actual fun <T : Any> klassBy(constructor: KFunction<T>): KClass<out T> {
+        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T> {
             TODO("Implement me!")
         }
 
@@ -425,6 +425,20 @@ actual class Platform {
          */
         actual fun <T : Any> undefinedOf(klass: KClass<T>): T {
             TODO("Not yet implemented")
+        }
+
+        /**
+         * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
+         * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
+         * @param pobject The object at which to query for the proxy.
+         * @param klass The proxy class.
+         * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
+         * @return The proxy instance.
+         * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
+         */
+        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
+            require(pobject is JvmObject)
+            return pobject.proxy(klass, doNotOverride)
         }
     }
 }

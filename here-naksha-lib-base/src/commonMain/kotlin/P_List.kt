@@ -24,7 +24,6 @@ import kotlin.reflect.KClass
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
-
     override fun bind(data: PlatformObject, symbol: Symbol) {
         require(data is PlatformList)
         super.bind(data, symbol)

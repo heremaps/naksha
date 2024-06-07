@@ -1,9 +1,8 @@
 package com.here.naksha.lib.base
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-internal actual class Int64Api {
+internal class Int64Api {
     @OptIn(ExperimentalJsStatic::class)
-    actual companion object {
+    companion object {
         @JsStatic
         fun eq(t: Int64, o: Int64): Boolean = js("t == o").unsafeCast<Boolean>()
         @JsStatic
@@ -25,11 +24,11 @@ internal actual class Int64Api {
         @JsStatic
         fun gtei(t: Int64, o: Int): Boolean = js("t >= o").unsafeCast<Boolean>()
         @JsStatic
-        actual fun shr(self: Int64, bits: Int): Int64 = js("self >> BigInt(bits)").unsafeCast<Int64>()
+        fun shr(self: Int64, bits: Int): Int64 = js("self >> BigInt(bits)").unsafeCast<Int64>()
         @JsStatic
-        actual fun ushr(self: Int64, bits: Int): Int64 = js("BigInt.ushr(self, bits)").unsafeCast<Int64>()
+        fun ushr(self: Int64, bits: Int): Int64 = js("BigInt.ushr(self, bits)").unsafeCast<Int64>()
         @JsStatic
-        actual fun shl(self: Int64, bits: Int): Int64 = js("self << BigInt(bits)").unsafeCast<Int64>()
+        fun shl(self: Int64, bits: Int): Int64 = js("self << BigInt(bits)").unsafeCast<Int64>()
         @JsStatic
         fun add(self: Int64, o: Int64): Int64 = js("self + o").unsafeCast<Int64>()
         @JsStatic
@@ -51,55 +50,12 @@ internal actual class Int64Api {
         @JsStatic
         fun divi(t: Int64, o: Int): Int64 = js("t / BigInt(o)").unsafeCast<Int64>()
         @JsStatic
-        actual fun and(self: Int64, other: Int64): Int64 = js("BigInt.and(self,other)").unsafeCast<Int64>()
+        fun and(self: Int64, other: Int64): Int64 = js("BigInt.and(self,other)").unsafeCast<Int64>()
         @JsStatic
-        actual fun or(self: Int64, other: Int64): Int64 = js("BigInt.or(self,other)").unsafeCast<Int64>()
+        fun or(self: Int64, other: Int64): Int64 = js("BigInt.or(self,other)").unsafeCast<Int64>()
         @JsStatic
-        actual fun xor(self: Int64, other: Int64): Int64 = js("BigInt.xor(self,other)").unsafeCast<Int64>()
+        fun xor(self: Int64, other: Int64): Int64 = js("BigInt.xor(self,other)").unsafeCast<Int64>()
         @JsStatic
-        actual fun inv(self: Int64): Int64 = js("BigInt.inv(self)").unsafeCast<Int64>()
-        actual fun unaryPlus(self: Int64): Int64 {
-            TODO("Not yet implemented")
-        }
-
-        actual fun unaryMinus(self: Int64): Int64 {
-            TODO("Not yet implemented")
-        }
-
-        actual fun inc(self: Int64): Int64 {
-            TODO("Not yet implemented")
-        }
-
-        actual fun dec(self: Int64): Int64 {
-            TODO("Not yet implemented")
-        }
-
-        actual fun plus(self: Int64, other: Any): Int64 {
-            TODO("Not yet implemented")
-        }
-
-        actual fun minus(self: Int64, other: Any): Int64 {
-            TODO("Not yet implemented")
-        }
-
-        actual fun times(self: Int64, other: Any): Int64 {
-            TODO("Not yet implemented")
-        }
-
-        actual fun div(self: Int64, other: Any): Int64 {
-            TODO("Not yet implemented")
-        }
-
-        actual fun rem(self: Int64, other: Any): Int64 {
-            TODO("Not yet implemented")
-        }
-
-        actual fun compareTo(self: Int64, other: Any?): Int {
-            TODO("Not yet implemented")
-        }
-
-        actual fun equals(self: Int64, other: Any?): Boolean {
-            TODO("Not yet implemented")
-        }
+        fun inv(self: Int64): Int64 = js("BigInt.inv(self)").unsafeCast<Int64>()
     }
 }

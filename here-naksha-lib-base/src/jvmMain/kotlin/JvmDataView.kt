@@ -130,6 +130,7 @@ open class JvmDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byte
         Platform.unsafe.putLong(buffer, offset(pos, 8), ordered(value.toLong(), littleEndian))
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T : P_DataView> proxy(klass: KClass<out T>, doNotOverride: Boolean): T {
         val symbol = Symbols.of(klass)
         var proxy = getSymbol(symbol)

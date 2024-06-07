@@ -114,4 +114,14 @@ abstract class Proxy : PlatformObject {
         }
         return symbol
     }
+
+    /**
+     * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
+     * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
+     * @param klass The proxy class.
+     * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
+     * @return The proxy instance.
+     * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
+     */
+    fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean = false): T = Platform.proxy(data(), klass, doNotOverride)
 }

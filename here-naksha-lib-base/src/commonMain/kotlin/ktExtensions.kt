@@ -1,4 +1,4 @@
-@file:Suppress("NOTHING_TO_INLINE")
+@file:Suppress("NOTHING_TO_INLINE", "unused")
 
 package com.here.naksha.lib.base
 
@@ -175,3 +175,7 @@ inline operator fun Double.compareTo(other: Int64): Int {
 //inline fun Int64.toFloat(): Float = Platform.toDouble(this).toFloat()
 //inline fun Int64.toDouble(): Double = Platform.toDouble(this)
 //inline fun Int64.toDoubleRawBits(): Double = Platform.toDoubleRawBits(this)
+
+inline fun Double.toInt64RawBits(value: Double): Int64 = Platform.toInt64RawBits(value)
+inline fun Double.toLongRawBits(value: Double): Long = Platform.toInt64RawBits(value).toLong()
+inline fun Long.toInt64(): Int64 = Platform.longToInt64(this)

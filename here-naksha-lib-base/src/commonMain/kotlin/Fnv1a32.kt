@@ -98,7 +98,7 @@ object Fnv1a32 {
     }
 
     /**
-     * Hash a short that was read in big-endian encoding. This is the default encoding used by [IDataView].
+     * Hash a short that was read in big-endian encoding. This is the default encoding used by [P_DataView].
      * @param hashCode The current hash code.
      * @param v The value to hash.
      * @return the updated hash.
@@ -126,7 +126,7 @@ object Fnv1a32 {
     }
 
     /**
-     * Hash an integer that was read in big-endian encoding. This is the default encoding used by [IDataView].
+     * Hash an integer that was read in big-endian encoding. This is the default encoding used by [P_DataView].
      * @param hashCode The current hash code.
      * @param v The value to hash.
      * @return the updated hash.

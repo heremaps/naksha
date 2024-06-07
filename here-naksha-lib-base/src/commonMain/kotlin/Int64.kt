@@ -16,27 +16,27 @@ interface Int64 {
     /**
      * Returns this.
      */
-    operator fun unaryPlus(): Int64 = Int64Api.unaryPlus(this)
+    operator fun unaryPlus(): Int64
 
     /**
      * Negate the value, -1 becomes 1 and 1 becomes -1.
      */
-    operator fun unaryMinus(): Int64 = Int64Api.unaryMinus(this)
+    operator fun unaryMinus(): Int64
 
-    operator fun inc(): Int64 = Int64Api.inc(this)
-    operator fun dec(): Int64 = Int64Api.dec(this)
+    operator fun inc(): Int64
+    operator fun dec(): Int64
 
-    operator fun plus(other: Any): Int64 = Int64Api.plus(this, other)
-    operator fun minus(other: Any): Int64 = Int64Api.minus(this, other)
-    operator fun times(other: Any): Int64 = Int64Api.times(this, other)
-    operator fun div(other: Any): Int64 = Int64Api.div(this, other)
-    operator fun rem(other: Any): Int64 = Int64Api.rem(this, other)
+    operator fun plus(other: Any): Int64
+    operator fun minus(other: Any): Int64
+    operator fun times(other: Any): Int64
+    operator fun div(other: Any): Int64
+    operator fun rem(other: Any): Int64
 
     /**
      * Compares this integer with the specified number. Returns zero if this integer is equal to the specified other number,
      * a negative number if it's less than other, or a positive number if it's greater than other.
      */
-    operator fun compareTo(other: Any?): Int = Int64Api.compareTo(this, other)
+    operator fun compareTo(other: Any?): Int
     override operator fun equals(other: Any?): Boolean
 
     infix fun eq(other: Any?): Boolean
@@ -46,44 +46,58 @@ interface Int64 {
     /**
      * Signed shift right (copies the sign bit right).
      */
-    infix fun shr(bits: Int): Int64 = Int64Api.shr(this, bits)
+    infix fun shr(bits: Int): Int64
 
     /**
      * Unsigned shift rights (move the sign bit right).
      */
-    infix fun ushr(bits: Int): Int64 = Int64Api.ushr(this, bits)
+    infix fun ushr(bits: Int): Int64
 
     /**
      * Shift left.
      */
-    infix fun shl(bits: Int): Int64 = Int64Api.shl(this, bits)
+    infix fun shl(bits: Int): Int64
 
     /**
      * Bitwise AND.
      */
-    infix fun and(other: Int64): Int64 = Int64Api.and(this, other)
+    infix fun and(other: Int64): Int64
 
     /**
      * Bitwise OR.
      */
-    infix fun or(other: Int64): Int64 = Int64Api.or(this, other)
+    infix fun or(other: Int64): Int64
 
     /**
      * Bitwise XOR.
      */
-    infix fun xor(other: Int64): Int64 = Int64Api.xor(this, other)
+    infix fun xor(other: Int64): Int64
 
     /**
      * Bitwise NOT.
      */
-    fun inv(): Int64 = Int64Api.inv(this)
+    fun inv(): Int64
+
+    /**
+     * Returns the value of the specified number as a `byte`.
+     *
+     * @return  the numeric value represented by this object after conversion to type `byte`.
+     */
+    fun toByte(): Byte
+
+    /**
+     * Returns the value of the specified number as a `short`.
+     *
+     * @return  the numeric value represented by this object after conversion to type `short`.
+     */
+    fun toShort(): Short
 
     /**
      * Returns the value of the specified number as a `int`.
      *
      * @return  the numeric value represented by this object after conversion to type `int`.
      */
-    fun toInt(): Int = Platform.toInt(this)
+    fun toInt(): Int
 
     /**
      * Returns the value of the specified number as a `long`.
@@ -91,14 +105,21 @@ interface Int64 {
      * @return  the numeric value represented by this object after conversion to type `long`.
      */
     @Suppress("NON_EXPORTABLE_TYPE")
-    fun toLong(): Long = Platform.int64ToLong(this)
+    fun toLong(): Long
 
     /**
      * Returns the value of the specified number as a `float`.
      *
      * @return  the numeric value represented by this object after conversion to type `float`.
      */
-    fun toDouble(): Double = Platform.toDouble(this)
+    fun toFloat(): Float
+
+    /**
+     * Returns the value of the specified number as a `double`.
+     *
+     * @return  the numeric value represented by this object after conversion to type `double`.
+     */
+    fun toDouble(): Double
 
     /**
      * Cast the 64-bit integer into a 64-bit floating point number using only raw bits. That means, the 64-bits of the
@@ -106,5 +127,5 @@ interface Int64 {
      * so for example 0xffff_ffff_ffff_ffff becomes [Double.NaN].
      * @return The integer converted into a double.
      */
-    fun toDoubleRawBits(): Double = Platform.toDoubleRawBits(this)
+    fun toDoubleRawBits(): Double
 }

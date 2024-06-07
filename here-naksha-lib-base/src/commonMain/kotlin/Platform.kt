@@ -2,8 +2,6 @@
 
 package com.here.naksha.lib.base
 
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
@@ -152,7 +150,7 @@ expect class Platform {
          * @return The [KClass] that is created **by** this constructor.
          * @throws IllegalArgumentException If the given constructor does not create any valid Kotlin object.
          */
-        fun <T : Any> klassBy(constructor: KFunction<T>): KClass<out T>
+        fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T>
 
         /**
          * Returns the [KClass] **of** the given object.
@@ -218,6 +216,17 @@ expect class Platform {
          * @throws IllegalArgumentException If any of the given arguments is invalid.
          */
         fun newDataView(byteArray: ByteArray, offset: Int = 0, size: Int = byteArray.size - offset): PlatformDataView
+
+        /**
+         * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
+         * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
+         * @param pobject The object at which to query for the proxy.
+         * @param klass The proxy class.
+         * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
+         * @return The proxy instance.
+         * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
+         */
+        fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean = false): T
 
         /**
          * Unboxes the given object so that the underlying native value is returned.

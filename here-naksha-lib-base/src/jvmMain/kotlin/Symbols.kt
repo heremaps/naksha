@@ -14,7 +14,7 @@ actual class Symbols {
         private val symbolsCache = ConcurrentHashMap<String, Symbol>()
 
         @JvmStatic
-        actual fun newInstance(description: String?): Symbol = JvmSymbol(description?:"")
+        actual fun newInstance(description: String?): Symbol = JvmSymbol(description ?: "")
 
         @JvmStatic
         actual fun forName(key: String?): Symbol {
@@ -29,65 +29,71 @@ actual class Symbols {
         }
 
         @JvmStatic
-        private val symbolResolver = AtomicReference<List<SymbolResolver>>()
+        private val symbolResolverRef = AtomicReference<List<SymbolResolver>>()
 
         @JvmStatic
         actual fun <T : Any> of(klass: KClass<out T>): Symbol {
-            val resolvers = symbolResolver.get()
+            val resolvers = symbolResolverRef.get()
             if (resolvers != null) {
                 for (resolver in resolvers) {
-                    val symbol = resolver.resolve(klass)
-                    if (symbol != null) return symbol
+                    try {
+                        val symbol = resolver.resolve(klass)
+                        if (symbol != null) return symbol
+                    } catch (e: Exception) {
+                        // TODO: Log an error
+                    }
                 }
             }
             return Platform.DEFAULT_SYMBOL
         }
 
         @JvmStatic
-        actual fun getSymbolResolvers(): List<SymbolResolver> = symbolResolver.get() ?: emptyList()
+        actual fun getSymbolResolvers(): List<SymbolResolver> = symbolResolverRef.get() ?: emptyList()
 
         @JvmStatic
-        actual fun compareAndSetSymbolResolvers(expect: List<SymbolResolver>, value: List<SymbolResolver>): Boolean
-            = symbolResolver.compareAndSet(expect.ifEmpty { null }, value.ifEmpty { null })
+        actual fun compareAndSetSymbolResolvers(expect: List<SymbolResolver>, value: List<SymbolResolver>): Boolean =
+            symbolResolverRef.compareAndSet(expect.ifEmpty { null }, value.ifEmpty { null })
 
         /**
          * Returns the value of a symbol, stored with the platform object.
          * @param obj The object to access.
-         * @param key The symbol.
+         * @param symbol The symbol.
          * @return The value or _undefined_ if no such symbol exist.
          */
-        actual fun get(obj: PlatformObject, key: Symbol): Any? = if (obj is JvmObject) obj.getSymbol(key) else null
+        actual fun get(obj: PlatformObject, symbol: Symbol): Any? = if (obj is JvmObject) obj.getSymbol(symbol) else null
 
         /**
          * Sets the value of a symbol, stored with the platform object.
          * @param obj The object to access.
-         * @param key The symbol.
+         * @param symbol The symbol.
          * @param value The value to store, if being _undefined_, then the symbol is removed.
          * @return The previously assigned value; _undefined_ if no such symbol existed.
          */
-        actual fun set(obj: PlatformObject, key: Symbol, value: Any?): Any? {
-            if (obj !is JvmObject) throw IllegalArgumentException("Unsupported platform object $obj")
-            return obj.setSymbol(key, value)
+        actual fun set(obj: PlatformObject, symbol: Symbol, value: Any?): Any? {
+            require(obj is JvmObject) { "Unsupported platform object $obj" }
+            return obj.setSymbol(symbol, value)
         }
 
         /**
          * Tests if the symbol exists, stored with the platform object.
          * @param obj The object to access.
-         * @param key The symbol to test.
+         * @param symbol The symbol to test.
          * @return _true_ if the symbol exists; _false_ otherwise.
          */
-        actual fun has(obj: PlatformObject, key: Symbol): Boolean {
-            TODO("Not yet implemented")
+        actual fun has(obj: PlatformObject, symbol: Symbol): Boolean {
+            require(obj is JvmObject) { "Unsupported platform object $obj" }
+            return obj.containsSymbol(symbol)
         }
 
         /**
          * Removes the symbol, stored with the platform object.
          * @param obj The object to access.
-         * @param key The symbol.
+         * @param symbol The symbol.
          * @return The value being removed; _undefined_ if no such symbol existed.
          */
-        actual fun remove(obj: PlatformObject, key: String): Any? {
-            TODO("Not yet implemented")
+        actual fun remove(obj: PlatformObject, symbol: Symbol): Any? {
+            require(obj is JvmObject) { "Unsupported platform object $obj" }
+            return obj.removeSymbol(symbol)
         }
 
         /**
@@ -97,7 +103,8 @@ actual class Symbols {
          * and the element at index 1 being the value.
          */
         actual fun iterator(obj: PlatformObject): PlatformIterator<PlatformList> {
-            TODO("Not yet implemented")
+            require(obj is JvmObject) { "Unsupported platform object $obj" }
+            return JvmMapEntryIterator(obj.symbols)
         }
 
         /**
@@ -106,7 +113,8 @@ actual class Symbols {
          * @return The keys of the object properties.
          */
         actual fun keys(obj: PlatformObject): Array<Symbol> {
-            TODO("Not yet implemented")
+            require(obj is JvmObject) { "Unsupported platform object $obj" }
+            return obj.symbols?.keys?.toTypedArray() ?: emptyArray()
         }
 
         /**
@@ -115,8 +123,36 @@ actual class Symbols {
          * @return The amount of symbols.
          */
         actual fun count(obj: PlatformObject): Int {
-            TODO("Not yet implemented")
+            require(obj is JvmObject) { "Unsupported platform object $obj" }
+            return obj.symbols().size
         }
 
+        /**
+         * A simple helper that adds the given symbol resolver to the end of the resolver list.
+         * @param symbolResolver The symbol resolved to add.
+         */
+        actual fun pushSymbolResolver(symbolResolver: SymbolResolver) {
+            while (true) {
+                val current = symbolResolverRef.get()
+                val _new = List((current?.size ?: 0) + 1) {
+                    if (current != null && it < current.size) current[it] else symbolResolver
+                }
+                if (symbolResolverRef.compareAndSet(current, _new)) break
+            }
+        }
+
+        /**
+         * A simple helper that adds the given symbol resolver to the start of the resolver list.
+         * @param symbolResolver The symbol resolved to add.
+         */
+        actual fun unshiftSymbolResolver(symbolResolver: SymbolResolver) {
+            while (true) {
+                val current = symbolResolverRef.get()
+                val _new = List((current?.size ?: 0) + 1) {
+                    if (it == 0) symbolResolver else current[it - 1]
+                }
+                if (symbolResolverRef.compareAndSet(current, _new)) break
+            }
+        }
     }
 }
