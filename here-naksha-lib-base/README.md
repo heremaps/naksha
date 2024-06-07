@@ -36,20 +36,21 @@ For example, in the Naksha-Hub pipelines all features are exposed as `XyzFeature
 However, if a handler is part of a custom extension, it may want to access a custom namespace, for example `properties.@ns:com:customData`. The default `XyzFeatureProxy` does not expose it. If the default **XyzFeatureProxy** would be a normal [POJO](https://en.wikipedia.org/wiki/Plain_old_Java_object) the handle would need to first convert the Xyz-Feature into some proprietary object, then it could modify it. However, after doing so, it would have to convert the proprietary object back into the XYZ-Feature for the next handler. This even would require to keep all unknown properties intact and unchanged. The effort to do this is immense and the code will become very slow due to all the data transformations. To solve this problem (and many other), `lib-base` comes with an abstraction between the in memory data storage and the data model. When being based upon `lib-base`, the handle only need to create his own data model, for example:
 
 ```kotlin
-class CustomDataProxy : BaseObjectProxy() {
-    var name: String?
-        get() = getOrNull("name", String::class)
-        set(value: String?) = set("name", value)
+// Note: Property delegation only works for primitives!
+class CustomDataProxy : ObjectProxy() {
+    var name: String? by this
+    var age: Int? by this
 }
-class CustomPropertiesProxy : XyzProperties() {
+class CustomPropertiesProxy : ObjectProxy() {
     var customData: CustomDataProxy
         get() = getOrCreate("@ns:com:customData", CustomDataProxy::class)
         set(value) = set("@ns:com:customData", value)
 }
-class CustomFeatureProxy : XyzFeatureProxy() {
+class CustomFeatureProxy : ObjectProxy() {
+    var id: String? by this
     override var properties: CustomPropertiesProxy
         get() = getOrCreate("properties", CustomPropertiesProxy::class)
-        set(value) = super.set(value)
+        set(value) = set("properties", value)
 }
 ```
 
@@ -66,6 +67,9 @@ class CustomHandler : IEventHandler {
                 if (feature.properties.customData.name == null) {
                     feature.properties.customData.name = "Unknown"
                 }
+                require(feature.properties.customData.age >= 21) {
+                    "The age of the feature ${feature.id} must be greater/equal 21"
+                }
             }
         }
         return event.sendUpstream(event)
@@ -73,7 +77,7 @@ class CustomHandler : IEventHandler {
 }
 ```
 
-As shown, with just around 30 lines of code an own data model can be created and used in an own event-handler in the Naksha-Hub pipeline, avoiding expensive in-memory transformations and issues. Additionally, this allows to apply general tooling to the data, for example to generate differences, calculate patches and then apply these patches, handling conflicts.
+As shown, with just around 30 lines of code an own data model can be created and used in an own event-handler to implement some business logic in the Naksha-Hub pipeline, avoiding expensive in-memory transformations and issues. Additionally, this allows to apply general tooling to the data, for example to generate differences, calculate patches and then apply these patches, handling conflicts.
 
 Eventually, when the data need to be written into the database or send to the client, the corresponding encoders can simply apply a raw data model to the in-memory data without any further knowledge about the specific details of the data-model and without transforming the in-memory data. They will simply use the agnostic general model, for example `feature.proxy(AnyMapProxy::class)`. The `AnyMapProxy` basically treats the underlying data object as a plain map (`MutableMap<*,*>`).
 

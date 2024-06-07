@@ -9,4 +9,4 @@ import kotlin.js.JsExport
  */
 @Suppress("unused")
 @JsExport
-abstract class P_Object : P_Map<String, Any>(String::class, Any::class)
+open class P_Object : P_Map<String, Any>(String::class, Any::class)
