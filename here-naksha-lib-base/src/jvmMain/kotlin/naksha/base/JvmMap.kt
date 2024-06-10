@@ -3,11 +3,10 @@
 package naksha.base
 
 import java.util.LinkedHashMap
-import java.util.Map
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
-open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformMap {
+open class JvmMap(vararg entries: Any?) : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
     init {
         var i = 0
         while (i < entries.size) {
@@ -37,12 +36,6 @@ open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformM
         }
         return p
     }
-
-    /**
-     * Returns the number of key-value pairs.
-     * @return the number of key-value pairs.
-     */
-    override fun size() : Int = map?.size ?: 0
 
     /**
      * Tests if this map contains the given key.
@@ -97,7 +90,27 @@ open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformM
         return old
     }
 
-    override fun isEmpty(): Boolean = size() == 0
+    override val entries: MutableSet<MutableMap.MutableEntry<Any, Any?>>
+        get() = map().entries
+    override val keys: MutableSet<Any>
+        get() = map().keys
+
+    override val size: Int = map().size
+    override val values: MutableCollection<Any?>
+        get() = map().values
+
+    override fun isEmpty(): Boolean = size == 0
+    override fun remove(key: Any): Any? {
+        val map = this.map
+        if (map != null) {
+            return map.remove(key)
+        }
+        return null
+    }
+
+    override fun putAll(from: Map<out Any, Any?>) {
+        map().putAll(from)
+    }
 
     override fun containsKey(key: Any): Boolean = contains(key)
 
@@ -109,27 +122,15 @@ open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformM
 
     override fun put(key: Any, value: Any?): Any? = set(key, value)
 
-    override fun remove(key: Any?): Any? {
-        val map = this.map
-        if (map != null && key != null) {
-            return map.remove(key)
-        }
-        return null
-    }
-
     override fun clear() {
         map?.clear()
     }
 
-    override fun keySet(): MutableSet<Any> = map().keys
+    //fun keySet(): MutableSet<Any> = map().keys
 
-    override fun values(): MutableCollection<Any?> = map().values
+    //fun values(): MutableCollection<Any?> = map().values
 
-    override fun entrySet(): MutableSet<MutableMap.MutableEntry<Any, Any?>> = map().entries
-
-    override fun putAll(m: MutableMap<out Any, out Any?>) {
-        map().putAll(m)
-    }
+    //fun entrySet(): MutableSet<MutableMap.MutableEntry<Any, Any?>> = map().entries
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : P_Map<*,*>> proxy(klass: KClass<T>, doNotOverride: Boolean): T {

@@ -4,7 +4,6 @@ import kotlin.test.*
 
 class PlatformTest {
     // TODO: Fix the JSON parsing in [Platform], then enable the test again
-    @Ignore
     @Test
     fun fromJSON() {
         val raw = Platform.fromJSON("""{
@@ -33,5 +32,13 @@ class PlatformTest {
         assertEquals(2, tags.size)
         assertEquals("a", tags[0])
         assertEquals("b", tags[1])
+    }
+
+    @Test
+    fun testJsonSerialize() {
+        val data: Any = mapOf("name" to "Mustermann", "age" to 69, "boolean" to true)
+        val json = Platform.toJSON(data)
+        val jsonString = "{\"name\":\"Mustermann\",\"age\":69,\"boolean\":true}"
+        assertEquals(jsonString,json)
     }
 }
