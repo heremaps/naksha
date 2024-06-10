@@ -13,6 +13,11 @@ import kotlin.jvm.JvmStatic
 class BaseUtil {
     companion object {
         /**
+         * When no size is explicitly given, the amount of byte to allocated initially for a data-view.
+         */
+        var defaultDataViewSize = 128
+
+        /**
          * An array with the Web-Safe Base-64 characters.
          */
         private val randomCharacters = CharArray(64) {
