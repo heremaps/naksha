@@ -2,6 +2,7 @@
 
 package com.here.naksha.lib.jbon
 
+import naksha.base.P_DataView
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -9,7 +10,7 @@ import kotlin.js.JsExport
 class JbPath(var dictManager: JbDictManager) {
 
     var bytes: ByteArray = ByteArray(0)
-    lateinit var view: IDataView
+    lateinit var view: P_DataView
     var reader: JbReader = JbReader()
     var jmap: JbMap = JbMap()
     var feature: JbFeature = JbFeature(dictManager).mapReader(reader)

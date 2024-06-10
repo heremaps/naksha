@@ -1,5 +1,7 @@
 package com.here.naksha.lib.jbon
 
+import naksha.base.P_DataView
+
 // Encoding constants
 internal const val ENC_MASK = 0b1100_0000
 internal const val ENC_MIXED = 0b0000_0000
@@ -177,7 +179,7 @@ val randomCharacters = CharArray(64) {
 }
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun newDataView(size: Int) = Jb.env.newDataView(ByteArray(size))
+inline fun newDataView(size: Int) = P_DataView(size)
 
 @Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
 inline fun asArray(any: Any?): Array<Any?> = any as Array<Any?>

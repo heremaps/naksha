@@ -2,6 +2,7 @@
 
 package com.here.naksha.lib.jbon
 
+import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -10,7 +11,7 @@ import kotlin.jvm.JvmStatic
  * A helper to manage Naksha UUIDs.
  */
 @JsExport
-class NakshaUuid(val storageId: String, val collectionId: String, val year: Int, val month: Int, val day: Int, val seq:BigInt64, val uid: Int) {
+class NakshaUuid(val storageId: String, val collectionId: String, val year: Int, val month: Int, val day: Int, val seq: Int64, val uid: Int) {
     private lateinit var string : String
     companion object {
         @JvmStatic
@@ -23,13 +24,13 @@ class NakshaUuid(val storageId: String, val collectionId: String, val year: Int,
                     values[2].toInt(),
                     values[3].toInt(),
                     values[4].toInt(),
-                    BigInt64( values[5].toLong()),
+                    Int64( values[5].toLong()),
                     values[6].toInt(),
             )
         }
 
         @JvmStatic
-        fun from(storageId: String, collectionId: String, txn: BigInt64, uid: Int): NakshaUuid {
+        fun from(storageId: String, collectionId: String, txn: Int64, uid: Int): NakshaUuid {
             val nakshaTxn = NakshaTxn(txn)
             return NakshaUuid(
                     storageId,

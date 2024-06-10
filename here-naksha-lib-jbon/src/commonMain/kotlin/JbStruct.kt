@@ -2,6 +2,8 @@
 
 package com.here.naksha.lib.jbon
 
+import naksha.base.P_DataView
+import naksha.base.Platform
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -71,7 +73,7 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    protected open fun map(view: IDataView?, leadInOffset: Int, localDict: JbDict?, globalDict: JbDict?): SELF {
+    protected open fun map(view: P_DataView?, leadInOffset: Int, localDict: JbDict?, globalDict: JbDict?): SELF {
         clear()
         if (view != null) {
             reader.mapView(view, leadInOffset, localDict, globalDict)
@@ -131,7 +133,7 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    fun mapView(view: IDataView?, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): SELF {
+    fun mapView(view: P_DataView?, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): SELF {
         map(view, offset, localDict, globalDict)
         return this as SELF
     }
@@ -145,8 +147,8 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * @return this.
      */
     fun mapBytes(bytes: ByteArray?, start: Int = 0, end: Int = bytes?.size ?: Int.MAX_VALUE): SELF {
-        val view = if (bytes != null) Jb.env.newDataView(bytes, start, end) else null
-        map(view, 0, null, null)
+        val view = if (bytes != null) Platform.newDataView(bytes, start, end) else null
+        map(view?.proxy(P_DataView::class), 0, null, null)
         return this as SELF
     }
 

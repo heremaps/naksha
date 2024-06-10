@@ -2,12 +2,15 @@
 
 package com.here.naksha.lib.jbon
 
+import naksha.base.Int64
+import naksha.base.P_DataView
+import naksha.base.Platform
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class XyzBuilder(view: IDataView?=null, global: JbDict? = null) : JbBuilder(view, global) {
+class XyzBuilder(view: P_DataView? = null, global: JbDict? = null) : JbBuilder(view, global) {
 
     companion object {
         /**
@@ -18,7 +21,7 @@ class XyzBuilder(view: IDataView?=null, global: JbDict? = null) : JbBuilder(view
          */
         @JvmStatic
         fun create(size: Int? = null, global: JbDict? = null): XyzBuilder =
-                XyzBuilder(Jb.env.newDataView(ByteArray(size ?: Jb.defaultBuilderSize)), global)
+                XyzBuilder(P_DataView(), global)
     }
 
     /**
@@ -64,9 +67,9 @@ class XyzBuilder(view: IDataView?=null, global: JbDict? = null) : JbBuilder(view
             is Boolean -> writeBool(value)
 
             is Double -> {
-                if (Jb.env.canBeInt32(value)) {
+                if (Platform.canBeInt32(value)) {
                     writeInt(value.toInt())
-                } else if (Jb.env.canBeFloat32(value)) {
+                } else if (Platform.canBeFloat32(value)) {
                     writeFloat(value.toFloat())
                 } else {
                     writeDouble(value)
@@ -133,17 +136,17 @@ class XyzBuilder(view: IDataView?=null, global: JbDict? = null) : JbBuilder(view
      * @return The JBON encoded XYZ namespace.
      */
     fun buildXyzNs(
-            createdAt: BigInt64,
-            updatedAt: BigInt64,
-            txn: BigInt64,
-            action: Short,
-            version: Int,
-            authorTs: BigInt64,
-            puuid: String?,
-            uuid: String,
-            appId: String,
-            author: String,
-            grid: Int
+        createdAt: Int64,
+        updatedAt: Int64,
+        txn: Int64,
+        action: Short,
+        version: Int,
+        authorTs: Int64,
+        puuid: String?,
+        uuid: String,
+        appId: String,
+        author: String,
+        grid: Int
     ): ByteArray {
         end = 10
         writeTimestamp(createdAt)

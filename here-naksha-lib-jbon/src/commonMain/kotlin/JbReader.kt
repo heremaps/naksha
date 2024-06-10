@@ -2,6 +2,10 @@
 
 package com.here.naksha.lib.jbon
 
+import naksha.base.CodePoints
+import naksha.base.Int64
+import naksha.base.P_DataView
+import naksha.base.P_JsMap
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -83,7 +87,7 @@ open class JbReader {
          * @return The read code point shift left by 3, the lower 3 bit store the amount of byte that have been read or -1, if eof or invalid encoding.
          */
         @JvmStatic
-        internal fun readCodePoint(view: IDataView, offset: Int, end: Int): Int {
+        internal fun readCodePoint(view: P_DataView, offset: Int, end: Int): Int {
             if (offset >= end) return -1
             var unicode = view.getInt8(offset).toInt() and 0xff
             // One byte encoding.
@@ -111,7 +115,14 @@ open class JbReader {
          * @param localDict The local dictionary to use to decode string-references.
          */
         @JvmStatic
-        internal fun readSubstring(view: IDataView, offset: Int, end: Int, sb: StringBuilder, globalDict: JbDict? = null, localDict: JbDict? = null) {
+        internal fun readSubstring(
+            view: P_DataView,
+            offset: Int,
+            end: Int,
+            sb: StringBuilder,
+            globalDict: JbDict? = null,
+            localDict: JbDict? = null
+        ) {
             var i = offset
             while (i < end) {
                 val codePointLeadIn = view.getInt8(i).toInt()
@@ -178,10 +189,10 @@ open class JbReader {
          * @return The platform native map.
          */
         @JvmStatic
-        internal fun readMap(jbMap: JbMap): IMap {
-            val imap = newMap()
+        internal fun readMap(jbMap: JbMap): P_JsMap {
+            val imap = P_JsMap()
             while (jbMap.next()) {
-                imap.put(jbMap.key(), jbMap.value().readValue())
+                imap[jbMap.key()] = jbMap.value().readValue()
             }
             return imap
         }
@@ -206,7 +217,7 @@ open class JbReader {
     /**
      * The view to which the reader maps, if any.
      */
-    private var _view: IDataView? = null
+    private var _view: P_DataView? = null
 
     /**
      * The local dictionary to be used when decoding text or references.
@@ -258,7 +269,7 @@ open class JbReader {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    open fun mapView(view: IDataView?, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): JbReader {
+    open fun mapView(view: P_DataView?, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): JbReader {
         clear()
         this._view = view
         this._offset = offset
@@ -291,7 +302,7 @@ open class JbReader {
      */
     open fun mapBytes(bytes: ByteArray, start: Int = 0, end: Int = bytes.size, localDict: JbDict? = null, globalDict: JbDict? = null) {
         clear()
-        val view = Jb.env.newDataView(bytes, start, end)
+        val view = P_DataView(bytes, start, end)
         this._view = view
         this._offset = 0
         this._end = view.getSize()
@@ -304,7 +315,7 @@ open class JbReader {
      * @return The view.
      * @throws IllegalStateException If the view is _null_.
      */
-    fun view(): IDataView {
+    fun view(): P_DataView {
         val view = this._view
         check(view != null) { "view must not be null" }
         return view
@@ -685,19 +696,19 @@ open class JbReader {
      * Read the current unit as integer.
      * @return The value read or _null_, if the current unit is no integer.
      */
-    fun readInt64(): BigInt64? {
+    fun readInt64(): Int64? {
         val leadIn = leadIn()
         return when (leadIn and ENC_MASK) {
             ENC_TINY -> when (leadIn and ENC_TINY_MASK) {
-                ENC_TINY_INT -> BigInt64((leadIn shl 27) shr 27)
+                ENC_TINY_INT -> Int64((leadIn shl 27) shr 27)
                 else -> null
             }
 
             ENC_MIXED -> when (leadIn) {
-                ENC_MIXED_SCALAR_INT8 -> BigInt64(view().getInt8(_offset + 1).toInt())
-                ENC_MIXED_SCALAR_INT16 -> BigInt64(view().getInt16(_offset + 1).toInt())
-                ENC_MIXED_SCALAR_INT32 -> BigInt64(view().getInt32(_offset + 1))
-                ENC_MIXED_SCALAR_INT64 -> view().getBigInt64(_offset + 1)
+                ENC_MIXED_SCALAR_INT8 -> Int64(view().getInt8(_offset + 1).toInt())
+                ENC_MIXED_SCALAR_INT16 -> Int64(view().getInt16(_offset + 1).toInt())
+                ENC_MIXED_SCALAR_INT32 -> Int64(view().getInt32(_offset + 1))
+                ENC_MIXED_SCALAR_INT64 -> view().getInt64(_offset + 1)
                 else -> null
             }
 
@@ -711,11 +722,11 @@ open class JbReader {
      * Reads the timestamp if the current unit is a timestamp.
      * @throws IllegalStateException If the current unit is no timestamp.
      */
-    fun readTimestamp(): BigInt64 {
+    fun readTimestamp(): Int64 {
         val view = view()
         check(unitType() == TYPE_TIMESTAMP) { "Can't read timestamp, unit is ${unitTypeName(unitType())}" }
         val hi = (view.getInt16(_offset + 1).toLong() and 0xffff) shl 32
-        return BigInt64(hi or (view.getInt32(_offset + 3).toLong() and 0xffff_ffff))
+        return Int64(hi or (view.getInt32(_offset + 3).toLong() and 0xffff_ffff))
     }
 
     /**
@@ -761,7 +772,7 @@ open class JbReader {
                 ENC_MIXED_SCALAR_INT8 -> view().getInt8(_offset + 1).toFloat()
                 ENC_MIXED_SCALAR_INT16 -> view().getInt16(_offset + 1).toFloat()
                 ENC_MIXED_SCALAR_INT32 -> view().getInt32(_offset + 1).toFloat()
-                ENC_MIXED_SCALAR_INT64 -> if (!readStrict) view().getBigInt64(_offset + 1).toFloat() else alternative
+                ENC_MIXED_SCALAR_INT64 -> if (!readStrict) view().getInt64(_offset + 1).toFloat() else alternative
                 ENC_MIXED_SCALAR_FLOAT32 -> view().getFloat32(_offset + 1)
                 ENC_MIXED_SCALAR_FLOAT64 -> if (!readStrict) view().getFloat64(_offset + 1).toFloat() else alternative
                 else -> alternative
@@ -786,7 +797,7 @@ open class JbReader {
                 ENC_MIXED_SCALAR_INT8 -> view().getInt8(_offset + 1).toDouble()
                 ENC_MIXED_SCALAR_INT16 -> view().getInt16(_offset + 1).toDouble()
                 ENC_MIXED_SCALAR_INT32 -> view().getInt32(_offset + 1).toDouble()
-                ENC_MIXED_SCALAR_INT64 -> if (!readStrict) view().getBigInt64(_offset + 1).toDouble() else alternative
+                ENC_MIXED_SCALAR_INT64 -> if (!readStrict) view().getInt64(_offset + 1).toDouble() else alternative
                 ENC_MIXED_SCALAR_FLOAT32 -> view().getFloat32(_offset + 1).toDouble()
                 ENC_MIXED_SCALAR_FLOAT64 -> if (!readStrict) view().getFloat64(_offset + 1) else alternative
                 else -> alternative
@@ -916,8 +927,8 @@ open class JbReader {
     fun isXyz(): Boolean = unitType() == TYPE_XYZ
 
     /**
-     * Read the current unit as _null_, [Boolean], [Int], [BigInt64], [Double], [String], [IMap] or [Array].
-     * @return the current unit as _null_, [Boolean], [Int], [BigInt64], [Double], [String], [IMap] or [Array].
+     * Read the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [IMap] or [Array].
+     * @return the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [IMap] or [Array].
      * @throws IllegalStateException If the reader position or the unit-type is invalid.
      */
     fun readValue(): Any? {

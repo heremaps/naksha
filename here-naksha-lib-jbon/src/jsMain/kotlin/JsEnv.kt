@@ -94,7 +94,7 @@ Object.assign(JSON, {
             return Jb.env as JsEnv
         }
 
-        private var convertView: IDataView? = null
+        private var convertView: P_DataView? = null
     }
 
     override fun stringify(any: Any?, pretty: Boolean): String {
@@ -143,7 +143,7 @@ Object.assign(JSON, {
         return js("Math.random()")
     }
 
-    internal fun view() : IDataView {
+    internal fun view() : P_DataView {
         var view = convertView
         if (view == null) {
             view = get().newDataView(ByteArray(16))
@@ -152,7 +152,7 @@ Object.assign(JSON, {
         return view
     }
 
-    override fun newDataView(bytes: ByteArray, offset: Int, size: Int): IDataView {
+    override fun newDataView(bytes: ByteArray, offset: Int, size: Int): P_DataView {
         // If invoked from javascript, arguments may be undefined, fix this!
         js("if (!offset) offset = 0; if (!size) size = bytes.byteLength;")
         val end = endOf(bytes, offset, size)

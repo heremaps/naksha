@@ -119,7 +119,7 @@ open class JvmEnv : IEnv {
         return ThreadLocalRandom.current().nextDouble()
     }
 
-    override fun newDataView(bytes: ByteArray, offset: Int, size: Int): IDataView {
+    override fun newDataView(bytes: ByteArray, offset: Int, size: Int): P_DataView {
         val end = endOf(bytes, offset, size) // offset + size
         return JvmDataView(bytes, offset + baseOffset, end + baseOffset)
     }

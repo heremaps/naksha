@@ -2,7 +2,7 @@ package com.here.naksha.lib.jbon
 
 import java.nio.ByteOrder
 
-class JvmDataView(val buffer: ByteArray, val startOffset: Int, val endOffset: Int) : IDataView {
+class JvmDataView(val buffer: ByteArray, val startOffset: Int, val endOffset: Int) : P_DataView {
     override fun getByteArray(): ByteArray {
         return buffer
     }

@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalJsExport::class)
 package com.here.naksha.lib.jbon
 
+import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -25,7 +26,7 @@ class XyzVersion(val major: Int, val minor: Int, val revision: Int) : Comparable
                     s.substring(minorEnd + 1).toInt())
         }
 
-        fun fromBigInt(v: BigInt64) : XyzVersion {
+        fun fromBigInt(v: Int64) : XyzVersion {
             val major = (v ushr 32).toInt()
             val minor = (v.toInt() ushr 16) and 0xffff
             val revision = v.toInt() and 0xffff
@@ -33,8 +34,8 @@ class XyzVersion(val major: Int, val minor: Int, val revision: Int) : Comparable
         }
     }
 
-    fun toBigInt() : BigInt64 {
-        return (BigInt64(major) shl 32) or BigInt64(minor shl 16) or BigInt64(revision)
+    fun toBigInt() : Int64 {
+        return (Int64(major) shl 32) or Int64(minor shl 16) or Int64(revision)
     }
 
     override fun compareTo(other: XyzVersion): Int {

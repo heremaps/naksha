@@ -2,6 +2,7 @@
 
 package com.here.naksha.lib.jbon
 
+import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -25,5 +26,5 @@ data class NkStorageRow(
         val id : String,
         val uuid : String,
         val type : String,
-        val fnv1aHash : BigInt64
+        val fnv1aHash : Int64
 )

@@ -1,6 +1,8 @@
 @file:OptIn(ExperimentalJsExport::class)
 package com.here.naksha.lib.jbon
 
+import naksha.base.P_JsMap
+import naksha.base.P_Map
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -49,8 +51,8 @@ class XyzOp : XyzStruct<XyzOp>() {
     fun id(): String? = id
     fun uuid(): String? = uuid
     fun grid(): Int? = grid
-    fun toIMap() : IMap {
-        val map = Jb.map.newMap()
+    fun toIMap() : P_Map<String, *> {
+        val map = P_JsMap()
         map["op"] = getOpName(op)
         map["id"] = id
         map["uuid"] = uuid
