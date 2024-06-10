@@ -2,20 +2,24 @@
 
 package naksha.base
 
+import naksha.base.PlatformListApi.Companion.array_get
+import naksha.base.PlatformListApi.Companion.array_get_length
 import naksha.base.PlatformMapApi.Companion.map_clear
 import naksha.base.PlatformMapApi.Companion.map_contains_key
 import naksha.base.PlatformMapApi.Companion.map_contains_value
 import naksha.base.PlatformMapApi.Companion.map_get
+import naksha.base.PlatformMapApi.Companion.map_iterator
 import naksha.base.PlatformMapApi.Companion.map_remove
 import naksha.base.PlatformMapApi.Companion.map_set
 import naksha.base.PlatformMapApi.Companion.map_size
+import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 
 /**
  * A map that is not thread-safe.
  */
-@Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
+@Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
     override fun bind(data: PlatformObject, symbol: Symbol) {
