@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
@@ -18,6 +19,7 @@ kotlin {
             }
         }
         useEsModules()
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             target.set("es2015")
         }
@@ -33,7 +35,8 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-common"))
                 implementation(kotlin("reflect"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                // https://github.com/Kotlin/kotlinx-datetime
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
             }
         }
         commonTest {
@@ -41,7 +44,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
             }
         }
         jvmMain {
@@ -51,6 +54,10 @@ kotlin {
                 implementation(kotlin("reflect"))
                 api("org.lz4:lz4-java:1.8.0")
                 implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
+                // https://mvnrepository.com/artifact/org.slf4j
+                api("org.slf4j:slf4j-api:2.0.13")
+                implementation("org.slf4j:slf4j-simple:2.0.13")
+                api("org.lz4:lz4-java:1.8.0")
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }

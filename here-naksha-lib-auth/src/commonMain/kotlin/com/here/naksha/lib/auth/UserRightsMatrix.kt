@@ -115,7 +115,6 @@ class UserRightsMatrix : P_Map<String, UserRightsService>(String::class, UserRig
     }
 
     fun compile(): UserRightsMatrix {
-        TODO("Compile (convert) all shortcuts into full qualified CheckMaps")
         val x: UserRights
         PlatformMapApi.map_key_iterator(x.data())
 
@@ -125,9 +124,10 @@ class UserRightsMatrix : P_Map<String, UserRightsService>(String::class, UserRig
         //   "value" -> EqualsCheck("value")
         //   "value*" -> StartsWithCheck("value")
         //   "*value" -> EndsWith("value")
-        if (raw is PlatformList)
-        //   ["a","b"] -> EqualsChecks("a", "b")
-        // Do we need more?
-        if (raw !is PlatformMap)
+            if (raw is PlatformList)
+            //   ["a","b"] -> EqualsChecks("a", "b")
+            // Do we need more?
+                if (raw !is PlatformMap)
+        TODO("Compile (convert) all shortcuts into full qualified CheckMaps")
     }
 }
