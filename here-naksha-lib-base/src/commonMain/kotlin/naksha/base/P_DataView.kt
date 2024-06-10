@@ -33,7 +33,7 @@ open class P_DataView() : Proxy() {
     @Suppress("LeakingThis")
     @JsName("new")
     constructor(size: Int? = null) : this() {
-        bind(Platform.newDataView(ByteArray(size ?: 1024)), Symbols.of(this::class))
+        bind(Platform.newDataView(ByteArray(size ?: BaseUtil.defaultDataViewSize)), Symbols.of(this::class))
     }
 
     /**
@@ -55,7 +55,7 @@ open class P_DataView() : Proxy() {
         super.bind(data, symbol)
     }
     override fun data(): PlatformDataView = super.data() as PlatformDataView
-    override fun createData(): PlatformDataView = Platform.newDataView(ByteArray(1024))
+    override fun createData(): PlatformDataView = Platform.newDataView(ByteArray(BaseUtil.defaultDataViewSize))
 
     /**
      * Returns the byte-array below the view.

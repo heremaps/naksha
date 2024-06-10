@@ -2,6 +2,7 @@
 
 package com.here.naksha.lib.jbon
 
+import naksha.base.P_JsMap
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -95,7 +96,7 @@ class JbMap : JbEntryArray<JbMap>() {
      * Returns this map as [IMap].
      * @return This binary as [IMap].
      */
-    fun toIMap(): IMap {
+    fun toIMap(): P_JsMap {
         return JbReader.readMap(this)
     }
 }

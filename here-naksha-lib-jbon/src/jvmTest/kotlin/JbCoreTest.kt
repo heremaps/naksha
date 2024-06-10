@@ -3,7 +3,6 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 
 class JbCoreTest : JbAbstractTest() {

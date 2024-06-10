@@ -2,17 +2,20 @@
 
 package com.here.naksha.lib.jbon
 
+import naksha.base.Int64
+import naksha.base.P_JsMap
+import naksha.base.P_Map
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
 class XyzNs : XyzStruct<XyzNs>() {
-    private lateinit var createdAt: BigInt64
-    private lateinit var updatedAt: BigInt64
+    private lateinit var createdAt: Int64
+    private lateinit var updatedAt: Int64
     private lateinit var txn: NakshaTxn
     private var action: Int = 0
     private var version: Int = 0
-    private lateinit var authorTs: BigInt64
+    private lateinit var authorTs: Int64
 
     // Strings and maps are expensive to parse, therefore we only do on demand.
     private var uuid: String = UNDEFINED_STRING
@@ -39,8 +42,8 @@ class XyzNs : XyzStruct<XyzNs>() {
         check(reader.nextUnit()) { "Failed to move forward to 'puuid' field" }
     }
 
-    fun createdAt(): BigInt64 = createdAt
-    fun updatedAt(): BigInt64 = updatedAt
+    fun createdAt(): Int64 = createdAt
+    fun updatedAt(): Int64 = updatedAt
     fun txn(): NakshaTxn = txn
     fun action(): Int = action
     fun actionAsString(): String? = when (action) {
@@ -51,7 +54,7 @@ class XyzNs : XyzStruct<XyzNs>() {
     }
 
     fun version(): Int = version
-    fun authorTs(): BigInt64 = authorTs
+    fun authorTs(): Int64 = authorTs
 
     fun puuid(): String? {
         var value = this.puuid
@@ -119,8 +122,8 @@ class XyzNs : XyzStruct<XyzNs>() {
      * @param tags The tags to merge into, if any.
      * @return the XYZ namespace as map.
      */
-    fun toIMap(storageId: String, tags: Array<String>?): IMap {
-        val map = newMap()
+    fun toIMap(storageId: String, tags: Array<String>?): P_Map<String, *> {
+        val map = P_JsMap()
         map["createdAt"] = createdAt().toDouble()
         map["updatedAt"] = updatedAt().toDouble()
         map["txn"] = txn().toUuid(storageId).toString()

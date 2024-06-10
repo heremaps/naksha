@@ -2,6 +2,9 @@
 
 package com.here.naksha.lib.jbon
 
+import naksha.base.P_JsMap
+import naksha.base.P_Map
+import naksha.base.Platform
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -11,7 +14,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
-    private lateinit var _tagsMap: IMap
+    private lateinit var _tagsMap: P_JsMap
     private lateinit var _tagsArray: Array<String>
 
     override fun parseHeader() {
@@ -26,7 +29,7 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
         }
 
         // Now all key-value pairs follow.
-        val map = newMap()
+        val map = P_JsMap()
         val array = ArrayList<String>()
         while (reader.nextUnit()) {
             var key: String
@@ -40,7 +43,7 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
             var value: Any?
             if (reader.isNumber()) {
                 value = reader.readFloat64()
-                if (Jb.env.canBeInt32(value)) {
+                if (Platform.canBeInt32(value)) {
                     val intValue = value.toInt()
                     array.add("$key:=$intValue")
                 } else {
@@ -75,7 +78,7 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
     /**
      * Returns the tags as map.
      */
-    fun tagsMap(): IMap = _tagsMap
+    fun tagsMap(): P_Map<String, *> = _tagsMap
 
     /**
      * Returns the tags as array.

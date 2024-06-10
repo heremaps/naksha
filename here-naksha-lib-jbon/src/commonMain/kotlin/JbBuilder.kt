@@ -2,34 +2,40 @@
 
 package com.here.naksha.lib.jbon;
 
-import kotlin.js.ExperimentalJsExport
-import kotlin.js.JsExport
+import naksha.base.*
+import kotlin.js.*
 import kotlin.jvm.JvmStatic
 import kotlin.math.floor
+import kotlin.math.max
 
 /**
- * Creates a new JBON builder using the given view and optional dictionary.
- * @param view The view to use, if _null_, allocated on demand.
- * @property global The global dictionary to use when encoding.
+ * Creates a new JBON builder using the given view and global dictionary.
+ * @param view The view to use, optionally auto allocated and resized.
+ * @property global The global dictionary to use when encoding.; if any.
+ * @property autoResize The view to use, if _null_, allocated on demand.
  */
-@Suppress("DuplicatedCode")
+@Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate")
 @JsExport
-open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
-    /**
-     * The view used to build the JBON.
-     */
-    private var _view: IDataView
+open class JbBuilder() {
+    private var view: P_DataView? = null
+    var global: JbDict? = null
+    var autoResize: Boolean = true
 
-    /**
-     * The size of the view.
-     */
-    private var _size: Int
-
-    init {
-        _view = view ?: Jb.env.newDataView(ByteArray(240))
-        _size = _view.getSize()
+    @JsName("of")
+    constructor(view: P_DataView?, global: JbDict? = null, autoResize: Boolean = true) : this() {
+        this.view = view
+        this.global = global
+        this.autoResize = autoResize
     }
 
+    @JsName("new")
+    constructor(size: Int? = null, global: JbDict? = null, autoResize: Boolean = true) : this() {
+        this.view = P_DataView(size)
+        this.global = global
+        this.autoResize = autoResize
+    }
+
+    @OptIn(ExperimentalJsStatic::class)
     companion object {
         val wordUnicode = BooleanArray(128) {
             (it >= 'a'.code && it <= 'z'.code) || (it >= 'A'.code && it <= 'Z'.code) || it == ':'.code
@@ -37,13 +43,13 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
 
         /**
          * Create a new builder with a buffer of the given size.
-         * @param size The buffer size to use.
+         * @param size The buffer size to use; if _null_ a default is selected.
          * @param global The global dictionary to use for the builder; if any.
          * @return The builder.
          */
         @JvmStatic
-        fun create(size: Int? = null, global: JbDict? = null): JbBuilder =
-                JbBuilder(Jb.env.newDataView(ByteArray(size ?: Jb.defaultBuilderSize)), global)
+        @Deprecated("There is now a explict real static constructor, use it", ReplaceWith("JbBuilder(size, global)"))
+        fun create(size: Int? = null, global: JbDict? = null): JbBuilder = JbBuilder(size, global)
 
         /**
          * Returns the maximal encoding size of a string.
@@ -51,6 +57,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
          * @return The maximum byte-size.
          */
         @JvmStatic
+        @JsStatic
         fun maxSizeOfString(string: String): Int = string.length * 3 + 5
 
         /**
@@ -59,6 +66,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
          * @return The amount of byte that are needed to encode this integer.
          */
         @JvmStatic
+        @JsStatic
         fun sizeOfIntEncoding(value: Int): Int {
             return when (value) {
                 in -16..15 -> 1
@@ -74,8 +82,9 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
          * @return The amount of byte that are needed to encode this 64-bit integer.
          */
         @JvmStatic
-        fun sizeOfInt64Encoding(value: BigInt64): Int {
-            if (value.gtei(Int.MAX_VALUE) || value.ltei(Int.MIN_VALUE)) return 9
+        @JsStatic
+        fun sizeOfInt64Encoding(value: Int64): Int {
+            if (value >= Int.MAX_VALUE || value <= Int.MIN_VALUE) return 9
             return sizeOfIntEncoding(value.toInt())
         }
 
@@ -86,6 +95,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
          * @return The size of the header in byte.
          */
         @JvmStatic
+        @JsStatic
         internal fun sizeOfStructHeader(payloadSize: Int, variant: Int? = null): Int {
             var size = 1 // lead-in byte
             size += when (payloadSize) {
@@ -109,6 +119,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
          * @return The amount of byte requires to encode the code-point; 0 if the code point is invalid.
          */
         @JvmStatic
+        @JsStatic
         fun sizeOfUnicode(unicode: Int): Int {
             return when (unicode) {
                 in 0..127 -> 1
@@ -155,31 +166,46 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
     private var localDictNextIndex: Int = 0
 
     /**
+     * The end of the build, so the index of the next byte to write, and the first byte that is invalid.
+     */
+    var end: Int = 0
+        set(newValue) {
+            val view = this.view
+            if (view == null) {
+                require(newValue == 0)
+            } else {
+                require(newValue >= 0 && newValue <= view.getEnd())
+            }
+            field = newValue
+        }
+
+    /**
      * Returns the current view. If no view is defined yet, creates a new view. If the current view does not have enough free space to
      * store at least the given amount of bytes, copies the underlying byte-array into a bigger one and creates a new view, returning
      * this new view.
-     * @param minAvailable The amount of byte that need to be available in the view for write.
+     * @param minAvailable The amount of byte that need to be available in the view for write (starting from [end]).
      * @return The current view.
      */
-    fun view(minAvailable: Int = 0): IDataView {
+    fun view(minAvailable: Int = 0): P_DataView {
+        var view = this.view
         if (minAvailable > 0) {
             val minSize = end + minAvailable
-            if (_size < minSize) {
-                var newSize = (_size * 1.5).toInt()
-                while (newSize < minSize) {
+            val currentSize = view?.getSize() ?: 0
+            if (currentSize < minSize) {
+                check(autoResize)
+                var newSize = (currentSize * 1.5).toInt()
+                if (newSize < minSize) {
                     newSize = (minSize * 1.5).toInt()
                 }
-                _view = Jb.env.newDataView(_view.getByteArray().copyOf(newSize))
-                _size = newSize
+                view = P_DataView(view?.getByteArray()?.copyOf(newSize) ?: ByteArray(newSize))
             }
         }
-        return _view
+        if (view == null) {
+            check(autoResize)
+            view = P_DataView(max(128, minAvailable))
+        }
+        return view
     }
-
-    /**
-     * The current end in the view.
-     */
-    var end: Int = 0
 
     /**
      * Clear the builder, set [end] to the first byte and return the end position that was overridden. Clears the local dictionary, but
@@ -282,14 +308,14 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
      * @param value The integer to write.
      * @return The offset of the value written.
      */
-    fun writeInt64(value: BigInt64): Int {
-        if (value gtei Int.MIN_VALUE && value ltei Int.MAX_VALUE) {
+    fun writeInt64(value: Int64): Int {
+        if (value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) {
             return writeInt(value.toInt())
         }
         val offset = end;
         val view = view(9)
         view.setInt8(offset, ENC_MIXED_SCALAR_INT64.toByte())
-        view.setBigInt64(offset + 1, value)
+        view.setInt64(offset + 1, value)
         end += 9
         return offset
     }
@@ -299,7 +325,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
      * @param value The timestamp to write.
      * @return The offset of the value written.
      */
-    fun writeTimestamp(value: BigInt64): Int {
+    fun writeTimestamp(value: Int64): Int {
         val offset = end;
         val view = view(7)
         view.setInt8(offset, ENC_MIXED_SCALAR_TIMESTAMP.toByte())
@@ -436,7 +462,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
         var target = writeStringHeader(view, start, size)
         if (target < source) {
             while (source < pos) {
-                // TODO: Optimized this by adding support for a native copy function into IDataView
+                // TODO: Optimized this by adding support for a native copy function into P_DataView
                 view.setInt8(target++, view.getInt8(source++))
             }
             pos = target
@@ -601,7 +627,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
         var target = writeStringHeader(view, start, size)
         if (target < source) {
             while (source < pos) {
-                // TODO: Optimized this by adding support for a native copy function into IDataView
+                // TODO: Optimized this by adding support for a native copy function into P_DataView
                 view.setInt8(target++, view.getInt8(source++))
             }
             pos = target
@@ -610,7 +636,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
         return start
     }
 
-    private fun writeUnicode(view: IDataView, offset: Int, unicode: Int): Int {
+    private fun writeUnicode(view: P_DataView, offset: Int, unicode: Int): Int {
         require(unicode in 0..2_097_151)
         var pos = offset
         when (unicode) {
@@ -636,7 +662,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
         return pos
     }
 
-    private fun writeStringHeader(view: IDataView, offset: Int, size: Int): Int {
+    private fun writeStringHeader(view: P_DataView, offset: Int, size: Int): Int {
         require(size >= 0) { "The string must not be of a size less than zero: $size" }
         if (size < 61) {
             view.setInt8(offset, (ENC_STRING or size).toByte())
@@ -739,7 +765,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
         // Copy from where the content backwards.
         var source = contentStart
         if (end < source) {
-            val view = _view
+            val view = view()
             var end = this.end
             while (source < contentEnd) {
                 view.setInt8(end++, view.getInt8(source++))
@@ -750,9 +776,9 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
     }
 
     /**
-     * Ends a custom variant structure that has previously been started with [startCustomVariant]. If necessary (most of the time) copy
+     * Ends a custom variant structure that has previously been started with [startStruct]. If necessary (most of the time) copy
      * the structure content backwards, so that the header is exactly before the structure content.
-     * @param start The start of the array as returned by [startCustomVariant].
+     * @param start The start of the array as returned by [startStruct].
      * @param variant The variant to write.
      * @return The start of the structure (same value as given).
      */
@@ -836,7 +862,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
     fun buildDictionary(id: String): ByteArray {
         check(end == 0) { "The builder must be empty to create a global dictionary from the local, end: $end" }
         val start = writeDictionary(id)
-        return _view.getByteArray().copyOfRange(start, end)
+        return view().getByteArray().copyOfRange(start, end)
     }
 
     /**
@@ -845,9 +871,9 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
      * @param map The GeoJSON feature to convert into JBON.
      * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
      */
-    fun buildFeatureFromMap(map: IMap): ByteArray {
+    fun buildFeatureFromMap(map: P_Map<String, *>): ByteArray {
         clear()
-        val id: String? = map["id"]
+        val id: String? = map.getAs("id", String::class)
         xyz = null
         val start = startMap()
         for (entry in map) {
@@ -855,10 +881,11 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
             val value = entry.value
             if ("id" == key || "geometry" == key) continue
             writeKey(entry.key)
-            if ("properties" == key) {
-                writeMap(asMap(value), true)
+            if ("properties" == key && value is P_Map<*, *>) {
+                @Suppress("UNCHECKED_CAST")
+                writeMap(value as P_Map<String, *>, true)
             } else {
-                if (isMap(value)) writeValue(asMap(value)) else writeValue(value)
+                writeValue(value)
             }
         }
         endMap(start)
@@ -868,7 +895,7 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
     /**
      * When invoking [buildFeatureFromMap] this is used to capture the XYZ namespace reference, if any is found.
      */
-    var xyz: IMap? = null
+    var xyz: P_Map<String, *>? = null
 
     /**
      * Writes a map recursively.
@@ -876,13 +903,14 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
      * @param ignoreXyzNs If the key _@ns:com:here:xyz_ should be ignored (a reference is added to [xyz]).
      * @return The offset of the value written.
      */
-    fun writeMap(map: IMap, ignoreXyzNs: Boolean = false): Int {
+    fun writeMap(map: P_Map<String, *>, ignoreXyzNs: Boolean = false): Int {
         val start = startMap()
         for (entry in map) {
             val key = entry.key
             val value = entry.value
             if (ignoreXyzNs && ("@ns:com:here:xyz" == key)) {
-                if (value is IMap) xyz = value
+                @Suppress("UNCHECKED_CAST")
+                if (value is P_Map<*, *>) xyz = value as P_Map<String, *>
                 continue
             }
             writeKey(entry.key)
@@ -905,6 +933,18 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
     }
 
     /**
+     * Writes an array recursively.
+     * @param array The array to write.
+     * @return The offset of the value written.
+     */
+    fun writeList(array: P_List<*>): Int {
+        val start = startArray()
+        for (value in array) writeValue(value)
+        endArray(start)
+        return start
+    }
+
+    /**
      * Writes an arbitrary value, recursive if a map or array are provided.
      * @param value The value to write.
      * @return The offset of the value written.
@@ -920,16 +960,15 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
             is Byte -> writeInt(value.toInt())
             is Short -> writeInt(value.toInt())
             is Int -> writeInt(value)
-            is Long -> writeInt64(Jb.int64.longToBigInt64(value))
-            is BigInt64 -> writeInt64(value)
+            is Long -> writeInt64(value.toInt64())
+            is Int64 -> writeInt64(value)
             is Float -> writeFloat(value)
-            is Double -> if (Jb.env.canBeFloat32(value)) writeFloat(value.toFloat()) else writeDouble(value)
-            is IMap -> writeMap(value)
+            is Double -> if (Platform.canBeFloat32(value)) writeFloat(value.toFloat()) else writeDouble(value)
+            is P_Map<*, *> -> writeMap(value as P_Map<String, *>)
+            is P_List<*> -> writeList(value)
             is Array<*> -> writeArray(value as Array<Any?>)
             null -> writeNull()
-            else -> {
-                throw IllegalArgumentException()
-            }
+            else -> throw IllegalArgumentException()
         }
         return start
     }
@@ -1002,11 +1041,11 @@ open class JbBuilder(view: IDataView? = null, var global: JbDict? = null) {
 
         // Now, copy everything together into a target array.
         val targetArray = ByteArray(targetSize)
-        val targetView = JbSession.get().newDataView(targetArray)
+        val targetView = P_DataView(targetArray)
         var target = 0
 
         // Copy feature header.
-        val view = _view
+        val view = view()
         var source = startOfFeatureHeader
         while (source < endOfFeatureHeader) {
             targetView.setInt8(target++, view.getInt8(source++))

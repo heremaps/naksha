@@ -3,16 +3,35 @@ package naksha.base
 import kotlin.test.*
 
 class Foo : P_Object() {
-    var name: String by object : NotNullProperty<Any, Foo, String>(String::class, "Bernd") {}
-    var age: Int by object : NotNullProperty<Any, Foo, Int>(Int::class, 0) {}
+    companion object {
+        private val NAME = NotNullProperty<Any, Foo, String>(String::class, "Bernd")
+        private val AGE = NotNullProperty<Any, Foo, Int>(Int::class, 0)
+    }
+    var name: String by NAME
+    var age: Int by AGE
 }
 
 class Bar : P_Object() {
-    var foo: Foo by object : NotNullProperty<Any, Bar, Foo>(Foo::class) {}
-    var foo2 : Foo? by object : NullableProperty<Any, Bar, Foo>(Foo::class) {}
+    companion object {
+        private val FOO = NotNullProperty<Any, Bar, Foo>(Foo::class)
+        private val FOO2 = NullableProperty<Any, Bar, Foo>(Foo::class)
+    }
+    var foo: Foo by FOO
+    var foo2 : Foo? by FOO2
 }
 
 class ObjectProxyTest {
+    @Test
+    fun testSingleton() {
+        val foo1 = Foo()
+        foo1.name = "a"
+        val foo2 = Foo()
+        foo2.name = "a"
+        // Set a breakpoint here.
+        // There should be no delegation, the compiler should inline the setter and getter.
+        assertNotSame(foo1, foo2)
+    }
+
     @Test
     fun testNotNullable() {
         val bar = Bar()
