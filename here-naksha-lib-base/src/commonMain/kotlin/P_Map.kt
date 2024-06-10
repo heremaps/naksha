@@ -2,13 +2,17 @@
 
 package com.here.naksha.lib.base
 
+import com.here.naksha.lib.base.PlatformListApi.Companion.array_get
+import com.here.naksha.lib.base.PlatformListApi.Companion.array_get_length
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_clear
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_contains_key
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_contains_value
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_get
+import com.here.naksha.lib.base.PlatformMapApi.Companion.map_iterator
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_remove
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_set
 import com.here.naksha.lib.base.PlatformMapApi.Companion.map_size
+import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 
@@ -82,7 +86,8 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @param key The key to query.
      * @return The value or _null_.
      */
-    protected fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? = box(map_get(data(), key), klass)
+    protected fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? =
+        box(map_get(data(), key), klass)
 
     /**
      * Convert the given value into a key.
@@ -99,19 +104,46 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @param alt The alternative to return when the value can't be cast.
      * @return The given value as value.
      */
-    protected open fun toValue(key: K, value: Any?, alt: V? = null): V? = box(value, valueKlass, alt)
+    protected open fun toValue(key: K, value: Any?, alt: V? = null): V? =
+        box(value, valueKlass, alt)
 
     override fun createData(): PlatformMap = Platform.newMap()
     override fun data(): PlatformMap = super.data() as PlatformMap
 
-    override val entries: MutableSet<MutableMap.MutableEntry<K, V?>>
-        get() = TODO("Not yet implemented")
+    override val entries: MutableSet<MutableEntry<K, V?>>
+        get() {
+            return rawEntries()
+                .map { platformList ->
+                    require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
+                    val key = toKey(array_get(platformList, 0))
+                    requireNotNull(key) { "Key can't be null" }
+                    Entry(key, toValue(key, array_get(platformList, 1)))
+                }
+                .toMutableSet()
+        }
+
     override val keys: MutableSet<K>
-        get() = TODO("Not yet implemented")
+        get() {
+            return rawEntries()
+                .mapNotNull { platformList ->
+                    require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
+                    toKey(array_get(platformList, 0))
+                }
+                .toMutableSet()
+        }
+
     override val size: Int
         get() = map_size(data())
+
     override val values: MutableCollection<V?>
-        get() = TODO("Not yet implemented")
+        get() {
+            return rawEntries()
+                .mapNotNull { platformList ->
+                    require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
+                    box(array_get(platformList, 1), valueKlass)
+                }
+                .toMutableSet()
+        }
 
     override fun clear() = map_clear(data())
 
@@ -120,7 +152,7 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
     override fun remove(key: K): V? = toValue(key, map_remove(data(), key))
 
     override fun putAll(from: Map<out K, V?>) {
-        TODO("Not yet implemented")
+        from.onEach { (key, value) -> put(key, value) }
     }
 
     fun addAll(vararg items: Any?) {
@@ -141,4 +173,25 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
     override fun containsValue(value: V?): Boolean = map_contains_value(data(), value)
 
     override fun containsKey(key: K): Boolean = map_contains_key(data(), key)
+
+    class Entry<K, V>(override val key: K, initialValue: V) : MutableEntry<K, V> {
+
+        private var currentValue: V = initialValue
+
+        override fun setValue(newValue: V): V {
+            val oldValue = currentValue
+            currentValue = newValue
+            return oldValue
+        }
+
+        override val value: V
+            get() = currentValue
+    }
+
+    private fun rawEntries(): Sequence<PlatformList> {
+        val platformIterator = map_iterator(data())
+        return generateSequence(platformIterator.next().value) {
+            platformIterator.next().value
+        }
+    }
 }
