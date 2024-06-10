@@ -158,6 +158,35 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
 
     override fun get(key: K): V? = toValue(key, map_get(data(), key))
 
+    /**
+     * Returns the raw value stored in the underlying base map.
+     * @param key The key to read.
+     * @return The raw value, being either a scalar or [PlatformObject].
+     */
+    fun getRaw(key: Any): Any? = map_get(data(), key)
+
+    /**
+     * Sets the raw value stored in the underlying base map.
+     * @param key The key to set.
+     * @param value The value to set.
+     * @return The previously set value.
+     */
+    fun setRaw(key: Any, value: Any?): Any? = map_set(data(), key, unbox(value))
+
+    /**
+     * Tests if the underlying base map stored the given key.
+     * @param key The key to test.
+     * @return _true_ if the underlying map contains the given key; _false_ otherwise.
+     */
+    fun hasRaw(key: Any): Boolean = map_contains_key(data(), key)
+
+    /**
+     * Removes the key from the underlying base map.
+     * @param key The key to remove.
+     * @return The value that was removed; _null_ if either the value was _null_ or no such key existed.
+     */
+    fun removeRaw(key: Any): Any? = map_remove(data(), key)
+
     override fun containsValue(value: V?): Boolean = map_contains_value(data(), value)
 
     override fun containsKey(key: K): Boolean = map_contains_key(data(), key)

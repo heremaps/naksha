@@ -160,9 +160,7 @@ actual class Platform {
         }
 
         @JvmStatic
-        actual fun <T : Any> klassOf(o: T): KClass<out T> {
-            TODO("Implement me!")
-        }
+        actual fun <T : Any> klassOf(o: T): KClass<out T> = o::class
 
 //        @JvmStatic
 //        actual fun <T : Proxy> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
