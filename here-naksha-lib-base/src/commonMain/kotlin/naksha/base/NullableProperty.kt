@@ -13,21 +13,21 @@ import kotlin.reflect.KProperty
  * is returned, but the underlying property stays _undefined_ or _null_.
  * @property defaultValue The default value to return, when reading the member while being _null_.
  */
-@Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
+@Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE", "UNCHECKED_CAST")
 @JsExport
-open class NullableProperty<V : Any, MAP : P_Map<String, V>, T : V>(
-    val klass: KClass<out T>,
+open class NullableProperty<V>(
+    val klass: KClass<*>,
     val autoCreate: Boolean = false,
-    val defaultValue: T? = null
+    val defaultValue: V? = null
 ) {
-    open operator fun getValue(self: MAP, property: KProperty<*>): T? {
+    open operator fun getValue(self: P_Map<String, Any>, property: KProperty<*>): V? {
         val key = property.name
         if (autoCreate) {
-            if (defaultValue == null) return self.getOrCreate(key, klass)
+            if (defaultValue == null) return self.getOrCreate(key, klass) as V
             return self.getOrSet(key, defaultValue)
         }
-        return Proxy.box(map_get(self.data(), key), klass, defaultValue)
+        return Proxy.box(map_get(self.data(), key), klass, defaultValue) as V
     }
 
-    open operator fun setValue(self: MAP, property: KProperty<*>, value: T?) = self.put(property.name, value)
+    open operator fun setValue(self: P_Map<String, Any>, property: KProperty<*>, value: V?) = self.put(property.name, value)
 }

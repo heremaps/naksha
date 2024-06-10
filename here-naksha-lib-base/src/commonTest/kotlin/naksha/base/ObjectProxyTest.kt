@@ -3,13 +3,13 @@ package naksha.base
 import kotlin.test.*
 
 class Foo : P_Object() {
-    var name: String by object : NotNullProperty<Any, Foo, String>(String::class, "Bernd") {}
-    var age: Int by object : NotNullProperty<Any, Foo, Int>(Int::class, 0) {}
+    var name: String by NotNullProperty(String::class, "Bernd")
+    var age: Int by NotNullProperty(Int::class, 0)
 }
 
 class Bar : P_Object() {
-    var foo: Foo by object : NotNullProperty<Any, Bar, Foo>(Foo::class) {}
-    var foo2 : Foo? by object : NullableProperty<Any, Bar, Foo>(Foo::class) {}
+    var foo: Foo by NotNullProperty(Foo::class)
+    var foo2 : Foo? by  NullableProperty(Foo::class)
 }
 
 class ObjectProxyTest {
