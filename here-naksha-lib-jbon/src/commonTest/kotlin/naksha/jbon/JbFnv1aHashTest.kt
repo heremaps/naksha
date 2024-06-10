@@ -1,7 +1,11 @@
-import com.here.naksha.lib.jbon.*
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
+package naksha.jbon
+
+import naksha.base.Fnv1a32
+import naksha.base.Fnv1a64
+import naksha.base.Int64
+import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class JbFnv1aHashTest : JbAbstractTest() {
     @Test
@@ -31,7 +35,7 @@ class JbFnv1aHashTest : JbAbstractTest() {
     fun testFnv1a64() {
         // See: https://toolkitbay.com/tkb/tool/FNV-1
         val testString = "test"
-        val expectedHash = BigInt64(0xf9e6e6ef197c2b25uL.toLong())
+        val expectedHash = Int64(0xf9e6e6ef197c2b25uL.toLong())
         var hash = Fnv1a64.start()
         var i = 0
         while (i < testString.length) {

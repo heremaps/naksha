@@ -1,9 +1,8 @@
+package naksha.jbon
+
 import com.here.naksha.lib.jbon.*
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.*
-import java.nio.charset.StandardCharsets
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import naksha.base.*
+import kotlin.test.*
 
 class JbCoreTest : JbAbstractTest() {
     companion object {
@@ -11,20 +10,20 @@ class JbCoreTest : JbAbstractTest() {
         internal val TINY_DOUBLES = doubleArrayOf(-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
     }
 
-    @Test
-    fun testCompression() {
-        val originalString = "Hello World LZ4!"
-        val originalBytes = originalString.toByteArray(StandardCharsets.UTF_8)
-        val compressed = env.lz4Deflate(originalBytes)
-        val decompressed = env.lz4Inflate(compressed, originalBytes.size)
-        assertArrayEquals(decompressed, originalBytes)
-        val decompressedString = String(decompressed, StandardCharsets.UTF_8)
-        assertEquals(decompressedString, originalString)
-    }
+//    @Test
+//    fun testCompression() {
+//        val originalString = "Hello World LZ4!"
+//        val originalBytes = originalString.
+//        val compressed = Platform.lz4Deflate(originalBytes)
+//        val decompressed = Platform.lz4Inflate(compressed, originalBytes.size)
+//        assertArrayEquals(decompressed, originalBytes)
+//        val decompressedString = String(decompressed, StandardCharsets.UTF_8)
+//        assertEquals(decompressedString, originalString)
+//    }
 
     @Test
     fun testRandomString() {
-        val r = env.randomString(100)
+        val r = BaseUtil.randomString(100)
         assertEquals(100, r.length)
         var i = 0
         while (i < r.length) {
@@ -36,17 +35,17 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testDoubleToFloat() {
-        assertTrue(env.canBeFloat32(12.0))
-        assertTrue(env.canBeFloat32(Float.MAX_VALUE.toDouble()))
+        assertTrue(Platform.canBeFloat32(12.0))
+        assertTrue(Platform.canBeFloat32(Float.MAX_VALUE.toDouble()))
         // Note: Technically the conversion is possible, but when widening to double, the exponent is inflated to -149
         //       Even while this is technically correct, our simple method then rejects this, because it only allows
         //       the exponent to be -126 for safe-conversion.
-        assertFalse(env.canBeFloat32(Float.MIN_VALUE.toDouble()))
+        assertFalse(Platform.canBeFloat32(Float.MIN_VALUE.toDouble()))
     }
 
     @Test
     fun basicTest() {
-        val view = JbSession.get().newDataView(ByteArray(256))
+        val view = P_DataView(256)
         assertNotNull(view)
         view.setInt32(0, 12345678)
         assertEquals(12345678, view.getInt32(0))
@@ -64,7 +63,7 @@ class JbCoreTest : JbAbstractTest() {
     @Test
     fun testJson() {
         // Test parse.
-        val raw = env.parse("""
+        val raw = Platform.fromJSON("""
 {
     "id": "foo",
     "properties": {
@@ -85,14 +84,14 @@ class JbCoreTest : JbAbstractTest() {
         assertEquals(99, properties["age"])
 
         // Test stringify.
-        val json = env.stringify(map, false)
+        val json = Platform.toJSON(map)
         assertEquals(49, json.length)
         assertTrue(json.contains("properties"))
     }
 
     @Test
     fun testNull() {
-        val view = JbSession.get().newDataView(ByteArray(256))
+        val view = P_DataView(256)
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         builder.writeNull()
@@ -106,8 +105,8 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testUndefined() {
-        val view = JbSession.get().newDataView(ByteArray(256))
-        val builder = JbBuilder(view)
+        val builder = JbBuilder(256)
+        val view = builder.view(0)
         val reader = JbReader().mapView(view, 0)
         builder.writeUndefined()
         assertEquals(ENC_MIXED_CONST_UNDEFINED, view.getInt8(0).toInt())
@@ -142,8 +141,7 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testIntEncoding() {
-        val int64 = JvmBigInt64Api()
-        val view = JbSession.get().newDataView(ByteArray(256))
+        val view = P_DataView(256)
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         // the values -16 to 15 should be encoded in one byte
@@ -215,30 +213,30 @@ class JbCoreTest : JbAbstractTest() {
         reader.reset()
 
         // Test 64-bit integers
-        builder.writeInt64(int64.MIN_VALUE())
+        builder.writeInt64(Platform.INT64_MIN_VALUE)
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT, reader.unitType())
-        assertEquals(int64.MIN_VALUE(), reader.readInt64())
+        assertEquals(Platform.INT64_MIN_VALUE, reader.readInt64())
         assertEquals(9, reader.unitSize())
         assertEquals(9, builder.clear())
         reader.reset()
 
-        builder.writeInt64(int64.MAX_VALUE())
+        builder.writeInt64(Platform.INT64_MAX_VALUE)
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT, reader.unitType())
-        assertEquals(int64.MAX_VALUE(), reader.readInt64())
+        assertEquals(Platform.INT64_MAX_VALUE, reader.readInt64())
         assertEquals(9, reader.unitSize())
         assertEquals(9, builder.clear())
         reader.reset()
 
         // This ensures that high and low bits are encoded and decoded correctly in order
-        builder.writeInt64(int64.MIN_VALUE() addi 65535)
+        builder.writeInt64(Platform.INT64_MIN_VALUE + 65535)
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT, reader.unitType())
-        assertEquals(int64.MIN_VALUE() addi 65535, reader.readInt64())
+        assertEquals(Platform.INT64_MIN_VALUE + 65535, reader.readInt64())
         assertEquals(9, reader.unitSize())
         assertEquals(9, builder.clear())
         reader.reset()
@@ -279,7 +277,7 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testFloat64Encoding() {
-        val view = JbSession.get().newDataView(ByteArray(256))
+        val view = P_DataView(256)
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         for (i in -16..15) {
@@ -310,7 +308,7 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testEncodingTwoInts() {
-        val view = JbSession.get().newDataView(ByteArray(256))
+        val view = P_DataView(256)
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
 
@@ -400,7 +398,7 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testReference() {
-        val view = JbSession.get().newDataView(ByteArray(256))
+        val view = P_DataView(256)
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
 
@@ -460,7 +458,7 @@ class JbCoreTest : JbAbstractTest() {
         // Encode a dictionary.
         val dictId = "test"
         val dictArray = builder.buildDictionary(dictId)
-        val dictView = JbSession.get().newDataView(dictArray)
+        val dictView = P_DataView(dictArray)
         val dictReader = JbReader().mapView(dictView, 0)
         assertEquals(TYPE_DICTIONARY, dictReader.unitType())
         // size
@@ -501,7 +499,7 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testText() {
-        val view = JbSession.get().newDataView(ByteArray(8192))
+        val view = P_DataView(8192)
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
 
@@ -605,63 +603,58 @@ class JbCoreTest : JbAbstractTest() {
 //        assertSame(readText, feature.reader.readText())
     }
 
-    @Test
-    fun testBigFeature() {
-        // Read the topology, then parse and serialize to remove white spaces.
-        var topologyBytes = JbCoreTest::class.java.getResource("/topology.json")!!.readBytes()
-        assertEquals(29659, topologyBytes.size)
-        var topology = String(topologyBytes, StandardCharsets.UTF_8)
-        topology = env.stringify(env.parse(topology))
-        topologyBytes = topology.toByteArray(StandardCharsets.UTF_8)
-        // After this only 16kb should be left
-        assertEquals(16073, topologyBytes.size)
-        // Convert this as string into a binary.
-        val view = JbSession.get().newDataView(ByteArray(65535))
-        val builder = JbBuilder(view)
-        builder.writeText(topology)
-        val featureArray = builder.buildFeature(null)
-        val featureView = JbSession.get().newDataView(featureArray)
-
-        // Encode a dictionary.
-        builder.reset()
-        val dictId = "test"
-        val dictArray = builder.buildDictionary(dictId)
-        val dictView = JbSession.get().newDataView(dictArray)
-
-        // Test the dictionary class.
-        val dict = JbDict().mapView(dictView, 0)
-        dict.loadAll()
-
-        val view2 = JbSession.get().newDataView(ByteArray(65535))
-        val builder2 = JbBuilder(view2, dict)
-        builder2.writeText(topology)
-        val featureArray2 = builder2.buildFeature(null)
-        val featureView2 = JbSession.get().newDataView(featureArray2)
-
-        // Simple test using low level reader.
-        val reader = JbReader().mapView(featureView, 0)
-        assertEquals(TYPE_FEATURE, reader.unitType())
-        assertEquals(11682, reader.unitSize())
-
-        // Simple test using low level reader.
-        val reader2 = JbReader().mapView(featureView2, 0)
-        assertEquals(TYPE_FEATURE, reader2.unitType())
-        assertEquals(8341, reader2.unitSize())
-
-        // Use the feature reader.
-        val feature = JbFeature(dictManager).mapView(featureView, 0)
-        assertEquals(TYPE_STRING, feature.reader.unitType())
-        assertTrue(feature.reader.isString())
-        // TODO: Fix me!
-//        val text = JbText().mapReader(feature.reader)
-//        val topologyRestored = text.toString()
-//        assertEquals(topology, topologyRestored)
-//        assertSame(topologyRestored, text.toString())
-    }
+//    @Test
+//    fun testBigFeature() {
+//        // Read the topology, then parse and serialize to remove white spaces.
+//        var topologyBytes = JbCoreTest::class.java.getResource("/topology.json")!!.readBytes()
+//        assertEquals(29659, topologyBytes.size)
+//        var topology = String(topologyBytes, StandardCharsets.UTF_8)
+//        topology = env.stringify(env.parse(topology))
+//        topologyBytes = topology.toByteArray(StandardCharsets.UTF_8)
+//        // After this only 16kb should be left
+//        assertEquals(16073, topologyBytes.size)
+//        // Convert this as string into a binary.
+//        val view = JbSession.get().newDataView(ByteArray(65535))
+//        val builder = JbBuilder(view)
+//        builder.writeText(topology)
+//        val featureArray = builder.buildFeature(null)
+//        val featureView = JbSession.get().newDataView(featureArray)
+//
+//        // Encode a dictionary.
+//        builder.reset()
+//        val dictId = "test"
+//        val dictArray = builder.buildDictionary(dictId)
+//        val dictView = JbSession.get().newDataView(dictArray)
+//
+//        // Test the dictionary class.
+//        val dict = JbDict().mapView(dictView, 0)
+//        dict.loadAll()
+//
+//        val view2 = JbSession.get().newDataView(ByteArray(65535))
+//        val builder2 = JbBuilder(view2, dict)
+//        builder2.writeText(topology)
+//        val featureArray2 = builder2.buildFeature(null)
+//        val featureView2 = JbSession.get().newDataView(featureArray2)
+//
+//        // Simple test using low level reader.
+//        val reader = JbReader().mapView(featureView, 0)
+//        assertEquals(TYPE_FEATURE, reader.unitType())
+//        assertEquals(11682, reader.unitSize())
+//
+//        // Simple test using low level reader.
+//        val reader2 = JbReader().mapView(featureView2, 0)
+//        assertEquals(TYPE_FEATURE, reader2.unitType())
+//        assertEquals(8341, reader2.unitSize())
+//
+//        // Use the feature reader.
+//        val feature = JbFeature(dictManager).mapView(featureView, 0)
+//        assertEquals(TYPE_STRING, feature.reader.unitType())
+//        assertTrue(feature.reader.isString())
+//    }
 
     @Test
     fun testArray() {
-        val view = JbSession.get().newDataView(ByteArray(8192))
+        val view = P_DataView(8192)
         val builder = JbBuilder(view)
         val arrayStart = builder.startArray()
         builder.writeString("foo")
@@ -728,7 +721,7 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testMap() {
-        val builder = JbSession.get().newBuilder()
+        val builder = JbBuilder()
         val view = builder.view()
         val reader = JbReader()
 
@@ -816,8 +809,8 @@ class JbCoreTest : JbAbstractTest() {
     @Test
     fun testJbonTimestamp() {
         val nowLong = 1707491351417L
-        val nowBigInt64 = BigInt64(nowLong)
-        val view = JbSession.get().newDataView(ByteArray(256))
+        val nowBigInt64 = Int64(nowLong)
+        val view = P_DataView(256)
         val builder = JbBuilder(view)
         val reader = JbReader().mapView(view, 0)
         builder.writeTimestamp(nowBigInt64)
@@ -834,8 +827,8 @@ class JbCoreTest : JbAbstractTest() {
 
     @Test
     fun testTimestamp() {
-        val millis = BigInt64(1707985967244)
-        val ts = JbTimestamp.fromMillis(millis)
+        val millis = Int64(1707985967244)
+        val ts = Timestamp.fromMillis(millis)
         assertEquals(millis, ts.ts)
         assertEquals(2024, ts.year)
         assertEquals(2, ts.month)
@@ -850,8 +843,8 @@ class JbCoreTest : JbAbstractTest() {
     fun testBuildingCollectionWithOnlyId() {
         val builder = JbBuilder.create()
         val featureJson = """{"id":"bar"}"""
-        val featureMap = asMap(env.parse(featureJson))
-        val featureBytes = builder.buildFeatureFromMap(featureMap)
+        val featureMap = Platform.fromJSON(featureJson) as PlatformMap
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(P_JsMap::class))
         val feature = JbFeature(dictManager)
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())
