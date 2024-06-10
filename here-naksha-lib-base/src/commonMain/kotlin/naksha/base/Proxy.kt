@@ -31,14 +31,24 @@ abstract class Proxy : PlatformObject {
             val data = unbox(raw)
             if (isNil(data)) return alternative
             if (klass.isInstance(raw)) return raw as T
-            if (data is PlatformObject && Platform.isProxyKlass(klass)) {
-                val symbol = Symbols.of(klass)
-                val existing = Symbols.get(data, symbol)
-                if (klass.isInstance(existing)) return existing as T
-                if (existing == null) {
+            // The data value is a complex object
+            if (data is PlatformObject) {
+                if (Platform.isProxyKlass(klass)) {
+                    val symbol = Symbols.of(klass)
+                    val existing = Symbols.get(data, symbol)
+                    if (klass.isInstance(existing)) return existing as T
+                    // Create a new instance.
                     val instance = Platform.newInstanceOf(klass)
                     Symbols.set(data, symbol, instance)
                     return instance
+                }
+                // A scalar type was requested, but a complex type found.
+                // The only acceptable situation is that Any was requested.
+                // Then, return the standard types.
+                if (klass == Any::class) {
+                    if (data is PlatformMap) return data.proxy(P_JsMap::class) as T
+                    if (data is PlatformList) return data.proxy(P_AnyList::class) as T
+                    if (data is PlatformDataView) return data.proxy(P_DataView::class) as T
                 }
             }
             return alternative
