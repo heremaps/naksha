@@ -103,7 +103,7 @@ expect class Platform {
         /**
          * The [BaseLogger].
          */
-        val logger: BaseThreadLocal<BaseLogger>
+        val logger: BaseLogger
 
         /**
          * Tests if the given value is _null_ or _undefined_.

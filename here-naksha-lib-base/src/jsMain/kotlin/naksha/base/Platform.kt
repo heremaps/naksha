@@ -647,8 +647,7 @@ for (i=0; i < msg_arr.length; i++) {
          * The [BaseLogger].
          */
         @JsStatic
-        actual val logger: BaseThreadLocal<BaseLogger>
-            get() = TODO("Not yet implemented")
+        actual val logger: BaseLogger = TODO("Create implementation")
 
         /**
          * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).

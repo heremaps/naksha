@@ -550,7 +550,7 @@ actual class Platform {
          * The [BaseLogger].
          */
         @JvmStatic
-        actual val logger: BaseThreadLocal<BaseLogger> = newThreadLocal { defaultBaseLogger }
+        actual val logger: BaseLogger by newThreadLocal { defaultBaseLogger }
 
         /**
          * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).
