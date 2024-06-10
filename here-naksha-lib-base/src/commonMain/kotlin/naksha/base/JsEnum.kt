@@ -340,7 +340,7 @@ abstract class JsEnum : CharSequence {
                         e.isDefined = true
                         val defMap = defMap(ns)
                         // If the key is already assigned, another thread was faster, repeat all of this!
-                        if (defMap.putIfAbsent(key, e) == null) continue
+                        if (defMap.putIfAbsent(key, e) != null) continue
                         e.init()
                     }
                 } else {
