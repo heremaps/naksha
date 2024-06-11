@@ -11,7 +11,7 @@ kotlin {
     }
 
     js(IR) {
-        moduleName = "geo"
+        moduleName = "model"
         browser {
             webpackTask {
                 output.libraryTarget = "commonjs2"
@@ -34,6 +34,7 @@ kotlin {
                 implementation(kotlin("stdlib-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
                 implementation(project(":here-naksha-lib-base"))
+                implementation(project(":here-naksha-lib-geo"))
             }
         }
         commonTest {
@@ -48,6 +49,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-base"))
+                implementation(project(":here-naksha-lib-geo"))
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
@@ -64,6 +66,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-js"))
                 implementation(project(":here-naksha-lib-base"))
+                implementation(project(":here-naksha-lib-geo"))
             }
         }
     }
