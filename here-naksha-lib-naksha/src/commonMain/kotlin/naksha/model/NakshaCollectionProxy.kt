@@ -19,7 +19,7 @@ open class NakshaCollectionProxy : com.here.naksha.lib.base.GeoFeature() {
      * <br>
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
      */
-    var partitions: Int by NakshaCollectionProxy.Companion.PARTITIONS
+    var partitions: Int by PARTITIONS
 
     /**
      * @see hasPartitions
@@ -33,7 +33,7 @@ open class NakshaCollectionProxy : com.here.naksha.lib.base.GeoFeature() {
      * <br>
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
      */
-    var geoIndex: String? by NakshaCollectionProxy.Companion.GEO_INDEX
+    var geoIndex: String? by GEO_INDEX
 
     /**
      * The storageClass decides where the collection is created.
@@ -45,7 +45,7 @@ open class NakshaCollectionProxy : com.here.naksha.lib.base.GeoFeature() {
      * <br>
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
      */
-    var storageClass: String? by NakshaCollectionProxy.Companion.STORAGE_CLASS
+    var storageClass: String? by STORAGE_CLASS
 
     /**
      * The protectionClass defines how collections should be protected.
@@ -54,55 +54,55 @@ open class NakshaCollectionProxy : com.here.naksha.lib.base.GeoFeature() {
      * The disadvantage of these are, that they slow down the processing, but allow to actually do any kind of SQL query.
      * The final ones are NONE, which removes all protecting triggers and allow any kind of manual change, but this can easily break the history and/or transaction logs.
      */
-    var protectionClass: String? by NakshaCollectionProxy.Companion.PROTECTION_CLASS
+    var protectionClass: String? by PROTECTION_CLASS
 
     /**
      * Default value of `null` in `feature.type` column.
      *
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
      */
-    var defaultType: String by NakshaCollectionProxy.Companion.DEFAULT_TYPE
+    var defaultType: String by DEFAULT_TYPE
 
     /**
      * Default value of `feature.flags`.
      *
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
      */
-    var defaultFlags: Int by NakshaCollectionProxy.Companion.DEFAULT_FLAGS
+    var defaultFlags: Int by DEFAULT_FLAGS
 
     /**
      * true - disables history of features' modifications.
      */
-    var disableHistory: Boolean by NakshaCollectionProxy.Companion.DISABLE_HISTORY
+    var disableHistory: Boolean by DISABLE_HISTORY
 
     /**
      * If autoPurge is enabled, deleted features are automatically purged and no shadow state is kept available.
      * Note that if disableHistory is false, the deleted features will still be around in the history. This mainly effects lib-view.
      */
-    var autoPurge: Boolean by NakshaCollectionProxy.Companion.AUTO_PURGE
+    var autoPurge: Boolean by AUTO_PURGE
 
     /**
      * The indices list contains the list of indices to add to the collection.
      * If set to null, default indices are created.
      * The available indices are exposed through the virtual table naksha~indices.
      */
-    var indices: naksha.model.IndicesListProxy by NakshaCollectionProxy.Companion.INDICES
+    var indices: naksha.model.IndicesListProxy by INDICES
 
     /**
      * The maxAge decides about the maximum age of features in the history in days.
      * Note that there is no guarantee that features are deleted exactly after having reached their max-age.
      * However, they are eligible to be deleted at as soon as possible.
      */
-    var maxAge: Int64 by NakshaCollectionProxy.Companion.MAX_AGE
+    var maxAge: Int64 by MAX_AGE
 
     /**
      * The quadPartitionSize decides (for the optimal partitioning algorithm) how many features should be placed into each "optimal" tile.
      */
-    var quadPartitionSize: Int by NakshaCollectionProxy.Companion.QUAD_PARTITION_SIZE
+    var quadPartitionSize: Int by QUAD_PARTITION_SIZE
 
-    var estimatedFeatureCount: Int64? by NakshaCollectionProxy.Companion.ESTIMATED_FEATURE_COUNT
+    var estimatedFeatureCount: Int64? by ESTIMATED_FEATURE_COUNT
 
-    var estimatedDeletedFeatures: Int64? by NakshaCollectionProxy.Companion.ESTIMATED_DELETED_FEATURES
+    var estimatedDeletedFeatures: Int64? by ESTIMATED_DELETED_FEATURES
 
     companion object {
         private val PARTITIONS = NotNullProperty<Any, com.here.naksha.lib.base.GeoFeature, Int>(Int::class, 1)

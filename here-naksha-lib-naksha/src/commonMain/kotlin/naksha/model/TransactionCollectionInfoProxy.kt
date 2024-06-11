@@ -15,13 +15,13 @@ class TransactionCollectionInfoProxy : P_Object() {
         private val COUNT = NotNullProperty<Any, TransactionCollectionInfoProxy, Int>(Int::class)
     }
 
-    var collectionId: String? by TransactionCollectionInfoProxy.Companion.COLLECTION_ID
-    var inserted: Int by TransactionCollectionInfoProxy.Companion.COUNT
-    var updated: Int by TransactionCollectionInfoProxy.Companion.COUNT
-    var deleted: Int by TransactionCollectionInfoProxy.Companion.COUNT
-    var purged: Int by TransactionCollectionInfoProxy.Companion.COUNT
-    var insertedBytes: Int by TransactionCollectionInfoProxy.Companion.COUNT
-    var updatedBytes: Int by TransactionCollectionInfoProxy.Companion.COUNT
-    var deletedBytes: Int by TransactionCollectionInfoProxy.Companion.COUNT
-    var purgedBytes: Int by TransactionCollectionInfoProxy.Companion.COUNT
+    var collectionId: String? by COLLECTION_ID
+    var inserted: Int by COUNT
+    var updated: Int by COUNT
+    var deleted: Int by COUNT
+    var purged: Int by COUNT
+    var insertedBytes: Int by COUNT
+    var updatedBytes: Int by COUNT
+    var deletedBytes: Int by COUNT
+    var purgedBytes: Int by COUNT
 }

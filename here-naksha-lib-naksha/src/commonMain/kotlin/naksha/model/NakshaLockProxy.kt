@@ -33,11 +33,11 @@ class NakshaLockProxy : NakshaFeatureProxy() {
             NakshaLockProxy.Owners::class)
     }
 
-    var type: String by NakshaLockProxy.Companion.TYPE
-    var maxOwners: Int by NakshaLockProxy.Companion.MAX_OWNERS
-    var owner: String? by NakshaLockProxy.Companion.OWNER
-    var expires: Int64 by NakshaLockProxy.Companion.EXPIRES
-    var owners: NakshaLockProxy.Owners? by NakshaLockProxy.Companion.OWNERS
+    var type: String by TYPE
+    var maxOwners: Int by MAX_OWNERS
+    var owner: String? by OWNER
+    var expires: Int64 by EXPIRES
+    var owners: NakshaLockProxy.Owners? by OWNERS
 
     class Owners : P_Map<String, Int64>(String::class, Int64::class)
 }

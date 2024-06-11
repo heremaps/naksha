@@ -23,6 +23,6 @@ open class NakshaFeatureProxy : com.here.naksha.lib.base.GeoFeature() {
     /**
      * Reference point of the feature. Used for grid calculation.
      */
-    var referencePoint: PointProxy? by NakshaFeatureProxy.Companion.REFERENCE_POINT
+    var referencePoint: PointProxy? by REFERENCE_POINT
 
 }
