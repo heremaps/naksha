@@ -33,9 +33,10 @@ actual class Platform {
     actual companion object {
         @JvmStatic
         private val module = SimpleModule().apply {
-            @Suppress("UNCHECKED_CAST")
-            addAbstractTypeMapping(Map::class.java, JvmMap::class.java as Class<Map<*, *>>)
+            addAbstractTypeMapping(Map::class.java, JvmMap::class.java)
+            addAbstractTypeMapping(MutableMap::class.java, JvmMap::class.java)
             addAbstractTypeMapping(List::class.java, JvmList::class.java)
+            addAbstractTypeMapping(MutableList::class.java, JvmList::class.java)
         }
 
         @JvmStatic

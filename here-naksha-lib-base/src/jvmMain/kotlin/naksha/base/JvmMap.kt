@@ -7,8 +7,9 @@ import java.util.Map
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
-open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformMap {
-    init {
+open class JvmMap() : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
+
+    constructor(vararg entries: Any?) : this() {
         var i = 0
         while (i < entries.size) {
             val key = entries[i++]
@@ -37,12 +38,6 @@ open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformM
         }
         return p
     }
-
-    /**
-     * Returns the number of key-value pairs.
-     * @return the number of key-value pairs.
-     */
-    override fun size() : Int = map?.size ?: 0
 
     /**
      * Tests if this map contains the given key.
@@ -97,7 +92,10 @@ open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformM
         return old
     }
 
-    override fun isEmpty(): Boolean = size() == 0
+    override fun isEmpty(): Boolean = size == 0
+    override fun putAll(from: kotlin.collections.Map<out Any, Any?>) = map().putAll(from)
+
+    override fun remove(key: Any): Any? = map?.remove(key)
 
     override fun containsKey(key: Any): Boolean = contains(key)
 
@@ -109,26 +107,17 @@ open class JvmMap(vararg entries: Any?) : JvmObject(), Map<Any, Any?>, PlatformM
 
     override fun put(key: Any, value: Any?): Any? = set(key, value)
 
-    override fun remove(key: Any?): Any? {
-        val map = this.map
-        if (map != null && key != null) {
-            return map.remove(key)
-        }
-        return null
-    }
+    override val entries: MutableSet<MutableMap.MutableEntry<Any, Any?>>
+        get() = map().entries
+    override val keys: MutableSet<Any>
+        get() = map().keys
+    override val size: Int
+        get() = map?.size ?: 0
+    override val values: MutableCollection<Any?>
+        get() = map().values
 
     override fun clear() {
         map?.clear()
-    }
-
-    override fun keySet(): MutableSet<Any> = map().keys
-
-    override fun values(): MutableCollection<Any?> = map().values
-
-    override fun entrySet(): MutableSet<MutableMap.MutableEntry<Any, Any?>> = map().entries
-
-    override fun putAll(m: MutableMap<out Any, out Any?>) {
-        map().putAll(m)
     }
 
     @Suppress("UNCHECKED_CAST")
