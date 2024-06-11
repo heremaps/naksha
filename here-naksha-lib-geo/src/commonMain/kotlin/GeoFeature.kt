@@ -2,9 +2,9 @@
 
 package com.here.naksha.lib.base
 
-import com.here.naksha.lib.base.Platform.Companion.stringKlass
+import naksha.base.NotNullProperty
+import naksha.base.P_Object
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 
 /**
  *
@@ -13,17 +13,9 @@ import kotlin.jvm.JvmStatic
 open class GeoFeature : P_Object() {
 
     companion object {
-        @JvmStatic
-        val ID = Platform.intern("id")
-
-        @JvmStatic
-        val PROPERTIES = Platform.intern("properties")
+        private val ID = NotNullProperty<Any, GeoFeature, String>(String::class)
+        private val PROPERTIES = NotNullProperty<Any, GeoFeature, P_Object>(P_Object::class)
     }
-
-    open fun getId(): String? = getOrNull(ID, stringKlass)
-    open fun setId(id: String?) = set(ID, id)
-
-    open fun useProperties(): P_Object  = getOrCreate(PROPERTIES, P_Object::class)
-    open fun getProperties(): P_Object? = getOrNull(PROPERTIES, P_Object::class)
-    open fun setProperties(p: P_Object?) = set(PROPERTIES, p)
+    var id by ID
+    var properties by PROPERTIES
 }

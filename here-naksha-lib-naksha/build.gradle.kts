@@ -45,6 +45,7 @@ kotlin {
             }
         }
         jvmMain {
+            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-base"))
