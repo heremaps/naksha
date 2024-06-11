@@ -30,16 +30,18 @@ import kotlin.reflect.KProperty
  * defined, then this value will be set, when the value is read while being _null_. Otherwise, only the [defaultValue]
  * is returned, but the underlying property stays _undefined_ or _null_.
  * @property defaultValue The default value to return, when reading the member while being _null_.
+ * @property name The name of the property in the underlying map, if different from the property name.
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
 open class NullableProperty<MAP_VALUE_TYPE : Any, MAP : P_Map<String, MAP_VALUE_TYPE>, PROPERTY_TYPE : MAP_VALUE_TYPE>(
     val klass: KClass<out PROPERTY_TYPE>,
     val autoCreate: Boolean = false,
-    val defaultValue: PROPERTY_TYPE? = null
+    val defaultValue: PROPERTY_TYPE? = null,
+    val name: String? = null
 ) {
     open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE? {
-        val key = property.name
+        val key = this.name ?: property.name
         if (autoCreate) {
             if (defaultValue == null) return self.getOrCreate(key, klass)
             return self.getOrSet(key, defaultValue)
@@ -47,5 +49,5 @@ open class NullableProperty<MAP_VALUE_TYPE : Any, MAP : P_Map<String, MAP_VALUE_
         return Proxy.box(map_get(self.data(), key), klass, defaultValue)
     }
 
-    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) = self.put(property.name, value)
+    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) = self.put(this.name ?: property.name, value)
 }
