@@ -344,7 +344,7 @@ project(":here-naksha-lib-psql") {
     dependencies {
         api(project(":here-naksha-lib-base"))
         api(project(":here-naksha-lib-geo"))
-        api(project(":here-naksha-lib-naksha"))
+        api(project(":here-naksha-lib-model"))
         api(project(":here-naksha-lib-core"))
         api(project(":here-naksha-lib-jbon"))
         api(project(":here-naksha-lib-plv8"))
