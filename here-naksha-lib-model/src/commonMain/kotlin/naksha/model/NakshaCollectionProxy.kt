@@ -11,7 +11,7 @@ import kotlin.js.JsName
 @JsExport
 open class NakshaCollectionProxy : NakshaFeatureProxy {
 
-    @JsName("NakshaCollectionProxySecondary")
+    @JsName("of")
     constructor(
         id: String,
         partitions: Int,
