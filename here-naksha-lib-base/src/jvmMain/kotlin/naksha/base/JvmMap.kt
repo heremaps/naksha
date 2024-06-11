@@ -1,9 +1,6 @@
-@file:Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-
 package naksha.base
 
 import java.util.LinkedHashMap
-import java.util.Map
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
