@@ -3,8 +3,8 @@
 package naksha.model
 
 import naksha.model.response.Response
-import com.here.naksha.lib.naksha.request.Request
-import com.here.naksha.lib.naksha.request.ResultRow
+import naksha.model.request.Request
+import naksha.model.request.ResultRow
 import kotlin.js.JsExport
 
 // FIXME TODO move it to proper library

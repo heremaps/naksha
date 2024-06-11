@@ -1,4 +1,4 @@
-package com.here.naksha.lib.naksha.request
+package naksha.model.request
 
 import naksha.model.IReadRowFilter
 import kotlin.js.ExperimentalJsExport
@@ -41,5 +41,5 @@ abstract class Request(
      *
      * Beware: If the filters (noFeature, noGeometry, noGeoRef, noTags or noMeta) are set, these values are not even read from the database and therefore the result-filters will not find these values either!
      */
-    val resultFilter: Array<naksha.model.IReadRowFilter> = emptyArray()
+    val resultFilter: Array<IReadRowFilter> = emptyArray()
 )

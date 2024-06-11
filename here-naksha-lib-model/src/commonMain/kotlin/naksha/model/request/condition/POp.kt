@@ -1,15 +1,15 @@
-package com.here.naksha.lib.naksha.request
+package naksha.model.request
 
-import com.here.naksha.lib.naksha.request.POpType.Companion.CONTAINS
-import com.here.naksha.lib.naksha.request.POpType.Companion.EQ
-import com.here.naksha.lib.naksha.request.POpType.Companion.EXISTS
-import com.here.naksha.lib.naksha.request.POpType.Companion.GT
-import com.here.naksha.lib.naksha.request.POpType.Companion.GTE
-import com.here.naksha.lib.naksha.request.POpType.Companion.LT
-import com.here.naksha.lib.naksha.request.POpType.Companion.LTE
-import com.here.naksha.lib.naksha.request.POpType.Companion.NOT_NULL
-import com.here.naksha.lib.naksha.request.POpType.Companion.NULL
-import com.here.naksha.lib.naksha.request.POpType.Companion.STARTS_WITH
+import naksha.model.request.POpType.Companion.CONTAINS
+import naksha.model.request.POpType.Companion.EQ
+import naksha.model.request.POpType.Companion.EXISTS
+import naksha.model.request.POpType.Companion.GT
+import naksha.model.request.POpType.Companion.GTE
+import naksha.model.request.POpType.Companion.LT
+import naksha.model.request.POpType.Companion.LTE
+import naksha.model.request.POpType.Companion.NOT_NULL
+import naksha.model.request.POpType.Companion.NULL
+import naksha.model.request.POpType.Companion.STARTS_WITH
 import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport

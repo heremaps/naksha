@@ -9,12 +9,12 @@ import kotlin.js.JsExport
 class NakshaTransactionProxy : NakshaFeatureProxy() {
 
     companion object {
-        val FEATURES_MODIFIED = NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class)
-        val FEATURES_BYTES = NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class)
-        val COLLECTIONS = NotNullProperty<Any, NakshaTransactionProxy, TransactionCollectionInfoProxy>(
+        private val FEATURES_MODIFIED = NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class)
+        private val FEATURES_BYTES = NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class)
+        private val COLLECTIONS = NotNullProperty<Any, NakshaTransactionProxy, TransactionCollectionInfoProxy>(
             TransactionCollectionInfoProxy::class)
-        val SEQ_NUMBER = NotNullProperty<Any, NakshaTransactionProxy, Int64>(Int64::class)
-        val SEQ_TS = NotNullProperty<Any, NakshaTransactionProxy, Int64>(Int64::class)
+        private val SEQ_NUMBER = NotNullProperty<Any, NakshaTransactionProxy, Int64>(Int64::class)
+        private val SEQ_TS = NotNullProperty<Any, NakshaTransactionProxy, Int64>(Int64::class)
     }
 
     /**

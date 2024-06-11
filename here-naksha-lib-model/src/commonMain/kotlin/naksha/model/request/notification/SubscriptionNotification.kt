@@ -1,4 +1,4 @@
-package com.here.naksha.lib.naksha.request.notification
+package naksha.model.request.notification
 
 import naksha.base.P_List
 import naksha.model.NakshaTransactionProxy

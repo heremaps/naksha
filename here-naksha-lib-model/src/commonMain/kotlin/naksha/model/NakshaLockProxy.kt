@@ -29,15 +29,14 @@ class NakshaLockProxy : NakshaFeatureProxy() {
         private val MAX_OWNERS = NotNullProperty<Any, NakshaLockProxy, Int>(Int::class, defaultValue = 1)
         private val OWNER = NullableProperty<Any, NakshaLockProxy, String>(String::class)
         private val EXPIRES = NotNullProperty<Any, NakshaLockProxy, Int64>(Int64::class)
-        private val OWNERS = NullableProperty<Any, NakshaLockProxy, NakshaLockProxy.Owners>(
-            NakshaLockProxy.Owners::class)
+        private val OWNERS = NullableProperty<Any, NakshaLockProxy, NakshaLockOwnersProxy>(
+            NakshaLockOwnersProxy::class)
     }
 
     var type: String by TYPE
     var maxOwners: Int by MAX_OWNERS
     var owner: String? by OWNER
     var expires: Int64 by EXPIRES
-    var owners: NakshaLockProxy.Owners? by OWNERS
+    var owners: NakshaLockOwnersProxy? by OWNERS
 
-    class Owners : P_Map<String, Int64>(String::class, Int64::class)
 }

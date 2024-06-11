@@ -1,6 +1,6 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package com.here.naksha.lib.base
+package naksha.geo
 
 import naksha.base.NotNullProperty
 import naksha.base.P_Object

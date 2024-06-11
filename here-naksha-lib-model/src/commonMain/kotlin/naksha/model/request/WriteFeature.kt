@@ -1,4 +1,4 @@
-package com.here.naksha.lib.naksha.request
+package naksha.model.request
 
 import naksha.model.NakshaFeatureProxy
 import kotlin.js.ExperimentalJsExport

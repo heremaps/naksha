@@ -2,15 +2,31 @@
 
 package naksha.model
 
-import naksha.model.Flags
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
+import kotlin.js.JsName
 
 @JsExport
-open class NakshaCollectionProxy : com.here.naksha.lib.base.GeoFeature() {
+open class NakshaCollectionProxy : NakshaFeatureProxy {
+
+    @JsName("NakshaCollectionProxySecondary")
+    constructor(
+        id: String,
+        partitions: Int,
+        geoIndex: String? = null,
+        storageClass: String? = null,
+        autoPurge: Boolean,
+        disableHistory: Boolean
+    ) {
+        this.id = id
+        this.geoIndex = geoIndex
+        this.storageClass = storageClass
+        this.partitions = partitions
+        this.autoPurge = autoPurge
+        this.disableHistory = disableHistory
+    }
 
     /**
      * If partitions is given, then collection is internally partitioned in the storage and optimised for large quantities of features.
@@ -86,7 +102,7 @@ open class NakshaCollectionProxy : com.here.naksha.lib.base.GeoFeature() {
      * If set to null, default indices are created.
      * The available indices are exposed through the virtual table naksha~indices.
      */
-    var indices: naksha.model.IndicesListProxy by INDICES
+    var indices: IndicesListProxy by INDICES
 
     /**
      * The maxAge decides about the maximum age of features in the history in days.
@@ -105,41 +121,26 @@ open class NakshaCollectionProxy : com.here.naksha.lib.base.GeoFeature() {
     var estimatedDeletedFeatures: Int64? by ESTIMATED_DELETED_FEATURES
 
     companion object {
-        private val PARTITIONS = NotNullProperty<Any, com.here.naksha.lib.base.GeoFeature, Int>(Int::class, 1)
-        private val GEO_INDEX = NullableProperty<Any, com.here.naksha.lib.base.GeoFeature, String>(String::class, defaultValue = "gist")
-        private val STORAGE_CLASS = NullableProperty<Any, com.here.naksha.lib.base.GeoFeature, String>(String::class)
-        private val PROTECTION_CLASS = NullableProperty<Any, com.here.naksha.lib.base.GeoFeature, String>(String::class)
-        private val DEFAULT_TYPE = NotNullProperty<Any, com.here.naksha.lib.base.GeoFeature, String>(String::class, defaultValue = "Feature")
+        private val PARTITIONS = NotNullProperty<Any, NakshaCollectionProxy, Int>(Int::class, 1)
+        private val GEO_INDEX =
+            NullableProperty<Any, NakshaCollectionProxy, String>(String::class, defaultValue = "gist")
+        private val STORAGE_CLASS = NullableProperty<Any, NakshaCollectionProxy, String>(String::class)
+        private val PROTECTION_CLASS = NullableProperty<Any, NakshaCollectionProxy, String>(String::class)
+        private val DEFAULT_TYPE =
+            NotNullProperty<Any, NakshaCollectionProxy, String>(String::class, defaultValue = "Feature")
         private val DEFAULT_FLAGS =
-            NotNullProperty<Any, com.here.naksha.lib.base.GeoFeature, Int>(Int::class, defaultValue = naksha.model.Flags.DEFAULT_FLAGS)
-        private val DISABLE_HISTORY = NotNullProperty<Any, com.here.naksha.lib.base.GeoFeature, Boolean>(Boolean::class, false)
-        private val AUTO_PURGE = NotNullProperty<Any, com.here.naksha.lib.base.GeoFeature, Boolean>(Boolean::class, false)
-        private val INDICES = NotNullProperty<Any, com.here.naksha.lib.base.GeoFeature, naksha.model.IndicesListProxy>(
-            naksha.model.IndicesListProxy::class)
-        private val MAX_AGE = NotNullProperty<Any, com.here.naksha.lib.base.GeoFeature, Int64>(Int64::class, defaultValue = Int64(-1))
-        private val QUAD_PARTITION_SIZE = NotNullProperty<Any, com.here.naksha.lib.base.GeoFeature, Int>(Int::class, defaultValue = 10_485_760)
-        private val ESTIMATED_FEATURE_COUNT = NullableProperty<Any, com.here.naksha.lib.base.GeoFeature, Int64>(Int64::class)
-        private val ESTIMATED_DELETED_FEATURES = NullableProperty<Any, com.here.naksha.lib.base.GeoFeature, Int64>(Int64::class)
+            NotNullProperty<Any, NakshaCollectionProxy, Int>(
+                Int::class,
+                defaultValue = Flags.DEFAULT_FLAGS
+            )
+        private val DISABLE_HISTORY = NotNullProperty<Any, NakshaCollectionProxy, Boolean>(Boolean::class, false)
+        private val AUTO_PURGE = NotNullProperty<Any, NakshaCollectionProxy, Boolean>(Boolean::class, false)
+        private val INDICES = NotNullProperty<Any, NakshaCollectionProxy, IndicesListProxy>(IndicesListProxy::class)
+        private val MAX_AGE = NotNullProperty<Any, NakshaCollectionProxy, Int64>(Int64::class, defaultValue = Int64(-1))
+        private val QUAD_PARTITION_SIZE =
+            NotNullProperty<Any, NakshaCollectionProxy, Int>(Int::class, defaultValue = 10_485_760)
+        private val ESTIMATED_FEATURE_COUNT = NullableProperty<Any, NakshaCollectionProxy, Int64>(Int64::class)
+        private val ESTIMATED_DELETED_FEATURES = NullableProperty<Any, NakshaCollectionProxy, Int64>(Int64::class)
 
-
-        @JvmStatic
-        fun buildCollection(
-            id: String,
-            partitions: Int,
-            geoIndex: String? = null,
-            storageClass: String? = null,
-            autoPurge: Boolean,
-            disableHistory: Boolean
-        ): NakshaCollectionProxy {
-            val collection = NakshaCollectionProxy()
-            collection.id = id
-            collection.geoIndex = geoIndex
-            collection.storageClass = storageClass
-            collection.partitions = partitions
-            collection.autoPurge = autoPurge
-            collection.disableHistory = disableHistory
-
-            return collection
-        }
     }
 }

@@ -1,4 +1,4 @@
-package com.here.naksha.lib.naksha.request
+package naksha.model.request
 
 import naksha.model.Geometry
 import kotlin.js.ExperimentalJsExport
@@ -45,7 +45,7 @@ class SOp(
          * @return
          */
         fun intersectsWithTransformation(
-            geometry: naksha.model.Geometry,
+            geometry: Geometry,
             geometryTransformation: GeometryTransformation
         ): SOp {
             return SOp(

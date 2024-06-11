@@ -3,19 +3,19 @@
 package naksha.model
 
 import naksha.base.NullableProperty
+import naksha.geo.GeoFeature
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 
 /**
  * The Naksha Feature extending the default [GeoFeature].
  */
 @JsExport
-open class NakshaFeatureProxy : com.here.naksha.lib.base.GeoFeature() {
+open class NakshaFeatureProxy : GeoFeature() {
 
     companion object {
-        @JvmStatic
-        val REFERENCE_POINT =  NullableProperty<Any, NakshaFeatureProxy, PointProxy>(
-            PointProxy::class)
+        private val REFERENCE_POINT = NullableProperty<Any, NakshaFeatureProxy, PointProxy>(
+            PointProxy::class
+        )
     }
 
     fun getNakshaProperties(): NakshaPropertiesProxy = properties.proxy(NakshaPropertiesProxy::class)

@@ -1,6 +1,6 @@
-package com.here.naksha.lib.naksha.request.notification
+package naksha.model.request.notification
 
-import com.here.naksha.lib.naksha.request.Request
+import naksha.model.request.Request
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

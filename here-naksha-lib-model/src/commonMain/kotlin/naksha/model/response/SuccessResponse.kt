@@ -1,6 +1,6 @@
 package naksha.model.response
 
-import com.here.naksha.lib.naksha.request.ResultRow
+import naksha.model.request.ResultRow
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

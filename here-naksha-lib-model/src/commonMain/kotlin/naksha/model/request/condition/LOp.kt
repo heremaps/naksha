@@ -1,11 +1,11 @@
-package com.here.naksha.lib.naksha.request
+package naksha.model.request
 
 /**
  * Logical operation between elements 1..n
  */
-import com.here.naksha.lib.naksha.request.LOpType.Companion.AND
-import com.here.naksha.lib.naksha.request.LOpType.Companion.NOT
-import com.here.naksha.lib.naksha.request.LOpType.Companion.OR
+import naksha.model.request.LOpType.Companion.AND
+import naksha.model.request.LOpType.Companion.NOT
+import naksha.model.request.LOpType.Companion.OR
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

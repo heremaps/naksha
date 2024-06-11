@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.naksha.request
+package naksha.model.request
 
 import naksha.model.IReadRowFilter
 import kotlin.js.ExperimentalJsExport
@@ -49,6 +49,6 @@ class ReadCollections(
      * @see Request.resultFilter
      * default: empty
      */
-    resultFilter: Array<naksha.model.IReadRowFilter> = emptyArray()
+    resultFilter: Array<IReadRowFilter> = emptyArray()
 ) : ReadRequest(limit, noFeature, noGeometry, noMeta, noTags, resultFilter) {
 }
