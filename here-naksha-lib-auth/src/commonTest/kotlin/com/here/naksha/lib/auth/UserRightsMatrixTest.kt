@@ -1,45 +1,47 @@
 package com.here.naksha.lib.auth
 
+import com.here.naksha.lib.auth.action.ReadFeatures
+import com.here.naksha.lib.auth.attribute.FeatureAttributes
+import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRights
+import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserActionRights
+import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
+import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsService
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class UserRightsMatrixTest {
 
     @Test
     fun shouldMatchSimpleArm() {
-//        // Given: URM
-//        val rawUrm = Base.newObject(
-//            // service:
-//            "naksha", Base.newObject(
-//                // actions:
-//                "readFeatures", Base.newArray(
-//                    // attribute maps:
-//                    Base.newObject(
-//                        "id", "my-unique-feature-id",
-//                        "storageId", "id-with-wild-card-*"
-//                    )
-//                )
-//            )
-//        )
-//        val urm = Base.assign(rawUrm, UserRightsMatrix.klass)
-//
-//        // And: ARM
-//        val rawArm = Base.newObject(
-//            // service:
-//            "naksha", Base.newObject(
-//                // actions:
-//                "readFeatures", Base.newArray(
-//                    // attribute maps:
-//                    Base.newObject(
-//                        "id", "my-unique-feature-id",
-//                        "storageId", "id-with-wild-card-matching-value",
-//                        "collectionId", "this-should-not-break-anything"
-//                    )
-//                )
-//            )
-//        )
-//        val arm = Base.assign(rawArm, AccessRightsMatrix.klass)
-//
-//        // Then:
-//        assertTrue { urm.matches(arm) }
+        // Given:
+        val urm = UserRightsMatrix()
+            .withService(
+                "sample_service", UserRightsService()
+                    .withAction(
+                        "readFeatures", UserActionRights()
+                            .withCheckMap(
+                                UserRights()
+                                    .withPropertyCheck("id", "my-unique-feature-id")
+                                    .withPropertyCheck("storageId", "id-with-wildcard-*")
+                            )
+
+                    )
+            )
+
+        // And:
+        val arm = AccessRightsMatrix()
+            .withService(
+                "sample_service",
+                AccessRightsService().withAction(
+                    ReadFeatures().withAttributes(
+                        FeatureAttributes()
+                            .id("my-unique-feature-id")
+                            .storageId("id-with-wildcard-suffix")
+                    )
+                )
+            )
+
+        // Then:
+        assertTrue(urm.matches(arm))
     }
 }

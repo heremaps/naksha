@@ -48,7 +48,6 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-base"))
-                implementation(project(":here-naksha-lib-core"))
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }

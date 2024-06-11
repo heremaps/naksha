@@ -1,37 +1,54 @@
 package com.here.naksha.lib.auth.check
 
-import com.here.naksha.lib.base.com.here.naksha.lib.auth.RawCheckMap
+import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRights
 import naksha.base.PlatformList
 import naksha.base.PlatformListApi.Companion.array_entries
-import naksha.base.Proxy
 
 object CheckMapCompiler {
 
     private const val WILDCARD = "*"
 
-    fun compile(rawCheckMap: RawCheckMap): CheckMap {
-        val compiledMap = rawCheckMap.mapValues { (_, value) ->
-            checkFor(requireNotNull(value) { "Values shouldn't be null" })
+    /**
+     * Compiler's main function that takes in raw (uncompiled) map of properties ([UserRights] and
+     * their raw checks, and compiles them to specific instances of [Check] for each of property.
+     * This is later used in for matrix matching (see [UserRights.matches])
+     *
+     * IN:
+     * {
+     *    "foo": "prefix-*",
+     *    "bar": "*-suffix",
+     *    "xyz": "strict"
+     * }
+     *
+     * OUT:
+     * {
+     *    "foo": StartsWithCheck("prefix"),
+     *    "bar": EndsWithCheck("suffix"),
+     *    "xyz": EqualsCheck("strict")
+     * }
+     */
+    fun compile(userRights: UserRights): Map<String, Check> {
+        return userRights.asSequence().associate { (key, value) ->
+            key to checkFor(requireNotNull(value) { "Values shouldn't be null" })
         }
-        return requireNotNull(Proxy.box(compiledMap, CheckMap::class))
     }
 
     private fun checkFor(value: Any): Check {
         return when (value) {
             is String -> getStringCheckFor(value)
             is PlatformList -> getListCheckFor(value)
-            else -> UnknownOp().apply { add(value) }
+            else -> UndefinedCheck().apply { add(value) }
         }
     }
 
     private fun getStringCheckFor(value: String): Check {
         return if (value.startsWith(WILDCARD)) {
-            StartsWithCheck()
+            EndsWithCheck().apply { add(value.substringAfter(WILDCARD)) }
         } else if (value.endsWith(WILDCARD)) {
-            EndsWithCheck()
+            StartsWithCheck().apply { add(value.substringBefore(WILDCARD)) }
         } else {
-            EqualsCheck()
-        }.apply { add(value) }
+            EqualsCheck().apply { add(value) }
+        }
     }
 
     private fun getListCheckFor(value: PlatformList): Check {
