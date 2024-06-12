@@ -11,8 +11,9 @@ class PlatformTest {
   "properties": {
     "@ns:com:here:xyz": {
       "someInt": 14,
+      "bigInt": 9007199254740991,
       "hexBigInt": "data:bigint;hex,0x1fffffffffffff",
-      "decimalBigInt": "data:bigint;hex,9007199254740991",
+      "decimalBigInt": "data:bigint;dec,9007199254740991",
       "tags": ["a", "b"]
     }
   }
@@ -25,7 +26,9 @@ class PlatformTest {
         val xyz = properties.getAs("@ns:com:here:xyz", P_JsMap::class)
         assertNotNull(xyz)
         assertEquals(14, xyz.getAs("someInt", Int::class))
-//        assertEquals(Int64(9007199254740991), xyz.getAs("hexBigInt", Int64::class))
+        assertTrue(xyz.get("bigInt") is Int64)
+//        val int64 = xyz.getAs("hexBigInt", Int64::class)
+//        assertEquals(Int64(9007199254740991), int64)
 //        assertEquals(Int64(9007199254740991), xyz.getAs("decimalBigInt", Int64::class))
 //        val tags = properties.getAs("tags", P_StringList::class)
 //        assertNotNull(tags)

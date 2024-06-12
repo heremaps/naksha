@@ -37,6 +37,7 @@ actual class Platform {
             addAbstractTypeMapping(MutableMap::class.java, JvmMap::class.java)
             addAbstractTypeMapping(List::class.java, JvmList::class.java)
             addAbstractTypeMapping(MutableList::class.java, JvmList::class.java)
+            addDeserializer(Number::class.java, CustomNumberDeserializer())
         }
 
         @JvmStatic
@@ -59,9 +60,6 @@ actual class Platform {
                 .visibility(PropertyAccessor.CREATOR, JsonAutoDetect.Visibility.ANY)
                 .configure(SerializationFeature.CLOSE_CLOSEABLE, false)
                 .addModule(kotlinModule())
-                // TODO: Fix the module.
-                //       If this is removed, JSON parsing works, but returns LinkedHashMap.
-                //       When enabled, Jackson fails to parse a complex JSON, see [PlatformTest]
                 .addModule(module)
                 .build()
         }
