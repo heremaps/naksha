@@ -3,7 +3,7 @@
 package com.here.naksha.lib.base.com.here.naksha.lib.auth
 
 import com.here.naksha.lib.auth.AccessRightsMatrix
-import com.here.naksha.lib.auth.AccessRightsService
+import com.here.naksha.lib.auth.ServiceAccessRights
 import com.here.naksha.lib.auth.action.AccessRightsAction
 import com.here.naksha.lib.auth.attribute.ResourceAttributes
 import com.here.naksha.lib.auth.check.CheckMapCompiler
@@ -36,11 +36,11 @@ import kotlin.js.JsExport
  * ```
  */
 @JsExport
-class UserRightsMatrix : P_Map<String, UserRightsService>(String::class, UserRightsService::class) {
+class UserRightsMatrix : P_Map<String, ServiceUserRights>(String::class, ServiceUserRights::class) {
 
     /**
      * URM matches ARM when each service from URM matches corresponding service in ARM
-     * Service match is evaluated in [UserRightsService.matches]
+     * Service match is evaluated in [ServiceUserRights.matches]
      */
     fun matches(accessRightsMatrix: AccessRightsMatrix): Boolean {
         return all { (service, userServiceRights) ->
@@ -53,8 +53,8 @@ class UserRightsMatrix : P_Map<String, UserRightsService>(String::class, UserRig
         }
     }
 
-    fun withService(name: String, service: UserRightsService): UserRightsMatrix = apply {
-        val existing = getAs(name, UserRightsService::class)
+    fun withService(name: String, service: ServiceUserRights): UserRightsMatrix = apply {
+        val existing = getAs(name, ServiceUserRights::class)
         if (existing == null) {
             put(name, service)
         } else {
@@ -62,20 +62,20 @@ class UserRightsMatrix : P_Map<String, UserRightsService>(String::class, UserRig
         }
     }
 
-    fun getService(name: String): UserRightsService =
-        getOrCreate(name, UserRightsService::class)
+    fun getService(name: String): ServiceUserRights =
+        getOrCreate(name, ServiceUserRights::class)
 }
 
 @JsExport
-class UserRightsService : P_Map<String, UserActionRights>(String::class, UserActionRights::class) {
+class ServiceUserRights : P_Map<String, UserAction>(String::class, UserAction::class) {
 
     /**
      * Service defined in URM matches service from ARM when all actions for given service are matching
-     * Action match is evaluated in [UserActionRights.matches]
+     * Action match is evaluated in [UserAction.matches]
      */
-    fun matches(accessRightsService: AccessRightsService): Boolean {
+    fun matches(serviceAccessRights: ServiceAccessRights): Boolean {
         return all { (actionName, userAction) ->
-            val resourceAction = accessRightsService[actionName]
+            val resourceAction = serviceAccessRights[actionName]
             if (userAction == null || resourceAction == null) {
                 false
             } else {
@@ -84,17 +84,17 @@ class UserRightsService : P_Map<String, UserActionRights>(String::class, UserAct
         }
     }
 
-    fun withAction(actionName: String, userRightsAction: UserActionRights) = apply {
+    fun withAction(actionName: String, userRightsAction: UserAction) = apply {
         put(actionName, userRightsAction)
     }
 
-    fun mergeActionsFrom(otherService: UserRightsService): UserRightsService = apply {
+    fun mergeActionsFrom(otherService: ServiceUserRights): ServiceUserRights = apply {
         putAll(otherService)
     }
 }
 
 @JsExport
-class UserActionRights : P_List<UserRights>(UserRights::class) {
+class UserAction : P_List<UserRights>(UserRights::class) {
 
     /**
      * User Action matches resource's Access Action when EVERY attribute on resource side matches
@@ -127,7 +127,7 @@ class UserActionRights : P_List<UserRights>(UserRights::class) {
         }
     }
 
-    fun withCheckMap(check: UserRights): UserActionRights = apply {
+    fun withRights(check: UserRights): UserAction = apply {
         add(check)
     }
 }

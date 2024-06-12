@@ -2,6 +2,8 @@ package com.here.naksha.lib.auth.action
 
 import com.here.naksha.lib.auth.attribute.ResourceAttributes
 import naksha.base.P_List
+import naksha.base.Proxy
+import naksha.base.Proxy.Companion.box
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 
@@ -21,6 +23,12 @@ abstract class AccessRightsAction<T : ResourceAttributes, SELF : AccessRightsAct
      */
     fun withAttributes(vararg attributeMaps: T): SELF {
         addAll(attributeMaps)
+        return this as SELF
+    }
+
+    fun withAttributesFromAction(otherAction: AccessRightsAction<*, *>): SELF {
+        val typedValues = otherAction.map { box(it, elementKlass) }
+        addAll(typedValues)
         return this as SELF
     }
 }

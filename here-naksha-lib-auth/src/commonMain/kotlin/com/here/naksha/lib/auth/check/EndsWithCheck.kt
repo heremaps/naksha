@@ -3,16 +3,21 @@
 package com.here.naksha.lib.auth.check
 
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
+import kotlin.js.JsName
 
 /**
  * Tests if the attribute value is a [String] and ends with at least one of the given arguments.
  */
 @JsExport
-class EndsWithCheck : Check() {
+class EndsWithCheck() : Check() {
+
+    @JsName("withArgs")
+    constructor(vararg args: Any?) : this() {
+        addAll(args)
+    }
+
     override fun matches(value: Any?): Boolean {
-        if(value !is String){
+        if (value !is String) {
             return false
         }
         return filterIsInstance<String>().any { arg -> value.endsWith(arg) }

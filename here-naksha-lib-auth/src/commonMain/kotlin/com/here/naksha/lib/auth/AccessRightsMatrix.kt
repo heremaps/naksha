@@ -13,13 +13,13 @@ import kotlin.js.JsExport
  * create an own new one.
  */
 @JsExport
-open class AccessRightsMatrix :
-    P_Map<String, AccessRightsService>(String::class, AccessRightsService::class) {
+class AccessRightsMatrix :
+    P_Map<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
 
-    fun naksha(): AccessRightsService = getOrCreate("naksha", AccessRightsService::class)
+    fun naksha(): ServiceAccessRights = getService(NAKSHA_SERVICE_NAME)
 
-    fun withService(name: String, service: AccessRightsService): AccessRightsMatrix = apply {
-        val existing = getAs(name, AccessRightsService::class)
+    fun withService(name: String, service: ServiceAccessRights): AccessRightsMatrix = apply {
+        val existing = getAs(name, ServiceAccessRights::class)
         if (existing == null) {
             put(name, service)
         } else {
@@ -27,20 +27,32 @@ open class AccessRightsMatrix :
         }
     }
 
-    fun getService(name: String): AccessRightsService =
-        getOrCreate(name, AccessRightsService::class)
+    fun getService(name: String): ServiceAccessRights =
+        getOrCreate(name, ServiceAccessRights::class)
+
+    companion object {
+        const val NAKSHA_SERVICE_NAME: String = "naksha"
+    }
 }
 
 @JsExport
-open class AccessRightsService :
+class ServiceAccessRights :
     P_Map<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
 
-    fun <T : AccessRightsAction<*, T>> withAction(action: T): AccessRightsService = apply {
+    fun <T : AccessRightsAction<*, T>> withAction(action: T): ServiceAccessRights = apply {
         put(action.name, action)
     }
 
-    fun mergeActionsFrom(otherService: AccessRightsService): AccessRightsService = apply {
-        putAll(otherService)
+    fun mergeActionsFrom(otherService: ServiceAccessRights): ServiceAccessRights = apply {
+        otherService.filterValues { it != null }
+            .forEach { (actionName, notNullAction) ->
+                val existing = getAs(actionName, AccessRightsAction::class)
+                if (existing == null) {
+                    put(actionName, notNullAction)
+                } else {
+                    existing.withAttributesFromAction(notNullAction!!)
+                }
+            }
     }
 
     fun getActionAttributeMaps(actionName: String): P_List<ResourceAttributes>? =

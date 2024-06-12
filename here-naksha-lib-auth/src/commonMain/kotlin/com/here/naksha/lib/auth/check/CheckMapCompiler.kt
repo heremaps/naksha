@@ -43,11 +43,11 @@ object CheckMapCompiler {
 
     private fun getStringCheckFor(value: String): Check {
         return if (value.startsWith(WILDCARD)) {
-            EndsWithCheck().apply { add(value.substringAfter(WILDCARD)) }
+            EndsWithCheck(value.substringAfter(WILDCARD))
         } else if (value.endsWith(WILDCARD)) {
-            StartsWithCheck().apply { add(value.substringBefore(WILDCARD)) }
+            StartsWithCheck(value.substringBefore(WILDCARD))
         } else {
-            EqualsCheck().apply { add(value) }
+            EqualsCheck(value)
         }
     }
 
