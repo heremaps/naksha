@@ -6,13 +6,13 @@ import kotlin.reflect.full.primaryConstructor
 /**
  * The JVM implementation of a [PlatformList].
  */
-open class JvmList(vararg entries: Any?) : JvmObject(), MutableList<Any?>, PlatformList {
+open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
     /**
      * The payload of the array.
      */
-    internal var list: ArrayList<Any?>?
+    internal var list: ArrayList<Any?>? = null
 
-    init {
+    constructor(vararg entries: Any?) : this() {
         val list: ArrayList<Any?>?
         if (entries.isNotEmpty()) {
             list = ArrayList(entries.size + 4)

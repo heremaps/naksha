@@ -25,7 +25,7 @@ actual class PlatformMapApi {
             if (map is JvmMap) map.clear()
         }
 
-        actual fun map_size(map: PlatformMap?): Int = if (map is JvmMap) map.size else 0
+        actual fun map_size(map: PlatformMap?): Int = if (map is JvmMap) map?.size ?: 0 else 0
 
         actual fun map_contains_key(map: PlatformMap?, key: Any?): Boolean =
             if (map is JvmMap && key != null) map.containsKey(key) else false

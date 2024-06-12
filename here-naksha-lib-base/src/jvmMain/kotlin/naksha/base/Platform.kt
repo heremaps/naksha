@@ -33,9 +33,10 @@ actual class Platform {
     actual companion object {
         @JvmStatic
         private val module = SimpleModule().apply {
-            //@Suppress("UNCHECKED_CAST")
             addAbstractTypeMapping(Map::class.java, JvmMap::class.java)
+            addAbstractTypeMapping(MutableMap::class.java, JvmMap::class.java)
             addAbstractTypeMapping(List::class.java, JvmList::class.java)
+            addAbstractTypeMapping(MutableList::class.java, JvmList::class.java)
         }
 
         @JvmStatic
@@ -670,6 +671,7 @@ actual class Platform {
          * @param size The amount of bytes to compress.
          * @return The deflated (compressed) bytes.
          */
+        @JvmStatic
         actual fun lz4Deflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
             val end = endOf(raw, offset, size)
             val compressor = lz4Factory.fastCompressor()
@@ -687,6 +689,7 @@ actual class Platform {
          * @param size The amount of bytes to decompress.
          * @return The inflated (decompress) bytes.
          */
+        @JvmStatic
         actual fun lz4Inflate(
             compressed: ByteArray,
             bufferSize: Int,
@@ -710,6 +713,7 @@ actual class Platform {
          * @param size The amount of bytes to compress.
          * @return The deflated (compressed) bytes.
          */
+        @JvmStatic
         actual fun gzipDeflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
             TODO("Not yet implemented")
         }
@@ -722,6 +726,7 @@ actual class Platform {
          * @param size The amount of bytes to decompress.
          * @return The inflated (decompress) bytes.
          */
+        @JvmStatic
         actual fun gzipInflate(
             compressed: ByteArray,
             bufferSize: Int,

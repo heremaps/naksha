@@ -30,7 +30,7 @@ abstract class Proxy : PlatformObject {
             if (klass.isInstance(raw)) return raw as T
             val data = unbox(raw)
             if (isNil(data)) return alternative
-            if (klass.isInstance(raw)) return raw as T
+            if (klass.isInstance(data)) return data as T
             // The data value is a complex object
             if (data is PlatformObject) {
                 if (Platform.isProxyKlass(klass)) {
@@ -39,7 +39,7 @@ abstract class Proxy : PlatformObject {
                     if (klass.isInstance(existing)) return existing as T
                     // Create a new instance.
                     val instance = Platform.newInstanceOf(klass)
-                    Symbols.set(data, symbol, instance)
+                    (instance as Proxy).bind(data, symbol)
                     return instance
                 }
                 // A scalar type was requested, but a complex type found.

@@ -43,9 +43,20 @@ kotlin {
         }
         jvmMain {
             dependencies {
+                api(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-model"))
+                api(project(":here-naksha-lib-core"))
+
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-jbon"))
                 implementation(project(":here-naksha-lib-base"))
+
+                implementation("org.apache.commons:commons-lang3:3.12.0")
+                implementation("org.postgresql:postgresql:42.5.4")
+                implementation("commons-dbutils:commons-dbutils:1.7")
+                implementation("org.locationtech.jts:jts-core:1.19.0")
+                implementation("org.locationtech.jts.io:jts-io-common:1.19.0")
+
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
                 implementation("org.postgresql:postgresql:42.5.4")
             }
@@ -61,6 +72,8 @@ kotlin {
                 implementation("org.testcontainers:postgresql:1.19.4")
                 implementation("org.postgresql:postgresql:42.5.4")
                 implementation(project(":here-naksha-lib-jbon"))
+                implementation("org.mockito:mockito-core:5.8.0")
+                implementation("org.locationtech.spatial4j:spatial4j:0.8")
             }
         }
         jsMain {

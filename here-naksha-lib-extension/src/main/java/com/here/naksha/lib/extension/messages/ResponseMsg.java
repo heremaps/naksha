@@ -34,7 +34,7 @@ import org.jetbrains.annotations.NotNull;
 @JsonTypeName(value = "naksha.ext.rpc.v1.returnResponse")
 public class ResponseMsg extends ExtensionMessage {
 
-  public static final String RESPONSE = "response";
+  public static final String RESPONSE = "naksha/model/response";
 
   @AvailableSince(NakshaVersion.v2_0_3)
   @JsonCreator

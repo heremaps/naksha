@@ -96,7 +96,7 @@ open class JbBuilder() {
          */
         @JvmStatic
         @JsStatic
-        internal fun sizeOfStructHeader(payloadSize: Int, variant: Int? = null): Int {
+        fun sizeOfStructHeader(payloadSize: Int, variant: Int? = null): Int {
             var size = 1 // lead-in byte
             size += when (payloadSize) {
                 0 -> 0
