@@ -2,7 +2,7 @@
 
 package com.here.naksha.lib.auth.check
 
-import com.here.naksha.lib.base.P_AnyList
+import naksha.base.P_AnyList
 import kotlin.js.JsExport
 
 /**

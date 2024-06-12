@@ -30,14 +30,14 @@ class AccessServiceMatrixTest {
         val nakshaService = arm.naksha()
         assertSame(nakshaService, arm.naksha())
         val readFeatures = nakshaService.readFeatures()
-        readFeatures.add(FeatureAttributes().id("id_123").storageId("storage_1"))
+        readFeatures.withAttributes(FeatureAttributes().id("id_123").storageId("storage_1"))
         urm.matches(arm)
     }
 
     @Test
     fun shouldMergeActionsProperly() {
         // Given:
-        val leftService = AccessServiceMatrix()
+        val leftService = AccessRightsService()
             .withAction(
                 ReadFeatures()
                     .withAttributes(
@@ -47,7 +47,7 @@ class AccessServiceMatrixTest {
             )
 
         // And:
-        val rightService = AccessServiceMatrix()
+        val rightService = AccessRightsService()
             .withAction(
                 ReadFeatures()
                     .withAttributes(

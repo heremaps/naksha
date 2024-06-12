@@ -8,7 +8,9 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class ReadFeatures: AccessRightsAction<FeatureAttributes, ReadFeatures>(FeatureAttributes::class){
+class ReadFeatures : AccessRightsAction<FeatureAttributes, ReadFeatures>(FeatureAttributes::class) {
+
+    override val name: String = NAME
 
     companion object {
         @JvmStatic
@@ -18,7 +20,10 @@ class ReadFeatures: AccessRightsAction<FeatureAttributes, ReadFeatures>(FeatureA
 }
 
 @JsExport
-class CreateFeatures: AccessRightsAction<FeatureAttributes, CreateFeatures>(FeatureAttributes::class){
+class CreateFeatures :
+    AccessRightsAction<FeatureAttributes, CreateFeatures>(FeatureAttributes::class) {
+
+    override val name: String = NAME
 
     companion object {
         @JvmStatic
@@ -28,7 +33,10 @@ class CreateFeatures: AccessRightsAction<FeatureAttributes, CreateFeatures>(Feat
 }
 
 @JsExport
-class UpdateFeatures: AccessRightsAction<FeatureAttributes, UpdateFeatures>(FeatureAttributes::class){
+class UpdateFeatures :
+    AccessRightsAction<FeatureAttributes, UpdateFeatures>(FeatureAttributes::class) {
+
+    override val name: String = NAME
 
     companion object {
         @JvmStatic
@@ -38,7 +46,10 @@ class UpdateFeatures: AccessRightsAction<FeatureAttributes, UpdateFeatures>(Feat
 }
 
 @JsExport
-class DeleteFeatures: AccessRightsAction<FeatureAttributes, DeleteFeatures>(FeatureAttributes::class){
+class DeleteFeatures :
+    AccessRightsAction<FeatureAttributes, DeleteFeatures>(FeatureAttributes::class) {
+
+    override val name: String = NAME
 
     companion object {
         @JvmStatic

@@ -10,6 +10,8 @@ import kotlin.jvm.JvmStatic
 @JsExport
 class ReadCollections : AccessRightsAction<CollectionAttributes, ReadCollections>(CollectionAttributes::class) {
 
+    override val name: String = NAME
+
     companion object {
         @JvmStatic
         @JsStatic
@@ -19,6 +21,8 @@ class ReadCollections : AccessRightsAction<CollectionAttributes, ReadCollections
 
 @JsExport
 class CreateCollections : AccessRightsAction<CollectionAttributes, CreateCollections>(CollectionAttributes::class) {
+
+    override val name: String = NAME
 
     companion object {
         @JvmStatic
@@ -30,6 +34,8 @@ class CreateCollections : AccessRightsAction<CollectionAttributes, CreateCollect
 @JsExport
 class UpdateCollections : AccessRightsAction<CollectionAttributes, UpdateCollections>(CollectionAttributes::class) {
 
+    override val name: String = NAME
+
     companion object {
         @JvmStatic
         @JsStatic
@@ -39,6 +45,8 @@ class UpdateCollections : AccessRightsAction<CollectionAttributes, UpdateCollect
 
 @JsExport
 class DeleteCollections : AccessRightsAction<CollectionAttributes, DeleteCollections>(CollectionAttributes::class) {
+
+    override val name: String = NAME
 
     companion object {
         @JvmStatic

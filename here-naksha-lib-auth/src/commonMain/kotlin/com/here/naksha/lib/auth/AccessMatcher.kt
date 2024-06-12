@@ -1,4 +1,3 @@
-package com.here.naksha.lib.auth
 
 abstract class AccessMatcher(open val userAttribute: Any) {
 

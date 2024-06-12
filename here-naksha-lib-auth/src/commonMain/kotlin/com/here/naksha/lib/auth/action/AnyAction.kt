@@ -9,4 +9,11 @@ import kotlin.js.JsExport
  * Default type to represent any arbitrary action.
  */
 @JsExport
-class AnyAction : AccessRightsAction<ResourceAttributes, AnyAction>(ResourceAttributes::class)
+class AnyAction : AccessRightsAction<ResourceAttributes, AnyAction>(ResourceAttributes::class){
+
+    override val name: String = NAME
+
+    companion object {
+        const val NAME = "anyAction"
+    }
+}

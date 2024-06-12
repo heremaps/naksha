@@ -10,6 +10,8 @@ import kotlin.jvm.JvmStatic
 @JsExport
 class UseEventHandlers: AccessRightsAction<EventHandlerAttributes, UseEventHandlers>(EventHandlerAttributes::class) {
 
+    override val name: String = NAME
+
     companion object {
         @JvmStatic
         @JsStatic
@@ -19,6 +21,8 @@ class UseEventHandlers: AccessRightsAction<EventHandlerAttributes, UseEventHandl
 
 @JsExport
 class ManageEventHandlers: AccessRightsAction<EventHandlerAttributes, ManageEventHandlers>(EventHandlerAttributes::class) {
+
+    override val name: String = NAME
 
     companion object {
         @JvmStatic

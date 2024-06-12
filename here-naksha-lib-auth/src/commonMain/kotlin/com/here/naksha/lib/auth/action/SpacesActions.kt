@@ -10,6 +10,8 @@ import kotlin.jvm.JvmStatic
 @JsExport
 class UseSpaces: AccessRightsAction<SpaceAttributes, UseSpaces>(SpaceAttributes::class) {
 
+    override val name: String = NAME
+
     companion object {
         @JvmStatic
         @JsStatic
@@ -19,6 +21,8 @@ class UseSpaces: AccessRightsAction<SpaceAttributes, UseSpaces>(SpaceAttributes:
 
 @JsExport
 class ManageSpaces: AccessRightsAction<SpaceAttributes, ManageSpaces>(SpaceAttributes::class){
+
+    override val name: String = NAME
 
     companion object {
         @JvmStatic

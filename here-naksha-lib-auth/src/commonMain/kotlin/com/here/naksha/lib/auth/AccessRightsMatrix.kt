@@ -2,9 +2,11 @@
 
 package com.here.naksha.lib.auth
 
-import com.here.naksha.lib.auth.attribute.AccessRightsService
+import com.here.naksha.lib.auth.action.AccessRightsAction
+import com.here.naksha.lib.auth.attribute.ResourceAttributes
 import com.here.naksha.lib.auth.service.NakshaService
-import com.here.naksha.lib.base.P_Map
+import naksha.base.P_List
+import naksha.base.P_Map
 import kotlin.js.JsExport
 
 /**
@@ -12,69 +14,44 @@ import kotlin.js.JsExport
  * create an own new one.
  */
 @JsExport
-open class AccessRightsMatrix : P_Map<String, AccessRightsService>(String::class, AccessRightsService::class) {
+open class AccessRightsMatrix :
+    P_Map<String, AccessRightsService>(String::class, AccessRightsService::class) {
 
     fun naksha(): NakshaService = getOrCreate(NakshaService.NAME, NakshaService::class)
 
-    fun add(name: String, service: AccessRightsService): AccessRightsMatrix = apply {
+    fun withService(name: String, service: AccessRightsService): AccessRightsMatrix = apply {
         val existing = getOrNull(name, service::class)
         if (existing == null) {
             put(name, service)
         } else {
-            // TODO: Merge existing with given service
-            // existingService.mergeActionsFrom(serviceMatrix)
+            existing.mergeActionsFrom(service)
         }
     }
 
-
-//    fun withAction(action: AccessAction<*>): AccessServiceMatrix = apply {
-//        put(action.name, action)
-//    }
-//
-//    fun getActionAttributeMaps(actionName: String): AccessAttributeMapList? =
-//        getOrNull(actionName, AccessAttributeMapList::class)
-//
-//    fun mergeActionsFrom(otherService: AccessServiceMatrix): AccessServiceMatrix {
-//        otherService
-//            .forEach { (action, attributeMaps) ->
-//                addActions(action, *attributeMaps as Array<out AccessAttributeMap>)
-//            }
-//        return this
-//    }
-
-//    private fun getAttributeMapsByAction(): Map<String, List<AccessAttributeMap>> {
-//        return data().iterator()
-//            .asSequence()
-//            .filter { (_, rawAttributes) -> rawAttributes != null }
-//            .associate { (actionName, rawAttributes) ->
-//                actionName to convertAccessAttributesList(rawAttributes!!)
-//            }
-//    }
-
-//    private fun convertAccessAttributesList(rawList: Any): List<AccessAttributeMap> =
-//        Base.assign(rawList, BaseList.klass).toObjectList(AccessAttributeMap.klass)
+    fun getService(name: String): AccessRightsService =
+        getOrCreate(name, AccessRightsService::class)
 
 //    fun withActionAttributeMaps(
 //        actionName: String,
-//        vararg attributeMaps: AccessAttributeMap
+//        vararg attributes: ResourceAttributes
 //    ): AccessServiceMatrix {
 //        val currentAttributeMaps = getOrNull(actionName, P_List::class)
 //        val newAttributeMaps =
 //            if (currentAttributeMaps == null || currentAttributeMaps.isEmpty()) {
-//                BaseArray(*attributeMaps)
+//                BaseArray(*attributes)
 //            } else {
-//                Array(currentAttributeMaps.size() + attributeMaps.size) { ind ->
+//                Array(currentAttributeMaps.size() + attributes.size) { ind ->
 //                    if (ind < currentAttributeMaps.size()) {
 //                        currentAttributeMaps[ind]
 //                    } else {
-//                        attributeMaps[ind - currentAttributeMaps.size()]
+//                        attributes[ind - currentAttributeMaps.size()]
 //                    }
 //                }.let { BaseArray(*it) }
 //            }
 //        set(actionName, newAttributeMaps)
 //        return this
 //    }
-
+//
 //    fun addActions(vararg actions: AccessAction<*>): AccessServiceMatrix {
 //        for (attributeMap in actions) {
 //
@@ -97,4 +74,20 @@ open class AccessRightsMatrix : P_Map<String, AccessRightsService>(String::class
 ////        }
 //        return this
 //    }
+}
+
+@JsExport
+open class AccessRightsService :
+    P_Map<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
+
+    fun <T : AccessRightsAction<*, T>> withAction(action: T): AccessRightsService = apply {
+        put(action.name, action)
+    }
+
+    fun mergeActionsFrom(otherService: AccessRightsService): AccessRightsService = apply {
+        putAll(otherService)
+    }
+
+    fun getActionAttributeMaps(actionName: String): P_List<ResourceAttributes>? =
+        getOrNull(actionName, P_List::class) as? P_List<ResourceAttributes>
 }
