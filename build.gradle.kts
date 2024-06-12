@@ -333,36 +333,6 @@ project(":here-naksha-lib-heapcache") {
     setOverallCoverage(0.5) // only increasing allowed!
 }
 
-project(":here-naksha-lib-psql") {
-    description = "Naksha PostgresQL Storage Library"
-    java {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-        withJavadocJar()
-        withSourcesJar()
-    }
-    dependencies {
-        api(project(":here-naksha-lib-base"))
-        api(project(":here-naksha-lib-geo"))
-        api(project(":here-naksha-lib-model"))
-        api(project(":here-naksha-lib-core"))
-        api(project(":here-naksha-lib-jbon"))
-        api(project(":here-naksha-lib-plv8"))
-
-        implementation(commons_lang3)
-        implementation(postgres)
-        //implementation(zaxxer_hikari)
-        implementation(commons_dbutils)
-        implementation(jts_core)
-        implementation(jts_io_common)
-
-        testImplementation(mockito)
-        testImplementation(spatial4j)
-        testImplementation(test_containers_postgres)
-    }
-    setOverallCoverage(0.0) // only increasing allowed!
-}
-
 project(":here-naksha-storage-http") {
     description = "Naksha Http Storage Module"
     java {
@@ -398,7 +368,7 @@ project(":here-naksha-lib-view") {
 
         implementation(commons_lang3)
         testImplementation(mockito)
-        testImplementation(project(":here-naksha-lib-psql"))
+        testImplementation(project(":here-naksha-lib-plv8"))
         testImplementation(jts_core)
     }
     setOverallCoverage(0.0) // only increasing allowed!
@@ -418,7 +388,7 @@ project(":here-naksha-handler-activitylog") {
     description = "Naksha Activity Log Handler"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
-        implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-lib-plv8"))
         implementation(project(":here-naksha-lib-handlers"))
 
         implementation(flipkart_zjsonpatch)
@@ -461,7 +431,7 @@ project(":here-naksha-lib-handlers") {
     description = "Naksha Handlers library"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
-        implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-lib-plv8"))
         implementation(project(":here-naksha-lib-view"))
         implementation(project(":here-naksha-storage-http"))
 
@@ -494,7 +464,7 @@ project(":here-naksha-lib-hub") {
     description = "NakshaHub library"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
-        implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-lib-plv8"))
         implementation(project(":here-naksha-lib-handlers"))
         implementation(project(":here-naksha-lib-ext-manager"))
 
@@ -517,7 +487,7 @@ project(":here-naksha-app-service") {
     description = "Naksha Service"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
-        implementation(project(":here-naksha-lib-psql"))
+        implementation(project(":here-naksha-lib-plv8"))
         implementation(project(":here-naksha-storage-http"))
         //implementation(project(":here-naksha-lib-extension"))
         implementation(project(":here-naksha-lib-hub"))
