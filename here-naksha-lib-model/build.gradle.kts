@@ -88,9 +88,9 @@ tasks {
         dependsOn(webpackTask)
     }
     getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn(webpackTask)
+        dependsOn(webpackTask, browserDistribution)
     }
     getByName<ProcessResources>("jvmTestProcessResources") {
-        dependsOn(webpackTask, browserDistribution)
+        dependsOn(webpackTask)
     }
 }
