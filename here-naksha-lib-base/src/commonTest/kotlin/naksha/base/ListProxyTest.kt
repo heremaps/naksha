@@ -21,8 +21,13 @@ class ListProxyTest {
         list.add(null)
         // then
         assertEquals(null, list[1])
-
         assertEquals(2, list.size)
+
+        var count = 0
+        for (el in list) {
+            count++
+        }
+        assertEquals(count, list.size)
     }
 
     @Test

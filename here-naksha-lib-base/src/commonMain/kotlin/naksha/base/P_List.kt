@@ -167,10 +167,11 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
     private fun toMutableList(platformList: PlatformList): MutableList<E?> {
         val iterator = array_entries(platformList)
         val mutableList: MutableList<E?> = mutableListOf()
-        do {
-            val next = iterator.next()
+        var next = iterator.next()
+        while (!next.done) {
             mutableList.add(box(next.value, elementKlass))
-        } while (!next.done)
+            next = iterator.next()
+        }
         return mutableList
     }
 }
