@@ -1,13 +1,12 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package naksha.model
+package naksha.plv8
 
+import naksha.model.NakshaContext
 import naksha.model.response.Response
 import naksha.model.request.Request
 import naksha.model.request.ResultRow
 import kotlin.js.JsExport
-
-// FIXME TODO move it to proper library
 
 @JsExport
 abstract class IReadSession(

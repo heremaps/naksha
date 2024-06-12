@@ -1,10 +1,10 @@
-package naksha.model
+package naksha.plv8
 
+import naksha.model.NakshaContext
+import naksha.model.NakshaFeatureProxy
 import naksha.model.response.Response
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-
-// FIXME TODO move it to proper library
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport

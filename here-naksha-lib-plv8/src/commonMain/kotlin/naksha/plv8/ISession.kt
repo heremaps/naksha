@@ -1,9 +1,8 @@
-package naksha.model
+package naksha.plv8
 
+import naksha.model.NakshaContext
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-
-// FIXME TODO move it to proper library
 
 /**
  * When a session is opened, it is bound to the context in which the session shall operate.

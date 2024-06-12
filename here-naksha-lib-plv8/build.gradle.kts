@@ -34,6 +34,7 @@ kotlin {
                 implementation(kotlin("stdlib-common"))
                 implementation(project(":here-naksha-lib-jbon"))
                 implementation(project(":here-naksha-lib-base"))
+                implementation(project(":here-naksha-lib-model"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
