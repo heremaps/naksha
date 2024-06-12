@@ -444,7 +444,7 @@ final class PostgresStorage extends ClosableRootResource {
 
   private void initStoragePlpgsql(@NotNull IoHelp ioHelp, Statement stmt, PsqlConnection conn) throws SQLException {
     String SQL;
-    SQL = ioHelp.readResource(ioHelp.findResource("/naksha_plpgsql.sql", PostgresStorage.class));
+    SQL = ioHelp.readResource(ioHelp.findResource("/old/naksha_plpgsql.sql", PostgresStorage.class));
     if (logLevel.toLong() >= EPsqlLogLevel.DEBUG.toLong()) {
       SQL = SQL.replaceAll("--RAISE ", "RAISE ");
       SQL = SQL.replaceAll("--DEBUG ", " ");
