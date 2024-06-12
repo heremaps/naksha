@@ -1,10 +1,7 @@
-package naksha.plv8
+package naksha.model
 
 import naksha.model.response.Row
 import naksha.base.Int64
-import naksha.model.ILock
-import naksha.model.NakshaContext
-import naksha.model.NakshaFeatureProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
