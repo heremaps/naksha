@@ -31,10 +31,10 @@ class PlatformTest {
         val int64 = xyz.getAs("hexBigInt", Int64::class)
         assertEquals(Int64(9007199254740991), int64)
         assertEquals(Int64(9007199254740991), xyz.getAs("decimalBigInt", Int64::class))
-        val tags = properties.getAs("tags", P_StringList::class)
-//        assertNotNull(tags)
-//        assertEquals(2, tags.size)
-//        assertEquals("a", tags[0])
-//        assertEquals("b", tags[1])
+        val tags = xyz.getAs("tags", P_StringList::class)
+        assertNotNull(tags)
+        assertEquals(2, tags.size)
+        assertEquals("a", tags[0])
+        assertEquals("b", tags[1])
     }
 }
