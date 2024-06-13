@@ -1,11 +1,13 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
-import com.here.naksha.lib.jbon.BigInt64
 import com.here.naksha.lib.jbon.IDictManager
-import com.here.naksha.lib.jbon.Jb
 import com.here.naksha.lib.jbon.JbMapFeature
+import naksha.base.Int64
+import naksha.base.Platform
+import naksha.model.NakshaCollectionProxy
+import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -26,9 +28,9 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     private var _geoIndex: String? = null
     private var _disableHistory = false
     private var _autoPurge = false
-    private var _maxAge: BigInt64? = null
-    private var _estimatedFeatureCount: BigInt64? = null
-    private var _estimatedDeletedCount: BigInt64? = null
+    private var _maxAge: Int64? = null
+    private var _estimatedFeatureCount: Int64? = null
+    private var _estimatedDeletedCount: Int64? = null
     private var _storageClass: String? = null
 
     override fun clear(): NakshaCollection {
@@ -63,10 +65,10 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     }
 
     fun partitionCount(): Int = _partitionCount
-    fun geoIndex(): String = _geoIndex ?: Static.GEO_INDEX_DEFAULT
+    fun geoIndex(): String = _geoIndex ?: NakshaCollectionProxy.DEFAULT_GEO_INDEX
     fun disableHistory(): Boolean = _disableHistory
     fun autoPurge(): Boolean = _autoPurge
-    fun maxAge(): BigInt64 = _maxAge ?: Jb.int64.MAX_VALUE()
-    fun estimatedFeatureCount(): BigInt64 = _estimatedFeatureCount ?: Jb.int64.MINUS_ONE()
+    fun maxAge(): Int64 = _maxAge ?: Platform.INT64_MAX_VALUE
+    fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollectionProxy.BEFORE_ESTIMATION
     fun storageClass(): String = _storageClass ?: Static.SC_DEFAULT
 }

@@ -9,7 +9,7 @@ import java.sql.Types
 /**
  * The Java implementation of a plan.
  */
-class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : IPlv8Plan {
+class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : naksha.plv8.IPlv8Plan {
     val stmt: PreparedStatement = query.prepare(conn)
     var closed: Boolean = false
 

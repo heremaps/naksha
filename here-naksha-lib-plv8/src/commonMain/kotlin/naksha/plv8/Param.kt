@@ -1,4 +1,4 @@
-package com.here.naksha.lib.plv8
+package naksha.plv8
 import kotlin.js.JsExport
 
 @JsExport

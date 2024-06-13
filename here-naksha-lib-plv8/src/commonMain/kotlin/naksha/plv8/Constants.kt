@@ -1,6 +1,6 @@
 @file:Suppress("NOTHING_TO_INLINE")
 
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
 import com.here.naksha.lib.jbon.*
 
@@ -35,6 +35,7 @@ internal const val COL_GEOMETRY = "geo"
 internal const val COL_GEO_REF = "geo_ref"
 internal const val COL_FEATURE = "feature"
 internal const val COL_TYPE = "type"
+internal const val COL_ORIGIN = "origin"
 internal const val COL_ALL = "$COL_TXN_NEXT,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE"
 internal const val COL_RETURN = "$COL_TXN_NEXT,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEO_REF,$COL_GEOMETRY,$COL_FEATURE,$COL_TYPE"
 internal val COL_ALL_TYPES = arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT64,SQL_INT32, SQL_INT32, SQL_INT16, SQL_INT16, SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_INT32, SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_STRING)
@@ -54,6 +55,5 @@ internal const val RET_GEOMETRY = "geo"
 internal const val RET_ERR_NO = "err_no"
 internal const val RET_ERR_MSG = "err_msg"
 
-const val PARTITION_COUNT_NONE = 1
 
 var TEMPORARY_TABLESPACE = "temp"

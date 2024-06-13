@@ -2,8 +2,11 @@
 
 package com.here.naksha.lib.plv8;
 
-import com.here.naksha.lib.jbon.asMap
-import com.here.naksha.lib.jbon.get
+import naksha.base.P_JsMap
+import naksha.base.PlatformMap
+import naksha.plv8.IPlv8Sql
+import naksha.plv8.Param
+import naksha.plv8.PgDbInfo
 
 /**
  * Thin wrapper around the native plv8 engine methods. This wrapper allows to simulate this in the JVM.
@@ -14,10 +17,6 @@ class JsPlv8Sql : IPlv8Sql {
     private val dbInfo = PgDbInfo(this)
 
     override fun info(): PgDbInfo = dbInfo
-
-    override fun newTable(): ITable {
-        return JsPlv8Table()
-    }
 
     override fun quoteLiteral(vararg parts: String): String {
         return js("plv8.quote_literal(parts.join(\"\"))")
@@ -31,19 +30,21 @@ class JsPlv8Sql : IPlv8Sql {
         return js("typeof any === \"number\" && any || null")
     }
 
-    override fun rows(any: Any): Array<Any>? {
-        return js("Array.isArray(any) && any || null")
+    override fun rows(any: Any): Array<P_JsMap>? {
+        return (js("Array.isArray(any) && any || null") as Array<Any>)
+            .map { (it as PlatformMap).proxy(P_JsMap::class) }
+            .toTypedArray()
     }
 
     override fun execute(sql: String, args: Array<Any?>?): Any {
         return js("args ? plv8.execute(sql, args) : plv8.execute(sql)")
     }
 
-    override fun prepare(sql: String, typeNames: Array<String>?): IPlv8Plan {
+    override fun prepare(sql: String, typeNames: Array<String>?): naksha.plv8.IPlv8Plan {
         return js("typeNames ? plv8.prepare(sql, typeNames) : plv8.execute(typeNames)")
     }
 
-    override fun executeBatch(plan: IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray {
+    override fun executeBatch(plan: naksha.plv8.IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray {
         for (singleQueryParams in bulkParams) {
             val executionParams = singleQueryParams.map { it.value }.toTypedArray()
             js("plan.execute(executionParams)")
@@ -52,10 +53,10 @@ class JsPlv8Sql : IPlv8Sql {
     }
 
     override fun gzipCompress(raw: ByteArray): ByteArray {
-        return asMap(rows(execute("SELECT gzip($1) as compressed", arrayOf(raw)))!![0])["compressed"]!!
+        return rows(execute("SELECT gzip($1) as compressed", arrayOf(raw)))!![0]["compressed"] as ByteArray
     }
 
     override fun gzipDecompress(raw: ByteArray): ByteArray {
-        return asMap(rows(execute("SELECT gunzip($1) as uncompressed", arrayOf(raw)))!![0])["uncompressed"]!!
+        return rows(execute("SELECT gunzip($1) as uncompressed", arrayOf(raw)))!![0]["uncompressed"] as ByteArray
     }
 }

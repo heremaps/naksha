@@ -1,7 +1,5 @@
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
-import com.here.naksha.lib.jbon.asMap
-import com.here.naksha.lib.jbon.getAny
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -26,13 +24,13 @@ class PgDbInfo(val sql: IPlv8Sql) {
     val gzipSupported: Boolean
 
     init {
-        val row = asMap(sql.rows(sql.execute("""
+        val row = (sql.rows(sql.execute("""
             SELECT 
                 current_setting('block_size')::int4 as bs, 
                 (select oid FROM pg_tablespace WHERE spcname = '$TEMPORARY_TABLESPACE') as oid,
                 (select oid FROM pg_extension WHERE extname = 'gzip') as gzip_oid
             """))!![0])
-        pageSize = (row.getAny("bs") as Int)
+        pageSize = (row["bs"] as Int)
         val tupleSize = pageSize - 32
         maxTupleSize = if (tupleSize > MAX_POSTGRES_TOAST_TUPLE_TARGET) {
             MAX_POSTGRES_TOAST_TUPLE_TARGET
@@ -41,8 +39,8 @@ class PgDbInfo(val sql: IPlv8Sql) {
         } else {
             tupleSize
         }
-        brittleTableSpace = if (row.getAny("oid") != null) TEMPORARY_TABLESPACE else null
+        brittleTableSpace = if (row["oid"] != null) TEMPORARY_TABLESPACE else null
         tempTableSpace = brittleTableSpace
-        gzipSupported = row.getAny("gzip_oid") != null
+        gzipSupported = row["gzip_oid"] != null
     }
 }

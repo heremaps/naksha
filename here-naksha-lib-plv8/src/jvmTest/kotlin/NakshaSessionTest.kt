@@ -31,7 +31,7 @@ class NakshaSessionTest : JbTest() {
     @Test
     fun testGetBaseCollectionId() {
         // given
-        val session = NakshaSession.get()
+        val session = NakshaSession
 
         // expect
         assertEquals("foo", session.getBaseCollectionId("foo\$p7"))

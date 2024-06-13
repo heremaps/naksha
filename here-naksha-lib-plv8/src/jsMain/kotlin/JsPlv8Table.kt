@@ -2,12 +2,13 @@
 
 package com.here.naksha.lib.plv8;
 
-import com.here.naksha.lib.jbon.IMap
+import naksha.base.P_Map
+
 
 @JsExport
-class JsPlv8Table : ITable {
+class JsPlv8Table : naksha.plv8.ITable {
 
-    override fun returnNext(row: IMap) {
+    override fun returnNext(row: P_Map<String, Any>) {
         js("plv8.return_next(row)")
     }
 }

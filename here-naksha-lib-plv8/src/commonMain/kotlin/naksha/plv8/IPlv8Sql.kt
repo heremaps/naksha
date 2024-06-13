@@ -1,7 +1,8 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
+import naksha.base.P_JsMap
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -15,12 +16,6 @@ interface IPlv8Sql {
      * Returns general information about the database to which this API grants access.
      */
     fun info(): PgDbInfo
-
-    /**
-     * Creates a new table for a function to return. When executed inside PostgresQL does only return a small object, that
-     * allows invoking the native `plv8.return_next` function. For the JVM, it returns a container that can pick up rows.
-     */
-    fun newTable(): ITable
 
     /**
      * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
@@ -78,7 +73,7 @@ interface IPlv8Sql {
      * @param any The object to test.
      * @return The array of native maps or _null_, if _any_ is no valid rows.
      */
-    fun rows(any: Any): Array<Any>?
+    fun rows(any: Any): Array<P_JsMap>?
 
     /**
      * Execute an SQL query with the given arguments. The placeholder should be **$1** to **$n**.
@@ -94,9 +89,9 @@ interface IPlv8Sql {
      * @param typeNames The name of the types of the arguments, to be at $n position, where $1 is the first array element.
      * @return The prepared plan.
      */
-    fun prepare(sql: String, typeNames: Array<String>? = null): IPlv8Plan
+    fun prepare(sql: String, typeNames: Array<String>? = null):IPlv8Plan
 
-    fun executeBatch(plan: IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray
+    fun executeBatch(plan:IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray
 
     /**
      * Compress bytes using GZip.

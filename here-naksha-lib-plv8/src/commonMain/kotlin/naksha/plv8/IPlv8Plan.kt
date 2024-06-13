@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport

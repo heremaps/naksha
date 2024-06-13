@@ -1,5 +1,6 @@
 package naksha.model.response
 
+import naksha.model.Guid
 import naksha.model.IStorage
 import naksha.model.NakshaFeatureProxy
 import naksha.model.response.Metadata
@@ -19,7 +20,7 @@ class Row(
     /**
      * Guid of the feature, leave it empty for Insert operation (it will be calculated automatically).
      */
-    val guid: naksha.model.Guid?,
+    val guid: Guid?,
     /**
      * Flags to describe: feature, geometry, geo_ref, tags encodings and action flags.
      * @see Flags for more.
@@ -62,7 +63,7 @@ class Row(
     /**
      * Maps row into memory model.
      */
-    fun toMemoryModel(): NakshaFeatureProxy {
-        throw NotImplementedError("implement conversion")
+    fun toMemoryModel(): NakshaFeatureProxy? {
+        return storage.convertRowToFeature(this)
     }
 }

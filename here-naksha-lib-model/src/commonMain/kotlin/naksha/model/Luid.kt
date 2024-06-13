@@ -5,16 +5,14 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class Guid (
-    val storageId: String,
-    val collectionId: String,
-    val featureId: String,
-    val luid: Luid
+class Luid (
+    val txn: Txn,
+    val uid: Int
 ) {
     private lateinit var _string: String
 
     override fun toString(): String {
-        if (!this::_string.isInitialized) _string = "$storageId:$collectionId:$featureId:$luid"
+        if (!this::_string.isInitialized) _string = "$txn:$uid"
         return _string
     }
 }
