@@ -1,6 +1,6 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.JvmBigInt64
+import naksha.base.JvmInt64
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.ArrayList
@@ -64,7 +64,7 @@ class JvmPlv8SqlQuery(query: String) {
                 is Short -> stmt.setShort(index, arg)
                 is Int -> stmt.setInt(index, arg)
                 is Long -> stmt.setLong(index, arg)
-                is JvmBigInt64 -> stmt.setLong(index, arg.value)
+                is JvmInt64 -> stmt.setLong(index, arg.toLong())
                 is Float -> stmt.setFloat(index, arg)
                 is Double -> stmt.setDouble(index, arg)
                 is String -> stmt.setString(index, arg)
@@ -77,7 +77,7 @@ class JvmPlv8SqlQuery(query: String) {
                         is Short -> stmt.setArray(index, stmt.connection.createArrayOf("int2", arg))
                         is Int -> stmt.setArray(index, stmt.connection.createArrayOf("int4", arg))
                         is Long -> stmt.setArray(index, stmt.connection.createArrayOf("int8", arg))
-                        is JvmBigInt64 -> stmt.setArray(index, stmt.connection.createArrayOf("int8", arg))
+                        is JvmInt64 -> stmt.setArray(index, stmt.connection.createArrayOf("int8", arg))
                         is Float -> stmt.setArray(index, stmt.connection.createArrayOf("real", arg))
                         is Double -> stmt.setArray(index, stmt.connection.createArrayOf("double precision", arg))
                         is String -> stmt.setArray(index, stmt.connection.createArrayOf("text", arg))

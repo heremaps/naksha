@@ -1,8 +1,9 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
-import com.here.naksha.lib.jbon.IMap
+import naksha.model.response.Metadata
+import naksha.model.response.Row
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -38,6 +39,6 @@ class PgTrigger(
         val TG_RELID: Int,
         val TG_TABLE_NAME: String,
         val TG_TABLE_SCHEMA: String,
-        val NEW: IMap?,
-        val OLD: IMap?
+        val NEW: Row?,
+        val OLD: Row?
 )

@@ -1,15 +1,24 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
 import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.nak.Flags
-import com.here.naksha.lib.plv8.Static.SC_TRANSACTIONS
-import com.here.naksha.lib.plv8.Static.nakshaCollectionConfig
+import com.here.naksha.lib.jbon.ACTION_DELETE
+import com.here.naksha.lib.jbon.ACTION_UPDATE
 import kotlinx.datetime.*
+import naksha.base.*
+import naksha.base.Platform.Companion.logger
+import naksha.model.*
+import naksha.model.Flags
+import naksha.model.request.WriteFeature
+import naksha.model.request.WriteRequest
+import naksha.model.response.*
+import naksha.plv8.Static.SC_TRANSACTIONS
+import naksha.plv8.Static.nakshaCollectionConfig
+import naksha.plv8.write.SingleCollectionWriter
+import naksha.plv8.write.WriteRequestExecutor
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 
 /**
  * A session linked to a PostgresQL database connection with support for some special table layout and triggers. Its purpose is
@@ -34,11 +43,14 @@ import kotlin.jvm.JvmStatic
 @Suppress("UNUSED_PARAMETER", "unused", "LocalVariableName", "MemberVisibilityCanBePrivate", "DuplicatedCode")
 @JsExport
 class NakshaSession(
-        val sql: IPlv8Sql,
-        val schema: String,
-        val storageId: String,
-        appName: String, streamId: String, appId: String, author: String? = null
-) : JbSession(appName, streamId, appId, author) {
+    val sql: IPlv8Sql,
+    val schema: String,
+    val storage: IStorage,
+    var appName: String,
+    var streamId: String,
+    var appId: String,
+    var author: String? = null
+) {
 
     /**
      * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
@@ -71,35 +83,25 @@ class NakshaSession(
         return globalDictManager
     }
 
-    companion object {
-        /**
-         * Returns the current thread local [NakshaSession].
-         * @return The current thread local [NakshaSession].
-         * @throws IllegalStateException If the current session is no Naksha session.
-         */
-        @JvmStatic
-        fun get(): NakshaSession = threadLocal.get() as NakshaSession
-    }
-
     /**
      * The current transaction number.
      */
-    private var _txn: NakshaTxn? = null
+    private var _txn: Txn? = null
 
     /**
      * The epoch milliseconds of when the transaction started (`transaction_timestamp()`).
      */
-    private var _txts: BigInt64? = null
+    private var _txts: Int64? = null
 
     /**
      * Keeps transaction's counters.
      */
-    var transaction: NakshaTransaction = NakshaTransaction(dictManager = globalDictManager)
+    var transaction: NakshaTransactionProxy = NakshaTransactionProxy()
 
     /**
      * A cache to remember collections configuration <collectionId, configMap>
      */
-    var collectionConfiguration: IMap
+    var collectionConfiguration = mutableMapOf<String, NakshaCollectionProxy>()
 
     /**
      * The last error number as SQLState.
@@ -112,30 +114,40 @@ class NakshaSession(
     var errMsg: String? = null
 
     init {
-        sql.execute("""
+        sql.execute(
+            """
 SET SESSION search_path TO $schemaIdent, public, topology;
 SET SESSION enable_seqscan = OFF;
-""")
-        schemaOid = asMap(asArray(sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))[0]).getAny("oid") as Int
-        collectionConfiguration = Jb.map.newMap()
+"""
+        )
+        schemaOid = sql.rows(
+            sql.execute(
+                "SELECT oid FROM pg_namespace WHERE nspname = $1",
+                arrayOf(schema)
+            )
+        )!![0]["oid"] as Int
+        collectionConfiguration = mutableMapOf()
         collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
+        transaction.id = txn().toGuid(storage.id(), "txn", "txn").toString()
     }
 
-    override fun reset(appName: String, streamId: String, appId: String, author: String?) {
-        super.reset(appName, streamId, appId, author)
+    fun reset(appName: String, streamId: String, appId: String, author: String?) {
+        this.author = author
+        this.appName = appName
+        this.streamId = streamId
+        this.appId = appId
         clear()
     }
 
-    override fun clear() {
-        super.clear()
+    fun clear() {
         _txn = null
         uid = 0
         _txts = null
         errNo = null
         errMsg = null
-        collectionConfiguration = Jb.map.newMap()
+        collectionConfiguration = mutableMapOf()
         collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
-        transaction = NakshaTransaction(globalDictManager)
+        transaction = NakshaTransactionProxy()
     }
 
     /**
@@ -177,49 +189,6 @@ SET SESSION enable_seqscan = OFF;
     }
 
     /**
-     * Calculates the extent, the size of the feature in milliseconds.
-     */
-    internal fun extent(geo: ByteArray?): BigInt64 = Jb.int64.ZERO()
-    // TODO: Implement me!
-
-    private val xyzBuilder = XyzBuilder(Jb.env.newDataView(ByteArray(500)))
-
-    /**
-     * Convert the given database row into a JBON encoded XYZ namespace.
-     * @param collectionId The collection for which to generate the XYZ namespace.
-     * @param row The database row.
-     * @return The XYZ namespace JBON encoded.
-     */
-    fun xyzNsFromRow(collectionId: String, row: IMap): ByteArray {
-        val createdAt: BigInt64? = row[COL_CREATED_AT] ?: row[COL_UPDATE_AT]
-        check(createdAt != null) { "Missing $COL_CREATED_AT in row" }
-        // for transactions update might be null, for features created at might be null
-        val updatedAt: BigInt64 = row[COL_UPDATE_AT] ?: row[COL_CREATED_AT]!!
-        val txn: BigInt64? = row[COL_TXN]
-        check(txn != null) { "Missing $COL_TXN in row" }
-        val nakshaTxn = NakshaTxn(txn)
-        val uid: Int? = row[COL_UID]
-        check(uid != null) { "Missing $COL_UID in row" }
-        val uuid = nakshaTxn.newFeatureUuid(storageId, collectionId, uid)
-        val ptxn: BigInt64? = row[COL_PTXN]
-        val puid: Int? = row[COL_PUID]
-        val puuid = if (ptxn != null && puid != null) {
-            NakshaTxn(ptxn).newFeatureUuid(storageId, collectionId, puid).toString()
-        } else {
-            null
-        }
-        val action: Short = row[COL_ACTION] ?: 0
-        val version: Int = row[COL_VERSION] ?: 1
-        val authorTs: BigInt64 = row[COL_AUTHOR_TS] ?: updatedAt
-        val app_id: String? = row[COL_APP_ID]
-        check(app_id != null) { "Missing $COL_APP_ID, please invoke naksha_start_session" }
-        val author: String = row[COL_AUTHOR] ?: app_id
-        val geo_grid: Int? = row[COL_GEO_GRID]
-        check(geo_grid != null) { "Missing $COL_GEO_GRID, please invoke naksha_start_session" }
-        return xyzBuilder.buildXyzNs(createdAt, updatedAt, txn, action, version, authorTs, puuid, uuid.toString(), app_id, author, geo_grid)
-    }
-
-    /**
      * Session local uid counter.
      */
     private var uid = 0
@@ -230,91 +199,119 @@ SET SESSION enable_seqscan = OFF;
      * @param NEW The row in which to update the XYZ namespace columns.
      * @return The new XYZ namespace for this feature.
      */
-    internal fun xyzInsert(collectionId: String, NEW: IMap) {
+    internal fun xyzInsert(collectionId: String, NEW: Row) {
+        val newMeta = NEW.meta!!
         val txn = txn()
         val txnTs = txnTs()
-        NEW[COL_TXN] = txn.value
-        NEW[COL_TXN_NEXT] = null
-        NEW[COL_PTXN] = null
-        NEW[COL_PUID] = null
-        val flags = Flags(NEW[COL_FLAGS])
-        NEW[COL_FLAGS] = flags.toCombinedFlags()
+        newMeta.txn = txn.value
+        newMeta.txnNext = null
+        newMeta.ptxn = null
+        newMeta.puid = null
 
-        val geoGrid: Int? = NEW[COL_GEO_GRID]
+        val geoGrid: Int? = newMeta.geoGrid
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
-            val id: String? = NEW[COL_ID]
+            val id: String? = NEW.id
             check(id != null) { "Missing id" }
-            NEW[COL_GEO_GRID] = grid(id, flags.getGeometryEncoding(), NEW[COL_GEOMETRY])
+            newMeta.geoGrid = grid(id, Flags.readGeometryEncoding(newMeta.flags!!), NEW.geo)
         }
-        NEW[COL_ACTION] = null // saving space null means 0 (create)
-        NEW[COL_VERSION] = null // saving space null means 1
+        newMeta.action = null // saving space null means 0 (create)
+        newMeta.version = null // saving space null means 1
         if (collectionId == SC_TRANSACTIONS) {
-            NEW[COL_UID] = 0
+            newMeta.uid = 0
         } else {
-            NEW[COL_UID] = nextUid()
+            newMeta.uid = nextUid()
         }
-        NEW[COL_CREATED_AT] = null // saving space - it is same as update_at at creation,
-        NEW[COL_UPDATE_AT] = txnTs
-        NEW[COL_AUTHOR] = author
-        NEW[COL_AUTHOR_TS] = null // saving space - only apps are allowed to create features
-        NEW[COL_APP_ID] = appId
+        newMeta.createdAt = null // saving space - it is same as update_at at creation,
+        newMeta.updatedAt = txnTs
+        newMeta.author = author
+        newMeta.authorTs = null // saving space - only apps are allowed to create features
+        newMeta.appId = appId
     }
 
     /**
      *  Prepares XyzNamespace columns for head table.
      */
-    internal fun xyzUpdateHead(collectionId: String, NEW: IMap, OLD: IMap) {
+    internal fun xyzUpdateHead(collectionId: String, NEW: Row, OLD: Row) {
         xyzInsert(collectionId, NEW)
-        NEW[COL_ACTION] = ACTION_UPDATE.toShort()
-        NEW[COL_CREATED_AT] = OLD[COL_CREATED_AT] ?: OLD[COL_UPDATE_AT]
+        val newMeta = NEW.meta!!
+        val oldMeta = OLD.meta!!
+        newMeta.action = ACTION_UPDATE.toShort()
+        newMeta.createdAt = oldMeta.createdAt ?: oldMeta.updatedAt
         if (author == null) {
-            NEW[COL_AUTHOR_TS] = OLD[COL_AUTHOR_TS] ?: OLD[COL_UPDATE_AT]
+            newMeta.authorTs = oldMeta.authorTs ?: oldMeta.updatedAt
         } else {
-            NEW[COL_AUTHOR_TS] = null
+            newMeta.authorTs = null
         }
-        val oldVersion: Int = OLD[COL_VERSION] ?: 1
-        NEW[COL_VERSION] = oldVersion + 1
-        NEW[COL_PTXN] = OLD[COL_TXN]
-        NEW[COL_PUID] = OLD[COL_UID]
+        val oldVersion: Int = oldMeta.version ?: 1
+        newMeta.version = oldVersion + 1
+        newMeta.ptxn = oldMeta.txn
+        newMeta.puid = oldMeta.uid
         if (collectionId == SC_TRANSACTIONS) {
-            NEW[COL_UPDATE_AT] = Jb.env.currentMillis()
+            newMeta.updatedAt = Platform.currentMillis()
         }
     }
 
     /**
      *  Saves OLD in $hst.
      */
-    internal fun saveInHst(collectionId: String, OLD: IMap) {
+    internal fun saveInHst(collectionId: String, OLD: Row) {
         if (isHistoryEnabled(collectionId)) {
             // TODO move it outside and run it once
             val collectionIdQuoted = sql.quoteIdent("${collectionId}\$hst")
-            val hstInsertPlan = sql.prepare("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", COL_ALL_TYPES)
-            hstInsertPlan.execute(arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_FLAGS], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
+            val hstInsertPlan = sql.prepare(
+                """INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""",
+                COL_ALL_TYPES
+            )
+            val oldMeta = OLD.meta!!
+            hstInsertPlan.execute(
+                arrayOf(
+                    oldMeta.txnNext,
+                    oldMeta.txn,
+                    oldMeta.uid,
+                    oldMeta.ptxn,
+                    oldMeta.puid,
+                    oldMeta.flags,
+                    oldMeta.action,
+                    oldMeta.version,
+                    oldMeta.createdAt,
+                    oldMeta.updatedAt,
+                    oldMeta.authorTs,
+                    oldMeta.author,
+                    oldMeta.appId,
+                    oldMeta.geoGrid,
+                    OLD.id,
+                    OLD.tags,
+                    OLD.geo,
+                    OLD.feature,
+                    OLD.geoRef,
+                    OLD.type
+                )
+            )
         }
     }
 
     /**
      * Prepares row before putting into $del table.
      */
-    internal fun xyzDel(OLD: IMap) {
+    internal fun xyzDel(OLD: Metadata) {
         val txn = txn()
         val txnTs = txnTs()
-        OLD[COL_TXN] = txn.value
-        OLD[COL_TXN_NEXT] = txn.value
-        OLD[COL_ACTION] = ACTION_DELETE.toShort()
-        OLD[COL_AUTHOR] = author ?: appId
+        OLD.txn = txn.value
+        OLD.txnNext = txn.value
+        OLD.action = ACTION_DELETE.toShort()
+        OLD.author = author ?: appId
         if (author != null) {
-            OLD[COL_AUTHOR_TS] = txnTs
+            OLD.authorTs = txnTs
         }
-        if (!OLD.hasCreatedAt()) {
-            OLD[COL_CREATED_AT] = OLD[COL_UPDATE_AT]
+        if (OLD.createdAt != null) {
+            OLD.createdAt = OLD.updatedAt
         }
-        OLD[COL_UPDATE_AT] = txnTs
-        OLD[COL_APP_ID] = appId
-        OLD[COL_UID] = nextUid()
-        val currentVersion: Int = OLD[COL_VERSION] ?: 1
-        OLD[COL_VERSION] = currentVersion + 1
+        OLD.updatedAt = txnTs
+        OLD.appId = appId
+        OLD.uid = nextUid()
+        val currentVersion: Int = OLD.version ?: 1
+        OLD.version = currentVersion + 1
     }
 
     internal fun deleteFromDel(collectionId: String, id: String) {
@@ -325,12 +322,37 @@ SET SESSION enable_seqscan = OFF;
     /**
      * Updates xyz namespace and copies feature to $del table.
      */
-    internal fun copyToDel(collectionId: String, OLD: IMap) {
+    internal fun copyToDel(collectionId: String, OLD: Row) {
         val collectionConfig = getCollectionConfig(collectionId)
-        val autoPurge: Boolean? = collectionConfig[NKC_AUTO_PURGE]
+        val autoPurge: Boolean? = collectionConfig.autoPurge
         if (autoPurge != true) {
             val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
-            sql.execute("""INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""", arrayOf(OLD[COL_TXN_NEXT], OLD[COL_TXN], OLD[COL_UID], OLD[COL_PTXN], OLD[COL_PUID], OLD[COL_FLAGS], OLD[COL_ACTION], OLD[COL_VERSION], OLD[COL_CREATED_AT], OLD[COL_UPDATE_AT], OLD[COL_AUTHOR_TS], OLD[COL_AUTHOR], OLD[COL_APP_ID], OLD[COL_GEO_GRID], OLD[COL_ID], OLD[COL_TAGS], OLD[COL_GEOMETRY], OLD[COL_FEATURE], OLD[COL_GEO_REF], OLD[COL_TYPE]))
+            val oldMeta = OLD.meta!!
+            sql.execute(
+                """INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""",
+                arrayOf(
+                    oldMeta.txnNext,
+                    oldMeta.txn,
+                    oldMeta.uid,
+                    oldMeta.ptxn,
+                    oldMeta.puid,
+                    oldMeta.flags,
+                    oldMeta.action,
+                    oldMeta.version,
+                    oldMeta.createdAt,
+                    oldMeta.updatedAt,
+                    oldMeta.authorTs,
+                    oldMeta.author,
+                    oldMeta.appId,
+                    oldMeta.geoGrid,
+                    OLD.id,
+                    OLD.tags,
+                    OLD.geo,
+                    OLD.feature,
+                    OLD.geoRef,
+                    OLD.type
+                )
+            )
         }
     }
 
@@ -364,11 +386,11 @@ SET SESSION enable_seqscan = OFF;
         throw RuntimeException("Forbidden, please use API")
         val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
         if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
-            deleteFromDel(collectionId, data.OLD.getAny(COL_ID) as String)
+            deleteFromDel(collectionId, data.OLD.id)
             // save current head in hst
-            data.OLD[COL_TXN_NEXT] = data.OLD[COL_TXN]
+            data.OLD.meta?.txnNext = data.OLD.meta?.txn
             saveInHst(collectionId, data.OLD)
-            xyzDel(data.OLD)
+            xyzDel(data.OLD.meta!!)
             copyToDel(collectionId, data.OLD)
             // save del state in hst
             saveInHst(collectionId, data.OLD)
@@ -376,20 +398,15 @@ SET SESSION enable_seqscan = OFF;
         if (data.TG_OP == TG_OP_UPDATE) {
             check(data.NEW != null) { "Missing NEW for UPDATE" }
             check(data.OLD != null) { "Missing OLD for UPDATE" }
-            deleteFromDel(collectionId, data.NEW.getAny(COL_ID) as String)
-            data.OLD[COL_TXN_NEXT] = data.NEW[COL_TXN]
+            deleteFromDel(collectionId, data.NEW.id)
+            data.OLD.meta?.txnNext = data.NEW.meta?.txn
             saveInHst(collectionId, data.OLD)
         }
         if (data.TG_OP == TG_OP_INSERT) {
             check(data.NEW != null) { "Missing NEW for INSERT" }
-            deleteFromDel(collectionId, data.NEW.getAny(COL_ID) as String)
+            deleteFromDel(collectionId, data.NEW.id)
         }
     }
-
-    /**
-     * An internal view to calculate the partition id.
-     */
-    private lateinit var partView: IDataView
 
     /**
      * The cached Postgres version.
@@ -405,9 +422,9 @@ SET SESSION enable_seqscan = OFF;
             val r = sql.execute("select version() as version")
             val rows = sql.rows(r)
             check(rows != null)
-            val row = asMap(rows[0])
+            val row = rows[0]
             // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
-            val versionString: String = row["version"]!!
+            val versionString: String = row["version"]!! as String
             val firstSpace = versionString.indexOf(' ')
             check(firstSpace > 0)
             val secondSpace = versionString.indexOf(' ', firstSpace + 1)
@@ -424,18 +441,18 @@ SET SESSION enable_seqscan = OFF;
      * Returns the current transaction number, if no transaction number is yet generated, generates a new one.
      * @return The current transaction number.
      */
-    fun txn(): NakshaTxn {
+    fun txn(): Txn {
         if (_txn == null) {
             val query = """
 WITH ns as (SELECT oid FROM pg_namespace WHERE nspname = $1),
      txn_seq as (SELECT cls.oid as oid FROM pg_class cls, ns WHERE cls.relname = 'naksha_txn_seq' and cls.relnamespace = ns.oid)
 SELECT nextval(txn_seq.oid) as txn, txn_seq.oid as txn_oid, (extract(epoch from transaction_timestamp())*1000)::int8 as time, ns.oid as ns_oid
 FROM ns, txn_seq;"""
-            val row = asMap(asArray(sql.execute(query, arrayOf(schema)))[0])
-            val schemaOid = row.getAny("ns_oid") as Int
-            val txnSeqOid = row.getAny("txn_oid") as Int
-            val txts = asBigInt64(row["time"])
-            var txn = NakshaTxn(asBigInt64(row["txn"]))
+            val row = sql.rows(sql.execute(query, arrayOf(schema)))!![0]
+            val schemaOid = row["ns_oid"] as Int
+            val txnSeqOid = row["txn_oid"] as Int
+            val txts = asInt64(row["time"])
+            var txn = Txn(asInt64(row["txn"]))
             verifyCache(schemaOid)
             _txts = txts
             _txn = txn
@@ -444,12 +461,19 @@ FROM ns, txn_seq;"""
             if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
                 sql.execute("SELECT pg_advisory_lock($1)", arrayOf(Static.TXN_LOCK_ID))
                 try {
-                    val raw = asBigInt64(asMap((sql.execute("SELECT nextval($1) as v", arrayOf(txnSeqOid)) as Array<Any>)[0])["v"])
-                    txn = NakshaTxn(raw)
+                    val raw = asInt64(
+                        sql.rows(
+                            sql.execute(
+                                "SELECT nextval($1) as v",
+                                arrayOf(txnSeqOid)
+                            )
+                        )!![0]["v"]
+                    )
+                    txn = Txn(raw)
                     _txn = txn
                     if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
                         // Rollover, we update sequence of the day.
-                        txn = NakshaTxn.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, BigInt64(0))
+                        txn = Txn.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
                         _txn = txn
                         sql.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1))
                     }
@@ -465,46 +489,26 @@ FROM ns, txn_seq;"""
      * The start time of the transaction.
      * @return The start time of the transaction.
      */
-    fun txnTs(): BigInt64 {
+    fun txnTs(): Int64 {
         txn()
         return _txts!!
     }
 
-    private fun handleFeatureException(e: Throwable, table: ITable, id: String?) {
-        val err = asMap(e)
+    private fun handleFeatureException(e: Throwable, id: String?): ErrorResponse {
+        val err = (e as PlatformMap).proxy(P_JsMap::class)
         // available fields (only on server): sqlerrcode, schema_name, table_name, column_name, datatype_name, constraint_name, detail, hint, context, internalquery, code
-        val errCode: String? = err["sqlerrcode"] ?: err["sqlstate"]
-        when {
+        val errCode: String? = (err["sqlerrcode"] ?: err["sqlstate"]) as? String
+        return when {
             errCode != null -> {
-                table.returnErr(errCode, e.cause?.message ?: errCode, id)
+                ErrorResponse(NakshaError(errCode, e.cause?.message ?: errCode, id))
             }
 
             else -> {
                 if (Static.PRINT_STACK_TRACES)
-                    Jb.log.info(e.cause?.message!!)
-                table.returnErr(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}", id)
+                    logger.info(e.cause?.message!!)
+                ErrorResponse(NakshaError(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}", id))
             }
         }
-    }
-
-    fun writeCollections(
-            op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            flags_arr: Array<Int?> = arrayOfNulls(op_arr.size),
-            geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size)
-    ): ITable {
-        val table = sql.newTable()
-        val writer = NakshaFeaturesWriter(NKC_TABLE, this)
-        try {
-            return writer.writeCollections(op_arr, feature_arr, flags_arr, geo_arr, tags_arr, false)
-        } catch (e: NakshaException) {
-            if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-            table.returnException(e)
-        } catch (e: Throwable) {
-            handleFeatureException(e, table, null)
-        }
-        return table;
     }
 
     private lateinit var featureReader: JbMapFeature
@@ -574,48 +578,49 @@ FROM ns, txn_seq;"""
         }
     }
 
-    fun getCollectionConfig(collectionId: String): IMap {
+    fun getCollectionConfig(collectionId: String): NakshaCollectionProxy {
         return if (collectionConfiguration.containsKey(collectionId)) {
             collectionConfiguration[collectionId]!!
         } else {
-            val collectionsSearchRows = asArray(sql.execute("select $COL_FEATURE, $COL_FLAGS from $NKC_TABLE_ESC where $COL_ID = $1", arrayOf(collectionId)))
-            if (collectionsSearchRows.isEmpty()) {
+            val collectionsSearchRows = sql.rows(
+                sql.execute(
+                    "select $COL_FEATURE, $COL_FLAGS from $NKC_TABLE_ESC where $COL_ID = $1",
+                    arrayOf(collectionId)
+                )
+            )
+            if (collectionsSearchRows.isNullOrEmpty()) {
                 throw RuntimeException("collection $collectionId does not exist in $NKC_TABLE_ESC")
             }
-            val cols = asMap(collectionsSearchRows[0])
-            val bytes: ByteArray? = cols[COL_FEATURE]
-            val flags = Flags(cols[COL_FLAGS])
-            val rawFeatureBytes: ByteArray? = if (bytes != null && flags.isFeatureEncodedWithGZip()) sql.gzipDecompress(bytes) else bytes
-            val jbFeature = JbFeature(getDictManager(collectionId)).mapBytes(rawFeatureBytes)
-            val featureAsMap = JbMap().mapReader(jbFeature.reader).toIMap()
-            collectionConfiguration.put(collectionId, featureAsMap)
-            featureAsMap
+            val cols = collectionsSearchRows[0]
+            val row = Row(
+                storage = storage,
+                flags = cols[COL_FLAGS]!! as Int,
+                feature = cols[COL_FEATURE]!! as ByteArray,
+                id = collectionId,
+                guid = null
+            )
+            val nakCollection = row.toMemoryModel()!!.proxy(NakshaCollectionProxy::class)
+            collectionConfiguration.put(collectionId, nakCollection)
+            nakCollection
         }
     }
 
     internal fun isHistoryEnabled(collectionId: String): Boolean {
-        val isDisabled: Boolean? = getCollectionConfig(collectionId)[NKC_DISABLE_HISTORY]
+        val isDisabled: Boolean? = getCollectionConfig(collectionId).disableHistory
         return isDisabled != true
     }
 
-    private inner class TransactionAction internal constructor(collectionId: String, transaction: NakshaTransaction) {
-        private val transactionWriter: NakshaFeaturesWriter?
-        private val transactionOp: ByteArray?
-
-        init {
-            if (collectionId != SC_TRANSACTIONS) {
-                val xyzBuilder = XyzBuilder.create()
-                transactionOp = xyzBuilder.buildXyzOp(XYZ_OP_UPSERT, txn().toUuid(storageId).toString(), null, null)
-                transactionWriter = NakshaFeaturesWriter(SC_TRANSACTIONS, this@NakshaSession, modifyCounters = false)
-            } else {
-                transactionWriter = null
-                transactionOp = null
-            }
-        }
+    private inner class TransactionAction internal constructor(transaction: NakshaTransactionProxy) {
+        private val transactionWriter: SingleCollectionWriter =
+            SingleCollectionWriter(SC_TRANSACTIONS, this@NakshaSession, modifyCounters = false)
 
         fun write() {
-            if (transactionOp != null)
-                transactionWriter?.writeFeatures(arrayOf(transactionOp), arrayOf(transaction.toBytes()), minResult = true)
+            transactionWriter.writeFeatures(
+                WriteRequest(
+                    arrayOf(WriteFeature(SC_TRANSACTIONS, transaction)),
+                    noResults = true
+                )
+            )
         }
     }
 
@@ -623,72 +628,19 @@ FROM ns, txn_seq;"""
      * Single threaded all-or-nothing bulk write operation.
      * As result there is row with success or error returned.
      */
-    fun writeFeatures(
-            collectionId: String,
-            op_arr: Array<ByteArray>,
-            feature_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            flags_arr: Array<Int?> = arrayOfNulls(op_arr.size),
-            geo_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            tags_arr: Array<ByteArray?> = arrayOfNulls(op_arr.size),
-            minResult: Boolean = true
-    ): ITable {
-        val table = sql.newTable()
-        val featureWriter = NakshaFeaturesWriter(collectionId, this)
-        val transactionAction = TransactionAction(collectionId, transaction)
-        try {
+    fun write(writeRequest: WriteRequest): Response {
+        val executor = WriteRequestExecutor(this, true)
+        val transactionAction = TransactionAction(transaction)
+        return try {
             transactionAction.write()
-            val writeFeaturesResult = featureWriter.writeFeatures(op_arr, feature_arr, flags_arr, geo_arr, tags_arr, minResult)
+            val writeFeaturesResult = executor.write(writeRequest)
             transactionAction.write()
-            return writeFeaturesResult
+            writeFeaturesResult
         } catch (e: NakshaException) {
-            if (Static.PRINT_STACK_TRACES) Jb.log.info(e.rootCause().stackTraceToString())
-            table.returnException(e)
+            if (Static.PRINT_STACK_TRACES) logger.info(e.rootCause().stackTraceToString())
+            ErrorResponse(NakshaError(e.errNo, e.errMsg))
         } catch (e: Throwable) {
-            handleFeatureException(e, table, null)
+            handleFeatureException(e, null)
         }
-        return table;
-    }
-
-    internal fun select(collectionId: String, ids: List<String>): IMap {
-        val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val result = sql.execute("SELECT $COL_ID, $COL_TXN, $COL_UID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR, $COL_AUTHOR_TS FROM $collectionIdQuoted WHERE id = ANY($1)", arrayOf(ids.toTypedArray()))
-        val rows = sql.rows(result)
-        val retMap = newMap()
-        if (rows.isNullOrEmpty())
-            return retMap
-        for (row in rows) {
-            val cols = asMap(row)
-            retMap.put(cols[COL_ID]!!, cols)
-        }
-        return retMap
-    }
-
-    internal fun queryForExisting(collectionId: String, idsSmallFetch: List<String>, idsFullFetch: List<String>, wait: Boolean): IMap {
-        val waitOp = if (wait) "" else "NOWAIT"
-        val collectionIdQuoted = sql.quoteIdent(collectionId)
-        val basicQuery = "SELECT $COL_ID,$COL_TXN,$COL_UID,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR,$COL_AUTHOR_TS,$COL_GEO_GRID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp"
-        val result = if (idsFullFetch.isEmpty()) {
-            sql.execute(basicQuery, arrayOf(idsSmallFetch.toTypedArray()))
-        } else {
-            val complexQuery = """
-                with 
-                small as ($basicQuery),
-                remaining as (SELECT $COL_ID, $COL_TXN_NEXT,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_APP_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE FROM $collectionIdQuoted WHERE id = ANY($2))
-                select * from small s left join remaining r on s.$COL_ID = r.$COL_ID 
-            """.trimIndent()
-            sql.execute(complexQuery, arrayOf(idsSmallFetch.toTypedArray(), idsFullFetch.toTypedArray()))
-        }
-        val rows = sql.rows(result)
-
-        val retMap = newMap()
-
-        if (rows.isNullOrEmpty())
-            return retMap
-
-        for (row in rows) {
-            val cols = asMap(row)
-            retMap.put(cols[COL_ID]!!, cols)
-        }
-        return retMap
     }
 }

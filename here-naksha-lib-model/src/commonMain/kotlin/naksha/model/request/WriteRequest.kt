@@ -27,5 +27,18 @@ class WriteRequest(
     noGeometry: Boolean = false,
     noMeta: Boolean = false,
     noTags: Boolean = false,
-    resultFilter: Array<naksha.model.IReadRowFilter> = emptyArray()
-) : Request(noFeature, noGeometry, noMeta, noTags, resultFilter)
+    resultFilter: Array<IReadRowFilter> = emptyArray()
+) : Request(noFeature, noGeometry, noMeta, noTags, resultFilter) {
+
+    fun newRequestWithOps(ops: Array<Write>): WriteRequest {
+        return WriteRequest(
+            ops = ops,
+            noResults = noResults,
+            allowRandomOrder = allowRandomOrder,
+            noFeature = noFeature,
+            noGeometry = noGeometry,
+            noMeta = noMeta,
+            noTags = noTags
+        )
+    }
+}

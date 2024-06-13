@@ -1,22 +1,19 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
-import com.here.naksha.lib.jbon.BigInt64
-import com.here.naksha.lib.jbon.Fnv1a32
-import com.here.naksha.lib.jbon.Fnv1a64
-import com.here.naksha.lib.jbon.Jb
 import com.here.naksha.lib.jbon.NakshaTxn
 import com.here.naksha.lib.jbon.asArray
-import com.here.naksha.lib.jbon.asMap
-import com.here.naksha.lib.jbon.div
-import com.here.naksha.lib.jbon.getAny
-import com.here.naksha.lib.jbon.newMap
-import com.here.naksha.lib.jbon.put
-import com.here.naksha.lib.jbon.toLong
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import naksha.base.Fnv1a32
+import naksha.base.Fnv1a64
+import naksha.base.Int64
+import naksha.base.Platform
+import naksha.model.NakshaCollectionProxy
+import naksha.model.NakshaCollectionProxy.Companion.DEFAULT_GEO_INDEX
+import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -35,15 +32,13 @@ object Static {
      * Config for naksha_collection
      */
     @JvmStatic
-    internal val nakshaCollectionConfig = newMap()
-
-    init {
-        nakshaCollectionConfig.put(NKC_GEO_INDEX, null)
-        nakshaCollectionConfig.put(NKC_STORAGE_CLASS, null)
-        nakshaCollectionConfig.put(NKC_PARTITION_COUNT, PARTITION_COUNT_NONE)
-        nakshaCollectionConfig.put(NKC_AUTO_PURGE, false)
-        nakshaCollectionConfig.put(NKC_DISABLE_HISTORY, false)
-    }
+    internal val nakshaCollectionConfig = NakshaCollectionProxy(
+        storageClass = null,
+        partitions = PARTITION_COUNT_NONE,
+        autoPurge = false,
+        disableHistory = false,
+        id = NKC_TABLE
+    )
 
     /**
      * Array to create a pseudo GeoHash, which is BASE-32 encoded.
@@ -57,30 +52,6 @@ object Static {
      */
     @JvmStatic
     val DEBUG = false
-
-    /**
-     * The constant for the GIST geo-index.
-     */
-    @JvmStatic
-    val GEO_INDEX_GIST = "gist"
-
-    /**
-     * The constant for the SP-GIST geo-index.
-     */
-    @JvmStatic
-    val GEO_INDEX_SP_GIST = "sp-gist"
-
-    /**
-     * The constant for the SP-GIST geo-index.
-     */
-    @JvmStatic
-    val GEO_INDEX_BRIN = "brin"
-
-    /**
-     * The constant for the default geo-index (may change over time).
-     */
-    @JvmStatic
-    val GEO_INDEX_DEFAULT = GEO_INDEX_GIST
 
     /**
      * The storage class for collections that should be consistent.
@@ -166,7 +137,7 @@ object Static {
      * @return The 64-bit FNV1a hash.
      */
     @JvmStatic
-    fun lockId(name: String): BigInt64 = Fnv1a64.string(Fnv1a64.start(), name)
+    fun lockId(name: String): Int64 = Fnv1a64.string(Fnv1a64.start(), name)
 
     /**
      * Calculate the pseudo geo-reference-id from the given feature id.
@@ -205,7 +176,7 @@ object Static {
     @JvmStatic
     fun createBaseInternalsIfNotExists(sql: IPlv8Sql, schema: String, schemaOid: Int) {
         if (!tableExists(sql, SC_COLLECTIONS, schemaOid)) {
-            collectionCreate(sql, SC_COLLECTIONS, schema, schemaOid, SC_COLLECTIONS, GEO_INDEX_DEFAULT, partitionCount = PARTITION_COUNT_NONE)
+            collectionCreate(sql, SC_COLLECTIONS, schema, schemaOid, SC_COLLECTIONS, DEFAULT_GEO_INDEX, partitionCount = PARTITION_COUNT_NONE)
         }
         sql.execute("CREATE SEQUENCE IF NOT EXISTS naksha_txn_seq AS int8; COMMIT;")
     }
@@ -434,7 +405,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
             query += " PARTITION BY RANGE (txn_next) "
             query += pgTableInfo.TABLESPACE
             sql.execute(query)
-            val year = yearOf(Jb.env.currentMillis())
+            val year = yearOf(Platform.currentMillis())
             createHstPartition(sql, id, year, geoIndex, pgTableInfo)
             createHstPartition(sql, id, year + 1, geoIndex, pgTableInfo)
         }
@@ -446,7 +417,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
      * @return The UTC year read from the epoch milliseconds.
      */
     @JvmStatic
-    fun yearOf(epochMillis: BigInt64): Int =
+    fun yearOf(epochMillis: Int64): Int =
             Instant.fromEpochMilliseconds(epochMillis.toLong()).toLocalDateTime(TimeZone.UTC).year
 
     /**
@@ -565,8 +536,8 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         if (result is Array<*>) {
             val array = result as Array<Any>
             if (array.isNotEmpty()) {
-                val row = asMap(array[0])
-                val oid = row.getAny("oid")
+                val rows = sql.rows(result)!!
+                val oid = rows[0]["oid"]
                 if (oid is Int) return oid
             }
         }
@@ -595,8 +566,6 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         }
         return true
     }
-
-    fun currentMillis(): BigInt64? = if (DEBUG) Jb.env.currentMicros() / 1000 else null
 
     private fun Int.isPartitioningEnabled() = this >= 2
 }

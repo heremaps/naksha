@@ -1,9 +1,7 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
-import com.here.naksha.lib.jbon.IMap
-import com.here.naksha.lib.jbon.get
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -23,11 +21,6 @@ class NakshaException private constructor(
         @JvmStatic
         fun forId(errNo:String, errMsg:String, id :String?) : NakshaException =
                 NakshaException(errNo, errMsg, id)
-
-        @JvmStatic
-        fun forRow(errNo: String, errMsg: String, row: IMap, xyzNs: ByteArray) : NakshaException =
-                NakshaException(errNo, errMsg, row[COL_ID], row[COL_FEATURE], row[COL_FLAGS], row[COL_GEOMETRY], row[COL_TAGS], xyzNs)
-        // TODO: Add code that builds the XYZ namespace from the database row!
 
         @JvmStatic
         fun forBulk(errNo: String, errMsg: String): NakshaException = NakshaException(errNo, errMsg, null)
