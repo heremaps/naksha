@@ -9,6 +9,7 @@ import com.here.naksha.lib.auth.attribute.ResourceAttributes
 import com.here.naksha.lib.auth.check.CheckMapCompiler
 import naksha.base.P_List
 import naksha.base.P_Map
+import naksha.base.P_Object
 import kotlin.js.JsExport
 
 /**
@@ -133,7 +134,7 @@ class UserAction : P_List<UserRights>(UserRights::class) {
 }
 
 // attribute map from user's perspective
-class UserRights : P_Map<String, Any>(String::class, Any::class) {
+class UserRights : P_Object() {
 
     fun matches(attributes: ResourceAttributes): Boolean {
         if (isEmpty()) {

@@ -8,7 +8,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class ReadCollections : AccessRightsAction<CollectionAttributes, ReadCollections>(CollectionAttributes::class) {
+class ReadCollections : AccessRightsAction<CollectionAttributes, ReadCollections>() {
 
     override val name: String = NAME
 
@@ -20,7 +20,7 @@ class ReadCollections : AccessRightsAction<CollectionAttributes, ReadCollections
 }
 
 @JsExport
-class CreateCollections : AccessRightsAction<CollectionAttributes, CreateCollections>(CollectionAttributes::class) {
+class CreateCollections : AccessRightsAction<CollectionAttributes, CreateCollections>() {
 
     override val name: String = NAME
 
@@ -32,7 +32,7 @@ class CreateCollections : AccessRightsAction<CollectionAttributes, CreateCollect
 }
 
 @JsExport
-class UpdateCollections : AccessRightsAction<CollectionAttributes, UpdateCollections>(CollectionAttributes::class) {
+class UpdateCollections : AccessRightsAction<CollectionAttributes, UpdateCollections>() {
 
     override val name: String = NAME
 
@@ -44,7 +44,7 @@ class UpdateCollections : AccessRightsAction<CollectionAttributes, UpdateCollect
 }
 
 @JsExport
-class DeleteCollections : AccessRightsAction<CollectionAttributes, DeleteCollections>(CollectionAttributes::class) {
+class DeleteCollections : AccessRightsAction<CollectionAttributes, DeleteCollections>() {
 
     override val name: String = NAME
 

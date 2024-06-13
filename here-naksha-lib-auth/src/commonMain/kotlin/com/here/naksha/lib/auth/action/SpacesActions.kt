@@ -8,7 +8,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class UseSpaces: AccessRightsAction<SpaceAttributes, UseSpaces>(SpaceAttributes::class) {
+class UseSpaces: AccessRightsAction<SpaceAttributes, UseSpaces>() {
 
     override val name: String = NAME
 
@@ -20,7 +20,7 @@ class UseSpaces: AccessRightsAction<SpaceAttributes, UseSpaces>(SpaceAttributes:
 }
 
 @JsExport
-class ManageSpaces: AccessRightsAction<SpaceAttributes, ManageSpaces>(SpaceAttributes::class){
+class ManageSpaces: AccessRightsAction<SpaceAttributes, ManageSpaces>(){
 
     override val name: String = NAME
 

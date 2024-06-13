@@ -176,21 +176,3 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
         return mutableList
     }
 }
-
-fun main() {
-    val pList = object : P_List<String>(String::class){}
-//    pList.add("Hello")
-//    pList.add("there")
-    val it = pList.iterator()
-    println(pList.size)
-    pList.forEach { println(it) }
-}
-
-/*
-output:
-
-2
-Hello
-there
-null
- */

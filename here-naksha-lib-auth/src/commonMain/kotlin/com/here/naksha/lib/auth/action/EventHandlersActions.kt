@@ -8,7 +8,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class UseEventHandlers: AccessRightsAction<EventHandlerAttributes, UseEventHandlers>(EventHandlerAttributes::class) {
+class UseEventHandlers: AccessRightsAction<EventHandlerAttributes, UseEventHandlers>() {
 
     override val name: String = NAME
 
@@ -20,7 +20,7 @@ class UseEventHandlers: AccessRightsAction<EventHandlerAttributes, UseEventHandl
 }
 
 @JsExport
-class ManageEventHandlers: AccessRightsAction<EventHandlerAttributes, ManageEventHandlers>(EventHandlerAttributes::class) {
+class ManageEventHandlers: AccessRightsAction<EventHandlerAttributes, ManageEventHandlers>() {
 
     override val name: String = NAME
 

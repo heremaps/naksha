@@ -8,7 +8,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class UseStorages : AccessRightsAction<StorageAttributes, UseStorages>(StorageAttributes::class) {
+class UseStorages : AccessRightsAction<StorageAttributes, UseStorages>() {
 
     override val name: String = NAME
 
@@ -20,8 +20,7 @@ class UseStorages : AccessRightsAction<StorageAttributes, UseStorages>(StorageAt
 }
 
 @JsExport
-class ManageStorages :
-    AccessRightsAction<StorageAttributes, ManageStorages>(StorageAttributes::class) {
+class ManageStorages : AccessRightsAction<StorageAttributes, ManageStorages>() {
 
     override val name: String = NAME
 

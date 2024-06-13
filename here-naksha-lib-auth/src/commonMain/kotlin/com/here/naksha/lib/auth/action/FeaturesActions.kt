@@ -8,7 +8,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class ReadFeatures : AccessRightsAction<FeatureAttributes, ReadFeatures>(FeatureAttributes::class) {
+class ReadFeatures : AccessRightsAction<FeatureAttributes, ReadFeatures>() {
 
     override val name: String = NAME
 
@@ -21,7 +21,7 @@ class ReadFeatures : AccessRightsAction<FeatureAttributes, ReadFeatures>(Feature
 
 @JsExport
 class CreateFeatures :
-    AccessRightsAction<FeatureAttributes, CreateFeatures>(FeatureAttributes::class) {
+    AccessRightsAction<FeatureAttributes, CreateFeatures>() {
 
     override val name: String = NAME
 
@@ -34,7 +34,7 @@ class CreateFeatures :
 
 @JsExport
 class UpdateFeatures :
-    AccessRightsAction<FeatureAttributes, UpdateFeatures>(FeatureAttributes::class) {
+    AccessRightsAction<FeatureAttributes, UpdateFeatures>() {
 
     override val name: String = NAME
 
@@ -47,7 +47,7 @@ class UpdateFeatures :
 
 @JsExport
 class DeleteFeatures :
-    AccessRightsAction<FeatureAttributes, DeleteFeatures>(FeatureAttributes::class) {
+    AccessRightsAction<FeatureAttributes, DeleteFeatures>() {
 
     override val name: String = NAME
 
