@@ -31,6 +31,9 @@ import kotlin.reflect.full.primaryConstructor
 actual class Platform {
     actual companion object {
         @JvmStatic
+        actual var parseDataUrl: Boolean = false
+
+        @JvmStatic
         private val module = SimpleModule().apply {
             addAbstractTypeMapping(Map::class.java, JvmMap::class.java)
             addAbstractTypeMapping(MutableMap::class.java, JvmMap::class.java)

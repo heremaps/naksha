@@ -5,7 +5,8 @@ import kotlin.test.*
 class PlatformTest {
     // TODO: Fix the commented out type casting
     @Test
-    fun fromJSON() {
+    fun testFromJSON() {
+        Platform.parseDataUrl = true
         val raw = Platform.fromJSON("""{
   "id": "Foo",
   "properties": {
@@ -30,7 +31,7 @@ class PlatformTest {
         val int64 = xyz.getAs("hexBigInt", Int64::class)
         assertEquals(Int64(9007199254740991), int64)
         assertEquals(Int64(9007199254740991), xyz.getAs("decimalBigInt", Int64::class))
-//        val tags = properties.getAs("tags", P_StringList::class)
+        val tags = properties.getAs("tags", P_StringList::class)
 //        assertNotNull(tags)
 //        assertEquals(2, tags.size)
 //        assertEquals("a", tags[0])

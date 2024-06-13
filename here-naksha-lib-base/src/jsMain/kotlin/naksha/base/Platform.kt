@@ -790,5 +790,9 @@ for (i=0; i < msg_arr.length; i++) {
         ): ByteArray {
             TODO("Not yet implemented")
         }
+
+        actual var parseDataUrl: Boolean
+            get() = TODO("Not yet implemented")
+            set(value) {}
     }
 }

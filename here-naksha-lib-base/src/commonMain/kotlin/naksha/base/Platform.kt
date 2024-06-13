@@ -458,6 +458,8 @@ expect class Platform {
          * @return The inflated (decompress) bytes.
          */
         fun gzipInflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+
+        var parseDataUrl: Boolean
     }
 }
 /*
