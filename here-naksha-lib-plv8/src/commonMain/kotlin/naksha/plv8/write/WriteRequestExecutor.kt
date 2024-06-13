@@ -33,7 +33,7 @@ class WriteRequestExecutor(
         // then execute all others features' operations
         for (collection in collectionOperationsMap.keys) {
             val partialRequest = writeRequest.newRequestWithOps(collectionOperationsMap[collection]!!.toTypedArray())
-            val result = SingleCollectionWriter(collection, session, modifyCounters).writeCollections(partialRequest)
+            val result = SingleCollectionWriter(collection, session, modifyCounters).writeFeatures(partialRequest)
             responseRows.addAll(result.rows)
         }
         return SuccessResponse(rows = responseRows.toTypedArray())

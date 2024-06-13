@@ -104,17 +104,8 @@ internal class NakshaBulkLoaderPlan(
                 SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                     FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
             arrayOf(
-                SQL_INT64,
-                SQL_INT64,
-                SQL_INT32,
-                SQL_INT16,
-                SQL_INT32,
-                SQL_INT64,
-                SQL_INT64,
-                SQL_INT64,
-                SQL_STRING,
-                SQL_STRING,
-                SQL_STRING
+                SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32,
+                SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING
             )
         )
     }
@@ -126,17 +117,8 @@ internal class NakshaBulkLoaderPlan(
                 SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
                     FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
             arrayOf(
-                SQL_INT64,
-                SQL_INT64,
-                SQL_INT32,
-                SQL_INT16,
-                SQL_INT32,
-                SQL_INT64,
-                SQL_INT64,
-                SQL_INT64,
-                SQL_STRING,
-                SQL_STRING,
-                SQL_STRING
+                SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64,
+                SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING
             )
         )
     }
@@ -154,10 +136,10 @@ internal class NakshaBulkLoaderPlan(
     fun addCreate(op: NakshaRequestOp) {
         val dbRow = op.dbRow!!
         addToRemoveFromDel(op.id)
-        session.xyzInsert(op.collectionId, dbRow)
+        session.rowUpdater.xyzInsert(op.collectionId, dbRow)
         addInsertParams(dbRow)
         if (!minResult) {
-            addRow(XYZ_EXEC_CREATED, dbRow)
+            addResult(XYZ_EXEC_CREATED, dbRow)
         }
     }
 
@@ -168,10 +150,10 @@ internal class NakshaBulkLoaderPlan(
 
         addToRemoveFromDel(op.id)
         addCopyHeadToHstParams(op.id, isHistoryDisabled)
-        session.xyzUpdateHead(op.collectionId, dbRow, headBeforeUpdate)
+        session.rowUpdater.xyzUpdateHead(op.collectionId, dbRow, headBeforeUpdate)
         addUpdateHeadParams(op.dbRow)
         if (!minResult) {
-            addRow(XYZ_EXEC_UPDATED, dbRow)
+            addResult(XYZ_EXEC_UPDATED, dbRow)
         }
     }
 
@@ -184,9 +166,9 @@ internal class NakshaBulkLoaderPlan(
         addDeleteInternal(op, existingFeature)
         if (!minResult) {
             if (existingFeature == null) {
-                addRow(XYZ_EXEC_RETAINED)
+                addResult(XYZ_EXEC_RETAINED)
             } else {
-                addRow(XYZ_EXEC_DELETED, existingFeature)
+                addResult(XYZ_EXEC_DELETED, existingFeature)
             }
         }
     }
@@ -199,9 +181,9 @@ internal class NakshaBulkLoaderPlan(
             featuresToPurgeFromDel.add(op.id)
         if (!minResult) {
             if (deletedFeatureRow == null) {
-                addRow(XYZ_EXEC_RETAINED)
+                addResult(XYZ_EXEC_RETAINED)
             } else {
-                addRow(XYZ_EXEC_PURGED, deletedFeatureRow)
+                addResult(XYZ_EXEC_PURGED, deletedFeatureRow)
             }
         }
     }
@@ -236,7 +218,7 @@ internal class NakshaBulkLoaderPlan(
                 updatedAt = headBeforeDelete.meta!!.updatedAt,
                 createdAt = headBeforeDelete.meta!!.createdAt
             )
-            session.xyzDel(newMeta)
+            session.rowUpdater.xyzDel(newMeta)
             if (!autoPurge) // do not push to del
                 addDelParams(copyHeadToDelBulkParams, newMeta)
             addDeleteHeadParams(op.id)
@@ -367,7 +349,7 @@ internal class NakshaBulkLoaderPlan(
         }
     }
 
-    private fun addRow(op: String, row: Row? = null) {
+    private fun addResult(op: String, row: Row? = null) {
         val resultRow = ResultRow(row = row, op = op)
         result.add(resultRow)
     }

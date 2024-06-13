@@ -66,21 +66,17 @@ internal class NakshaRequestOp(
                 val row = prepareRow(session, nakWriteOp)
 
                 val op = NakshaRequestOp(
-                    nakWriteOp,
-                    row,
+                    reqWrite = nakWriteOp,
+                    dbRow = row,
                     collectionId = collectionId,
-                    atomicUUID = requestedUUID(
-                        session.storage.id(),
-                        nakWriteOp
-                    ),
+                    atomicUUID = requestedUUID(session.storage.id(), nakWriteOp),
                     collectionPartitionCount = collectionPartitionCount
                 )
                 operations.add(op)
                 if (partition == UNDETERMINED_PARTITION) {
                     partition = op.partition
                 } else if (partition != op.partition) {
-                    partition =
-                        MULTIPLE_DIFFERENT_PARTITIONS
+                    partition = MULTIPLE_DIFFERENT_PARTITIONS
                 }
             }
 
@@ -98,7 +94,6 @@ internal class NakshaRequestOp(
         private fun prepareRow(session: NakshaSession, nakWriteOp: Write): Row? {
             return when (nakWriteOp) {
                 is FeatureOp -> session.storage.convertFeatureToRow(nakWriteOp.feature)
-
                 is RowOp -> nakWriteOp.row
                 else -> null
             }
