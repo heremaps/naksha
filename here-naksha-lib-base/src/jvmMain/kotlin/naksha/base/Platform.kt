@@ -7,9 +7,8 @@ import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonFactoryBuilder
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.MapperFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.kotlinModule
@@ -37,8 +36,20 @@ actual class Platform {
             addAbstractTypeMapping(MutableMap::class.java, JvmMap::class.java)
             addAbstractTypeMapping(List::class.java, JvmList::class.java)
             addAbstractTypeMapping(MutableList::class.java, JvmList::class.java)
-            addDeserializer(Number::class.java, CustomNumberDeserializer())
-        }
+        }.setDeserializerModifier(object : BeanDeserializerModifier() {
+            override fun modifyDeserializer(
+                config: DeserializationConfig,
+                beanDesc: BeanDescription,
+                deserializer: JsonDeserializer<*>
+            ): JsonDeserializer<*> {
+                return if (beanDesc.beanClass == Number::class.java || beanDesc.beanClass == String::class.java) {
+                    CustomDeserializer()
+                } else {
+                    // If no special deserialization is required, delegate to the default deserializer
+                    deserializer
+                }
+            }
+        })
 
         @JvmStatic
         private val objectMapper: ThreadLocal<ObjectMapper> = ThreadLocal.withInitial {
