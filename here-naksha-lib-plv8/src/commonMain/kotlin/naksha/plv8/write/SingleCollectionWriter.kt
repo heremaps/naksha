@@ -30,7 +30,7 @@ class SingleCollectionWriter(
     fun writeFeatures(writeRequest: WriteRequest): SuccessResponse {
         val START = currentMillis()
         val START_MAPPING = currentMillis()
-        val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.getPartitions())
+        val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.partitions)
         val END_MAPPING = currentMillis()
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
@@ -40,7 +40,7 @@ class SingleCollectionWriter(
         val END_LOADING = currentMillis()
 
         val START_PREPARE = currentMillis()
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.disableHistory, collectionConfig.autoPurge)
         for (op in operations.operations) {
             val existingFeature: Row? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
@@ -65,19 +65,19 @@ class SingleCollectionWriter(
 
         val END = currentMillis()
         if (DEBUG) {
-            println("[${writeRequest.ops.size} feature]: ${END!! - START!!}ms, loading: ${END_LOADING!! - START}ms, execution: ${END_EXECUTION!! - START_EXECUTION!!}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
+            println("[${writeRequest.ops.size} feature]: ${END - START}ms, loading: ${END_LOADING - START}ms, execution: ${END_EXECUTION - START_EXECUTION}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
         }
         return SuccessResponse(rows = plan.result.toTypedArray())
     }
 
     fun writeCollections(writeRequest: WriteRequest): SuccessResponse {
-        val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.getPartitions())
+        val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.partitions)
 
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
         val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
         val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.noResults)
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.isDisableHistory(), collectionConfig.isAutoPurge())
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.disableHistory, collectionConfig.autoPurge)
 
         for (op in operations.operations) {
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
