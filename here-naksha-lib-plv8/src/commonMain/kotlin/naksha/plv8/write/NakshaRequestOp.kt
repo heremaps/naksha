@@ -5,6 +5,7 @@ import com.here.naksha.lib.jbon.XYZ_OP_DELETE
 import com.here.naksha.lib.jbon.XYZ_OP_PURGE
 import naksha.model.Guid
 import naksha.model.request.*
+import naksha.model.response.Metadata
 import naksha.model.response.Row
 import naksha.plv8.ERR_UNIQUE_VIOLATION
 import naksha.plv8.NakshaException

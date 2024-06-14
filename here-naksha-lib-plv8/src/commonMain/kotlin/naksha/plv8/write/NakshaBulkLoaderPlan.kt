@@ -350,6 +350,7 @@ internal class NakshaBulkLoaderPlan(
     }
 
     private fun addResult(op: String, row: Row? = null) {
+        if (row != null)  DbRowMapper.evaluateOptimizedValues(row.meta!!)
         val resultRow = ResultRow(row = row, op = op)
         result.add(resultRow)
     }

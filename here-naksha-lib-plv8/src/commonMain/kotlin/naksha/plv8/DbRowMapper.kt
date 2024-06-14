@@ -2,6 +2,7 @@ package naksha.plv8
 
 import naksha.base.Int64
 import naksha.base.P_JsMap
+import naksha.model.ACTION_CREATE
 import naksha.model.IStorage
 import naksha.model.response.Metadata
 import naksha.model.response.Row
@@ -40,11 +41,6 @@ object DbRowMapper {
      * @return ID, ROW
      */
     fun toRow(row: P_JsMap, storage: IStorage): Row {
-        val createdAt: Int64? = (row[COL_CREATED_AT] ?: row[COL_UPDATE_AT]) as Int64?
-        check(createdAt != null) { "Missing $COL_CREATED_AT in row" }
-        // for transactions update might be null, for features created at might be null
-        val updatedAt: Int64 = (row[COL_UPDATE_AT] ?: row[COL_CREATED_AT]) as Int64
-
         return Row(
             storage = storage,
             guid = null,
@@ -55,26 +51,57 @@ object DbRowMapper {
             geoRef = row[COL_GEO_REF] as ByteArray?,
             geo = row[COL_GEOMETRY] as ByteArray,
             tags = row[COL_TAGS] as ByteArray?,
-            meta = Metadata(
-                id = row[COL_ID] as String,
-                txnNext = row[COL_TXN_NEXT] as Int64?,
-                txn = row[COL_TXN] as Int64,
-                ptxn = row[COL_PTXN] as Int64?,
-                fnva1 = null,// TODO null
-                uid = row[COL_UID] as Int?,
-                puid = row[COL_PUID] as Int?,
-                version = (row[COL_VERSION] ?: 1) as Int?,
-                geoGrid = row[COL_GEO_GRID] as Int,
-                flags = row[COL_FLAGS] as Int,
-                action = (row[COL_ACTION] ?: 0) as Short?,
-                appId = row[COL_APP_ID] as String,
-                author = (row[COL_AUTHOR] ?: row[COL_APP_ID]) as String?,
-                createdAt = createdAt,
-                // for transactions update might be null, for features created at might be null
-                updatedAt = updatedAt,
-                authorTs = (row[COL_AUTHOR] ?: updatedAt) as Int64?,
-                origin = row[COL_ORIGIN] as String?
-            )
+            meta = toMetadata(row)
         )
+    }
+
+    /**
+     * Converts raw database row to Metadata object.
+     * It restores optimized values as well
+     * @see evaluateOptimizedValues
+     *
+     * @param row - raw database record
+     * @return Metadata object
+     */
+    fun toMetadata(row: P_JsMap): Metadata {
+        val meta = Metadata(
+            id = row[COL_ID] as String,
+            txnNext = row[COL_TXN_NEXT] as? Int64,
+            txn = row[COL_TXN] as Int64,
+            ptxn = row[COL_PTXN] as? Int64,
+            fnva1 = null,// TODO null
+            uid = row[COL_UID] as? Int,
+            puid = row[COL_PUID] as? Int,
+            version = (row[COL_VERSION] ?: 1) as? Int,
+            geoGrid = row[COL_GEO_GRID] as Int,
+            flags = row[COL_FLAGS] as Int,
+            action = row[COL_ACTION] as? Short,
+            appId = row[COL_APP_ID] as String,
+            author = row[COL_AUTHOR] as? String,
+            createdAt = row[COL_CREATED_AT] as? Int64,
+            updatedAt = row[COL_UPDATE_AT] as? Int64,
+            authorTs = row[COL_AUTHOR_TS] as? Int64,
+            origin = row[COL_ORIGIN] as String?
+        )
+        evaluateOptimizedValues(meta)
+        return meta
+    }
+
+    /**
+     * In database values are kept in optimized way, i.e. to avoid keeping 1M of action: 0, we keep action: null.
+     * By calling this method you will bring back original values to life.
+     *
+     * @param Metadata to fix.
+     */
+    fun evaluateOptimizedValues(meta: Metadata) {
+        meta.author = meta.author ?: meta.appId
+        meta.version = meta.version ?: 1
+        meta.action = meta.action ?: ACTION_CREATE.toShort()
+        meta.uid = meta.uid ?: 0
+        meta.puid = meta.puid ?: 0
+        // for transactions update might be null, for features created at might be null
+        meta.createdAt = meta.createdAt ?: meta.updatedAt
+        meta.updatedAt = meta.updatedAt ?: meta.createdAt
+        meta.authorTs = meta.authorTs ?: meta.updatedAt
     }
 }

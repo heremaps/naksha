@@ -26,9 +26,9 @@ data class Metadata(
     var appId: String,
     var author: String?,
     var createdAt: Int64?,
-    var updatedAt: Int64,
-    var authorTs: Int64?,
-    var origin: String?
+    var updatedAt: Int64?,
+    var authorTs: Int64? = null,
+    var origin: String? = null
 ) {
     fun getLuid(): Luid {
         return Luid(
