@@ -4,21 +4,15 @@ import naksha.model.response.Response
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
-// FIXME TODO move it to proper library
-
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class IWriteSession(
-    context: NakshaContext,
-    stmtTimeout: Int,
-    lockTimeout: Int
-): IReadSession(context, stmtTimeout, lockTimeout) {
+interface IWriteSession: IReadSession {
 
-    abstract fun writeFeature(feature: NakshaFeatureProxy): Response
+    fun writeFeature(feature: NakshaFeatureProxy): Response
 
-    abstract fun commit()
+    fun commit()
 
-    abstract fun rollback()
+    fun rollback()
 
-    abstract fun close()
+    fun close()
 }

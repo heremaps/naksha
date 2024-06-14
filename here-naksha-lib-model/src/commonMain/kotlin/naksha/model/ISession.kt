@@ -3,7 +3,6 @@ package naksha.model
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
-// FIXME TODO move it to proper library
 
 /**
  * When a session is opened, it is bound to the context in which the session shall operate.
@@ -13,10 +12,8 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class ISession(
-    val context: NakshaContext,
-    val stmtTimeout: Int,
+interface ISession {
+    val context: NakshaContext
+    val stmtTimeout: Int
     val lockTimeout: Int
-) {
-
 }

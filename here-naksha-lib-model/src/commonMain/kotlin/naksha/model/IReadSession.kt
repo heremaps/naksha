@@ -7,20 +7,14 @@ import naksha.model.request.Request
 import naksha.model.request.ResultRow
 import kotlin.js.JsExport
 
-// FIXME TODO move it to proper library
-
 @JsExport
-abstract class IReadSession(
-    context: NakshaContext,
-    stmtTimeout: Int,
-    lockTimeout: Int
-) : ISession(context, stmtTimeout, lockTimeout) {
+interface IReadSession: ISession {
 
-    abstract fun execute(request: Request): Response
+    fun execute(request: Request): Response
 
-    abstract fun executeParallel(request: Request): Response
+    fun executeParallel(request: Request): Response
 
-    abstract fun getFeatureById(id: String): ResultRow?
+    fun getFeatureById(id: String): ResultRow?
 
-    abstract fun getFeaturesByIds(ids: List<String>): Map<String, String>
+    fun getFeaturesByIds(ids: List<String>): Map<String, String>
 }
