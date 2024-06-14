@@ -7,11 +7,11 @@ import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonFactoryBuilder
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.MapperFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import net.jpountz.lz4.LZ4Factory
 import org.slf4j.LoggerFactory
@@ -38,6 +38,35 @@ actual class Platform {
             addAbstractTypeMapping(List::class.java, JvmList::class.java)
             addAbstractTypeMapping(MutableList::class.java, JvmList::class.java)
         }
+            .setDeserializerModifier(object : BeanDeserializerModifier() {
+            override fun modifyDeserializer(
+                config: DeserializationConfig,
+                beanDesc: BeanDescription,
+                deserializer: JsonDeserializer<*>
+            ): JsonDeserializer<*> {
+                return if (beanDesc.beanClass == Number::class.java || beanDesc.beanClass == String::class.java) {
+                    CustomDeserializer()
+                } else {
+                    // If no special deserialization is required, delegate to the default deserializer
+                    deserializer
+                }
+            }
+        })
+        //TODO implement the logic that will switch serializer, and the CustomSerializer itself
+//            .setSerializerModifier(object : BeanSerializerModifier() {
+//                override fun modifySerializer(
+//                    config: SerializationConfig?,
+//                    beanDesc: BeanDescription?,
+//                    serializer: JsonSerializer<*>?
+//                ): JsonSerializer<*>? {
+//                    return if (beanDesc?.beanClass == Number::class.java) {
+//                        CustomSerializer()
+//                    } else {
+//                        // If no special deserialization is required, delegate to the default serializer
+//                        serializer
+//                    }
+//                }
+//            })
 
         @JvmStatic
         private val objectMapper: ThreadLocal<ObjectMapper> = ThreadLocal.withInitial {
@@ -59,9 +88,6 @@ actual class Platform {
                 .visibility(PropertyAccessor.CREATOR, JsonAutoDetect.Visibility.ANY)
                 .configure(SerializationFeature.CLOSE_CLOSEABLE, false)
                 .addModule(kotlinModule())
-                // TODO: Fix the module.
-                //       If this is removed, JSON parsing works, but returns LinkedHashMap.
-                //       When enabled, Jackson fails to parse a complex JSON, see [PlatformTest]
                 .addModule(module)
                 .build()
         }
@@ -351,11 +377,21 @@ actual class Platform {
         @JvmStatic
         actual fun <T : Any> newInstanceOf(klass: KClass<T>): T = klass.primaryConstructor!!.call()
 
-        @JvmStatic
-        actual fun toJSON(obj: Any?): String = objectMapper.get().writeValueAsString(obj)
+        internal val toJsonOptions = ThreadLocal<ToJsonOptions>()
 
         @JvmStatic
-        actual fun fromJSON(json: String): Any? = objectMapper.get().readValue(json, Any::class.java)
+        actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
+            toJsonOptions.set(options)
+            return objectMapper.get().writeValueAsString(obj)
+        }
+
+        internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
+
+        @JvmStatic
+        actual fun fromJSON(json: String, options: FromJsonOptions): Any? {
+            fromJsonOptions.set(options)
+            return objectMapper.get().readValue(json, Any::class.java)
+        }
 
         @JvmStatic
         actual fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any? {
