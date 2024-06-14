@@ -1,4 +1,33 @@
+/*
+ * Copyright (C) 2017-2024 HERE Europe B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * License-Filename: LICENSE
+ */
 package com.here.naksha.lib.psql;
+
+import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.updateFeatureRequest;
+import static java.lang.String.format;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
@@ -14,31 +43,18 @@ import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.jbon.JvmBigInt64Api;
 import com.here.naksha.lib.plv8.ConstantsKt;
-import com.here.naksha.lib.plv8.NakshaSession;
 import com.here.naksha.lib.plv8.Static;
+import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDate;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIf;
-
-import java.io.IOException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.LocalDate;
-
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.updateFeatureRequest;
-import static java.lang.String.format;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestMethodOrder(OrderAnnotation.class)
 abstract class PsqlCollectionTests extends PsqlTests {
@@ -57,7 +73,7 @@ abstract class PsqlCollectionTests extends PsqlTests {
     final WriteXyzCollections request = new WriteXyzCollections();
     request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partitionCount(), false, true));
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(request).getXyzCollectionCursor()) {
+        session.execute(request).getXyzCollectionCursor()) {
       assertNotNull(cursor);
       assertTrue(cursor.hasNext());
       assertTrue(cursor.next());
@@ -94,7 +110,7 @@ abstract class PsqlCollectionTests extends PsqlTests {
     final WriteXyzCollections request = new WriteXyzCollections();
     request.add(EWriteOp.CREATE, new XyzCollection(collectionId(), partitionCount(), false, true));
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(request).getXyzCollectionCursor()) {
+        session.execute(request).getXyzCollectionCursor()) {
       assertTrue(cursor.next());
       assertSame(EExecutedOp.ERROR, cursor.getOp());
       assertEquals(XyzError.CONFLICT.value(), cursor.getError().err.value());
@@ -129,7 +145,7 @@ abstract class PsqlCollectionTests extends PsqlTests {
     request.add(EWriteOp.CREATE, xyzCollection);
 
     try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(request).getXyzCollectionCursor()) {
+        session.execute(request).getXyzCollectionCursor()) {
       assertTrue(cursor.next());
       assertNull(cursor.getError(), () -> cursor.getError().msg);
     }
@@ -160,7 +176,8 @@ abstract class PsqlCollectionTests extends PsqlTests {
   }
 
   private String getTablespace(PsqlWriteSession session, String table) throws SQLException {
-    try (PreparedStatement statement = session.session().prepareStatement("select tablespace from pg_tables where tablename=?")) {
+    try (PreparedStatement statement =
+        session.session().prepareStatement("select tablespace from pg_tables where tablename=?")) {
       statement.setString(1, table);
       ResultSet resultSet = statement.executeQuery();
       assertTrue(resultSet.next(), () -> "no table found: " + table);
@@ -174,12 +191,22 @@ abstract class PsqlCollectionTests extends PsqlTests {
   }
 
   private void createTablespace() throws IOException, InterruptedException {
-    postgreSQLContainer.execInContainer("psql", "-U", "postgres", "-d", "postgres", "-c", format("create tablespace %s LOCATION '/tmp/temporary_space';", ConstantsKt.getTEMPORARY_TABLESPACE()));
+    postgreSQLContainer.execInContainer(
+        "psql",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        format("create tablespace %s LOCATION '/tmp/temporary_space';", ConstantsKt.getTEMPORARY_TABLESPACE()));
   }
 
   private boolean isLockReleased(PsqlWriteSession session, String collectionId) throws SQLException {
     final PostgresSession pgSession = session.session();
-    final SQL sql = pgSession.sql().add("select count(*) from pg_locks where locktype = 'advisory' and ((classid::bigint << 32) | objid::bigint) = ?;");
+    final SQL sql = pgSession
+        .sql()
+        .add(
+            "select count(*) from pg_locks where locktype = 'advisory' and ((classid::bigint << 32) | objid::bigint) = ?;");
     try (PreparedStatement stmt = pgSession.prepareStatement(sql)) {
       stmt.setLong(1, new JvmBigInt64Api().toLong(Static.lockId(collectionId)));
       ResultSet resultSet = stmt.executeQuery();
@@ -189,6 +216,6 @@ abstract class PsqlCollectionTests extends PsqlTests {
   }
 
   int partitionCount() {
-    return partition()? 8: 1;
+    return partition() ? 8 : 1;
   }
 }

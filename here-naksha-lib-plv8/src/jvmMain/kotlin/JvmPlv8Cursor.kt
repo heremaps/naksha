@@ -1,5 +1,6 @@
 package com.here.naksha.lib.plv8
 
+import naksha.plv8.IPlv8Cursor
 import java.sql.ResultSet
 
 /**

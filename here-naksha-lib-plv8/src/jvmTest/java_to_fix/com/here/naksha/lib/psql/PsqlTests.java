@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,16 @@
  */
 package com.here.naksha.lib.psql;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
 import com.here.naksha.lib.jbon.JvmEnv;
 import com.here.naksha.lib.psql.PsqlStorage.Params;
+import java.io.IOException;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
@@ -35,13 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Base class for all PostgresQL tests that require some test database.
@@ -143,18 +142,19 @@ abstract class PsqlTests {
     if (existingUrl != null) {
       url = existingUrl;
     } else {
-      postgreSQLContainer =
-          new GenericContainer("hcr.data.here.com/naksha-devops/naksha-postgres:arm64-v16.2-r1")
-              .withExposedPorts(5432);
+      postgreSQLContainer = new GenericContainer("hcr.data.here.com/naksha-devops/naksha-postgres:arm64-v16.2-r1")
+          .withExposedPorts(5432);
       String password = "password";
       postgreSQLContainer.addEnv("PGPASSWORD", password);
       postgreSQLContainer.setWaitStrategy(new LogMessageWaitStrategy()
-                                              .withRegEx("Start postgres.*")
-                                              .withTimes(2)
-                                              .withStartupTimeout(Duration.of(60, ChronoUnit.SECONDS)));
+          .withRegEx("Start postgres.*")
+          .withTimes(2)
+          .withStartupTimeout(Duration.of(60, ChronoUnit.SECONDS)));
       postgreSQLContainer.start();
       Thread.sleep(1000);
-      url = String.format("jdbc:postgresql://localhost:%s/postgres?user=postgres&password=%s&schema=naksha_test&id=com.here.naksha&app=PsqlTests", postgreSQLContainer.getMappedPort(5432), password);
+      url = String.format(
+          "jdbc:postgresql://localhost:%s/postgres?user=postgres&password=%s&schema=naksha_test&id=com.here.naksha&app=PsqlTests",
+          postgreSQLContainer.getMappedPort(5432), password);
     }
     config = new PsqlStorageConfig(url);
   }
@@ -208,12 +208,10 @@ abstract class PsqlTests {
     assertNotNull(storage);
     assertNotNull(nakshaContext);
     assertThrows(StorageNotInitialized.class, () -> {
-      try (final PsqlWriteSession session = storage.newWriteSession(nakshaContext, true)) {
-      }
+      try (final PsqlWriteSession session = storage.newWriteSession(nakshaContext, true)) {}
     });
     assertThrows(StorageNotInitialized.class, () -> {
-      try (final PsqlReadSession session = storage.newReadSession(nakshaContext, true)) {
-      }
+      try (final PsqlReadSession session = storage.newReadSession(nakshaContext, true)) {}
     });
   }
 
@@ -276,5 +274,4 @@ abstract class PsqlTests {
       postgreSQLContainer.stop();
     }
   }
-
 }

@@ -44,10 +44,11 @@ kotlin {
             }
         }
         jvmMain {
+            jvmToolchain(11)
             dependencies {
                 api(project(":here-naksha-lib-geo"))
                 api(project(":here-naksha-lib-model"))
-                api(project(":here-naksha-lib-core"))
+//                api(project(":here-naksha-lib-core"))
 
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-jbon"))
@@ -112,9 +113,9 @@ tasks {
         }).duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
     getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn(webpackTask)
+        dependsOn(webpackTask, browserDistribution)
     }
     getByName<ProcessResources>("jvmTestProcessResources") {
-        dependsOn(webpackTask, browserDistribution)
+        dependsOn(webpackTask)
     }
 }

@@ -1,7 +1,7 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.BigInt64
-import com.here.naksha.lib.jbon.toLong
+import naksha.base.Int64
+import naksha.plv8.IPlv8Cursor
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Types
@@ -41,7 +41,7 @@ class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : naksh
         stmt.setBytes(parameterIndex, value)
     }
 
-    internal fun setLong(parameterIndex: Int, value: BigInt64?) {
+    internal fun setLong(parameterIndex: Int, value: Int64?) {
         if (value == null) stmt.setNull(parameterIndex, Types.BIGINT) else stmt.setLong(parameterIndex, value.toLong())
     }
 
