@@ -1,6 +1,9 @@
 package com.here.naksha.lib.plv8
 
 import com.here.naksha.lib.jbon.*
+import naksha.base.JvmInt64
+import naksha.base.P_JsMap
+import naksha.base.P_Map
 import java.sql.ResultSet
 
 /**
@@ -36,14 +39,14 @@ open class JvmPlv8ResultSet(private var rs: ResultSet?) {
      * Reads the next row into a native map.
      * @return The next row as native map.
      */
-    fun readRow(): JvmMap {
+    fun readRow(): P_JsMap {
         val rs = this.rs
         check(rs != null)
         val columnNames = this.columnNames
         check(columnNames != null)
         val columnTypes = this.columnTypes
         check(columnTypes != null)
-        val row = JvmMap()
+        val row = P_JsMap()
         var i = 0
         while (i < columnNames.size) {
             val name = columnNames[i]
@@ -58,7 +61,7 @@ open class JvmPlv8ResultSet(private var rs: ResultSet?) {
 
                 "smallint", "int2" -> row[name] = getPrimitiveNullable(i, rs, rs::getShort)
                 "integer", "int4", "xid4", "oid" -> row[name] = getPrimitiveNullable(i, rs, rs::getInt)
-                "bigint", "int8", "xid8" -> row[name] = getPrimitiveNullable(i, rs, rs::getLong)?.let { JvmBigInt64(it) }
+                "bigint", "int8", "xid8" -> row[name] = getPrimitiveNullable(i, rs, rs::getLong)?.let { JvmInt64(it) }
                 "real" -> row[name] = getPrimitiveNullable(i, rs, rs::getFloat)
                 "double precision" -> row[name] = getPrimitiveNullable(i, rs, rs::getFloat)
                 "numeric" -> row[name] = rs.getBigDecimal(i)
@@ -66,7 +69,7 @@ open class JvmPlv8ResultSet(private var rs: ResultSet?) {
                 "timestamp" -> row[name] = rs.getTimestamp(i)
                 "date" -> row[name] = rs.getDate(i)
                 "bytea" -> row[name] = rs.getBytes(i)
-                "jsonb" -> row[name] = Jb.env.parse(rs.getString(i))
+                "jsonb" -> TODO("implement parse") // Jb.env.parse(rs.getString(i))
                 "array" -> row[name] = rs.getArray(i)
                 else -> row[name] = rs.getObject(i)
             }
@@ -87,10 +90,10 @@ open class JvmPlv8ResultSet(private var rs: ResultSet?) {
      * Convert the while result-set into an array and then close the result-set.
      * @return The result set as array of rows (native maps).
      */
-    fun toArray(): Array<JvmMap> {
+    fun toArray(): Array<P_JsMap> {
         val rs = this.rs
         check(rs != null)
-        val array = ArrayList<JvmMap>(30)
+        val array = ArrayList<P_JsMap>(30)
         while (rs.next()) {
             array.add(readRow())
         }

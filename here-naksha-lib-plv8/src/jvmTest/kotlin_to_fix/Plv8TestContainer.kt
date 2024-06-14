@@ -1,4 +1,5 @@
 import com.here.naksha.lib.plv8.JvmPlv8Env
+import naksha.base.BaseUtil
 import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.slf4j.LoggerFactory
@@ -73,7 +74,7 @@ class Plv8TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableRes
                 conn,
                 schema,
                 "plv8_test",
-                env.randomString(),
+                BaseUtil.randomString(),
                 "plv8_test_app",
                 "plv8_test_user"
         )

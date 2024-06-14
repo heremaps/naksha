@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,22 +50,22 @@ public class PsqlCursorTest {
     StringCodecFactory stringCodecFactory = new StringCodecFactory();
     XyzFeatureCodecFactory xyzFeatureCodecFactory = XyzFeatureCodecFactory.get();
 
-
-    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, null, statement, rs);
+    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor =
+        new PsqlCursor<>(xyzFeatureCodecFactory, null, null, statement, rs);
 
     // when
     when(rs.next()).thenReturn(true);
     when(rs.getRow()).thenReturn(1);
 
     when(rs.getString(intThat(i -> i < 6))).thenReturn("id");
-    when(rs.getBytes(5)).thenReturn(new byte[]{});
+    when(rs.getBytes(5)).thenReturn(new byte[] {});
     when(rs.getString(8)).thenReturn(null);
     ForwardCursor<String, StringCodec> forwardCursor = cursor.withCodecFactory(stringCodecFactory, true);
 
     // expect
     assertEquals(stringCodecFactory, cursor.getCodecFactory());
     assertTrue(forwardCursor.next());
-    assertArrayEquals(new byte[]{}, forwardCursor.getFeatureJbon());
+    assertArrayEquals(new byte[] {}, forwardCursor.getFeatureJbon());
   }
 
   @ParameterizedTest
@@ -80,7 +80,7 @@ public class PsqlCursorTest {
     assertNotNull(cursor.getError());
     assertEquals(expected, cursor.getError().err);
     assertEquals("Error Message", cursor.getError().msg);
-    assertArrayEquals(new byte[]{}, cursor.getFeatureJbon());
+    assertArrayEquals(new byte[] {}, cursor.getFeatureJbon());
   }
 
   private static Stream<Arguments> psqlErrorValues() {
@@ -95,12 +95,14 @@ public class PsqlCursorTest {
         Arguments.of("UNKNOWN_CODE", XyzError.get("UNKNOWN_CODE")));
   }
 
-  private PsqlCursor<XyzFeature, XyzFeatureCodec> createCursorWithMockedError(String errNo, String errMsg) throws SQLException {
+  private PsqlCursor<XyzFeature, XyzFeatureCodec> createCursorWithMockedError(String errNo, String errMsg)
+      throws SQLException {
     Statement statement = Mockito.mock(Statement.class);
     ResultSet rs = Mockito.mock(ResultSet.class);
     XyzFeatureCodecFactory xyzFeatureCodecFactory = XyzFeatureCodecFactory.get();
 
-    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor = new PsqlCursor<>(xyzFeatureCodecFactory, null, null, statement, rs);
+    PsqlCursor<XyzFeature, XyzFeatureCodec> cursor =
+        new PsqlCursor<>(xyzFeatureCodecFactory, null, null, statement, rs);
 
     when(rs.next()).thenReturn(true);
     when(rs.getRow()).thenReturn(1);
@@ -113,5 +115,4 @@ public class PsqlCursorTest {
 
     return cursor;
   }
-
 }

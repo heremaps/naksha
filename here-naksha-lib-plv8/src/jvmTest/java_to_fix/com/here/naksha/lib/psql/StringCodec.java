@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 HERE Europe B.V.
+ * Copyright (C) 2017-2024 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,9 @@ import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.jbon.JbDictManager;
 import com.here.naksha.lib.jbon.JbFeature;
 import com.here.naksha.lib.jbon.JbMap;
-import java.util.Map;
-
 import com.here.naksha.lib.nak.Flags;
 import com.here.naksha.lib.nak.GZip;
+import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 
 class StringCodec extends FeatureCodec<String, StringCodec> {
@@ -45,9 +44,10 @@ class StringCodec extends FeatureCodec<String, StringCodec> {
 
   @Override
   public @NotNull StringCodec encodeFeature(boolean force) {
-    byte[] rawFeatureBytes = flags.isFeatureEncodedWithGZip()? GZip.INSTANCE.gunzip(featureBytes) : featureBytes;
+    byte[] rawFeatureBytes = flags.isFeatureEncodedWithGZip() ? GZip.INSTANCE.gunzip(featureBytes) : featureBytes;
     JbFeature jbFeature = new JbFeature(new JbDictManager()).mapBytes(rawFeatureBytes, 0, rawFeatureBytes.length);
-    Map<String, Object> featureAsMap = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
+    Map<String, Object> featureAsMap = (Map<String, Object>)
+        new JbMap().mapReader(jbFeature.getReader()).toIMap();
     try {
       feature = Json.get().writer().writeValueAsString(featureAsMap);
     } catch (JsonProcessingException e) {
