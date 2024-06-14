@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import net.jpountz.lz4.LZ4Factory
 import org.slf4j.LoggerFactory
@@ -36,7 +37,8 @@ actual class Platform {
             addAbstractTypeMapping(MutableMap::class.java, JvmMap::class.java)
             addAbstractTypeMapping(List::class.java, JvmList::class.java)
             addAbstractTypeMapping(MutableList::class.java, JvmList::class.java)
-        }.setDeserializerModifier(object : BeanDeserializerModifier() {
+        }
+            .setDeserializerModifier(object : BeanDeserializerModifier() {
             override fun modifyDeserializer(
                 config: DeserializationConfig,
                 beanDesc: BeanDescription,
@@ -50,6 +52,21 @@ actual class Platform {
                 }
             }
         })
+        //TODO implement the logic that will switch serializer, and the CustomSerializer itself
+//            .setSerializerModifier(object : BeanSerializerModifier() {
+//                override fun modifySerializer(
+//                    config: SerializationConfig?,
+//                    beanDesc: BeanDescription?,
+//                    serializer: JsonSerializer<*>?
+//                ): JsonSerializer<*>? {
+//                    return if (beanDesc?.beanClass == Number::class.java) {
+//                        CustomSerializer()
+//                    } else {
+//                        // If no special deserialization is required, delegate to the default serializer
+//                        serializer
+//                    }
+//                }
+//            })
 
         @JvmStatic
         private val objectMapper: ThreadLocal<ObjectMapper> = ThreadLocal.withInitial {
@@ -360,8 +377,13 @@ actual class Platform {
         @JvmStatic
         actual fun <T : Any> newInstanceOf(klass: KClass<T>): T = klass.primaryConstructor!!.call()
 
+        internal val toJsonOptions = ThreadLocal<ToJsonOptions>()
+
         @JvmStatic
-        actual fun toJSON(obj: Any?, options: ToJsonOptions): String = objectMapper.get().writeValueAsString(obj)
+        actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
+            toJsonOptions.set(options)
+            return objectMapper.get().writeValueAsString(obj)
+        }
 
         internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
 
