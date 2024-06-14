@@ -353,7 +353,7 @@ expect class Platform {
          * @param obj The object to serialize.
          * @return The JSON.
          */
-        fun toJSON(obj: Any?, options: ToJsonOptions): String
+        fun toJSON(obj: Any?, options: ToJsonOptions = ToJsonOptions.DEFAULT): String
 
         /**
          * Deserialize the given JSON.

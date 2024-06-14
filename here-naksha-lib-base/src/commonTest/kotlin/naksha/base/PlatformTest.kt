@@ -36,5 +36,11 @@ class PlatformTest {
         assertEquals("a", tags[0])
         assertEquals("b", tags[1])
     }
-
+        @Test
+        fun testToJson() {
+                val data: Any = mapOf("name" to "Mustermann", "age" to 69, "boolean" to true,"array" to listOf("a","b","c"))
+                val json = Platform.toJSON(data)
+                val jsonString = "{\"name\":\"Mustermann\",\"age\":69,\"boolean\":true,\"array\":[\"a\",\"b\",\"c\"]}"
+                assertEquals(jsonString,json)
+        }
 }

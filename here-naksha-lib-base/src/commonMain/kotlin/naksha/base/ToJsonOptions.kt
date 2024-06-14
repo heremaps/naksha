@@ -9,6 +9,6 @@ class ToJsonOptions(val int64Encoding: String? = null) {
     companion object {
         @JvmStatic
         @JsStatic
-        val DEFAULT = FromJsonOptions()
+        val DEFAULT = ToJsonOptions()
     }
 }
