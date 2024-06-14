@@ -4,13 +4,13 @@ import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRights
 import naksha.base.PlatformList
 import naksha.base.PlatformListApi.Companion.array_entries
 
-object CheckMapCompiler {
+object CheckCompiler {
 
     private const val WILDCARD = "*"
 
     /**
      * Compiler's main function that takes in raw (uncompiled) map of properties ([UserRights] and
-     * their raw checks, and compiles them to specific instances of [Check] for each of property.
+     * their raw checks, and compiles them to specific instances of [CompiledCheck] for each of property.
      * This is later used in for matrix matching (see [UserRights.matches])
      *
      * IN:
@@ -27,13 +27,13 @@ object CheckMapCompiler {
      *    "xyz": EqualsCheck("strict")
      * }
      */
-    fun compile(userRights: UserRights): Map<String, Check> {
+    fun compile(userRights: UserRights): Map<String, CompiledCheck> {
         return userRights.asSequence().associate { (key, value) ->
-            key to checkFor(requireNotNull(value) { "Values shouldn't be null" })
+            key to compile(requireNotNull(value) { "Values shouldn't be null" })
         }
     }
 
-    private fun checkFor(value: Any): Check {
+    fun compile(value: Any): CompiledCheck {
         return when (value) {
             is String -> getStringCheckFor(value)
             is PlatformList -> getListCheckFor(value)
@@ -41,7 +41,7 @@ object CheckMapCompiler {
         }
     }
 
-    private fun getStringCheckFor(value: String): Check {
+    private fun getStringCheckFor(value: String): CompiledCheck {
         return if (value.startsWith(WILDCARD)) {
             EndsWithCheck(value.substringAfter(WILDCARD))
         } else if (value.endsWith(WILDCARD)) {
@@ -51,12 +51,12 @@ object CheckMapCompiler {
         }
     }
 
-    private fun getListCheckFor(value: PlatformList): Check {
+    private fun getListCheckFor(value: PlatformList): CompiledCheck {
         val platformIterator = array_entries(value)
-        val check = EqualsCheck()
+        val composedCheck = ComposedCheck()
         generateSequence(platformIterator.next().value) {
             platformIterator.next().value
-        }.forEach { check.add(it) }
-        return check
+        }.forEach { composedCheck.add(it) }
+        return composedCheck
     }
 }

@@ -9,10 +9,10 @@ import kotlin.js.JsExport
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE", "UNCHECKED_CAST")
 @JsExport
-abstract class AccessRightsAction<T : ResourceAttributes, SELF : AccessRightsAction<T, SELF>> :
+open class AccessRightsAction<T : ResourceAttributes, SELF : AccessRightsAction<T, SELF>> :
     P_List<ResourceAttributes>(ResourceAttributes::class) {
 
-    abstract val name: String
+   open val name: String = "unknownAction"
 
     /**
      * Add the given attribute maps.

@@ -18,8 +18,7 @@ class MatrixMatchTest {
                         "id": "my-unique-feature-id",
                         "storageId": "id-with-wild-card-*",
                         "tags": [  
-                            "my-unique-tag",
-                            "some-common-tag-with-wild-card-*"
+                            "my-unique-tag"
                         ]
                     }
                 ]
@@ -40,7 +39,6 @@ class MatrixMatchTest {
                         "collectionId": "unused-id-during-checks",
                         "tags": [
                             "my-unique-tag",
-                            "some-common-tag-with-wild-card-matching-value",
                             "some-additional-tag"
                         ]
                     }

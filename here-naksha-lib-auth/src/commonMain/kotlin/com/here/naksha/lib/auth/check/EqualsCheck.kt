@@ -9,7 +9,7 @@ import kotlin.js.JsName
  * Tests if the attribute value equals at least one of the arguments.
  */
 @JsExport
-class EqualsCheck() : Check() {
+class EqualsCheck() : CompiledCheck() {
 
     @JsName("withArgs")
     constructor(vararg args: Any?): this(){

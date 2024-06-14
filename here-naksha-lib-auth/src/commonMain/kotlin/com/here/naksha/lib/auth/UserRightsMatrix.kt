@@ -6,7 +6,7 @@ import com.here.naksha.lib.auth.AccessRightsMatrix
 import com.here.naksha.lib.auth.ServiceAccessRights
 import com.here.naksha.lib.auth.action.AccessRightsAction
 import com.here.naksha.lib.auth.attribute.ResourceAttributes
-import com.here.naksha.lib.auth.check.CheckMapCompiler
+import com.here.naksha.lib.auth.check.CheckCompiler
 import naksha.base.P_List
 import naksha.base.P_Map
 import naksha.base.P_Object
@@ -140,11 +140,13 @@ class UserRights : P_Object() {
         if (isEmpty()) {
             return true
         }
-        val checkMap = CheckMapCompiler.compile(this)
+        val checkMap = CheckCompiler.compile(this)
         return all { (propertyName, _) ->
-            checkMap[propertyName]
+            val res = checkMap[propertyName]
                 ?.matches(attributes[propertyName])
                 ?: false
+            println("Check for $propertyName: $res")
+            res
         }
     }
 
