@@ -76,6 +76,7 @@ kotlin {
                 implementation("org.postgresql:postgresql:42.5.4")
                 implementation(project(":here-naksha-lib-jbon"))
                 implementation("org.mockito:mockito-core:5.8.0")
+                implementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
                 implementation("org.locationtech.spatial4j:spatial4j:0.8")
             }
         }

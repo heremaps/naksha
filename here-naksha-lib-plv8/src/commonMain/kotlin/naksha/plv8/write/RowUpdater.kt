@@ -2,6 +2,7 @@ package naksha.plv8.write
 
 import com.here.naksha.lib.jbon.ACTION_DELETE
 import com.here.naksha.lib.jbon.ACTION_UPDATE
+import naksha.base.BaseUtil
 import naksha.base.Platform
 import naksha.model.Flags
 import naksha.model.response.Metadata
@@ -26,33 +27,46 @@ class RowUpdater(
      * @return The new XYZ namespace for this feature.
      */
     internal fun xyzInsert(collectionId: String, NEW: Row) {
-        val newMeta = NEW.meta!!
         val txn = session.txn()
         val txnTs = session.txnTs()
-        newMeta.txn = txn.value
-        newMeta.txnNext = null
-        newMeta.ptxn = null
-        newMeta.puid = null
 
-        val geoGrid: Int? = newMeta.geoGrid
+        var geoGrid: Int? = NEW.meta?.geoGrid
+
+        // FIXME: default flags should be taken from collectionConfig
+        val flags = NEW.meta?.flags ?: Flags.DEFAULT_FLAGS
+
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
             val id: String? = NEW.id
             check(id != null) { "Missing id" }
-            newMeta.geoGrid = grid(id, Flags.readGeometryEncoding(newMeta.flags!!), NEW.geo)
+            geoGrid = grid(id, Flags.readGeometryEncoding(flags), NEW.geo)
         }
-        newMeta.action = null // saving space null means 0 (create)
-        newMeta.version = null // saving space null means 1
-        if (collectionId == SC_TRANSACTIONS) {
-            newMeta.uid = 0
+
+        val uid = if (collectionId == SC_TRANSACTIONS) {
+            0
         } else {
-            newMeta.uid = session.nextUid()
+            session.nextUid()
         }
-        newMeta.createdAt = null // saving space - it is same as update_at at creation,
-        newMeta.updatedAt = txnTs
-        newMeta.author = session.author
-        newMeta.authorTs = null // saving space - only apps are allowed to create features
-        newMeta.appId = session.appId
+
+        val newMeta = Metadata(
+            id = NEW.id,
+            txn = txn.value,
+            txnNext = null,
+            ptxn = null,
+            puid = null,
+            geoGrid = geoGrid,
+            action = null, // saving space null means 0 (create)
+            version = null, // saving space null means 1
+            uid = uid,
+            createdAt = null, // saving space - it is same as update_at at creation,
+            updatedAt = txnTs,
+            author = session.author,
+            authorTs = null, // saving space - only apps are allowed to create features
+            appId = session.appId,
+            flags = flags,
+            fnva1 = null // TODO FIXME
+        )
+        NEW.meta = newMeta
     }
 
     /**
