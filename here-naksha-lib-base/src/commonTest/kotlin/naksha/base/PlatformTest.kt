@@ -3,10 +3,8 @@ package naksha.base
 import kotlin.test.*
 
 class PlatformTest {
-    // TODO: Fix the commented out type casting
     @Test
     fun testFromJSON() {
-        Platform.parseDataUrl = true
         val raw = Platform.fromJSON("""{
   "id": "Foo",
   "properties": {
@@ -18,7 +16,8 @@ class PlatformTest {
       "tags": ["a", "b"]
     }
   }
-}""")
+}""",FromJsonOptions(true)
+        )
         val map = assertIs<PlatformMap>(raw)
         val feature = map.proxy(P_JsMap::class)
         assertEquals("Foo", feature["id"])
@@ -37,4 +36,5 @@ class PlatformTest {
         assertEquals("a", tags[0])
         assertEquals("b", tags[1])
     }
+
 }

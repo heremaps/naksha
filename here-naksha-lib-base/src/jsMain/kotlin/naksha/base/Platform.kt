@@ -524,7 +524,7 @@ return new DataView(byteArray.buffer, offset, size);
          * @return The JSON.
          */
         @JsStatic
-        actual fun toJSON(obj: Any?): String {
+        actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
             TODO("Not yet implemented")
         }
 
@@ -534,7 +534,7 @@ return new DataView(byteArray.buffer, offset, size);
          * @return The parsed JSON.
          */
         @JsStatic
-        actual fun fromJSON(json: String): Any? {
+        actual fun fromJSON(json: String, options: FromJsonOptions): Any? {
             TODO("Not yet implemented")
         }
 
@@ -790,9 +790,5 @@ for (i=0; i < msg_arr.length; i++) {
         ): ByteArray {
             TODO("Not yet implemented")
         }
-
-        actual var parseDataUrl: Boolean
-            get() = TODO("Not yet implemented")
-            set(value) {}
     }
 }

@@ -31,9 +31,6 @@ import kotlin.reflect.full.primaryConstructor
 actual class Platform {
     actual companion object {
         @JvmStatic
-        actual var parseDataUrl: Boolean = false
-
-        @JvmStatic
         private val module = SimpleModule().apply {
             addAbstractTypeMapping(Map::class.java, JvmMap::class.java)
             addAbstractTypeMapping(MutableMap::class.java, JvmMap::class.java)
@@ -364,10 +361,15 @@ actual class Platform {
         actual fun <T : Any> newInstanceOf(klass: KClass<T>): T = klass.primaryConstructor!!.call()
 
         @JvmStatic
-        actual fun toJSON(obj: Any?): String = objectMapper.get().writeValueAsString(obj)
+        actual fun toJSON(obj: Any?, options: ToJsonOptions): String = objectMapper.get().writeValueAsString(obj)
+
+        internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
 
         @JvmStatic
-        actual fun fromJSON(json: String): Any? = objectMapper.get().readValue(json, Any::class.java)
+        actual fun fromJSON(json: String, options: FromJsonOptions): Any? {
+            fromJsonOptions.set(options)
+            return objectMapper.get().readValue(json, Any::class.java)
+        }
 
         @JvmStatic
         actual fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any? {

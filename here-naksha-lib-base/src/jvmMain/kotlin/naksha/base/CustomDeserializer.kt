@@ -20,7 +20,7 @@ internal class CustomDeserializer() : JsonDeserializer<Any>() {
         }
         else if (value.isTextual) {
             val asText = value.asText()
-            if (asText.startsWith("data:bigint;") && Platform.parseDataUrl) {
+            if (asText.startsWith("data:bigint;") && Platform.fromJsonOptions.get().parseDataUrl) {
                 val data = asText.split(";")[1]
                 val parts = data.split(",")
                 val encoding = parts[0]

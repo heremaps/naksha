@@ -353,14 +353,14 @@ expect class Platform {
          * @param obj The object to serialize.
          * @return The JSON.
          */
-        fun toJSON(obj: Any?): String
+        fun toJSON(obj: Any?, options: ToJsonOptions): String
 
         /**
          * Deserialize the given JSON.
          * @param json The JSON string to parse.
          * @return The parsed JSON.
          */
-        fun fromJSON(json: String): Any?
+        fun fromJSON(json: String, options: FromJsonOptions = FromJsonOptions.DEFAULT): Any?
 
         /**
          * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap],
@@ -458,8 +458,6 @@ expect class Platform {
          * @return The inflated (decompress) bytes.
          */
         fun gzipInflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
-
-        var parseDataUrl: Boolean
     }
 }
 /*
