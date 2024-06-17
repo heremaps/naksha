@@ -6,6 +6,7 @@ import naksha.model.request.ReadFeatures.Companion.readIdsBy
 import naksha.model.request.condition.LOp.Companion.and
 import naksha.model.request.condition.LOp.Companion.or
 import naksha.model.request.condition.POp.Companion.eq
+import naksha.model.request.condition.POp.Companion.isNotNull
 import naksha.model.request.condition.POp.Companion.lt
 import naksha.model.request.condition.PRef.ID
 import naksha.model.request.condition.PRef.UID
@@ -229,6 +230,7 @@ class ReadQueryBuilderTest {
         val (sql, params) = builder.build(req)
 
         // then
+        assertEquals(3, params.size)
         assertEquals(
             """
             (SELECT id, type, geo_ref, flags FROM "foo" WHERE id=$1)
@@ -237,6 +239,23 @@ class ReadQueryBuilderTest {
             UNION ALL
             (SELECT id, type, geo_ref, flags FROM "foo${'$'}hst" WHERE id=$1)
         """.trimIndent(), removeLimitWrapper(sql)
+        )
+    }
+
+
+    @Test
+    fun testReadByIdIsNotNull() {
+        // given
+        val req = readIdsBy("foo", isNotNull(ID))
+
+        // when
+        val (sql, params) = builder.build(req)
+
+        // then
+        assertEquals(0, params.size)
+        assertEquals(
+            """(SELECT id, type, geo_ref, flags FROM "foo" WHERE id is not null)""",
+            removeLimitWrapper(sql)
         )
     }
 

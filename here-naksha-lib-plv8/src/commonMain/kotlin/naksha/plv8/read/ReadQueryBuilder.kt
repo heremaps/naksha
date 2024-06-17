@@ -150,7 +150,7 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
      *
      * @return table names to be queries
      */
-    fun ReadFeatures.getQuotedTablesToQuery(): List<String> {
+    private fun ReadFeatures.getQuotedTablesToQuery(): List<String> {
         val tables = mutableListOf<String>()
         for (collection in collectionIds) {
             tables.add(sql.quoteIdent(collection))
