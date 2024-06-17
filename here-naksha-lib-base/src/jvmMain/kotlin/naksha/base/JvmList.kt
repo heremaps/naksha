@@ -108,17 +108,4 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         d[index] = element
         return old
     }
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : P_List<*>> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-        val symbol = Symbols.of(klass)
-        var proxy = getSymbol(symbol)
-        if (proxy != null) {
-            if (klass.isInstance(proxy)) return proxy as T
-            if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
-        }
-        proxy = klass.primaryConstructor!!.call()
-        proxy.bind(this, symbol)
-        return proxy
-    }
 }

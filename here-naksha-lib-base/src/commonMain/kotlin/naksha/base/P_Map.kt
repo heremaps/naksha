@@ -22,6 +22,9 @@ import kotlin.reflect.KClass
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
+    override fun createData(): PlatformMap = Platform.newMap()
+    override fun data(): PlatformMap = super.data() as PlatformMap
+
     override fun bind(data: PlatformObject, symbol: Symbol) {
         require(data is PlatformMap)
         super.bind(data, symbol)
@@ -99,9 +102,6 @@ abstract class P_Map<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: 
      * @return The given value as value.
      */
     open fun toValue(key: K, value: Any?, alt: V? = null): V? = box(value, valueKlass, alt)
-
-    override fun createData(): PlatformMap = Platform.newMap()
-    override fun data(): PlatformMap = super.data() as PlatformMap
 
     override val entries: MutableSet<MutableEntry<K, V?>>
         get() {

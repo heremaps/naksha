@@ -128,17 +128,25 @@ expect class Platform {
         fun initialize(vararg parameters: Any?): Boolean
 
         /**
-         * Tests if the [fromSource] class or interface is either the same as, or is a superclass or superinterface of, the class
-         * or interface represented by the specified [toTarget] parameter.
+         * Tests if the [target] class or interface is either the same as, or is a superclass or superinterface of, the class
+         * or interface represented by the specified [source] parameter.
          *
-         * For example `isAssignableForm(CharSequence, String)` would be _true_, while
-         * `isAssignableForm(String, CharSequence)` would be _false_.
+         * For example `isAssignable(CharSequence, String)` would be _false_ (not every [CharSequence] is always a [String]),
+         * while `isAssignable(String, CharSequence)` will be _true_ (every [String] is always a [CharSequence]).
          *
-         * @param fromSource The type that should be cast.
-         * @param toTarget The target type to which to cast.
-         * @return _true_ if the [fromSource] type can be cast to the [toTarget] type; _false_ otherwise.
+         * In other words, this method tests if the [source] type can be cast down to the [target] type, so if
+         * **`source as target`** is possible.
+         *
+         * **Warning**: An assignment is not the same as an instanceof test. For example for interfaces the example can be tricky,
+         * because formally the cast from a [CharSequence] to a [String] is not an assignable form, but technically can still
+         * succeed, if the object being tried to cast down is actually a string, just the compiler type is formally [CharSequence].
+         * Formally this kind of cast is an assignment from [String] to [String] not being known at compile time.
+         *
+         * @param source The type that should be cast.
+         * @param target The target type to which to cast.
+         * @return _true_ if the [source] type can be cast to the [target] type in all cases; _false_ otherwise.
          */
-        fun isAssignableFrom(fromSource: KClass<*>, toTarget: KClass<*>): Boolean
+        fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean
 
         /**
          * Tests if the given type is any [Proxy]. This is necessary to be used with [proxy].
@@ -178,19 +186,6 @@ expect class Platform {
         fun intern(s: String, cd: Boolean = false): String
 
         /**
-         * Create a proxy of the given type or return the existing proxy. If a proxy of a not compatible type exists already, either
-         * override it or throw an _IllegalStateException_. The method will automatically [unbox] all [Proxy] instances, when given.
-         * @param <T> The proxy type, must extend [Proxy].
-         * @param o The native object to query, should be an instance of [PlatformObject].
-         * @param klass The proxy class.
-         * @param override If an existing incompatible proxy should be overridden; if _false_, an exception is thrown.
-         * @return The proxy type.
-         * @throws IllegalArgumentException If the given class is no instance of [PlatformObject].
-         * @throws IllegalStateException If the given object binds an incompatible proxy and [override] is _false_.
-         */
-//////        fun <T : Proxy> proxy(o: Any?, klass: KClass<out T>, override: Boolean = false): T
-
-        /**
          * Creates a new array.
          * @param entries The entries to initialize the array with.
          * @return The created array.
@@ -199,8 +194,7 @@ expect class Platform {
 
         /**
          * Creates a new map.
-         * @param entries The entries to add into the map. Can be a list of [P_MapEntry] of just alternating (_key_, _value_)'s,
-         * where _key_ need to a string and _value_ can be anything.
+         * @param entries The entries to add into the map. Can be a list of [Pair] or alternating (`key`, `value`)'s.
          * @return The created map.
          */
         fun newMap(vararg entries: Any?): PlatformMap
@@ -241,11 +235,12 @@ expect class Platform {
         fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean = false): T
 
         /**
-         * Unboxes the given object so that the underlying native value is returned.
-         * @param value The object to unbox.
-         * @return The unboxed value.
+         * Return the native platform object for the given proxy. If the given object is no proxy, the object is returned
+         * as given.
+         * @param value The object to access.
+         * @return The [PlatformObject] if a [Proxy] given; otherwise the value itself.
          */
-        fun unbox(value: Any?): Any?
+        fun valueOf(value: Any?): Any?
 
         /**
          * Create a 32-bit integer from the given value.
@@ -393,13 +388,13 @@ expect class Platform {
          * Returns the current epoch microseconds.
          * @return current epoch microseconds.
          */
-        fun currentMicros() : Int64
+        fun currentMicros(): Int64
 
         /**
          * Returns the current epoch nanoseconds.
          * @return current epoch nanoseconds.
          */
-        fun currentNanos() : Int64
+        fun currentNanos(): Int64
 
         /**
          * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).

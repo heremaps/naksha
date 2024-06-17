@@ -13,19 +13,23 @@ actual class Platform {
     actual companion object {
         private var isInitialized: Boolean = false
 
-        val objectTemplate = object : PlatformObject {}
+        val objectTemplate = object : PlatformObject {
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
+                TODO("Not yet implemented")
+            }
+        }
         val listTemplate = object : PlatformList {
-            override fun <T : P_List<*>> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
                 TODO("Not yet implemented")
             }
         }
         val mapTemplate = object : PlatformMap {
-            override fun <T : P_Map<*, *>> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
                 TODO("Not yet implemented")
             }
         }
         val dataViewTemplate = object : PlatformDataView {
-            override fun <T : P_DataView> proxy(klass: KClass<out T>, doNotOverride: Boolean): T {
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
                 TODO("Not yet implemented")
             }
         }
@@ -313,7 +317,7 @@ return new DataView(byteArray.buffer, offset, size);
 """).unsafeCast<PlatformDataView>()
 
         @JsStatic
-        actual fun unbox(value: Any?): Any? = if (value is Proxy) value.data() else value
+        actual fun valueOf(value: Any?): Any? = if (value is Proxy) value.data() else value
 
         @JsStatic
         actual fun toInt(value: Any): Int = js("Number(value) >> 0").unsafeCast<Int>()
@@ -412,7 +416,7 @@ return new DataView(byteArray.buffer, offset, size);
         }
 
         @JsStatic
-        actual fun isAssignableFrom(fromSource: KClass<*>, toTarget: KClass<*>): Boolean = TODO("Fix me, see documentation!")
+        actual fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean = TODO("Fix me, see documentation!")
 
         @JsStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean = TODO("Fix me, see documentation!")

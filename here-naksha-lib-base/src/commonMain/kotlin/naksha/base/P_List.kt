@@ -24,6 +24,10 @@ import kotlin.reflect.KClass
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
+
+    override fun createData(): PlatformList = Platform.newList()
+    override fun data(): PlatformList = super.data() as PlatformList
+
     override fun bind(data: PlatformObject, symbol: Symbol) {
         require(data is PlatformList)
         super.bind(data, symbol)
@@ -50,14 +54,11 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
         var value = box(raw, elementKlass, null)
         if (value == null) {
             value = Platform.newInstanceOf(elementKlass)
-            array_set(data, index, Platform.unbox(value))
+            array_set(data, index, Platform.valueOf(value))
         }
         return value
     }
 
-    override fun createData(): PlatformList = Platform.newList()
-
-    override fun data(): PlatformList = super.data() as PlatformList
     override var size: Int
         get() = array_get_length(data())
         set(newLength) = array_set_length(data(), newLength)
@@ -97,7 +98,7 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
     }
 
     override fun retainAll(elements: Collection<E?>): Boolean {
-        val unboxed: Array<Any?> = elements.map { Platform.unbox(it) }.toTypedArray()
+        val unboxed: Array<Any?> = elements.map { Platform.valueOf(it) }.toTypedArray()
         return array_retain_all(data(), *unboxed)
     }
 
@@ -137,7 +138,7 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
     override fun addAll(elements: Collection<E?>): Boolean {
         val data = data()
         if (elements.isNotEmpty()) {
-            for (e in elements) array_push(data, Platform.unbox(e))
+            for (e in elements) array_push(data, Platform.valueOf(e))
             return true
         }
         return false
@@ -148,7 +149,7 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
         if (elements.isNotEmpty()) {
             val array = arrayOfNulls<Any?>(elements.size)
             var i = 0
-            for (e in elements) array[i++] = Platform.unbox(e)
+            for (e in elements) array[i++] = Platform.valueOf(e)
             array_splice(data, index, 0, *array)
             return true
         }
@@ -156,11 +157,11 @@ abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutab
     }
 
     override fun add(index: Int, element: E?) {
-        array_splice(data(), index, 0, Platform.unbox(element))
+        array_splice(data(), index, 0, Platform.valueOf(element))
     }
 
     override fun add(element: E?): Boolean {
-        array_push(data(), Platform.unbox(element))
+        array_push(data(), Platform.valueOf(element))
         return true
     }
 

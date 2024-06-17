@@ -176,7 +176,7 @@ actual class Platform {
         actual fun intern(s: String, cd: Boolean): String = s
 
         @JvmStatic
-        actual fun isAssignableFrom(fromSource: KClass<*>, toTarget: KClass<*>): Boolean = fromSource.java.isAssignableFrom(toTarget.java)
+        actual fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean = source.java.isAssignableFrom(target.java)
 
         @JvmStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean = Proxy::class.isSuperclassOf(klass)
@@ -236,10 +236,10 @@ actual class Platform {
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView = JvmDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun unbox(value: Any?): Any? = if (value is Proxy) value.data() as? JvmObject else value
+        actual fun valueOf(value: Any?): Any? = if (value is Proxy) value.data() as? JvmObject else value
 
         /**
-         * Returns the [JvmObject] of the given object. This method uses the same implementation as [unbox].
+         * Returns the [JvmObject] of the given object.
          * @param o Any object.
          * @return The [JvmObject] or _null_.
          */
@@ -529,10 +529,19 @@ actual class Platform {
          * @return The proxy instance.
          * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
          */
+        @Suppress("UNCHECKED_CAST")
         @JvmStatic
         actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
             require(pobject is JvmObject)
-            return pobject.proxy(klass, doNotOverride)
+            val symbol = Symbols.of(klass)
+            var proxy = pobject.getSymbol(symbol)
+            if (proxy != null) {
+                if (klass.isInstance(proxy)) return proxy as T
+                if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
+            }
+            proxy = klass.primaryConstructor!!.call()
+            proxy.bind(pobject, symbol)
+            return proxy
         }
 
         @JvmStatic
