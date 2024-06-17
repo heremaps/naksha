@@ -80,5 +80,6 @@ class WriteFeaturesTest {
         assertEquals(Flags.DEFAULT_FLAGS, row0.flags)
         assertEquals(0, row0.meta?.uid)
         assertEquals(XYZ_OP_CREATE.toShort(), row0.meta?.action)
+        assertEquals(1, row0.meta?.version)
     }
 }

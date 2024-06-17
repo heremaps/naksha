@@ -1,6 +1,7 @@
-package naksha.model.request
+package naksha.model.request.condition
 
 import naksha.model.Geometry
+import naksha.model.request.condition.geometry.GeometryTransformation
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

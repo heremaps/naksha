@@ -16,9 +16,14 @@ import java.sql.Connection
  */
 @Suppress("MemberVisibilityCanBePrivate", "UNCHECKED_CAST")
 class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
-    private val dbInfo = PgDbInfo(this)
+    private var dbInfo: PgDbInfo? = null
 
-    override fun info(): PgDbInfo = dbInfo
+    override fun info(): PgDbInfo {
+        if (dbInfo == null) {
+            dbInfo = PgDbInfo(this)
+        }
+        return dbInfo!!
+    }
 
     override fun affectedRows(any: Any): Int? = if (any is Int) any else null
 

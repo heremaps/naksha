@@ -105,5 +105,5 @@ interface IPlv8Sql {
      * @param compressed The bytes to decompress.
      * @return The inflated (decompress) bytes.
      */
-    fun gzipDecompress(raw: ByteArray): ByteArray
+    fun gzipDecompress(compressed: ByteArray): ByteArray
 }
