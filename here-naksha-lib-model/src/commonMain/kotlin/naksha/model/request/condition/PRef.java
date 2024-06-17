@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.storage;
+package naksha.model.request.condition;
 
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.ID;
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.PROPERTIES;
@@ -56,15 +56,15 @@ public class PRef {
     return this;
   }
 
-  public static final String[] ID_PROP_PATH = new String[] {ID};
-  public static final String[] APP_ID_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, APP_ID};
-  public static final String[] AUTHOR_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, AUTHOR};
-  public static final String[] UUID_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, UUID};
-  public static final String[] MRID_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, "mrid"};
-  public static final String[] GRID_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, GRID};
-  public static final String[] TXN_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TXN};
-  public static final String[] TXN_NEXT_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TXN_NEXT};
-  public static final String[] TAGS_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TAGS};
+  public static final String[] ID_PROP_PATH = new String[] {XyzFeature.ID};
+  public static final String[] APP_ID_PROP_PATH = new String[] {XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE, XyzNamespace.APP_ID};
+  public static final String[] AUTHOR_PROP_PATH = new String[] {XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE, XyzNamespace.AUTHOR};
+  public static final String[] UUID_PROP_PATH = new String[] {XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE, XyzNamespace.UUID};
+  public static final String[] MRID_PROP_PATH = new String[] {XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE, "mrid"};
+  public static final String[] GRID_PROP_PATH = new String[] {XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE, XyzNamespace.GRID};
+  public static final String[] TXN_PROP_PATH = new String[] {XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE, XyzNamespace.TXN};
+  public static final String[] TXN_NEXT_PROP_PATH = new String[] {XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE, XyzNamespace.TXN_NEXT};
+  public static final String[] TAGS_PROP_PATH = new String[] {XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE, XyzNamespace.TAGS};
 
   static final PRef PREF_ID = new PRef(ID_PROP_PATH);
   static final PRef PREF_APP_ID = new PRef(APP_ID_PROP_PATH);
@@ -174,7 +174,7 @@ public class PRef {
    * @return the reference to a specific tag from the {@code tags} array of the XYZ-Namespace.
    */
   public static @NotNull PRef tag(@NotNull CharSequence name) {
-    final String tagName = string(name);
+    final String tagName = StringCache.string(name);
     assert tagName != null;
     return new PRef(TAGS_PROP_PATH).withTagName(tagName);
   }

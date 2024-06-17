@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.storage;
+package naksha.model.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.NakshaVersion;

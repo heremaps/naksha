@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.storage;
+package naksha.model.request.condition;
 
 import com.here.naksha.lib.core.util.json.JsonEnum;
 
@@ -28,22 +28,22 @@ public class OpType extends JsonEnum {
   /**
    * Combine all children via logical AND operator.
    */
-  public static final OpType AND = defIgnoreCase(OpType.class, "and");
+  public static final OpType AND = JsonEnum.defIgnoreCase(OpType.class, "and");
 
   /**
    * Combine all children via logical OR operator.
    */
-  public static final OpType OR = defIgnoreCase(OpType.class, "or");
+  public static final OpType OR = JsonEnum.defIgnoreCase(OpType.class, "or");
 
   /**
    * Negate the logical state of the child operation, requires exactly one child.
    */
-  public static final OpType NOT = defIgnoreCase(OpType.class, "not");
+  public static final OpType NOT = JsonEnum.defIgnoreCase(OpType.class, "not");
 
   @Override
   protected void init() {
-    register(OpType.class);
-    register(POpType.class);
-    register(SOpType.class);
+    JsonEnum.register(OpType.class);
+    JsonEnum.register(POpType.class);
+    JsonEnum.register(SOpType.class);
   }
 }

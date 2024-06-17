@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.storage;
+package naksha.model.request;
 
 import static com.here.naksha.lib.core.models.storage.EWriteOp.CREATE;
 import static com.here.naksha.lib.core.models.storage.EWriteOp.DELETE;
@@ -114,24 +114,24 @@ public abstract class WriteRequest<
   }
 
   public @NotNull SELF create(@NotNull FEATURE feature) {
-    return add(CREATE, feature);
+    return add(EWriteOp.CREATE, feature);
   }
 
   public @NotNull SELF put(@NotNull FEATURE feature) {
-    return add(PUT, feature);
+    return add(EWriteOp.PUT, feature);
   }
 
   public @NotNull SELF update(@NotNull FEATURE feature) {
-    return add(UPDATE, feature);
+    return add(EWriteOp.UPDATE, feature);
   }
 
   public @NotNull SELF delete(@NotNull FEATURE feature) {
-    return add(DELETE, feature);
+    return add(EWriteOp.DELETE, feature);
   }
 
   public @NotNull SELF delete(@NotNull String id, @Nullable String uuid) {
     CODEC codec = codecFactory.newInstance();
-    codec.setOp(DELETE);
+    codec.setOp(EWriteOp.DELETE);
     codec.setId(id);
     codec.setUuid(uuid);
     codec.decodeXyzOp(null);
@@ -141,12 +141,12 @@ public abstract class WriteRequest<
   }
 
   public @NotNull SELF purge(@NotNull FEATURE feature) {
-    return add(PURGE, feature);
+    return add(EWriteOp.PURGE, feature);
   }
 
   public @NotNull SELF purge(@NotNull String id, @Nullable String uuid) {
     CODEC codec = codecFactory.newInstance();
-    codec.setOp(PURGE);
+    codec.setOp(EWriteOp.PURGE);
     codec.setId(id);
     codec.setUuid(uuid);
     codec.isDecoded = true;
