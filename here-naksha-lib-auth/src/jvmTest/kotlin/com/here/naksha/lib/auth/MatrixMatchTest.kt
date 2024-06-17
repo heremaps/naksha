@@ -13,7 +13,7 @@ import kotlin.test.fail
 class MatrixMatchTest {
 
     @Test
-    fun test() {
+    fun testJsonCases() {
         for (tc in testCases()) {
             assertEquals(tc.shouldMatch, tc.urm.matches(tc.arm), "Unexpected match result for '${tc.fileName}'")
         }
