@@ -3,21 +3,33 @@ package com.here.naksha.lib.auth
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
-import naksha.base.*
+import naksha.base.P_List
+import naksha.base.P_Object
 import naksha.base.Proxy.Companion.box
 
 object AuthParser {
 
     private val MAPPER = ObjectMapper()
     fun parseUrm(json: String): UserRightsMatrix {
-        val rawArm = parseRawAuthMatrix(json)
-        return box(rawArm, UserRightsMatrix::class)!!
+        val rootNode = MAPPER.readTree(json)
+        return parseUrm(rootNode)
     }
 
     fun parseArm(json: String): AccessRightsMatrix {
-        val rawArm = parseRawAuthMatrix(json)
+        val rootNode = MAPPER.readTree(json)
+        return parseArm(rootNode)
+    }
+
+    fun parseUrm(rootNode: JsonNode): UserRightsMatrix {
+        val rawArm = parseMatrix(rootNode)
+        return box(rawArm, UserRightsMatrix::class)!!
+    }
+
+    fun parseArm(rootNode: JsonNode): AccessRightsMatrix {
+        val rawArm = parseMatrix(rootNode)
         return box(rawArm, AccessRightsMatrix::class)!!
     }
+
 
     /*
     raw type structure for both Matrix types:
@@ -32,10 +44,9 @@ object AuthParser {
         >
      >
      */
-    private fun parseRawAuthMatrix(json: String): P_Object {
+    private fun parseMatrix(matrixNode: JsonNode): P_Object {
         val rootMatrix = P_Object()
-        MAPPER.readTree(json)
-            .fields()
+        matrixNode.fields()
             .asSequence()
             .forEach { (serviceName, serviceNode) ->
                 rootMatrix[serviceName] = parseService(serviceNode)
@@ -55,7 +66,7 @@ object AuthParser {
 
     private fun parseActions(actionNode: JsonNode): P_List<P_Object> {
         require(actionNode.isArray) { "Expected action array" }
-        val actions = object: P_List<P_Object>(P_Object::class){}
+        val actions = object : P_List<P_Object>(P_Object::class) {}
         actionNode.forEach { actions.add(parseAttributeMap(it)) }
         return actions
     }
@@ -69,7 +80,7 @@ object AuthParser {
                 if (attrValue.isTextual) {
                     attributeMap[attrKey] = attrValue.textValue()
                 } else if (attrValue.isArray) {
-                    val values = object: P_List<String>(String::class){}
+                    val values = object : P_List<String>(String::class) {}
                     attrValue.map { it.textValue() }
                         .toTypedArray()
                         .let { values.addAll(it) }

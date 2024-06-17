@@ -133,7 +133,6 @@ class UserAction : P_List<UserRights>(UserRights::class) {
     }
 }
 
-// attribute map from user's perspective
 class UserRights : P_Object() {
 
     fun matches(attributes: ResourceAttributes): Boolean {
@@ -142,11 +141,9 @@ class UserRights : P_Object() {
         }
         val checkMap = CheckCompiler.compile(this)
         return all { (propertyName, _) ->
-            val res = checkMap[propertyName]
+            checkMap[propertyName]
                 ?.matches(attributes[propertyName])
                 ?: false
-            println("Check for $propertyName: $res")
-            res
         }
     }
 

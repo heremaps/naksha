@@ -5,7 +5,33 @@ import kotlin.js.JsName
 
 /**
  * This check delegates compilation of dependent checks basing on initial arguments.
- * It tests if for all values passed to the [ComposedCheck.matches], at least one of compiled checks passes.
+ * All checks must be satisfied in order for the composed check to pass.
+ *
+ * Given these raw args:
+ * [
+ *     "my-unique-tag",
+ *     "some-common-tag-with-wild-card-*"
+ * ]
+ *
+ * The compiled check would look as follows:
+ * [
+ *     EqualsCheck("my-unique-tag"),
+ *     StartsWithCheck("some-common-tag-with-wild-card-")
+ * ]
+ *
+ * Hence, since all the compiled checks must be satisfied by values the following example would pass
+ * [
+ *     "my-unique-tag",                         // satisfies first check
+ *     "some-common-tag-with-wild-card-SUFFIX", // satisfies second check
+ *     "some_other_tag"                         // doesn't satisfy anything but other values already did
+ * ]
+ *
+ * This example however, would fail because 'StartWithCheck` is not satisfied by anything
+ * [
+ *     "my-unique-tag",                         // satisfies first check
+ *     "some_other_tag"                         // doesn't satisfy anything
+ * ]
+ *
  */
 @JsExport
 class ComposedCheck() : CompiledCheck() {
@@ -20,23 +46,27 @@ class ComposedCheck() : CompiledCheck() {
             checkValue?.let { CheckCompiler.compile(it) }
         }
         return if (value is List<*>) {
-            checks.all { check ->
-                value.any { check.matches(it) }
-            }
+            allChecksAreSatisfiedByAtLeastOneValue(checks, value)
         } else {
-            atLeastSingleCheckMatches(value, checks)
+            allChecksAreSatisfiedByValue(checks, value)
         }
     }
 
     companion object {
-        private fun atLeastSingleCheckMatches(
-            value: Any?,
-            checks: List<CompiledCheck>
+        private fun allChecksAreSatisfiedByAtLeastOneValue(
+            checks: List<CompiledCheck>,
+            values: List<Any?>
         ): Boolean {
-            return checks.any { check ->
-                check.matches(value)
+            return checks.all { check ->
+                values.any { check.matches(it) }
             }
         }
 
+        private fun allChecksAreSatisfiedByValue(
+            checks: List<CompiledCheck>,
+            value: Any?
+        ): Boolean {
+            return checks.all { check -> check.matches(value) }
+        }
     }
 }
