@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.storage.transformation;
+package naksha.model.request.condition.geometry;
 
 import org.jetbrains.annotations.Nullable;
 

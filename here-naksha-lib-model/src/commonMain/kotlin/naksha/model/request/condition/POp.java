@@ -16,21 +16,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.storage;
+package naksha.model.request.condition;
 
-import static com.here.naksha.lib.core.models.storage.OpType.AND;
-import static com.here.naksha.lib.core.models.storage.OpType.NOT;
-import static com.here.naksha.lib.core.models.storage.OpType.OR;
-import static com.here.naksha.lib.core.models.storage.POpType.CONTAINS;
-import static com.here.naksha.lib.core.models.storage.POpType.EQ;
-import static com.here.naksha.lib.core.models.storage.POpType.EXISTS;
-import static com.here.naksha.lib.core.models.storage.POpType.GT;
-import static com.here.naksha.lib.core.models.storage.POpType.GTE;
-import static com.here.naksha.lib.core.models.storage.POpType.LT;
-import static com.here.naksha.lib.core.models.storage.POpType.LTE;
-import static com.here.naksha.lib.core.models.storage.POpType.NOT_NULL;
-import static com.here.naksha.lib.core.models.storage.POpType.NULL;
-import static com.here.naksha.lib.core.models.storage.POpType.STARTS_WITH;
+import static naksha.model.request.condition.OpType.AND;
+import static naksha.model.request.condition.OpType.NOT;
+import static naksha.model.request.condition.OpType.OR;
 
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
@@ -69,59 +59,59 @@ public class POp extends Op<POp> {
   }
 
   public static @NotNull POp and(@NotNull POp... children) {
-    return new POp(AND, children);
+    return new POp(OpType.AND, children);
   }
 
   public static @NotNull POp or(@NotNull POp... children) {
-    return new POp(OR, children);
+    return new POp(OpType.OR, children);
   }
 
   public static @NotNull POp not(@NotNull POp op) {
-    return new POp(NOT, op);
+    return new POp(OpType.NOT, op);
   }
 
   public static @NotNull POp exists(@NotNull PRef propertyRef) {
-    return new POp(EXISTS, propertyRef, null);
+    return new POp(POpType.EXISTS, propertyRef, null);
   }
 
   public static @NotNull POp startsWith(@NotNull PRef propertyRef, @NotNull String prefix) {
-    return new POp(STARTS_WITH, propertyRef, prefix);
+    return new POp(POpType.STARTS_WITH, propertyRef, prefix);
   }
 
   public static @NotNull POp eq(@NotNull PRef propertyRef, @NotNull String value) {
-    return new POp(EQ, propertyRef, value);
+    return new POp(POpType.EQ, propertyRef, value);
   }
 
   public static @NotNull POp eq(@NotNull PRef propertyRef, @NotNull Number value) {
-    return new POp(EQ, propertyRef, value);
+    return new POp(POpType.EQ, propertyRef, value);
   }
 
   public static @NotNull POp eq(@NotNull PRef propertyRef, @NotNull Boolean value) {
-    return new POp(EQ, propertyRef, value);
+    return new POp(POpType.EQ, propertyRef, value);
   }
 
   public static @NotNull POp gt(@NotNull PRef propertyRef, @NotNull Number value) {
-    return new POp(GT, propertyRef, value);
+    return new POp(POpType.GT, propertyRef, value);
   }
 
   public static @NotNull POp gte(@NotNull PRef propertyRef, @NotNull Number value) {
-    return new POp(GTE, propertyRef, value);
+    return new POp(POpType.GTE, propertyRef, value);
   }
 
   public static @NotNull POp lt(@NotNull PRef propertyRef, @NotNull Number value) {
-    return new POp(LT, propertyRef, value);
+    return new POp(POpType.LT, propertyRef, value);
   }
 
   public static @NotNull POp lte(@NotNull PRef propertyRef, @NotNull Number value) {
-    return new POp(LTE, propertyRef, value);
+    return new POp(POpType.LTE, propertyRef, value);
   }
 
   public static @NotNull POp isNull(@NotNull PRef propertyRef) {
-    return new POp(NULL, propertyRef, null);
+    return new POp(POpType.NULL, propertyRef, null);
   }
 
   public static @NotNull POp isNotNull(@NotNull PRef propertyRef) {
-    return new POp(NOT_NULL, propertyRef, null);
+    return new POp(POpType.NOT_NULL, propertyRef, null);
   }
 
   /**
@@ -170,7 +160,7 @@ public class POp extends Op<POp> {
    * @return
    */
   public static @NotNull POp contains(@NotNull PRef propertyRef, @NotNull Object value) {
-    return new POp(CONTAINS, propertyRef, value);
+    return new POp(POpType.CONTAINS, propertyRef, value);
   }
 
   @Override

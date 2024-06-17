@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.storage;
+package naksha.model;
 
 /**
  * An interface implemented by the locks returned by the storage sessions.
