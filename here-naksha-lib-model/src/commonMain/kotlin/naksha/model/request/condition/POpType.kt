@@ -1,33 +1,20 @@
-package naksha.model.request
+package naksha.model.request.condition
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class POpType private constructor(val operation: String): OpType {
+sealed class POpType(val operation: String) : OpType {
 
-    companion object {
-        @JvmStatic
-        val EXISTS = POpType("exists")
-        @JvmStatic
-        val STARTS_WITH = POpType("startsWith")
-        @JvmStatic
-        val EQ = POpType("=")
-        @JvmStatic
-        val GT = POpType(">")
-        @JvmStatic
-        val GTE = POpType(">=")
-        @JvmStatic
-        val LT = POpType("<")
-        @JvmStatic
-        val LTE = POpType("<=")
-        @JvmStatic
-        val NULL = POpType("null")
-        @JvmStatic
-        val NOT_NULL = POpType("not null")
-        @JvmStatic
-        val CONTAINS = POpType("@>")
-    }
+    data object EXISTS : POpType("exists")
+    data object STARTS_WITH : POpType("startsWith")
+    data object EQ : POpType("=")
+    data object GT : POpType(">")
+    data object GTE : POpType(">=")
+    data object LT : POpType("<")
+    data object LTE : POpType("<=")
+    data object NULL : POpType("null")
+    data object NOT_NULL : POpType("not null")
+    data object CONTAINS : POpType("@>")
 }

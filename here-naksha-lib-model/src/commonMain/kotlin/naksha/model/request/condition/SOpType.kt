@@ -1,4 +1,4 @@
-package naksha.model.request
+package naksha.model.request.condition
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport

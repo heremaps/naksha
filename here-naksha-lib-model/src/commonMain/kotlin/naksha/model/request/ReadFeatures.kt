@@ -1,6 +1,8 @@
 package naksha.model.request
 
 import naksha.model.IReadRowFilter
+import naksha.model.request.condition.Op
+import naksha.model.request.condition.SOp
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -31,9 +33,9 @@ class ReadFeatures(
      */
     val collectionIds: Array<String>,
     /**
-     * propertyOp - gives ability to set conditions in `WHERE`.
+     * op - gives ability to set conditions in `WHERE`.
      */
-    val propertyOp: POp? = null,
+    val op: Op? = null,
     /**
      * Additional conditions for geometry.
      */
@@ -72,6 +74,16 @@ class ReadFeatures(
 ) : ReadRequest(limit, noFeature, noGeometry, noMeta, noTags, resultFilter) {
 
     companion object {
-        fun readHeadBy(collectionId: String, propertyOp: POp) = ReadFeatures(collectionIds = arrayOf(collectionId), propertyOp = propertyOp)
+        fun readHeadBy(collectionId: String, op: Op) =
+            ReadFeatures(collectionIds = arrayOf(collectionId), op = op)
+
+        fun readIdsBy(collectionId: String, op: Op) = ReadFeatures(
+            collectionIds = arrayOf(collectionId),
+            op = op,
+            noFeature = true,
+            noGeometry = true,
+            noMeta = true,
+            noTags = true
+        )
     }
 }

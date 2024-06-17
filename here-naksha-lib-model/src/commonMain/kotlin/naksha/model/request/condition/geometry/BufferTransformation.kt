@@ -1,9 +1,7 @@
-package naksha.model.request
+package naksha.model.request.condition.geometry
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
-import kotlin.jvm.JvmOverloads
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport

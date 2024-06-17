@@ -1,4 +1,4 @@
-package naksha.model.request
+package naksha.model.request.condition
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -8,5 +8,6 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class PRef {
+enum class PRef {
+    ID, APP_ID, AUTHOR, UID, GRID, TXN, TXN_NEXT, TAGS
 }

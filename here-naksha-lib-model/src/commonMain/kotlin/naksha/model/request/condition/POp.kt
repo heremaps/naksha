@@ -1,16 +1,7 @@
-package naksha.model.request
+package naksha.model.request.condition
 
-import naksha.model.request.POpType.Companion.CONTAINS
-import naksha.model.request.POpType.Companion.EQ
-import naksha.model.request.POpType.Companion.EXISTS
-import naksha.model.request.POpType.Companion.GT
-import naksha.model.request.POpType.Companion.GTE
-import naksha.model.request.POpType.Companion.LT
-import naksha.model.request.POpType.Companion.LTE
-import naksha.model.request.POpType.Companion.NOT_NULL
-import naksha.model.request.POpType.Companion.NULL
-import naksha.model.request.POpType.Companion.STARTS_WITH
 import naksha.base.Int64
+import naksha.model.request.condition.POpType.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
