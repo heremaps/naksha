@@ -35,6 +35,6 @@ class NakshaTransaction(dictManager: IDictManager) : JbFeature(dictManager) {
         map["modifiedFeatureCount"] = modifiedFeatureCount
         map["collectionCounters"] = collectionCounters
         map["seqNumber"] = seqNumber
-        return JbBuilder().buildFeatureFromMap(map)
+        return JbBinaryBuilder().buildFeatureFromMap(map)
     }
 }

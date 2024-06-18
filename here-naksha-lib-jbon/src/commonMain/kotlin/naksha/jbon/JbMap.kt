@@ -7,15 +7,11 @@ import kotlin.js.JsExport
 
 /**
  * A map view.
- * @constructor Create a new JBON array reader.
- * @param binary The binary to map initially.
- * @param pos The position of the first byte to access, defaults to `binary.pos`.
- * @param end The first byte that should not be read, defaults to `binary.end`.
+ * @constructor Create a new JBON map reader.
  */
 @Suppress("DuplicatedCode", "OPT_IN_USAGE")
 @JsExport
-class JbMap(binary: BinaryView = Binary.EMPTY_IMMUTABLE, pos: Int = binary.pos, end: Int = binary.end)
-    : JbEntryArray<JbMap>(binary, pos, end) {
+class JbMap : JbEntryArray<JbMap>() {
 
     override fun parseHeader() {
         check(unitType == TYPE_MAP) { "Mapped structure is no map, but ${JbReader.unitTypeName(unitType)}" }
@@ -58,7 +54,7 @@ class JbMap(binary: BinaryView = Binary.EMPTY_IMMUTABLE, pos: Int = binary.pos, 
     /**
      * A reader we use flexible, when reading of values is requested.
      */
-    private val valueReader = JbReader(binary)
+    private val valueReader = JbReader()
 
     /**
      * The [reader] offset that currently is cached.

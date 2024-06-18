@@ -7,11 +7,10 @@ import kotlin.js.JsExport
 /**
  * A dictionary reader.
  * @constructor Create a new dictionary reader.
- * @param binaryView The binary to map initially.
  */
 @Suppress("DuplicatedCode", "OPT_IN_USAGE")
 @JsExport
-class JbDict(binaryView: BinaryView = Binary.EMPTY_IMMUTABLE) : JbStruct<JbDict>(binaryView) {
+class JbDict : JbStruct<JbDict>() {
     /**
      * Cached ID of the dictionary, if any.
      */

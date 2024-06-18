@@ -9,12 +9,11 @@ import kotlin.js.JsExport
  * feature. Beware that the content of an JBON feature can be anything, but most often will be a map. To read this
  * kind of features, simply use the [JbMapFeature] class.
  * @constructor Create a new feature reader.
- * @param binaryView The binary to map initially.
  * @property dictManager The dictionary manager to use to decode the feature.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class JbFeature(var dictManager: IDictManager, binaryView: BinaryView = Binary.EMPTY_IMMUTABLE) : JbStruct<JbFeature>(binaryView) {
+open class JbFeature(var dictManager: IDictManager) : JbStruct<JbFeature>() {
     private var id: String? = null
     private var featureType: Int = -1
 
@@ -45,7 +44,7 @@ open class JbFeature(var dictManager: IDictManager, binaryView: BinaryView = Bin
         check(reader.nextUnit()) { "Failed to seek forward to local dictionary field" }
         // The embedded local dictionary.
         check(reader.isDictionary()) { "Expect local dictionary, but found ${JbReader.unitTypeName(reader.unitType())}" }
-        reader.localDict = JbDict(reader.binary).mapReader(reader)
+        reader.localDict = JbDict().mapReader(reader)
         check(reader.nextUnit()) { "Failed to seek forward to the feature payload" }
         featureType = reader.unitType()
     }

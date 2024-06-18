@@ -81,23 +81,26 @@ interface BinaryView {
      * only truncated if necessary.
      *
      * @param newSize The new size in byte.
+     * @param exact If _true_, then the resize is done to exactly the given [newSize]; otherwise optimizations are
+     * applied that may result in a bigger view (or not modified one).
      * @throws IllegalStateException If the binary is [readOnly] or [resize] is _false_.
      */
-    fun resizeTo(newSize: Int)
+    fun resizeTo(newSize: Int, exact:Boolean = false)
 
     /**
      * Internally called by all getters to ensure that reading the given number of byte from the given position is okay.
      * @param pos The position to read, must be greater than `0`.
-     * @param bytes The number of bytes to read, must be greater than `0`.
-     * @throws IndexOutOfBoundsException If reading that amount of byte from that position is out of bounds (ends behind [end]).
+     * @param bytes The number of bytes to read, must be greater than `0` and less than [byteLength].
+     * @param size The size to test against.
+     * @throws IndexOutOfBoundsException If reading that amount of byte from that position is out of bounds ([size]).
      */
-    fun prepareRead(pos: Int, bytes: Int)
+    fun prepareRead(pos: Int, bytes: Int, size: Int)
 
     /**
      * Internally called by all setters to ensure that writing the given number of byte to the given position is okay.
      *
      * The method will set the [byteAvailable] and therefore may cause a [resize].
-     * @param pos The position to write.
+     * @param pos The position to write, must be less than [byteLength].
      * @param bytes The number of bytes to write.
      * @param resize If the underlying byte-array should be resized to allow to write.
      * @throws IndexOutOfBoundsException If resizing failed and otherwise that amount of bytes can't be written to that position.
@@ -110,7 +113,7 @@ interface BinaryView {
      * @param pos The position to read (between `0` and [byteLength]). The offset in the [byteArray] is calculated as [byteOffset] + [pos].
      * @param littleEndian If the data is stored in [little-endian](https://en.wikipedia.org/wiki/Endianness) in the [byteArray].
      * @return The read value.
-     * @throws IndexOutOfBoundsException If the [pos] is at [end] or reading would require to read [end].
+     * @throws IndexOutOfBoundsException If the [pos] is at [byteLength] or reading would require to read [byteLength].
      */
     fun getFloat32(pos: Int, littleEndian: Boolean = false): Float
 
@@ -142,7 +145,7 @@ interface BinaryView {
      * @param pos The position to read (between `0` and [byteLength]). The offset in the [byteArray] is calculated as [byteOffset] + [pos].
      * @param littleEndian If the data is stored in [little-endian](https://en.wikipedia.org/wiki/Endianness) in the [byteArray].
      * @return The read value.
-     * @throws IndexOutOfBoundsException If the [pos] is at [end] or reading would require to read [end].
+     * @throws IndexOutOfBoundsException If the [pos] is at [byteLength] or reading would require to read [byteLength].
      */
     fun getFloat64(pos: Int, littleEndian: Boolean = false): Double
 
@@ -173,7 +176,7 @@ interface BinaryView {
      * Read from the [byteArray].
      * @param pos The position to read (between `0` and [byteLength]). The offset in the [byteArray] is calculated as [byteOffset] + [pos].
      * @return The read value.
-     * @throws IndexOutOfBoundsException If the [pos] is at [end] or reading would require to read [end].
+     * @throws IndexOutOfBoundsException If the [pos] is at [byteLength] or reading would require to read [byteLength].
      */
     fun getInt8(pos: Int): Byte
 
@@ -202,7 +205,7 @@ interface BinaryView {
      * @param pos The position to read (between `0` and [byteLength]). The offset in the [byteArray] is calculated as [byteOffset] + [pos].
      * @param littleEndian If the data is stored in [little-endian](https://en.wikipedia.org/wiki/Endianness) in the [byteArray].
      * @return The read value.
-     * @throws IndexOutOfBoundsException If the [pos] is at [end] or reading would require to read [end].
+     * @throws IndexOutOfBoundsException If the [pos] is at [byteLength] or reading would require to read [byteLength].
      */
     fun getInt16(pos: Int, littleEndian: Boolean = false): Short
 
@@ -234,7 +237,7 @@ interface BinaryView {
      * @param pos The position to read (between `0` and [byteLength]). The offset in the [byteArray] is calculated as [byteOffset] + [pos].
      * @param littleEndian If the data is stored in [little-endian](https://en.wikipedia.org/wiki/Endianness) in the [byteArray].
      * @return The read value.
-     * @throws IndexOutOfBoundsException If the [pos] is at [end] or reading would require to read [end].
+     * @throws IndexOutOfBoundsException If the [pos] is at [byteLength] or reading would require to read [byteLength].
      */
     fun getInt32(pos: Int, littleEndian: Boolean = false): Int
 
@@ -266,7 +269,7 @@ interface BinaryView {
      * @param pos The position to read (between `0` and [byteLength]). The offset in the [byteArray] is calculated as [byteOffset] + [pos].
      * @param littleEndian If the data is stored in [little-endian](https://en.wikipedia.org/wiki/Endianness) in the [byteArray].
      * @return The read value.
-     * @throws IndexOutOfBoundsException If the [pos] is at [end] or reading would require to read [end].
+     * @throws IndexOutOfBoundsException If the [pos] is at [byteLength] or reading would require to read [byteLength].
      */
     fun getInt64(pos: Int, littleEndian: Boolean = false): Int64
 

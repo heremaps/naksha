@@ -27,7 +27,7 @@ import naksha.geo.XyzGeometry;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import naksha.model.XyzTags;
 import naksha.jbon.IMap;
-import naksha.jbon.JbBuilder;
+import naksha.jbon.JbBinaryBuilder;
 import naksha.jbon.JbDict;
 import naksha.jbon.JbDictManager;
 import naksha.jbon.JvmEnv;
@@ -92,7 +92,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     feature.getProperties().setXyzNamespace(new XyzNamespace());
 
     IMap featureAsMap = JvmEnv.get().convert(feature, JvmMap.class);
-    JbBuilder builder = new JbBuilder(newDataView(65536), globalDict);
+    JbBinaryBuilder builder = new JbBinaryBuilder(newDataView(65536), globalDict);
     featureBytes = builder.buildFeatureFromMap(featureAsMap);
 
     feature.getProperties().setXyzNamespace(xyz);

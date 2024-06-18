@@ -1,20 +1,14 @@
 package naksha.jbon
 
-import naksha.base.Binary
-import naksha.base.BinaryView
 import kotlin.js.JsExport
 
 /**
  * Intermediate class with shared code for array and map.
  * @constructor Create a new JBON array type mapping.
- * @param binary The binary to map initially.
- * @param pos The position of the first byte to access, defaults to `binary.pos`.
- * @param end The first byte that should not be read, defaults to `binary.end`.
  */
 @Suppress("UNCHECKED_CAST", "OPT_IN_USAGE")
 @JsExport
-abstract class JbEntryArray<SELF : JbEntryArray<SELF>>(binary: BinaryView = Binary.EMPTY_IMMUTABLE, pos: Int = binary.pos, end: Int = binary.end)
-    : JbStruct<SELF>(binary, pos, end) {
+abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStruct<SELF>() {
     /**
      * The current index in the entry list.
      */
@@ -75,7 +69,7 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>>(binary: BinaryView = Bina
         if (index == 0) return true
         dropEntry()
         index = 0
-        reader.pos += bodyStart
+        reader.pos = bodyStart
         if (ok()) return true
         index = -1
         return false
