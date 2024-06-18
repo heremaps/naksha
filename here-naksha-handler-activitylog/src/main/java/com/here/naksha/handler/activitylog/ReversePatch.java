@@ -21,7 +21,7 @@ package com.here.naksha.handler.activitylog;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.lib.core.util.diff.RemoveOp;
+import naksha.model.RemoveOp;
 import com.here.naksha.lib.core.util.diff.UpdateOp;
 import java.util.ArrayList;
 import java.util.Collections;

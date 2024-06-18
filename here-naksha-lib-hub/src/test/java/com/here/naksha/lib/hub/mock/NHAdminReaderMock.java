@@ -20,11 +20,11 @@ package com.here.naksha.lib.hub.mock;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.*;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.storage.IReadSession;
+import naksha.model.IReadSession;
 import com.here.naksha.lib.psql.EPsqlState;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.postgresql.util.PSQLState;

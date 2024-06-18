@@ -30,6 +30,8 @@ import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
 import com.here.naksha.lib.core.util.json.JsonObject;
+import naksha.model.XyzGeometryCollection;
+
 import java.util.List;
 
 /** Implemented following: https://tools.ietf.org/html/rfc7946#section-3.1 */

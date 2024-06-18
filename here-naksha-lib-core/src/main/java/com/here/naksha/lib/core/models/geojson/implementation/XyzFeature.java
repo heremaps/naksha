@@ -50,6 +50,8 @@ import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.view.ViewMember;
 import java.util.ArrayList;
 import java.util.List;
+
+import naksha.model.XyzGeometryCollection;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;

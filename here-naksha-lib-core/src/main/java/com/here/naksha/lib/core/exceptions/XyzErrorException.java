@@ -19,7 +19,7 @@
 package com.here.naksha.lib.core.exceptions;
 
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.payload.responses.ErrorResponse;
+import naksha.model.ErrorResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

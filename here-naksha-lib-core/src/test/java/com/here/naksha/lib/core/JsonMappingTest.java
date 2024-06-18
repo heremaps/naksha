@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.payload.responses.ErrorResponse;
+import naksha.model.ErrorResponse;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.view.ViewDeserialize.All;

@@ -20,7 +20,7 @@ package com.here.naksha.lib.core;
 
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IStorage;
 import org.jetbrains.annotations.NotNull;
 
 /**

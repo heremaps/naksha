@@ -21,7 +21,7 @@ package com.here.naksha.lib.core.responses;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.here.naksha.lib.core.models.payload.responses.BinaryResponse;
+import naksha.model.BinaryResponse;
 import org.junit.jupiter.api.Test;
 
 public class TestBinaryResponse {

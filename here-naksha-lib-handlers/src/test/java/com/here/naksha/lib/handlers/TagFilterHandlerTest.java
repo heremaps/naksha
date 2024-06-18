@@ -2,12 +2,15 @@ package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.test.common.FileUtil;
 import com.here.naksha.test.common.JsonUtil;
 import com.here.naksha.test.common.assertions.POpAssertion;
+import naksha.model.POp;
+import naksha.model.POpType;
+import naksha.model.PRef;
+import naksha.model.ReadFeatures;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -23,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static com.here.naksha.lib.core.models.storage.PRef.TAGS_PROP_PATH;
+import static naksha.model.PRef.TAGS_PROP_PATH;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TagFilterHandlerTest {

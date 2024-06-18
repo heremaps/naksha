@@ -18,15 +18,14 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.SOp;
+import naksha.model.ReadFeatures;
+import naksha.model.SOp;
 import com.here.naksha.lib.core.models.storage.SeekableCursor;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
@@ -37,10 +36,6 @@ import com.here.naksha.lib.psql.PsqlStorage;
 import com.here.naksha.lib.psql.PsqlStorage.Params;
 import com.here.naksha.lib.psql.PsqlStorageConfig;
 import com.here.naksha.lib.psql.PsqlWriteSession;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -51,7 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static com.here.naksha.lib.core.models.storage.SOp.intersects;
+import static naksha.model.SOp.intersects;
 import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

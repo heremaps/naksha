@@ -27,9 +27,9 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzName
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.PRef;
-import com.here.naksha.lib.core.models.storage.ReadRequest;
+import naksha.model.POp;
+import naksha.model.PRef;
+import naksha.model.ReadRequest;
 import com.here.naksha.lib.core.util.ValueList;
 import java.util.ArrayList;
 import java.util.List;

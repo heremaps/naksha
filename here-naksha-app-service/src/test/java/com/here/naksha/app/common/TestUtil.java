@@ -22,7 +22,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.here.naksha.app.init.TestPsqlStorageConfigs;
 import com.here.naksha.app.service.http.auth.NakshaAuthProvider;
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
 import com.here.naksha.lib.core.util.json.Json;

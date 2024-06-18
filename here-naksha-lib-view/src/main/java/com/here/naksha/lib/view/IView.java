@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IStorage;
 
 public interface IView extends IStorage {
 

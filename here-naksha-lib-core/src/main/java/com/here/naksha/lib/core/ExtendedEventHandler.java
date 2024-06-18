@@ -22,7 +22,7 @@ import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.payload.Event;
-import com.here.naksha.lib.core.models.payload.XyzResponse;
+import naksha.model.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.admin.ModifySubscriptionEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.DeleteFeaturesByTagEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByBBoxEvent;
@@ -39,7 +39,7 @@ import com.here.naksha.lib.core.models.payload.events.info.GetStatisticsEvent;
 import com.here.naksha.lib.core.models.payload.events.info.GetStorageStatisticsEvent;
 import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
 import com.here.naksha.lib.core.models.payload.events.space.ModifySpaceEvent;
-import com.here.naksha.lib.core.models.payload.responses.ErrorResponse;
+import naksha.model.ErrorResponse;
 import javax.annotation.Nonnull;
 import org.jetbrains.annotations.NotNull;
 

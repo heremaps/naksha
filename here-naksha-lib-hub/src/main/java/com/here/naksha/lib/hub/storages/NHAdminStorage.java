@@ -18,12 +18,12 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.lambdas.Fe1;
-import com.here.naksha.lib.core.storage.IReadSession;
-import com.here.naksha.lib.core.storage.IStorage;
-import com.here.naksha.lib.core.storage.IWriteSession;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.IWriteSession;
 import com.here.naksha.lib.psql.PsqlStorage;
 import java.util.Map;
 import java.util.concurrent.Future;

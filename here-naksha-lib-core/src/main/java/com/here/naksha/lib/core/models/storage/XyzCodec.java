@@ -25,7 +25,7 @@ import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzTags;
+import naksha.model.XyzTags;
 import com.here.naksha.lib.jbon.IMap;
 import com.here.naksha.lib.jbon.JbBuilder;
 import com.here.naksha.lib.jbon.JbDict;

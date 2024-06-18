@@ -2,6 +2,7 @@ package com.here.naksha.lib.core.models.storage;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.lib.core.util.json.Json;
+import naksha.model.ReadFeatures;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

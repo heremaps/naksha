@@ -19,7 +19,7 @@
 package com.here.naksha.lib.core.models.geojson.coordinates;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometryCollection;
+import naksha.model.XyzGeometryCollection;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometryItem;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzLineString;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzMultiLineString;

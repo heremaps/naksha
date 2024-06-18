@@ -1,7 +1,7 @@
 package com.here.naksha.lib.core.util;
 
 import com.here.naksha.lib.core.models.storage.NonIndexedPRef;
-import com.here.naksha.lib.core.models.storage.PRef;
+import naksha.model.PRef;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import org.junit.jupiter.api.Test;
 

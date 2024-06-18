@@ -24,13 +24,15 @@ import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValid
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.naksha.NakshaFeature;
 import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.storage.IReadSession;
-import com.here.naksha.lib.core.storage.IWriteSession;
+import naksha.model.IReadSession;
+import naksha.model.IWriteSession;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.psql.PsqlStorage;
+import naksha.model.ReadRequest;
+import naksha.model.Request;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

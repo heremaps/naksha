@@ -18,6 +18,8 @@
  */
 package com.here.naksha.lib.core.util.diff;
 
+import naksha.model.RemoveOp;
+
 import java.util.Iterator;
 import java.util.Map.Entry;
 

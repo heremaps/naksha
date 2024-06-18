@@ -23,10 +23,10 @@ import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.
 import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_ACTIVITY_LOG_NS;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.pRefFromPropPath;
 
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.POpType;
-import com.here.naksha.lib.core.models.storage.PRef;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import naksha.model.POp;
+import naksha.model.POpType;
+import naksha.model.PRef;
+import naksha.model.ReadFeatures;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import java.util.List;
 import java.util.Optional;

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.psql.*;
 import com.here.naksha.lib.psql.PsqlStorage.Params;
 import org.jetbrains.annotations.NotNull;

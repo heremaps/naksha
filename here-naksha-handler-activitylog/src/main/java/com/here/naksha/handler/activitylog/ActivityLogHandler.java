@@ -28,7 +28,7 @@ import static java.util.stream.Collectors.toMap;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -36,13 +36,13 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzName
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.PRef;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Request;
+import naksha.model.POp;
+import naksha.model.PRef;
+import naksha.model.ReadFeatures;
+import naksha.model.Request;
 import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteCollections;
-import com.here.naksha.lib.core.storage.IReadSession;
+import naksha.model.WriteCollections;
+import naksha.model.IReadSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import java.util.Collections;

@@ -4,7 +4,7 @@ import static com.here.naksha.lib.common.assertions.XyzFeatureCodecAssertions.as
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-import com.here.naksha.lib.core.models.storage.WriteRequest;
+import naksha.model.WriteRequest;
 import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import java.util.function.Consumer;

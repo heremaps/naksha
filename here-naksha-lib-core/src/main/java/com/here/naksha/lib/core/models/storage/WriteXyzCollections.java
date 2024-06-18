@@ -21,6 +21,7 @@ package com.here.naksha.lib.core.models.storage;
 import static com.here.naksha.lib.core.models.storage.XyzCodecFactory.getFactory;
 
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
+import naksha.model.WriteCollections;
 
 /**
  * Helper to simplify the usage of {@link WriteCollections}.

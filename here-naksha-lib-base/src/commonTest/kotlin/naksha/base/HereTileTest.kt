@@ -3,6 +3,7 @@ package naksha.base
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Test
+import kotlin.test.Test
 
 class HereTileTest {
     @Test
