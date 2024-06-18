@@ -3,8 +3,6 @@
 package com.here.naksha.lib.auth.check
 
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 /**
  * A pseudo operation that always fails (for unknown checks).

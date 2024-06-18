@@ -4,8 +4,6 @@ package com.here.naksha.lib.auth.action
 
 import com.here.naksha.lib.auth.attribute.CollectionAttributes
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 @JsExport
 class ReadCollections : AccessRightsAction<CollectionAttributes, ReadCollections>() {
@@ -13,9 +11,7 @@ class ReadCollections : AccessRightsAction<CollectionAttributes, ReadCollections
     override val name: String = NAME
 
     companion object {
-        @JvmStatic
-        @JsStatic
-        val NAME = "readCollections"
+        const val NAME = "readCollections"
     }
 }
 
@@ -25,9 +21,7 @@ class CreateCollections : AccessRightsAction<CollectionAttributes, CreateCollect
     override val name: String = NAME
 
     companion object {
-        @JvmStatic
-        @JsStatic
-        val NAME = "createCollections"
+        const val NAME = "createCollections"
     }
 }
 
@@ -37,9 +31,7 @@ class UpdateCollections : AccessRightsAction<CollectionAttributes, UpdateCollect
     override val name: String = NAME
 
     companion object {
-        @JvmStatic
-        @JsStatic
-        val NAME = "updateCollections"
+        const val NAME = "updateCollections"
     }
 }
 
@@ -49,8 +41,6 @@ class DeleteCollections : AccessRightsAction<CollectionAttributes, DeleteCollect
     override val name: String = NAME
 
     companion object {
-        @JvmStatic
-        @JsStatic
-        val NAME = "deleteCollections"
+        const val NAME = "deleteCollections"
     }
 }
