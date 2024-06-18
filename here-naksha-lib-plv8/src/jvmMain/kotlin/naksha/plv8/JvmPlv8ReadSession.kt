@@ -7,7 +7,10 @@ import naksha.model.request.ReadRequest
 import naksha.model.request.Request
 import naksha.model.request.ResultRow
 import naksha.model.response.Response
+import naksha.model.response.SuccessResponse
+import naksha.plv8.DbRowMapper
 import naksha.plv8.NakshaSession
+import naksha.plv8.read.ReadQueryBuilder
 import java.sql.Connection
 
 open class JvmPlv8ReadSession(
@@ -30,9 +33,13 @@ open class JvmPlv8ReadSession(
 
     override fun execute(request: Request): Response {
         return when (request) {
-            // TODO implement read
-            is ReadRequest -> throw NotImplementedError()
-            else -> throw NotImplementedError()
+            is ReadRequest -> {
+                val (sql, params) = ReadQueryBuilder(nakshaSession.sql).build(request)
+                val pgResult = nakshaSession.sql.rows(nakshaSession.sql.execute(sql, params.toTypedArray()))
+                val rows = DbRowMapper.toReadRows(pgResult, storage)
+                return SuccessResponse(rows = rows)
+            }
+            else -> throw UnsupportedOperationException("Read session can execute only read requests")
         }
     }
 

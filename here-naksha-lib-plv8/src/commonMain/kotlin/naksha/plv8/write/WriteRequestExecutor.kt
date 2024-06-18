@@ -36,6 +36,6 @@ class WriteRequestExecutor(
             val result = SingleCollectionWriter(collection, session, modifyCounters).writeFeatures(partialRequest)
             responseRows.addAll(result.rows)
         }
-        return SuccessResponse(rows = responseRows.toTypedArray())
+        return SuccessResponse(rows = responseRows)
     }
 }

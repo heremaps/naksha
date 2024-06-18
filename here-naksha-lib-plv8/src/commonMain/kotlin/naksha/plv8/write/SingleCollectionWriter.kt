@@ -67,7 +67,7 @@ class SingleCollectionWriter(
         if (DEBUG) {
             println("[${writeRequest.ops.size} feature]: ${END - START}ms, loading: ${END_LOADING - START}ms, execution: ${END_EXECUTION - START_EXECUTION}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
         }
-        return SuccessResponse(rows = plan.result.toTypedArray())
+        return SuccessResponse(rows = plan.result)
     }
 
     fun writeCollections(writeRequest: WriteRequest): SuccessResponse {
@@ -123,7 +123,7 @@ class SingleCollectionWriter(
             }
         }
         plan.executeAll()
-        return SuccessResponse(rows = plan.result.toTypedArray())
+        return SuccessResponse(rows = plan.result)
     }
 
     private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?, autoPurge: Boolean): NakshaBulkLoaderPlan {

@@ -4,6 +4,8 @@ import naksha.base.Int64
 import naksha.base.P_JsMap
 import naksha.model.ACTION_CREATE
 import naksha.model.IStorage
+import naksha.model.XYZ_EXEC_READ
+import naksha.model.request.ResultRow
 import naksha.model.response.Metadata
 import naksha.model.response.Row
 import kotlin.js.ExperimentalJsExport
@@ -31,6 +33,34 @@ object DbRowMapper {
             retMap[cols.id] = cols
         }
         return retMap
+    }
+
+    /**
+     * Converts plv8 result into to List<ROW>
+     *
+     * @param rows - Raw plv8 result.
+     * @param storage - current storage reference
+     * @return List<ROW>
+     */
+    fun toRows(rows: Array<P_JsMap>?, storage: IStorage): List<Row> {
+        if (rows.isNullOrEmpty())
+            return emptyList()
+
+        return rows.map { toRow(it, storage) }
+    }
+
+    /**
+     * Converts plv8 result into to List<ResultRow> with 'READ' op type.
+     *
+     * @param rows - Raw plv8 result.
+     * @param storage - current storage reference
+     * @return List<ResultRow>
+     */
+    fun toReadRows(rows: Array<P_JsMap>?, storage: IStorage): List<ResultRow> {
+        if (rows.isNullOrEmpty())
+            return emptyList()
+
+        return rows.map { toRow(it, storage) }.map { ResultRow(XYZ_EXEC_READ, it) }
     }
 
     /**
