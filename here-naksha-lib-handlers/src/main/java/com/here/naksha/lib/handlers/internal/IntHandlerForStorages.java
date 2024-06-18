@@ -23,7 +23,7 @@ import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFro
 import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -31,13 +31,13 @@ import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.PRef;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import naksha.model.POp;
+import naksha.model.PRef;
+import naksha.model.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.storage.IReadSession;
+import naksha.model.IReadSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;

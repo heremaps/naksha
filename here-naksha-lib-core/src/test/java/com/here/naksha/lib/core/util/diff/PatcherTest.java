@@ -24,15 +24,16 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzName
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.JsonObject;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.util.ArrayList;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+
+import naksha.model.RemoveOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;

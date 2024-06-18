@@ -19,13 +19,15 @@
 package com.here.naksha.lib.core;
 
 import com.here.naksha.lib.core.models.payload.Event;
-import com.here.naksha.lib.core.models.payload.XyzResponse;
-import com.here.naksha.lib.core.models.payload.XyzResponseType;
+import naksha.model.XyzResponse;
+import naksha.model.XyzResponseType;
 import com.here.naksha.lib.core.models.payload.events.feature.LoadFeaturesEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.ModifyFeaturesEvent;
-import com.here.naksha.lib.core.models.payload.responses.ErrorResponse;
+import naksha.model.ErrorResponse;
 import java.util.ArrayList;
 import java.util.List;
+
+import naksha.model.NakshaContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

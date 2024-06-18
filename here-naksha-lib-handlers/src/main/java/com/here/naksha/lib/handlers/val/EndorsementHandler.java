@@ -30,7 +30,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EReview
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
-import com.here.naksha.lib.core.models.storage.Request;
+import naksha.model.Request;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;

@@ -18,12 +18,12 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.storage.Notification;
-import com.here.naksha.lib.core.models.storage.ReadRequest;
+import naksha.model.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.storage.IReadSession;
+import naksha.model.IReadSession;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;

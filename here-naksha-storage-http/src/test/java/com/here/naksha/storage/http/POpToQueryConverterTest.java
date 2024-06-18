@@ -1,7 +1,7 @@
 package com.here.naksha.storage.http;
 
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.PRef;
+import naksha.model.POp;
+import naksha.model.PRef;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.storage.http.POpToQueryConverter.POpToQueryConversionException;
 import org.jetbrains.annotations.NotNull;
@@ -11,7 +11,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.URLEncoder;
 
-import static com.here.naksha.lib.core.models.storage.POp.*;
+import static naksha.model.POp.*;
 import static com.here.naksha.storage.http.POpToQueryConverter.p0pToQuery;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;

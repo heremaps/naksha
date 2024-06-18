@@ -26,7 +26,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.here.naksha.lib.core.LazyParsableFeatureList.ProxyStringReader;
 import com.here.naksha.lib.core.models.Typed;
-import com.here.naksha.lib.core.models.payload.responses.ErrorResponse;
+import naksha.model.ErrorResponse;
 import com.here.naksha.lib.core.view.ViewDeserialize.All;
 import com.here.naksha.lib.core.view.ViewDeserialize.User;
 import com.here.naksha.lib.core.view.ViewSerialize;

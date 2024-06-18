@@ -28,7 +28,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.PluginCache;
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IStorage;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 

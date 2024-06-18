@@ -27,9 +27,9 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import com.here.naksha.app.service.http.ops.TagsUtil;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.OpType;
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.POpType;
+import naksha.model.OpType;
+import naksha.model.POp;
+import naksha.model.POpType;
 
 import java.util.List;
 import java.util.function.Consumer;

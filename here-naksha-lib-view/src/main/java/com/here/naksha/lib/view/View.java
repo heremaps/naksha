@@ -18,10 +18,10 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IStorage;
 import java.util.concurrent.Future;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;

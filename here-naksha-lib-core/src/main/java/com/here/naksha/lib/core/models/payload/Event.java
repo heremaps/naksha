@@ -53,6 +53,8 @@ import com.here.naksha.lib.core.view.ViewMember;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import naksha.model.XyzResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

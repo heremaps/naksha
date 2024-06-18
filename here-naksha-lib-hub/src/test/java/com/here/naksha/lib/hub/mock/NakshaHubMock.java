@@ -25,7 +25,7 @@ import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFrom
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.PluginCache;
 import com.here.naksha.lib.core.models.ExtensionConfig;
@@ -33,8 +33,8 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.storage.IReadSession;
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
 import java.util.TreeMap;

@@ -18,10 +18,10 @@
  */
 package com.here.naksha.lib.core.util.storage;
 
-import static com.here.naksha.lib.core.models.storage.POp.eq;
-import static com.here.naksha.lib.core.models.storage.POp.or;
-import static com.here.naksha.lib.core.models.storage.PRef.PATH_TO_PREF_MAPPING;
-import static com.here.naksha.lib.core.models.storage.PRef.id;
+import static naksha.model.POp.eq;
+import static naksha.model.POp.or;
+import static naksha.model.PRef.PATH_TO_PREF_MAPPING;
+import static naksha.model.PRef.id;
 
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
@@ -33,6 +33,11 @@ import com.here.naksha.lib.core.models.storage.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import naksha.model.OpType;
+import naksha.model.POp;
+import naksha.model.PRef;
+import naksha.model.ReadFeatures;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -314,7 +319,7 @@ public class RequestHelper {
   }
 
   public static void combineOperationsForRequestAs(
-      final @NotNull ReadFeatures request, final OpType opType, @Nullable POp... operations) {
+          final @NotNull ReadFeatures request, final OpType opType, @Nullable POp... operations) {
     if (operations == null) return;
     List<POp> opList = null;
     for (final POp crtOp : operations) {

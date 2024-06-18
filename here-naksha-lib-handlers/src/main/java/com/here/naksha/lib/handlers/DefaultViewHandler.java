@@ -22,14 +22,14 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.*;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.storage.IStorage;
-import com.here.naksha.lib.core.storage.IWriteSession;
+import naksha.model.IStorage;
+import naksha.model.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.DefaultViewHandlerProperties.ViewType;
 import com.here.naksha.lib.view.*;
@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

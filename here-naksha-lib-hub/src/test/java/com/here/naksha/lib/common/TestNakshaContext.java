@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.common;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import org.jetbrains.annotations.NotNull;
 

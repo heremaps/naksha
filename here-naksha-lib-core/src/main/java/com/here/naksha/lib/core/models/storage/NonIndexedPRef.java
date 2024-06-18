@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
+import naksha.model.PRef;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -19,10 +19,10 @@
 package com.here.naksha.storage.http;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.models.storage.POpType.*;
+import static naksha.model.POpType.*;
 
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.POpType;
+import naksha.model.POp;
+import naksha.model.POpType;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;

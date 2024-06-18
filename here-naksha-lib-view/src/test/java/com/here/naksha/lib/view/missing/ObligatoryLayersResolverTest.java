@@ -3,7 +3,7 @@ package com.here.naksha.lib.view.missing;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IStorage;
 import com.here.naksha.lib.view.MissingIdResolver;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerRow;

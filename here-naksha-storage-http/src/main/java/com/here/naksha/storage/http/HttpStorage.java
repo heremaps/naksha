@@ -20,11 +20,11 @@ package com.here.naksha.storage.http;
 
 import static com.here.naksha.storage.http.RequestSender.KeyProperties;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.storage.IReadSession;
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 import java.util.concurrent.Future;

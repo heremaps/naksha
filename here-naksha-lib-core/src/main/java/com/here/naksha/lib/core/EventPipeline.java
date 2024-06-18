@@ -21,7 +21,7 @@ package com.here.naksha.lib.core;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Request;
+import naksha.model.Request;
 import com.here.naksha.lib.core.models.storage.Result;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;

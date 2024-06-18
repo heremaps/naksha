@@ -18,11 +18,13 @@
  */
 package com.here.naksha.storage.http;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.storage.IReadSession;
+import naksha.model.IReadSession;
 import java.util.concurrent.TimeUnit;
+
+import naksha.model.ReadRequest;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -21,7 +21,7 @@ package com.here.naksha.app.service.models;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.storage.CollectionInfo;
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IStorage;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 

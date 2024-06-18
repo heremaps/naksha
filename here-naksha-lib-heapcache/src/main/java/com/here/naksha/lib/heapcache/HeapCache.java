@@ -18,18 +18,18 @@
  */
 package com.here.naksha.lib.heapcache;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.lambdas.Pe1;
 import com.here.naksha.lib.core.models.TxSignalSet;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.storage.CollectionInfo;
 import com.here.naksha.lib.core.storage.IMasterTransaction;
-import com.here.naksha.lib.core.storage.IReadSession;
+import naksha.model.IReadSession;
 import com.here.naksha.lib.core.storage.IReadTransaction;
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IStorage;
 import com.here.naksha.lib.core.storage.ITransactionSettings;
-import com.here.naksha.lib.core.storage.IWriteSession;
+import naksha.model.IWriteSession;
 import com.here.naksha.lib.core.util.fib.FibSet;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;

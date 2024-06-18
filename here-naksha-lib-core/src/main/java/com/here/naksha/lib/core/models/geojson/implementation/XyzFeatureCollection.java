@@ -33,7 +33,7 @@ import com.here.naksha.lib.core.LazyParsableFeatureList;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawDeserializer;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
 import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
-import com.here.naksha.lib.core.models.payload.XyzResponse;
+import naksha.model.XyzResponse;
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;

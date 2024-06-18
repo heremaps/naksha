@@ -17,6 +17,9 @@
  * License-Filename: LICENSE
  */
 package com.here.naksha.lib.core;
+
+import naksha.model.NakshaContext;
+
 /**
  * The DefaultRequestLimitManager class is an implementation of the IRequestLimitManager interface
  * providing default behavior for retrieving request limits.

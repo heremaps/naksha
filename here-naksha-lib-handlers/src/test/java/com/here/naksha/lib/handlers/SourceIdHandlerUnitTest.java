@@ -1,24 +1,19 @@
 package com.here.naksha.lib.handlers;
 
-import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEvent;
-import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.lambdas.F0;
-import com.here.naksha.lib.core.lambdas.Lambda;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
-import com.here.naksha.test.common.FileUtil;
+import naksha.model.*;
 import org.json.JSONException;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mock;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 

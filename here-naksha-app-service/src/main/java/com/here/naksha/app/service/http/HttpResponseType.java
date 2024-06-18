@@ -18,9 +18,9 @@
  */
 package com.here.naksha.app.service.http;
 
-import com.here.naksha.lib.core.models.payload.XyzResponseType;
+import naksha.model.XyzResponseType;
 import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByTileResponseType;
-import com.here.naksha.lib.core.models.payload.responses.ErrorResponse;
+import naksha.model.ErrorResponse;
 import com.here.naksha.lib.core.util.MIMEType;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.impl.ParsableMIMEValue;

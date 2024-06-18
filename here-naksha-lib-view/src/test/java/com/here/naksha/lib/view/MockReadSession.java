@@ -18,12 +18,12 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.storage.Notification;
-import com.here.naksha.lib.core.models.storage.ReadRequest;
+import naksha.model.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.storage.IReadSession;
+import naksha.model.IReadSession;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.NotNull;

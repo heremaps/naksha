@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.heapcache;
 
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IStorage;
 import org.jetbrains.annotations.Nullable;
 
 public class HeapCacheConfig {

@@ -22,12 +22,12 @@ import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 import static com.here.naksha.storage.http.PrepareResult.prepareResult;
 import static java.lang.String.format;
 
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.POp;
+import naksha.model.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.lib.core.models.storage.Result;
 import java.net.HttpURLConnection;

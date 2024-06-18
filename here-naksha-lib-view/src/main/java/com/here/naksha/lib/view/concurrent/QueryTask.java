@@ -21,7 +21,7 @@ package com.here.naksha.lib.view.concurrent;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaContext;
+import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.SimpleTask;
 import org.jetbrains.annotations.NotNull;
 

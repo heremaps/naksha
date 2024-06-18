@@ -27,7 +27,7 @@ import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.storage.CollectionInfo;
 import com.here.naksha.lib.core.storage.IMasterTransaction;
 import com.here.naksha.lib.core.storage.IResultSet;
-import com.here.naksha.lib.core.storage.IStorage;
+import naksha.model.IStorage;
 import com.here.naksha.lib.core.storage.ITransactionSettings;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.ArrayList;

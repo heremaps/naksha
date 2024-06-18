@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.view.concurrent;
 
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.storage.IReadSession;
+import naksha.model.ReadFeatures;
+import naksha.model.IReadSession;
 import com.here.naksha.lib.view.ViewLayer;
 
 public class LayerReadRequest {

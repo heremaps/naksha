@@ -1,12 +1,12 @@
 package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PREF_ACTIVITY_LOG_ID;
-import static com.here.naksha.lib.core.models.storage.PRef.id;
-import static com.here.naksha.lib.core.models.storage.PRef.uuid;
+import static naksha.model.PRef.id;
+import static naksha.model.PRef.uuid;
 
-import com.here.naksha.lib.core.models.storage.POp;
-import com.here.naksha.lib.core.models.storage.POpType;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import naksha.model.POp;
+import naksha.model.POpType;
+import naksha.model.ReadFeatures;
 import com.here.naksha.test.common.assertions.POpAssertion;
 import org.junit.jupiter.api.Test;
 
