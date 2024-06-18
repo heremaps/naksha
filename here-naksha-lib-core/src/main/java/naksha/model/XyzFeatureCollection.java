@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.implementation;
+package naksha.model;
 
 import static java.util.stream.Collectors.toList;
 
@@ -32,8 +32,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.here.naksha.lib.core.LazyParsableFeatureList;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawDeserializer;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
-import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
-import naksha.model.XyzResponse;
+import naksha.geo.BBox;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;

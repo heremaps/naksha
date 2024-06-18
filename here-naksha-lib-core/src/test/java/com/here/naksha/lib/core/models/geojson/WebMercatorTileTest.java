@@ -25,7 +25,7 @@ import static com.here.naksha.lib.core.models.geojson.WebMercatorTile.xy;
 import static com.here.naksha.lib.core.models.geojson.WebMercatorTile.y;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
+import naksha.geo.BBox;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.junit.jupiter.api.Test;

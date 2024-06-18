@@ -21,7 +21,7 @@ package com.here.naksha.lib.core.util.storage;
 import static java.util.Collections.emptyList;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.Result;

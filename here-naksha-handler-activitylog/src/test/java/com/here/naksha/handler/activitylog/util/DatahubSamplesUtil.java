@@ -1,9 +1,9 @@
 package com.here.naksha.handler.activitylog.util;
 
 import com.here.naksha.handler.activitylog.ActivityLogComparator;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import naksha.model.EXyzAction;
+import naksha.model.XyzFeature;
+import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;

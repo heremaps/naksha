@@ -2,8 +2,8 @@ package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.model.XyzFeature;
+import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;

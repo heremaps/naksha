@@ -18,7 +18,7 @@
  */
 package com.here.naksha.handler.activitylog;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.storage.*;
 import java.util.List;
 

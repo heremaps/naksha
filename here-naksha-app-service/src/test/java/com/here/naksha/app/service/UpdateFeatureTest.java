@@ -29,9 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.model.XyzFeature;
+import naksha.model.XyzFeatureCollection;
+import naksha.geo.XyzProperties;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;

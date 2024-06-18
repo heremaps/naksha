@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.NakshaVersion;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
+import naksha.model.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;

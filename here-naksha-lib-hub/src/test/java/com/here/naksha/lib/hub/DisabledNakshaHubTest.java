@@ -28,7 +28,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
 import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;

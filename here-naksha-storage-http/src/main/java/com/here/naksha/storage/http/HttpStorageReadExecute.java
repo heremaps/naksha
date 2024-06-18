@@ -24,8 +24,8 @@ import static java.lang.String.format;
 
 import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import naksha.model.XyzFeature;
+import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
 import naksha.model.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;

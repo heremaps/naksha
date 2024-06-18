@@ -26,7 +26,7 @@ import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.assertions.ResponseAssertions;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import naksha.model.XyzFeatureCollection;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;

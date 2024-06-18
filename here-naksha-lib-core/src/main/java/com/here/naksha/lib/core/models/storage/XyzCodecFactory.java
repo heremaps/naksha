@@ -20,7 +20,7 @@ package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

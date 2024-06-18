@@ -19,7 +19,7 @@
 package com.here.naksha.lib.core.storage;
 
 import com.here.naksha.lib.core.NakshaVersion;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.models.geojson.declaration;
 
-import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
+import naksha.geo.BBox;
 import java.util.List;
 
 public interface IBoundedCoordinates {

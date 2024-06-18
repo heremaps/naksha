@@ -21,7 +21,7 @@ package com.here.naksha.lib.core.models.payload.events.feature;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
+import naksha.model.EXyzAction;
 import com.here.naksha.lib.core.models.payload.events.FeatureEvent;
 import java.util.HashMap;
 import java.util.Map;

@@ -25,9 +25,9 @@ import static naksha.model.PRef.id;
 
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates;
-import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.geo.MultiPointCoordinates;
+import naksha.geo.PointCoordinates;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.*;
 import java.util.ArrayList;

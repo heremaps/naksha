@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.implementation;
+package naksha.geo;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -24,41 +24,39 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import com.here.naksha.lib.core.models.geojson.coordinates.MultiPolygonCoordinates;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
 import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeName(value = "MultiPolygon")
-public class XyzMultiPolygon extends XyzGeometryItem {
+@JsonTypeName(value = "LineString")
+public class XyzLineString extends XyzGeometryItem {
 
   @JsonProperty(COORDINATES)
-  private MultiPolygonCoordinates coordinates = new MultiPolygonCoordinates();
+  LineStringCoordinates coordinates = new LineStringCoordinates();
 
   @Override
   @JsonGetter
-  public MultiPolygonCoordinates getCoordinates() {
+  public LineStringCoordinates getCoordinates() {
     return this.coordinates;
   }
 
   @JsonSetter
-  public void setCoordinates(MultiPolygonCoordinates coordinates) {
+  public void setCoordinates(LineStringCoordinates coordinates) {
     this.coordinates = coordinates;
   }
 
-  public XyzMultiPolygon withCoordinates(MultiPolygonCoordinates coordinates) {
+  public XyzLineString withCoordinates(LineStringCoordinates coordinates) {
     setCoordinates(coordinates);
     return this;
   }
 
-  @Override
-  protected org.locationtech.jts.geom.Geometry convertToJTSGeometry() {
-    return JTSHelper.toMultiPolygon(this.coordinates);
+  public org.locationtech.jts.geom.LineString convertToJTSGeometry() {
+    return JTSHelper.toLineString(this.coordinates);
   }
 
   @Override
   public void validate() throws InvalidGeometryException {
-    validateMultiPolygonCoordinates(this.coordinates);
+    validateLineStringCoordinates(this.coordinates);
   }
 
   @Override
@@ -69,7 +67,7 @@ public class XyzMultiPolygon extends XyzGeometryItem {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    XyzMultiPolygon that = (XyzMultiPolygon) o;
+    XyzLineString that = (XyzLineString) o;
     return Objects.equals(coordinates, that.coordinates);
   }
 

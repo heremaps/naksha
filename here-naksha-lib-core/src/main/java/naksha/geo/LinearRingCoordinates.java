@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.coordinates;
+package naksha.geo;
 
 public class LinearRingCoordinates extends PositionList {
 

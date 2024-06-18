@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core.util.diff;
 
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.EXyzAction;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.JsonObject;

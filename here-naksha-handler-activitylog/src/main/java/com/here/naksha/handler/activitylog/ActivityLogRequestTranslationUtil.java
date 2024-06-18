@@ -18,9 +18,9 @@
  */
 package com.here.naksha.handler.activitylog;
 
-import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.ID;
-import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.PROPERTIES;
-import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_ACTIVITY_LOG_NS;
+import static naksha.model.XyzFeature.ID;
+import static naksha.model.XyzFeature.PROPERTIES;
+import static naksha.geo.XyzProperties.XYZ_ACTIVITY_LOG_NS;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.pRefFromPropPath;
 
 import naksha.model.POp;

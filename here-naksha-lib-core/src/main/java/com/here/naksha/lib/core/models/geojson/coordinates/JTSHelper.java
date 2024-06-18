@@ -18,15 +18,9 @@
  */
 package com.here.naksha.lib.core.models.geojson.coordinates;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
+import naksha.geo.*;
 import naksha.model.XyzGeometryCollection;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometryItem;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzLineString;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzMultiLineString;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzMultiPoint;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzMultiPolygon;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzPolygon;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.Nullable;

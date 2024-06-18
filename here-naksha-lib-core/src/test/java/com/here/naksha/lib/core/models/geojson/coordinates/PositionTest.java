@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core.models.geojson.coordinates;
 
+import naksha.geo.Position;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

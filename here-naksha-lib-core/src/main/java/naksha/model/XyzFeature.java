@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.implementation;
+package naksha.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
@@ -33,8 +33,11 @@ import com.here.naksha.lib.core.models.Typed;
 import com.here.naksha.lib.core.models.features.Catalog;
 import com.here.naksha.lib.core.models.features.Subscription;
 import com.here.naksha.lib.core.models.features.TxSignal;
-import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
+import naksha.geo.BBox;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
+import naksha.geo.XyzGeometry;
+import naksha.geo.XyzPoint;
+import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.NakshaFeature;
@@ -51,7 +54,6 @@ import com.here.naksha.lib.core.view.ViewMember;
 import java.util.ArrayList;
 import java.util.List;
 
-import naksha.model.XyzGeometryCollection;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;

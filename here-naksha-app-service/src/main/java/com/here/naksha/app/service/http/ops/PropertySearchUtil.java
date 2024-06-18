@@ -25,8 +25,8 @@ import static com.here.naksha.lib.core.util.storage.RequestHelper.pRefFromPropPa
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.model.XyzFeature;
+import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryOperation;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;

@@ -28,7 +28,7 @@ import com.here.naksha.lib.core.INaksha;
 import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Space;
 import naksha.model.XyzResponse;
 import naksha.model.POp;

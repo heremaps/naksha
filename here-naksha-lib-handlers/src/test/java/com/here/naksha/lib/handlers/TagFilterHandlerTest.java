@@ -1,7 +1,7 @@
 package com.here.naksha.lib.handlers;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
+import naksha.model.XyzFeature;
+import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.test.common.FileUtil;

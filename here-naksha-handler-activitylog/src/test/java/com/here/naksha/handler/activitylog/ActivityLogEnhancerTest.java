@@ -1,6 +1,6 @@
 package com.here.naksha.handler.activitylog;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
 import java.io.File;

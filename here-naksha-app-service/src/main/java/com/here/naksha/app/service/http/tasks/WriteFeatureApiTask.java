@@ -33,7 +33,7 @@ import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import naksha.model.ReadFeatures;
 import naksha.model.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;

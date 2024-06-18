@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.heapcache;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.util.ILike;
 import com.here.naksha.lib.core.util.fib.FibMapEntry;
 import org.jetbrains.annotations.NotNull;

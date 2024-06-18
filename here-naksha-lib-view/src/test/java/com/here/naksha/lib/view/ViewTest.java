@@ -22,7 +22,7 @@ import com.here.naksha.lib.core.*;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.TooManyTasks;
 import com.here.naksha.lib.core.exceptions.UncheckedException;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.storage.*;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;

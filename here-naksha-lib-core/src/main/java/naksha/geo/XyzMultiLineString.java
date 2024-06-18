@@ -16,63 +16,48 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.implementation;
+package naksha.geo;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
 import java.util.Objects;
-import org.jetbrains.annotations.NotNull;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeName(value = "Point")
-public class XyzPoint extends XyzGeometryItem {
-
-  public XyzPoint() {}
-
-  public XyzPoint(double longitude, double latitude) {
-    this(longitude, latitude, 0d);
-  }
-
-  public XyzPoint(double longitude, double latitude, double altitude) {
-    coordinates.add(longitude);
-    coordinates.add(latitude);
-    coordinates.add(altitude);
-  }
+@JsonTypeName(value = "MultiLineString")
+public class XyzMultiLineString extends XyzGeometryItem {
 
   @JsonProperty(COORDINATES)
-  private PointCoordinates coordinates = new PointCoordinates();
+  private MultiLineStringCoordinates coordinates = new MultiLineStringCoordinates();
 
   @Override
   @JsonGetter
-  public PointCoordinates getCoordinates() {
+  public MultiLineStringCoordinates getCoordinates() {
     return this.coordinates;
   }
 
   @JsonSetter
-  public void setCoordinates(PointCoordinates coordinates) {
+  public void setCoordinates(MultiLineStringCoordinates coordinates) {
     this.coordinates = coordinates;
   }
 
-  public @NotNull XyzPoint withCoordinates(PointCoordinates coordinates) {
+  public XyzMultiLineString withCoordinates(MultiLineStringCoordinates coordinates) {
     setCoordinates(coordinates);
     return this;
   }
 
-  @JsonIgnore
-  public org.locationtech.jts.geom.Point convertToJTSGeometry() {
-    return JTSHelper.toPoint(this.coordinates);
+  @Override
+  protected org.locationtech.jts.geom.MultiLineString convertToJTSGeometry() {
+    return JTSHelper.toMultiLineString(getCoordinates());
   }
 
   @Override
   public void validate() throws InvalidGeometryException {
-    validatePointCoordinates(this.coordinates);
+    validateMultiLineStringCoordinates(this.coordinates);
   }
 
   @Override
@@ -83,8 +68,8 @@ public class XyzPoint extends XyzGeometryItem {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    XyzPoint xyzPoint = (XyzPoint) o;
-    return Objects.equals(coordinates, xyzPoint.coordinates);
+    XyzMultiLineString that = (XyzMultiLineString) o;
+    return Objects.equals(coordinates, that.coordinates);
   }
 
   @Override

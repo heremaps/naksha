@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.here.naksha.handler.activitylog.ActivityLogSuccessResult;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.storage.ResultHelper;
 import java.util.List;

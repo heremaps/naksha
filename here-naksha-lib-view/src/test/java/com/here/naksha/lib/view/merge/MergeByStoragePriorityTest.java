@@ -1,6 +1,6 @@
 package com.here.naksha.lib.view.merge;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.view.ViewLayerRow;

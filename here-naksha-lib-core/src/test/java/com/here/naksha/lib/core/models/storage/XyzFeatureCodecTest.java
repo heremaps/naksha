@@ -1,6 +1,6 @@
 package com.here.naksha.lib.core.models.storage;
 
-import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_NAMESPACE;
+import static naksha.geo.XyzProperties.XYZ_NAMESPACE;
 import static com.here.naksha.lib.jbon.BigInt64Kt.BigInt64;
 import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -9,10 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.here.naksha.lib.core.SessionTest;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.model.EXyzAction;
+import naksha.model.XyzFeature;
+import naksha.geo.XyzPoint;
+import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import naksha.jbon.JbDictManager;
 import naksha.jbon.JbFeature;

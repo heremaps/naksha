@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.lib.core.SessionTest;
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import org.junit.jupiter.api.Test;
 
 public class ResultTest extends SessionTest {

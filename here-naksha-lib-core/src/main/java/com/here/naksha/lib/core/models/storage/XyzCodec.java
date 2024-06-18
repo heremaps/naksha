@@ -22,8 +22,8 @@ import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
 import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
+import naksha.model.XyzFeature;
+import naksha.geo.XyzGeometry;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import naksha.model.XyzTags;
 import naksha.jbon.IMap;

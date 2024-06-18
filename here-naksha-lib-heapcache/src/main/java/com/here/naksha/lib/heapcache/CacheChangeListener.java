@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.heapcache;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 
 public interface CacheChangeListener {
   void onCacheEntryAdded(String key, XyzFeature feature);

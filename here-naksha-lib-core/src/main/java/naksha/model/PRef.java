@@ -18,9 +18,9 @@
  */
 package naksha.model;
 
-import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.ID;
-import static com.here.naksha.lib.core.models.geojson.implementation.XyzFeature.PROPERTIES;
-import static com.here.naksha.lib.core.models.geojson.implementation.XyzProperties.XYZ_NAMESPACE;
+import static naksha.model.XyzFeature.ID;
+import static naksha.model.XyzFeature.PROPERTIES;
+import static naksha.geo.XyzProperties.XYZ_NAMESPACE;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.APP_ID;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.AUTHOR;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.GRID;

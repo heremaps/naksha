@@ -21,7 +21,7 @@ package com.here.naksha.lib.core.models.geojson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
+import naksha.geo.BBox;
 import org.junit.jupiter.api.Test;
 
 public class HQuadTest {

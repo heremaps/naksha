@@ -2,8 +2,8 @@ package com.here.naksha.app.service.http.ops;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.model.XyzFeature;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;

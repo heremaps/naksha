@@ -36,6 +36,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import naksha.geo.XyzPoint;
+import naksha.model.XyzFeature;
+import naksha.model.XyzFeatureCollection;
 import org.junit.jupiter.api.Test;
 
 public class LazyParsedFeatureCollectionTest {

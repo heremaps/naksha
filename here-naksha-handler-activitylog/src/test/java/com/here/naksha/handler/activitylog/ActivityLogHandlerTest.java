@@ -26,9 +26,9 @@ import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil.DatahubSample
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.model.EXyzAction;
+import naksha.model.XyzFeature;
+import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;

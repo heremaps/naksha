@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
+import naksha.model.XyzFeature;
+import naksha.geo.XyzGeometry;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
