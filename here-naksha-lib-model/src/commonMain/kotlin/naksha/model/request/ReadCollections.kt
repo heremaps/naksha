@@ -14,7 +14,7 @@ class ReadCollections(
     /**
      * Ids of collections to search.
      */
-    val ids: Array<String>,
+    val ids: Array<String> = emptyArray(),
     /**
      * true - includes deleted features in search.
      * Default: false

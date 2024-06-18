@@ -16,5 +16,6 @@ sealed class POpType(val operation: String) : OpType {
     data object LTE : POpType("<=")
     data object NULL : POpType(" is null ")
     data object NOT_NULL : POpType(" is not null")
+    data object IN : POpType(" in ")
     data object CONTAINS : POpType("@>")
 }

@@ -112,14 +112,16 @@ class POp internal constructor(val op: POpType, val propertyRef: PRef, val value
             return POp(LTE, propertyRef, value)
         }
 
-
         fun isNull(propertyRef: PRef): Op {
             return POp(NULL, propertyRef, null)
         }
 
-
         fun isNotNull(propertyRef: PRef): Op {
             return POp(NOT_NULL, propertyRef, null)
+        }
+
+        fun isIn(propertyRef: PRef, value: Array<String>): Op {
+            return POp(IN, propertyRef, value)
         }
 
         /**

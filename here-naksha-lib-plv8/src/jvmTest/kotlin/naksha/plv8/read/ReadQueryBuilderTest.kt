@@ -1,6 +1,8 @@
 package naksha.plv8.read
 
 import com.here.naksha.lib.plv8.JvmPlv8Sql
+import naksha.model.Geometry
+import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadFeatures.Companion.readIdsBy
 import naksha.model.request.condition.LOp.Companion.and
@@ -10,10 +12,15 @@ import naksha.model.request.condition.POp.Companion.isNotNull
 import naksha.model.request.condition.POp.Companion.lt
 import naksha.model.request.condition.PRef.ID
 import naksha.model.request.condition.PRef.UID
+import naksha.model.request.condition.SOp.Companion.intersects
+import naksha.model.request.condition.SOp.Companion.intersectsWithTransformation
+import naksha.model.request.condition.geometry.BufferTransformation
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
+@Suppress("UNCHECKED_CAST")
 class ReadQueryBuilderTest {
 
     private val sql = JvmPlv8Sql(null)
@@ -235,13 +242,12 @@ class ReadQueryBuilderTest {
             """
             (SELECT id, type, geo_ref, flags FROM "foo" WHERE id=$1)
             UNION ALL
-            (SELECT id, type, geo_ref, flags FROM "foo${'$'}del" WHERE id=$1)
+            (SELECT id, type, geo_ref, flags FROM "foo${'$'}del" WHERE id=$2)
             UNION ALL
-            (SELECT id, type, geo_ref, flags FROM "foo${'$'}hst" WHERE id=$1)
+            (SELECT id, type, geo_ref, flags FROM "foo${'$'}hst" WHERE id=$3)
         """.trimIndent(), removeLimitWrapper(sql)
         )
     }
-
 
     @Test
     fun testReadByIdIsNotNull() {
@@ -255,6 +261,106 @@ class ReadQueryBuilderTest {
         assertEquals(0, params.size)
         assertEquals(
             """(SELECT id, type, geo_ref, flags FROM "foo" WHERE id is not null)""",
+            removeLimitWrapper(sql)
+        )
+    }
+
+    @Test
+    fun testReadBySpatial() {
+        // given
+        val req = readIdsBy("foo", intersects(Geometry()))
+
+        // when
+        val (sql, params) = builder.build(req)
+
+        // then
+        assertEquals(1, params.size)
+        assertEquals(
+            """(SELECT id, type, geo_ref, flags FROM "foo" WHERE ST_Intersects(naksha_geometry(flags,geo), ST_Force3D(naksha_geometry_in_type(3::int2,$1))))""",
+            removeLimitWrapper(sql)
+        )
+    }
+
+    @Test
+    fun testReadBySpatialWithBuffer() {
+        // given
+        val geometryTransformation = BufferTransformation.bufferInMeters(22.2)
+        val req = readIdsBy("foo", intersectsWithTransformation(Geometry(), geometryTransformation))
+
+        // when
+        val (sql, params) = builder.build(req)
+
+        // then
+        assertEquals(1, params.size)
+        assertEquals(
+            """(SELECT id, type, geo_ref, flags FROM "foo" WHERE ST_Intersects(naksha_geometry(flags,geo),  ST_Buffer(ST_Force3D(naksha_geometry_in_type(3::int2,$1))::geography ,22.2,E'') ))""",
+            removeLimitWrapper(sql)
+        )
+    }
+
+    @Test
+    fun testReadAllCollections() {
+        // given
+        val req = ReadCollections(emptyArray())
+
+        // when
+        val (sql, params) = builder.build(req)
+
+        // then
+        assertEquals(0, params.size)
+        assertEquals(
+            """(SELECT id, type, geo_ref, flags, txn_next, txn, uid, ptxn, puid, action, version, created_at, updated_at, author_ts, author, app_id, geo_grid, tags, geo, feature FROM "naksha~collections")""",
+            removeLimitWrapper(sql)
+        )
+    }
+
+    @Test
+    fun testReadCollectionsById() {
+        // given
+        val req = ReadCollections(
+            arrayOf("foo", "bar", "baz"),
+            queryDeleted = false,
+            noGeometry = true,
+            noTags = true,
+            noMeta = true,
+            noFeature = true,
+        )
+
+        // when
+        val (sql, params) = builder.build(req)
+
+        // then
+        assertEquals(1, params.size)
+        assertArrayEquals(arrayOf("foo", "bar", "baz"), params[0] as Array<String>)
+        assertEquals(
+            """(SELECT id, type, geo_ref, flags FROM "naksha~collections" WHERE id in $1)""",
+            removeLimitWrapper(sql)
+        )
+    }
+
+    @Test
+    fun testReadDeletedCollections() {
+        // given
+        val req = ReadCollections(
+            arrayOf("foo"),
+            queryDeleted = true,
+            noGeometry = true,
+            noTags = true,
+            noMeta = true,
+            noFeature = true,
+        )
+
+        // when
+        val (sql, params) = builder.build(req)
+
+        // then
+        assertEquals(2, params.size)
+        assertEquals(
+            """
+            (SELECT id, type, geo_ref, flags FROM "naksha~collections" WHERE id in $1)
+            UNION ALL
+            (SELECT id, type, geo_ref, flags FROM "naksha~collections${'$'}del" WHERE id in $2)
+            """.trimIndent().trimMargin(),
             removeLimitWrapper(sql)
         )
     }
