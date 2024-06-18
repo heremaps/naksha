@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
 import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
@@ -15,6 +15,7 @@ import kotlin.js.JsExport
  * @property geometryType The geometry type (0=none, 1=WKB, 2=EWKB, 3=TWKB)
  */
 @JsExport
+@Deprecated("Please use new class from lib-model", level = DeprecationLevel.WARNING)
 data class NkStorageRow(
         val dictManager: JbDictManager,
         val feature: ByteArray,

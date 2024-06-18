@@ -1,7 +1,8 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
+import naksha.base.BinaryView
 import naksha.base.P_JsMap
 import naksha.base.P_Map
 import naksha.base.Platform
@@ -13,14 +14,14 @@ import kotlin.js.JsExport
  * @property dictManager The dictionary manager to use to decode the tags.
  */
 @JsExport
-class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
+class XyzTags(var dictManager: IDictManager, binaryView: BinaryView) : XyzStruct<XyzTags>(binaryView) {
     private lateinit var _tagsMap: P_JsMap
     private lateinit var _tagsArray: Array<String>
 
     override fun parseHeader() {
         super.parseXyzHeader(XYZ_TAGS_VARIANT)
 
-        val dictId = if (reader.isString()) reader.readString() else null
+        val dictId = if (reader.isString()) reader.decodeString() else null
         if (dictId != null) {
             reader.globalDict = dictManager.getDictionary(dictId)
             check(reader.globalDict != null) { "Failed to load dictionary with ID '$dictId'" }
@@ -34,15 +35,15 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
         while (reader.nextUnit()) {
             var key: String
             if (reader.isGlobalRef()) {
-                val index = reader.readRef()
+                val index = reader.decodeRef()
                 key = reader.globalDict!!.get(index)
             } else {
-                key = reader.readString()
+                key = reader.decodeString()
             }
             check(reader.nextUnit())
             var value: Any?
             if (reader.isNumber()) {
-                value = reader.readFloat64()
+                value = reader.decodeFloat64()
                 if (Platform.canBeInt32(value)) {
                     val intValue = value.toInt()
                     array.add("$key:=$intValue")
@@ -53,10 +54,10 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
                 value = reader.readBoolean()
                 array.add("$key:=$value")
             } else if (reader.isString()) {
-                value = reader.readString()
+                value = reader.decodeString()
                 array.add("$key=$value")
             } else if (reader.isGlobalRef()) {
-                val index = reader.readRef()
+                val index = reader.decodeRef()
                 value = reader.globalDict!!.get(index)
                 array.add("$key=$value")
             } else {

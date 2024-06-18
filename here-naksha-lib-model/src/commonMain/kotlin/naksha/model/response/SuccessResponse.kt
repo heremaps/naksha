@@ -14,7 +14,7 @@ class SuccessResponse(
      * A handler (available if requested) to fetch more (next) rows from DB.
      */
     val handle: String? = null,
-    val rows: Array<ResultRow>
+    val rows: List<ResultRow>
 ) : Response(SUCCESS_TYPE) {
     override fun size(): Int = rows.size
 }

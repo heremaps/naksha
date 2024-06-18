@@ -39,6 +39,25 @@ inline fun Int64(value: Long) = Platform.longToInt64(value)
 inline fun Int64(value: Int) = Platform.toInt64(value)
 inline fun Int64(value: Double, rawBits: Boolean = false) = if (rawBits) Platform.toInt64RawBits(value) else Platform.toInt64(value)
 
+// We intentionally do not want to have this, the reason is that it should be as
+// complicated as possible to create native platform objects, because we want the
+// proxies to be used to avoid major errors, because you must only add a limited
+// amount of objects into platform native objects we this is handled much better
+// by higher level code (proxies) !!!
+//
+//inline fun PlatformList(vararg entries: Any?) = Platform.newList(*entries)
+//inline fun <K, V> PlatformMap(vararg entries: Pair<K, V?>): PlatformMap {
+//    val array = arrayOfNulls<Any?>(entries.size*2)
+//    var i = 0
+//    for ((k, v) in entries) {
+//        array[i++] = k
+//        array[i++] = v
+//    }
+//    return Platform.newMap(*array)
+//}
+//inline fun <K, V> PlatformMap(vararg entries: Any?): PlatformMap = Platform.newMap(*entries)
+
+
 //inline infix fun Int64.eq(other: Short): Boolean = this eq other.toInt()
 //infix fun Int64.eq(other: Int): Boolean = Int64Api.eqi(this, other)
 //infix fun Int64.eq(other: Int64): Boolean = Int64Api.eq(this, other)

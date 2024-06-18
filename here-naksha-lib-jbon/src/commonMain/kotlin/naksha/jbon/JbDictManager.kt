@@ -1,13 +1,11 @@
-@file:OptIn(ExperimentalJsExport::class)
+package naksha.jbon
 
-package com.here.naksha.lib.jbon
-
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
  * A simple dictionary manager that only cache dictionaries in memory.
  */
+@Suppress("OPT_IN_USAGE")
 @JsExport
 class JbDictManager : IDictManager {
     private val globalDictionaries = HashMap<String, JbDict>()

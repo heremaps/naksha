@@ -1,14 +1,22 @@
-@file:OptIn(ExperimentalJsExport::class)
+package naksha.jbon
 
-package com.here.naksha.lib.jbon
-
+import naksha.base.Binary
+import naksha.base.BinaryView
 import naksha.base.P_JsMap
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
-@Suppress("DuplicatedCode")
+/**
+ * A map view.
+ * @constructor Create a new JBON array reader.
+ * @param binary The binary to map initially.
+ * @param pos The position of the first byte to access, defaults to `binary.pos`.
+ * @param end The first byte that should not be read, defaults to `binary.end`.
+ */
+@Suppress("DuplicatedCode", "OPT_IN_USAGE")
 @JsExport
-class JbMap : JbEntryArray<JbMap>() {
+class JbMap(binary: BinaryView = Binary.EMPTY_IMMUTABLE, pos: Int = binary.pos, end: Int = binary.end)
+    : JbEntryArray<JbMap>(binary, pos, end) {
+
     override fun parseHeader() {
         check(unitType == TYPE_MAP) { "Mapped structure is no map, but ${JbReader.unitTypeName(unitType)}" }
         valueReader.mapReader(reader)
@@ -18,24 +26,24 @@ class JbMap : JbEntryArray<JbMap>() {
     }
 
     override fun nextEntry(): Boolean {
-        if (reader.offset() < end) {
+        if (reader.pos < end) {
             // Seek over key and value.
             reader.nextUnit()
             reader.nextUnit()
-            return reader.offset() < end
+            return reader.pos < end
         }
         return false
     }
 
     override fun loadEntry() {
         val reader = this.reader
-        if (reader.offset() != cachedOffset) {
+        if (reader.pos != cachedOffset) {
             val vr = this.valueReader
-            vr.setOffset(reader.offset())
-            check(vr.isRef()) { "Key in map at offset ${reader.offset()} is no string-reference" }
-            val index = vr.readRef()
+            vr.pos = reader.pos
+            check(vr.isRef()) { "Key in map at offset ${reader.pos} is no string-reference" }
+            val index = vr.decodeRef()
             val dict = if (vr.isGlobalRef()) vr.globalDict else vr.localDict
-            check(dict != null) { (if (vr.isGlobalRef()) "Global" else "Local") + "-Dictionary in map is null, but referred to at index ${reader.offset()}" }
+            check(dict != null) { (if (vr.isGlobalRef()) "Global" else "Local") + "-Dictionary in map is null, but referred to at index ${reader.pos}" }
             key = dict.get(index)
             check(vr.nextUnit()) {"Failed to seek to value of key $key"}
             // We're now positioned at the value.
@@ -50,7 +58,7 @@ class JbMap : JbEntryArray<JbMap>() {
     /**
      * A reader we use flexible, when reading of values is requested.
      */
-    private val valueReader = JbReader()
+    private val valueReader = JbReader(binary)
 
     /**
      * The [reader] offset that currently is cached.
@@ -81,20 +89,20 @@ class JbMap : JbEntryArray<JbMap>() {
      * @param key The key to search for.
      */
     fun selectKey(key: String): Boolean {
-        val backup = reader.offset()
+        val backup = reader.pos
         if (first()) {
             if (key == key()) return true
             while (next()) {
                 if (key == key()) return true
             }
         }
-        reader.setOffset(backup)
+        reader.pos = backup
         return false
     }
 
     /**
-     * Returns this map as [IMap].
-     * @return This binary as [IMap].
+     * Returns this map as [P_JsMap].
+     * @return This binary as [P_JsMap].
      */
     fun toIMap(): P_JsMap {
         return JbReader.readMap(this)

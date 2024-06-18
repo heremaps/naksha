@@ -9,8 +9,7 @@ import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
- * The base class for proxy types bound to [PlatformObject], [PlatformList], [PlatformMap], [PlatformConcurrentMap] or
- * [PlatformDataViewApi].
+ * The base class for proxy types bound to [PlatformObject], [PlatformList], [PlatformMap], or [PlatformDataViewApi].
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
@@ -61,7 +60,7 @@ abstract class Proxy : PlatformObject {
          */
         @JvmStatic
         @JsStatic
-        fun unbox(value: Any?): Any? = Platform.unbox(value)
+        fun unbox(value: Any?): Any? = Platform.valueOf(value)
     }
 
     /**
@@ -72,12 +71,12 @@ abstract class Proxy : PlatformObject {
     /**
      * The native object to which this type is linked.
      */
-    private var data: PlatformObject? = null
+    internal var data: PlatformObject? = null
 
     /**
      * A helper method that creates a new data object.
      */
-    protected abstract fun createData(): PlatformObject
+    protected abstract fun createData(): PlatformObject // TODO: Rename to createPlatformObject
 
     /**
      * Binds this proxy to the given native object and symbol, normally only invoke from [Platform]. This method should only be invoked ones,
@@ -104,6 +103,7 @@ abstract class Proxy : PlatformObject {
     /**
      * Returns the data (native) object to which this proxy is bound via the [symbol].
      */
+    // TODO: Rename to platformObject()
     open fun data(): PlatformObject {
         var data = this.data
         if (data == null) {
@@ -133,5 +133,5 @@ abstract class Proxy : PlatformObject {
      * @return The proxy instance.
      * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
      */
-    fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean = false): T = Platform.proxy(data(), klass, doNotOverride)
+    override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = Platform.proxy(data(), klass, doNotOverride)
 }

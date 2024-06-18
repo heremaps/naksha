@@ -7,8 +7,8 @@ import kotlin.js.JsExport
 @JsExport
 sealed class POpType(val operation: String) : OpType {
 
-    data object EXISTS : POpType("exists")
-    data object STARTS_WITH : POpType("startsWith")
+    data object EXISTS : POpType(" exists ")
+    data object STARTS_WITH : POpType(" like ")
     data object EQ : POpType("=")
     data object GT : POpType(">")
     data object GTE : POpType(">=")

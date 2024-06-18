@@ -14,6 +14,11 @@ interface BaseThreadLocal<T> {
      */
     fun get(): T
 
+    /**
+     * Returns the thread-local value.
+     * @param self The reference to the object called (delegation source).
+     * @param property The property being accessed (delegation source).
+     */
     operator fun getValue(self: Any?, property: KProperty<*>): T = get()
 
     /**
@@ -22,5 +27,11 @@ interface BaseThreadLocal<T> {
      */
     fun set(value: T)
 
+    /**
+     * Sets the thread-local.
+     * @param self The reference to the object called (delegation source).
+     * @param property The property being accessed (delegation source).
+     * @param value The value to set.
+     */
     operator fun setValue(self: Any?, property: KProperty<*>, value: T) = set(value)
 }

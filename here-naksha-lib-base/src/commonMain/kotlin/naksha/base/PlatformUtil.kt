@@ -10,10 +10,10 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class BaseUtil {
+class PlatformUtil {
     companion object {
         /**
-         * When no size is explicitly given, the amount of byte to allocated initially for a data-view.
+         * The default size of a view. This is used at various placed.
          */
         var defaultDataViewSize = 128
 

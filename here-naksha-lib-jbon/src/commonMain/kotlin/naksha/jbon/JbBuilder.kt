@@ -1,44 +1,104 @@
-@file:OptIn(ExperimentalJsExport::class)
-
-package com.here.naksha.lib.jbon;
+package naksha.jbon;
 
 import naksha.base.*
+import naksha.base.PlatformDataViewApi.Companion.dataview_get_size
+import naksha.base.PlatformUtil.Companion.defaultDataViewSize
 import kotlin.js.*
 import kotlin.jvm.JvmStatic
 import kotlin.math.floor
-import kotlin.math.max
 
 /**
  * Creates a new JBON builder using the given view and global dictionary.
- * @param view The view to use, optionally auto allocated and resized.
- * @property global The global dictionary to use when encoding.; if any.
- * @property autoResize The view to use, if _null_, allocated on demand.
+ * @property global The global dictionary to use when encoding; if any.
  */
-@Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate")
+@Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
 @JsExport
-open class JbBuilder() {
-    private var view: P_DataView? = null
-    var global: JbDict? = null
-    var autoResize: Boolean = true
+open class JbBuilder(var global: JbDict? = null) : Binary() {
 
-    @JsName("of")
-    constructor(view: P_DataView?, global: JbDict? = null, autoResize: Boolean = true) : this() {
-        this.view = view
-        this.global = global
-        this.autoResize = autoResize
+    /**
+     * Create a new resizable editor with a new byte-array of the given size backing it.
+     * @param size The amount of byte to allocate initially.
+     * @param global The global dictionary to use when encoding; if any.
+     */
+    @Suppress("LeakingThis")
+    @JsName("forSize")
+    constructor(size: Int, global: JbDict? = null) : this(global) {
+        view = Platform.newDataView(ByteArray(size))
+        this.readOnly = false
+        this.resize = true
     }
 
-    @JsName("new")
-    constructor(size: Int? = null, global: JbDict? = null, autoResize: Boolean = true) : this() {
-        this.view = P_DataView(size)
-        this.global = global
-        this.autoResize = autoResize
+    /**
+     * Creates a new read-only about the given data-view.
+     * @param binaryView The view for which to create a proxy.
+     * @param pos The position in the view to start reading; defaults to `0`.
+     * @param end The position in the view to stop reading at (first position to **not** read); defaults to `view.byteLength`.
+     * @param global The global dictionary to use when encoding; if any.
+     */
+    @Suppress("LeakingThis")
+    @JsName("forBinary")
+    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: JbDict? = null) : this(global) {
+        this.view = binaryView.view
+        this.pos = pos
+        this.end = end
+        this.readOnly = true
+        this.resize = false
+    }
+
+    /**
+     * Creates a new read-only about the given data-view.
+     * @param view The view for which to create a proxy.
+     * @param pos The position in the view to start reading; defaults to `0`.
+     * @param end The position in the view to stop reading at (first position to **not** read); defaults to `view.byteLength`.
+     * @param global The global dictionary to use when encoding; if any.
+     */
+    @Suppress("LeakingThis")
+    @JsName("forDataView")
+    constructor(view: PlatformDataView, pos: Int = 0, end: Int = dataview_get_size(view), global: JbDict? = null) : this(global) {
+        this.view = view
+        this.pos = pos
+        this.end = end
+        this.readOnly = true
+        this.resize = false
+    }
+
+    /**
+     * Creates a new read-only with a new data-view about the given byte-array.
+     * @param byteArray The byte-array to view.
+     * @param offset The first byte to view.
+     * @param length The amount of byte to view; defaults to everything from [offset] to `byteArray.size`.
+     * @param global The global dictionary to use when encoding; if any.
+     */
+    @Suppress("LeakingThis")
+    @JsName("forUint8Array")
+    constructor(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset, global: JbDict? = null) : this(global) {
+        view = Platform.newDataView(byteArray, offset, length)
+        this.pos = 0
+        this.end = dataview_get_size(view)
+        this.readOnly = true
+        this.resize = false
     }
 
     @OptIn(ExperimentalJsStatic::class)
     companion object {
+        /**
+         * An array that stores _true_ for every character that should belong to a **word**, when auto-splitting
+         * strings for the local dictionary. Ones a character being _false_ is found, the string is split at that
+         * point and a new sub-string is created.
+         *
+         * All characters that do not belong to words, are always individually encoded as unicode points, they
+         * can't form entries in the dictionary.
+         *
+         * By default, digits are not part of words, therefore numbers are not added to the local dictionary.
+         * The reason is that we often find strings that have numbers in them, but except for the numbers nothing
+         * else changes, for example `urn:here::here:Topology:123245678`.
+         */
+        @JvmStatic
+        @JsStatic
         val wordUnicode = BooleanArray(128) {
-            (it >= 'a'.code && it <= 'z'.code) || (it >= 'A'.code && it <= 'Z'.code) || it == ':'.code
+            (it >= 'a'.code && it <= 'z'.code)
+                    || (it >= 'A'.code && it <= 'Z'.code)
+                    || it == ':'.code
         }
 
         /**
@@ -49,7 +109,7 @@ open class JbBuilder() {
          */
         @JvmStatic
         @Deprecated("There is now a explict real static constructor, use it", ReplaceWith("JbBuilder(size, global)"))
-        fun create(size: Int? = null, global: JbDict? = null): JbBuilder = JbBuilder(size, global)
+        fun create(size: Int? = null, global: JbDict? = null): JbBuilder = JbBuilder(size ?: defaultDataViewSize, global)
 
         /**
          * Returns the maximal encoding size of a string.
@@ -166,78 +226,24 @@ open class JbBuilder() {
     private var localDictNextIndex: Int = 0
 
     /**
-     * The end of the build, so the index of the next byte to write, and the first byte that is invalid.
+     * Clear the builder, set [pos] and [end] to `0`, and return the old [end] position. Clears the local dictionary,
+     * but leaves the global dictionary intact.
+     * @return The old [end].
      */
-    var end: Int = 0
-        set(newValue) {
-            val view = this.view
-            if (view == null) {
-                require(newValue == 0)
-            } else {
-                require(newValue >= 0 && newValue <= view.getEnd())
-            }
-            field = newValue
-        }
-
-    /**
-     * Returns the current view. If no view is defined yet, creates a new view. If the current view does not have enough free space to
-     * store at least the given amount of bytes, copies the underlying byte-array into a bigger one and creates a new view, returning
-     * this new view.
-     * @param minAvailable The amount of byte that need to be available in the view for write (starting from [end]).
-     * @return The current view.
-     */
-    fun view(minAvailable: Int = 0): P_DataView {
-        var view = this.view
-        if (minAvailable > 0) {
-            val minSize = end + minAvailable
-            val currentSize = view?.getSize() ?: 0
-            if (currentSize < minSize) {
-                check(autoResize)
-                var newSize = (currentSize * 1.5).toInt()
-                if (newSize < minSize) {
-                    newSize = (minSize * 1.5).toInt()
-                }
-                view = P_DataView(view?.getByteArray()?.copyOf(newSize) ?: ByteArray(newSize))
-            }
-        }
-        if (view == null) {
-            check(autoResize)
-            view = P_DataView(max(128, minAvailable))
-        }
-        return view
-    }
-
-    /**
-     * Clear the builder, set [end] to the first byte and return the end position that was overridden. Clears the local dictionary, but
-     * leaves the global dictionary intact.
-     * @return The overridden end position.
-     */
-    fun clear(): Int {
-        val old = end
-        end = 0
+    open fun clear(): Int {
         localDictByName = null
         localDictByIndex = null
         localDictNextIndex = 0
-        return old
-    }
-
-    /**
-     * Reset the [end] and return the end position that was overridden. Leave the dictionaries intact (local and global).
-     * @return The overridden end position.
-     */
-    fun reset(): Int {
-        val old = end
-        end = 0
-        return old
+        return reset()
     }
 
     /**
      * Write a NULL value.
      * @return The offset of the value written.
      */
-    fun writeNull(): Int {
-        val pos = end;
-        view(1).setInt8(end++, ENC_MIXED_CONST_NULL.toByte())
+    fun encodeNull(): Int {
+        val pos = end
+        writeInt8(ENC_MIXED_CONST_NULL.toByte())
         return pos
     }
 
@@ -245,9 +251,9 @@ open class JbBuilder() {
      * Write an undefined value.
      * @return The offset of the value written.
      */
-    fun writeUndefined(): Int {
+    fun encodeUndefined(): Int {
         val pos = end;
-        view(1).setInt8(end++, ENC_MIXED_CONST_UNDEFINED.toByte())
+        writeInt8(ENC_MIXED_CONST_UNDEFINED.toByte())
         return pos
     }
 
@@ -256,12 +262,12 @@ open class JbBuilder() {
      * @param value The boolean to write.
      * @return The offset of the value written.
      */
-    fun writeBool(value: Boolean): Int {
+    fun encodeBool(value: Boolean): Int {
         val pos = end;
         if (value) {
-            view(1).setInt8(end++, ENC_MIXED_CONST_TRUE.toByte())
+            writeInt8(ENC_MIXED_CONST_TRUE.toByte())
         } else {
-            view(1).setInt8(end++, ENC_MIXED_CONST_FALSE.toByte())
+            writeInt8(ENC_MIXED_CONST_FALSE.toByte())
         }
         return pos
     }
@@ -271,33 +277,26 @@ open class JbBuilder() {
      * @param value The integer to write.
      * @return The offset of the value written.
      */
-    fun writeInt(value: Int): Int {
+    fun encodeInt(value: Int): Int {
         val offset = end;
         when (value) {
             in -16..15 -> {
-                view(1).setInt8(offset, (ENC_TINY or ENC_TINY_INT or (value and 0x1f)).toByte())
-                end += 1
+                writeInt8((ENC_TINY or ENC_TINY_INT or (value and 0x1f)).toByte())
             }
 
             in -128..127 -> {
-                val view = view(2)
-                view.setInt8(offset, ENC_MIXED_SCALAR_INT8.toByte())
-                view.setInt8(offset + 1, value.toByte())
-                end += 2
+                writeInt8(ENC_MIXED_SCALAR_INT8.toByte())
+                writeInt8(value.toByte())
             }
 
             in -32768..32767 -> {
-                val view = view(3)
-                view.setInt8(offset, ENC_MIXED_SCALAR_INT16.toByte())
-                view.setInt16(offset + 1, value.toShort())
-                end += 3
+                writeInt8(ENC_MIXED_SCALAR_INT16.toByte())
+                writeInt16(value.toShort())
             }
 
             else -> {
-                val view = view(5)
-                view.setInt8(offset, ENC_MIXED_SCALAR_INT32.toByte())
-                view.setInt32(offset + 1, value)
-                end += 5
+                writeInt8(ENC_MIXED_SCALAR_INT32.toByte())
+                writeInt32(value)
             }
         }
         return offset
@@ -308,15 +307,13 @@ open class JbBuilder() {
      * @param value The integer to write.
      * @return The offset of the value written.
      */
-    fun writeInt64(value: Int64): Int {
+    fun encodeInt64(value: Int64): Int {
         if (value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) {
-            return writeInt(value.toInt())
+            return encodeInt(value.toInt())
         }
         val offset = end;
-        val view = view(9)
-        view.setInt8(offset, ENC_MIXED_SCALAR_INT64.toByte())
-        view.setInt64(offset + 1, value)
-        end += 9
+        writeInt8(ENC_MIXED_SCALAR_INT64.toByte())
+        writeInt64(value)
         return offset
     }
 
@@ -325,15 +322,13 @@ open class JbBuilder() {
      * @param value The timestamp to write.
      * @return The offset of the value written.
      */
-    fun writeTimestamp(value: Int64): Int {
+    fun encodeTimestamp(value: Int64): Int {
         val offset = end;
-        val view = view(7)
-        view.setInt8(offset, ENC_MIXED_SCALAR_TIMESTAMP.toByte())
+        writeInt8(ENC_MIXED_SCALAR_TIMESTAMP.toByte())
         val hi = (value ushr 32).toShort()
         val lo = value.toInt()
-        view.setInt16(offset + 1, hi)
-        view.setInt32(offset + 3, lo)
-        end += 7
+        writeInt16(hi)
+        writeInt32(lo)
         return offset
     }
 
@@ -342,17 +337,15 @@ open class JbBuilder() {
      * @param value The value to write.
      * @return The offset of the value written.
      */
-    fun writeFloat(value: Float): Int {
+    fun encodeFloat(value: Float): Int {
         val pos = end
         if (value >= -16.0 && value <= 15.0 && value == floor(value)) {
             val i = value.toInt() and 0x1f
-            view(1).setInt8(end++, (ENC_TINY or ENC_TINY_FLOAT or i).toByte())
+            writeInt8((ENC_TINY or ENC_TINY_FLOAT or i).toByte())
             return pos
         }
-        val view = view(5)
-        view.setInt8(end, ENC_MIXED_SCALAR_FLOAT32.toByte())
-        view.setFloat32(end + 1, value)
-        end += 5
+        writeInt8(ENC_MIXED_SCALAR_FLOAT32.toByte())
+        writeFloat32(value)
         return pos
     }
 
@@ -361,17 +354,15 @@ open class JbBuilder() {
      * @param value The value to write.
      * @return The offset of the value written.
      */
-    fun writeDouble(value: Double): Int {
+    fun encodeDouble(value: Double): Int {
         val pos = end
         if (value >= -16.0 && value <= 15.0 && value == floor(value)) {
             val i = value.toInt() and 0x1f
-            view(1).setInt8(end++, (ENC_TINY or ENC_TINY_FLOAT or i).toByte())
+            writeInt8((ENC_TINY or ENC_TINY_FLOAT or i).toByte())
             return pos
         }
-        val view = view(9)
-        view.setInt8(end, ENC_MIXED_SCALAR_FLOAT64.toByte())
-        view.setFloat64(end + 1, value)
-        end += 9
+        writeInt8(ENC_MIXED_SCALAR_FLOAT64.toByte())
+        writeFloat64(value)
         return pos
     }
 
@@ -381,35 +372,29 @@ open class JbBuilder() {
      * @param global If the reference is into global-dictionary (true) or local (false).
      * @return The offset of the value written.
      */
-    fun writeRef(index: Int, global: Boolean): Int {
+    fun encodeRef(index: Int, global: Boolean): Int {
         val offset = end
         val globalBit = if (global) ENC_MIXED_REF_GLOBAL_BIT else 0
         if (index < 0) {
             // null
-            view(1).setInt8(end++, (globalBit or ENC_MIXED_REF_NULL).toByte())
+            writeInt8((globalBit or ENC_MIXED_REF_NULL).toByte())
             return offset
         }
         if (index < 16) {
             // tiny reference
-            view(1).setInt8(end++, ((if (global) ENC_MIXED_REF5_GLOBAL else ENC_MIXED_REF5_LOCAL).toInt() or index).toByte())
+            writeInt8(((if (global) ENC_MIXED_REF5_GLOBAL else ENC_MIXED_REF5_LOCAL).toInt() or index).toByte())
             return offset
         }
         val value = index - 16
         if (value < 256) {
-            val view = view(2)
-            view.setInt8(end, (globalBit or ENC_MIXED_REF_INT8).toByte())
-            view.setInt8(end + 1, value.toByte())
-            end += 2
+            writeInt8((globalBit or ENC_MIXED_REF_INT8).toByte())
+            writeInt8(value.toByte())
         } else if (value < 65536) {
-            val view = view(3)
-            view.setInt8(end, (globalBit or ENC_MIXED_REF_INT16).toByte())
-            view.setInt16(end + 1, value.toShort())
-            end += 3
+            writeInt8((globalBit or ENC_MIXED_REF_INT16).toByte())
+            writeInt16(value.toShort())
         } else {
-            val view = view(5)
-            view.setInt8(end, (globalBit or ENC_MIXED_REF_INT32).toByte())
-            view.setInt32(end + 1, value)
-            end += 5
+            writeInt8((globalBit or ENC_MIXED_REF_INT32).toByte())
+            writeInt32(value)
         }
         return offset
     }
@@ -436,8 +421,7 @@ open class JbBuilder() {
      * @param string The string to encode.
      * @return The offset of the value written.
      */
-    fun writeString(string: String): Int {
-        val view = view(maxSizeOfString(string))
+    fun encodeString(string: String): Int {
         val start = end
         // We reserve 5 byte for the header.
         var pos = end + 5
@@ -453,17 +437,17 @@ open class JbBuilder() {
                 unicode = hi.code
             }
             check(unicode in 0..2_097_151)
-            pos = writeUnicode(view, pos, unicode)
+            pos = writeUnicode(this, pos, unicode)
         }
         // Calculate the size of the string.
         val size = pos - start - 5
         var source = start + 5
         // If the header is smaller than 5 byte, we need copy the data backwards.
-        var target = writeStringHeader(view, start, size)
+        var target = writeStringHeader(this, start, size)
         if (target < source) {
             while (source < pos) {
                 // TODO: Optimized this by adding support for a native copy function into P_DataView
-                view.setInt8(target++, view.getInt8(source++))
+                setInt8(target++, getInt8(source++))
             }
             pos = target
         }
@@ -479,7 +463,7 @@ open class JbBuilder() {
      * @param add If nothing, a space, an underscore or a colon should be added (must be 0 to 3).
      * @return The end offset.
      */
-    private fun writeStringRef(offset: Int, index: Int, isGlobal: Boolean, add: Int): Int {
+    private fun encodeStringRef(offset: Int, index: Int, isGlobal: Boolean, add: Int): Int {
         require(add in 0..3)
         require(index >= 0)
         var pos = offset
@@ -488,19 +472,16 @@ open class JbBuilder() {
             leadIn = leadIn or 0b00000_100
         }
         if (index < 256) {
-            val view = view(2)
-            view.setInt8(pos, (leadIn or 1).toByte())
-            view.setInt8(pos + 1, index.toByte())
+            setInt8(pos, (leadIn or 1).toByte())
+            setInt8(pos + 1, index.toByte())
             pos += 2
         } else if (index < 65536) {
-            val view = view(3)
-            view.setInt8(pos, (leadIn or 2).toByte())
-            view.setInt16(pos + 1, index.toShort())
+            setInt8(pos, (leadIn or 2).toByte())
+            setInt16(pos + 1, index.toShort())
             pos += 3
         } else {
-            val view = view(5)
-            view.setInt8(pos, (leadIn or 3).toByte())
-            view.setInt32(pos + 1, index)
+            setInt8(pos, (leadIn or 3).toByte())
+            setInt32(pos + 1, index)
             pos += 5
         }
         return pos
@@ -511,9 +492,8 @@ open class JbBuilder() {
      * @param string The string to encode.
      * @return The offset of the value written.
      */
-    fun writeText(string: String): Int {
+    fun encodeText(string: String): Int {
         val sb = StringBuilder()
-        val view = view(maxSizeOfString(string))
         val start = end
         val global = this.global
         // We reserve the header.
@@ -553,13 +533,13 @@ open class JbBuilder() {
                     // - We are at the end of the string
                     // - The current unicode (last character) is a valid word-code
                     // - We have at least two more bytes in the current word.
-                    pos = writeUnicode(view, pos, unicode)
+                    pos = writeUnicode(this, pos, unicode)
                     // We know that the unicode is only one byte (is < 128)
                     size++
                 }
                 if (size >= 3) {
                     sb.clear()
-                    JbReader.readSubstring(view, wordStart, pos, sb)
+                    JbReader.readSubstring(this, wordStart, pos, sb)
                     val subString = sb.toString()
                     val isGlobal: Boolean
                     var index = -1
@@ -571,17 +551,17 @@ open class JbBuilder() {
                             var reversePos = pos - 1
                             val stopAt = wordStart + 3
                             while (reversePos > stopAt) {
-                                val c = view.getInt8(reversePos).toInt() and 0xff
+                                val c = getInt8(reversePos).toInt() and 0xff
                                 if (':'.code == c) {
                                     // We found a colon at reversePos
                                     // Try to look it up in the global dictionary (reversePos is excluded below).
                                     sb.clear()
-                                    JbReader.readSubstring(view, wordStart, reversePos, sb)
+                                    JbReader.readSubstring(this, wordStart, reversePos, sb)
                                     val prefix = sb.toString()
                                     index = global.indexOf(prefix)
                                     if (index >= 0) {
                                         // Found the prefix in the global dict, now we encode the prefix as reference.
-                                        pos = writeStringRef(wordStart, index, true, ADD_COLON)
+                                        pos = encodeStringRef(wordStart, index, true, ADD_COLON)
                                         // Seek back behind the colon.
                                         i = reversePos + 1
                                         // A new word starts
@@ -609,7 +589,7 @@ open class JbBuilder() {
                         else -> ADD_NOTHING
                     }
                     // Moved back to where the word started and encode the reference instead
-                    pos = writeStringRef(wordStart, index, isGlobal, add)
+                    pos = encodeStringRef(wordStart, index, isGlobal, add)
                     wordStart = -1
                     // If we're currently on a space or underscore, we do not need to encode it, it is embedded.
                     // If we hit the end of the string, we have added the code already.
@@ -618,17 +598,17 @@ open class JbBuilder() {
                 // Word ends now.
                 wordStart = -1
             }
-            pos = writeUnicode(view, pos, unicode)
+            pos = writeUnicode(this, pos, unicode)
         }
         // Calculate the size of the string.
         val size = pos - start - headerReservedSize
         var source = start + headerReservedSize
         // If the header is smaller than 5 byte, we need copy the data backwards.
-        var target = writeStringHeader(view, start, size)
+        var target = writeStringHeader(this, start, size)
         if (target < source) {
             while (source < pos) {
                 // TODO: Optimized this by adding support for a native copy function into P_DataView
-                view.setInt8(target++, view.getInt8(source++))
+                setInt8(target++, getInt8(source++))
             }
             pos = target
         }
@@ -636,7 +616,7 @@ open class JbBuilder() {
         return start
     }
 
-    private fun writeUnicode(view: P_DataView, offset: Int, unicode: Int): Int {
+    private fun writeUnicode(view: BinaryView, offset: Int, unicode: Int): Int {
         require(unicode in 0..2_097_151)
         var pos = offset
         when (unicode) {
@@ -662,7 +642,7 @@ open class JbBuilder() {
         return pos
     }
 
-    private fun writeStringHeader(view: P_DataView, offset: Int, size: Int): Int {
+    private fun writeStringHeader(view: BinaryView, offset: Int, size: Int): Int {
         require(size >= 0) { "The string must not be of a size less than zero: $size" }
         if (size < 61) {
             view.setInt8(offset, (ENC_STRING or size).toByte())
@@ -694,11 +674,9 @@ open class JbBuilder() {
         // We need 1-byte lead-in
         // optional: 4 byte for the size.
         // optional: 4 byte for the variant.
-        view(9)
         end += 9
         return start
     }
-
 
     /**
      * Write the header of a structure to the [end] of the builder.
@@ -711,39 +689,32 @@ open class JbBuilder() {
         val start = end
         require(payloadSize >= 0) { "Structure size must be greater/equal zero, but was: $payloadSize" }
         var leadIn = ENC_STRUCT or structType
-        val view = view(9)
         end++ // We write the lead-in later
         if (payloadSize == 0) {
             leadIn = leadIn or ENC_STRUCT_SIZE0
         } else if (payloadSize < 256) {
             leadIn = leadIn or ENC_STRUCT_SIZE8
-            view.setInt8(end, payloadSize.toByte())
-            end += 1
+            writeInt8(payloadSize.toByte())
         } else if (payloadSize < 65536) {
             leadIn = leadIn or ENC_STRUCT_SIZE16
-            view.setInt16(end, payloadSize.toShort())
-            end += 2
+            writeInt16(payloadSize.toShort())
         } else {
             leadIn = leadIn or ENC_STRUCT_SIZE32
-            view.setInt32(end, payloadSize)
-            end += 4
+            writeInt32(payloadSize)
         }
         if (variant == null) {
             leadIn = leadIn or ENC_STRUCT_VARIANT0
         } else if (variant < 256) {
             leadIn = leadIn or ENC_STRUCT_VARIANT8
-            view.setInt8(end, variant.toByte())
-            end += 1
+            writeInt8(variant.toByte())
         } else if (variant < 65536) {
             leadIn = leadIn or ENC_STRUCT_VARIANT16
-            view.setInt16(end, variant.toShort())
-            end += 2
+            writeInt16(variant.toShort())
         } else {
             leadIn = leadIn or ENC_STRUCT_VARIANT32
-            view.setInt32(end, variant)
-            end += 4
+            writeInt32(variant)
         }
-        view.setInt8(start, leadIn.toByte())
+        setInt8(start, leadIn.toByte())
         return start
     }
 
@@ -765,10 +736,9 @@ open class JbBuilder() {
         // Copy from where the content backwards.
         var source = contentStart
         if (end < source) {
-            val view = view()
             var end = this.end
             while (source < contentEnd) {
-                view.setInt8(end++, view.getInt8(source++))
+                setInt8(end++, getInt8(source++))
             }
             this.end = end
         }
@@ -818,12 +788,12 @@ open class JbBuilder() {
         if (global != null) {
             index = global.indexOf(key)
             if (index >= 0) {
-                writeRef(index, true)
+                encodeRef(index, true)
                 return start
             }
         }
         index = addToLocalDictionary(key)
-        writeRef(index, false)
+        encodeRef(index, false)
         return start
     }
 
@@ -841,11 +811,11 @@ open class JbBuilder() {
      */
     fun writeDictionary(id: String? = null): Int {
         val start = startStruct()
-        if (id != null) writeString(id) else writeNull()
+        if (id != null) encodeString(id) else encodeNull()
         val localStringById = this.localDictByIndex
         if (localStringById != null) {
             for (string in localStringById) {
-                writeString(string)
+                encodeString(string)
             }
         }
         // TODO: Improve, so that endStruct is not always copy data (make it optional)
@@ -862,7 +832,7 @@ open class JbBuilder() {
     fun buildDictionary(id: String): ByteArray {
         check(end == 0) { "The builder must be empty to create a global dictionary from the local, end: $end" }
         val start = writeDictionary(id)
-        return view().getByteArray().copyOfRange(start, end)
+        return byteArray.copyOfRange(start, end)
     }
 
     /**
@@ -883,9 +853,9 @@ open class JbBuilder() {
             writeKey(entry.key)
             if ("properties" == key && value is P_Map<*, *>) {
                 @Suppress("UNCHECKED_CAST")
-                writeMap(value as P_Map<String, *>, true)
+                encodeMap(value as P_Map<String, *>, true)
             } else {
-                writeValue(value)
+                encodeValue(value)
             }
         }
         endMap(start)
@@ -903,7 +873,7 @@ open class JbBuilder() {
      * @param ignoreXyzNs If the key _@ns:com:here:xyz_ should be ignored (a reference is added to [xyz]).
      * @return The offset of the value written.
      */
-    fun writeMap(map: P_Map<String, *>, ignoreXyzNs: Boolean = false): Int {
+    fun encodeMap(map: P_Map<String, *>, ignoreXyzNs: Boolean = false): Int {
         val start = startMap()
         for (entry in map) {
             val key = entry.key
@@ -914,7 +884,7 @@ open class JbBuilder() {
                 continue
             }
             writeKey(entry.key)
-            writeValue(entry.value)
+            encodeValue(entry.value)
         }
         endMap(start)
         return start
@@ -925,9 +895,9 @@ open class JbBuilder() {
      * @param array The array to write.
      * @return The offset of the value written.
      */
-    fun writeArray(array: Array<Any?>): Int {
+    fun encodeArray(array: Array<Any?>): Int {
         val start = startArray()
-        for (value in array) writeValue(value)
+        for (value in array) encodeValue(value)
         endArray(start)
         return start
     }
@@ -937,9 +907,9 @@ open class JbBuilder() {
      * @param array The array to write.
      * @return The offset of the value written.
      */
-    fun writeList(array: P_List<*>): Int {
+    fun encodeList(array: P_List<*>): Int {
         val start = startArray()
-        for (value in array) writeValue(value)
+        for (value in array) encodeValue(value)
         endArray(start)
         return start
     }
@@ -951,23 +921,23 @@ open class JbBuilder() {
      * @throws IllegalArgumentException If the given value is not writable.
      */
     @Suppress("UNCHECKED_CAST")
-    fun writeValue(value: Any?): Int {
+    fun encodeValue(value: Any?): Int {
         val start = end
         when (value) {
-            is Char -> writeString(value.toString())
-            is String -> writeString(value)
-            is Boolean -> writeBool(value)
-            is Byte -> writeInt(value.toInt())
-            is Short -> writeInt(value.toInt())
-            is Int -> writeInt(value)
-            is Long -> writeInt64(value.toInt64())
-            is Int64 -> writeInt64(value)
-            is Float -> writeFloat(value)
-            is Double -> if (Platform.canBeFloat32(value)) writeFloat(value.toFloat()) else writeDouble(value)
-            is P_Map<*, *> -> writeMap(value as P_Map<String, *>)
-            is P_List<*> -> writeList(value)
-            is Array<*> -> writeArray(value as Array<Any?>)
-            null -> writeNull()
+            is Char -> encodeString(value.toString())
+            is String -> encodeString(value)
+            is Boolean -> encodeBool(value)
+            is Byte -> encodeInt(value.toInt())
+            is Short -> encodeInt(value.toInt())
+            is Int -> encodeInt(value)
+            is Long -> encodeInt64(value.toInt64())
+            is Int64 -> encodeInt64(value)
+            is Float -> encodeFloat(value)
+            is Double -> if (Platform.canBeFloat32(value)) encodeFloat(value.toFloat()) else encodeDouble(value)
+            is P_Map<*, *> -> encodeMap(value as P_Map<String, *>)
+            is P_List<*> -> encodeList(value)
+            is Array<*> -> encodeArray(value as Array<Any?>)
+            null -> encodeNull()
             else -> throw IllegalArgumentException()
         }
         return start
@@ -988,11 +958,11 @@ open class JbBuilder() {
 
         // Write the local dictionary (without header)
         val startOfLocalDictPayload = end
-        writeNull() // The local dictionary does not have an ID.
+        encodeNull() // The local dictionary does not have an ID.
         val localDictByIndex = this.localDictByIndex
         if (localDictByIndex != null) {
             for (string in localDictByIndex) {
-                writeString(string)
+                encodeString(string)
             }
         }
         val endOfLocalDictPayload = end
@@ -1007,9 +977,9 @@ open class JbBuilder() {
         // Write the feature-id, we will eventually copy that into the target.
         val startOfFeatureId = end
         if (id != null) {
-            if (global != null) writeText(id) else writeString(id)
+            if (global != null) encodeText(id) else encodeString(id)
         } else {
-            writeNull()
+            encodeNull()
         }
         val endOfFeatureId = end
         val sizeOfFeatureId = endOfFeatureId - startOfFeatureId
@@ -1018,9 +988,9 @@ open class JbBuilder() {
         val startOfGlobalDictId = end
         val featureId: String? = global?.id()
         if (featureId != null) {
-            writeString(featureId)
+            encodeString(featureId)
         } else {
-            writeNull()
+            encodeNull()
         }
         val endOfGlobalDictId = end
         val sizeOfGlobalDictId = endOfGlobalDictId - startOfGlobalDictId
@@ -1045,35 +1015,34 @@ open class JbBuilder() {
         var target = 0
 
         // Copy feature header.
-        val view = view()
         var source = startOfFeatureHeader
         while (source < endOfFeatureHeader) {
-            targetView.setInt8(target++, view.getInt8(source++))
+            targetView.setInt8(target++, getInt8(source++))
         }
         // Copy the global dictionary id.
         source = startOfGlobalDictId
         while (source < endOfGlobalDictId) {
-            targetView.setInt8(target++, view.getInt8(source++))
+            targetView.setInt8(target++, getInt8(source++))
         }
         // Copy the feature id.
         source = startOfFeatureId
         while (source < endOfFeatureId) {
-            targetView.setInt8(target++, view.getInt8(source++))
+            targetView.setInt8(target++, getInt8(source++))
         }
         // Copy header of local dictionary.
         source = startOfLocalDictHeader
         while (source < endOfLocalDictHeader) {
-            targetView.setInt8(target++, view.getInt8(source++))
+            targetView.setInt8(target++, getInt8(source++))
         }
         // Copy local dict content.
         source = startOfLocalDictPayload
         while (source < endOfLocalDictPayload) {
-            targetView.setInt8(target++, view.getInt8(source++))
+            targetView.setInt8(target++, getInt8(source++))
         }
         // Copy the feature payload.
         source = startOfFeaturePayload
         while (source < endOfFeaturePayload) {
-            targetView.setInt8(target++, view.getInt8(source++))
+            targetView.setInt8(target++, getInt8(source++))
         }
         return targetArray
     }

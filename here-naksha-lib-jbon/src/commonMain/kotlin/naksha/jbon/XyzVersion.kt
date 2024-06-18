@@ -1,5 +1,5 @@
 @file:OptIn(ExperimentalJsExport::class)
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
 import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport

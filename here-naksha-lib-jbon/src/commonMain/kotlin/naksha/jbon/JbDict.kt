@@ -1,16 +1,17 @@
-@file:OptIn(ExperimentalJsExport::class)
+package naksha.jbon
 
-package com.here.naksha.lib.jbon
-
-import kotlin.js.ExperimentalJsExport
+import naksha.base.Binary
+import naksha.base.BinaryView
 import kotlin.js.JsExport
 
 /**
  * A dictionary reader.
+ * @constructor Create a new dictionary reader.
+ * @param binaryView The binary to map initially.
  */
-@Suppress("DuplicatedCode")
+@Suppress("DuplicatedCode", "OPT_IN_USAGE")
 @JsExport
-class JbDict : JbStruct<JbDict>() {
+class JbDict(binaryView: BinaryView = Binary.EMPTY_IMMUTABLE) : JbStruct<JbDict>(binaryView) {
     /**
      * Cached ID of the dictionary, if any.
      */
@@ -38,7 +39,7 @@ class JbDict : JbStruct<JbDict>() {
     fun id(): String? = id
 
     override fun parseHeader() {
-        id = if (reader.isString()) reader.readString() else null
+        id = if (reader.isString()) reader.decodeString() else null
         reader.nextUnit()
     }
 
@@ -78,9 +79,9 @@ class JbDict : JbStruct<JbDict>() {
             val indexToOffset = this.indexToOffset
             var length = content.size
             while (length <= index && reader.isString()) {
-                val string = reader.readString()
+                val string = reader.decodeString()
                 content.add(string)
-                indexToOffset.add(reader.offset())
+                indexToOffset.add(reader.pos)
                 length++
                 reader.nextUnit()
             }

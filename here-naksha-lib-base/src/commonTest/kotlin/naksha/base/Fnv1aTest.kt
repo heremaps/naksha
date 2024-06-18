@@ -1,13 +1,10 @@
-package naksha.jbon
+package naksha.base
 
-import naksha.base.Fnv1a32
-import naksha.base.Fnv1a64
-import naksha.base.Int64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class JbFnv1aHashTest : JbAbstractTest() {
+class Fnv1aTest {
     @Test
     fun testFnv1a32() {
         // See: https://md5calc.com/hash/fnv1a32/

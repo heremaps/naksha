@@ -1,15 +1,18 @@
-@file:OptIn(ExperimentalJsExport::class)
+package naksha.jbon
 
-package com.here.naksha.lib.jbon
-
-import kotlin.js.ExperimentalJsExport
+import naksha.base.Binary
+import naksha.base.BinaryView
 import kotlin.js.JsExport
 
 /**
- * A feature that wraps a map.
+ * A feature with the root unit being a map.
+ * @constructor Create a new JBON feature reader for features with a map as body.
+ * @param dictManager The dictionary manager to use.
+ * @param binaryView The binary to map initially.
  */
+@Suppress("OPT_IN_USAGE")
 @JsExport
-open class JbMapFeature(dictManager: IDictManager) : JbFeature(dictManager) {
+open class JbMapFeature(dictManager: IDictManager, binaryView: BinaryView = Binary.EMPTY_IMMUTABLE) : JbFeature(dictManager, binaryView) {
     private lateinit var _map: JbMap
 
     override fun clear(): JbMapFeature {

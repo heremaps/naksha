@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalJsExport::class)
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
+import naksha.base.BinaryView
 import naksha.base.P_JsMap
 import naksha.base.P_Map
 import kotlin.js.ExperimentalJsExport
@@ -11,7 +12,7 @@ import kotlin.jvm.JvmStatic
  * The operation to be executed.
  */
 @JsExport
-class XyzOp : XyzStruct<XyzOp>() {
+class XyzOp(binaryView: BinaryView) : XyzStruct<XyzOp>(binaryView) {
     private var op: Int = 0
     private var id: String? = null
     private var uuid: String? = null
@@ -37,13 +38,13 @@ class XyzOp : XyzStruct<XyzOp>() {
     override fun parseHeader() {
         super.parseXyzHeader(XYZ_OPS_VARIANT)
 
-        op = reader.readInt32()
+        op = reader.decodeInt32()
         check(reader.nextUnit())
-        id = if (reader.isString()) reader.readString() else null
+        id = if (reader.isString()) reader.decodeString() else null
         check(reader.nextUnit())
-        uuid = if (reader.isString()) reader.readString() else null
+        uuid = if (reader.isString()) reader.decodeString() else null
         check(reader.nextUnit())
-        grid = if (reader.isInt()) reader.readInt32() else null
+        grid = if (reader.isInt()) reader.decodeInt32() else null
         reader.nextUnit()
     }
 

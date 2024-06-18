@@ -1,28 +1,20 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
+import naksha.base.Binary
+import naksha.base.BinaryView
 import naksha.base.Int64
-import naksha.base.P_DataView
 import naksha.base.Platform
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 
+/**
+ * A builder for XYZ structures.
+ * @constructor Creates a new empty, mutable, and resizable binary editor.
+ */
 @JsExport
-class XyzBuilder(view: P_DataView? = null, global: JbDict? = null) : JbBuilder(view, global) {
-
-    companion object {
-        /**
-         * Create a new builder with a buffer of the given size.
-         * @param size The buffer size to use.
-         * @param global The global dictionary to use for the builder; if any.
-         * @return The builder.
-         */
-        @JvmStatic
-        fun create(size: Int? = null, global: JbDict? = null): XyzBuilder =
-                XyzBuilder(P_DataView(), global)
-    }
+class XyzBuilder(binaryView: BinaryView = Binary(), global: JbDict? = null) : JbBuilder(binaryView = binaryView, global = global) {
 
     /**
      * Starts tag building.
@@ -30,7 +22,7 @@ class XyzBuilder(view: P_DataView? = null, global: JbDict? = null) : JbBuilder(v
     fun startTags() {
         end = 10
         val global = this.global
-        if (global == null) writeNull() else writeString(global.id()!!)
+        if (global == null) encodeNull() else encodeString(global.id()!!)
     }
 
     /**
@@ -62,26 +54,26 @@ class XyzBuilder(view: P_DataView? = null, global: JbDict? = null) : JbBuilder(v
             }
         }
         var index = global?.indexOf(key) ?: -1
-        if (index >= 0) writeRef(index, true) else writeString(key)
+        if (index >= 0) encodeRef(index, true) else encodeString(key)
         when (value) {
-            is Boolean -> writeBool(value)
+            is Boolean -> encodeBool(value)
 
             is Double -> {
                 if (Platform.canBeInt32(value)) {
-                    writeInt(value.toInt())
+                    encodeInt(value.toInt())
                 } else if (Platform.canBeFloat32(value)) {
-                    writeFloat(value.toFloat())
+                    encodeFloat(value.toFloat())
                 } else {
-                    writeDouble(value)
+                    encodeDouble(value)
                 }
             }
 
             is String -> {
                 index = global?.indexOf(value) ?: -1
-                if (index >= 0) writeRef(index, true) else writeString(value)
+                if (index >= 0) encodeRef(index, true) else encodeString(value)
             }
 
-            else -> writeNull()
+            else -> encodeNull()
         }
     }
 
@@ -91,7 +83,7 @@ class XyzBuilder(view: P_DataView? = null, global: JbDict? = null) : JbBuilder(v
      * @param variant The variant; _null_ if no variant.
      * @return The bytes of the structure.
      */
-    private fun finish(structType:Int, variant: Int): ByteArray {
+    private fun finish(structType: Int, variant: Int): ByteArray {
         val startOfPayload = 10
         val endOfPayload = end
         val sizeOfPayload = endOfPayload - startOfPayload
@@ -99,7 +91,7 @@ class XyzBuilder(view: P_DataView? = null, global: JbDict? = null) : JbBuilder(v
         end = startOfStruct
         writeStructHeader(structType, variant, sizeOfPayload)
         end = endOfPayload
-        return view().getByteArray().copyOfRange(startOfStruct, end)
+        return byteArray.copyOfRange(startOfStruct, end)
     }
 
     /**
@@ -124,10 +116,10 @@ class XyzBuilder(view: P_DataView? = null, global: JbDict? = null) : JbBuilder(v
      */
     fun buildXyzOp(op: Int, id: String? = null, uuid: String? = null, grid: Int? = null): ByteArray {
         end = 10
-        writeInt(op)
-        if (id == null) writeNull() else writeString(id)
-        if (uuid == null) writeNull() else writeString(uuid)
-        if (grid == null) writeNull() else writeInt(grid)
+        encodeInt(op)
+        if (id == null) encodeNull() else encodeString(id)
+        if (uuid == null) encodeNull() else encodeString(uuid)
+        if (grid == null) encodeNull() else encodeInt(grid)
         return finish(ENC_STRUCT_VARIANT_XYZ, XYZ_OPS_VARIANT)
     }
 
@@ -149,17 +141,17 @@ class XyzBuilder(view: P_DataView? = null, global: JbDict? = null) : JbBuilder(v
         grid: Int
     ): ByteArray {
         end = 10
-        writeTimestamp(createdAt)
-        if (createdAt == updatedAt) writeNull() else writeTimestamp(updatedAt)
+        encodeTimestamp(createdAt)
+        if (createdAt == updatedAt) encodeNull() else encodeTimestamp(updatedAt)
         writeInt64(txn)
-        writeInt(action.toInt())
-        writeInt(version)
-        if (authorTs == updatedAt) writeNull() else writeTimestamp(authorTs)
-        if (puuid == null) writeNull() else writeString(puuid)
-        writeString(uuid)
-        writeString(appId)
-        writeString(author)
-        writeInt(grid)
+        encodeInt(action.toInt())
+        encodeInt(version)
+        if (authorTs == updatedAt) encodeNull() else encodeTimestamp(authorTs)
+        if (puuid == null) encodeNull() else encodeString(puuid)
+        encodeString(uuid)
+        encodeString(appId)
+        encodeString(author)
+        encodeInt(grid)
         return finish(ENC_STRUCT_VARIANT_XYZ, XYZ_NS_VARIANT)
     }
 

@@ -136,16 +136,5 @@ open class JvmObject : PlatformObject {
      * @return The proxy instance.
      * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-        val symbol = Symbols.of(klass)
-        var proxy = getSymbol(symbol)
-        if (proxy != null) {
-            if (klass.isInstance(proxy)) return proxy as T
-            if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
-        }
-        proxy = klass.primaryConstructor!!.call()
-        proxy.bind(this, symbol)
-        return proxy
-    }
+    override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = Platform.proxy(this, klass, doNotOverride)
 }

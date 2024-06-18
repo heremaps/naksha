@@ -73,7 +73,7 @@ object Fnv1a64 {
     }
 
     /**
-     * Hash a short that was read in big-endian encoding. This is the default encoding used by [P_DataView].
+     * Hash a short that was read in big-endian encoding. This is the default encoding used by [DataViewProxy].
      * @param hashCode The current hash code.
      * @param v The value to hash.
      * @return the updated hash.
@@ -101,7 +101,7 @@ object Fnv1a64 {
     }
 
     /**
-     * Hash an integer that was read in big-endian encoding. This is the default encoding used by [P_DataView].
+     * Hash an integer that was read in big-endian encoding. This is the default encoding used by [DataViewProxy].
      * @param hashCode The current hash code.
      * @param v The value to hash.
      * @return the updated hash.

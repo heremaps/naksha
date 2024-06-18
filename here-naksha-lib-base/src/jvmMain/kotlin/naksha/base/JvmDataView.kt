@@ -129,17 +129,4 @@ open class JvmDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byte
         check(value is JvmInt64)
         Platform.unsafe.putLong(buffer, offset(pos, 8), ordered(value.toLong(), littleEndian))
     }
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : P_DataView> proxy(klass: KClass<out T>, doNotOverride: Boolean): T {
-        val symbol = Symbols.of(klass)
-        var proxy = getSymbol(symbol)
-        if (proxy != null) {
-            if (klass.isInstance(proxy)) return proxy as T
-            if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
-        }
-        proxy = klass.primaryConstructor!!.call()
-        proxy.bind(this, symbol)
-        return proxy
-    }
 }

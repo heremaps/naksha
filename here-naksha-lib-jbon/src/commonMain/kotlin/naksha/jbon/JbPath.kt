@@ -1,19 +1,14 @@
-@file:OptIn(ExperimentalJsExport::class)
+package naksha.jbon
 
-package com.here.naksha.lib.jbon
-
-import naksha.base.P_DataView
-import kotlin.js.ExperimentalJsExport
+import naksha.base.Binary
+import naksha.base.BinaryView
 import kotlin.js.JsExport
 
+@Suppress("OPT_IN_USAGE")
 @JsExport
-class JbPath(var dictManager: JbDictManager) {
-
-    var bytes: ByteArray = ByteArray(0)
-    lateinit var view: P_DataView
-    var reader: JbReader = JbReader()
-    var jmap: JbMap = JbMap()
-    var feature: JbFeature = JbFeature(dictManager).mapReader(reader)
+class JbPath(var dictManager: JbDictManager, private var binaryView: BinaryView) {
+    private var jmap: JbMap = JbMap(binaryView)
+    private var feature: JbFeature = JbFeature(dictManager, binaryView)
 
     fun getBool(binary: ByteArray, path: String, alternative: Boolean? = null): Boolean? {
         val valueReader = readElement(binary, path)
@@ -26,7 +21,7 @@ class JbPath(var dictManager: JbDictManager) {
     fun getInt32(binary: ByteArray, path: String, alternative: Int? = null): Int? {
         val valueReader = readElement(binary, path)
         if (valueReader != null && valueReader.isInt32()) {
-            return valueReader.readInt32()
+            return valueReader.decodeInt32()
         }
         return alternative
     }
@@ -38,7 +33,7 @@ class JbPath(var dictManager: JbDictManager) {
     fun getFloat32(binary: ByteArray, path: String, alternative: Float? = null): Float? {
         val valueReader = readElement(binary, path)
         if (valueReader != null && valueReader.isFloat32()) {
-            return valueReader.readFloat32()
+            return valueReader.decodeFloat32()
         }
         return alternative
     }
@@ -47,9 +42,9 @@ class JbPath(var dictManager: JbDictManager) {
         val valueReader = readElement(binary, path)
         if (valueReader != null) {
             if (valueReader.isFloat32()) {
-                return valueReader.readFloat32().toDouble()
+                return valueReader.decodeFloat32().toDouble()
             } else if (valueReader.isFloat64()) {
-                return valueReader.readFloat64()
+                return valueReader.decodeFloat64()
             }
         }
         return alternative
@@ -58,18 +53,15 @@ class JbPath(var dictManager: JbDictManager) {
     fun getString(binary: ByteArray, path: String, alternative: String? = null): String? {
         val valueReader = readElement(binary, path)
         if (valueReader != null && valueReader.isString()) {
-            return valueReader.readString()
+            return valueReader.decodeString()
         }
         return alternative
     }
 
-    private fun readElement(binary: ByteArray, path: String): JbReader? {
-        if (!bytes.contentEquals(binary)) {
-            bytes = binary
-            feature = JbFeature(dictManager).mapBytes(bytes)
-            reader = feature.reader
-            view = reader.view()
-            jmap = JbMap()
+    private fun readElement(elementBytes: ByteArray, path: String): JbReader? {
+        if (!binaryView.byteArray.contentEquals(elementBytes)) {
+            binaryView = Binary(elementBytes)
+            feature = feature.mapView(binaryView)
             jmap.mapReader(feature.reader)
         }
 
