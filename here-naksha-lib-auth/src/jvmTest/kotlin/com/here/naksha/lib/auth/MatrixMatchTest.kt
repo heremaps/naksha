@@ -4,6 +4,9 @@ import arrow.core.success
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
 import io.kotlintest.inspectors.runTests
+import naksha.base.JvmMap
+import naksha.base.Platform
+import naksha.base.Proxy
 import java.io.File
 import kotlin.io.path.Path
 import kotlin.test.Test
@@ -40,15 +43,11 @@ class MatrixMatchTest {
     ) {
 
         companion object {
-            private val OBJECT_MAPPER = ObjectMapper()
             fun from(jsonFile: File): TestCase {
-                val tree = OBJECT_MAPPER.readTree(jsonFile)
-                val urm = tree["urm"]?.let { AuthParser.parseUrm(it) }
-                    ?: throw IllegalArgumentException("Missing 'urm' node")
-                val arm = tree["arm"]?.let { AuthParser.parseArm(it) }
-                    ?: throw IllegalArgumentException("Missing 'arm' node")
-                val shouldMatch = tree["matches"]?.asBoolean()
-                    ?: throw IllegalArgumentException("Missing 'matches' boolean value")
+                val root = Platform.fromJSON(jsonFile.readText()) as JvmMap
+                val urm = Proxy.box(root["urm"]!!, UserRightsMatrix::class)!!
+                val arm = Proxy.box(root["arm"]!!, AccessRightsMatrix::class)!!
+                val shouldMatch = Proxy.box(root["matches"], Boolean::class)!!
                 return TestCase(jsonFile.name, urm, arm, shouldMatch)
             }
         }

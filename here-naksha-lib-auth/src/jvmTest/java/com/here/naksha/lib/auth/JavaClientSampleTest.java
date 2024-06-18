@@ -21,15 +21,11 @@ package com.here.naksha.lib.auth;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.lib.auth.action.ReadCollections;
-import com.here.naksha.lib.auth.action.ReadFeatures;
 import com.here.naksha.lib.auth.attribute.CollectionAttributes;
-import com.here.naksha.lib.auth.attribute.FeatureAttributes;
 import com.here.naksha.lib.auth.attribute.NakshaAttributes;
 import com.here.naksha.lib.auth.attribute.ResourceAttributes;
-import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix;
 import naksha.base.P_List;
 import org.junit.jupiter.api.Test;
 
@@ -87,32 +83,5 @@ class JavaClientSampleTest {
     assertEquals("otherStorage", attributes.get(1).get(CollectionAttributes.STORAGE_ID_KEY));
     assertArrayEquals(
         new String[] {"tag1", "tag2"}, (String[]) attributes.get(1).get(CollectionAttributes.TAGS_KEY));
-  }
-
-  @Test
-  void urmArmFlowSample() {
-    // Given: raw URM, possibly from external source
-    String rawUrm = "{\n" + "   \"naksha\": {\n"
-        + "      \"readFeatures\": [\n"
-        + "         {\n"
-        + "            \"id\": \"featureId_*\",\n"
-        + "            \"storageId\": \"someStorage\"\n"
-        + "         }\n"
-        + "      ]\n"
-        + "   }\n"
-        + "}\n";
-
-    // And:
-    AccessRightsMatrix arm = new AccessRightsMatrix();
-    arm.naksha()
-        .withAction(new ReadFeatures()
-            .withAttributes(
-                new FeatureAttributes().id("featureId_121").storageId("someStorage")));
-
-    // When: parsing rawUrm
-    UserRightsMatrix urm = AuthParser.INSTANCE.parseUrm(rawUrm);
-
-    // Then:
-    assertTrue(urm.matches(arm));
   }
 }
