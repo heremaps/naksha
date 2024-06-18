@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.view;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 
 /** All serialization views. */

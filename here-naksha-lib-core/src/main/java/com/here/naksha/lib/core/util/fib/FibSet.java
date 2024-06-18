@@ -22,7 +22,7 @@ import static com.here.naksha.lib.core.util.fib.FibSetOp.GET;
 import static com.here.naksha.lib.core.util.fib.FibSetOp.PUT;
 import static com.here.naksha.lib.core.util.fib.FibSetOp.REMOVE;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.util.ILike;
 import java.lang.invoke.MethodHandles;

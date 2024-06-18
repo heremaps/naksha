@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.util;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import java.lang.ref.WeakReference;
 import java.util.Enumeration;
 import java.util.concurrent.ConcurrentHashMap;

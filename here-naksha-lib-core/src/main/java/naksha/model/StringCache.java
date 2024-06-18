@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util;
+package naksha.model;
 
 import static com.here.naksha.lib.core.util.fib.FibSet.SOFT;
 import static com.here.naksha.lib.core.util.fib.FibSet.STRONG;
@@ -25,7 +25,6 @@ import static com.here.naksha.lib.core.util.fib.FibSetOp.GET;
 import static com.here.naksha.lib.core.util.fib.FibSetOp.PUT;
 import static com.here.naksha.lib.core.util.fib.FibSetOp.REMOVE;
 
-import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.util.fib.FibEntry;
 import com.here.naksha.lib.core.util.fib.FibRefType;
 import com.here.naksha.lib.core.util.fib.FibSet;

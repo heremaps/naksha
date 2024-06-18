@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.util;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.io.BufferedReader;
 import java.io.File;

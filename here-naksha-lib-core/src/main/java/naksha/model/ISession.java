@@ -18,7 +18,6 @@
  */
 package naksha.model;
 
-import com.here.naksha.lib.core.NakshaVersion;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 

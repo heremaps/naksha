@@ -21,11 +21,10 @@ package naksha.model;
 import static java.lang.ThreadLocal.withInitial;
 
 import com.here.naksha.lib.core.AbstractTask;
-import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.Unauthorized;
 import com.here.naksha.lib.core.models.auth.ServiceMatrix;
 import com.here.naksha.lib.core.util.NanoTime;
-import com.here.naksha.lib.core.util.StreamInfo;
+
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

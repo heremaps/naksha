@@ -21,7 +21,6 @@ package naksha.model;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.Typed;
 import com.here.naksha.lib.core.models.storage.Notification;
 import org.apache.commons.lang3.NotImplementedException;

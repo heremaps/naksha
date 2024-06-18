@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.util;
 
-import static com.here.naksha.lib.core.NakshaVersion.v2_0_6;
+import static naksha.model.NakshaVersion.v2_0_6;
 
 import com.here.naksha.lib.core.lambdas.F1;
 import java.lang.management.GarbageCollectorMXBean;

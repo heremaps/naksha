@@ -20,7 +20,7 @@ package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.*;
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
-import static com.here.naksha.lib.core.util.diff.PatcherUtils.removeAllRemoveOp;
+import static naksha.diff.PatcherUtils.removeAllRemoveOp;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -39,8 +39,8 @@ import naksha.model.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
 import naksha.model.IWriteSession;
-import com.here.naksha.lib.core.util.diff.Difference;
-import com.here.naksha.lib.core.util.diff.Patcher;
+import naksha.diff.Difference;
+import naksha.diff.Patcher;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.*;

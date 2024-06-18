@@ -24,7 +24,7 @@ import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
 import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;

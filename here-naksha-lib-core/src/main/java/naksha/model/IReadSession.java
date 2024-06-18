@@ -18,7 +18,6 @@
  */
 package naksha.model;
 
-import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.storage.Notification;
 import com.here.naksha.lib.core.models.storage.Result;
 import java.util.concurrent.TimeUnit;

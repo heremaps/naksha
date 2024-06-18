@@ -23,7 +23,7 @@ import static naksha.model.POp.or;
 import static naksha.model.PRef.PATH_TO_PREF_MAPPING;
 import static naksha.model.PRef.id;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import naksha.geo.MultiPointCoordinates;
 import naksha.geo.PointCoordinates;

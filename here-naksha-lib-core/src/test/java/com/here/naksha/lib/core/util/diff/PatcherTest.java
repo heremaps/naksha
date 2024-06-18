@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core.util.diff;
 
+import naksha.diff.*;
 import naksha.model.EXyzAction;
 import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
@@ -29,7 +30,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
-import naksha.model.RemoveOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -43,7 +43,7 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 
 import java.util.Map;
 
-import static com.here.naksha.lib.core.util.diff.PatcherUtils.removeAllRemoveOp;
+import static naksha.diff.PatcherUtils.removeAllRemoveOp;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 

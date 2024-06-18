@@ -25,7 +25,7 @@ import static io.vertx.core.http.HttpHeaders.*;
 import static io.vertx.core.http.HttpMethod.*;
 
 import com.here.naksha.app.service.http.auth.JWTPayload;
-import com.here.naksha.lib.core.util.StreamInfo;
+import naksha.model.StreamInfo;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;

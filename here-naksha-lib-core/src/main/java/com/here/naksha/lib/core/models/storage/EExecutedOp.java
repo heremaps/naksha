@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.XyzError;
 import naksha.model.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;

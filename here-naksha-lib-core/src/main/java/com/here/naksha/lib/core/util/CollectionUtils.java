@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.util;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import java.util.Collection;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;

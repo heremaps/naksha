@@ -20,7 +20,7 @@ package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.core.models.storage.XyzCodecFactory.getFactory;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import naksha.model.XyzFeature;
 import java.util.List;
 

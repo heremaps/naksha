@@ -19,6 +19,8 @@
 package com.here.naksha.lib.core;
 
 import java.util.function.Supplier;
+
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

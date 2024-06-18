@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.util;
 
-import static com.here.naksha.lib.core.NakshaVersion.v2_0_12;
+import static naksha.model.NakshaVersion.v2_0_12;
 
 import naksha.model.XyzFeature;
 import java.util.*;

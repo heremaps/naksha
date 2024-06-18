@@ -19,7 +19,7 @@
 package naksha.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.lib.core.NakshaVersion;
+
 import java.util.List;
 
 import com.here.naksha.lib.core.models.storage.EWriteOp;

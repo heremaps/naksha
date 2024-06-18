@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.AbstractEventTask;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.payload.Event;
 import java.util.List;

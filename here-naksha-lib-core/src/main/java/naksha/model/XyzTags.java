@@ -18,7 +18,6 @@
  */
 package naksha.model;
 
-import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.storage.XyzCodec;
 import java.util.ArrayList;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

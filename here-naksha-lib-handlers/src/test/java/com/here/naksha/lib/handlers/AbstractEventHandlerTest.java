@@ -15,7 +15,7 @@ import com.here.naksha.lib.core.IEvent;
 import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.util.StreamInfo;
+import naksha.model.StreamInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

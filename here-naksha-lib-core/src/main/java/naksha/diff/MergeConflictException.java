@@ -16,12 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.diff;
+package naksha.diff;
 
-/** An update. */
-public class UpdateOp extends PrimitiveDiff {
+import org.jetbrains.annotations.NotNull;
 
-  UpdateOp(Object oldValue, Object newValue) {
-    super(oldValue, newValue);
+/**
+ * An exception thrown if applying a patch fails, the creation of a difference fails or any other merge error occurs.
+ */
+public class MergeConflictException extends Exception {
+
+  MergeConflictException(@NotNull String msg) {
+    super(msg);
   }
 }

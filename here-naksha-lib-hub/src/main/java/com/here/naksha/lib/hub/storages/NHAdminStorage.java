@@ -19,7 +19,7 @@
 package com.here.naksha.lib.hub.storages;
 
 import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
