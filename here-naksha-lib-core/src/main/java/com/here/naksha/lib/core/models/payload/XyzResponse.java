@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.model.response;
+package com.here.naksha.lib.core.models.payload;
 
 import static com.here.naksha.lib.core.NakshaContext.currentContext;
 

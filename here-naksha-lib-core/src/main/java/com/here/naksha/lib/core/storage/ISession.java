@@ -16,12 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.model.request.condition;
+package com.here.naksha.lib.core.storage;
 
-public class SOpType extends OpType {
+import com.here.naksha.lib.core.NakshaVersion;
+import javax.annotation.concurrent.NotThreadSafe;
+import org.jetbrains.annotations.ApiStatus.AvailableSince;
+
+/**
+ * Base interface of all session.
+ */
+@NotThreadSafe
+@AvailableSince(NakshaVersion.v2_0_7)
+public interface ISession extends AutoCloseable {
 
   /**
-   * Test if the feature in the database intersects with the parameter geometry.
+   * Closes the session, returns the underlying connection back to the connection pool. Any method of the session will from now on throw an
+   * {@link IllegalStateException}.
    */
-  public static final SOpType INTERSECTS = defIgnoreCase(SOpType.class, "intersects");
+  @AvailableSince(NakshaVersion.v2_0_7)
+  @Override
+  void close();
 }

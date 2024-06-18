@@ -16,12 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.model.request.condition;
+package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.core.models.storage.OpType.AND;
 import static com.here.naksha.lib.core.models.storage.OpType.NOT;
 import static com.here.naksha.lib.core.models.storage.OpType.OR;
-import static naksha.model.request.condition.SOpType.INTERSECTS;
+import static com.here.naksha.lib.core.models.storage.SOpType.INTERSECTS;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
 import com.here.naksha.lib.core.models.storage.transformation.GeometryTransformation;

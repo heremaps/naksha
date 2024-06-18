@@ -16,24 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.model;
+package com.here.naksha.lib.core.models.storage.transformation;
 
-import com.here.naksha.lib.core.NakshaVersion;
-import javax.annotation.concurrent.NotThreadSafe;
-import org.jetbrains.annotations.ApiStatus.AvailableSince;
+import org.jetbrains.annotations.Nullable;
 
-/**
- * Base interface of all session.
- */
-@NotThreadSafe
-@AvailableSince(NakshaVersion.v2_0_7)
-public interface ISession extends AutoCloseable {
+public class GeographyTransformation extends GeometryTransformation {
 
-  /**
-   * Closes the session, returns the underlying connection back to the connection pool. Any method of the session will from now on throw an
-   * {@link IllegalStateException}.
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @Override
-  void close();
+  public GeographyTransformation() {
+    super(null);
+  }
+
+  protected GeographyTransformation(@Nullable GeometryTransformation childTransformation) {
+    super(childTransformation);
+  }
 }
