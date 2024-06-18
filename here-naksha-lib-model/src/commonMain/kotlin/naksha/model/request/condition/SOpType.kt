@@ -6,10 +6,7 @@ import kotlin.jvm.JvmStatic
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class SOpType private constructor(val operation: String): OpType {
+sealed class SOpType: OpType {
 
-    companion object {
-        @JvmStatic
-        val INTERSECTS = SOpType("intersects")
-    }
+    data object INTERSECTS : SOpType()
 }

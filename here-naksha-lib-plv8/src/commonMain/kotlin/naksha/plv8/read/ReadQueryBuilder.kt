@@ -1,10 +1,12 @@
 package naksha.plv8.read
 
-import naksha.model.request.*
+import naksha.model.Flags.GEO_TYPE_TWKB
+import naksha.model.request.ReadCollections
+import naksha.model.request.ReadFeatures
+import naksha.model.request.ReadRequest
 import naksha.model.request.condition.*
+import naksha.model.request.condition.SOpType.INTERSECTS
 import naksha.plv8.*
-import naksha.plv8.COL_ID
-import naksha.plv8.COL_TYPE
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -12,11 +14,18 @@ import kotlin.js.JsExport
 @JsExport
 internal class ReadQueryBuilder(val sql: IPlv8Sql) {
 
+    private val geometryTransformer = SqlGeometryTransformationResolver(sql)
+
+    /**
+     * Builds SQL request based on given ReadRequest.
+     *
+     * @param req - read request
+     * @return <SQL query string, list of params for query>
+     */
     fun build(req: ReadRequest): Pair<String, MutableList<Any?>> {
         return when (req) {
-            is ReadCollections -> TODO()
+            is ReadCollections -> buildReadFeatures(req.toReadFeatures())
             is ReadFeatures -> buildReadFeatures(req)
-
             else -> throw NotImplementedError()
         }
     }
@@ -30,8 +39,7 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
 
         queryBuilder.append("SELECT * FROM (")
         for (table in quotedTablesToQuery.withIndex()) {
-            val (whereSql, params) = resolveFeaturesWhere(req)
-            allQueriesParams.addAll(params)
+            val whereSql = resolveFeaturesWhere(req, allQueriesParams)
 
             queryBuilder.append("\n(")
             queryBuilder.append("SELECT $columnsToFetch")
@@ -72,13 +80,11 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
         return columns
     }
 
-    private fun resolveFeaturesWhere(req: ReadFeatures): Pair<String, MutableList<Any?>> {
+    private fun resolveFeaturesWhere(req: ReadFeatures, allQueriesParams: MutableList<Any?>): String {
         val whereSql = StringBuilder()
-        val paramsList = mutableListOf<Any?>()
+        resolveOps(whereSql, allQueriesParams, req.op)
 
-        resolveOps(whereSql, paramsList, req.op)
-
-        return Pair(whereSql.toString(), paramsList)
+        return whereSql.toString()
     }
 
     /**
@@ -91,9 +97,9 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
         if (op == null) return
 
         when (op) {
-            is LOp -> resolveLOp(whereSql, paramsList, op)
-            is POp -> resolvePOp(whereSql, paramsList, op)
-            is SOp -> TODO()
+            is LOp -> addLOp(whereSql, paramsList, op)
+            is POp -> addPOp(whereSql, paramsList, op)
+            is SOp -> addSop(whereSql, paramsList, op)
         }
     }
 
@@ -104,7 +110,7 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
      * @param whereSql - StringBuilder to add conditions
      * @param paramsList - list of params - will be modified whenever condition is compared to value provided by request.
      */
-    private fun resolveLOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, lop: LOp) {
+    private fun addLOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, lop: LOp) {
         whereSql.append("(")
         for (el in lop.children.withIndex()) {
             resolveOps(whereSql, paramsList, el.value)
@@ -122,7 +128,7 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
      * @param whereSql - StringBuilder to add conditions
      * @param paramsList - list of params - will be modified whenever condition is compared to value provided by request.
      */
-    private fun resolvePOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: POp) {
+    private fun addPOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: POp) {
         // real column names
         val col = when (pop.propertyRef) {
             PRef.ID -> COL_ID
@@ -138,9 +144,31 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
         whereSql.append(col)
         whereSql.append(pop.op.operation)
         if (pop.value != null) {
-            val idx = paramsList.size + 1
-            whereSql.append("${'$'}$idx")
+            whereSql.append(paramsList.nextPlaceHolder())
             paramsList.add(pop.value)
+        }
+    }
+
+    /**
+     * Adds Spatial conditions to where section
+     *
+     * @param whereSql - StringBuilder to add conditions
+     * @param paramsList - list of params - will be modified whenever condition is compared to value provided by request.
+     * @param sop - requested spatial operations.
+     */
+    private fun addSop(whereSql: StringBuilder, paramsList: MutableList<Any?>, sop: SOp) {
+        val valuePlaceholder = paramsList.nextPlaceHolder()
+        when (sop.op) {
+            INTERSECTS -> {
+                val wrapperForReqValuePlaceholder = geometryTransformer.wrapWithTransformation(
+                    sop.geometryTransformation,
+                    "ST_Force3D(naksha_geometry_in_type($GEO_TYPE_TWKB::int2,$valuePlaceholder))"
+                )
+                whereSql.append("ST_Intersects(naksha_geometry(flags,geo), $wrapperForReqValuePlaceholder)")
+
+                // TODO FIXME, sop.geometry should be transformed to byteArray once we have Platform <-> twkb converter
+                paramsList.add(sop.geometry)
+            }
         }
     }
 
@@ -161,4 +189,23 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
         }
         return tables
     }
+
+    private fun ReadCollections.toReadFeatures(): ReadFeatures {
+        val op = if (this.ids.isNotEmpty()) {
+            POp.isIn(PRef.ID, this.ids)
+        } else null
+        return ReadFeatures(
+            collectionIds = arrayOf(NKC_TABLE),
+            op = op,
+            resultFilter = resultFilter,
+            queryDeleted = queryDeleted,
+            limit = this.limit,
+            noFeature = noFeature,
+            noMeta = noMeta,
+            noTags = noTags,
+            noGeometry = noGeometry
+        )
+    }
+
+    private fun MutableList<*>.nextPlaceHolder() = "${"$"}${this.size + 1}"
 }
