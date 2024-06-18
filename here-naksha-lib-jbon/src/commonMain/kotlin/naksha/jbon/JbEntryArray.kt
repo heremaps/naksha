@@ -1,16 +1,20 @@
-@file:OptIn(ExperimentalJsExport::class)
+package naksha.jbon
 
-package com.here.naksha.lib.jbon
-
-import kotlin.js.ExperimentalJsExport
+import naksha.base.Binary
+import naksha.base.BinaryView
 import kotlin.js.JsExport
 
 /**
  * Intermediate class with shared code for array and map.
+ * @constructor Create a new JBON array type mapping.
+ * @param binary The binary to map initially.
+ * @param pos The position of the first byte to access, defaults to `binary.pos`.
+ * @param end The first byte that should not be read, defaults to `binary.end`.
  */
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "OPT_IN_USAGE")
 @JsExport
-abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStruct<SELF>() {
+abstract class JbEntryArray<SELF : JbEntryArray<SELF>>(binary: BinaryView = Binary.EMPTY_IMMUTABLE, pos: Int = binary.pos, end: Int = binary.end)
+    : JbStruct<SELF>(binary, pos, end) {
     /**
      * The current index in the entry list.
      */
@@ -60,7 +64,7 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStruct<SELF>() {
      * @return true if the current position is valid; false otherwise.
      */
     fun ok(): Boolean {
-        return reader.isMapped() && index >= 0 && reader.offset() < end
+        return index >= 0 && reader.pos < end
     }
 
     /**
@@ -71,7 +75,7 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStruct<SELF>() {
         if (index == 0) return true
         dropEntry()
         index = 0
-        reader.setOffset(bodyStart)
+        reader.pos += bodyStart
         if (ok()) return true
         index = -1
         return false
@@ -108,14 +112,14 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStruct<SELF>() {
                 length = 0
                 return 0
             }
-            val backup = reader.offset()
-            reader.setOffset(bodyStart)
+            val backup = reader.pos
+            reader.pos = bodyStart
             var len = if (reader.ok()) 1 else 0
             while (nextEntry()) {
                 len++
             }
             length = len
-            reader.setOffset(backup)
+            reader.pos = backup
         }
         return length
     }

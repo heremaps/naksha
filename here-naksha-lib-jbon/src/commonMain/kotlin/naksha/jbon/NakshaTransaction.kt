@@ -1,10 +1,8 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
-import naksha.base.P_DataView
 import naksha.base.P_JsMap
-import naksha.base.Platform
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -12,6 +10,7 @@ import kotlin.js.JsExport
  * Represents feature held in naksha~transaction.feature.
  */
 @JsExport
+@Deprecated("Please use new class from lib-model", level = DeprecationLevel.WARNING)
 class NakshaTransaction(dictManager: IDictManager) : JbFeature(dictManager) {
     var modifiedFeatureCount: Int = 0
     var collectionCounters: P_JsMap = P_JsMap() // TODO: If we stick with this class, make the map a Map<String, Int>!

@@ -1,4 +1,4 @@
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
 import naksha.base.P_DataView
 

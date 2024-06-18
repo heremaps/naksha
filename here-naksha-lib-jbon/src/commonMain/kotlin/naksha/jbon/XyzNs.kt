@@ -1,7 +1,8 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
+import naksha.base.BinaryView
 import naksha.base.Int64
 import naksha.base.P_JsMap
 import naksha.base.P_Map
@@ -9,7 +10,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
-class XyzNs : XyzStruct<XyzNs>() {
+class XyzNs(binaryView: BinaryView) : XyzStruct<XyzNs>(binaryView) {
     private lateinit var createdAt: Int64
     private lateinit var updatedAt: Int64
     private lateinit var txn: NakshaTxn
@@ -28,17 +29,17 @@ class XyzNs : XyzStruct<XyzNs>() {
         super.parseXyzHeader(XYZ_NS_VARIANT)
 
         check(reader.isTimestamp()) { "Field 'createdAt' of XYZ namespace is not timestamp" }
-        createdAt = reader.readTimestamp()
+        createdAt = reader.decodeTimestamp()
         check(reader.nextUnit()) { "Failed to move forward to 'updatedAt' field" }
-        updatedAt = if (reader.isNull()) createdAt else reader.readTimestamp()
+        updatedAt = if (reader.isNull()) createdAt else reader.decodeTimestamp()
         check(reader.nextUnit()) { "Failed to move forward to 'txn' field" }
-        txn = NakshaTxn(reader.readInt64() ?: throw IllegalStateException("Missing txn"))
+        txn = NakshaTxn(reader.decodeInt64() ?: throw IllegalStateException("Missing txn"))
         check(reader.nextUnit()) { "Failed to move forward to 'action' field" }
-        action = reader.readInt32()
+        action = reader.decodeInt32()
         check(reader.nextUnit()) { "Failed to move forward to 'version' field" }
-        version = reader.readInt32()
+        version = reader.decodeInt32()
         check(reader.nextUnit()) { "Failed to move forward to 'author_ts' field" }
-        authorTs = if (reader.isNull()) updatedAt else reader.readTimestamp()
+        authorTs = if (reader.isNull()) updatedAt else reader.decodeTimestamp()
         check(reader.nextUnit()) { "Failed to move forward to 'puuid' field" }
     }
 
@@ -60,7 +61,7 @@ class XyzNs : XyzStruct<XyzNs>() {
         var value = this.puuid
         if (value === UNDEFINED_STRING) {
             reset()
-            value = if (reader.isNull()) null else reader.readString()
+            value = if (reader.isNull()) null else reader.decodeString()
             this.puuid = value
         }
         return value
@@ -71,7 +72,7 @@ class XyzNs : XyzStruct<XyzNs>() {
         if (value === UNDEFINED_STRING) {
             reset()
             reader.nextUnit() // puuid
-            value = reader.readString()
+            value = reader.decodeString()
             this.uuid = value
         }
         return value
@@ -83,7 +84,7 @@ class XyzNs : XyzStruct<XyzNs>() {
             reset()
             reader.nextUnit() // puuid
             reader.nextUnit() // uuid
-            value = reader.readString()
+            value = reader.decodeString()
             this.appId = value
         }
         return value
@@ -96,7 +97,7 @@ class XyzNs : XyzStruct<XyzNs>() {
             reader.nextUnit() // puuid
             reader.nextUnit() // uuid
             reader.nextUnit() // appId
-            value = reader.readString()
+            value = reader.decodeString()
             this.author = value
         }
         return value
@@ -110,7 +111,7 @@ class XyzNs : XyzStruct<XyzNs>() {
             reader.nextUnit() // uuid
             reader.nextUnit() // appId
             reader.nextUnit() // author
-            value = reader.readInt32()
+            value = reader.decodeInt32()
             this.grid = value
         }
         return value

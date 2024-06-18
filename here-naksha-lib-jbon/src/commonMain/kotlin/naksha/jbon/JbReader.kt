@@ -1,22 +1,26 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
-import naksha.base.CodePoints
-import naksha.base.Int64
-import naksha.base.P_DataView
-import naksha.base.P_JsMap
+import naksha.base.*
 import kotlin.js.ExperimentalJsExport
+import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * A low level JBON reader that can be used with any data. The reader
+ * A low level JBON reader that can be used with any binary.
+ * @constructor Creates a new reader.
+ * @param binary The binary to read.
+ * @param pos The initial read-position; defaults to the `pos` of the [binary].
+ * @param end The position where to stop reading; defaults to the `end` of the [binary].
  */
 @Suppress("DuplicatedCode", "PropertyName")
 @JsExport
-open class JbReader {
+open class JbReader(binary: BinaryView, pos: Int = binary.pos, end: Int = binary.end) {
 
+    @OptIn(ExperimentalJsStatic::class)
     companion object {
         /**
          * Returns the human-readable name for the given unit-type.
@@ -24,6 +28,7 @@ open class JbReader {
          * @return The human-readable name of this unit-type.
          */
         @JvmStatic
+        @JsStatic
         fun unitTypeName(unitType: Int): String = when (unitType) {
             TYPE_NULL -> "null"
             TYPE_BOOL -> "boolean"
@@ -47,6 +52,7 @@ open class JbReader {
          * @return The size of the header in byte (1..9).
          */
         @JvmStatic
+        @JsStatic
         fun unitHeaderSize(leadIn: Int): Int = when (leadIn and ENC_MASK) {
             ENC_STRING -> when (leadIn and 0b0011_1111) {
                 61 -> 2 // lead-in + 1 byte size
@@ -86,8 +92,7 @@ open class JbReader {
          * @param end The end-offset.
          * @return The read code point shift left by 3, the lower 3 bit store the amount of byte that have been read or -1, if eof or invalid encoding.
          */
-        @JvmStatic
-        internal fun readCodePoint(view: P_DataView, offset: Int, end: Int): Int {
+        internal fun readCodePoint(view: BinaryView, offset: Int, end: Int): Int {
             if (offset >= end) return -1
             var unicode = view.getInt8(offset).toInt() and 0xff
             // One byte encoding.
@@ -114,9 +119,8 @@ open class JbReader {
          * @param globalDict The global dictionary to use to decode string-references.
          * @param localDict The local dictionary to use to decode string-references.
          */
-        @JvmStatic
         internal fun readSubstring(
-            view: P_DataView,
+            view: BinaryView,
             offset: Int,
             end: Int,
             sb: StringBuilder,
@@ -188,11 +192,10 @@ open class JbReader {
          * @param jbMap The JBON map.
          * @return The platform native map.
          */
-        @JvmStatic
         internal fun readMap(jbMap: JbMap): P_JsMap {
             val imap = P_JsMap()
             while (jbMap.next()) {
-                imap[jbMap.key()] = jbMap.value().readValue()
+                imap[jbMap.key()] = jbMap.value().decodeValue()
             }
             return imap
         }
@@ -202,12 +205,11 @@ open class JbReader {
          * @param jbArray The JBON array.
          * @return The platform native array.
          */
-        @JvmStatic
         internal fun readArray(jbArray: JbArray): Array<Any?> {
             val arr = Array<Any?>(jbArray.length()) {}
             var i = 0
             while (jbArray.next() && jbArray.ok()) {
-                arr[i] = jbArray.value().readValue()
+                arr[i] = jbArray.value().decodeValue()
                 i += 1
             }
             return arr
@@ -215,9 +217,14 @@ open class JbReader {
     }
 
     /**
-     * The view to which the reader maps, if any.
+     * The binary that is read. When assigned, by default the
      */
-    private var _view: P_DataView? = null
+    var binary: BinaryView = binary
+        set(value) {
+            field = value
+            this.end = value.end
+            this.pos = value.pos
+        }
 
     /**
      * The local dictionary to be used when decoding text or references.
@@ -230,52 +237,65 @@ open class JbReader {
     var globalDict: JbDict? = null
 
     /**
-     * The current offset in the view, starts with zero.
+     * The current offset in the binary, can't become bigger than [end].
      */
-    private var _offset = 0
+    var pos = pos
+        set(value) {
+            field = if (value < 0) 0 else if (value >= end) end else value
+            _unitTypeOffset = -1
+            _headerSizeOffset = -1
+            _unitPayloadSizeOffset = -1
+            _stringOffset = -1
+        }
 
     /**
-     * The current end of the view.
+     * The current end of the view, can become bigger than `binary`
      */
-    private var _end = 0
+    var end: Int = end
+        set(value) {
+            field = if (value < 0) 0 else if (value >= binary.byteLength) binary.byteLength else value
+            _unitTypeOffset = -1
+            _headerSizeOffset = -1
+            _unitPayloadSizeOffset = -1
+            _stringOffset = -1
+        }
 
     /**
-     * Clears the mapping of the reader.
+     * Move the [pos] to the `binary.pos` and [end] to `binary.end`. Clears the local and global dictionaries (_null_).
+     * @return this.
      */
     open fun clear() {
-        _view = null
+        end = binary.end
+        pos = binary.pos
         localDict = null
         globalDict = null
-        reset()
-        _end = 0
     }
 
     /**
-     * Move the [offset] back to the start of the reader.
+     * Move the [pos] to the `binary.pos`, leaves [end] unchanged.
+     * @return this.
      */
     open fun reset() {
-        _offset = 0
-        _unitTypeOffset = -1
-        _headerSizeOffset = -1
-        _unitPayloadSizeOffset = -1
-        _stringOffset = -1
+        pos = 0
     }
 
     /**
-     * Maps the given view.
-     * @param view The view to map.
-     * @param offset The offset to start with, defaults to _0_.
+     * Maps the given binary.
+     * @param binaryView The binary to map.
+     * @param pos The position to start reading at; defaults to `binary.pos`.
+     * @param end The end to map; defaults to `binary.end`.
      * @param localDict The local dictionary to map, if any.
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    open fun mapView(view: P_DataView?, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): JbReader {
+    open fun mapBinary(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, localDict: JbDict? = null, globalDict: JbDict? = null): JbReader {
+        check(pos >= end)
         clear()
-        this._view = view
-        this._offset = offset
-        this._end = view?.getSize() ?: 0
+        this.binary = binaryView
         this.localDict = localDict
         this.globalDict = globalDict
+        this.end = end
+        this.pos = pos
         return this
     }
 
@@ -285,107 +305,27 @@ open class JbReader {
      */
     open fun mapReader(reader: JbReader) {
         clear()
-        this._view = reader._view
-        this._offset = reader._offset
-        this._end = _view?.getSize() ?: 0
+        this.binary = reader.binary
         this.localDict = reader.localDict
         this.globalDict = reader.globalDict
+        this.end = reader.end
+        this.pos = reader.pos
     }
 
     /**
-     * Creates a view above the given bytes and maps this view for reading.
+     * Creates a view above the given byte-array and maps this view for reading. This sets [pos] to `0` and [end] to [length],
+     * which allows to invoke [reset] or [clear] in a deterministic way.
      * @param bytes The byte-array to map.
-     * @param start The first byte to map.
-     * @param end The end, being the first byte to exclude from mapping.
+     * @param offset The offset in the byte-array to create the view for.
+     * @param length The amount of byte to map.
      * @param localDict The local dictionary to map, if any.
      * @param globalDict The global dictionary to use, if any.
      */
-    open fun mapBytes(bytes: ByteArray, start: Int = 0, end: Int = bytes.size, localDict: JbDict? = null, globalDict: JbDict? = null) {
+    open fun mapBytes(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size, localDict: JbDict? = null, globalDict: JbDict? = null) {
         clear()
-        val view = P_DataView(bytes, start, end)
-        this._view = view
-        this._offset = 0
-        this._end = view.getSize()
+        this.binary = Binary(bytes, offset, length)
         this.localDict = localDict
         this.globalDict = globalDict
-    }
-
-    /**
-     * Returns the view, checked to not being _null_.
-     * @return The view.
-     * @throws IllegalStateException If the view is _null_.
-     */
-    fun view(): P_DataView {
-        val view = this._view
-        check(view != null) { "view must not be null" }
-        return view
-    }
-
-    /**
-     * Tests if the reader has a valid view.
-     * @return _true_ if the reader has a valid view; _false_ otherwise (view is _null_).
-     */
-    fun isMapped(): Boolean = _view != null
-
-    /**
-     * Returns the current offset.
-     * @return The current offset.
-     */
-    fun offset(): Int = _offset
-
-    /**
-     * Returns the current offset.
-     * @return The current offset.
-     */
-    fun getOffset(): Int = _offset
-
-    /**
-     * Set the offset in the [view].
-     * @param pos The offset to set, must be between 0 and view size.
-     * @return this.
-     * @throws IllegalStateException If the view is _null_.
-     * @throws IllegalArgumentException If the given offset is out of bounds.
-     */
-    fun setOffset(pos: Int): JbReader {
-        val view = view()
-        require(pos in 0.._end) { "The offset must be between 0 and $_end (inclusive), but $pos was given" }
-        this._offset = pos
-        return this
-    }
-
-    /**
-     * Adds the given amount to the current offset. If moved behind the end or in-front of the start, positioned at start or end.
-     * @param amount The amount of byte add to the [getOffset].
-     * @return this.
-     */
-    fun addOffset(amount: Int): JbReader {
-        val view = _view
-        if (view == null) {
-            _offset = 0
-        } else {
-            var newOffset = _offset + amount
-            if (newOffset > _end) newOffset = _end
-            if (newOffset < 0) newOffset = 0
-            _offset = newOffset
-        }
-        return this
-    }
-
-    /**
-     * Returns the current end of the reader, so the first byte not to read from.
-     * @return The end of the reader.
-     */
-    fun end(): Int = _end
-
-    /**
-     * Sets the end.
-     * @param end The end to set.
-     * @return this.
-     */
-    fun setEnd(end: Int): JbReader {
-        require(end >= 0) { "Invalid end, must be greater/equal zero, but was: $end" }
-        this._end = end
-        return this
     }
 
     /**
@@ -393,20 +333,13 @@ open class JbReader {
      * @param offset The offset to test for.
      * @return true if the offset can be read.
      */
-    fun isValid(offset: Int): Boolean {
-        val view = this._view ?: return false
-        return offset >= 0 && offset < _end
-    }
+    fun isValid(offset: Int): Boolean = offset in pos..<end
 
     /**
      * Tests whether the reader is end-of-file (at a not readable position).
      * @return _true_ if the reader is invalid (can't be read from); _false_ if ready for reading.
      */
-    fun eof(): Boolean {
-        val view = this._view ?: return true
-        val offset = this._offset
-        return offset < 0 || offset >= _end
-    }
+    fun eof(): Boolean = pos < 0 || pos >= end
 
     /**
      * Tests whether the reader is valid, it can be read from.
@@ -419,20 +352,18 @@ open class JbReader {
      * @return true if the next unit is [ok]; false if [eof].
      */
     fun nextUnit(): Boolean {
-        val view = this._view ?: return false
-        addOffset(unitSize())
-        return _offset < _end
+        pos += unitSize()
+        return pos < end
     }
 
     /**
-     * Reads the lead-in byte from the current [_offset]. If [eof], the methods returns the lead-in byte for [TYPE_UNDEFINED].
-     * @return The lead-in from the current [_offset].
+     * Reads the lead-in byte from the current [pos]. If [eof], the methods returns the lead-in byte for [TYPE_UNDEFINED].
+     * @return The lead-in from the current [pos].
      */
     open fun leadIn(): Int {
-        val view = this._view ?: return ENC_MIXED_CONST_UNDEFINED
-        val offset = this._offset
-        if (offset < 0 || offset >= _end) return ENC_MIXED_CONST_UNDEFINED
-        return view.getInt8(offset).toInt() and 0xff
+        val offset = this.pos
+        if (offset < 0 || offset >= end) return ENC_MIXED_CONST_UNDEFINED
+        return binary.getInt8(offset).toInt() and 0xff
     }
 
     private var _unitType = 0
@@ -458,9 +389,9 @@ open class JbReader {
      * @return The type stored at the current position.
      */
     open fun unitType(): Int {
-        if (_offset != _unitTypeOffset) {
+        if (pos != _unitTypeOffset) {
             val leadIn = leadIn()
-            _unitTypeOffset = _offset
+            _unitTypeOffset = pos
             var bits = leadIn and ENC_MASK
             when (bits) {
                 ENC_STRING -> _unitType = TYPE_STRING
@@ -508,9 +439,9 @@ open class JbReader {
      * @return The header size of the unit.
      */
     fun unitHeaderSize(): Int {
-        if (_offset != _headerSizeOffset) {
+        if (pos != _headerSizeOffset) {
             val leadIn = leadIn()
-            _headerSizeOffset = _offset
+            _headerSizeOffset = pos
             _headerSize = Companion.unitHeaderSize(leadIn)
         }
         return _headerSize
@@ -525,10 +456,10 @@ open class JbReader {
      * @return The size of the payload of the unit in byte.
      */
     fun unitPayloadSize(): Int {
-        if (_offset != _unitPayloadSizeOffset) {
+        if (pos != _unitPayloadSizeOffset) {
             val leadIn = leadIn()
-            val view = view()
-            val offset = _offset
+            val view = binary
+            val offset = pos
             _unitPayloadSizeOffset = offset
             _unitPayloadSize = when (leadIn and ENC_MASK) {
                 ENC_TINY -> 0
@@ -577,8 +508,8 @@ open class JbReader {
     }
 
     /**
-     * Returns the size of the current unit in byte including the unit header, therefore the amount of byte to [addOffset], if
-     * wanting to skip the unit to the next one. The method return 0, when [eof].
+     * Returns the size of the current unit in byte including the unit header, therefore the amount of byte to add to [pos]
+     * to skip the current unit and seek to the next one. The method return 0, when [eof].
      * @return The size of the value in bytes including the unit-header (so between 1 and n), 0 when EOF.
      */
     fun unitSize(): Int = unitHeaderSize() + unitPayloadSize()
@@ -598,9 +529,9 @@ open class JbReader {
                 else -> 1 + 4
             }
             return when (leadIn and ENC_STRUCT_VARIANT_MASK) {
-                ENC_STRUCT_VARIANT8 -> view().getInt8(_offset + skipSize).toInt() and 0xff
-                ENC_STRUCT_VARIANT16 -> view().getInt16(_offset + skipSize).toInt() and 0xffff
-                ENC_STRUCT_VARIANT32 -> view().getInt32(_offset + skipSize)
+                ENC_STRUCT_VARIANT8 -> binary.getInt8(pos + skipSize).toInt() and 0xff
+                ENC_STRUCT_VARIANT16 -> binary.getInt16(pos + skipSize).toInt() and 0xffff
+                ENC_STRUCT_VARIANT32 -> binary.getInt32(pos + skipSize)
                 // ENC_STRUCT_VARIANT0
                 else -> null
             }
@@ -609,14 +540,14 @@ open class JbReader {
     }
 
     /**
-     * Move the [offset] into the unit, skipping the lead-in byte and the (optional) size field.
+     * Move the [pos] into the unit, skipping the lead-in byte and the (optional) size field.
      * @return _True_ if the unit was entered successfully; _false_ if the current unit can't be entered.
      */
     fun enterStruct(): Boolean {
         val leadIn = leadIn()
         val baseType = leadIn and ENC_MASK
         if (baseType == ENC_STRUCT) {
-            addOffset(unitHeaderSize())
+            pos += unitHeaderSize()
             return true
         }
         return false
@@ -673,7 +604,7 @@ open class JbReader {
      * @param alternative The value to return if the current unit is no 32-bit integer.
      * @return The value read or [alternative].
      */
-    fun readInt32(alternative: Int = -1): Int {
+    fun decodeInt32(alternative: Int = -1): Int {
         val leadIn = leadIn()
         return when (leadIn and ENC_MASK) {
             ENC_TINY -> when (leadIn and ENC_TINY_MASK) {
@@ -682,9 +613,9 @@ open class JbReader {
             }
 
             ENC_MIXED -> when (leadIn) {
-                ENC_MIXED_SCALAR_INT8 -> view().getInt8(_offset + 1).toInt()
-                ENC_MIXED_SCALAR_INT16 -> view().getInt16(_offset + 1).toInt()
-                ENC_MIXED_SCALAR_INT32 -> view().getInt32(_offset + 1)
+                ENC_MIXED_SCALAR_INT8 -> binary.getInt8(pos + 1).toInt()
+                ENC_MIXED_SCALAR_INT16 -> binary.getInt16(pos + 1).toInt()
+                ENC_MIXED_SCALAR_INT32 -> binary.getInt32(pos + 1)
                 else -> alternative
             }
 
@@ -696,7 +627,7 @@ open class JbReader {
      * Read the current unit as integer.
      * @return The value read or _null_, if the current unit is no integer.
      */
-    fun readInt64(): Int64? {
+    fun decodeInt64(): Int64? {
         val leadIn = leadIn()
         return when (leadIn and ENC_MASK) {
             ENC_TINY -> when (leadIn and ENC_TINY_MASK) {
@@ -705,10 +636,10 @@ open class JbReader {
             }
 
             ENC_MIXED -> when (leadIn) {
-                ENC_MIXED_SCALAR_INT8 -> Int64(view().getInt8(_offset + 1).toInt())
-                ENC_MIXED_SCALAR_INT16 -> Int64(view().getInt16(_offset + 1).toInt())
-                ENC_MIXED_SCALAR_INT32 -> Int64(view().getInt32(_offset + 1))
-                ENC_MIXED_SCALAR_INT64 -> view().getInt64(_offset + 1)
+                ENC_MIXED_SCALAR_INT8 -> Int64(binary.getInt8(pos + 1).toInt())
+                ENC_MIXED_SCALAR_INT16 -> Int64(binary.getInt16(pos + 1).toInt())
+                ENC_MIXED_SCALAR_INT32 -> Int64(binary.getInt32(pos + 1))
+                ENC_MIXED_SCALAR_INT64 -> binary.getInt64(pos + 1)
                 else -> null
             }
 
@@ -722,11 +653,11 @@ open class JbReader {
      * Reads the timestamp if the current unit is a timestamp.
      * @throws IllegalStateException If the current unit is no timestamp.
      */
-    fun readTimestamp(): Int64 {
-        val view = view()
+    fun decodeTimestamp(): Int64 {
+        val view = binary
         check(unitType() == TYPE_TIMESTAMP) { "Can't read timestamp, unit is ${unitTypeName(unitType())}" }
-        val hi = (view.getInt16(_offset + 1).toLong() and 0xffff) shl 32
-        return Int64(hi or (view.getInt32(_offset + 3).toLong() and 0xffff_ffff))
+        val hi = (view.getInt16(pos + 1).toLong() and 0xffff) shl 32
+        return Int64(hi or (view.getInt32(pos + 3).toLong() and 0xffff_ffff))
     }
 
     /**
@@ -763,18 +694,18 @@ open class JbReader {
      * @param readStrict If set to _true_, the method does not lose precision, rather returns the alternative.
      * @return The read floating point number or the given alternative.
      */
-    fun readFloat32(alternative: Float = Float.NaN, readStrict: Boolean = false): Float {
+    fun decodeFloat32(alternative: Float = Float.NaN, readStrict: Boolean = false): Float {
         val leadIn = leadIn()
         return when (leadIn and ENC_MASK) {
             // We do not care if this is an integer or float, we just read it as float
             ENC_TINY -> ((leadIn shl 27) shr 27).toFloat()
             ENC_MIXED -> when (leadIn) {
-                ENC_MIXED_SCALAR_INT8 -> view().getInt8(_offset + 1).toFloat()
-                ENC_MIXED_SCALAR_INT16 -> view().getInt16(_offset + 1).toFloat()
-                ENC_MIXED_SCALAR_INT32 -> view().getInt32(_offset + 1).toFloat()
-                ENC_MIXED_SCALAR_INT64 -> if (!readStrict) view().getInt64(_offset + 1).toFloat() else alternative
-                ENC_MIXED_SCALAR_FLOAT32 -> view().getFloat32(_offset + 1)
-                ENC_MIXED_SCALAR_FLOAT64 -> if (!readStrict) view().getFloat64(_offset + 1).toFloat() else alternative
+                ENC_MIXED_SCALAR_INT8 -> binary.getInt8(pos + 1).toFloat()
+                ENC_MIXED_SCALAR_INT16 -> binary.getInt16(pos + 1).toFloat()
+                ENC_MIXED_SCALAR_INT32 -> binary.getInt32(pos + 1).toFloat()
+                ENC_MIXED_SCALAR_INT64 -> if (!readStrict) binary.getInt64(pos + 1).toFloat() else alternative
+                ENC_MIXED_SCALAR_FLOAT32 -> binary.getFloat32(pos + 1)
+                ENC_MIXED_SCALAR_FLOAT64 -> if (!readStrict) binary.getFloat64(pos + 1).toFloat() else alternative
                 else -> alternative
             }
 
@@ -788,18 +719,18 @@ open class JbReader {
      * @param alternative The value to return, when the value can't be read as a double.
      * @param readStrict If set to true, the method does not lose precision, rather returns the alternative.
      */
-    fun readFloat64(alternative: Double = Double.NaN, readStrict: Boolean = false): Double {
+    fun decodeFloat64(alternative: Double = Double.NaN, readStrict: Boolean = false): Double {
         val leadIn = leadIn()
         return when (leadIn and ENC_MASK) {
             // We do not care if this is an integer or float, we just read it as float
             ENC_TINY -> ((leadIn shl 27) shr 27).toDouble()
             ENC_MIXED -> when (leadIn) {
-                ENC_MIXED_SCALAR_INT8 -> view().getInt8(_offset + 1).toDouble()
-                ENC_MIXED_SCALAR_INT16 -> view().getInt16(_offset + 1).toDouble()
-                ENC_MIXED_SCALAR_INT32 -> view().getInt32(_offset + 1).toDouble()
-                ENC_MIXED_SCALAR_INT64 -> if (!readStrict) view().getInt64(_offset + 1).toDouble() else alternative
-                ENC_MIXED_SCALAR_FLOAT32 -> view().getFloat32(_offset + 1).toDouble()
-                ENC_MIXED_SCALAR_FLOAT64 -> if (!readStrict) view().getFloat64(_offset + 1) else alternative
+                ENC_MIXED_SCALAR_INT8 -> binary.getInt8(pos + 1).toDouble()
+                ENC_MIXED_SCALAR_INT16 -> binary.getInt16(pos + 1).toDouble()
+                ENC_MIXED_SCALAR_INT32 -> binary.getInt32(pos + 1).toDouble()
+                ENC_MIXED_SCALAR_INT64 -> if (!readStrict) binary.getInt64(pos + 1).toDouble() else alternative
+                ENC_MIXED_SCALAR_FLOAT32 -> binary.getFloat32(pos + 1).toDouble()
+                ENC_MIXED_SCALAR_FLOAT64 -> if (!readStrict) binary.getFloat64(pos + 1) else alternative
                 else -> alternative
             }
 
@@ -812,27 +743,27 @@ open class JbReader {
     private var _stringSb: StringBuilder? = null
 
     /**
-     * Uses an internal string reader to parse the string at the current [getOffset] and return it.
+     * Uses an internal string reader to parse the string at the current [pos] and return it.
      * @return The parsed string.
      * @throws IllegalStateException If the current unit is no string.
      */
-    fun readString(): String {
+    fun decodeString(): String {
         val leadIn = leadIn()
         check((leadIn and ENC_MASK) == ENC_STRING) { "Current unit is not of type string: ${unitTypeName(unitType())}" }
-        if (_offset != _stringOffset) {
-            val view = view()
-            val leadInOffset = _offset
+        if (pos != _stringOffset) {
+            val view = binary
+            val leadInOffset = pos
             val sb = _stringSb ?: StringBuilder()
             try {
                 val size = unitPayloadSize()
-                addOffset(unitHeaderSize())
-                val end = _offset + size
+                pos += unitHeaderSize()
+                val end = pos + size
                 sb.setLength(0)
-                readSubstring(view, _offset, end, sb, globalDict, localDict)
+                readSubstring(view, pos, end, sb, globalDict, localDict)
                 _string = sb.toString()
             } finally {
                 _stringSb = sb
-                _offset = leadInOffset
+                pos = leadInOffset
                 _stringOffset = leadInOffset
             }
         }
@@ -883,15 +814,15 @@ open class JbReader {
      * Read the value of the reference, not returning the global- or back-bits.
      * @return The value of the reference or _-1_, if being a null-reference or invalid.
      */
-    fun readRef(): Int {
+    fun decodeRef(): Int {
         val leadIn = leadIn()
         if ((leadIn and ENC_MASK) == ENC_MIXED) {
             return when (leadIn and ENC_MIXED_MASK) {
                 ENC_MIXED_REF5_LOCAL, ENC_MIXED_REF5_GLOBAL -> leadIn and 0xf
                 ENC_MIXED_REF -> when (leadIn) {
-                    ENC_MIXED_REF_INT8 -> (view().getInt8(_offset + 1).toInt() and 0xff) + 16
-                    ENC_MIXED_REF_INT16 -> (view().getInt16(_offset + 1).toInt() and 0xffff) + 16
-                    ENC_MIXED_REF_INT32 -> view().getInt32(_offset + 1) + 16
+                    ENC_MIXED_REF_INT8 -> (binary.getInt8(pos + 1).toInt() and 0xff) + 16
+                    ENC_MIXED_REF_INT16 -> (binary.getInt16(pos + 1).toInt() and 0xffff) + 16
+                    ENC_MIXED_REF_INT32 -> binary.getInt32(pos + 1) + 16
                     // ENC_MIXED_REF_NULL
                     else -> -1
                 }
@@ -903,19 +834,19 @@ open class JbReader {
     }
 
     /**
-     * Tests if the current [offset] is at the lead-in of a dictionary.
+     * Tests if the current [pos] is at the lead-in of a dictionary.
      * @return _true_ if the current type is a dictionary; _false_ otherwise.
      */
     fun isDictionary(): Boolean = unitType() == TYPE_DICTIONARY
 
     /**
-     * Tests if the current [offset] is at the lead-in of a map.
+     * Tests if the current [pos] is at the lead-in of a map.
      * @return _true_ if the current type is a dictionary; _false_ otherwise.
      */
     fun isMap(): Boolean = unitType() == TYPE_MAP
 
     /**
-     * Tests if the current [offset] is at the lead-in of an array.
+     * Tests if the current [pos] is at the lead-in of an array.
      * @return _true_ if the current type is an array; _false_ otherwise.
      */
     fun isArray(): Boolean = unitType() == TYPE_ARRAY
@@ -927,29 +858,29 @@ open class JbReader {
     fun isXyz(): Boolean = unitType() == TYPE_XYZ
 
     /**
-     * Read the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [IMap] or [Array].
-     * @return the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [IMap] or [Array].
+     * Read the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [JbMap], [JbArray] or [Array].
+     * @return the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [JbMap], [JbArray] or [Array].
      * @throws IllegalStateException If the reader position or the unit-type is invalid.
      */
-    fun readValue(): Any? {
+    fun decodeValue(): Any? {
         return if (isInt32()) {
-            readInt32()
+            decodeInt32()
         } else if (isInt()) {
-            readInt64()
+            decodeInt64()
         } else if (isString()) {
-            readString()
+            decodeString()
         } else if (isBool()) {
             readBoolean()
         } else if (isFloat64() || isFloat32()) {
-            readFloat64()
+            decodeFloat64()
         } else if (isNull()) {
             null
         } else if (isTimestamp()) {
-            readTimestamp()
+            decodeTimestamp()
         } else if (isMap()) {
-            readMap(JbMap().mapReader(this))
+            readMap(JbMap(binary).mapReader(this))
         } else if (isArray()) {
-            readArray(JbArray().mapReader(this))
+            readArray(JbArray(binary).mapReader(this))
         } else {
             throw IllegalStateException("Not implemented jbon value type")
         }

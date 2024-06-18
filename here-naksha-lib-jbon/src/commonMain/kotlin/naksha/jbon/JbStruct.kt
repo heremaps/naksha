@@ -1,9 +1,9 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
-import naksha.base.P_DataView
-import naksha.base.Platform
+import naksha.base.BinaryView
+import naksha.base.Binary
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -11,24 +11,29 @@ import kotlin.js.JsExport
  * The base class for all structure readers (JBON structure types). A structure does always have the unit-header. Apart from this, the
  * structure may have values that should be parsed ones when mapped, and other values, that should only be read on demand. For this
  * purpose the [parseHeader] method can be overridden.
+ * @constructor Create a new structure reader.
+ * @param binary The binary to map initially.
+ * @param pos The position of the first byte to access, defaults to `binary.pos`.
+ * @param end The first byte that should not be read, defaults to `binary.end`.
  */
 @Suppress("UNCHECKED_CAST", "MemberVisibilityCanBePrivate")
 @JsExport
-abstract class JbStruct<SELF : JbStruct<SELF>> {
+abstract class JbStruct<SELF : JbStruct<SELF>>(binary: BinaryView = Binary.EMPTY_IMMUTABLE, pos: Int = binary.pos, end: Int = binary.end) {
+
     /**
      * The reader used to read from the structure.
      */
-    val reader = JbReader()
+    val reader = JbReader(binary, pos, end)
 
     /**
      * The lead-in byte of the structure.
      */
-    internal var leadIn : Int = 0
+    internal var leadIn: Int = 0
 
     /**
      * The unit-type, read from lead-in.
      */
-    internal var unitType : Int = 0
+    internal var unitType: Int = 0
 
     /**
      * The start of the header of the mapped structure.
@@ -38,7 +43,7 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
     /**
      * The variant; if any.
      */
-    internal var variant : Int? = null
+    internal var variant: Int? = null
 
     /**
      * The start of the structure body, the first byte to read of the content. If being the same as [end], then the structure
@@ -55,7 +60,7 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * Returns the structure variant.
      * @return The variant, if any; otherwise _null_.
      */
-    fun variant() : Int? = variant
+    fun variant(): Int? = variant
 
     /**
      * Invoked after a view, reader or bytes were mapped to parse the internal structure header. When the method is called, the [reader]
@@ -65,29 +70,27 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
     protected abstract fun parseHeader()
 
     /**
-     * Map a specific region of a view as object.
+     * Map a specific region of a binary as object.
      *
-     * @param view The view to map.
+     * @param binaryView The binary to map.
      * @param leadInOffset The offset where the structure starts (lead-in byte of header).
      * @param localDict The local dictionary to use, if any.
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    protected open fun map(view: P_DataView?, leadInOffset: Int, localDict: JbDict?, globalDict: JbDict?): SELF {
+    protected open fun map(binaryView: BinaryView, leadInOffset: Int, localDict: JbDict?, globalDict: JbDict?): SELF {
         clear()
-        if (view != null) {
-            reader.mapView(view, leadInOffset, localDict, globalDict)
-            check( reader.isStruct() ) { "Mapping failed, the view does not contain a structure at the given offset" }
-            leadIn = reader.leadIn()
-            variant = reader.unitVariant()
-            unitType = reader.unitType()
-            start = leadInOffset
-            end = leadInOffset + reader.unitSize()
-            reader.setEnd(end)
-            reader.enterStruct()
-            parseHeader()
-            bodyStart = reader.offset()
-        }
+        reader.mapBinary(binaryView, leadInOffset, binaryView.end, localDict, globalDict)
+        check(reader.isStruct()) { "Mapping failed, the view does not contain a structure at the given offset" }
+        leadIn = reader.leadIn()
+        variant = reader.unitVariant()
+        unitType = reader.unitType()
+        start = leadInOffset
+        end = leadInOffset + reader.unitSize()
+        reader.end = end
+        reader.enterStruct()
+        parseHeader()
+        bodyStart = reader.pos
         return this as SELF
     }
 
@@ -120,35 +123,34 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * @return this.
      */
     open fun reset(): SELF {
-        reader.setOffset(bodyStart)
+        reader.pos = bodyStart
         return this as SELF
     }
 
     /**
-     * Map a structure from the given view. The [offset] should refer to the lead-in byte.
+     * Map a structure from the given binary. The [offset] should refer to the lead-in byte.
      *
-     * @param view The view to map.
+     * @param binaryView The binary to map.
      * @param offset The offset where the structure starts (lead-in byte).
      * @param localDict The local dictionary to map, if any.
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    fun mapView(view: P_DataView?, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): SELF {
-        map(view, offset, localDict, globalDict)
+    fun mapView(binaryView: BinaryView, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): SELF {
+        map(binaryView, offset, localDict, globalDict)
         return this as SELF
     }
 
     /**
-     * When called, this method will map the given byte-array, automatically creating a view for them, detecting the
+     * When called, this method will map the given byte-array, automatically creating a [Binary] for it, and detect the
      * [bodyStart] and [end] from the header stored in the bytes. May additionally do other header processing.
      * @param bytes The bytes to map.
      * @param start The offset of the lead-in byte of the byte-array.
      * @param end The offset of the first byte not to map.
      * @return this.
      */
-    fun mapBytes(bytes: ByteArray?, start: Int = 0, end: Int = bytes?.size ?: Int.MAX_VALUE): SELF {
-        val view = if (bytes != null) Platform.newDataView(bytes, start, end) else null
-        map(view?.proxy(P_DataView::class), 0, null, null)
+    fun mapBytes(bytes: ByteArray, start: Int = 0, end: Int = bytes.size): SELF {
+        map(Binary(bytes, start, end), 0, null, null)
         return this as SELF
     }
 
@@ -158,12 +160,8 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * @param reader The reader from which to use the view and offset.
      * @return this.
      */
-    fun mapReader(reader: JbReader?): SELF {
-        if (reader != null && reader.isMapped()) {
-            map(reader.view(), reader.offset(), reader.localDict, reader.globalDict)
-        } else {
-            map(null, 0, null, null)
-        }
+    fun mapReader(reader: JbReader): SELF {
+        map(reader.binary, reader.pos, reader.localDict, reader.globalDict)
         return this as SELF
     }
 
@@ -180,10 +178,4 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
     fun totalSize(): Int {
         return end - start
     }
-
-    /**
-     * Tests whether this structure is mapped.
-     * @return _true_ if this structure is mapped; _false_ otherwise.
-     */
-    fun isMapped() : Boolean = reader.isMapped()
 }

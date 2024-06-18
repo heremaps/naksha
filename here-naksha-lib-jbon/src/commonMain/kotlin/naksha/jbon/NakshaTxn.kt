@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
 import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
@@ -14,6 +14,7 @@ import kotlin.js.JsExport
  * @property seq The sequence identifier inside the day.
  */
 @JsExport
+@Deprecated("Please use new class from lib-model", level = DeprecationLevel.WARNING)
 class NakshaTxn(val value: Int64) : Comparable<NakshaTxn> {
     companion object {
         /**

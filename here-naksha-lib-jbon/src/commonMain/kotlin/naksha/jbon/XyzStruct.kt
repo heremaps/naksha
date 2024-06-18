@@ -1,19 +1,28 @@
 @file:OptIn(ExperimentalJsExport::class)
-package com.here.naksha.lib.jbon
+package naksha.jbon
 
+import naksha.base.BinaryView
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
-import kotlin.math.exp
 
 /**
  * Abstract base class for all XYZ special types.
+ * @param binaryView The binary to map initially.
  */
 @JsExport
-abstract class XyzStruct<SELF : XyzStruct<SELF>> : JbStruct<SELF>() {
+abstract class XyzStruct<SELF : XyzStruct<SELF>>(binaryView: BinaryView) : JbStruct<SELF>(binaryView) {
 
+    @Suppress("OPT_IN_USAGE")
     companion object {
+        /**
+         * Query a human-readable name of a variant for debugging purpose.
+         * @param variant The variant.
+         * @return The human-readable name of the variant.
+         */
         @JvmStatic
+        @JsStatic
         fun xyzVariantName(variant: Int?) : String {
             return when(variant) {
                 null -> "struct-xyz-null"
