@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
-import com.here.naksha.lib.jbon.JvmEnv;
+import naksha.jbon.JvmEnv;
 import com.here.naksha.lib.psql.PsqlStorage.Params;
 import java.io.IOException;
 import java.time.Duration;

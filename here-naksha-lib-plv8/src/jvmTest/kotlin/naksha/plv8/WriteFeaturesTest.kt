@@ -1,10 +1,10 @@
 package naksha.plv8
 
+import naksha.jbon.XYZ_OP_CREATE
 import com.here.naksha.lib.plv8.JvmPlv8Plan
 import naksha.base.Int64
 import naksha.model.*
 import naksha.model.request.InsertRow
-import naksha.model.request.Write.Companion.XYZ_OP_CREATE
 import naksha.model.request.WriteRequest
 import naksha.model.response.Row
 import naksha.model.response.SuccessResponse

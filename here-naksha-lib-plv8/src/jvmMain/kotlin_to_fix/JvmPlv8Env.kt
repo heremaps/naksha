@@ -4,7 +4,7 @@ import com.here.naksha.lib.base.P_NakshaCollection
 import com.here.naksha.lib.base.response.ErrorResponse
 import com.here.naksha.lib.base.response.Response
 import com.here.naksha.lib.base.response.SuccessResponse
-import com.here.naksha.lib.jbon.*
+import naksha.jbon.*
 import com.here.naksha.lib.naksha.request.InsertFeature
 import com.here.naksha.lib.naksha.request.WriteRequest
 import com.here.naksha.lib.plv8.Static.SC_DICTIONARIES

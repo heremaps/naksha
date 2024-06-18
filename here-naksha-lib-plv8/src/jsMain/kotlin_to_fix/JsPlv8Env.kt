@@ -2,8 +2,8 @@
 
 package com.here.naksha.lib.plv8;
 
-import com.here.naksha.lib.jbon.Jb
-import com.here.naksha.lib.jbon.JsEnv
+import naksha.jbon.Jb
+import naksha.jbon.JsEnv
 
 /**
  * Special JS session that is optimized for PLV8 (Postgres extension).

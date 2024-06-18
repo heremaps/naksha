@@ -21,9 +21,9 @@ package com.here.naksha.lib.core.models.storage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.json.JsonUtil;
-import com.here.naksha.lib.jbon.JbDictManager;
-import com.here.naksha.lib.jbon.JbFeature;
-import com.here.naksha.lib.jbon.JbMap;
+import naksha.jbon.JbDictManager;
+import naksha.jbon.JbFeature;
+import naksha.jbon.JbMap;
 import java.util.Map;
 
 import com.here.naksha.lib.nak.Flags;

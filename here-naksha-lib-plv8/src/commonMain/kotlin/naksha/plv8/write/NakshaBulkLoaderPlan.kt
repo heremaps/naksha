@@ -2,11 +2,6 @@ package naksha.plv8.write
 
 import naksha.jbon.*
 import naksha.model.*
-import naksha.model.XYZ_EXEC_CREATED
-import naksha.model.XYZ_EXEC_DELETED
-import naksha.model.XYZ_EXEC_PURGED
-import naksha.model.XYZ_EXEC_RETAINED
-import naksha.model.XYZ_EXEC_UPDATED
 import naksha.model.request.ResultRow
 import naksha.model.response.Metadata
 import naksha.model.response.Row

@@ -2,7 +2,7 @@
 
 package com.here.naksha.lib.plv8;
 
-import com.here.naksha.lib.jbon.ILog
+import naksha.jbon.ILog
 
 @JsExport
 class JsPlv8Log : ILog {

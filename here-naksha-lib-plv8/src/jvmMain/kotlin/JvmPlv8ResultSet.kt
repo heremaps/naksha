@@ -1,5 +1,6 @@
 package com.here.naksha.lib.plv8
 
+import naksha.jbon.*
 import naksha.base.JvmInt64
 import naksha.base.P_JsMap
 import java.sql.ResultSet
