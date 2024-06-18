@@ -1,7 +1,7 @@
 package com.here.naksha.lib.core.util;
 
 import com.here.naksha.lib.core.common.TestUtil;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;

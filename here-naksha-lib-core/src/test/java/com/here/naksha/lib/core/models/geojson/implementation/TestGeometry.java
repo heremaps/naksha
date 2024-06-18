@@ -19,6 +19,7 @@
 package com.here.naksha.lib.core.models.geojson.implementation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import naksha.geo.*;
 import naksha.model.XyzGeometryCollection;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;

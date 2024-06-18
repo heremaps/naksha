@@ -20,7 +20,7 @@ package com.here.naksha.app.service.models;
 
 import com.fasterxml.jackson.annotation.*;
 import com.here.naksha.lib.core.LazyParsableFeatureList;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 

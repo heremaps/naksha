@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.storage;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;

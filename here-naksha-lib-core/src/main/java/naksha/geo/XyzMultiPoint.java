@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.implementation;
+package naksha.geo;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -24,40 +24,39 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
 import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeName(value = "LineString")
-public class XyzLineString extends XyzGeometryItem {
+@JsonTypeName(value = "MultiPoint")
+public class XyzMultiPoint extends XyzGeometryItem {
 
   @JsonProperty(COORDINATES)
-  LineStringCoordinates coordinates = new LineStringCoordinates();
+  private MultiPointCoordinates coordinates = new MultiPointCoordinates();
 
   @Override
   @JsonGetter
-  public LineStringCoordinates getCoordinates() {
+  public MultiPointCoordinates getCoordinates() {
     return this.coordinates;
   }
 
   @JsonSetter
-  public void setCoordinates(LineStringCoordinates coordinates) {
+  public void setCoordinates(MultiPointCoordinates coordinates) {
     this.coordinates = coordinates;
   }
 
-  public XyzLineString withCoordinates(LineStringCoordinates coordinates) {
+  public XyzMultiPoint withCoordinates(MultiPointCoordinates coordinates) {
     setCoordinates(coordinates);
     return this;
   }
 
-  public org.locationtech.jts.geom.LineString convertToJTSGeometry() {
-    return JTSHelper.toLineString(this.coordinates);
+  public org.locationtech.jts.geom.MultiPoint convertToJTSGeometry() {
+    return JTSHelper.toMultiPoint(this.coordinates);
   }
 
   @Override
   public void validate() throws InvalidGeometryException {
-    validateLineStringCoordinates(this.coordinates);
+    validateMultiPointCoordinates(this.coordinates);
   }
 
   @Override
@@ -68,7 +67,7 @@ public class XyzLineString extends XyzGeometryItem {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    XyzLineString that = (XyzLineString) o;
+    XyzMultiPoint that = (XyzMultiPoint) o;
     return Objects.equals(coordinates, that.coordinates);
   }
 

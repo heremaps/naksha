@@ -21,7 +21,7 @@ package com.here.naksha.lib.core.models.payload.events.feature;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
+import naksha.geo.BBox;
 import com.here.naksha.lib.core.models.payload.events.clustering.Clustering;
 import com.here.naksha.lib.core.models.payload.events.tweaks.Tweaks;
 import org.jetbrains.annotations.Nullable;

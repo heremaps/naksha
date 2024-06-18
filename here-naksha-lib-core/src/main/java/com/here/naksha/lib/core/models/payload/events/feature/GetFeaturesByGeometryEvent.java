@@ -20,7 +20,7 @@ package com.here.naksha.lib.core.models.payload.events.feature;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
+import naksha.geo.XyzGeometry;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "GetFeaturesByGeometryEvent")

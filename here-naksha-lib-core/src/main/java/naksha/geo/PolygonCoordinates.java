@@ -16,18 +16,18 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.coordinates;
+package naksha.geo;
 
 import com.here.naksha.lib.core.models.geojson.declaration.IBoundedCoordinates;
 import java.util.ArrayList;
 
-public class MultiLineStringCoordinates extends ArrayList<LineStringCoordinates> implements IBoundedCoordinates {
+public class PolygonCoordinates extends ArrayList<LinearRingCoordinates> implements IBoundedCoordinates {
 
-  public MultiLineStringCoordinates() {
+  public PolygonCoordinates() {
     super();
   }
 
-  public MultiLineStringCoordinates(int size) {
+  public PolygonCoordinates(int size) {
     super(size);
   }
 

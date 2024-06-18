@@ -2,7 +2,7 @@ package com.here.naksha.app.data;
 
 import com.here.naksha.app.data.GenerativeDataIngest.TopologyFeatureGenerator;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import java.util.Random;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;

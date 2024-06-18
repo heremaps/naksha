@@ -6,12 +6,11 @@ import static com.here.naksha.handler.activitylog.ReversePatch.PatchOp.REPLACE;
 import static com.here.naksha.handler.activitylog.assertions.ReversePatchAssertions.assertThat;
 
 import com.here.naksha.handler.activitylog.ReversePatch.PatchOp;
-import com.here.naksha.lib.core.models.geojson.coordinates.LineStringCoordinates;
-import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzLineString;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.geo.LineStringCoordinates;
+import naksha.geo.PointCoordinates;
+import naksha.model.XyzFeature;
+import naksha.geo.XyzLineString;
+import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import java.util.List;
 import java.util.Map;

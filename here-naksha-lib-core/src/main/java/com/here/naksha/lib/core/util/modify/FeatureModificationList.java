@@ -21,8 +21,8 @@ package com.here.naksha.lib.core.util.modify;
 import static com.here.naksha.lib.core.models.storage.IfExists.MERGE;
 import static com.here.naksha.lib.core.models.storage.IfNotExists.CREATE;
 
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.EXyzAction;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.payload.events.feature.LoadFeaturesEvent;
 import com.here.naksha.lib.core.models.storage.IfExists;
 import com.here.naksha.lib.core.models.storage.IfNotExists;

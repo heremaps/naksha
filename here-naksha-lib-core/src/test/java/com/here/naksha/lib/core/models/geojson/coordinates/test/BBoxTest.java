@@ -21,9 +21,9 @@ package com.here.naksha.lib.core.models.geojson.coordinates.test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzMultiPolygon;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzPoint;
+import naksha.geo.BBox;
+import naksha.geo.XyzMultiPolygon;
+import naksha.geo.XyzPoint;
 import org.junit.jupiter.api.Test;
 
 public class BBoxTest {

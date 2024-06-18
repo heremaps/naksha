@@ -21,8 +21,8 @@ package com.here.naksha.lib.core.util.modify;
 import static com.here.naksha.lib.core.models.storage.IfExists.REPLACE;
 import static com.here.naksha.lib.core.util.diff.Patcher.calculateDifferenceOfPartialUpdate;
 
-import com.here.naksha.lib.core.models.geojson.implementation.EXyzAction;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.EXyzAction;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.storage.IfExists;
 import com.here.naksha.lib.core.models.storage.IfNotExists;

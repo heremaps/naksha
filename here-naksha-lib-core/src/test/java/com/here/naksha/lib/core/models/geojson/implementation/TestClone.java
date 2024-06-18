@@ -21,13 +21,17 @@ package com.here.naksha.lib.core.models.geojson.implementation;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.here.naksha.lib.core.models.geojson.coordinates.PointCoordinates;
+import naksha.geo.PointCoordinates;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
+
+import naksha.geo.XyzPoint;
+import naksha.model.XyzFeature;
+import naksha.model.XyzFeatureCollection;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 

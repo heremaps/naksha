@@ -22,8 +22,8 @@ import static java.lang.System.arraycopy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.model.XyzFeature;
+import naksha.geo.XyzProperties;
 import naksha.model.PRef;
 import com.here.naksha.lib.core.util.diff.Difference;
 import com.here.naksha.lib.core.util.diff.InsertOp;

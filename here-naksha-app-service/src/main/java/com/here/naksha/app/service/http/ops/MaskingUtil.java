@@ -18,7 +18,7 @@
  */
 package com.here.naksha.app.service.http.ops;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;

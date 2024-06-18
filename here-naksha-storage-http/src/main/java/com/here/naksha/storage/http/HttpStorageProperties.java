@@ -21,7 +21,7 @@ package com.here.naksha.storage.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.NakshaVersion;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.geo.XyzProperties;
 import java.util.Map;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;

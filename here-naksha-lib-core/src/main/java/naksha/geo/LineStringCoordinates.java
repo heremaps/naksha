@@ -16,22 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.coordinates;
+package naksha.geo;
 
-import com.here.naksha.lib.core.models.geojson.declaration.IBoundedCoordinates;
-import java.util.ArrayList;
+public class LineStringCoordinates extends PositionList {
 
-public class MultiPolygonCoordinates extends ArrayList<PolygonCoordinates> implements IBoundedCoordinates {
-
-  public MultiPolygonCoordinates() {
+  public LineStringCoordinates() {
     super();
   }
 
-  public MultiPolygonCoordinates(int size) {
+  public LineStringCoordinates(int size) {
     super(size);
-  }
-
-  public BBox calculateBBox() {
-    return IBoundedCoordinates.calculate(this);
   }
 }

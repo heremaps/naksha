@@ -20,8 +20,8 @@ package com.here.naksha.lib.handlers;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.NakshaVersion;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import naksha.model.XyzFeature;
+import naksha.geo.XyzProperties;
 import naksha.model.ReadFeatures;
 import naksha.model.WriteFeatures;
 import java.util.List;

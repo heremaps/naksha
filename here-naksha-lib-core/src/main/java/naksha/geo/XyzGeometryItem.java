@@ -16,10 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.implementation;
+package naksha.geo;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
 import com.here.naksha.lib.core.models.geojson.declaration.IBoundedCoordinates;
 
 @JsonSubTypes({

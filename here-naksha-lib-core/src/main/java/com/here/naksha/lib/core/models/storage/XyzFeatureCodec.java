@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import naksha.model.XyzFeature;
 
 /**
  * The default codec for Naksha-Hub and the XYZ core library.

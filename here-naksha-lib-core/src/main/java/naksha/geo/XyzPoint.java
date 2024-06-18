@@ -16,48 +16,62 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.implementation;
+package naksha.geo;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import com.here.naksha.lib.core.models.geojson.coordinates.MultiPointCoordinates;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
 import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeName(value = "MultiPoint")
-public class XyzMultiPoint extends XyzGeometryItem {
+@JsonTypeName(value = "Point")
+public class XyzPoint extends XyzGeometryItem {
+
+  public XyzPoint() {}
+
+  public XyzPoint(double longitude, double latitude) {
+    this(longitude, latitude, 0d);
+  }
+
+  public XyzPoint(double longitude, double latitude, double altitude) {
+    coordinates.add(longitude);
+    coordinates.add(latitude);
+    coordinates.add(altitude);
+  }
 
   @JsonProperty(COORDINATES)
-  private MultiPointCoordinates coordinates = new MultiPointCoordinates();
+  private PointCoordinates coordinates = new PointCoordinates();
 
   @Override
   @JsonGetter
-  public MultiPointCoordinates getCoordinates() {
+  public PointCoordinates getCoordinates() {
     return this.coordinates;
   }
 
   @JsonSetter
-  public void setCoordinates(MultiPointCoordinates coordinates) {
+  public void setCoordinates(PointCoordinates coordinates) {
     this.coordinates = coordinates;
   }
 
-  public XyzMultiPoint withCoordinates(MultiPointCoordinates coordinates) {
+  public @NotNull XyzPoint withCoordinates(PointCoordinates coordinates) {
     setCoordinates(coordinates);
     return this;
   }
 
-  public org.locationtech.jts.geom.MultiPoint convertToJTSGeometry() {
-    return JTSHelper.toMultiPoint(this.coordinates);
+  @JsonIgnore
+  public org.locationtech.jts.geom.Point convertToJTSGeometry() {
+    return JTSHelper.toPoint(this.coordinates);
   }
 
   @Override
   public void validate() throws InvalidGeometryException {
-    validateMultiPointCoordinates(this.coordinates);
+    validatePointCoordinates(this.coordinates);
   }
 
   @Override
@@ -68,8 +82,8 @@ public class XyzMultiPoint extends XyzGeometryItem {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    XyzMultiPoint that = (XyzMultiPoint) o;
-    return Objects.equals(coordinates, that.coordinates);
+    XyzPoint xyzPoint = (XyzPoint) o;
+    return Objects.equals(coordinates, xyzPoint.coordinates);
   }
 
   @Override

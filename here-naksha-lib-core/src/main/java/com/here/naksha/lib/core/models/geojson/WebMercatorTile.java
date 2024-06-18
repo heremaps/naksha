@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.models.geojson;
 
-import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
+import naksha.geo.BBox;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.declaration.ILonLat;
 import java.util.regex.Matcher;
