@@ -7,8 +7,8 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class JbPath(var dictManager: JbDictManager, private var binaryView: BinaryView) {
-    private var jmap: JbMap = JbMap(binaryView)
-    private var feature: JbFeature = JbFeature(dictManager, binaryView)
+    private var jmap: JbMap = JbMap()
+    private var feature: JbFeature = JbFeature(dictManager)
 
     fun getBool(binary: ByteArray, path: String, alternative: Boolean? = null): Boolean? {
         val valueReader = readElement(binary, path)
@@ -61,7 +61,7 @@ class JbPath(var dictManager: JbDictManager, private var binaryView: BinaryView)
     private fun readElement(elementBytes: ByteArray, path: String): JbReader? {
         if (!binaryView.byteArray.contentEquals(elementBytes)) {
             binaryView = Binary(elementBytes)
-            feature = feature.mapView(binaryView)
+            feature = feature.mapBinary(binaryView)
             jmap.mapReader(feature.reader)
         }
 

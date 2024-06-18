@@ -2,17 +2,14 @@
 
 package naksha.jbon
 
-import naksha.base.Binary
-import naksha.base.BinaryView
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
  * An intermediate helper to support parsing of unicode encoding in the internal format.
- * @param binaryView The binary to map initially.
  */
 @JsExport
-abstract class JbUnicodeMapper<SELF : JbUnicodeMapper<SELF>>(binaryView: BinaryView = Binary.EMPTY_IMMUTABLE) : JbStruct<SELF>(binaryView) {
+abstract class JbUnicodeMapper<SELF : JbUnicodeMapper<SELF>> : JbStruct<SELF>() {
     /**
      * Read the code-point at the current offset.
      * @param moveForward If true, the offset will be adjusted after reading the code point; false otherwise.

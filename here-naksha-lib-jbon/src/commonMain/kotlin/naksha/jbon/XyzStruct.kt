@@ -1,7 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 package naksha.jbon
 
-import naksha.base.BinaryView
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -9,10 +8,9 @@ import kotlin.jvm.JvmStatic
 
 /**
  * Abstract base class for all XYZ special types.
- * @param binaryView The binary to map initially.
  */
 @JsExport
-abstract class XyzStruct<SELF : XyzStruct<SELF>>(binaryView: BinaryView) : JbStruct<SELF>(binaryView) {
+abstract class XyzStruct<SELF : XyzStruct<SELF>> : JbStruct<SELF>() {
 
     @Suppress("OPT_IN_USAGE")
     companion object {

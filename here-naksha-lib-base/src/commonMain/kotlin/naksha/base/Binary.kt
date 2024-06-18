@@ -21,7 +21,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
-import kotlin.math.min
+import kotlin.math.max
 
 /**
  * A class to read or modify binary data stored in a byte-array. The class operates either directly on a [PlatformDataView].
@@ -150,7 +150,7 @@ open class Binary() : BinaryView {
             } else {
                 if (value > byteLength) {
                     check(!readOnly && resize)
-                    resizeTo(min((value * 1.5).toInt(), defaultDataViewSize))
+                    resizeTo(value)
                 }
                 field = value
             }
@@ -162,7 +162,7 @@ open class Binary() : BinaryView {
             val available = byteLength - end
             if (value > available) {
                 check(!readOnly && resize)
-                resizeTo(min(((byteLength - available + value) * 1.2).toInt(), defaultDataViewSize))
+                resizeTo(byteLength + value - available)
             }
         }
 
@@ -173,23 +173,30 @@ open class Binary() : BinaryView {
         return old
     }
 
-    override fun resizeTo(newSize: Int) {
+    override fun resizeTo(newSize: Int, exact: Boolean) {
         val byteLength = this.byteLength
-        if (newSize != byteLength) {
+        if (newSize != byteLength && (exact || newSize > byteLength)) {
             check(!readOnly && resize)
+            val targetSize: Int
+            if (exact) {
+                targetSize = newSize
+            } else if (newSize > byteLength) {
+                val need = newSize - byteLength
+                targetSize = byteLength + max(max(need * 1.5, byteLength * 0.25), defaultDataViewSize.toDouble()).toInt()
+            } else return
             Platform.logger.atDebug {
                 val op = if (newSize < byteLength) "Shrink" else "Expand"
                 "$op view from $byteLength to $newSize"
             }
-            view = newDataView(byteArray.copyOf(newSize))
+            view = newDataView(byteArray.copyOf(targetSize))
         }
     }
 
-    override fun prepareRead(pos: Int, bytes: Int) {
+    override fun prepareRead(pos: Int, bytes: Int, size: Int) {
         require(pos >= 0)
         require(bytes >= 1)
-        val newEnd = pos + bytes
-        if (newEnd > end) throw IndexOutOfBoundsException()
+        val end = pos + bytes
+        if (end > byteLength || end > size) throw IndexOutOfBoundsException()
     }
 
     override fun prepareWrite(pos: Int, bytes: Int, resize: Boolean) {
@@ -198,12 +205,12 @@ open class Binary() : BinaryView {
         check(!readOnly)
         val end = pos + bytes
         if (end > byteLength) {
-            if (resize) byteAvailable = bytes else throw IndexOutOfBoundsException()
+            if (resize) resizeTo(end) else throw IndexOutOfBoundsException()
         }
     }
 
     override fun getFloat32(pos: Int, littleEndian: Boolean): Float {
-        prepareRead(pos, 4)
+        prepareRead(pos, 4, byteLength)
         return dataview_get_float32(view, pos, littleEndian)
     }
 
@@ -213,7 +220,7 @@ open class Binary() : BinaryView {
     }
 
     override fun readFloat32(littleEndian: Boolean): Float {
-        prepareRead(pos, 4)
+        prepareRead(pos, 4, end)
         val v = dataview_get_float32(view, pos, littleEndian)
         pos += 4
         return v
@@ -226,7 +233,7 @@ open class Binary() : BinaryView {
     }
 
     override fun getFloat64(pos: Int, littleEndian: Boolean): Double {
-        prepareRead(pos, 8)
+        prepareRead(pos, 8, byteLength)
         return dataview_get_float64(view, pos, littleEndian)
     }
 
@@ -236,7 +243,7 @@ open class Binary() : BinaryView {
     }
 
     override fun readFloat64(littleEndian: Boolean): Double {
-        prepareRead(pos, 8)
+        prepareRead(pos, 8, end)
         val v = dataview_get_float64(view, pos, littleEndian)
         pos += 8
         return v
@@ -249,7 +256,7 @@ open class Binary() : BinaryView {
     }
 
     override fun getInt8(pos: Int): Byte {
-        prepareRead(pos, 1)
+        prepareRead(pos, 1, byteLength)
         return dataview_get_int8(view, pos)
     }
 
@@ -259,7 +266,7 @@ open class Binary() : BinaryView {
     }
 
     override fun readInt8(): Byte {
-        prepareRead(pos, 1)
+        prepareRead(pos, 1, end)
         val v = dataview_get_int8(view, pos)
         pos += 1
         return v
@@ -272,7 +279,7 @@ open class Binary() : BinaryView {
     }
 
     override fun getInt16(pos: Int, littleEndian: Boolean): Short {
-        prepareRead(pos, 2)
+        prepareRead(pos, 2, byteLength)
         return dataview_get_int16(view, pos, littleEndian)
     }
 
@@ -282,7 +289,7 @@ open class Binary() : BinaryView {
     }
 
     override fun readInt16(littleEndian: Boolean): Short {
-        prepareRead(pos, 2)
+        prepareRead(pos, 2, end)
         val v = dataview_get_int16(view, pos, littleEndian)
         pos += 2
         return v
@@ -295,7 +302,7 @@ open class Binary() : BinaryView {
     }
 
     override fun getInt32(pos: Int, littleEndian: Boolean): Int {
-        prepareRead(pos, 4)
+        prepareRead(pos, 4, byteLength)
         return dataview_get_int32(view, pos, littleEndian)
     }
 
@@ -305,7 +312,7 @@ open class Binary() : BinaryView {
     }
 
     override fun readInt32(littleEndian: Boolean): Int {
-        prepareRead(pos, 4)
+        prepareRead(pos, 4, end)
         val v = dataview_get_int32(view, pos, littleEndian)
         pos += 4
         return v
@@ -318,7 +325,7 @@ open class Binary() : BinaryView {
     }
 
     override fun getInt64(pos: Int, littleEndian: Boolean): Int64 {
-        prepareRead(pos, 8)
+        prepareRead(pos, 8, byteLength)
         return dataview_get_int64(view, pos, littleEndian)
     }
 
@@ -328,7 +335,7 @@ open class Binary() : BinaryView {
     }
 
     override fun readInt64(littleEndian: Boolean): Int64 {
-        prepareRead(pos, 8)
+        prepareRead(pos, 8, end)
         val v = dataview_get_int64(view, pos, littleEndian)
         pos += 8
         return v

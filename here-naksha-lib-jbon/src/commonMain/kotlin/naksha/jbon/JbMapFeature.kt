@@ -1,18 +1,15 @@
 package naksha.jbon
 
-import naksha.base.Binary
-import naksha.base.BinaryView
 import kotlin.js.JsExport
 
 /**
  * A feature with the root unit being a map.
  * @constructor Create a new JBON feature reader for features with a map as body.
  * @param dictManager The dictionary manager to use.
- * @param binaryView The binary to map initially.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class JbMapFeature(dictManager: IDictManager, binaryView: BinaryView = Binary.EMPTY_IMMUTABLE) : JbFeature(dictManager, binaryView) {
+open class JbMapFeature(dictManager: IDictManager) : JbFeature(dictManager) {
     private lateinit var _map: JbMap
 
     override fun clear(): JbMapFeature {

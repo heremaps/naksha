@@ -2,7 +2,6 @@
 
 package naksha.jbon
 
-import naksha.base.BinaryView
 import naksha.base.Int64
 import naksha.base.P_JsMap
 import naksha.base.P_Map
@@ -10,7 +9,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
-class XyzNs(binaryView: BinaryView) : XyzStruct<XyzNs>(binaryView) {
+class XyzNs : XyzStruct<XyzNs>() {
     private lateinit var createdAt: Int64
     private lateinit var updatedAt: Int64
     private lateinit var txn: NakshaTxn

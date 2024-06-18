@@ -12,18 +12,15 @@ import kotlin.js.JsExport
  * structure may have values that should be parsed ones when mapped, and other values, that should only be read on demand. For this
  * purpose the [parseHeader] method can be overridden.
  * @constructor Create a new structure reader.
- * @param binary The binary to map initially.
- * @param pos The position of the first byte to access, defaults to `binary.pos`.
- * @param end The first byte that should not be read, defaults to `binary.end`.
  */
 @Suppress("UNCHECKED_CAST", "MemberVisibilityCanBePrivate")
 @JsExport
-abstract class JbStruct<SELF : JbStruct<SELF>>(binary: BinaryView = Binary.EMPTY_IMMUTABLE, pos: Int = binary.pos, end: Int = binary.end) {
+abstract class JbStruct<SELF : JbStruct<SELF>> {
 
     /**
      * The reader used to read from the structure.
      */
-    val reader = JbReader(binary, pos, end)
+    val reader = JbReader()
 
     /**
      * The lead-in byte of the structure.
@@ -72,15 +69,15 @@ abstract class JbStruct<SELF : JbStruct<SELF>>(binary: BinaryView = Binary.EMPTY
     /**
      * Map a specific region of a binary as object.
      *
-     * @param binaryView The binary to map.
+     * @param binary The binary to map.
      * @param leadInOffset The offset where the structure starts (lead-in byte of header).
      * @param localDict The local dictionary to use, if any.
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    protected open fun map(binaryView: BinaryView, leadInOffset: Int, localDict: JbDict?, globalDict: JbDict?): SELF {
+    protected open fun map(binary: BinaryView, leadInOffset: Int, localDict: JbDict?, globalDict: JbDict?): SELF {
         clear()
-        reader.mapBinary(binaryView, leadInOffset, binaryView.end, localDict, globalDict)
+        reader.mapBinary(binary, leadInOffset, binary.end, localDict, globalDict)
         check(reader.isStruct()) { "Mapping failed, the view does not contain a structure at the given offset" }
         leadIn = reader.leadIn()
         variant = reader.unitVariant()
@@ -130,14 +127,14 @@ abstract class JbStruct<SELF : JbStruct<SELF>>(binary: BinaryView = Binary.EMPTY
     /**
      * Map a structure from the given binary. The [offset] should refer to the lead-in byte.
      *
-     * @param binaryView The binary to map.
+     * @param binary The binary to map.
      * @param offset The offset where the structure starts (lead-in byte).
      * @param localDict The local dictionary to map, if any.
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    fun mapView(binaryView: BinaryView, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): SELF {
-        map(binaryView, offset, localDict, globalDict)
+    fun mapBinary(binary: BinaryView, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): SELF {
+        map(binary, offset, localDict, globalDict)
         return this as SELF
     }
 

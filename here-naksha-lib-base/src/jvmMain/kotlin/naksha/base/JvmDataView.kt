@@ -11,9 +11,14 @@ import kotlin.reflect.full.primaryConstructor
  * @param length The amount of byte to map.
  */
 open class JvmDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset) : JvmObject(), PlatformDataView {
+    init {
+        require(offset >= 0 && offset <= byteArray.size)
+        require(length >= offset && (offset + length) <= byteArray.size)
+    }
+
     private val buffer: ByteArray = byteArray
     private val startOffset: Int = Platform.baseOffset + offset
-    private val endOffset: Int = Platform.baseOffset + startOffset + length
+    private val endOffset: Int = startOffset + length
 
     fun getByteArray(): ByteArray {
         return buffer

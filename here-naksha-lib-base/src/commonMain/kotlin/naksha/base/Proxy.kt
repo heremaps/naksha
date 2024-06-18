@@ -26,13 +26,13 @@ abstract class Proxy : PlatformObject {
         @JvmStatic
         @JsStatic
         fun <T : Any> box(raw: Any?, klass: KClass<out T>, alternative: T? = null): T? {
-            if (klass.isInstance(raw)) return raw as T
             val data = unbox(raw)
             if (isNil(data)) return alternative
-            if (klass.isInstance(data)) return data as T
             // The data value is a complex object
             if (data is PlatformObject) {
+                // If a proxy is requested.
                 if (Platform.isProxyKlass(klass)) {
+                    if (klass.isInstance(data)) return data as T
                     val symbol = Symbols.of(klass)
                     val existing = Symbols.get(data, symbol)
                     if (klass.isInstance(existing)) return existing as T
@@ -49,7 +49,7 @@ abstract class Proxy : PlatformObject {
                     if (data is PlatformList) return data.proxy(P_AnyList::class) as T
                     if (data is PlatformDataView) return data.proxy(P_DataView::class) as T
                 }
-            }
+            } else if (klass.isInstance(data)) return data as T
             return alternative
         }
 

@@ -2,7 +2,6 @@
 
 package naksha.jbon
 
-import naksha.base.BinaryView
 import naksha.base.P_JsMap
 import naksha.base.P_Map
 import naksha.base.Platform
@@ -14,7 +13,7 @@ import kotlin.js.JsExport
  * @property dictManager The dictionary manager to use to decode the tags.
  */
 @JsExport
-class XyzTags(var dictManager: IDictManager, binaryView: BinaryView) : XyzStruct<XyzTags>(binaryView) {
+class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
     private lateinit var _tagsMap: P_JsMap
     private lateinit var _tagsArray: Array<String>
 

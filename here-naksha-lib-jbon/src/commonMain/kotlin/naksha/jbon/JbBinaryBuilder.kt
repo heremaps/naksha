@@ -13,7 +13,7 @@ import kotlin.math.floor
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
 @JsExport
-open class JbBuilder(var global: JbDict? = null) : Binary() {
+open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
 
     /**
      * Create a new resizable editor with a new byte-array of the given size backing it.
@@ -29,7 +29,7 @@ open class JbBuilder(var global: JbDict? = null) : Binary() {
     }
 
     /**
-     * Creates a new read-only about the given data-view.
+     * Creates a new resizable editor about the given data-view.
      * @param binaryView The view for which to create a proxy.
      * @param pos The position in the view to start reading; defaults to `0`.
      * @param end The position in the view to stop reading at (first position to **not** read); defaults to `view.byteLength`.
@@ -41,12 +41,12 @@ open class JbBuilder(var global: JbDict? = null) : Binary() {
         this.view = binaryView.view
         this.pos = pos
         this.end = end
-        this.readOnly = true
-        this.resize = false
+        this.readOnly = false
+        this.resize = true
     }
 
     /**
-     * Creates a new read-only about the given data-view.
+     * Creates a new resizable editor about the given data-view.
      * @param view The view for which to create a proxy.
      * @param pos The position in the view to start reading; defaults to `0`.
      * @param end The position in the view to stop reading at (first position to **not** read); defaults to `view.byteLength`.
@@ -58,12 +58,12 @@ open class JbBuilder(var global: JbDict? = null) : Binary() {
         this.view = view
         this.pos = pos
         this.end = end
-        this.readOnly = true
-        this.resize = false
+        this.readOnly = false
+        this.resize = true
     }
 
     /**
-     * Creates a new read-only with a new data-view about the given byte-array.
+     * Creates a new resizable editor with a new data-view about the given byte-array.
      * @param byteArray The byte-array to view.
      * @param offset The first byte to view.
      * @param length The amount of byte to view; defaults to everything from [offset] to `byteArray.size`.
@@ -75,8 +75,8 @@ open class JbBuilder(var global: JbDict? = null) : Binary() {
         view = Platform.newDataView(byteArray, offset, length)
         this.pos = 0
         this.end = dataview_get_size(view)
-        this.readOnly = true
-        this.resize = false
+        this.readOnly = false
+        this.resize = true
     }
 
     @OptIn(ExperimentalJsStatic::class)
@@ -109,7 +109,7 @@ open class JbBuilder(var global: JbDict? = null) : Binary() {
          */
         @JvmStatic
         @Deprecated("There is now a explict real static constructor, use it", ReplaceWith("JbBuilder(size, global)"))
-        fun create(size: Int? = null, global: JbDict? = null): JbBuilder = JbBuilder(size ?: defaultDataViewSize, global)
+        fun create(size: Int? = null, global: JbDict? = null): JbBinaryBuilder = JbBinaryBuilder(size ?: defaultDataViewSize, global)
 
         /**
          * Returns the maximal encoding size of a string.
@@ -809,7 +809,7 @@ open class JbBuilder(var global: JbDict? = null) : Binary() {
      * @param id The identifier to write into the dictionary.
      * @return The start of the local dictionary.
      */
-    fun writeDictionary(id: String? = null): Int {
+    fun encodeLocalDictionary(id: String? = null): Int {
         val start = startStruct()
         if (id != null) encodeString(id) else encodeNull()
         val localStringById = this.localDictByIndex
@@ -831,7 +831,7 @@ open class JbBuilder(var global: JbDict? = null) : Binary() {
      */
     fun buildDictionary(id: String): ByteArray {
         check(end == 0) { "The builder must be empty to create a global dictionary from the local, end: $end" }
-        val start = writeDictionary(id)
+        val start = encodeLocalDictionary(id)
         return byteArray.copyOfRange(start, end)
     }
 

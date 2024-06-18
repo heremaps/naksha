@@ -7,14 +7,10 @@ import kotlin.js.JsExport
 /**
  * An array implementation.
  * @constructor Create a new JBON array reader.
- * @param binary The binary to map initially.
- * @param pos The position of the first byte to access, defaults to `binary.pos`.
- * @param end The first byte that should not be read, defaults to `binary.end`.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class JbArray(binary: BinaryView = Binary.EMPTY_IMMUTABLE, pos: Int = binary.pos, end: Int = binary.end)
-    : JbEntryArray<JbArray>(binary, pos, end) {
+class JbArray : JbEntryArray<JbArray>() {
 
     override fun parseHeader() {
         check(unitType == TYPE_ARRAY) { "Mapped structure is no array, but ${JbReader.unitTypeName(unitType)}" }

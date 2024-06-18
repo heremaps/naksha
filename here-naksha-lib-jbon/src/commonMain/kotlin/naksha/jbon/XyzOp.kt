@@ -1,7 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 package naksha.jbon
 
-import naksha.base.BinaryView
 import naksha.base.P_JsMap
 import naksha.base.P_Map
 import kotlin.js.ExperimentalJsExport
@@ -12,7 +11,7 @@ import kotlin.jvm.JvmStatic
  * The operation to be executed.
  */
 @JsExport
-class XyzOp(binaryView: BinaryView) : XyzStruct<XyzOp>(binaryView) {
+class XyzOp : XyzStruct<XyzOp>() {
     private var op: Int = 0
     private var id: String? = null
     private var uuid: String? = null

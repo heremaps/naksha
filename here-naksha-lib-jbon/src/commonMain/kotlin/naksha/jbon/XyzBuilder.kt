@@ -14,7 +14,7 @@ import kotlin.js.JsExport
  * @constructor Creates a new empty, mutable, and resizable binary editor.
  */
 @JsExport
-class XyzBuilder(binaryView: BinaryView = Binary(), global: JbDict? = null) : JbBuilder(binaryView = binaryView, global = global) {
+class XyzBuilder(binaryView: BinaryView = Binary(), global: JbDict? = null) : JbBinaryBuilder(binaryView = binaryView, global = global) {
 
     /**
      * Starts tag building.

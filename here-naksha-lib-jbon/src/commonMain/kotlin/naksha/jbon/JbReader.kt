@@ -12,13 +12,10 @@ import kotlin.jvm.JvmStatic
 /**
  * A low level JBON reader that can be used with any binary.
  * @constructor Creates a new reader.
- * @param binary The binary to read.
- * @param pos The initial read-position; defaults to the `pos` of the [binary].
- * @param end The position where to stop reading; defaults to the `end` of the [binary].
  */
 @Suppress("DuplicatedCode", "PropertyName")
 @JsExport
-open class JbReader(binary: BinaryView, pos: Int = binary.pos, end: Int = binary.end) {
+open class JbReader {
 
     @OptIn(ExperimentalJsStatic::class)
     companion object {
@@ -219,7 +216,7 @@ open class JbReader(binary: BinaryView, pos: Int = binary.pos, end: Int = binary
     /**
      * The binary that is read. When assigned, by default the
      */
-    var binary: BinaryView = binary
+    var binary: BinaryView = Binary.EMPTY_IMMUTABLE
         set(value) {
             field = value
             this.end = value.end
@@ -239,7 +236,7 @@ open class JbReader(binary: BinaryView, pos: Int = binary.pos, end: Int = binary
     /**
      * The current offset in the binary, can't become bigger than [end].
      */
-    var pos = pos
+    var pos = 0
         set(value) {
             field = if (value < 0) 0 else if (value >= end) end else value
             _unitTypeOffset = -1
@@ -251,7 +248,7 @@ open class JbReader(binary: BinaryView, pos: Int = binary.pos, end: Int = binary
     /**
      * The current end of the view, can become bigger than `binary`
      */
-    var end: Int = end
+    var end: Int = 0
         set(value) {
             field = if (value < 0) 0 else if (value >= binary.byteLength) binary.byteLength else value
             _unitTypeOffset = -1
@@ -281,17 +278,17 @@ open class JbReader(binary: BinaryView, pos: Int = binary.pos, end: Int = binary
 
     /**
      * Maps the given binary.
-     * @param binaryView The binary to map.
+     * @param binary The binary to map.
      * @param pos The position to start reading at; defaults to `binary.pos`.
      * @param end The end to map; defaults to `binary.end`.
      * @param localDict The local dictionary to map, if any.
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    open fun mapBinary(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, localDict: JbDict? = null, globalDict: JbDict? = null): JbReader {
-        check(pos >= end)
+    open fun mapBinary(binary: BinaryView, pos: Int = binary.pos, end: Int = binary.end, localDict: JbDict? = null, globalDict: JbDict? = null): JbReader {
+        check(pos <= end)
         clear()
-        this.binary = binaryView
+        this.binary = binary
         this.localDict = localDict
         this.globalDict = globalDict
         this.end = end
@@ -878,9 +875,9 @@ open class JbReader(binary: BinaryView, pos: Int = binary.pos, end: Int = binary
         } else if (isTimestamp()) {
             decodeTimestamp()
         } else if (isMap()) {
-            readMap(JbMap(binary).mapReader(this))
+            readMap(JbMap().mapReader(this))
         } else if (isArray()) {
-            readArray(JbArray(binary).mapReader(this))
+            readArray(JbArray().mapReader(this))
         } else {
             throw IllegalStateException("Not implemented jbon value type")
         }
