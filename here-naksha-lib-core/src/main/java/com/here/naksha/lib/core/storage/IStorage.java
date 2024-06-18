@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.model;
+package com.here.naksha.lib.core.storage;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
@@ -193,7 +193,7 @@ public interface IStorage extends AutoCloseable {
         return;
       } catch (InterruptedException ignore) {
       } catch (Exception e) {
-        throw UncheckedException.unchecked(e);
+        throw unchecked(e);
       }
     }
   }

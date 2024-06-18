@@ -16,17 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.model.request.condition.geometry;
+package com.here.naksha.lib.core.util.diff;
 
-import org.jetbrains.annotations.Nullable;
+/** A remove. */
+public class RemoveOp extends PrimitiveDiff {
 
-public class GeographyTransformation extends GeometryTransformation {
-
-  public GeographyTransformation() {
-    super(null);
-  }
-
-  protected GeographyTransformation(@Nullable GeometryTransformation childTransformation) {
-    super(childTransformation);
+  RemoveOp(final Object value) {
+    super(value, null);
   }
 }

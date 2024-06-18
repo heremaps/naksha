@@ -16,23 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.model.request.condition.geometry;
+package com.here.naksha.lib.core.models.storage;
 
-import org.jetbrains.annotations.Nullable;
+public class SOpType extends OpType {
 
-public abstract class GeometryTransformation {
-
-  private final @Nullable GeometryTransformation childTransformation;
-
-  protected GeometryTransformation(@Nullable GeometryTransformation childTransformation) {
-    this.childTransformation = childTransformation;
-  }
-
-  public GeometryTransformation getChildTransformation() {
-    return childTransformation;
-  }
-
-  public boolean hasChildTransformation() {
-    return childTransformation != null;
-  }
+  /**
+   * Test if the feature in the database intersects with the parameter geometry.
+   */
+  public static final SOpType INTERSECTS = defIgnoreCase(SOpType.class, "intersects");
 }
