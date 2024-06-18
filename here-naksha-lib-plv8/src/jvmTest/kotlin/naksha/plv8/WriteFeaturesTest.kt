@@ -1,6 +1,6 @@
 package naksha.plv8
 
-import com.here.naksha.lib.jbon.XYZ_OP_CREATE
+import naksha.jbon.XYZ_OP_CREATE
 import com.here.naksha.lib.plv8.JvmPlv8Plan
 import naksha.base.Int64
 import naksha.base.JvmMap

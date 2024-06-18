@@ -1,4 +1,4 @@
-import com.here.naksha.lib.jbon.*
+import naksha.jbon.*
 import naksha.plv8.IPlv8Plan
 import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.Static

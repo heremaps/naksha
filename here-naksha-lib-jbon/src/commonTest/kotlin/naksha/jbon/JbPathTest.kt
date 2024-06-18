@@ -1,4 +1,4 @@
-package naksha.jbon//import com.here.naksha.lib.jbon.*
+package naksha.jbon//import naksha.jbon.*
 //import org.junit.jupiter.api.Assertions.*
 //import org.junit.jupiter.api.Test
 //import java.nio.charset.StandardCharsets

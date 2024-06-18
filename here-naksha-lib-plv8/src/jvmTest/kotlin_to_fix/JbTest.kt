@@ -1,5 +1,5 @@
-import com.here.naksha.lib.jbon.Jb
-import com.here.naksha.lib.jbon.JbDictManager
+import naksha.jbon.Jb
+import naksha.jbon.JbDictManager
 import com.here.naksha.lib.plv8.NakshaSession
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.TestMethodOrder

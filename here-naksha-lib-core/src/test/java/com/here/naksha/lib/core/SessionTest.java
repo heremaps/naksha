@@ -1,7 +1,7 @@
 package com.here.naksha.lib.core;
 
-import com.here.naksha.lib.jbon.JbSession;
-import com.here.naksha.lib.jbon.JvmEnv;
+import naksha.jbon.JbSession;
+import naksha.jbon.JvmEnv;
 
 public abstract class SessionTest {
 

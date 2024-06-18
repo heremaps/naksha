@@ -2,8 +2,8 @@
 
 package naksha.plv8
 
-import com.here.naksha.lib.jbon.NakshaTxn
-import com.here.naksha.lib.jbon.asArray
+import naksha.jbon.NakshaTxn
+import naksha.jbon.asArray
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime

@@ -2,8 +2,8 @@
 
 package naksha.plv8
 
-import com.here.naksha.lib.jbon.IDictManager
-import com.here.naksha.lib.jbon.JbMapFeature
+import naksha.jbon.IDictManager
+import naksha.jbon.JbMapFeature
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.model.NakshaCollectionProxy
@@ -53,13 +53,13 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
             val key = map.key()
             val value = map.value()
             when (key) {
-                NKC_PARTITION_COUNT -> if (value.isInt()) _partitionCount = value.readInt32()
-                NKC_GEO_INDEX -> if (value.isString()) _geoIndex = value.readString()
+                NKC_PARTITION_COUNT -> if (value.isInt()) _partitionCount = value.decodeInt32()
+                NKC_GEO_INDEX -> if (value.isString()) _geoIndex = value.decodeString()
                 NKC_DISABLE_HISTORY -> if (value.isBool()) _disableHistory = value.readBoolean() ?: false
                 NKC_AUTO_PURGE -> if (value.isBool()) _autoPurge = value.readBoolean() ?: false
-                NKC_MAX_AGE -> if (value.isInt()) _maxAge = value.readInt64()
-                NKC_ESTIMATED_FEATURE_COUNT -> if (value.isInt()) _estimatedFeatureCount = value.readInt64()
-                NKC_STORAGE_CLASS -> if (value.isString()) _storageClass = value.readString()
+                NKC_MAX_AGE -> if (value.isInt()) _maxAge = value.decodeInt64()
+                NKC_ESTIMATED_FEATURE_COUNT -> if (value.isInt()) _estimatedFeatureCount = value.decodeInt64()
+                NKC_STORAGE_CLASS -> if (value.isString()) _storageClass = value.decodeString()
             }
         }
     }

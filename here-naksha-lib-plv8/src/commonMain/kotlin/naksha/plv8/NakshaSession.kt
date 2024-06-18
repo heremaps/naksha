@@ -2,9 +2,9 @@
 
 package naksha.plv8
 
-import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.jbon.ACTION_DELETE
-import com.here.naksha.lib.jbon.ACTION_UPDATE
+import naksha.jbon.*
+import naksha.jbon.ACTION_DELETE
+import naksha.jbon.ACTION_UPDATE
 import kotlinx.datetime.*
 import naksha.base.*
 import naksha.base.Platform.Companion.logger
@@ -446,13 +446,13 @@ FROM ns, txn_seq;"""
                 properties.mapReader(value)
                 if (properties.selectKey("featureType")) {
                     val v = properties.value()
-                    if (v.isString()) return v.readString()
+                    if (v.isString()) return v.decodeString()
                 }
             }
         }
         if (root.selectKey("momType") || root.selectKey("type")) {
             val value = root.value()
-            if (value.isString()) return value.readString()
+            if (value.isString()) return value.decodeString()
         }
         return "Feature"
     }

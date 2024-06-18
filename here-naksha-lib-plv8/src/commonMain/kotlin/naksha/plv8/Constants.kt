@@ -2,7 +2,7 @@
 
 package naksha.plv8
 
-import com.here.naksha.lib.jbon.*
+import naksha.jbon.*
 
 internal const val NKC_TABLE = "naksha~collections"
 internal const val NKC_TABLE_ESC = "\"naksha~collections\""

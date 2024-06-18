@@ -28,12 +28,12 @@ import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_UPSERT;
 import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 
 import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.jbon.JbDict;
-import com.here.naksha.lib.jbon.JbDictManager;
-import com.here.naksha.lib.jbon.JbFeature;
-import com.here.naksha.lib.jbon.JbMap;
-import com.here.naksha.lib.jbon.JvmEnv;
-import com.here.naksha.lib.jbon.XyzBuilder;
+import naksha.jbon.JbDict;
+import naksha.jbon.JbDictManager;
+import naksha.jbon.JbFeature;
+import naksha.jbon.JbMap;
+import naksha.jbon.JvmEnv;
+import naksha.jbon.XyzBuilder;
 import com.here.naksha.lib.nak.Flags;
 import com.here.naksha.lib.nak.GZip;
 import com.here.naksha.lib.nak.HereTile;

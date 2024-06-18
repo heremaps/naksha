@@ -1,6 +1,6 @@
 package com.here.naksha.lib.plv8
 
-import com.here.naksha.lib.jbon.*
+import naksha.jbon.*
 import naksha.base.GZip
 import naksha.base.Int64
 import naksha.base.P_JsMap

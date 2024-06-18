@@ -1,6 +1,6 @@
 package naksha.plv8.write
 
-import com.here.naksha.lib.jbon.asArray
+import naksha.jbon.asArray
 import naksha.base.Platform.Companion.currentMillis
 import naksha.model.NakshaCollectionProxy
 import naksha.model.request.FeatureOp

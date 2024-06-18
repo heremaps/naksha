@@ -1,10 +1,10 @@
 package naksha.plv8.write
 
-import com.here.naksha.lib.jbon.SQL_BYTE_ARRAY
-import com.here.naksha.lib.jbon.SQL_INT16
-import com.here.naksha.lib.jbon.SQL_INT32
-import com.here.naksha.lib.jbon.SQL_INT64
-import com.here.naksha.lib.jbon.SQL_STRING
+import naksha.jbon.SQL_BYTE_ARRAY
+import naksha.jbon.SQL_INT16
+import naksha.jbon.SQL_INT32
+import naksha.jbon.SQL_INT64
+import naksha.jbon.SQL_STRING
 import naksha.model.*
 import naksha.model.request.ResultRow
 import naksha.model.response.Metadata

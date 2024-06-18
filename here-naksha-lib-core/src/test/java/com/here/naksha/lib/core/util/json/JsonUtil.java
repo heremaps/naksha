@@ -1,8 +1,8 @@
 package com.here.naksha.lib.core.util.json;
 
-import com.here.naksha.lib.jbon.IMap;
-import com.here.naksha.lib.jbon.JbSession;
-import com.here.naksha.lib.jbon.JvmEnv;
+import naksha.jbon.IMap;
+import naksha.jbon.JbSession;
+import naksha.jbon.JvmEnv;
 
 public class JsonUtil {
 

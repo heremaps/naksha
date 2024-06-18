@@ -24,7 +24,7 @@ import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import com.here.naksha.lib.core.models.storage.CodecError;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
-import com.here.naksha.lib.jbon.IMap;
+import naksha.jbon.IMap;
 import com.here.naksha.lib.nak.Flags;
 import com.here.naksha.lib.plv8.IPlv8Sql;
 import java.util.ArrayList;

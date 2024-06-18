@@ -41,7 +41,7 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import com.here.naksha.lib.jbon.JvmBigInt64Api;
+import naksha.jbon.JvmBigInt64Api;
 import com.here.naksha.lib.plv8.ConstantsKt;
 import com.here.naksha.lib.plv8.Static;
 import java.io.IOException;
