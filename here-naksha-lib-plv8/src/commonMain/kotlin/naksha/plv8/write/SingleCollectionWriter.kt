@@ -1,7 +1,7 @@
 package naksha.plv8.write
 
-import com.here.naksha.lib.jbon.asArray
 import naksha.base.Platform.Companion.currentMillis
+import naksha.jbon.asArray
 import naksha.model.NakshaCollectionProxy
 import naksha.model.request.FeatureOp
 import naksha.model.request.Write.Companion.XYZ_OP_CREATE

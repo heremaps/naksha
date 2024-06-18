@@ -1,7 +1,7 @@
 package naksha.plv8
 
-import com.here.naksha.lib.jbon.IDictManager
-import com.here.naksha.lib.jbon.JbDict
+import naksha.jbon.IDictManager
+import naksha.jbon.JbDict
 import kotlin.js.JsExport
 
 /**

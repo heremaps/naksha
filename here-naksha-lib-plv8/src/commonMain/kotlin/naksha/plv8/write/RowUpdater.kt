@@ -1,9 +1,8 @@
 package naksha.plv8.write
 
-import com.here.naksha.lib.jbon.ACTION_DELETE
-import com.here.naksha.lib.jbon.ACTION_UPDATE
-import naksha.base.BaseUtil
 import naksha.base.Platform
+import naksha.model.ACTION_DELETE
+import naksha.model.ACTION_UPDATE
 import naksha.model.Flags
 import naksha.model.response.Metadata
 import naksha.model.response.Row

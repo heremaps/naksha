@@ -2,14 +2,14 @@
 
 package naksha.plv8
 
-import com.here.naksha.lib.jbon.*
-import com.here.naksha.lib.jbon.ACTION_DELETE
-import com.here.naksha.lib.jbon.ACTION_UPDATE
 import kotlinx.datetime.*
 import naksha.base.*
 import naksha.base.Platform.Companion.logger
+import naksha.jbon.IDictManager
+import naksha.jbon.JbMap
+import naksha.jbon.JbMapFeature
+import naksha.jbon.XyzVersion
 import naksha.model.*
-import naksha.model.Flags
 import naksha.model.request.WriteFeature
 import naksha.model.request.WriteRequest
 import naksha.model.response.*
@@ -446,13 +446,13 @@ FROM ns, txn_seq;"""
                 properties.mapReader(value)
                 if (properties.selectKey("featureType")) {
                     val v = properties.value()
-                    if (v.isString()) return v.readString()
+                    if (v.isString()) return v.decodeString()
                 }
             }
         }
         if (root.selectKey("momType") || root.selectKey("type")) {
             val value = root.value()
-            if (value.isString()) return value.readString()
+            if (value.isString()) return value.decodeString()
         }
         return "Feature"
     }
@@ -532,7 +532,7 @@ FROM ns, txn_seq;"""
             transactionAction.write()
             writeFeaturesResult
         } catch (e: NakshaException) {
-            if (Static.PRINT_STACK_TRACES) logger.info(e.rootCause().stackTraceToString())
+            if (Static.PRINT_STACK_TRACES) logger.info(e.stackTraceToString())
             ErrorResponse(NakshaError(e.errNo, e.errMsg))
         } catch (e: Throwable) {
             handleFeatureException(e, null)

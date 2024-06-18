@@ -1,13 +1,10 @@
 package naksha.plv8
 
-import com.here.naksha.lib.jbon.XYZ_OP_CREATE
 import com.here.naksha.lib.plv8.JvmPlv8Plan
 import naksha.base.Int64
-import naksha.base.JvmMap
-import naksha.base.P_JsMap
 import naksha.model.*
-import naksha.model.request.InsertFeature
 import naksha.model.request.InsertRow
+import naksha.model.request.Write.Companion.XYZ_OP_CREATE
 import naksha.model.request.WriteRequest
 import naksha.model.response.Row
 import naksha.model.response.SuccessResponse
@@ -15,12 +12,12 @@ import naksha.plv8.write.RowUpdater
 import naksha.plv8.write.WriteRequestExecutor
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.anyString
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 class WriteFeaturesTest {
 

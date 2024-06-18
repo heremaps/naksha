@@ -2,8 +2,6 @@
 
 package naksha.plv8
 
-import com.here.naksha.lib.jbon.NakshaTxn
-import com.here.naksha.lib.jbon.asArray
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -11,6 +9,8 @@ import naksha.base.Fnv1a32
 import naksha.base.Fnv1a64
 import naksha.base.Int64
 import naksha.base.Platform
+import naksha.jbon.NakshaTxn
+import naksha.jbon.asArray
 import naksha.model.NakshaCollectionProxy
 import naksha.model.NakshaCollectionProxy.Companion.DEFAULT_GEO_INDEX
 import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
