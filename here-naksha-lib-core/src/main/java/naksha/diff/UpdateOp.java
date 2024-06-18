@@ -16,7 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.diff;
+package naksha.diff;
 
-/** All differences implement this base interface. */
-public interface Difference {}
+/** An update. */
+public class UpdateOp extends PrimitiveDiff {
+
+  UpdateOp(Object oldValue, Object newValue) {
+    super(oldValue, newValue);
+  }
+}

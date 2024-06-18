@@ -27,7 +27,7 @@ import com.here.naksha.lib.core.models.storage.ErrorResult;
 import naksha.model.Request;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.util.StreamInfo;
+import naksha.model.StreamInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

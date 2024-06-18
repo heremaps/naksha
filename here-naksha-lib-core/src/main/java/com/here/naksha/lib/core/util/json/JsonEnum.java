@@ -19,11 +19,11 @@
 package com.here.naksha.lib.core.util.json;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.StringCache.string;
+import static naksha.model.StringCache.string;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.lambdas.P1;
 import com.here.naksha.lib.core.util.Unsafe;
 import java.util.Locale;

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.util;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;

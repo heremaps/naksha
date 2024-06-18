@@ -24,7 +24,6 @@ import static com.here.naksha.lib.core.models.storage.EWriteOp.PURGE;
 import static com.here.naksha.lib.core.models.storage.EWriteOp.PUT;
 import static com.here.naksha.lib.core.models.storage.EWriteOp.UPDATE;
 
-import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import java.util.ArrayList;
 import java.util.List;

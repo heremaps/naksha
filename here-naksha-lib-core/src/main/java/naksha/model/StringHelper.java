@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util;
+package naksha.model;
 
 import java.lang.ref.Reference;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

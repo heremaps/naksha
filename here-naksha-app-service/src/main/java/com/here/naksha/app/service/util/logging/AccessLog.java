@@ -21,7 +21,7 @@ package com.here.naksha.app.service.util.logging;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.here.naksha.lib.core.util.StreamInfo;
+import naksha.model.StreamInfo;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.time.Instant;
 import java.time.ZoneId;

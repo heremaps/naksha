@@ -28,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.here.naksha.lib.core.models.payload.Payload;
 import com.here.naksha.lib.core.util.Hasher;
-import com.here.naksha.lib.core.util.StringHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

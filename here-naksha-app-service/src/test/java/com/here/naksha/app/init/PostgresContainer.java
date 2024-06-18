@@ -4,7 +4,7 @@ import static java.util.Objects.requireNonNull;
 import static org.testcontainers.containers.InternetProtocol.TCP;
 import static org.testcontainers.containers.wait.strategy.WaitAllStrategy.Mode.WITH_MAXIMUM_OUTER_TIMEOUT;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.psql.PsqlStorage;
 import java.io.IOException;
 import java.nio.file.Files;

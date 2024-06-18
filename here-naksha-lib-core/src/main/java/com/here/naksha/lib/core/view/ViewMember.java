@@ -21,7 +21,7 @@ package com.here.naksha.lib.core.view;
 // See: https://www.baeldung.com/jackson-json-view-annotation
 
 import com.fasterxml.jackson.annotation.JsonView;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 
 /**

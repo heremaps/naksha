@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.here.naksha.lib.core.LibraryConstants;
-import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.storage.*;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.storage;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;

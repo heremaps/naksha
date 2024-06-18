@@ -20,7 +20,7 @@ package com.here.naksha.lib.handlers;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.naksha.Storage;

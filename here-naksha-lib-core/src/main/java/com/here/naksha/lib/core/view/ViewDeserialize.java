@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.view;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.view.ViewMember.Import;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 

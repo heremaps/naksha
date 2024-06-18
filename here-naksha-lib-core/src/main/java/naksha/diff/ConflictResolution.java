@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.diff;
+package naksha.diff;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.jetbrains.annotations.Nullable;

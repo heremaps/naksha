@@ -16,12 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.diff;
+package naksha.diff;
 
-/** An insert. */
-public class InsertOp extends PrimitiveDiff {
+import java.util.HashMap;
 
-  InsertOp(final Object value) {
-    super(null, value);
-  }
-}
+/** Represents a difference between maps. */
+public class MapDiff extends HashMap<Object, Difference> implements Difference {}

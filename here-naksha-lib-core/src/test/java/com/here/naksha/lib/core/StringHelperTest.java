@@ -21,7 +21,7 @@ package com.here.naksha.lib.core;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.here.naksha.lib.core.util.StringHelper;
+import naksha.model.StringHelper;
 import org.junit.jupiter.api.Test;
 
 public class StringHelperTest {

@@ -16,9 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.model;
-
-import com.here.naksha.lib.core.util.diff.PrimitiveDiff;
+package naksha.diff;
 
 /** A remove. */
 public class RemoveOp extends PrimitiveDiff {

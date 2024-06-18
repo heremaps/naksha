@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.storage.Result;
 import naksha.model.WriteRequest;

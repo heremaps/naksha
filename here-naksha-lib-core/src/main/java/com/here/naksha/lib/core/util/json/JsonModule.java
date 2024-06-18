@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.util.json;
 
-import static com.here.naksha.lib.core.util.StringCache.internSoft;
+import static naksha.model.StringCache.internSoft;
 
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.NumericNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import com.here.naksha.lib.core.util.StringCache;
+import naksha.model.StringCache;
 import java.io.IOException;
 import org.jetbrains.annotations.NotNull;
 

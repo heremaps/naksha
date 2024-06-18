@@ -20,7 +20,7 @@ package com.here.naksha.lib.core.models.storage;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.XyzError;
 import javax.annotation.concurrent.ThreadSafe;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

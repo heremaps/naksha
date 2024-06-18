@@ -19,7 +19,7 @@
 package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.StringCache.string;
+import static naksha.model.StringCache.string;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_CREATE;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_DELETE;
 import static com.here.naksha.lib.jbon.ConstantsKt.XYZ_OP_PURGE;

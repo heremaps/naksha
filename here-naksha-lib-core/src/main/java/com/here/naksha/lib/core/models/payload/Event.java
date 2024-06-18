@@ -28,7 +28,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.IEventHandler;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.events.admin.ModifySubscriptionEvent;

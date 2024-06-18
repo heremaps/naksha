@@ -28,7 +28,7 @@ import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.TXN;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.TXN_NEXT;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.UUID;
-import static com.here.naksha.lib.core.util.StringCache.string;
+import static naksha.model.StringCache.string;
 
 import java.util.HashMap;
 import java.util.List;

@@ -16,9 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.diff;
-
-import naksha.model.RemoveOp;
+package naksha.diff;
 
 import java.util.Iterator;
 import java.util.Map.Entry;

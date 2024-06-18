@@ -16,17 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.diff;
+package naksha.diff;
 
-import java.util.ArrayList;
-
-/** Represents a difference between two lists. */
-public class ListDiff extends ArrayList<Difference> implements Difference {
-
-  int originalLength;
-  int newLength;
-
-  ListDiff(final int totalLength) {
-    super(totalLength);
-  }
-}
+/** All differences implement this base interface. */
+public interface Difference {}

@@ -19,7 +19,7 @@
 package com.here.naksha.lib.core.models.tx;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
 

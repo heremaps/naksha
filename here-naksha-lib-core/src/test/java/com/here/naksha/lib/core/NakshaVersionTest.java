@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core;
 
+import naksha.model.NakshaVersion;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

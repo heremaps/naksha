@@ -62,7 +62,7 @@ import naksha.model.NotModifiedResponse;
 import com.here.naksha.lib.core.storage.ModifyFeaturesResp;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.MIMEType;
-import com.here.naksha.lib.core.util.StreamInfo;
+import naksha.model.StreamInfo;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;

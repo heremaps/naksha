@@ -19,6 +19,8 @@
 package com.here.naksha.lib.core.util;
 
 import java.util.Objects;
+
+import naksha.model.StringHelper;
 import org.jetbrains.annotations.Nullable;
 
 /**

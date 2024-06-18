@@ -20,7 +20,7 @@ package com.here.naksha.lib.core.util.json;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.lib.core.util.StringHelper;
+import naksha.model.StringHelper;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;

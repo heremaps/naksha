@@ -19,7 +19,7 @@
 package com.here.naksha.lib.hub.storages;
 
 import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.storage.Notification;
 import naksha.model.ReadRequest;
 import com.here.naksha.lib.core.models.storage.Result;

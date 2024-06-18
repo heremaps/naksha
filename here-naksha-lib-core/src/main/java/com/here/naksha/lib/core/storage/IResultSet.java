@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.storage;
 
-import static com.here.naksha.lib.core.NakshaVersion.v2_0_5;
+import static naksha.model.NakshaVersion.v2_0_5;
 
 import naksha.model.XyzFeature;
 import java.util.ArrayList;

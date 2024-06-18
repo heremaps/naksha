@@ -24,7 +24,6 @@ import com.here.naksha.lib.core.storage.CollectionInfo;
 import com.here.naksha.lib.core.storage.IMasterTransaction;
 import com.here.naksha.lib.core.storage.IReadTransaction;
 import com.here.naksha.lib.core.storage.ITransactionSettings;
-import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.StorageException;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.lambdas.Pe1;

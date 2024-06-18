@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereMetaNs;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;

@@ -27,7 +27,7 @@ import com.here.naksha.app.service.http.auth.NakshaAuthProvider;
 import com.here.naksha.app.service.metrics.OTelMetrics;
 import com.here.naksha.app.service.util.UrlUtil;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaVersion;
+import naksha.model.NakshaVersion;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.NakshaHubFactory;
 import com.here.naksha.lib.hub.util.ConfigUtil;

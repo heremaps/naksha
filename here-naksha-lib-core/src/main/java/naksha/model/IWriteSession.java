@@ -18,7 +18,6 @@
  */
 package naksha.model;
 
-import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.storage.Result;
 
