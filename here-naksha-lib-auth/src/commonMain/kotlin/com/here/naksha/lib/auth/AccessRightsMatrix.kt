@@ -8,11 +8,14 @@ import naksha.base.P_List
 import naksha.base.P_Map
 import kotlin.js.JsExport
 
-/**
- * The abstract base class for access right matrices. Please use a specific type that is suitable for your service or
- * create an own new one.
- */
 @JsExport
+/**
+ * The ARM ([AccessRightsMatrix]) describes what attributes are required for given Action to be performed in given Service.
+ * It is main domain class of lib-auth module, besides the [UserRightsMatrix].
+ *
+ * It is meant to be constructed by the client who is bound to given Service so it can evaluate whether the access should be granted
+ * for given incoming user request bearing [UserRightsMatrix] - see its documentation for details.
+ */
 class AccessRightsMatrix :
     P_Map<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
 

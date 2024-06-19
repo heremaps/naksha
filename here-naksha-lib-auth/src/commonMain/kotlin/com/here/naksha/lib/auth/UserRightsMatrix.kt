@@ -13,24 +13,31 @@ import naksha.base.P_Object
 import kotlin.js.JsExport
 
 /**
- * The URM (User-Rights-Matrix) as returned by the UPM (User-Permission-Management).
+ * The URM [UserRightsMatrix] as returned by the UPM (User-Permission-Management).
+ *
+ * Main function of URM is [UserRightsMatrix.matches] that check whether corresponding [AccessRightsMatrix] (ARM)
+ * allows the bearer of this URM to perform a given ACTION upon a RESOURCE within the SERVICE.
+ *
+ * Both URM and ARM are objects nested in specific hierarchy:
+ * - Services are defined on top (see 'naksha' in example below)
+ * - Services contain Actions (for example 'readFeatures')
+ * - Actions are arrays of attribute maps (these maps are [UserRights] in URM and [ResourceAttributes] in ARM)
+ *
+ * For given URM and ARM, there is a match if:
+ * - both contain the same Services
+ * - each Service contain corresponding Actions
+ * - all corresponding Actions match - which means that [UserAction] must match [AccessRightsAction]
+ * - action matching happens in [UserAction.matches], see docs there
  *
  * ```js
  * { // UserRightsMatrix <-> AccessRightsMatrix
  *   "naksha": { // UserRightsService <-> AccessRightsService
  *     "readFeatures": [ // UserRightsAction <-> AccessRightsAction
  *       { // UserRights <-> ResourceAttributes
- *         "id": { // CheckMap, compiled from {"id": "x-*"}
- *           "startsWith": [ // Check
- *             "x-"
- *           ]
- *         }
- *        },
- *
- *       // CheckMap, direct syntax, no short alternative
- *       {"id": {"anyOf":["foo", "bar"]}}
- *
- *       // CheckMap, starts with "foo-" or "bar-" AND ends with "-fn" *       {"id": {"startsWith":["foo-", "bar-"], "endsWith":["-fn"]}}
+ *         "id": "prefix-*",        // check for "id": needs to start with 'prefix-' (gets compiled to StartsWithCheck)
+ *         "storageId": "storage"   // check for "storageId": must be equal to 'storage' (gets compiled to EqualityCheck)
+ *         "tags": [ "t1-*", "t2" ]   // check for "tags": must contain tag that starts with 't1-' and other that is equal to 't2' (ComposedCheck)
+ *       }
  *     ]
  *   }
  * }
@@ -98,20 +105,12 @@ class ServiceUserRights : P_Map<String, UserAction>(String::class, UserAction::c
 class UserAction : P_List<UserRights>(UserRights::class) {
 
     /**
-     * User Action matches resource's Access Action when EVERY attribute on resource side matches
-     * at least one User Rights.
-     * Matching between resource's attributes and user's rights happens in [UserRights.matches]
+     * If [AccessRightsAction] passed to this function is empty, it is assumed that there is no restriction
+     * and user is allowed to perform given action.
      *
-     * TODO:
-     * User Rights match ResourceAttributes if for every KEY from (KEY, CHECK) entries of User Rights,
-     * there is a corresponding (KEY, VALUE) entry in Resource Attributes where KEY is the same and
-     * compiled CHECK returns true for given VALUE.
-     *
-     * If User Rights are empty, it is assumed that the match is positive.
-     * The reasoning is, that empty user-rights are the biggest rights, because the user is not limited!
-     *
-     * Please note that User Rights hold raw (not compiled) Checks. Compilation process happens within
-     * [UserRights.matches] method and proceeds final [CheckMap.matches] step
+     * [UserAction] matches [AccessRightsAction] when for all [ResourceAttributes] that [AccessRightsAction] contain:
+     * - [ResourceAttributes] is null or empty (it is assumed then that there are no access restrictions)
+     * - at least single [UserRights] matches [ResourceAttributes] which happens in [UserRights.matches]
      */
     fun matches(accessRightsAction: AccessRightsAction<*, *>): Boolean {
         return accessRightsAction.all { resourceAttributes ->
@@ -133,8 +132,52 @@ class UserAction : P_List<UserRights>(UserRights::class) {
     }
 }
 
+/**
+ * [UserRights] represent attribute map of an action ([UserAction]) from URM side.
+ * It's corresponding type on ARM side is [ResourceAttributes] that is comapred againts.
+ *
+ * The difference is, [UserRights] hold checks, while [ResourceAttributes] hold raw values that these checks
+ * are being run against.
+ */
 class UserRights : P_Object() {
 
+    /**
+     * [UserRights] matches [ResourceAttributes] when all of it's compiled checks hold true against resource values.
+     *
+     * For example when dealing with UserRights:
+     * ```js
+     * {
+     *      "foo": "prefix-*",
+     *      "bar": "*-suffix,
+     *      "fuzz": "buzz"
+     * }
+     * ```
+     * and ResourceAttributes
+     * ```js
+     * {
+     *      "foo": "prefix-ABC",
+     *      "bar": "ABD-suffix,
+     *      "fuzz": "meh"
+     * }
+     * ```
+     *
+     * the matching process will look as follows:
+     * 1) the UserRights entries will get compiled to instances of [CompiledCheck] (see: [CheckCompiler.compile])
+     * 2) compilation will end up with this kind of map:
+     *     ```js
+     *     {
+     *          "foo": StartsWithCheck("prefix-"),
+     *          "bar": EndsWithCheck("-suffix),
+     *          "fuzz": EqualsCheck("buzz")
+     *     }
+     *     ```
+     * 3) for each key, value from [ResourceAttributes] will be obtained
+     * 4a) if value is missing - the result is `false`
+     * 4b) if value is there, the result will be obtained from the check ([CompiledCheck.matches])
+     * 5) the match must be positive for every key-value pairs
+     *
+     * In the example above, the result is `false` because 'fuzz' is not equal to 'meh'
+     */
     fun matches(attributes: ResourceAttributes): Boolean {
         if (isEmpty()) {
             return true
