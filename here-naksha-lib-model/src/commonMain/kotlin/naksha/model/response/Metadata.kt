@@ -16,7 +16,7 @@ data class Metadata(
     var txnNext: Int64?,
     var txn: Int64,
     var ptxn: Int64?,
-    var fnva1: Int64?,
+    var fnva1: Int?,
     var uid: Int?,
     var puid: Int?,
     var version: Int?,

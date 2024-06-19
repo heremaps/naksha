@@ -160,4 +160,22 @@ object Fnv1a32 {
         hash *= 16777619
         return hash
     }
+
+    /**
+     * Hash a byteArray.
+     *
+     * @param byteArray to calculate hash
+     * @param currentHash current hash as a base, or nothing
+     * @return hash
+     */
+    fun hashByteArray(byteArray: ByteArray?, currentHash: Int = start()): Int {
+        if (byteArray == null) {
+            return currentHash
+        }
+        var hash = currentHash
+        for (byte in byteArray) {
+            hash = int8(hash, byte)
+        }
+        return hash
+    }
 }

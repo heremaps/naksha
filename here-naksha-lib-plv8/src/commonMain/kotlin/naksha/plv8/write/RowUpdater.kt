@@ -1,8 +1,9 @@
 package naksha.plv8.write
 
-import naksha.jbon.ACTION_DELETE
-import naksha.jbon.ACTION_UPDATE
+import naksha.base.Fnv1a32
 import naksha.base.Platform
+import naksha.model.ACTION_DELETE
+import naksha.model.ACTION_UPDATE
 import naksha.model.Flags
 import naksha.model.response.Metadata
 import naksha.model.response.Row
@@ -36,8 +37,7 @@ class RowUpdater(
 
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
-            val id: String? = NEW.id
-            check(id != null) { "Missing id" }
+            val id: String = NEW.id
             geoGrid = grid(id, Flags.readGeometryEncoding(flags), NEW.geo)
         }
 
@@ -63,7 +63,7 @@ class RowUpdater(
             authorTs = null, // saving space - only apps are allowed to create features
             appId = session.appId,
             flags = flags,
-            fnva1 = null // TODO FIXME
+            fnva1 = rowHash(NEW)
         )
         NEW.meta = newMeta
     }
@@ -136,5 +136,20 @@ class RowUpdater(
 //            gridPlan = sql.prepare("SELECT ST_GeoHash(ST_Centroid(naksha_geometry($1::int2,$2::bytea)),14) as hash", arrayOf(SQL_INT16, SQL_BYTE_ARRAY))
 //        }
 //        return asMap(asArray(gridPlan.execute(arrayOf(flags, geo)))[0])["hash"]!!
+    }
+
+    /**
+     * Calculates hash of row using Fnv1a32 algorithm.
+     * Elements of row used to calculate hash (in order): feature, tags, geo, geoRef
+     *
+     * @param row
+     * @return hash
+     */
+    internal fun rowHash(row: Row): Int {
+        var totalHash = Fnv1a32.hashByteArray(row.feature)
+        totalHash = Fnv1a32.hashByteArray(row.tags, totalHash)
+        totalHash = Fnv1a32.hashByteArray(row.geo, totalHash)
+        totalHash = Fnv1a32.hashByteArray(row.geoRef, totalHash)
+        return totalHash
     }
 }

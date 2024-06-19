@@ -2,14 +2,14 @@
 
 package naksha.plv8
 
-import naksha.jbon.*
-import naksha.jbon.ACTION_DELETE
-import naksha.jbon.ACTION_UPDATE
 import kotlinx.datetime.*
 import naksha.base.*
 import naksha.base.Platform.Companion.logger
+import naksha.jbon.IDictManager
+import naksha.jbon.JbMap
+import naksha.jbon.JbMapFeature
+import naksha.jbon.XyzVersion
 import naksha.model.*
-import naksha.model.Flags
 import naksha.model.request.WriteFeature
 import naksha.model.request.WriteRequest
 import naksha.model.response.*
@@ -203,7 +203,8 @@ SET SESSION enable_seqscan = OFF;
                     OLD.geo,
                     OLD.feature,
                     OLD.geoRef,
-                    OLD.type
+                    OLD.type,
+                    oldMeta.fnva1
                 )
             )
         }
@@ -245,7 +246,8 @@ SET SESSION enable_seqscan = OFF;
                     OLD.geo,
                     OLD.feature,
                     OLD.geoRef,
-                    OLD.type
+                    OLD.type,
+                    oldMeta.fnva1
                 )
             )
         }
@@ -532,7 +534,7 @@ FROM ns, txn_seq;"""
             transactionAction.write()
             writeFeaturesResult
         } catch (e: NakshaException) {
-            if (Static.PRINT_STACK_TRACES) logger.info(e.rootCause().stackTraceToString())
+            if (Static.PRINT_STACK_TRACES) logger.info(e.stackTraceToString())
             ErrorResponse(NakshaError(e.errNo, e.errMsg))
         } catch (e: Throwable) {
             handleFeatureException(e, null)
