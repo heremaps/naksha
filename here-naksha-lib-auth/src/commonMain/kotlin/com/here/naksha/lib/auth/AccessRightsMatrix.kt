@@ -3,6 +3,7 @@
 package com.here.naksha.lib.auth
 
 import com.here.naksha.lib.auth.action.AccessRightsAction
+import com.here.naksha.lib.auth.action.ReadFeatures
 import com.here.naksha.lib.auth.attribute.ResourceAttributes
 import naksha.base.P_List
 import naksha.base.P_Map
@@ -41,6 +42,12 @@ class AccessRightsMatrix :
 @JsExport
 class ServiceAccessRights :
     P_Map<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
+
+    override fun toValue(key: String, value: Any?, alt: AccessRightsAction<*, *>?): AccessRightsAction<*, *>? = when (key) {
+        ReadFeatures.NAME -> box(value, ReadFeatures::class, alt)
+        // TODO: Add other types
+        else -> super.toValue(key, value, alt)
+    }
 
     fun <T : AccessRightsAction<*, T>> withAction(action: T): ServiceAccessRights = apply {
         put(action.name, action)
