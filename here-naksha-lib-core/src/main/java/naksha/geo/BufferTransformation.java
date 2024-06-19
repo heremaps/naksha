@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.model;
+package naksha.geo;
 
 import org.jetbrains.annotations.Nullable;
 

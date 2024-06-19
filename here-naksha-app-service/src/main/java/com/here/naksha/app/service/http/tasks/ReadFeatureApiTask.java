@@ -42,7 +42,7 @@ import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_ID;
 import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE;
 import static com.here.naksha.common.http.apis.ApiParamsConst.WEST;
-import static naksha.model.BufferTransformation.bufferInMeters;
+import static naksha.geo.BufferTransformation.bufferInMeters;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;

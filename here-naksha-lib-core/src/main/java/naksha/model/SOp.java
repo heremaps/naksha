@@ -23,6 +23,7 @@ import static naksha.model.OpType.NOT;
 import static naksha.model.OpType.OR;
 import static naksha.model.SOpType.INTERSECTS;
 
+import naksha.geo.GeometryTransformation;
 import naksha.geo.XyzGeometry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
