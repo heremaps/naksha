@@ -99,7 +99,7 @@ object DbRowMapper {
             txnNext = row[COL_TXN_NEXT] as? Int64,
             txn = row[COL_TXN] as Int64,
             ptxn = row[COL_PTXN] as? Int64,
-            fnva1 = null,// TODO null
+            fnva1 = row[COL_FNVA1] as? Int,
             uid = row[COL_UID] as? Int,
             puid = row[COL_PUID] as? Int,
             version = (row[COL_VERSION] ?: 1) as? Int,

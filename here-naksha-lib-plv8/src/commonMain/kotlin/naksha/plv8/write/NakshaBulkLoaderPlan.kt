@@ -102,7 +102,7 @@ internal class NakshaBulkLoaderPlan(
         return session.sql.prepare(
             """
                 INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
-                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
                     FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
             arrayOf(
                 SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32,
@@ -115,7 +115,7 @@ internal class NakshaBulkLoaderPlan(
         return session.sql.prepare(
             """
                 INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
-                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
                     FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
             arrayOf(
                 SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32, SQL_INT64,
@@ -128,7 +128,7 @@ internal class NakshaBulkLoaderPlan(
         return session.sql.prepare(
             """
             INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
-            SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE 
+            SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
                 FROM $partitionHeadQuoted WHERE $COL_ID = $2
             """.trimIndent(), arrayOf(SQL_INT64, SQL_STRING)
         )

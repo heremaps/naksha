@@ -203,7 +203,8 @@ SET SESSION enable_seqscan = OFF;
                     OLD.geo,
                     OLD.feature,
                     OLD.geoRef,
-                    OLD.type
+                    OLD.type,
+                    oldMeta.fnva1
                 )
             )
         }
@@ -245,7 +246,8 @@ SET SESSION enable_seqscan = OFF;
                     OLD.geo,
                     OLD.feature,
                     OLD.geoRef,
-                    OLD.type
+                    OLD.type,
+                    oldMeta.fnva1
                 )
             )
         }

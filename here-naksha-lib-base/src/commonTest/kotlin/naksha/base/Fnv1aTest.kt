@@ -42,4 +42,24 @@ class Fnv1aTest {
         assertTrue(expectedHash eq hash)
         assertEquals(expectedHash, hash)
     }
+
+    @Test
+    fun testFnv1a32ByteArray() {
+        // given
+        val testString = "test"
+        val testByteArray = testString.encodeToByteArray()
+
+        // when
+        val byteArrayHash = Fnv1a32.hashByteArray(testByteArray)
+        val stringHash = Fnv1a32.string(Fnv1a32.start(), testString)
+
+        // then
+        assertEquals(byteArrayHash, stringHash)
+    }
+
+    @Test
+    fun testFnv1a32NullByteArray() {
+        // expect
+        assertEquals(Fnv1a32.start(), Fnv1a32.hashByteArray(null))
+    }
 }

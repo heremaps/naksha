@@ -36,7 +36,8 @@ class WriteFeaturesTest {
             mock<IStorage>(),
             guid = null,
             flags = Flags.DEFAULT_FLAGS,
-            id = "foo1"
+            id = "foo1",
+            feature = "dummyFeature".encodeToByteArray()
         )
 
         val createFeatureRequest = WriteRequest(ops = arrayOf(InsertRow(collectionId = collectionId, row = row)))
@@ -78,5 +79,6 @@ class WriteFeaturesTest {
         assertEquals(0, row0.meta?.uid)
         assertEquals(XYZ_OP_CREATE.toShort(), row0.meta?.action)
         assertEquals(1, row0.meta?.version)
+        assertEquals(-1906261745, row0.meta?.fnva1)
     }
 }
