@@ -93,4 +93,7 @@ tasks {
     getByName<ProcessResources>("jvmTestProcessResources") {
         dependsOn(webpackTask)
     }
+    getByName<Task>("jsProductionLibraryCompileSync") {
+        dependsOn(webpackTask)
+    }
 }
