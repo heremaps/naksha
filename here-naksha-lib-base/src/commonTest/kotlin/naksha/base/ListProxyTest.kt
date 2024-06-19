@@ -192,6 +192,6 @@ class ListProxyTest {
         // then
         assertEquals(7, iterator.next())
         assertEquals(8, iterator.next())
-        assertNull(iterator.next())
+        assertFailsWith<NoSuchElementException> { iterator.next() }
     }
 }

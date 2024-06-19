@@ -1,9 +1,8 @@
 package naksha.base
 
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrowsExactly
-import org.junit.jupiter.api.Test
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class HereTileTest {
     @Test
@@ -22,9 +21,9 @@ class HereTileTest {
 
     @Test
     fun testInvalid() {
-        assertThrowsExactly(IllegalArgumentException::class.java) { HereTile(0) } // below minimum
-        assertThrowsExactly(IllegalArgumentException::class.java) { HereTile(Int.MAX_VALUE) } // too large
-        assertThrowsExactly(IllegalArgumentException::class.java) { HereTile("10".toInt()) } // level indicator missing or in wrong position
+        assertFailsWith<IllegalArgumentException> { HereTile(0) } // below minimum
+        assertFailsWith<IllegalArgumentException> { HereTile(Int.MAX_VALUE) } // too large
+        assertFailsWith<IllegalArgumentException> { HereTile("10".toInt()) } // level indicator missing or in wrong position
     }
 
     @Test
@@ -105,13 +104,13 @@ class HereTileTest {
 
     @Test
     fun testHereTile() {
-        assertThrowsExactly(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             HereTile(0.0, 0.0, 16)
         }
-        assertThrowsExactly(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             HereTile(-91.0, 0.0, 0)
         }
-        assertThrowsExactly(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             HereTile(0.0, 181.0, 0)
         }
 
