@@ -1,8 +1,10 @@
 package com.here.naksha.lib.auth.attribute
 
 import naksha.base.P_List
+import kotlin.js.JsExport
 
 
+@JsExport
 class SpaceAttributes : NakshaAttributes<StorageAttributes>() {
 
     fun eventHandlerIds(eventHandlerIds: List<String>) =

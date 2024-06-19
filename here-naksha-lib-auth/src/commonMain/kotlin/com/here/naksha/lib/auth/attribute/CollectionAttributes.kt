@@ -1,5 +1,8 @@
 package com.here.naksha.lib.auth.attribute
 
+import kotlin.js.JsExport
+
+@JsExport
 class CollectionAttributes : NakshaAttributes<CollectionAttributes>() {
 
     fun storageId(storageId: String) = apply { set(STORAGE_ID_KEY, storageId) }

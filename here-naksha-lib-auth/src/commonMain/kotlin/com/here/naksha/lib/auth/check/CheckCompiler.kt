@@ -1,6 +1,7 @@
 package com.here.naksha.lib.auth.check
 
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRights
+import naksha.base.P_List
 import naksha.base.PlatformList
 import naksha.base.PlatformListApi.Companion.array_entries
 
@@ -37,6 +38,7 @@ object CheckCompiler {
         return when (value) {
             is String -> getStringCheckFor(value)
             is PlatformList -> getListCheckFor(value)
+            is P_List<*> -> getListCheckFor(value.data())
             else -> UndefinedCheck().apply { add(value) }
         }
     }

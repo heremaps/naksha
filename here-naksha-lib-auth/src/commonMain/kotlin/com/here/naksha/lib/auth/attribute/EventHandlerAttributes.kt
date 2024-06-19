@@ -1,5 +1,8 @@
 package com.here.naksha.lib.auth.attribute
 
+import kotlin.js.JsExport
+
+@JsExport
 class EventHandlerAttributes: NakshaAttributes<EventHandlerAttributes>() {
 
     fun className(className: String) = apply { set(CLASS_NAME_KEY, className) }
