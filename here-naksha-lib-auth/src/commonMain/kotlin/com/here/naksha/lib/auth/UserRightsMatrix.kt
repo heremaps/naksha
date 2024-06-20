@@ -70,7 +70,7 @@ class UserRightsMatrix : P_Map<String, ServiceUserRights>(String::class, Service
         }
     }
 
-    fun getService(name: String): ServiceUserRights =
+    fun useService(name: String): ServiceUserRights =
         getOrCreate(name, ServiceUserRights::class)
 }
 

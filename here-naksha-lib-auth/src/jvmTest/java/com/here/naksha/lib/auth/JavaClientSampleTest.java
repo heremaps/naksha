@@ -69,7 +69,7 @@ class JavaClientSampleTest {
                             .tags("tag1", "tag2"))));
 
     // When
-    ServiceAccessRights armService = arm.getService("someService");
+    ServiceAccessRights armService = arm.useService("someService");
 
     // Then:
     assertNotNull(armService);

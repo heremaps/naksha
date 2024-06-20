@@ -20,7 +20,7 @@ class AccessRightsMatrixTest {
         val arm = AccessRightsMatrix()
 
         // When: getting service that was not in ARM before
-        val freshService = arm.getService("some_service")
+        val freshService = arm.useService("some_service")
 
         // Then: requested service got created
         assertNotNull(freshService)
@@ -36,7 +36,7 @@ class AccessRightsMatrixTest {
         )
 
         // And: fetching this service directly from ARM again
-        val modifiedService = arm.getService("some_service")
+        val modifiedService = arm.useService("some_service")
 
         // Then: returned instance contains modifications
         assertSame(freshService, modifiedService)
@@ -66,7 +66,7 @@ class AccessRightsMatrixTest {
         arm.withService(serviceName, freshService)
 
         // Then:
-        val retrievedService = arm.getService(serviceName)
+        val retrievedService = arm.useService(serviceName)
         assertSame(retrievedService, freshService)
     }
 
@@ -101,7 +101,7 @@ class AccessRightsMatrixTest {
         arm.withService(serviceName, secondService)
 
         // When:
-        val retrievedService = arm.getService(serviceName)
+        val retrievedService = arm.useService(serviceName)
 
         // Then:
         retrievedService[CreateCollections.NAME].let { createCollectionsAttrs ->
@@ -125,7 +125,7 @@ class AccessRightsMatrixTest {
     fun shouldPersistTypeAfterSerialization() {
         // Given:
         val arm = AccessRightsMatrix()
-        arm.naksha()
+        arm.useNaksha()
             .withAction(
                 ReadFeatures().withAttributes(
                     FeatureAttributes()
@@ -151,7 +151,7 @@ class AccessRightsMatrixTest {
         val fromJson = Proxy.box(Platform.fromJSON(asJson), AccessRightsMatrix::class)!!
 
         // Then
-        val nakshaFromJson = fromJson.naksha()
+        val nakshaFromJson = fromJson.useNaksha()
         assertIs<ReadFeatures>(nakshaFromJson[ReadFeatures.NAME])
         assertIs<ReadCollections>(nakshaFromJson[ReadCollections.NAME])
     }

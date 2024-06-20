@@ -20,7 +20,7 @@ import kotlin.js.JsExport
 class AccessRightsMatrix :
     P_Map<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
 
-    fun naksha(): ServiceAccessRights = getService(NAKSHA_SERVICE_NAME)
+    fun useNaksha(): ServiceAccessRights = useService(NAKSHA_SERVICE_NAME)
 
     fun withService(name: String, service: ServiceAccessRights): AccessRightsMatrix = apply {
         val existing = getAs(name, ServiceAccessRights::class)
@@ -31,7 +31,7 @@ class AccessRightsMatrix :
         }
     }
 
-    fun getService(name: String): ServiceAccessRights =
+    fun useService(name: String): ServiceAccessRights =
         getOrCreate(name, ServiceAccessRights::class)
 
     companion object {

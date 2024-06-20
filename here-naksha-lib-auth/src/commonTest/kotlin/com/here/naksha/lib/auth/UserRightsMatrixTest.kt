@@ -1,10 +1,7 @@
 package com.here.naksha.lib.auth
 
-import com.here.naksha.lib.auth.action.CreateCollections
 import com.here.naksha.lib.auth.action.ReadFeatures
-import com.here.naksha.lib.auth.attribute.CollectionAttributes
 import com.here.naksha.lib.auth.attribute.FeatureAttributes
-import com.here.naksha.lib.auth.attribute.NakshaAttributes
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.ServiceUserRights
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserAction
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRights
@@ -78,7 +75,7 @@ class UserRightsMatrixTest {
         urm.withService(serviceName, secondService)
 
         // When:
-        val retrievedService = urm.getService(serviceName)
+        val retrievedService = urm.useService(serviceName)
 
         // Then:
         retrievedService[firstActionName].let { firstAction ->
@@ -99,7 +96,7 @@ class UserRightsMatrixTest {
         val urm = UserRightsMatrix()
 
         // When: getting service that was not in URM before
-        val initialService = urm.getService("some_service")
+        val initialService = urm.useService("some_service")
 
         // Then: requested service got created
         assertNotNull(initialService)
@@ -117,7 +114,7 @@ class UserRightsMatrixTest {
         )
 
         // And: fetching this service directly from ARM again
-        val retrievedService = urm.getService("some_service")
+        val retrievedService = urm.useService("some_service")
 
         // Then: returned instance contains modifications
         assertSame(initialService, retrievedService)
