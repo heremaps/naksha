@@ -1,7 +1,10 @@
 package com.here.naksha.lib.auth.attribute
 
-import com.here.naksha.lib.base.P_List
+import naksha.base.P_List
+import kotlin.js.JsExport
 
+
+@JsExport
 class FeatureAttributes : NakshaAttributes<FeatureAttributes>() {
 
     fun storageId(storageId: String) = apply { set(STORAGE_ID_KEY, storageId) }

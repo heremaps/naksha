@@ -3,24 +3,18 @@
 package com.here.naksha.lib.auth.check
 
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
+import kotlin.js.JsName
 
 /**
  * Tests if the attribute value equals at least one of the arguments.
  */
 @JsExport
-class EqualsCheck : Check() {
-    companion object {
-        @JvmStatic
-        @JsStatic
-        val NAME = "equals"
-    }
+class EqualsCheck() : CompiledCheck() {
 
-    override fun matches(value: Any?): Boolean {
-        for (arg in this) {
-            if (arg == value) return true
-        }
-        return false
+    @JsName("withArgs")
+    constructor(vararg args: Any?): this(){
+        addAll(args)
     }
+    override fun matches(value: Any?): Boolean =
+        any { arg -> arg == value }
 }

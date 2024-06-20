@@ -4,25 +4,23 @@ package com.here.naksha.lib.auth.action
 
 import com.here.naksha.lib.auth.attribute.EventHandlerAttributes
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 @JsExport
-class UseEventHandlers: AccessRightsAction<EventHandlerAttributes, UseEventHandlers>(EventHandlerAttributes::class) {
+class UseEventHandlers : AccessRightsAction<EventHandlerAttributes, UseEventHandlers>() {
+
+    override val name: String = NAME
 
     companion object {
-        @JvmStatic
-        @JsStatic
-        val NAME = "useEventHandlers"
+        const val NAME = "useEventHandlers"
     }
 }
 
 @JsExport
-class ManageEventHandlers: AccessRightsAction<EventHandlerAttributes, ManageEventHandlers>(EventHandlerAttributes::class) {
+class ManageEventHandlers : AccessRightsAction<EventHandlerAttributes, ManageEventHandlers>() {
+
+    override val name: String = NAME
 
     companion object {
-        @JvmStatic
-        @JsStatic
-        val NAME = "managerEventHandlers"
+        const val NAME = "managerEventHandlers"
     }
 }

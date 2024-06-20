@@ -1,0 +1,31 @@
+{
+  "urm": {
+    "naksha": {
+      "readFeatures": [
+        {
+          "id": "my-unique-feature-id",
+          "storageId": "id-with-wild-card-*",
+          "tags": [
+            "my-unique-tag"
+          ]
+        }
+      ]
+    }
+  },
+  "arm": {
+    "naksha": {
+      "readFeatures": [
+        {
+          "id": "my-unique-feature-id",
+          "storageId": "id-with-wild-card-matching-value",
+          "collectionId": "unused-id-during-checks",
+          "tags": [
+            "my-unique-tag",
+            "some-additional-tag"
+          ]
+        }
+      ]
+    }
+  },
+  "matches": true
+}
