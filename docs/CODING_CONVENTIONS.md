@@ -1,4 +1,4 @@
-# Coding conventions
+# Coding conventions - WORK IN PROGRESS
 
 This document aims to establish some coding rules that we agreed to follow in scope of `naksha` and
 its modules.
