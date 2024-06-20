@@ -1,12 +1,15 @@
 package com.here.naksha.lib.auth
 
 import com.here.naksha.lib.auth.action.CreateCollections
+import com.here.naksha.lib.auth.action.ReadCollections
 import com.here.naksha.lib.auth.action.ReadFeatures
 import com.here.naksha.lib.auth.attribute.CollectionAttributes
 import com.here.naksha.lib.auth.attribute.FeatureAttributes
 import com.here.naksha.lib.auth.attribute.FeatureAttributes.Companion.STORAGE_ID_KEY
 import com.here.naksha.lib.auth.attribute.NakshaAttributes.Companion.ID_KEY
 import com.here.naksha.lib.auth.attribute.NakshaAttributes.Companion.TAGS_KEY
+import naksha.base.Platform
+import naksha.base.Proxy
 import kotlin.test.*
 
 class AccessRightsMatrixTest {
@@ -37,7 +40,7 @@ class AccessRightsMatrixTest {
 
         // Then: returned instance contains modifications
         assertSame(freshService, modifiedService)
-        val attributes = freshService.getActionAttributeMaps(ReadFeatures.NAME)
+        val attributes = freshService.getResourceAttributesForAction(ReadFeatures.NAME)
         assertNotNull(attributes)
         assertEquals(1, attributes.size)
         assertEquals("feature_1", attributes[0]!![ID_KEY])
@@ -116,5 +119,40 @@ class AccessRightsMatrixTest {
                 readFeaturesAttrs[0]!![TAGS_KEY] as Array<String>
             )
         }
+    }
+
+    @Test
+    fun shouldPersistTypeAfterSerialization() {
+        // Given:
+        val arm = AccessRightsMatrix()
+        arm.naksha()
+            .withAction(
+                ReadFeatures().withAttributes(
+                    FeatureAttributes()
+                        .id("f_id")
+                        .storageId("s_id")
+                )
+            )
+            .withAction(
+                ReadCollections().withAttributes(
+                    CollectionAttributes()
+                        .id("c_id")
+                        .tags("t1", "t2"),
+                    CollectionAttributes()
+                        .id("c_id_2")
+                        .tags("t3", "t4")
+                )
+            )
+
+        // When
+        val asJson = Platform.toJSON(arm)
+
+        // And:
+        val fromJson = Proxy.box(Platform.fromJSON(asJson), AccessRightsMatrix::class)!!
+
+        // Then
+        val nakshaFromJson = fromJson.naksha()
+        assertIs<ReadFeatures>(nakshaFromJson[ReadFeatures.NAME])
+        assertIs<ReadCollections>(nakshaFromJson[ReadCollections.NAME])
     }
 }

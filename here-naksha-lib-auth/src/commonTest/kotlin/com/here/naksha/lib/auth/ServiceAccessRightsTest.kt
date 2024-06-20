@@ -1,5 +1,6 @@
 package com.here.naksha.lib.auth
 
+import com.here.naksha.lib.auth.action.AccessRightsAction
 import com.here.naksha.lib.auth.action.ManageEventHandlers
 import com.here.naksha.lib.auth.action.ReadFeatures
 import com.here.naksha.lib.auth.attribute.EventHandlerAttributes
@@ -34,12 +35,12 @@ class ServiceAccessRightsTest {
             .withAction(manageEventHandlers)
 
         // Then:
-        val retrievedFeatureAttributes = service.getActionAttributeMaps(ReadFeatures.NAME)
+        val retrievedFeatureAttributes = service.getResourceAttributesForAction(ReadFeatures.NAME)
         assertNotNull(retrievedFeatureAttributes)
         assertContentEquals(retrievedFeatureAttributes, readFeaturesAction)
 
         // And
-        val retrievedHandlerAttributes = service.getActionAttributeMaps(ManageEventHandlers.NAME)
+        val retrievedHandlerAttributes = service.getResourceAttributesForAction(ManageEventHandlers.NAME)
         assertNotNull(retrievedHandlerAttributes)
         assertContentEquals(retrievedHandlerAttributes, manageEventHandlers)
     }
@@ -50,7 +51,7 @@ class ServiceAccessRightsTest {
         val service = ServiceAccessRights()
 
         // Then
-        assertNull(service.getActionAttributeMaps(ReadFeatures.NAME))
+        assertNull(service.getResourceAttributesForAction(ReadFeatures.NAME))
     }
 
     @Test
@@ -80,7 +81,7 @@ class ServiceAccessRightsTest {
         leftService.mergeActionsFrom(rightService)
 
         // Then:
-        val readFeaturesAttrs = leftService.getActionAttributeMaps(ReadFeatures.NAME)
+        val readFeaturesAttrs = leftService.getResourceAttributesForAction(ReadFeatures.NAME)
         assertNotNull(readFeaturesAttrs)
         assertEquals(2, readFeaturesAttrs.size)
         assertEquals("s_1", readFeaturesAttrs[0]!![STORAGE_ID_KEY])

@@ -9,7 +9,7 @@ import kotlin.js.JsExport
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE", "UNCHECKED_CAST")
 @JsExport
-open class AccessRightsAction<T : ResourceAttributes, SELF : AccessRightsAction<T, SELF>> :
+sealed class AccessRightsAction<T : ResourceAttributes, SELF : AccessRightsAction<T, SELF>> :
     P_List<ResourceAttributes>(ResourceAttributes::class) {
 
    open val name: String = "unknownAction"

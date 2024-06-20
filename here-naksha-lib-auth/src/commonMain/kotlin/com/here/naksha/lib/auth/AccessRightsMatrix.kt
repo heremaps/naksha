@@ -2,14 +2,13 @@
 
 package com.here.naksha.lib.auth
 
+import com.here.naksha.lib.auth.action.ACTIONS_BY_NAME
 import com.here.naksha.lib.auth.action.AccessRightsAction
-import com.here.naksha.lib.auth.action.ReadFeatures
 import com.here.naksha.lib.auth.attribute.ResourceAttributes
 import naksha.base.P_List
 import naksha.base.P_Map
 import kotlin.js.JsExport
 
-@JsExport
 /**
  * The ARM ([AccessRightsMatrix]) describes what attributes are required for given Action to be performed in given Service.
  * It is main domain class of lib-auth module, besides the [UserRightsMatrix].
@@ -17,6 +16,7 @@ import kotlin.js.JsExport
  * It is meant to be constructed by the client who is bound to given Service so it can evaluate whether the access should be granted
  * for given incoming user request bearing [UserRightsMatrix] - see its documentation for details.
  */
+@JsExport
 class AccessRightsMatrix :
     P_Map<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
 
@@ -43,10 +43,15 @@ class AccessRightsMatrix :
 class ServiceAccessRights :
     P_Map<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
 
-    override fun toValue(key: String, value: Any?, alt: AccessRightsAction<*, *>?): AccessRightsAction<*, *>? = when (key) {
-        ReadFeatures.NAME -> box(value, ReadFeatures::class, alt)
-        // TODO: Add other types
-        else -> super.toValue(key, value, alt)
+    override fun toValue(
+        key: String,
+        value: Any?,
+        alt: AccessRightsAction<*, *>?
+    ): AccessRightsAction<*, *>? {
+        return ACTIONS_BY_NAME[key]
+            ?.let { actionType ->
+                box(value, actionType, alt)
+            } ?: super.toValue(key, value, alt)
     }
 
     fun <T : AccessRightsAction<*, T>> withAction(action: T): ServiceAccessRights = apply {
@@ -65,6 +70,9 @@ class ServiceAccessRights :
             }
     }
 
-    fun getActionAttributeMaps(actionName: String): P_List<ResourceAttributes>? =
-        getAs(actionName, P_List::class) as? P_List<ResourceAttributes>
+    fun getResourceAttributesForAction(actionName: String): ResourceAttributesList? =
+        getAs(actionName, ResourceAttributesList::class)
 }
+
+@JsExport
+class ResourceAttributesList : P_List<ResourceAttributes>(ResourceAttributes::class)

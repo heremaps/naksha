@@ -22,7 +22,7 @@ class CreateFeatures :
     override val name: String = NAME
 
     companion object {
-        const val NAME = "readFeatures"
+        const val NAME = "createFeatures"
     }
 }
 

@@ -782,22 +782,3 @@ actual class Platform {
         }
     }
 }
-
-abstract class Parent : P_Object()
-
-class A: Parent(){
-    override fun toString(): String =
-        "Hello from 'A'"
-}
-class B: Parent(){
-    override fun toString(): String =
-        "Hello from 'B'"
-}
-
-fun main() {
-    val container = object : P_Map<String, Parent>(String::class, Parent::class){}
-    container["A"] = A()
-    container["B"] = B()
-    println(container["A"])
-    println(container["B"])
-}

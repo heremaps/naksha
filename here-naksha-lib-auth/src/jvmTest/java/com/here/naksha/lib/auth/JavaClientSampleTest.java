@@ -73,7 +73,7 @@ class JavaClientSampleTest {
 
     // Then:
     assertNotNull(armService);
-    P_List<ResourceAttributes> attributes = armService.getActionAttributeMaps(ReadCollections.NAME);
+    P_List<ResourceAttributes> attributes = armService.getResourceAttributesForAction(ReadCollections.NAME);
     assertNotNull(attributes);
     assertEquals(2, attributes.size());
     ResourceAttributes x = attributes.get(0);
