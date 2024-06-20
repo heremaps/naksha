@@ -4,23 +4,23 @@ package com.here.naksha.lib.auth.action
 
 import com.here.naksha.lib.auth.attribute.StorageAttributes
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 @JsExport
-class UseStorages: AccessRightsAction<StorageAttributes, UseStorages>(StorageAttributes::class){
+class UseStorages : AccessRightsAction<StorageAttributes, UseStorages>() {
+
+    override val name: String = NAME
+
     companion object {
-        @JvmStatic
-        @JsStatic
-        val NAME = "useStorages"
+        const val NAME = "useStorages"
     }
 }
 
 @JsExport
-class ManageStorages: AccessRightsAction<StorageAttributes, ManageStorages>(StorageAttributes::class){
+class ManageStorages : AccessRightsAction<StorageAttributes, ManageStorages>() {
+
+    override val name: String = NAME
+
     companion object {
-        @JvmStatic
-        @JsStatic
-        val NAME = "manageStorages"
+        const val NAME = "manageStorages"
     }
 }

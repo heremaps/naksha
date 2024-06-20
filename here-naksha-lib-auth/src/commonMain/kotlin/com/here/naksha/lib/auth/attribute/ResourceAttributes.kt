@@ -2,7 +2,7 @@
 
 package com.here.naksha.lib.auth.attribute
 
-import com.here.naksha.lib.base.P_Object
+import naksha.base.P_Object
 import kotlin.js.JsExport
 
 /**

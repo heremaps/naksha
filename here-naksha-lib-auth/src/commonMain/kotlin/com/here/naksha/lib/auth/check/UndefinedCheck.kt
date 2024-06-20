@@ -8,6 +8,6 @@ import kotlin.js.JsExport
  * A pseudo operation that always fails (for unknown checks).
  */
 @JsExport
-class UnknownOp : Check() {
+class UndefinedCheck : CompiledCheck() {
     override fun matches(value: Any?): Boolean = false
 }

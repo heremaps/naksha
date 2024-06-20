@@ -2,99 +2,77 @@
 
 package com.here.naksha.lib.auth
 
-import com.here.naksha.lib.auth.attribute.AccessRightsService
-import com.here.naksha.lib.auth.service.NakshaService
-import com.here.naksha.lib.base.P_Map
+import com.here.naksha.lib.auth.action.ACTIONS_BY_NAME
+import com.here.naksha.lib.auth.action.AccessRightsAction
+import com.here.naksha.lib.auth.attribute.ResourceAttributes
+import naksha.base.P_List
+import naksha.base.P_Map
 import kotlin.js.JsExport
 
 /**
- * The abstract base class for access right matrices. Please use a specific type that is suitable for your service or
- * create an own new one.
+ * The ARM ([AccessRightsMatrix]) describes what attributes are required for given Action to be performed in given Service.
+ * It is main domain class of lib-auth module, besides the [UserRightsMatrix].
+ *
+ * It is meant to be constructed by the client who is bound to given Service so it can evaluate whether the access should be granted
+ * for given incoming user request bearing [UserRightsMatrix] - see its documentation for details.
  */
 @JsExport
-open class AccessRightsMatrix : P_Map<String, AccessRightsService>(String::class, AccessRightsService::class) {
+class AccessRightsMatrix :
+    P_Map<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
 
-    fun naksha(): NakshaService = getOrCreate(NakshaService.NAME, NakshaService::class)
+    fun useNaksha(): ServiceAccessRights = useService(NAKSHA_SERVICE_NAME)
 
-    fun add(name: String, service: AccessRightsService): AccessRightsMatrix = apply {
-        val existing = getOrNull(name, service::class)
+    fun withService(name: String, service: ServiceAccessRights): AccessRightsMatrix = apply {
+        val existing = getAs(name, ServiceAccessRights::class)
         if (existing == null) {
             put(name, service)
         } else {
-            // TODO: Merge existing with given service
-            // existingService.mergeActionsFrom(serviceMatrix)
+            existing.mergeActionsFrom(service)
         }
     }
 
+    fun useService(name: String): ServiceAccessRights =
+        getOrCreate(name, ServiceAccessRights::class)
 
-//    fun withAction(action: AccessAction<*>): AccessServiceMatrix = apply {
-//        put(action.name, action)
-//    }
-//
-//    fun getActionAttributeMaps(actionName: String): AccessAttributeMapList? =
-//        getOrNull(actionName, AccessAttributeMapList::class)
-//
-//    fun mergeActionsFrom(otherService: AccessServiceMatrix): AccessServiceMatrix {
-//        otherService
-//            .forEach { (action, attributeMaps) ->
-//                addActions(action, *attributeMaps as Array<out AccessAttributeMap>)
-//            }
-//        return this
-//    }
-
-//    private fun getAttributeMapsByAction(): Map<String, List<AccessAttributeMap>> {
-//        return data().iterator()
-//            .asSequence()
-//            .filter { (_, rawAttributes) -> rawAttributes != null }
-//            .associate { (actionName, rawAttributes) ->
-//                actionName to convertAccessAttributesList(rawAttributes!!)
-//            }
-//    }
-
-//    private fun convertAccessAttributesList(rawList: Any): List<AccessAttributeMap> =
-//        Base.assign(rawList, BaseList.klass).toObjectList(AccessAttributeMap.klass)
-
-//    fun withActionAttributeMaps(
-//        actionName: String,
-//        vararg attributeMaps: AccessAttributeMap
-//    ): AccessServiceMatrix {
-//        val currentAttributeMaps = getOrNull(actionName, P_List::class)
-//        val newAttributeMaps =
-//            if (currentAttributeMaps == null || currentAttributeMaps.isEmpty()) {
-//                BaseArray(*attributeMaps)
-//            } else {
-//                Array(currentAttributeMaps.size() + attributeMaps.size) { ind ->
-//                    if (ind < currentAttributeMaps.size()) {
-//                        currentAttributeMaps[ind]
-//                    } else {
-//                        attributeMaps[ind - currentAttributeMaps.size()]
-//                    }
-//                }.let { BaseArray(*it) }
-//            }
-//        set(actionName, newAttributeMaps)
-//        return this
-//    }
-
-//    fun addActions(vararg actions: AccessAction<*>): AccessServiceMatrix {
-//        for (attributeMap in actions) {
-//
-//        }
-//        val current = getActionAttributeMaps(actionName) ?: emptyList()
-//        val finalAttributeMaps = current + actions
-//        set(actionName, box(finalAttributeMaps, AccessAttributeMapList::class))
-////        if (currentAttributeMaps.isNullOrEmpty()) {
-////            set(actionName, attributeMaps)
-////        } else {
-////            val combinedAttributes =
-////                Array(currentAttributeMaps.size + attributeMaps.size) { ind ->
-////                    if (ind < currentAttributeMaps.size) {
-////                        currentAttributeMaps[ind]
-////                    } else {
-////                        attributeMaps[ind - currentAttributeMaps.size]
-////                    }
-////                }
-////            set(actionName, combinedAttributes)
-////        }
-//        return this
-//    }
+    companion object {
+        const val NAKSHA_SERVICE_NAME: String = "naksha"
+    }
 }
+
+@JsExport
+class ServiceAccessRights :
+    P_Map<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
+
+    override fun toValue(
+        key: String,
+        value: Any?,
+        alt: AccessRightsAction<*, *>?
+    ): AccessRightsAction<*, *>? {
+        return ACTIONS_BY_NAME[key]
+            ?.let { actionType ->
+                box(value, actionType, alt)
+            } ?: super.toValue(key, value, alt)
+    }
+
+    fun <T : AccessRightsAction<*, T>> withAction(action: T): ServiceAccessRights = apply {
+        put(action.name, action)
+    }
+
+    fun mergeActionsFrom(otherService: ServiceAccessRights): ServiceAccessRights = apply {
+        otherService.filterValues { it != null }
+            .forEach { (actionName, notNullAction) ->
+                val existing = getAs(actionName, AccessRightsAction::class)
+                if (existing == null) {
+                    put(actionName, notNullAction)
+                } else {
+                    existing.withAttributesFromAction(notNullAction!!)
+                }
+            }
+    }
+
+    fun getResourceAttributesForAction(actionName: String): ResourceAttributesList? =
+        getAs(actionName, ResourceAttributesList::class)
+}
+
+@JsExport
+class ResourceAttributesList : P_List<ResourceAttributes>(ResourceAttributes::class)
