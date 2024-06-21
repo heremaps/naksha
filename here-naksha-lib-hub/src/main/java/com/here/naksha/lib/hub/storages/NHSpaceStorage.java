@@ -95,7 +95,7 @@ public class NHSpaceStorage implements IStorage {
 
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void initStorage(@Nullable Map<String, Object> params) {
+  public void initStorage(@Nullable Map<String, ?> params) {
     nakshaHub.getAdminStorage().initStorage(params);
   }
 
