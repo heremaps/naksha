@@ -239,7 +239,7 @@ IMMUTABLE
 PARALLEL SAFE
 SET search_path FROM CURRENT
 AS $$
-  return require("naksha").Static.partitionNumber(id, partition_count);
+  return require("naksha").Static.getInstance().partitionNumber(id, partition_count);
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_partition_id(id text, partition_count int4) RETURNS text
