@@ -12,9 +12,9 @@ import naksha.model.response.SuccessResponse
 import naksha.plv8.NKC_TABLE
 import naksha.plv8.NakshaSession
 import naksha.plv8.Static
-import naksha.plv8.Static.Companion.SC_DICTIONARIES
-import naksha.plv8.Static.Companion.SC_INDICES
-import naksha.plv8.Static.Companion.SC_TRANSACTIONS
+import naksha.plv8.Static.SC_DICTIONARIES
+import naksha.plv8.Static.SC_INDICES
+import naksha.plv8.Static.SC_TRANSACTIONS
 import java.sql.Connection
 
 /**

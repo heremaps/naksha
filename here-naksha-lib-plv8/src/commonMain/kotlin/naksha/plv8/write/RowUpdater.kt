@@ -9,7 +9,7 @@ import naksha.model.response.Metadata
 import naksha.model.response.Row
 import naksha.plv8.IPlv8Plan
 import naksha.plv8.NakshaSession
-import naksha.plv8.Static.Companion.SC_TRANSACTIONS
+import naksha.plv8.Static.SC_TRANSACTIONS
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
