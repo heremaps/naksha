@@ -14,8 +14,8 @@ import naksha.model.*
 import naksha.model.request.WriteFeature
 import naksha.model.request.WriteRequest
 import naksha.model.response.*
-import naksha.plv8.Static.SC_TRANSACTIONS
-import naksha.plv8.Static.nakshaCollectionConfig
+import naksha.plv8.Static.Companion.SC_TRANSACTIONS
+import naksha.plv8.Static.Companion.nakshaCollectionConfig
 import naksha.plv8.write.RowUpdater
 import naksha.plv8.write.SingleCollectionWriter
 import naksha.plv8.write.WriteRequestExecutor

@@ -51,8 +51,7 @@ abstract class DbTest {
 
             connection = DriverManager.getConnection(url)
 
-            // FIXME  storage = JvmPlv8Storage("test_storage", connection, SCHEMA)
-            storage = JvmPlv8Storage("test_storage")
+            storage = JvmPlv8Storage("test_storage", connection, SCHEMA)
             storage.initStorage()
         }
     }

@@ -88,11 +88,11 @@ AS $$
     }
   }
   let naksha = require("naksha");
-  naksha.JsPlv8Env.Companion.initialize();
+  //naksha.JsPlv8Env.Companion.initialize();
   let jb = require("jbon");
   // always create new session as previous one could be for different storage or schema
-  session = new naksha.NakshaSession(new naksha.JsPlv8Sql(), '${schema}', '${storage_id}', app_name, stream_id, app_id, author);
-  jb.JbSession.Companion.threadLocal.set(session);
+  //session = new naksha.NakshaSession(new naksha.JsPlv8Sql(), '${schema}', '${storage_id}', app_name, stream_id, app_id, author);
+  //jb.JbSession.Companion.threadLocal.set(session);
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_clear_session() RETURNS void
