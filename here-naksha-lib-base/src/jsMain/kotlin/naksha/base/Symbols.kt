@@ -16,7 +16,7 @@ actual class Symbols {
          */
         @JsStatic
         actual fun newInstance(description: String?): Symbol {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented newInstance")
         }
 
         /**
@@ -27,7 +27,7 @@ actual class Symbols {
          */
         @JsStatic
         actual fun forName(key: String?): Symbol {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented forName")
         }
 
         /**
@@ -37,7 +37,7 @@ actual class Symbols {
          * @return The default symbol to bind the given [KClass] against.
          */
         actual fun <T : Any> of(klass: KClass<out T>): Symbol {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented of")
         }
 
         /**
@@ -46,7 +46,7 @@ actual class Symbols {
          */
         @JsStatic
         actual fun getSymbolResolvers(): List<SymbolResolver> {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented getSymbolResolvers")
         }
 
         /**
@@ -60,7 +60,7 @@ actual class Symbols {
             expect: List<SymbolResolver>,
             value: List<SymbolResolver>
         ): Boolean {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented compareAndSetSymbolResolvers")
         }
 
         /**
@@ -71,7 +71,7 @@ actual class Symbols {
          */
         @JsStatic
         actual fun get(obj: PlatformObject, symbol: Symbol): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented get")
         }
 
         /**
@@ -87,7 +87,7 @@ actual class Symbols {
             symbol: Symbol,
             value: Any?
         ): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented set")
         }
 
         /**
@@ -98,7 +98,7 @@ actual class Symbols {
          */
         @JsStatic
         actual fun has(obj: PlatformObject, symbol: Symbol): Boolean {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented has")
         }
 
         /**
@@ -109,7 +109,7 @@ actual class Symbols {
          */
         @JsStatic
         actual fun remove(obj: PlatformObject, symbol: Symbol): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented remove")
         }
 
         /**
@@ -120,7 +120,7 @@ actual class Symbols {
          */
         @JsStatic
         actual fun iterator(obj: PlatformObject): PlatformIterator<PlatformList> {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented iterator")
         }
 
         /**
@@ -130,7 +130,7 @@ actual class Symbols {
          */
         @JsStatic
         actual fun keys(obj: PlatformObject): Array<Symbol> {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented keys")
         }
 
         /**
@@ -140,7 +140,7 @@ actual class Symbols {
          */
         @JsStatic
         actual fun count(obj: PlatformObject): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented count")
         }
 
         /**

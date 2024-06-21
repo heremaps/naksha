@@ -18,10 +18,6 @@ data class Row(
      */
     val storage: IStorage,
     /**
-     * Guid of the feature, leave it empty for Insert operation (it will be calculated automatically).
-     */
-    val guid: Guid?,
-    /**
      * Flags to describe: feature, geometry, geo_ref, tags encodings and action flags.
      * @see Flags for more.
      */
@@ -30,6 +26,10 @@ data class Row(
      * Feature id.
      */
     val id: String,
+    /**
+     * Guid of the feature, leave it empty for Insert operation (it will be calculated automatically).
+     */
+    val guid: Guid? = null,
     /**
      * Feature type, null - indicates the type is default for collection.
      */

@@ -32,13 +32,13 @@ import kotlin.reflect.KProperty
 @JsExport
 open class NotNullProperty<MAP_VALUE_TYPE : Any, MAP : P_Map<String, MAP_VALUE_TYPE>, PROPERTY_TYPE : MAP_VALUE_TYPE>(
     val klass: KClass<out PROPERTY_TYPE>,
-    val defaultValue: PROPERTY_TYPE? = null,
+    val defaultValue: (() -> PROPERTY_TYPE)? = null,
     val name: String? = null
 ) {
     open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE {
         val key = this.name ?: property.name
         if (defaultValue == null) return self.getOrCreate(key, klass)
-        return self.getOrSet(key, defaultValue)
+        return self.getOrSet(key, defaultValue!!.invoke())
     }
 
     open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE) = self.put(this.name ?: property.name, value)

@@ -15,128 +15,128 @@ actual class Platform {
 
         val objectTemplate = object : PlatformObject {
             override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 1")
             }
         }
         val listTemplate = object : PlatformList {
             override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 2")
             }
         }
         val mapTemplate = object : PlatformMap {
             override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 3")
             }
         }
         val dataViewTemplate = object : PlatformDataView {
             override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 4")
             }
         }
         val symbolTemplate = object : Symbol {}
         val bigIntTemplate = object : Int64 {
             override fun unaryPlus(): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 5")
             }
 
             override fun unaryMinus(): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 6")
             }
 
             override fun inc(): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 7")
             }
 
             override fun dec(): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 8")
             }
 
             override fun plus(other: Any): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 9")
             }
 
             override fun minus(other: Any): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 10")
             }
 
             override fun times(other: Any): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 11")
             }
 
             override fun div(other: Any): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 12")
             }
 
             override fun rem(other: Any): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 13")
             }
 
             override fun compareTo(other: Any?): Int {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 14")
             }
 
             override fun equals(other: Any?): Boolean {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 15")
             }
 
             override fun eq(other: Any?): Boolean {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 16")
             }
 
             override fun shr(bits: Int): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 17")
             }
 
             override fun ushr(bits: Int): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 18")
             }
 
             override fun shl(bits: Int): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 19")
             }
 
             override fun and(other: Int64): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 20")
             }
 
             override fun or(other: Int64): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 21")
             }
 
             override fun xor(other: Int64): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 22")
             }
 
             override fun inv(): Int64 {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 23")
             }
 
             override fun toByte(): Byte {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 24")
             }
 
             override fun toShort(): Short {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 25")
             }
 
             override fun toInt(): Int {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 26")
             }
 
             override fun toLong(): Long {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 27")
             }
 
             override fun toFloat(): Float {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 28")
             }
 
             override fun toDouble(): Double {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 29")
             }
 
             override fun toDoubleRawBits(): Double {
-                TODO("Not yet implemented")
+                TODO("Not yet implemented 30")
             }
 
             override fun hashCode(): Int = js("BigInt.hashCode(this)").unsafeCast<Int>()
@@ -509,7 +509,7 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun <T : Any> undefinedOf(klass: KClass<T>): T {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented undefinedOf")
         }
 
         /**
@@ -519,7 +519,7 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun <T : Any> newInstanceOf(klass: KClass<T>): T {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented newInstanceOf")
         }
 
         /**
@@ -529,7 +529,7 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented toJSON")
         }
 
         /**
@@ -539,7 +539,7 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun fromJSON(json: String, options: FromJsonOptions): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented fromJSON")
         }
 
         /**
@@ -553,7 +553,7 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented fromPlatform")
         }
 
         /**
@@ -566,7 +566,7 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun toPlatform(obj: Any?, exporters: List<PlatformExporter>): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented toPlatform")
         }
 
         /**
@@ -580,7 +580,7 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented proxy")
         }
 
         private val defaultBaseLogger = object : BaseLogger {
@@ -651,7 +651,7 @@ for (i=0; i < msg_arr.length; i++) {
          * The [BaseLogger].
          */
         @JsStatic
-        actual val logger: BaseLogger = TODO("Create implementation")
+        actual val logger: BaseLogger = defaultBaseLogger
 
         /**
          * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).
@@ -660,7 +660,7 @@ for (i=0; i < msg_arr.length; i++) {
          */
         @JsStatic
         actual fun <T> newThreadLocal(initializer: (() -> T)?): BaseThreadLocal<T> {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented newThreadLocal")
         }
 
         // TODO: Implement high resolution timer, when available (sadly, not in PLV8):
@@ -744,7 +744,7 @@ for (i=0; i < msg_arr.length; i++) {
          */
         @JsStatic
         actual fun lz4Deflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented lz4Deflate")
         }
 
         /**
@@ -762,7 +762,7 @@ for (i=0; i < msg_arr.length; i++) {
             offset: Int,
             size: Int
         ): ByteArray {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented lz4Inflate")
         }
 
         /**
@@ -774,7 +774,7 @@ for (i=0; i < msg_arr.length; i++) {
          */
         @JsStatic
         actual fun gzipDeflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented gzipDeflate")
         }
 
         /**
@@ -792,7 +792,7 @@ for (i=0; i < msg_arr.length; i++) {
             offset: Int,
             size: Int
         ): ByteArray {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented gzipInflate")
         }
     }
 }

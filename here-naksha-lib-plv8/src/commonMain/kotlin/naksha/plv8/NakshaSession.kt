@@ -3,8 +3,6 @@
 package naksha.plv8
 
 import naksha.jbon.*
-import naksha.jbon.ACTION_DELETE
-import naksha.jbon.ACTION_UPDATE
 import kotlinx.datetime.*
 import naksha.base.*
 import naksha.base.Platform.Companion.logger
@@ -154,6 +152,7 @@ SET SESSION enable_seqscan = OFF;
         collectionConfiguration = mutableMapOf()
         collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
         transaction = NakshaTransactionProxy()
+        transaction.id = txn().toGuid(storage.id(), "txn", "txn").toString()
     }
 
     /**
@@ -394,23 +393,6 @@ FROM ns, txn_seq;"""
         return _txts!!
     }
 
-    private fun handleFeatureException(e: Throwable, id: String?): ErrorResponse {
-        val err = (e as PlatformMap).proxy(P_JsMap::class)
-        // available fields (only on server): sqlerrcode, schema_name, table_name, column_name, datatype_name, constraint_name, detail, hint, context, internalquery, code
-        val errCode: String? = (err["sqlerrcode"] ?: err["sqlstate"]) as? String
-        return when {
-            errCode != null -> {
-                ErrorResponse(NakshaError(errCode, e.cause?.message ?: errCode, id))
-            }
-
-            else -> {
-                if (Static.PRINT_STACK_TRACES)
-                    logger.info(e.cause?.message!!)
-                ErrorResponse(NakshaError(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}", id))
-            }
-        }
-    }
-
     private lateinit var featureReader: JbMapFeature
     private lateinit var propertiesReader: JbMap
 
@@ -510,12 +492,17 @@ FROM ns, txn_seq;"""
         return isDisabled != true
     }
 
-    private inner class TransactionAction internal constructor(transaction: NakshaTransactionProxy) {
-        private val transactionWriter: SingleCollectionWriter =
+    private inner class TransactionAction internal constructor(
+        val transaction: NakshaTransactionProxy,
+        writeRequest: WriteRequest
+    ) {
+        private val transactionWriter: SingleCollectionWriter?  = if (writeRequest.ops.any { it.collectionId == NKC_TABLE })
+            null
+        else
             SingleCollectionWriter(SC_TRANSACTIONS, this@NakshaSession, modifyCounters = false)
 
         fun write() {
-            transactionWriter.writeFeatures(
+            transactionWriter?.writeFeatures(
                 WriteRequest(
                     arrayOf(WriteFeature(SC_TRANSACTIONS, transaction)),
                     noResults = true
@@ -530,7 +517,7 @@ FROM ns, txn_seq;"""
      */
     fun write(writeRequest: WriteRequest): Response {
         val executor = WriteRequestExecutor(this, true)
-        val transactionAction = TransactionAction(transaction)
+        val transactionAction = TransactionAction(transaction, writeRequest)
         return try {
             transactionAction.write()
             val writeFeaturesResult = executor.write(writeRequest)
@@ -540,7 +527,9 @@ FROM ns, txn_seq;"""
             if (Static.PRINT_STACK_TRACES) logger.info(e.stackTraceToString())
             ErrorResponse(NakshaError(e.errNo, e.errMsg))
         } catch (e: Throwable) {
-            handleFeatureException(e, null)
+            if (Static.PRINT_STACK_TRACES)
+                logger.info(e.cause?.message!!)
+            ErrorResponse(NakshaError(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}"))
         }
     }
 }

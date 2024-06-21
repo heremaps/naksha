@@ -1,4 +1,5 @@
 @file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
 import naksha.base.Int64
@@ -6,13 +7,15 @@ import naksha.base.NotNullProperty
 import kotlin.js.JsExport
 
 @JsExport
-class NakshaTransactionProxy : NakshaFeatureProxy() {
+class NakshaTransactionProxy() : NakshaFeatureProxy() {
 
     companion object {
-        private val FEATURES_MODIFIED = NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class)
-        private val FEATURES_BYTES = NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class)
-        private val COLLECTIONS = NotNullProperty<Any, NakshaTransactionProxy, TransactionCollectionInfoProxy>(
-            TransactionCollectionInfoProxy::class)
+        private val FEATURES_MODIFIED =
+            NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class, defaultValue = { 0 })
+        private val FEATURES_BYTES = NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class, defaultValue = { 0 })
+        private val COLLECTIONS = NotNullProperty<Any, NakshaTransactionProxy, TransactionCollectionInfoMapProxy>(
+            TransactionCollectionInfoMapProxy::class, defaultValue = { TransactionCollectionInfoMapProxy() }
+        )
         private val SEQ_NUMBER = NotNullProperty<Any, NakshaTransactionProxy, Int64>(Int64::class)
         private val SEQ_TS = NotNullProperty<Any, NakshaTransactionProxy, Int64>(Int64::class)
     }
@@ -20,7 +23,7 @@ class NakshaTransactionProxy : NakshaFeatureProxy() {
     /**
      * Number of features modified in the transaction - total number of features from all touched collections.
      */
-    var  featuresModified: Int by FEATURES_MODIFIED
+    var featuresModified: Int by FEATURES_MODIFIED
 
     /**
      * Total number of bytes sent to DB in transaction.
@@ -35,15 +38,19 @@ class NakshaTransactionProxy : NakshaFeatureProxy() {
 
     var seqTs: Int64 by SEQ_TS
 
-    var collections: TransactionCollectionInfoProxy by COLLECTIONS
+    var collections: TransactionCollectionInfoMapProxy by COLLECTIONS
 
 
     fun incFeaturesModified(count: Int) {
         featuresModified += count
     }
 
-    fun addCollectionCounts(collection: String, count: Int) {
-        // TODO implement me
-        throw NotImplementedError()
+    fun addCollectionCounts(collectionCounts: TransactionCollectionInfoProxy) {
+        if (!collections.contains(collectionCounts.collectionId)) {
+            collections[collectionCounts.collectionId!!] = collectionCounts
+        } else {
+            collections[collectionCounts.collectionId]!!.addValues(collectionCounts)
+        }
+
     }
 }
