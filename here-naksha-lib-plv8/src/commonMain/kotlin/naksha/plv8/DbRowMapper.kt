@@ -79,7 +79,7 @@ object DbRowMapper {
             type = row[COL_TYPE] as String?,
             feature = row[COL_FEATURE] as ByteArray?,
             geoRef = row[COL_GEO_REF] as ByteArray?,
-            geo = row[COL_GEOMETRY] as ByteArray,
+            geo = row[COL_GEOMETRY] as ByteArray?,
             tags = row[COL_TAGS] as ByteArray?,
             meta = toMetadata(row)
         )

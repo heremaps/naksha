@@ -3,6 +3,7 @@ package naksha.plv8.write
 import naksha.base.Platform.Companion.currentMillis
 import naksha.jbon.asArray
 import naksha.model.NakshaCollectionProxy
+import naksha.model.TransactionCollectionInfoProxy
 import naksha.model.request.FeatureOp
 import naksha.model.request.Write.Companion.XYZ_OP_CREATE
 import naksha.model.request.Write.Companion.XYZ_OP_DELETE
@@ -33,6 +34,9 @@ class SingleCollectionWriter(
         val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.partitions)
         val END_MAPPING = currentMillis()
 
+        val counts = TransactionCollectionInfoProxy()
+        counts.collectionId = collectionId
+
         session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
         val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
@@ -45,10 +49,22 @@ class SingleCollectionWriter(
             val existingFeature: Row? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
             when (opType) {
-                XYZ_OP_CREATE -> plan.addCreate(op)
-                XYZ_OP_UPDATE -> plan.addUpdate(op, existingFeature)
-                XYZ_OP_DELETE -> plan.addDelete(op, existingFeature)
-                XYZ_OP_PURGE -> plan.addPurge(op, existingFeature, existingInDelFeatures[op.id])
+                XYZ_OP_CREATE -> {
+                    plan.addCreate(op)
+                    counts.inserted++
+                }
+                XYZ_OP_UPDATE -> {
+                    plan.addUpdate(op, existingFeature)
+                    counts.updated++
+                }
+                XYZ_OP_DELETE -> {
+                    plan.addDelete(op, existingFeature)
+                    counts.deleted++
+                }
+                XYZ_OP_PURGE -> {
+                    plan.addPurge(op, existingFeature, existingInDelFeatures[op.id])
+                    counts.purged++
+                }
                 else -> throw RuntimeException("Operation $opType not supported")
             }
         }
@@ -59,7 +75,7 @@ class SingleCollectionWriter(
         if (modifyCounters) {
             // no exception was thrown - execution succeeded, we can increase transaction counter
             session.transaction.incFeaturesModified(writeRequest.ops.size)
-            session.transaction.addCollectionCounts(collectionId, writeRequest.ops.size)
+            session.transaction.addCollectionCounts(counts)
         }
         val END_EXECUTION = currentMillis()
 

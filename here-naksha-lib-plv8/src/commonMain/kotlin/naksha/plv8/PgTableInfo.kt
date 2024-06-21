@@ -64,6 +64,7 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?, val partitionCou
                 ptxn        int8,
                 uid         int4,
                 puid        int4,
+                fnva1       int4,
                 version     int4,
                 geo_grid    int4,
                 flags       int4,

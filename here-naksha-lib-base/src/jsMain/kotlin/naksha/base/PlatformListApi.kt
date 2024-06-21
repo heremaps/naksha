@@ -7,7 +7,7 @@ actual class PlatformListApi {
     actual companion object {
         @JsStatic
         actual fun array_get_length(array: PlatformList?): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_get_length")
         }
 
         @JsStatic
@@ -20,17 +20,17 @@ actual class PlatformListApi {
 
         @JsStatic
         actual fun array_get(array: PlatformList?, i: Int): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_get")
         }
 
         @JsStatic
         actual fun array_set(array: PlatformList?, i: Int, value: Any?): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_set")
         }
 
         @JsStatic
         actual fun array_delete(array: PlatformList?, i: Int): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_delete")
         }
 
         @JsStatic
@@ -40,7 +40,7 @@ actual class PlatformListApi {
             deleteCount: Int,
             vararg add: Any?
         ): PlatformList {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_splice")
         }
 
         /**
@@ -60,7 +60,7 @@ actual class PlatformListApi {
             searchElement: Any?,
             fromIndex: Int?
         ): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_index_of")
         }
 
         @JsStatic
@@ -68,7 +68,7 @@ actual class PlatformListApi {
             array: PlatformList?,
             searchElement: Any?
         ): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_first_index_of")
         }
 
         /**
@@ -88,7 +88,7 @@ actual class PlatformListApi {
             searchElement: Any?,
             fromIndex: Int?
         ): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_last_index_of")
         }
 
         /**
@@ -97,7 +97,7 @@ actual class PlatformListApi {
          */
         @JsStatic
         actual fun array_entries(array: PlatformList): PlatformIterator<Any?> {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_entries")
         }
 
         /**
@@ -107,7 +107,7 @@ actual class PlatformListApi {
          */
         @JsStatic
         actual fun array_unshift(vararg elements: Any?): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_unshift")
         }
 
         /**
@@ -118,7 +118,7 @@ actual class PlatformListApi {
          */
         @JsStatic
         actual fun array_push(array: PlatformList?, vararg elements: Any?): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_push")
         }
 
         /**
@@ -127,7 +127,7 @@ actual class PlatformListApi {
          */
         @JsStatic
         actual fun array_shift(): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_shift")
         }
 
         /**
@@ -135,7 +135,7 @@ actual class PlatformListApi {
          */
         @JsStatic
         actual fun array_pop(): Any? {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_pop")
         }
 
         /**
@@ -150,7 +150,7 @@ actual class PlatformListApi {
          */
         @JsStatic
         actual fun array_sort(compareFn: ((Any?, Any?) -> Int)?): PlatformList {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_sort")
         }
 
         /**
@@ -162,12 +162,12 @@ actual class PlatformListApi {
          */
         @JsStatic
         actual fun array_to_sorted(compareFn: ((Any?, Any?) -> Int)?): PlatformList {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_to_sorted")
         }
 
         @JsStatic
         actual fun array_retain_all(array: PlatformList?, vararg keep: Any?): Boolean {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented array_retain_all")
         }
     }
 }

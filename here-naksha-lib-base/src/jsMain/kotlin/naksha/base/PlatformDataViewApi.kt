@@ -7,22 +7,22 @@ actual class PlatformDataViewApi {
     actual companion object {
         @JsStatic
         actual fun dataview_get_byte_array(view: PlatformDataView): ByteArray {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_byte_array")
         }
 
         @JsStatic
         actual fun dataview_get_start(view: PlatformDataView): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_start")
         }
 
         @JsStatic
         actual fun dataview_get_end(view: PlatformDataView): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_end")
         }
 
         @JsStatic
         actual fun dataview_get_size(view: PlatformDataView): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_size")
         }
 
         @JsStatic
@@ -31,7 +31,7 @@ actual class PlatformDataViewApi {
             pos: Int,
             littleEndian: Boolean
         ): Float {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_float32")
         }
 
         @JsStatic
@@ -49,7 +49,7 @@ actual class PlatformDataViewApi {
             pos: Int,
             littleEndian: Boolean
         ): Double {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_float64")
         }
 
         @JsStatic
@@ -63,7 +63,7 @@ actual class PlatformDataViewApi {
 
         @JsStatic
         actual fun dataview_get_int8(view: PlatformDataView, pos: Int): Byte {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_int8")
         }
 
         @JsStatic
@@ -76,7 +76,7 @@ actual class PlatformDataViewApi {
             pos: Int,
             littleEndian: Boolean
         ): Short {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_int16")
         }
 
         @JsStatic
@@ -94,7 +94,7 @@ actual class PlatformDataViewApi {
             pos: Int,
             littleEndian: Boolean
         ): Int {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_int32")
         }
 
         @JsStatic
@@ -112,7 +112,7 @@ actual class PlatformDataViewApi {
             pos: Int,
             littleEndian: Boolean
         ): Int64 {
-            TODO("Not yet implemented")
+            TODO("Not yet implemented dataview_get_int64")
         }
 
         @JsStatic
