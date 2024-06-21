@@ -38,25 +38,25 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings({"unchecked", "ConstantValue", "unused"})
 @AvailableSince(NakshaVersion.v2_0_5)
-public final class NakshaContext {
+public final class NakshaContextOld {
 
-  private static final Logger logger = LoggerFactory.getLogger(NakshaContext.class);
+  private static final Logger logger = LoggerFactory.getLogger(NakshaContextOld.class);
 
   /**
    * The thread local instance.
    */
-  static final ThreadLocal<NakshaContext> instance = withInitial(NakshaContext::new);
+  static final ThreadLocal<NakshaContextOld> instance = withInitial(NakshaContextOld::new);
 
   /**
-   * Returns the {@link NakshaContext} of the current thread. If the thread does not have a context yet, create a new context, attach it to
+   * Returns the {@link NakshaContextOld} of the current thread. If the thread does not have a context yet, create a new context, attach it to
    * the current thread and return it.
    *
-   * @return The {@link NakshaContext} of the current thread.
+   * @return The {@link NakshaContextOld} of the current thread.
    */
   @AvailableSince(NakshaVersion.v2_0_5)
-  public static @NotNull NakshaContext currentContext() {
+  public static @NotNull NakshaContextOld currentContext() {
     final AbstractTask<?, ?> task = AbstractTask.currentTask();
-    return task != null ? task.context() : instance.get();
+    return task != null ? (NakshaContextOld) (Object) task.context() : instance.get();
   }
 
   /**
@@ -67,8 +67,8 @@ public final class NakshaContext {
    *
    * @return The previously attached context.
    */
-  public @NotNull NakshaContext attachToCurrentThread() {
-    final NakshaContext old = instance.get();
+  public @NotNull NakshaContextOld attachToCurrentThread() {
+    final NakshaContextOld old = instance.get();
     instance.set(this);
     return old;
   }
@@ -77,7 +77,7 @@ public final class NakshaContext {
    * Create a new context with random stream-id.
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public NakshaContext() {
+  public NakshaContextOld() {
     this(null);
   }
 
@@ -87,7 +87,7 @@ public final class NakshaContext {
    * @param streamId the stream-id to use; if {@code null}, then a random one is generated.
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public NakshaContext(@Nullable String streamId) {
+  public NakshaContextOld(@Nullable String streamId) {
     this(streamId, false);
   }
 
@@ -99,7 +99,7 @@ public final class NakshaContext {
    *                      not matching, it is replaced with a random one and a corresponding log entry is produced.
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public NakshaContext(@Nullable String streamId, boolean trustStreamId) {
+  public NakshaContextOld(@Nullable String streamId, boolean trustStreamId) {
     this.startNanos = NanoTime.now();
     if (streamId != null) {
       if (!trustStreamId) {
@@ -275,7 +275,7 @@ public final class NakshaContext {
    * @throws NullPointerException if the given value is null.
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull NakshaContext with(@NotNull Object key, @NotNull Object value) {
+  public @NotNull NakshaContextOld with(@NotNull Object key, @NotNull Object value) {
     if (value == null) {
       throw new NullPointerException();
     }
@@ -349,7 +349,7 @@ public final class NakshaContext {
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull NakshaContext withAppId(@Nullable String app_id) {
+  public @NotNull NakshaContextOld withAppId(@Nullable String app_id) {
     this.app_id = app_id;
     return this;
   }
@@ -365,7 +365,7 @@ public final class NakshaContext {
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull NakshaContext withAuthor(@Nullable String author) {
+  public @NotNull NakshaContextOld withAuthor(@Nullable String author) {
     this.author = author;
     return this;
   }
@@ -390,7 +390,7 @@ public final class NakshaContext {
   }
 
   @AvailableSince(NakshaVersion.v2_0_16)
-  public @NotNull NakshaContext withUrm(@Nullable ServiceMatrix urm) {
+  public @NotNull NakshaContextOld withUrm(@Nullable ServiceMatrix urm) {
     this.urm = urm;
     return this;
   }
@@ -415,7 +415,7 @@ public final class NakshaContext {
   /*
   This should be set only in rare cases where recursive / multiple layers of the Auth check needs to be avoided when request has already passed the Auth check in first layer.
   */
-  public @NotNull NakshaContext withSuperUser(boolean superUser) {
+  public @NotNull NakshaContextOld withSuperUser(boolean superUser) {
     setSuperUser(superUser);
     return this;
   }
