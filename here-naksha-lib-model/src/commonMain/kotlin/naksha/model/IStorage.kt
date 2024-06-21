@@ -17,7 +17,7 @@ import kotlin.js.JsName
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-interface IStorage {
+interface IStorage : AutoCloseable {
 
     /**
      * Storage id
