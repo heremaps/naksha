@@ -16,7 +16,7 @@ import naksha.model.response.SuccessResponse
 import naksha.plv8.NakshaSession
 import naksha.plv8.Static
 import naksha.plv8.write.NakshaRequestOp.Companion.mapToOperations
-import naksha.plv8.Static.DEBUG
+import naksha.plv8.Static.Companion.DEBUG
 
 class SingleCollectionWriter(
     val collectionId: String,
