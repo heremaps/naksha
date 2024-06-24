@@ -20,11 +20,10 @@ package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.core.models.storage.XyzCodecFactory.getFactory;
 
-import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
 import java.util.List;
-
+import naksha.model.NakshaVersion;
 import naksha.model.WriteFeatures;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 

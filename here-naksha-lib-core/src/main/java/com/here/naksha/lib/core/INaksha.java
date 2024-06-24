@@ -19,8 +19,8 @@
 package com.here.naksha.lib.core;
 
 import com.here.naksha.lib.core.models.ExtensionConfig;
-import naksha.model.XyzFeature;
 import naksha.model.IStorage;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.NotNull;
 
 /**

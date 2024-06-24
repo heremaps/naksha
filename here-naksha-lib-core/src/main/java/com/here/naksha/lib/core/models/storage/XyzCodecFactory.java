@@ -20,8 +20,8 @@ package com.here.naksha.lib.core.models.storage;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import naksha.model.XyzFeature;
 import java.util.concurrent.ConcurrentHashMap;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

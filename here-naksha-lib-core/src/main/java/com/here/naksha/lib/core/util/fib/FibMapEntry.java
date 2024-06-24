@@ -18,10 +18,10 @@
  */
 package com.here.naksha.lib.core.util.fib;
 
-import naksha.model.NakshaVersion;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.Map;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

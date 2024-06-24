@@ -22,10 +22,10 @@ import static com.here.naksha.lib.jbon.BigInt64Kt.toLong;
 import static com.here.naksha.lib.jbon.ConstantsKt.newDataView;
 
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzGeometry;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
-import naksha.model.XyzTags;
+import com.here.naksha.lib.nak.Flags;
+import java.util.List;
+import naksha.geo.XyzGeometry;
 import naksha.jbon.IMap;
 import naksha.jbon.JbBinaryBuilder;
 import naksha.jbon.JbDict;
@@ -34,8 +34,8 @@ import naksha.jbon.JvmEnv;
 import naksha.jbon.JvmMap;
 import naksha.jbon.XyzBuilder;
 import naksha.jbon.XyzNs;
-import com.here.naksha.lib.nak.Flags;
-import java.util.List;
+import naksha.model.XyzFeature;
+import naksha.model.XyzTags;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

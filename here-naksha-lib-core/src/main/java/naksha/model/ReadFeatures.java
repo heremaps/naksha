@@ -19,7 +19,6 @@
 package naksha.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

@@ -18,10 +18,9 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.model.ReadFeatures;
-
 import java.util.HashMap;
 import java.util.Map;
+import naksha.model.ReadFeatures;
 
 public class ReadFeaturesProxyWrapper extends ReadFeatures {
 

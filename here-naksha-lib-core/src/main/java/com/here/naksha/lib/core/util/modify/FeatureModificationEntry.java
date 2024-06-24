@@ -21,18 +21,18 @@ package com.here.naksha.lib.core.util.modify;
 import static com.here.naksha.lib.core.models.storage.IfExists.REPLACE;
 import static naksha.diff.Patcher.calculateDifferenceOfPartialUpdate;
 
-import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.storage.IfExists;
 import com.here.naksha.lib.core.models.storage.IfNotExists;
+import com.here.naksha.lib.core.util.json.JsonSerializable;
+import java.util.HashMap;
+import java.util.Objects;
 import naksha.diff.ConflictResolution;
 import naksha.diff.Difference;
 import naksha.diff.MergeConflictException;
 import naksha.diff.Patcher;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.util.HashMap;
-import java.util.Objects;
+import naksha.model.EXyzAction;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

@@ -28,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.IEventHandler;
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.events.admin.ModifySubscriptionEvent;
@@ -53,7 +52,7 @@ import com.here.naksha.lib.core.view.ViewMember;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
+import naksha.model.NakshaVersion;
 import naksha.model.XyzResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

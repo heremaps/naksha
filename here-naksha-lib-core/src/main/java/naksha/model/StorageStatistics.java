@@ -18,8 +18,8 @@
  */
 package naksha.model;
 
-import naksha.model.StatisticsResponse.Value;
 import java.util.Map;
+import naksha.model.StatisticsResponse.Value;
 
 public class StorageStatistics extends XyzResponse {
 

@@ -18,11 +18,11 @@
  */
 package com.here.naksha.lib.core.models.geojson;
 
-import naksha.geo.BBox;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.declaration.ILonLat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import naksha.geo.BBox;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.prep.PreparedGeometry;
 import org.locationtech.jts.geom.prep.PreparedGeometryFactory;

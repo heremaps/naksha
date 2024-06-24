@@ -32,10 +32,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.here.naksha.lib.core.LazyParsableFeatureList;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawDeserializer;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
-import naksha.geo.BBox;
-
 import java.util.ArrayList;
 import java.util.List;
+import naksha.geo.BBox;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

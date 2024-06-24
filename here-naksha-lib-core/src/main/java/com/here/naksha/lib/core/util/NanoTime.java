@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core.util;
 
-import naksha.model.NakshaVersion;
 import java.util.concurrent.TimeUnit;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 

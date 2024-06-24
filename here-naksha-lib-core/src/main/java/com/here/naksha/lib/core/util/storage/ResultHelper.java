@@ -21,7 +21,6 @@ package com.here.naksha.lib.core.util.storage;
 import static java.util.Collections.emptyList;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.Result;
@@ -31,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

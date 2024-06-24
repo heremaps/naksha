@@ -20,7 +20,6 @@ package com.here.naksha.lib.core.models.storage;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import naksha.model.ReadRequest;
 import org.jetbrains.annotations.NotNull;
 

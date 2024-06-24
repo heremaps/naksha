@@ -18,11 +18,10 @@
  */
 package com.here.naksha.lib.core.models.geojson.coordinates;
 
-import naksha.geo.*;
-import naksha.model.XyzGeometryCollection;
-
 import java.util.ArrayList;
 import java.util.List;
+import naksha.geo.*;
+import naksha.model.XyzGeometryCollection;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;

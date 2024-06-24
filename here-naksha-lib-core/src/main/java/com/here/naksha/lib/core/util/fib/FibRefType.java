@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core.util.fib;
 
-import naksha.model.NakshaVersion;
 import java.lang.ref.Reference;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 

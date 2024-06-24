@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.util;
 
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.io.BufferedReader;
 import java.io.File;
@@ -37,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

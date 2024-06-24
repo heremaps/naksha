@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.util.json.JsonEnum;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 
 /**

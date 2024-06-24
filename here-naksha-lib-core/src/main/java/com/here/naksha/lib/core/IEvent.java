@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core;
 
-import naksha.model.Request;
 import com.here.naksha.lib.core.models.storage.Result;
+import naksha.model.Request;
 import org.jetbrains.annotations.NotNull;
 
 /**
