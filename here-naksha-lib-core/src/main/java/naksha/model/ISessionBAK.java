@@ -26,7 +26,7 @@ import org.jetbrains.annotations.ApiStatus.AvailableSince;
  */
 @NotThreadSafe
 @AvailableSince(NakshaVersion.v2_0_7)
-public interface ISession extends AutoCloseable {
+public interface ISessionBAK extends AutoCloseable {
 
   /**
    * Closes the session, returns the underlying connection back to the connection pool. Any method of the session will from now on throw an

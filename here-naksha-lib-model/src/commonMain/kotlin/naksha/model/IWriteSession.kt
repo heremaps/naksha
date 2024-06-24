@@ -13,6 +13,4 @@ interface IWriteSession: IReadSession {
     fun commit()
 
     fun rollback()
-
-    fun close()
 }
