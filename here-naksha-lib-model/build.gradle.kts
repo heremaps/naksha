@@ -34,6 +34,7 @@ kotlin {
                 implementation(kotlin("stdlib-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
                 implementation(project(":here-naksha-lib-base"))
+                implementation(project(":here-naksha-lib-auth"))
                 implementation(project(":here-naksha-lib-geo"))
             }
         }
