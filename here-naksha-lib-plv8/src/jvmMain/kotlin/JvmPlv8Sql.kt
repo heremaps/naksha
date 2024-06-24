@@ -28,7 +28,7 @@ class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
     override fun affectedRows(any: Any): Int? = if (any is Int) any else null
 
     override fun rows(any: Any): Array<P_JsMap>? = if (any is Array<*>) {
-        (any as Array<Any>).map { (it as PlatformMap).proxy(P_JsMap::class) }.toTypedArray()
+        (any as Array<Any>).map { (it as P_JsMap) }.toTypedArray()
     } else null
 
     override fun execute(sql: String, args: Array<Any?>?): Any {
