@@ -43,8 +43,8 @@ open class NullableProperty<MAP_VALUE_TYPE : Any, MAP : P_Map<String, MAP_VALUE_
     open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE? {
         val key = this.name ?: property.name
         if (autoCreate) {
-            if (defaultValue == null) return self.getOrCreate(key, klass)
-            return self.getOrSet(key, defaultValue!!.invoke())
+            val defaultValue = defaultValue ?: return self.getOrCreate(key, klass)
+            return self.getOrSet(key, defaultValue.invoke())
         }
         return Proxy.box(map_get(self.data(), key), klass, defaultValue?.invoke())
     }
