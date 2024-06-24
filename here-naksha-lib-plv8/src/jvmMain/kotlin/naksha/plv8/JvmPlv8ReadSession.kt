@@ -4,7 +4,6 @@ import com.here.naksha.lib.plv8.JvmPlv8Sql
 import naksha.model.IReadSession
 import naksha.model.NakshaContext
 import naksha.model.request.ReadRequest
-import naksha.model.request.Request
 import naksha.model.request.ResultRow
 import naksha.model.response.Response
 import naksha.model.response.SuccessResponse
@@ -31,7 +30,7 @@ open class JvmPlv8ReadSession(
         author = context.author
     )
 
-    override fun execute(request: Request): Response {
+    override fun execute(request: ReadRequest): Response {
         return when (request) {
             is ReadRequest -> {
                 val (sql, params) = ReadQueryBuilder(nakshaSession.sql).build(request)
@@ -43,7 +42,7 @@ open class JvmPlv8ReadSession(
         }
     }
 
-    override fun executeParallel(request: Request): Response {
+    override fun executeParallel(request: ReadRequest): Response {
         TODO("Not yet implemented")
     }
 
@@ -52,6 +51,14 @@ open class JvmPlv8ReadSession(
     }
 
     override fun getFeaturesByIds(ids: List<String>): Map<String, String> {
+        TODO("Not yet implemented")
+    }
+
+    override fun close() {
+        TODO("Not yet implemented")
+    }
+
+    override fun getNakshaContext(): NakshaContext {
         TODO("Not yet implemented")
     }
 }
