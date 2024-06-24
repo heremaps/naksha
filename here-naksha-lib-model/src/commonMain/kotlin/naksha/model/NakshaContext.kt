@@ -11,7 +11,7 @@ import kotlin.jvm.JvmStatic
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-open class NakshaContext private constructor() {
+open class NakshaContext protected constructor() {
     private var _appId: String? = null
 
     open var appId: String
@@ -23,7 +23,6 @@ open class NakshaContext private constructor() {
     open var author: String? = null
 
     open var su: Boolean = false
-
 
     @Suppress("OPT_IN_USAGE")
     companion object {

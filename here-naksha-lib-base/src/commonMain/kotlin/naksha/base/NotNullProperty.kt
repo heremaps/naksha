@@ -37,8 +37,8 @@ open class NotNullProperty<MAP_VALUE_TYPE : Any, MAP : P_Map<String, MAP_VALUE_T
 ) {
     open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE {
         val key = this.name ?: property.name
-        if (defaultValue == null) return self.getOrCreate(key, klass)
-        return self.getOrSet(key, defaultValue!!.invoke())
+        val defaultValue = this.defaultValue ?: return self.getOrCreate(key, klass)
+        return self.getOrSet(key, defaultValue())
     }
 
     open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE) = self.put(this.name ?: property.name, value)

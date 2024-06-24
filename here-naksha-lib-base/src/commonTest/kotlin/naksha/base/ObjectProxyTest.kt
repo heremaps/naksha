@@ -4,10 +4,11 @@ import kotlin.test.*
 
 class Foo : P_Object() {
     companion object {
-        private val NAME = NotNullProperty<Any, Foo, String>(String::class, "Bernd")
-        private val XYZ = NullableProperty<Any, Foo, String>(String::class, name="@ns:com:here:xyz")
-        private val AGE = NotNullProperty<Any, Foo, Int>(Int::class, 0)
+        private val NAME = NotNullProperty<Any, Foo, String>(String::class, { "Bernd" })
+        private val XYZ = NullableProperty<Any, Foo, String>(String::class, name = "@ns:com:here:xyz")
+        private val AGE = NotNullProperty<Any, Foo, Int>(Int::class, { 0 })
     }
+
     var name: String by NAME
     var age: Int by AGE
     var xyz: String? by XYZ
@@ -18,8 +19,9 @@ class Bar : P_Object() {
         private val FOO = NotNullProperty<Any, Bar, Foo>(Foo::class)
         private val FOO2 = NullableProperty<Any, Bar, Foo>(Foo::class)
     }
+
     var foo: Foo by FOO
-    var foo2 : Foo? by FOO2
+    var foo2: Foo? by FOO2
 }
 
 class ObjectProxyTest {
