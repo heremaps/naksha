@@ -1,13 +1,15 @@
 package com.here.naksha.lib.plv8.naksha.plv8
 
+import com.here.naksha.lib.plv8.JvmPlv8Sql
 import naksha.base.Int64
 import naksha.jbon.*
 import naksha.model.*
 import naksha.model.response.Row
+import naksha.plv8.NakshaSession
 import java.sql.Connection
 
 
-class JvmPlv8Storage(private val id: String, private val connection: Connection, private val schema:String) : IStorage {
+class JvmPlv8Storage(private val id: String, private val connection: Connection, val schema:String) : IStorage {
     override fun id(): String = id
 
     override fun initStorage() {
@@ -45,7 +47,13 @@ class JvmPlv8Storage(private val id: String, private val connection: Connection,
     }
 
     override fun openWriteSession(nakshaContext: NakshaContext, useMaster: Boolean): IWriteSession {
-        TODO("Not yet implemented")
+        return JvmPlv8WriteSession(
+            connection,
+            this,
+            nakshaContext,
+            stmtTimeout = 2000,
+            lockTimeout = 2000
+        )
     }
 
 
