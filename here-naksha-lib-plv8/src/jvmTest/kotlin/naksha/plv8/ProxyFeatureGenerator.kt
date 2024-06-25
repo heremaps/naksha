@@ -18,7 +18,7 @@
  */
 package naksha.plv8
 
-import naksha.geo.PointProxy
+import naksha.geo.ProxyGeoUtil.pointProxy
 import naksha.model.NakshaFeatureProxy
 import naksha.model.TagsProxy
 import org.apache.commons.lang3.RandomStringUtils
@@ -385,7 +385,7 @@ class ProxyFeatureGenerator {
         val feature = NakshaFeatureProxy(featureId)
         val longitude = rand.nextDouble(-180.0, +180.0)
         val latitude = rand.nextDouble(-90.0, +90.0)
-        feature.geometry = PointProxy(longitude, latitude)
+        feature.geometry = pointProxy(longitude, latitude)
 
         val firstName = firstNames[rand.nextInt(0, firstNames.size)]
         val lastName = lastNames[rand.nextInt(0, lastNames.size)]

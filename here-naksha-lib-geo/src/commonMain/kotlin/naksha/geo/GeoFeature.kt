@@ -4,7 +4,6 @@ package naksha.geo
 
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.P_List
 import naksha.base.P_Object
 import kotlin.js.JsExport
 

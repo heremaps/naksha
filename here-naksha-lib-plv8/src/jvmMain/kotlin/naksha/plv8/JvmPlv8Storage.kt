@@ -57,5 +57,33 @@ class JvmPlv8Storage(private val id: String, private val connection: Connection,
         )
     }
 
+    override fun startMaintainer() {
+        TODO("Not yet implemented")
+    }
+
+    override fun maintainNow() {
+        TODO("Not yet implemented")
+    }
+
+    override fun stopMaintainer() {
+        TODO("Not yet implemented")
+    }
+
+    override fun newWriteSession(context: NakshaContext?, useMaster: Boolean): IWriteSession {
+        TODO("Not yet implemented")
+    }
+
+    override fun newReadSession(context: NakshaContext?, useMaster: Boolean): IReadSession {
+        TODO("Not yet implemented")
+    }
+
+    override fun <T> shutdown(onShutdown: ((IStorage) -> T)?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun close() {
+        TODO("Not yet implemented")
+    }
+
 
 }

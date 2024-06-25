@@ -2,7 +2,6 @@ package naksha.plv8.read
 
 import com.here.naksha.lib.plv8.JvmPlv8Sql
 import naksha.geo.GeometryProxy
-import naksha.geo.PointProxy
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadFeatures.Companion.readIdsBy
@@ -269,7 +268,7 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadBySpatial() {
         // given
-        val req = readIdsBy("foo", intersects(PointProxy()))
+        val req = readIdsBy("foo", intersects(GeometryProxy()))
 
         // when
         val (sql, params) = builder.build(req)
@@ -286,7 +285,7 @@ class ReadQueryBuilderTest {
     fun testReadBySpatialWithBuffer() {
         // given
         val geometryTransformation = BufferTransformation.bufferInMeters(22.2)
-        val req = readIdsBy("foo", intersectsWithTransformation(PointProxy(), geometryTransformation))
+        val req = readIdsBy("foo", intersectsWithTransformation(GeometryProxy(), geometryTransformation))
 
         // when
         val (sql, params) = builder.build(req)

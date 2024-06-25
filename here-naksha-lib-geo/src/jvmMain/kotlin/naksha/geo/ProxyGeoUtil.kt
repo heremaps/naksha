@@ -1,8 +1,7 @@
 package naksha.geo
 
-import org.locationtech.jts.geom.Envelope
+import naksha.base.P_AnyList
 import org.locationtech.jts.geom.Geometry
-import org.locationtech.jts.geom.MultiPoint
 
 object ProxyGeoUtil {
 
@@ -23,12 +22,28 @@ object ProxyGeoUtil {
     fun createBBoxEnvelope(
         west: Double, south: Double, east: Double, north: Double
     ): GeometryProxy {
-        return PolygonProxy(
-            PointProxy(west, south),
-            PointProxy(east, south),
-            PointProxy(east, north),
-            PointProxy(west, north),
-            PointProxy(west, south)
-        )
+        val geometryProxy = GeometryProxy()
+        geometryProxy.coordinates = PolygonCoordsProxy(
+            LineStringCoordsProxy(
+                PointCoordsProxy(west, south),
+                PointCoordsProxy(east, south),
+                PointCoordsProxy(east, north),
+                PointCoordsProxy(west, north),
+                PointCoordsProxy(west, south)
+            )
+        ).proxy(P_AnyList::class)
+        return geometryProxy
+    }
+
+    fun pointProxy(longitude: Double, latitude: Double, altitude: Double? = null): GeometryProxy {
+        val geometryProxy = GeometryProxy()
+        geometryProxy.coordinates = PointCoordsProxy(longitude, latitude, altitude).proxy(P_AnyList::class)
+        return geometryProxy
+    }
+
+    fun lineStringProxy(vararg points: PointCoordsProxy): GeometryProxy {
+        val geometryProxy = GeometryProxy()
+        geometryProxy.coordinates = LineStringCoordsProxy(*points).proxy(P_AnyList::class)
+        return geometryProxy
     }
 }

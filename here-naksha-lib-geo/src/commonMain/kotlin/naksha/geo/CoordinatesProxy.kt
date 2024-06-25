@@ -8,6 +8,6 @@ import kotlin.reflect.KClass
 @Suppress("NON_EXPORTABLE_TYPE")
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class CoordinatesProxy<T : Any>(elementKlass: KClass<out T>) : P_List<T>(elementKlass) {
+abstract class CoordinatesProxy<E : Any>(elementKlass: KClass<out E>) : P_List<E>(elementKlass) {
 
 }

@@ -5,10 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
 import naksha.base.Platform
 import naksha.base.PlatformMap
-import naksha.geo.LineStringProxy
 import naksha.geo.PointCoordsProxy
-import naksha.geo.PointProxy
 import naksha.geo.ProxyGeoUtil.createBBoxEnvelope
+import naksha.geo.ProxyGeoUtil.lineStringProxy
+import naksha.geo.ProxyGeoUtil.pointProxy
 import naksha.geo.ProxyGeoUtil.toJtsGeometry
 import naksha.model.*
 import naksha.model.request.*
@@ -56,7 +56,7 @@ class DbReadWriteTest : DbCollectionTest() {
 
         val feature = NakshaFeatureProxy()
         feature.id = SINGLE_FEATURE_ID
-        val geometry = PointProxy(5.0, 6.0, 2.0)
+        val geometry = pointProxy(5.0, 6.0, 2.0)
         feature.geometry = geometry
         val xyz = XyzProxy()
         xyz.tags = TagsProxy()
@@ -204,7 +204,7 @@ class DbReadWriteTest : DbCollectionTest() {
     @EnabledIf("runTest")
     fun readWithBuffer() {
 
-        val xyzPoint = PointProxy(4.0, 5.0)
+        val xyzPoint = pointProxy(4.0, 5.0)
 
         val readFeatures = ReadFeatures(
             collectionIds = arrayOf(collectionId),
@@ -228,7 +228,7 @@ class DbReadWriteTest : DbCollectionTest() {
     @EnabledIf("runTest")
     fun readWithBufferInMeters() {
 
-        val xyzPoint = PointProxy(4.0, 5.0)
+        val xyzPoint = pointProxy(4.0, 5.0)
 
         var readFeatures = ReadFeatures(
             collectionIds = arrayOf(collectionId),
@@ -258,7 +258,7 @@ class DbReadWriteTest : DbCollectionTest() {
         // given
         val featureToUpdate = NakshaFeatureProxy()
         featureToUpdate.id = SINGLE_FEATURE_ID
-        val xyzGeometry = PointProxy(5.0, 6.0, 2.0)
+        val xyzGeometry = pointProxy(5.0, 6.0, 2.0)
         featureToUpdate.geometry = xyzGeometry
         featureToUpdate.xyz()?.tags =
             TagsProxy(SINGLE_FEATURE_INITIAL_TAG, SINGLE_FEATURE_REPLACEMENT_TAG)
@@ -294,9 +294,9 @@ class DbReadWriteTest : DbCollectionTest() {
          */
         val featureToUpdate = NakshaFeatureProxy(SINGLE_FEATURE_ID)
         // different geometry
-        val newPoint1 = PointProxy(5.1, 6.0, 2.1)
-        val newPoint2 = PointProxy(5.15, 6.0, 2.15)
-        val lineString = LineStringProxy(newPoint1, newPoint2)
+        val newPoint1 = PointCoordsProxy(5.1, 6.0, 2.1)
+        val newPoint2 = PointCoordsProxy(5.15, 6.0, 2.15)
+        val lineString = lineStringProxy(newPoint1, newPoint2)
 
         featureToUpdate.geometry = lineString
         // This tag should replace the previous one!
@@ -352,7 +352,7 @@ class DbReadWriteTest : DbCollectionTest() {
         assertSame(XYZ_EXEC_UPDATED, xyz?.action)
         val geometry = feature.geometry
         assertNotNull(geometry)
-        val expectedGeometry = PointProxy(5.15, 6.0, 2.15)
+        val expectedGeometry = pointProxy(5.15, 6.0, 2.15)
         assertEquals(expectedGeometry, geometry?.coordinates?.proxy(PointCoordsProxy::class))
 
         val guid: Guid = row.row?.guid!!
@@ -465,7 +465,7 @@ class DbReadWriteTest : DbCollectionTest() {
 
 
         val feature = NakshaFeatureProxy((SINGLE_FEATURE_ID))
-        val geometry = PointProxy(5.0, 6.0, 2.0)
+        val geometry = pointProxy(5.0, 6.0, 2.0)
         feature.geometry = geometry
         val request = WriteRequest(arrayOf(WriteFeature(collectionId, feature)))
         try {
@@ -484,7 +484,7 @@ class DbReadWriteTest : DbCollectionTest() {
 
         // given
         val feature = NakshaFeatureProxy(SINGLE_FEATURE_ID)
-        feature.geometry = PointProxy(0.0, 0.0, 0.0)
+        feature.geometry = pointProxy(0.0, 0.0, 0.0)
         val request = WriteRequest(arrayOf(InsertFeature(collectionId, feature)))
         // when
         val result = session.execute(request)
@@ -500,7 +500,7 @@ class DbReadWriteTest : DbCollectionTest() {
         val readRequest = ReadFeatures.readFeaturesByIdRequest(collectionId, SINGLE_FEATURE_ID)
         val successResponse = session.execute(readRequest) as SuccessResponse
         assertEquals(
-            PointProxy(5.0, 6.0, 2.0),
+            pointProxy(5.0, 6.0, 2.0),
             successResponse.rows.first().getFeature()?.geometry
         )
     }
@@ -883,9 +883,9 @@ class DbReadWriteTest : DbCollectionTest() {
     @EnabledIf("runTest")
     fun intersectionSearch() {
         val feature = NakshaFeatureProxy("otherFeature")
-        val geometry = LineStringProxy(
-            PointProxy(4.0, 5.0),
-            PointProxy(4.0, 6.0)
+        val geometry = lineStringProxy(
+            PointCoordsProxy(4.0, 5.0),
+            PointCoordsProxy(4.0, 6.0)
         )
         feature.geometry = geometry
         val request = WriteRequest(

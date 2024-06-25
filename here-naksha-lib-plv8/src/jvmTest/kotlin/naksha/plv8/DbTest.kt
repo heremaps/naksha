@@ -39,7 +39,7 @@ abstract class DbTest {
         protected var SCHEMA = "unit-tests-schema"
 
         @JvmStatic
-        protected val defaultNakshaContext = NakshaContext(appId = "unit-test-app", su = false, author = "kotlin")
+        protected val defaultNakshaContext = NakshaContext.newInstance(appId = "unit-test-app", su = false, author = "kotlin")
 
         @JvmStatic
         @BeforeAll

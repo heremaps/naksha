@@ -6,10 +6,10 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 @JsExport
-class MultiPointsArrayCoordsProxy() : CoordinatesProxy<MultiPointProxy>(MultiPointProxy::class) {
+class LineStringCoordsProxy() : CoordinatesProxy<PointCoordsProxy>(PointCoordsProxy::class) {
 
     @JsName("of")
-    constructor(vararg coords: MultiPointProxy) : this() {
+    constructor(vararg coords: PointCoordsProxy) : this() {
         addAll(coords)
     }
 }
