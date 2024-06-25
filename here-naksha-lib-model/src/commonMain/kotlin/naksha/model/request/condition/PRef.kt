@@ -25,7 +25,6 @@ sealed class PRef {
         /**
          * Just for convenient usage in java
          */
-
         @JvmStatic fun id() = ID
         @JvmStatic fun appId() = APP_ID
         @JvmStatic fun author() = AUTHOR
@@ -35,6 +34,7 @@ sealed class PRef {
         @JvmStatic fun txnNext() = TXN_NEXT
         @JvmStatic fun tags() = TAGS
         @JvmStatic fun nonIndexedPref(vararg path: String) = NON_INDEXED_PREF(*path)
+        //TODO     log.atInfo().setMessage("NonIndexedPRef: {}").addArgument(path).log();
     }
 
 }
