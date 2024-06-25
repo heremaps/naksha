@@ -4,6 +4,7 @@ import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
 import naksha.base.BaseThreadLocal
 import naksha.base.Int64
 import naksha.base.Platform
+import naksha.base.PlatformUtil
 import naksha.model.NakshaContext.Fn
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -16,7 +17,7 @@ import kotlin.jvm.JvmStatic
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-open class NakshaContext(val streamId: String? = null, var appId: String = "") {
+open class NakshaContext {
     /**
      * Any interface needed for Java compatibility.
      */
@@ -24,27 +25,34 @@ open class NakshaContext(val streamId: String? = null, var appId: String = "") {
         fun nakshaContext(): NakshaContext
     }
 
-    fun interface Fn1 {
-        fun nakshaContext(streamId: String?): NakshaContext
-    }
+    private var _appId: String? = null
 
-
-//    private var _appId: String? = null
-//
-//    /**
-//     * The application identifier.
-//     */
-//    open var appId: String
-//        get() = _appId ?: throw IllegalStateException("AppId must not be null")
-//        set(value) {
-//            _appId = value
-//        }
-
+    /**
+     * The application identifier.
+     */
+    open var appId: String
+        get() = _appId ?: throw IllegalStateException("AppId must not be null")
+        set(value) {
+            _appId = value
+        }
 
     fun withAppId(appId: String): NakshaContext {
         this.appId = appId
         return this
     }
+
+    private var _streamId: String? = null
+
+    var streamId: String
+        get() {
+            var s =_streamId
+            if (s == null) {
+                s = PlatformUtil.randomString()
+                _streamId = s
+            }
+            return s
+        }
+        set(value) { _streamId = value }
 
     /**
      * The author.
@@ -95,7 +103,7 @@ open class NakshaContext(val streamId: String? = null, var appId: String = "") {
          */
         @JvmStatic
         @JsStatic
-        var constructorRef: Fn1 = Fn1(::NakshaContext)
+        var constructorRef: Fn = Fn(::NakshaContext)
 
         /**
          * Can be overridden by application code to modify the thread local context gathering.
@@ -112,8 +120,9 @@ open class NakshaContext(val streamId: String? = null, var appId: String = "") {
          */
         @JvmStatic
         @JsStatic
-        open fun newInstance(streamId: String? = null, appId: String, author: String? = null, su: Boolean = false): NakshaContext {
-            val context = constructorRef.nakshaContext(streamId)
+        open fun newInstance(streamId: String, appId: String, author: String? = null, su: Boolean = false): NakshaContext {
+            val context = constructorRef.nakshaContext()
+            context.streamId = streamId
             context.appId = appId
             context.author = author
             context.su = su
