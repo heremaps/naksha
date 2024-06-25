@@ -20,7 +20,8 @@ class JvmPlv8Storage(private val id: String, private val connection: Connection,
         return if (row.feature != null) {
             // FIXME
             val featureReader = JbMapFeature(JbDictManager()).mapBytes(row.feature!!).reader
-            JbMap().mapReader(featureReader).toIMap().proxy(NakshaFeatureProxy::class)
+            val feature = JbMap().mapReader(featureReader).toIMap().proxy(NakshaFeatureProxy::class)
+            feature
         } else {
             null
         }

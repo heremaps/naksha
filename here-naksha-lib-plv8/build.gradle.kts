@@ -39,10 +39,6 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
-        commonMain {
-            dependencies {
-            }
-        }
         jvmMain {
             jvmToolchain(11)
             dependencies {

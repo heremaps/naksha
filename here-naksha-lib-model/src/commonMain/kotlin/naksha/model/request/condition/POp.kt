@@ -168,7 +168,7 @@ class POp internal constructor(val op: POpType, val propertyRef: PRef, val value
          * @return
          */
 
-        fun contains(propertyRef: PRef, value: Any?): Op {
+        fun contains(propertyRef: PRef, value: Any?): POp {
             return POp(CONTAINS, propertyRef, value)
         }
     }
