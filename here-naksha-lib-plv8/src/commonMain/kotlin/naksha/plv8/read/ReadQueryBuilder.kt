@@ -139,6 +139,7 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
             PRef.TXN -> COL_TXN
             PRef.TXN_NEXT -> COL_TXN_NEXT
             PRef.TAGS -> COL_TAGS
+            is PRef.NON_INDEXED_PREF -> (pop.propertyRef as PRef.NON_INDEXED_PREF).path.joinToString { "->" }
         }
 
         whereSql.append(col)
