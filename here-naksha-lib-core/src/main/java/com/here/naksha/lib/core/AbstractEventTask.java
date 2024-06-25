@@ -61,7 +61,7 @@ public abstract class AbstractEventTask<EVENT extends Event>
   @Override
   @Deprecated
   protected @NotNull XyzResponse errorResponse(@NotNull Throwable throwable) {
-    return new ErrorResponse(throwable, context().streamId());
+    return new ErrorResponse(throwable, context().getStreamId());
   }
 
   /**

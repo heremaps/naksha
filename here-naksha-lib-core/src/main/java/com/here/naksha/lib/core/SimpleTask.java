@@ -55,9 +55,8 @@ public class SimpleTask<RESULT> extends AbstractTask<RESULT, SimpleTask<RESULT>>
   public SimpleTask(@NotNull String streamId) {
     this(
         null,
-        new NakshaContext(streamId)
-            .withAppId(currentContext().getAppId())
-            .withAuthor(currentContext().getAuthor()));
+        NakshaContext.newInstance(
+            streamId, currentContext().getAppId(), currentContext().getAuthor(), false));
   }
 
   /**

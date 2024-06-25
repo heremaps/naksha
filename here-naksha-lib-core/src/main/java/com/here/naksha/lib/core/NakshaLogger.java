@@ -84,7 +84,7 @@ public final class NakshaLogger implements Logger {
     final StringBuilder sb = this.sb;
     sb.setLength(0);
     sb.append("[");
-    sb.append(context.streamId());
+    sb.append(context.getStreamId());
     sb.append("] ");
     long micros = NanoTime.timeSinceStart(TimeUnit.MICROSECONDS);
     assert micros >= 0;
@@ -127,7 +127,7 @@ public final class NakshaLogger implements Logger {
 
   @Override
   public String getName() {
-    return context.streamId();
+    return context.getStreamId();
   }
 
   @Override
