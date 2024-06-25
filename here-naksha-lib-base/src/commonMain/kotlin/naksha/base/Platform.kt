@@ -200,6 +200,12 @@ expect class Platform {
         fun newMap(vararg entries: Any?): PlatformMap
 
         /**
+         * Create a new concurrent map.
+         * @return The concurrent map.
+         */
+        fun <K : Any, V : Any> newCMap(): CMap<K, V>
+
+        /**
          * Creates a new byte-array of the given size.
          * @param size The size in byte.
          * @return The byte-array of the given size.
@@ -337,11 +343,25 @@ expect class Platform {
         fun hashCodeOf(o: Any?): Int
 
         /**
-         * Creates a new instance of the given type.
+         * Creates a new initialized instance of the given type, using the parameterless constructor.
+         * @param klass The type of which to create a new instance.
+         * @return The new instance.
+         * @throws IllegalArgumentException If there is no parameterless constructor.
+         */
+        fun <T : Any> newInstanceOf(klass: KClass<T>): T
+
+        /**
+         * Creates a new instance of the given type, bypassing the constructor, so it returns the uninitialized class.
          * @param klass The type of which to create a new instance.
          * @return The new instance.
          */
-        fun <T : Any> newInstanceOf(klass: KClass<T>): T
+        fun <T : Any> allocateInstance(klass: KClass<T>): T
+
+        /**
+         * Forces the class loader to initialize the given Kotlin class.
+         * @param klass The type to initialize.
+         */
+        fun initializeKlass(klass: KClass<*>)
 
         /**
          * Serialize the given value to JSON.

@@ -2,6 +2,8 @@
 
 package naksha.base
 
+import kotlin.reflect.KClass
+
 //inline operator fun PlatformMap.contains(key: String): Boolean = Int64Api.has(this, key)
 //inline operator fun PlatformObject.contains(key: Symbol): Boolean = Platform.has(this, key)
 //
@@ -198,3 +200,5 @@ inline operator fun Double.compareTo(other: Int64): Int {
 inline fun Double.toInt64RawBits(value: Double): Int64 = Platform.toInt64RawBits(value)
 inline fun Double.toLongRawBits(value: Double): Long = Platform.toInt64RawBits(value).toLong()
 inline fun Long.toInt64(): Int64 = Platform.longToInt64(this)
+
+inline fun <K: Any, V:Any> CMap(): CMap<K, V> = Platform.newCMap()

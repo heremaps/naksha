@@ -4,9 +4,10 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 
-class CustomSerializer : JsonSerializer<Any>() {
+object CustomSerializer : JsonSerializer<Any>() {
     override fun serialize(value: Any?, gen: JsonGenerator?, serializers: SerializerProvider?) {
-        //TODO implement
+        // TODO
+        // - If the value is JsEnum, serialize using valueOf()
         gen?.writeStartObject()
         gen?.writeEndObject()
     }
