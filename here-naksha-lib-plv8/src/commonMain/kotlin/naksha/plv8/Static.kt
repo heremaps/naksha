@@ -32,20 +32,21 @@ object Static {
      * Config for naksha_collection
      */
     @JvmStatic
-    internal val nakshaCollectionConfig = NakshaCollectionProxy(
-        storageClass = null,
-        partitions = PARTITION_COUNT_NONE,
-        autoPurge = false,
-        disableHistory = false,
-        id = NKC_TABLE
-    )
+    internal val nakshaCollectionConfig by lazy { NakshaCollectionProxy(
+            storageClass = null,
+            partitions = PARTITION_COUNT_NONE,
+            autoPurge = false,
+            disableHistory = false,
+            id = NKC_TABLE
+        )
+    }
 
     /**
      * Array to create a pseudo GeoHash, which is BASE-32 encoded.
      */
     @JvmStatic
     internal val BASE32 = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
-            'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
+        'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
 
     /**
      * Used to debug.
@@ -129,7 +130,7 @@ object Static {
      * The lock-id for the transaction number sequence.
      */
     @JvmStatic
-    val TXN_LOCK_ID = lockId("naksha_txn_seq")
+    val TXN_LOCK_ID by lazy { lockId("naksha_txn_seq") }
 
     /**
      * Returns the lock-id for the given name.
@@ -418,7 +419,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
      */
     @JvmStatic
     fun yearOf(epochMillis: Int64): Int =
-            Instant.fromEpochMilliseconds(epochMillis.toLong()).toLocalDateTime(TimeZone.UTC).year
+        Instant.fromEpochMilliseconds(epochMillis.toLong()).toLocalDateTime(TimeZone.UTC).year
 
     /**
      * Add the before and after triggers.

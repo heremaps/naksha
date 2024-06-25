@@ -22,7 +22,7 @@ open class JvmPlv8ReadSession(
 
     protected val nakshaSession: NakshaSession = NakshaSession(
         sql = JvmPlv8Sql(connection),
-        schema = "FIXME", // FIXME
+        schema = storage.schema, // FIXME
         storage = storage,
         appName = "FIXME", // FIXME
         streamId = "FIXME", // FIXME

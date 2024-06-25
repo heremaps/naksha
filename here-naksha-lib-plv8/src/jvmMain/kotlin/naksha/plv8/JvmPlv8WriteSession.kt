@@ -28,7 +28,7 @@ class JvmPlv8WriteSession(
     }
 
     override fun commit() {
-        TODO("Not yet implemented")
+        nakshaSession.sql.execute("commit")
     }
 
     override fun rollback() {

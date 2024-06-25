@@ -14,11 +14,11 @@ class Plv8TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableRes
 
     companion object {
         private val logger = LoggerFactory.getLogger(Plv8TestContainer::class.java)
-        private lateinit var postgreSQLContainer: GenericContainer<*>
+        lateinit var postgreSQLContainer: GenericContainer<*>
         private var existingUrl: String? = null
         lateinit var url: String
         lateinit var schema: String
-        private var initialized = false
+        var initialized = false
     }
 
     private fun architecture(): String {
@@ -41,7 +41,7 @@ class Plv8TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableRes
         // Run docker locally with env parameter: POSTGRES_PASSWORD=password
         // NAKSHA_TEST_PSQL_DB_URL=jdbc:postgresql://localhost:5400/postgres?user=postgres&password=password&schema=test_schema
         existingUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
-        schema = "test_schema"
+        schema = "unit-tests-schema"
         if (existingUrl != null) {
             url = existingUrl!!
             // TODO: Parse the url to extract the schema!
