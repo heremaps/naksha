@@ -294,6 +294,9 @@ Object.assign(BigInt, {
         }
 
         @JsStatic
+        actual fun <K: Any, V: Any> newCMap(): CMap<K, V> = TODO("Make an implementation of CMap")
+
+        @JsStatic
         actual fun newList(vararg entries: Any?): PlatformList {
             val array = js("[]").unsafeCast<PlatformList>()
             if (entries.isNotEmpty()) {
@@ -516,10 +519,34 @@ return new DataView(byteArray.buffer, offset, size);
          * Creates a new instance of the given type.
          * @param klass The type of which to create a new instance.
          * @return The new instance.
+         * @throws IllegalArgumentException If the given class does not have a parameterless constructor.
          */
         @JsStatic
         actual fun <T : Any> newInstanceOf(klass: KClass<T>): T {
-            TODO("Not yet implemented newInstanceOf")
+            try {
+                val constructor = klass.js
+                return js("new constructor()").unsafeCast<T>()
+            } catch (e: Exception) {
+                if (e is IllegalArgumentException) throw e
+                throw IllegalArgumentException(e)
+            }
+        }
+
+        /**
+         * Creates a new instance of the given type, bypassing the constructor, so it returns the uninitialized class.
+         * @param klass The type of which to create a new instance.
+         * @return The new instance.
+         */
+        @JsStatic
+        actual fun <T : Any> allocateInstance(klass: KClass<T>): T {
+            val constructor = klass.js
+            return js("Object.create(constructor.prototype)").unsafeCast<T>()
+        }
+
+        @JsStatic
+        actual fun initializeKlass(klass: KClass<*>) {
+            val constructor = klass.js
+            js("Object.create(constructor.prototype)")
         }
 
         /**
@@ -794,5 +821,6 @@ for (i=0; i < msg_arr.length; i++) {
         ): ByteArray {
             TODO("Not yet implemented gzipInflate")
         }
+
     }
 }

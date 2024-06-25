@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import net.jpountz.lz4.LZ4Factory
 import org.slf4j.LoggerFactory
@@ -37,21 +36,23 @@ actual class Platform {
             addAbstractTypeMapping(MutableMap::class.java, JvmMap::class.java)
             addAbstractTypeMapping(List::class.java, JvmList::class.java)
             addAbstractTypeMapping(MutableList::class.java, JvmList::class.java)
-        }
-            .setDeserializerModifier(object : BeanDeserializerModifier() {
-            override fun modifyDeserializer(
-                config: DeserializationConfig,
-                beanDesc: BeanDescription,
-                deserializer: JsonDeserializer<*>
-            ): JsonDeserializer<*> {
-                return if (beanDesc.beanClass == Number::class.java || beanDesc.beanClass == String::class.java) {
-                    CustomDeserializer()
-                } else {
-                    // If no special deserialization is required, delegate to the default deserializer
-                    deserializer
+            // TODO: Fix me!
+            //addSerializer(CustomSerializer)
+            setDeserializerModifier(object : BeanDeserializerModifier() {
+                override fun modifyDeserializer(
+                    config: DeserializationConfig,
+                    beanDesc: BeanDescription,
+                    deserializer: JsonDeserializer<*>
+                ): JsonDeserializer<*> {
+                    return if (beanDesc.beanClass == Number::class.java || beanDesc.beanClass == String::class.java) {
+                        CustomDeserializer
+                    } else {
+                        // If no special deserialization is required, delegate to the default deserializer
+                        deserializer
+                    }
                 }
-            }
-        })
+            })
+        }
         //TODO implement the logic that will switch serializer, and the CustomSerializer itself
 //            .setSerializerModifier(object : BeanSerializerModifier() {
 //                override fun modifySerializer(
@@ -189,6 +190,22 @@ actual class Platform {
         @JvmStatic
         actual fun <T : Any> klassOf(o: T): KClass<out T> = o::class
 
+        /**
+         * Returns the Kotlin class of the given Java class.
+         * @param javaClass The Java class.
+         * @return The Kotlin class.
+         */
+        @JvmStatic
+        fun <T : Any> klassOf(javaClass: Class<out T>): KClass<out T> = javaClass.kotlin
+
+        /**
+         * Returns the Java class of the given Kotlin class.
+         * @param kotlinKlass The Kotlin class.
+         * @return The Java class.
+         */
+        @JvmStatic
+        fun <T : Any> classOf(kotlinKlass: KClass<out T>): Class<out T> = kotlinKlass.java
+
 //        @JvmStatic
 //        actual fun <T : Proxy> proxy(o: Any, klass: OldBaseKlass<T>, vararg args: Any?): T {
 //            val data = toJvmObject(o)
@@ -225,6 +242,9 @@ actual class Platform {
 
         @JvmStatic
         actual fun newMap(vararg entries: Any?): PlatformMap = JvmMap(*entries)
+
+        @JvmStatic
+        actual fun <K : Any, V : Any> newCMap(): CMap<K, V> = JvmCMap()
 
         @JvmStatic
         actual fun newList(vararg entries: Any?): PlatformList = JvmList(*entries)
@@ -375,7 +395,16 @@ actual class Platform {
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
 
         @JvmStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<T>): T = klass.primaryConstructor!!.call()
+        actual fun <T : Any> newInstanceOf(klass: KClass<T>): T = klass.primaryConstructor?.call() ?: throw IllegalArgumentException()
+
+        @JvmStatic
+        @Suppress("UNCHECKED_CAST")
+        actual fun <T: Any> allocateInstance(klass: KClass<T>): T = unsafe.allocateInstance(klass.java) as T
+
+        @JvmStatic
+        actual fun initializeKlass(klass: KClass<*>) {
+            unsafe.ensureClassInitialized(klass.java)
+        }
 
         internal val toJsonOptions = ThreadLocal<ToJsonOptions>()
 
