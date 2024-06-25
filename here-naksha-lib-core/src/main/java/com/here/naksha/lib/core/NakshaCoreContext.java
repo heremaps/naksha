@@ -48,7 +48,7 @@ public class NakshaCoreContext extends NakshaContext {
     init();
   }
 
-  protected NakshaCoreContext(String streamId) {}
+  protected NakshaCoreContext() {}
 
   /**
    * Returns the current core-context. The method will return the same as {@link NakshaContext#currentContext()}.
