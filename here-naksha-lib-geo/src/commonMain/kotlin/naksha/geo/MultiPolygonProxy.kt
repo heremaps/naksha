@@ -13,12 +13,12 @@ open class MultiPolygonProxy() : GeometryProxy() {
 
     @JsName("ofPolygons")
     constructor(vararg polygons: PolygonProxy) : this() {
-        this.addAll(polygons.map { it.coordinates })
+        this.coordinates = MultiPolygonCoordsProxy(*polygons.map { it.coordinates!! }.toTypedArray())
     }
 
     @JsName("ofPolygonsCoords")
     constructor(vararg coords: PolygonCoordsProxy) : this() {
-        this.addAll(coords)
+        this.coordinates = MultiPolygonCoordsProxy(*coords)
     }
 
     companion object {

@@ -13,12 +13,12 @@ open class MultiPointProxy() : GeometryProxy() {
 
     @JsName("ofPoints")
     constructor(vararg points: PointProxy) : this() {
-        this.addAll(points.map { it.coordinates })
+        this.coordinates = MultiPointCoordsProxy(*points.map { it.coordinates!! }.toTypedArray())
     }
 
     @JsName("ofCoords")
     constructor(vararg coords: PointCoordsProxy) : this() {
-        this.addAll(coords)
+        this.coordinates = MultiPointCoordsProxy(*coords)
     }
 
     companion object {

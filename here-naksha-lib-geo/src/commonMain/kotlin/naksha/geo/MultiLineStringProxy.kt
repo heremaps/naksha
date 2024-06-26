@@ -13,12 +13,12 @@ open class MultiLineStringProxy() : GeometryProxy() {
 
     @JsName("ofLineStrings")
     constructor(vararg lineStrings: LineStringProxy) : this() {
-        this.addAll(lineStrings.map { it.coordinates })
+        this.coordinates = MultiLineStringCoordsProxy(*lineStrings.map { it.coordinates!! }.toTypedArray())
     }
 
     @JsName("ofLineStringsCoords")
     constructor(vararg coords: LineStringCoordsProxy) : this() {
-        this.addAll(coords)
+        this.coordinates = MultiLineStringCoordsProxy(*coords)
     }
 
     companion object {

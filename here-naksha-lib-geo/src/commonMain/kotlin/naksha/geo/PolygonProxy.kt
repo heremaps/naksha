@@ -13,12 +13,12 @@ open class PolygonProxy(): GeometryProxy() {
 
     @JsName("ofLineStrings")
     constructor(vararg lineStrings: LineStringProxy) : this() {
-        this.addAll(lineStrings.map { it.coordinates })
+        this.coordinates = PolygonCoordsProxy(*lineStrings.map { it.coordinates!! }.toTypedArray())
     }
 
     @JsName("ofLineStringsCoords")
     constructor(vararg coords: LineStringCoordsProxy) : this() {
-        this.addAll(coords)
+        this.coordinates = PolygonCoordsProxy(*coords)
     }
 
     companion object {

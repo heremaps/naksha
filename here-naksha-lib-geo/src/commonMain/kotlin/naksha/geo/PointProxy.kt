@@ -12,7 +12,7 @@ open class PointProxy() : GeometryProxy() {
 
     @JsName("of")
     constructor(vararg coords: Double?) : this() {
-        this.addAll(coords)
+        this.coordinates = PointCoordsProxy(*coords)
     }
 
     companion object{
