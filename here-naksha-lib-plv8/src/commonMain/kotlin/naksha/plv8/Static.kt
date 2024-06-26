@@ -9,11 +9,11 @@ import naksha.base.Fnv1a32
 import naksha.base.Fnv1a64
 import naksha.base.Int64
 import naksha.base.Platform
-import naksha.jbon.NakshaTxn
 import naksha.jbon.asArray
 import naksha.model.NakshaCollectionProxy
 import naksha.model.NakshaCollectionProxy.Companion.DEFAULT_GEO_INDEX
 import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
+import naksha.model.Txn
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -32,20 +32,21 @@ object Static {
      * Config for naksha_collection
      */
     @JvmStatic
-    internal val nakshaCollectionConfig = NakshaCollectionProxy(
-        storageClass = null,
-        partitions = PARTITION_COUNT_NONE,
-        autoPurge = false,
-        disableHistory = false,
-        id = NKC_TABLE
-    )
+    internal val nakshaCollectionConfig by lazy { NakshaCollectionProxy(
+            storageClass = null,
+            partitions = PARTITION_COUNT_NONE,
+            autoPurge = false,
+            disableHistory = false,
+            id = NKC_TABLE
+        )
+    }
 
     /**
      * Array to create a pseudo GeoHash, which is BASE-32 encoded.
      */
     @JvmStatic
     internal val BASE32 = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
-            'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
+        'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
 
     /**
      * Used to debug.
@@ -129,7 +130,7 @@ object Static {
      * The lock-id for the transaction number sequence.
      */
     @JvmStatic
-    val TXN_LOCK_ID = lockId("naksha_txn_seq")
+    val TXN_LOCK_ID by lazy { lockId("naksha_txn_seq") }
 
     /**
      * Returns the lock-id for the given name.
@@ -418,7 +419,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
      */
     @JvmStatic
     fun yearOf(epochMillis: Int64): Int =
-            Instant.fromEpochMilliseconds(epochMillis.toLong()).toLocalDateTime(TimeZone.UTC).year
+        Instant.fromEpochMilliseconds(epochMillis.toLong()).toLocalDateTime(TimeZone.UTC).year
 
     /**
      * Add the before and after triggers.
@@ -482,8 +483,8 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         val parentNameQuoted = sql.quoteIdent(parentName)
         val hstPartName = "${parentName}_${year}"
         val hstPartNameQuoted = sql.quoteIdent(hstPartName)
-        val start = NakshaTxn.of(year, 0, 0, NakshaTxn.SEQ_MIN).value
-        val end = NakshaTxn.of(year, 12, 31, NakshaTxn.SEQ_MAX).value
+        val start = Txn.of(year, 0, 0, Txn.SEQ_MIN).value
+        val end = Txn.of(year, 12, 31, Txn.SEQ_MAX).value
         var query = pgTableInfo.CREATE_TABLE
         query += "IF NOT EXISTS $hstPartNameQuoted PARTITION OF $parentNameQuoted FOR VALUES FROM ($start) TO ($end) "
         if (pgTableInfo.partitionCount.isPartitioningEnabled()) {

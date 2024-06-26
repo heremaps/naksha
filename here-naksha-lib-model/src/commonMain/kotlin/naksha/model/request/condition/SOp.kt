@@ -1,6 +1,6 @@
 package naksha.model.request.condition
 
-import naksha.model.Geometry
+import naksha.geo.GeometryProxy
 import naksha.model.request.condition.geometry.GeometryTransformation
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -12,7 +12,7 @@ import kotlin.js.JsExport
 @JsExport
 class SOp(
     val op: SOpType,
-    val geometry: naksha.model.Geometry,
+    val geometry: GeometryProxy,
     val geometryTransformation: GeometryTransformation?
 ) : Op {
 
@@ -25,7 +25,7 @@ class SOp(
          * @param geometry The geometry against which existing features should be tested for intersection.
          * @return The operation describing this.
          */
-        fun intersects(geometry: naksha.model.Geometry): SOp {
+        fun intersects(geometry: GeometryProxy): SOp {
             return return SOp(
                 SOpType.INTERSECTS,
                 geometry,
@@ -46,7 +46,7 @@ class SOp(
          * @return
          */
         fun intersectsWithTransformation(
-            geometry: Geometry,
+            geometry: GeometryProxy,
             geometryTransformation: GeometryTransformation
         ): SOp {
             return SOp(

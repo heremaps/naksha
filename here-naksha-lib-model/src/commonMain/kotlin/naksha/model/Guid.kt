@@ -1,7 +1,9 @@
 package naksha.model
 
+import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmStatic
 
 
 /**
@@ -11,7 +13,7 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class Guid (
+class Guid(
     val storageId: String,
     val collectionId: String,
     val featureId: String,
@@ -26,5 +28,27 @@ class Guid (
     override fun toString(): String {
         if (!this::_string.isInitialized) _string = "$storageId:$collectionId:$featureId:$luid"
         return _string
+    }
+
+    companion object {
+        @JvmStatic
+        fun fromString(s: String): Guid {
+            val values = s.split(':')
+            check(values.size == 8) { "invalid naksha uuid $s" }
+            return Guid(
+                values[0],
+                values[1],
+                values[2],
+                Luid(
+                    Txn.of(
+                        values[3].toInt(),
+                        values[4].toInt(),
+                        values[5].toInt(),
+                        Int64(values[6].toLong()),
+                    ),
+                    values[7].toInt(),
+                )
+            )
+        }
     }
 }
