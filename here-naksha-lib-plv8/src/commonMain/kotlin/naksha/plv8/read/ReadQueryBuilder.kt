@@ -1,6 +1,7 @@
 package naksha.plv8.read
 
 import naksha.model.Flags.GEO_TYPE_TWKB
+import naksha.model.Guid
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadRequest
@@ -139,6 +140,7 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
             PRef.TXN -> COL_TXN
             PRef.TXN_NEXT -> COL_TXN_NEXT
             PRef.TAGS -> COL_TAGS
+            PRef.UUID -> return customUuidOp(whereSql, paramsList, pop)
             is PRef.NON_INDEXED_PREF -> (pop.propertyRef as PRef.NON_INDEXED_PREF).path.joinToString { "->" }
         }
 
@@ -171,6 +173,23 @@ internal class ReadQueryBuilder(val sql: IPlv8Sql) {
                 paramsList.add(sop.geometry)
             }
         }
+    }
+
+    /**
+     * Custom implementation of UUID search. UUID is kept in database in set of columns.
+     * To query UUID we have to query particular columns.
+     * Only `=` operation is allowed.
+     */
+    private fun customUuidOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: POp) {
+        check(pop.value != null)
+        check(pop.op == POpType.EQ)
+
+        val guid = Guid.fromString(pop.value as String)
+        val uuidOp = LOp.and(
+            POp.eq(PRef.TXN, guid.luid.txn.value),
+            POp.eq(PRef.UID, guid.luid.uid)
+        )
+        resolveOps(whereSql, paramsList, uuidOp)
     }
 
     /**

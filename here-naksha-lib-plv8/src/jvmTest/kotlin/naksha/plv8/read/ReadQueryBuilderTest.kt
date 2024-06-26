@@ -10,8 +10,8 @@ import naksha.model.request.condition.LOp.Companion.or
 import naksha.model.request.condition.POp.Companion.eq
 import naksha.model.request.condition.POp.Companion.isNotNull
 import naksha.model.request.condition.POp.Companion.lt
-import naksha.model.request.condition.PRef.ID
-import naksha.model.request.condition.PRef.UID
+import naksha.model.request.condition.PRef
+import naksha.model.request.condition.PRef.*
 import naksha.model.request.condition.SOp.Companion.intersects
 import naksha.model.request.condition.SOp.Companion.intersectsWithTransformation
 import naksha.model.request.condition.geometry.BufferTransformation
@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.eq
 
 @Suppress("UNCHECKED_CAST")
 class ReadQueryBuilderTest {
@@ -361,6 +362,24 @@ class ReadQueryBuilderTest {
             UNION ALL
             (SELECT id, type, geo_ref, flags FROM "naksha~collections${'$'}del" WHERE id in $2)
             """.trimIndent().trimMargin(),
+            removeLimitWrapper(sql)
+        )
+    }
+
+    @Test
+    fun testUuidQuery() {
+        // given
+        val uuid = "test_storage:building_delta:feature1:2024:01:23:1:0"
+
+        val req = readIdsBy("foo", eq(UUID, uuid))
+
+        // when
+        val (sql, params) = builder.build(req)
+
+        // then
+        assertEquals(2, params.size)
+        assertEquals(
+            """(SELECT id, type, geo_ref, flags FROM "foo" WHERE (txn=$1 AND uid=$2))""",
             removeLimitWrapper(sql)
         )
     }
