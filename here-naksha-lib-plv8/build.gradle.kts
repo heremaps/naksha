@@ -95,8 +95,18 @@ configure<JavaPluginExtension> {
 }
 
 tasks {
-    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack")
+    val jsProductionLibraryCompileSync = getByName<Task>("jsProductionLibraryCompileSync")
+    val jsProductionExecutableCompileSync = getByName<Task>("jsProductionExecutableCompileSync")
     val browserDistribution = getByName<Task>("jsBrowserDistribution")
+    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack") {
+        dependsOn(jsProductionLibraryCompileSync)
+    }
+    getByName<Task>("jsNodeProductionLibraryDistribution") {
+        dependsOn(jsProductionExecutableCompileSync)
+    }
+    getByName<Task>("jsBrowserProductionLibraryDistribution") {
+        dependsOn(jsProductionExecutableCompileSync)
+    }
     getByName<Test>("jvmTest") {
         useJUnitPlatform()
         maxHeapSize = "8g"
