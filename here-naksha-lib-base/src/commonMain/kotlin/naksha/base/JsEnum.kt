@@ -80,7 +80,8 @@ abstract class JsEnum protected constructor(value: Any?) : CharSequence {
     private var string: String? = null
 
     /**
-     * If the enumeration value is predefined or was generated on-the-fly.
+     * If the enumeration value is predefined or was generated on-the-fly. This can be used to reject custom
+     * enumeration values.
      */
     var isDefined: Boolean = false
         private set
