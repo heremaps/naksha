@@ -36,6 +36,11 @@ class ReadCollections(
      */
     noGeometry: Boolean = false,
     /**
+     * @see Request.noGeoRef
+     * default: false
+     */
+    noGeoRef: Boolean = false,
+    /**
      * @see Request.noMeta
      * default: false
      */
@@ -50,5 +55,5 @@ class ReadCollections(
      * default: empty
      */
     resultFilter: Array<IReadRowFilter> = emptyArray()
-) : ReadRequest(limit, noFeature, noGeometry, noMeta, noTags, resultFilter) {
+) : ReadRequest(limit, noFeature, noGeometry, noGeoRef, noMeta, noTags, resultFilter) {
 }

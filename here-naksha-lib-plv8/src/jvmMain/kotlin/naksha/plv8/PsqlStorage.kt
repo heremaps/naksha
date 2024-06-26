@@ -5,14 +5,26 @@ import naksha.base.PlatformObject
 import naksha.jbon.*
 import naksha.model.*
 import naksha.model.response.Row
-import java.sql.Connection
 
+/**
+ * The Java implementation of the [IStorage] interface. This storage class is extended in `here-naksha-storage-psql`,
+ * which has a `PsqlStoragePlugin` class, which implements the `Plugin` contract (internal contract in _Naksha-Hub_) and
+ * makes the storage available to **Naksha-Hub** as storage plugin. It parses the configuration from feature properties
+ * given, and calls this constructor.
+ * @constructor Creates a new PSQL storage.
+ * @property id the identifier of the storage.
+ * @property pgCluster the PostgresQL instances used by this storage.
+ * @property schema the schema to use.
+ */
+open class PsqlStorage(val id: String, val pgCluster: PsqlCluster, val schema: String) : IStorage {
 
-class JvmPlv8Storage(private val id: String, private val connection: Connection, val schema:String) : IStorage {
     override fun id(): String = id
 
     override fun initStorage(params: Map<String, *>?) {
-        JvmPlv8Env(this).install(connection, 0, schema, id, appName = "fixme")
+        val conn = pgCluster.getConnection(PsqlConnectOptions(false))
+        conn.use {
+            JvmPlv8Env(this).install(conn, 0, schema, id, appName = "fixme")
+        }
     }
 
     override fun convertRowToFeature(row: Row): NakshaFeatureProxy {
@@ -44,17 +56,11 @@ class JvmPlv8Storage(private val id: String, private val connection: Connection,
     }
 
     override fun newReadSession(context: NakshaContext, useMaster: Boolean): IReadSession {
-        TODO("Not yet implemented")
+        return PsqlWriteSession(this, PsqlConnectOptions(true), context)
     }
 
     override fun newWriteSession(context: NakshaContext): IWriteSession {
-        return JvmPlv8WriteSession(
-            connection,
-            this,
-            context,
-            stmtTimeout = 2000,
-            lockTimeout = 2000
-        )
+        return PsqlWriteSession(this, PsqlConnectOptions(false), context)
     }
 
     override fun close() {

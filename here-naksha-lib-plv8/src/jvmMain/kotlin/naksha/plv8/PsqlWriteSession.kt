@@ -6,15 +6,19 @@ import naksha.model.NakshaFeatureProxy
 import naksha.model.request.Request
 import naksha.model.request.WriteRequest
 import naksha.model.response.Response
-import java.sql.Connection
 
-class JvmPlv8WriteSession(
-    connection: Connection,
-    storage: JvmPlv8Storage,
-    context: NakshaContext,
-    stmtTimeout: Int,
-    lockTimeout: Int
-) : JvmPlv8ReadSession(connection, storage, context, stmtTimeout, lockTimeout), IWriteSession {
+class PsqlWriteSession internal constructor(
+    storage: PsqlStorage,
+    options: PsqlConnectOptions,
+    context: NakshaContext
+) : PsqlReadSession(storage, context, options, true),
+    IWriteSession {
+
+    override var options: PsqlConnectOptions = options
+        set(value) {
+            require(!value.readOnly) {"Can't change write session to read-only connections"}
+            field = value
+        }
 
     override fun writeFeature(feature: NakshaFeatureProxy): Response {
         TODO("Not yet implemented")
@@ -32,10 +36,13 @@ class JvmPlv8WriteSession(
     }
 
     override fun rollback() {
-        TODO("Not yet implemented")
+        nakshaSession.sql.execute("commit")
     }
 
     override fun close() {
-        TODO("Not yet implemented")
+        if (!_closed) {
+            rollback()
+            super.close()
+        }
     }
 }

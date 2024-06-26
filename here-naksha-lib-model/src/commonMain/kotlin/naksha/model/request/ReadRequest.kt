@@ -23,6 +23,11 @@ abstract class ReadRequest(
      */
     noGeometry: Boolean = false,
     /**
+     * @see Request.noGeoRef
+     * default: false
+     */
+    noGeoRef: Boolean = false,
+    /**
      * @see Request.noMeta
      * default: false
      */
@@ -38,7 +43,7 @@ abstract class ReadRequest(
      */
     resultFilter: Array<IReadRowFilter> = emptyArray()
 
-) : Request(noFeature, noGeometry, noMeta, noTags, resultFilter) {
+) : Request(noFeature, noGeometry, noGeoRef, noMeta, noTags, resultFilter) {
 
     companion object {
         var DEFAULT_LIMIT = 100_000

@@ -23,7 +23,7 @@ import java.sql.Connection
  *
  * This class extends the standard [JvmEnv] by SQL support to simulate the internal database connection of PLV8.
  */
-class JvmPlv8Env(val storage: JvmPlv8Storage) {
+class JvmPlv8Env(val storage: PsqlStorage) {
     // ============================================================================================================
     //                             Additional code only available in Java
     // ============================================================================================================
@@ -111,9 +111,9 @@ class JvmPlv8Env(val storage: JvmPlv8Storage) {
      * @param conn The connection to use for the installation.
      * @param version The Naksha Version.
      */
-    fun install(conn: Connection, version: Long, schema: String, storageId: String, appName: String) {
-        conn.autoCommit = false
-        val sql = JvmPgConnection(conn)
+    fun install(conn: PsqlConnection, version: Long, schema: String, storageId: String, appName: String) {
+        conn.pgConnection.autoCommit = false
+        val sql = JvmPgConnection(conn.pgConnection)
         val schemaQuoted = sql.quoteIdent(schema)
         sql.execute("""
 CREATE SCHEMA IF NOT EXISTS $schemaQuoted;
@@ -150,7 +150,7 @@ module.exports = module.exports["here-naksha-lib-plv8"];
         executeSqlFromResource(sql, "/naksha.sql", replacements)
         executeSqlFromResource(sql, "/jbon.sql")
         Static.createBaseInternalsIfNotExists(sql, schema, schemaOid)
-        createInternalsIfNotExists(conn, schema, appName)
+        createInternalsIfNotExists(conn.pgConnection, schema, appName)
         conn.commit()
     }
 

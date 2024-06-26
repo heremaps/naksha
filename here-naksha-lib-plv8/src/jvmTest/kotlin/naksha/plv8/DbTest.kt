@@ -1,7 +1,9 @@
 package naksha.plv8
 
 import Plv8TestContainer
-import com.here.naksha.lib.plv8.naksha.plv8.JvmPlv8Storage
+import com.here.naksha.lib.plv8.naksha.plv8.PsqlCluster
+import com.here.naksha.lib.plv8.naksha.plv8.PsqlInstance
+import com.here.naksha.lib.plv8.naksha.plv8.PsqlStorage
 import naksha.model.IReadSession
 import naksha.model.IStorage
 import naksha.model.IWriteSession
@@ -40,6 +42,9 @@ abstract class DbTest {
         protected val defaultNakshaContext = NakshaContext.newInstance(appId = "unit-test-app", su = false, author = "kotlin")
 
         @JvmStatic
+        protected lateinit var cluster: PsqlCluster
+
+        @JvmStatic
         @BeforeAll
         fun beforeAll() {
             val envUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
@@ -55,7 +60,7 @@ abstract class DbTest {
                 SCHEMA = params["schema"]!![0]
                 envUrl
             }
-
+            cluster = PsqlCluster(PsqlInstance.get(url))
             connection = DriverManager.getConnection(url)
         }
     }
@@ -68,7 +73,7 @@ abstract class DbTest {
     @Order(10)
     @EnabledIf("runTest")
     fun createStorage() {
-        storage = JvmPlv8Storage("test_storage", connection, SCHEMA)
+        storage = PsqlStorage("test_storage", cluster, SCHEMA)
     }
 
     @Test
