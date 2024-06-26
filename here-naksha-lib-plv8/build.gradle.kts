@@ -32,23 +32,22 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation(project(":here-naksha-lib-jbon"))
-                implementation(project(":here-naksha-lib-base"))
-                implementation(project(":here-naksha-lib-model"))
-                implementation(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-base"))
+                api(project(":here-naksha-lib-jbon"))
+                api(project(":here-naksha-lib-model"))
+                api(project(":here-naksha-lib-geo"))
+
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
         jvmMain {
             jvmToolchain(11)
             dependencies {
-                api(project(":here-naksha-lib-geo"))
-                api(project(":here-naksha-lib-model"))
-//                api(project(":here-naksha-lib-core"))
-
                 implementation(kotlin("stdlib-jdk8"))
-                implementation(project(":here-naksha-lib-jbon"))
-                implementation(project(":here-naksha-lib-base"))
+                api(project(":here-naksha-lib-base"))
+                api(project(":here-naksha-lib-jbon"))
+                api(project(":here-naksha-lib-model"))
+                api(project(":here-naksha-lib-geo"))
 
                 implementation("org.apache.commons:commons-lang3:3.12.0")
                 implementation("org.postgresql:postgresql:42.5.4")
@@ -79,7 +78,11 @@ kotlin {
         jsMain {
             dependencies {
                 implementation(kotlin("stdlib-js"))
-                implementation(project(":here-naksha-lib-jbon"))
+                api(project(":here-naksha-lib-base"))
+                api(project(":here-naksha-lib-jbon"))
+                api(project(":here-naksha-lib-model"))
+                api(project(":here-naksha-lib-geo"))
+
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }

@@ -1,7 +1,7 @@
 package com.here.naksha.lib.auth.action
 
 import com.here.naksha.lib.auth.attribute.ResourceAttributes
-import naksha.base.P_List
+import naksha.base.AbstractListProxy
 import kotlin.js.JsExport
 
 /**
@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE", "UNCHECKED_CAST")
 @JsExport
 sealed class AccessRightsAction<T : ResourceAttributes, SELF : AccessRightsAction<T, SELF>> :
-    P_List<ResourceAttributes>(ResourceAttributes::class) {
+    AbstractListProxy<ResourceAttributes>(ResourceAttributes::class) {
 
    open val name: String = "unknownAction"
 

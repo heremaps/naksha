@@ -1,6 +1,6 @@
 package com.here.naksha.lib.plv8.naksha.plv8
 
-import com.here.naksha.lib.plv8.JvmPlv8Sql
+import com.here.naksha.lib.plv8.JvmPgConnection
 import naksha.model.IReadSession
 import naksha.model.NakshaContext
 import naksha.model.request.ReadRequest
@@ -22,7 +22,7 @@ open class JvmPlv8ReadSession(
 ) : JvmPlv8Session(context, stmtTimeout, lockTimeout), IReadSession {
 
     protected val nakshaSession: NakshaSession = NakshaSession(
-        sql = JvmPlv8Sql(connection),
+        sql = JvmPgConnection(connection),
         schema = storage.schema, // FIXME
         storage = storage,
         appName = "FIXME", // FIXME

@@ -6,10 +6,11 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * A cursor as it is returned by the PLV8 engine.
+ * A cursor as it is returned by the [PLV8](https://plv8.github.io/) engine. In Java this is a thin wrapper
+ * around a `ResultSet`.
  */
 @JsExport
-interface IPlv8Cursor {
+interface IPgCursor {
 
     /**
      * Fetches the current row returns it as native map.

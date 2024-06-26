@@ -2,10 +2,10 @@
 
 package naksha.model
 
-import naksha.base.P_Map
+import naksha.base.AbstractMapProxy
 import kotlin.js.JsExport
 
 @JsExport
 class TransactionCollectionInfoMapProxy :
-    P_Map<String, TransactionCollectionInfoProxy>(String::class, TransactionCollectionInfoProxy::class) {
+    AbstractMapProxy<String, TransactionCollectionInfoProxy>(String::class, TransactionCollectionInfoProxy::class) {
 }

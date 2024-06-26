@@ -1,12 +1,12 @@
 @file:Suppress("OPT_IN_USAGE")
 package naksha.model
 
-import naksha.base.P_List
+import naksha.base.AbstractListProxy
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 @JsExport
-class TagsProxy() : P_List<String>(String::class) {
+class TagsProxy() : AbstractListProxy<String>(String::class) {
 
     @JsName("of")
     constructor(vararg tags: String): this() {

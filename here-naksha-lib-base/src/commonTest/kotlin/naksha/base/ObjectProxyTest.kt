@@ -2,7 +2,7 @@ package naksha.base
 
 import kotlin.test.*
 
-class Foo : P_Object() {
+class Foo : ObjectProxy() {
     companion object {
         private val NAME = NotNullProperty<Any, Foo, String>(String::class, { "Bernd" })
         private val XYZ = NullableProperty<Any, Foo, String>(String::class, name = "@ns:com:here:xyz")
@@ -14,7 +14,7 @@ class Foo : P_Object() {
     var xyz: String? by XYZ
 }
 
-class Bar : P_Object() {
+class Bar : ObjectProxy() {
     companion object {
         private val FOO = NotNullProperty<Any, Bar, Foo>(Foo::class)
         private val FOO2 = NullableProperty<Any, Bar, Foo>(Foo::class)

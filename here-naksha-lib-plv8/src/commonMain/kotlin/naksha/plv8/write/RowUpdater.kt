@@ -7,7 +7,7 @@ import naksha.model.ACTION_UPDATE
 import naksha.model.Flags
 import naksha.model.response.Metadata
 import naksha.model.response.Row
-import naksha.plv8.IPlv8Plan
+import naksha.plv8.IPgPlan
 import naksha.plv8.NakshaSession
 import naksha.plv8.Static.SC_TRANSACTIONS
 import kotlin.js.ExperimentalJsExport
@@ -18,7 +18,7 @@ import kotlin.js.JsExport
 class RowUpdater(
     val session: NakshaSession
 ) {
-    private lateinit var gridPlan: IPlv8Plan
+    private lateinit var gridPlan: IPgPlan
 
     /**
      * Create the XYZ namespace for an _INSERT_ operation.

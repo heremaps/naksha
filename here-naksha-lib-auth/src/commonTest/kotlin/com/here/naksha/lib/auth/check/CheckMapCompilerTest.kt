@@ -2,7 +2,7 @@ package com.here.naksha.lib.auth.check
 
 import com.here.naksha.lib.auth.check.CheckMapCompilerTest.CheckAssertion.Companion.assertThat
 import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRights
-import naksha.base.P_StringList
+import naksha.base.StringListProxy
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -42,7 +42,7 @@ class CheckMapCompilerTest {
     fun shouldCompileListCheckForUserRights() {
         // Given:
         val userRights = UserRights()
-            .withPropertyCheck("list", P_StringList()
+            .withPropertyCheck("list", StringListProxy()
                 .apply {
                     add("foo")
                     add("bar")

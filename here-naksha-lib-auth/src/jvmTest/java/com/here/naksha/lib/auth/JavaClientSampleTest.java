@@ -26,7 +26,7 @@ import com.here.naksha.lib.auth.action.ReadCollections;
 import com.here.naksha.lib.auth.attribute.CollectionAttributes;
 import com.here.naksha.lib.auth.attribute.NakshaAttributes;
 import com.here.naksha.lib.auth.attribute.ResourceAttributes;
-import naksha.base.P_List;
+import naksha.base.AbstractListProxy;
 import org.junit.jupiter.api.Test;
 
 class JavaClientSampleTest {
@@ -73,7 +73,7 @@ class JavaClientSampleTest {
 
     // Then:
     assertNotNull(armService);
-    P_List<ResourceAttributes> attributes = armService.getResourceAttributesForAction(ReadCollections.NAME);
+    AbstractListProxy<ResourceAttributes> attributes = armService.getResourceAttributesForAction(ReadCollections.NAME);
     assertNotNull(attributes);
     assertEquals(2, attributes.size());
     ResourceAttributes x = attributes.get(0);

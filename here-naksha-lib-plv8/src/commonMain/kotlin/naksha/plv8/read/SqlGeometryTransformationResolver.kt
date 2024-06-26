@@ -21,11 +21,11 @@ package naksha.plv8.read
 import naksha.model.request.condition.geometry.BufferTransformation
 import naksha.model.request.condition.geometry.GeographyTransformation
 import naksha.model.request.condition.geometry.GeometryTransformation
-import naksha.plv8.IPlv8Sql
+import naksha.plv8.IPgConnection
 
 
 class SqlGeometryTransformationResolver(
-    val sql: IPlv8Sql
+    val sql: IPgConnection
 ) {
     fun wrapWithTransformation(
         transformation: GeometryTransformation?, variablePlaceholder: String

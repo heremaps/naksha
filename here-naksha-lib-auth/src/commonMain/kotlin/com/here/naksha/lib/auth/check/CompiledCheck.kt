@@ -2,13 +2,13 @@
 
 package com.here.naksha.lib.auth.check
 
-import naksha.base.P_AnyList
+import naksha.base.AnyListProxy
 import kotlin.js.JsExport
 
 /**
  * A test operation.
  */
 @JsExport
-abstract class CompiledCheck: P_AnyList() {
+abstract class CompiledCheck: AnyListProxy() {
     abstract fun matches(value: Any?): Boolean
 }

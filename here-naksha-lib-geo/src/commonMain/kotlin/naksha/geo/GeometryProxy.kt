@@ -1,13 +1,13 @@
 package naksha.geo
 
 import naksha.base.NullableProperty
-import naksha.base.P_Object
+import naksha.base.ObjectProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-open class GeometryProxy : P_Object() {
+open class GeometryProxy : ObjectProxy() {
 
     companion object {
         private val TYPE = NullableProperty<Any, GeometryProxy, String>(String::class)

@@ -13,7 +13,7 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-internal class ReadQueryBuilder(val sql: IPlv8Sql) {
+internal class ReadQueryBuilder(val sql: IPgConnection) {
 
     private val geometryTransformer = SqlGeometryTransformationResolver(sql)
 

@@ -1,8 +1,7 @@
 package com.here.naksha.lib.plv8
 
-import naksha.jbon.*
 import naksha.base.JvmInt64
-import naksha.base.P_JsMap
+import naksha.base.ObjectProxy
 import java.sql.ResultSet
 
 /**
@@ -38,14 +37,14 @@ open class JvmPlv8ResultSet(private var rs: ResultSet?) {
      * Reads the next row into a native map.
      * @return The next row as native map.
      */
-    fun readRow(): P_JsMap {
+    fun readRow(): ObjectProxy {
         val rs = this.rs
         check(rs != null)
         val columnNames = this.columnNames
         check(columnNames != null)
         val columnTypes = this.columnTypes
         check(columnTypes != null)
-        val row = P_JsMap()
+        val row = ObjectProxy()
         var i = 0
         while (i < columnNames.size) {
             val name = columnNames[i]
@@ -89,10 +88,10 @@ open class JvmPlv8ResultSet(private var rs: ResultSet?) {
      * Convert the while result-set into an array and then close the result-set.
      * @return The result set as array of rows (native maps).
      */
-    fun toArray(): Array<P_JsMap> {
+    fun toArray(): Array<ObjectProxy> {
         val rs = this.rs
         check(rs != null)
-        val array = ArrayList<P_JsMap>(30)
+        val array = ArrayList<ObjectProxy>(30)
         while (rs.next()) {
             array.add(readRow())
         }

@@ -5,8 +5,8 @@ package com.here.naksha.lib.auth
 import com.here.naksha.lib.auth.action.ACTIONS_BY_NAME
 import com.here.naksha.lib.auth.action.AccessRightsAction
 import com.here.naksha.lib.auth.attribute.ResourceAttributes
-import naksha.base.P_List
-import naksha.base.P_Map
+import naksha.base.AbstractListProxy
+import naksha.base.AbstractMapProxy
 import kotlin.js.JsExport
 
 /**
@@ -18,7 +18,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 class AccessRightsMatrix :
-    P_Map<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
+    AbstractMapProxy<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
 
     fun useNaksha(): ServiceAccessRights = useService(NAKSHA_SERVICE_NAME)
 
@@ -41,7 +41,7 @@ class AccessRightsMatrix :
 
 @JsExport
 class ServiceAccessRights :
-    P_Map<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
+    AbstractMapProxy<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
 
     override fun toValue(
         key: String,
@@ -75,4 +75,4 @@ class ServiceAccessRights :
 }
 
 @JsExport
-class ResourceAttributesList : P_List<ResourceAttributes>(ResourceAttributes::class)
+class ResourceAttributesList : AbstractListProxy<ResourceAttributes>(ResourceAttributes::class)

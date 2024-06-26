@@ -7,7 +7,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-interface BaseLogger {
+interface PlatformLogger {
     /**
      * Writes an debug log.
      * @param msg The message with optional placeholders `{}` for the varargs.

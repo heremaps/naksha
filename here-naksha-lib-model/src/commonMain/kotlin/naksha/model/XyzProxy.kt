@@ -5,14 +5,14 @@ package naksha.model
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.P_Object
+import naksha.base.ObjectProxy
 import kotlin.js.JsExport
 
 /**
  * The XYZ namespace stored in the `@ns:com:here:xyz` property of the [NakshaFeatureProxy].
  */
 @JsExport
-class XyzProxy : P_Object() {
+class XyzProxy : ObjectProxy() {
     companion object {
         private val ACTION = NullableProperty<Any, XyzProxy, String>(String::class, defaultValue = { XYZ_EXEC_CREATED })
         private val UUID = NullableProperty<Any, XyzProxy, String>(String::class)

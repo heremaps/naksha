@@ -2,12 +2,12 @@
 
 package naksha.geo.cords
 
-import naksha.base.P_List
+import naksha.base.AbstractListProxy
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 @JsExport
-class PointCoordsProxy() : P_List<Double>(Double::class) {
+class PointCoordsProxy() : AbstractListProxy<Double>(Double::class) {
 
     @JsName("of")
     constructor(vararg coords: Double?) : this() {

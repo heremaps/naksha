@@ -8,10 +8,8 @@ import naksha.model.IWriteSession
 import naksha.model.NakshaContext
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.condition.EnabledIf
 import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.function.Executable
 import java.sql.Connection
 import java.sql.DriverManager
 
@@ -23,10 +21,10 @@ import java.sql.DriverManager
 abstract class DbTest {
 
     protected fun sessionRead(): IReadSession =
-        storage.openReadSession(defaultNakshaContext, false)
+        storage.newReadSession(defaultNakshaContext, false)
 
     protected fun sessionWrite(): IWriteSession =
-        storage.openWriteSession(defaultNakshaContext, true)
+        storage.newWriteSession(defaultNakshaContext)
 
     companion object {
         @JvmStatic

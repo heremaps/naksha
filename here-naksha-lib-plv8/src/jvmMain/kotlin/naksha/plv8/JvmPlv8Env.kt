@@ -1,6 +1,6 @@
 package com.here.naksha.lib.plv8.naksha.plv8
 
-import com.here.naksha.lib.plv8.JvmPlv8Sql
+import com.here.naksha.lib.plv8.JvmPgConnection
 import naksha.jbon.*
 import naksha.model.NakshaCollectionProxy
 import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
@@ -43,7 +43,7 @@ class JvmPlv8Env(val storage: JvmPlv8Storage) {
     fun startSession(conn: Connection, schema: String, appName: String, streamId: String, appId: String, author: String?): NakshaSession {
         // Prepare the connection, need to load the module system.
         conn.autoCommit = false
-        val sql = JvmPlv8Sql(conn)
+        val sql = JvmPgConnection(conn)
         val schemaQuoted = sql.quoteIdent(schema)
         sql.execute("SET SESSION search_path TO $schemaQuoted, public, topology; SELECT naksha_start_session($1, $2, $3, $4);",
             arrayOf(appName, streamId, appId, author))
@@ -78,7 +78,7 @@ class JvmPlv8Env(val storage: JvmPlv8Storage) {
      * @param path The file-path, for example `/lz4.sql`.
      * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    private fun executeSqlFromResource(sql: JvmPlv8Sql, path: String, replacements: Map<String, String>? = null) {
+    private fun executeSqlFromResource(sql: JvmPgConnection, path: String, replacements: Map<String, String>? = null) {
         val resourceAsText = getResourceAsText(path)
         check(resourceAsText != null)
         sql.execute(applyReplacements(resourceAsText, replacements))
@@ -94,7 +94,7 @@ class JvmPlv8Env(val storage: JvmPlv8Storage) {
      * @param extraCode Additional code to be executed, appended at the end of the module.
      * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    private fun installModuleFromResource(sql: JvmPlv8Sql, name: String, path: String, autoload: Boolean = false, beautify: Boolean = false, extraCode: String? = null, replacements: Map<String, String>? = null) {
+    private fun installModuleFromResource(sql: JvmPgConnection, name: String, path: String, autoload: Boolean = false, beautify: Boolean = false, extraCode: String? = null, replacements: Map<String, String>? = null) {
         val resourceAsText = getResourceAsText(path)
         check(resourceAsText != null)
         var code = applyReplacements(resourceAsText, replacements)
@@ -113,7 +113,7 @@ class JvmPlv8Env(val storage: JvmPlv8Storage) {
      */
     fun install(conn: Connection, version: Long, schema: String, storageId: String, appName: String) {
         conn.autoCommit = false
-        val sql = JvmPlv8Sql(conn)
+        val sql = JvmPgConnection(conn)
         val schemaQuoted = sql.quoteIdent(schema)
         sql.execute("""
 CREATE SCHEMA IF NOT EXISTS $schemaQuoted;

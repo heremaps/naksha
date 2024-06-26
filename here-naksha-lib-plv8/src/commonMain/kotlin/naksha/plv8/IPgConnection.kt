@@ -2,16 +2,17 @@
 
 package naksha.plv8
 
-import naksha.base.P_JsMap
+import naksha.base.ObjectProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * The API that grants access to native PLV8 SQL interface.
+ * An abstract API that grants access to a single Postgres SQL connection. This interface is made in a way, so that it is
+ * naturally compatible with [PLV8](https://plv8.github.io/). In Java there is a thin wrapper on top of a JDBC connection.
  */
 @Suppress("DuplicatedCode")
 @JsExport
-interface IPlv8Sql {
+interface IPgConnection {
     /**
      * Returns general information about the database to which this API grants access.
      */
@@ -73,13 +74,13 @@ interface IPlv8Sql {
      * @param any The object to test.
      * @return The array of native maps or _null_, if _any_ is no valid rows.
      */
-    fun rows(any: Any): Array<P_JsMap>?
+    fun rows(any: Any): Array<ObjectProxy>?
 
     /**
      * Execute an SQL query with the given arguments. The placeholder should be **$1** to **$n**.
      * @param sql The SQL query to execute.
      * @param args The arguments to be set at $n position, where $1 is the first array element.
-     * @return Either the number of affected rows or the fetched rows.
+     * @return Either the [number of affected rows][affectedRows] or the [fetched rows][rows].
      */
     fun execute(sql: String, args: Array<Any?>? = null): Any
 
@@ -89,9 +90,9 @@ interface IPlv8Sql {
      * @param typeNames The name of the types of the arguments, to be at $n position, where $1 is the first array element.
      * @return The prepared plan.
      */
-    fun prepare(sql: String, typeNames: Array<String>? = null):IPlv8Plan
+    fun prepare(sql: String, typeNames: Array<String>? = null):IPgPlan
 
-    fun executeBatch(plan:IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray
+    fun executeBatch(plan:IPgPlan, bulkParams: Array<Array<Param>>): IntArray
 
     /**
      * Compress bytes using GZip.

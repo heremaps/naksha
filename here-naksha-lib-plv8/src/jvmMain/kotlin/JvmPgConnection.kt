@@ -2,10 +2,9 @@ package com.here.naksha.lib.plv8
 
 import naksha.base.GZip
 import naksha.base.Int64
-import naksha.base.P_JsMap
-import naksha.base.PlatformMap
+import naksha.base.ObjectProxy
 import naksha.jbon.*
-import naksha.plv8.IPlv8Sql
+import naksha.plv8.IPgConnection
 import naksha.plv8.Param
 import naksha.plv8.PgDbInfo
 import java.io.Closeable
@@ -15,7 +14,7 @@ import java.sql.Connection
  * Java JDBC binding to grant access to PostgresQL.
  */
 @Suppress("MemberVisibilityCanBePrivate", "UNCHECKED_CAST")
-class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
+class JvmPgConnection(var conn: Connection?) : IPgConnection, Closeable {
     private var dbInfo: PgDbInfo? = null
 
     override fun info(): PgDbInfo {
@@ -27,8 +26,8 @@ class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
 
     override fun affectedRows(any: Any): Int? = if (any is Int) any else null
 
-    override fun rows(any: Any): Array<P_JsMap>? = if (any is Array<*>) {
-        (any as Array<Any>).map { (it as P_JsMap) }.toTypedArray()
+    override fun rows(any: Any): Array<ObjectProxy>? = if (any is Array<*>) {
+        (any as Array<Any>).map { (it as ObjectProxy) }.toTypedArray()
     } else null
 
     override fun execute(sql: String, args: Array<Any?>?): Any {
@@ -48,10 +47,10 @@ class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
         }
     }
 
-    override fun prepare(sql: String, typeNames: Array<String>?): naksha.plv8.IPlv8Plan {
+    override fun prepare(sql: String, typeNames: Array<String>?): naksha.plv8.IPgPlan {
         val conn = this.conn
         check(conn != null)
-        return JvmPlv8Plan(JvmPlv8SqlQuery(sql), conn)
+        return JvmPgPlan(JvmPlv8SqlQuery(sql), conn)
     }
 
     override fun close() {
@@ -59,8 +58,8 @@ class JvmPlv8Sql(var conn: Connection?) : IPlv8Sql, Closeable {
         conn = null
     }
 
-    override fun executeBatch(plan: naksha.plv8.IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray {
-        plan as JvmPlv8Plan
+    override fun executeBatch(plan: naksha.plv8.IPgPlan, bulkParams: Array<Array<Param>>): IntArray {
+        plan as JvmPgPlan
         for (singleQueryParams in bulkParams) {
             for (p in singleQueryParams) {
                 when (p.type) {

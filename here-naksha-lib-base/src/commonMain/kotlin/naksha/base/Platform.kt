@@ -101,9 +101,9 @@ expect class Platform {
         val dataViewKlass: KClass<PlatformDataView>
 
         /**
-         * The [BaseLogger].
+         * The [PlatformLogger].
          */
-        val logger: BaseLogger
+        val logger: PlatformLogger
 
         /**
          * Tests if the given value is _null_ or _undefined_.
@@ -227,7 +227,7 @@ expect class Platform {
          * @param initializer An optional lambda to be invoked, when the thread-local is read for the first time.
          * @return The thread local.
          */
-        fun <T> newThreadLocal(initializer: (() -> T)? = null): BaseThreadLocal<T>
+        fun <T> newThreadLocal(initializer: (() -> T)? = null): PlatformThreadLocal<T>
 
         /**
          * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]

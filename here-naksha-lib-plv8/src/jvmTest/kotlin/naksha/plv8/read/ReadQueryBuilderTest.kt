@@ -1,6 +1,6 @@
 package naksha.plv8.read
 
-import com.here.naksha.lib.plv8.JvmPlv8Sql
+import com.here.naksha.lib.plv8.JvmPgConnection
 import naksha.geo.GeometryProxy
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
@@ -10,7 +10,6 @@ import naksha.model.request.condition.LOp.Companion.or
 import naksha.model.request.condition.POp.Companion.eq
 import naksha.model.request.condition.POp.Companion.isNotNull
 import naksha.model.request.condition.POp.Companion.lt
-import naksha.model.request.condition.PRef
 import naksha.model.request.condition.PRef.*
 import naksha.model.request.condition.SOp.Companion.intersects
 import naksha.model.request.condition.SOp.Companion.intersectsWithTransformation
@@ -19,12 +18,11 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.eq
 
 @Suppress("UNCHECKED_CAST")
 class ReadQueryBuilderTest {
 
-    private val sql = JvmPlv8Sql(null)
+    private val sql = JvmPgConnection(null)
     private val builder = ReadQueryBuilder(sql)
 
     @Test

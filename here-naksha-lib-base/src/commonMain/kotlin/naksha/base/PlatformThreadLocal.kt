@@ -8,7 +8,7 @@ import kotlin.reflect.KProperty
  */
 @Suppress("OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
 @JsExport
-interface BaseThreadLocal<T> {
+interface PlatformThreadLocal<T> {
     /**
      * Returns the thread-local value.
      */

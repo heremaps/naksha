@@ -23,7 +23,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-abstract class P_List<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
+abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
 
     override fun createData(): PlatformList = Platform.newList()
     override fun data(): PlatformList = super.data() as PlatformList

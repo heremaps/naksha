@@ -5,4 +5,4 @@ package naksha.base
 import kotlin.js.JsExport
 
 @JsExport
-open class P_AnyMap : P_Map<Any, Any>(Any::class, Any::class)
+open class AnyListProxy : AbstractListProxy<Any>(Any::class)

@@ -2,7 +2,7 @@
 
 package naksha.plv8
 
-import naksha.base.P_Map
+import naksha.base.AbstractMapProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -25,5 +25,5 @@ interface ITable {
      * Returns a new row.
      * @param ret The return row.
      */
-    fun returnNext(ret: P_Map<String, Any>)
+    fun returnNext(ret: AbstractMapProxy<String, Any>)
 }

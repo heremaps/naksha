@@ -12,7 +12,7 @@ import kotlin.js.JsName
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class P_DataView(internal val binary: Binary = Binary()) : Proxy(), BinaryView by binary {
+open class DataViewProxy(internal val binary: Binary = Binary()) : Proxy(), BinaryView by binary {
 
     /**
      * Create a new view with a new byte array of the given size backing it.

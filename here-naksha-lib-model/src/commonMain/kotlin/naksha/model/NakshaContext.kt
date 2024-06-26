@@ -1,7 +1,8 @@
 package naksha.model
 
-import naksha.base.BaseThreadLocal
+import naksha.base.PlatformThreadLocal
 import naksha.base.Platform
+import naksha.base.fn.Fn0
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -13,13 +14,6 @@ import kotlin.jvm.JvmStatic
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 open class NakshaContext protected constructor() {
-    /**
-     * Any interface needed for Java compatibility.
-     */
-    fun interface Fn {
-        fun nakshaContext(): NakshaContext
-    }
-
     private var _appId: String? = null
 
     /**
@@ -45,21 +39,21 @@ open class NakshaContext protected constructor() {
 
     @Suppress("OPT_IN_USAGE")
     companion object {
-        private val threadLocal: BaseThreadLocal<NakshaContext> = Platform.newThreadLocal(::NakshaContext)
+        private val threadLocal: PlatformThreadLocal<NakshaContext> = Platform.newThreadLocal(::NakshaContext)
 
         /**
          * Can be overridden by application code to modify the context creation.
          */
         @JvmStatic
         @JsStatic
-        var constructorRef: Fn = Fn(::NakshaContext)
+        var constructorRef: Fn0<NakshaContext> = Fn0(::NakshaContext)
 
         /**
          * Can be overridden by application code to modify the thread local context gathering.
          */
         @JvmStatic
         @JsStatic
-        var currentRef: Fn = Fn(threadLocal::get)
+        var currentRef: Fn0<NakshaContext> = Fn0(threadLocal::get)
 
         /**
          * Creates a new Naksha Context.
@@ -70,7 +64,7 @@ open class NakshaContext protected constructor() {
         @JvmStatic
         @JsStatic
         open fun newInstance(appId: String, author: String? = null, su: Boolean = false): NakshaContext {
-            val context = constructorRef.nakshaContext()
+            val context = constructorRef.call()
             context.appId = appId
             context.author = author
             context.su = su

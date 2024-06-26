@@ -73,18 +73,18 @@ class JbCoreTest {
     }
 }""".trimIndent())
         assertTrue(raw is PlatformMap)
-        val map = raw.proxy(P_JsMap::class)
+        val map = raw.proxy(ObjectProxy::class)
         assertEquals(2, map.size)
         assertTrue(map.containsKey("id"))
         assertEquals("foo", map["id"])
         assertTrue(map.containsKey("properties"))
-        assertTrue(map["properties"] is P_JsMap)
-        val properties = map["properties"] as P_JsMap
+        assertTrue(map["properties"] is ObjectProxy)
+        val properties = map["properties"] as ObjectProxy
         assertEquals(3, properties.size)
         assertEquals("Tim", properties["name"])
         assertEquals(99, properties["age"])
-        assertTrue(properties["array"] is P_AnyList)
-        val array = properties["array"] as P_AnyList
+        assertTrue(properties["array"] is AnyListProxy)
+        val array = properties["array"] as AnyListProxy
         assertEquals(5, array.size)
         assertEquals(1, array[0])
         assertEquals(2, array[1])
@@ -460,7 +460,7 @@ class JbCoreTest {
         // Encode a dictionary.
         val dictId = "test"
         val dictArray = builder.buildDictionary(dictId)
-        val dictView = P_DataView(dictArray)
+        val dictView = DataViewProxy(dictArray)
         val dictReader = JbReader().mapBinary(dictView)
         assertEquals(TYPE_DICTIONARY, dictReader.unitType())
         // size
@@ -841,7 +841,7 @@ class JbCoreTest {
         val builder = JbBinaryBuilder()
         val featureJson = """{"id":"bar"}"""
         val featureMap = Platform.fromJSON(featureJson) as PlatformMap
-        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(P_JsMap::class))
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(ObjectProxy::class))
         val feature = JbFeature(dictManager)
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())

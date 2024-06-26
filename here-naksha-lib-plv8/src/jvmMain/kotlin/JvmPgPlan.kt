@@ -1,7 +1,7 @@
 package com.here.naksha.lib.plv8
 
 import naksha.base.Int64
-import naksha.plv8.IPlv8Cursor
+import naksha.plv8.IPgCursor
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Types
@@ -9,7 +9,7 @@ import java.sql.Types
 /**
  * The Java implementation of a plan.
  */
-class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : naksha.plv8.IPlv8Plan {
+class JvmPgPlan(internal val query: JvmPlv8SqlQuery, conn: Connection) : naksha.plv8.IPgPlan {
     val stmt: PreparedStatement = query.prepare(conn)
     var closed: Boolean = false
 
@@ -23,14 +23,14 @@ class JvmPlv8Plan(internal val query: JvmPlv8SqlQuery, conn: Connection) : naksh
         return stmt.updateCount
     }
 
-    override fun cursor(args: Array<Any?>?): IPlv8Cursor {
+    override fun cursor(args: Array<Any?>?): IPgCursor {
         check(!closed)
         if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
         val hasResultSet = stmt.execute()
         if (hasResultSet) {
-            return JvmPlv8Cursor(stmt.resultSet)
+            return JvmPgCursor(stmt.resultSet)
         }
-        return JvmPlv8Cursor(null)
+        return JvmPgCursor(null)
     }
 
     internal fun setString(parameterIndex: Int, value: String?) {

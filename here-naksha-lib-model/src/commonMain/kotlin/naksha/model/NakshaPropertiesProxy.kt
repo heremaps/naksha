@@ -3,13 +3,13 @@
 package naksha.model
 
 import naksha.base.NullableProperty
-import naksha.base.P_Object
+import naksha.base.ObjectProxy
 import naksha.base.Platform
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 @JsExport
-open class NakshaPropertiesProxy : P_Object() {
+open class NakshaPropertiesProxy : ObjectProxy() {
     companion object {
         @JvmStatic
         val XYZ_KEY = Platform.intern("@ns:com:here:xyz")

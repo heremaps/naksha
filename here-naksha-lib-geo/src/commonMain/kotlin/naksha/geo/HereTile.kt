@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package naksha.base
+package naksha.geo
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport

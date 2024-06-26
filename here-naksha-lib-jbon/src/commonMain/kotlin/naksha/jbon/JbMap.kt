@@ -1,8 +1,6 @@
 package naksha.jbon
 
-import naksha.base.Binary
-import naksha.base.BinaryView
-import naksha.base.P_JsMap
+import naksha.base.ObjectProxy
 import kotlin.js.JsExport
 
 /**
@@ -97,10 +95,10 @@ class JbMap : JbEntryArray<JbMap>() {
     }
 
     /**
-     * Returns this map as [P_JsMap].
-     * @return This binary as [P_JsMap].
+     * Returns this map as [ObjectProxy].
+     * @return This binary as [ObjectProxy].
      */
-    fun toIMap(): P_JsMap {
+    fun toIMap(): ObjectProxy {
         return JbReader.readMap(this)
     }
 }

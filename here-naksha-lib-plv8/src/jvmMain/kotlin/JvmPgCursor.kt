@@ -1,12 +1,12 @@
 package com.here.naksha.lib.plv8
 
-import naksha.plv8.IPlv8Cursor
+import naksha.plv8.IPgCursor
 import java.sql.ResultSet
 
 /**
  * Wraps a native JDBC result-set.
  */
-class JvmPlv8Cursor(resultSet: ResultSet?) : JvmPlv8ResultSet(resultSet), IPlv8Cursor {
+class JvmPgCursor(resultSet: ResultSet?) : JvmPlv8ResultSet(resultSet), IPgCursor {
 
     override fun fetch(): Any? {
         val rs = rs()

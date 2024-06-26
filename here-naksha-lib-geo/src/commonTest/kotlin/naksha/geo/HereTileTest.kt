@@ -1,4 +1,4 @@
-package naksha.base
+package naksha.geo
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

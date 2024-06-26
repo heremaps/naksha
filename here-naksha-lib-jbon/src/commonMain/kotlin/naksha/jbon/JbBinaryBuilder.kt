@@ -841,7 +841,7 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
      * @param map The GeoJSON feature to convert into JBON.
      * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
      */
-    fun buildFeatureFromMap(map: P_Map<String, *>): ByteArray {
+    fun buildFeatureFromMap(map: AbstractMapProxy<String, *>): ByteArray {
         clear()
         val id: String? = map.getAs("id", String::class)
         xyz = null
@@ -851,9 +851,9 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
             val value = entry.value
             if ("id" == key || "geometry" == key) continue
             writeKey(entry.key)
-            if ("properties" == key && value is P_Map<*, *>) {
+            if ("properties" == key && value is AbstractMapProxy<*, *>) {
                 @Suppress("UNCHECKED_CAST")
-                encodeMap(value as P_Map<String, *>, true)
+                encodeMap(value as AbstractMapProxy<String, *>, true)
             } else {
                 encodeValue(value)
             }
@@ -865,7 +865,7 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
     /**
      * When invoking [buildFeatureFromMap] this is used to capture the XYZ namespace reference, if any is found.
      */
-    var xyz: P_Map<String, *>? = null
+    var xyz: AbstractMapProxy<String, *>? = null
 
     /**
      * Writes a map recursively.
@@ -873,14 +873,14 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
      * @param ignoreXyzNs If the key _@ns:com:here:xyz_ should be ignored (a reference is added to [xyz]).
      * @return The offset of the value written.
      */
-    fun encodeMap(map: P_Map<String, *>, ignoreXyzNs: Boolean = false): Int {
+    fun encodeMap(map: AbstractMapProxy<String, *>, ignoreXyzNs: Boolean = false): Int {
         val start = startMap()
         for (entry in map) {
             val key = entry.key
             val value = entry.value
             if (ignoreXyzNs && ("@ns:com:here:xyz" == key)) {
                 @Suppress("UNCHECKED_CAST")
-                if (value is P_Map<*, *>) xyz = value as P_Map<String, *>
+                if (value is AbstractMapProxy<*, *>) xyz = value as AbstractMapProxy<String, *>
                 continue
             }
             writeKey(entry.key)
@@ -907,7 +907,7 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
      * @param array The array to write.
      * @return The offset of the value written.
      */
-    fun encodeList(array: P_List<*>): Int {
+    fun encodeList(array: AbstractListProxy<*>): Int {
         val start = startArray()
         for (value in array) encodeValue(value)
         endArray(start)
@@ -934,8 +934,8 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
             is Int64 -> encodeInt64(value)
             is Float -> encodeFloat(value)
             is Double -> if (Platform.canBeFloat32(value)) encodeFloat(value.toFloat()) else encodeDouble(value)
-            is P_Map<*, *> -> encodeMap(value as P_Map<String, *>)
-            is P_List<*> -> encodeList(value)
+            is AbstractMapProxy<*, *> -> encodeMap(value as AbstractMapProxy<String, *>)
+            is AbstractListProxy<*> -> encodeList(value)
             is Array<*> -> encodeArray(value as Array<Any?>)
             null -> encodeNull()
             else -> throw IllegalArgumentException()
@@ -1011,7 +1011,7 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
 
         // Now, copy everything together into a target array.
         val targetArray = ByteArray(targetSize)
-        val targetView = P_DataView(targetArray)
+        val targetView = DataViewProxy(targetArray)
         var target = 0
 
         // Copy feature header.

@@ -45,9 +45,9 @@ abstract class Proxy : PlatformObject {
                 // The only acceptable situation is that Any was requested.
                 // Then, return the standard types.
                 if (klass == Any::class) {
-                    if (data is PlatformMap) return data.proxy(P_JsMap::class) as T
-                    if (data is PlatformList) return data.proxy(P_AnyList::class) as T
-                    if (data is PlatformDataView) return data.proxy(P_DataView::class) as T
+                    if (data is PlatformMap) return data.proxy(ObjectProxy::class) as T
+                    if (data is PlatformList) return data.proxy(AnyListProxy::class) as T
+                    if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
                 }
             } else if (klass.isInstance(data)) return data as T
             return alternative

@@ -8,7 +8,7 @@ private const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 128
 
 /**
  * Information about the database, that need only to be queried ones per session.
- * @property sql The SQL API.
+ * @property sql The SQL connection for which this information was returned.
  * @property pageSize The page-size of the database (`current_setting('block_size')`).
  * @property maxTupleSize The maximum size of a tuple (row).
  * @property brittleTableSpace The tablespace to use for storage-class "brittle"; if any.
@@ -16,7 +16,7 @@ private const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 128
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class PgDbInfo(val sql: IPlv8Sql) {
+class PgDbInfo(val sql: IPgConnection) { // TODO: Rename sql into conn
     val pageSize: Int
     val maxTupleSize: Int
     val brittleTableSpace: String?
