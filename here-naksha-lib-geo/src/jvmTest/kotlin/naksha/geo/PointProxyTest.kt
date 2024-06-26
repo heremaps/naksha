@@ -1,4 +1,6 @@
-import naksha.geo.PointCoordsProxy
+package naksha.geo
+
+import naksha.geo.cords.PointCoordsProxy
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 

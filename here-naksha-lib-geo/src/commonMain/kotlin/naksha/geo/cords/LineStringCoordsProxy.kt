@@ -1,12 +1,12 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package naksha.geo
+package naksha.geo.cords
 
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 @JsExport
-class MultiPointCoordsProxy() : CoordinatesProxy<PointCoordsProxy>(PointCoordsProxy::class) {
+class LineStringCoordsProxy() : CoordinatesProxy<PointCoordsProxy>(PointCoordsProxy::class) {
 
     @JsName("of")
     constructor(vararg coords: PointCoordsProxy) : this() {

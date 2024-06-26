@@ -1,6 +1,8 @@
 package naksha.geo
 
-import naksha.base.P_AnyList
+import naksha.geo.cords.LineStringCoordsProxy
+import naksha.geo.cords.PointCoordsProxy
+import naksha.geo.cords.PolygonCoordsProxy
 import org.locationtech.jts.geom.Geometry
 
 object ProxyGeoUtil {
@@ -21,9 +23,9 @@ object ProxyGeoUtil {
      */
     fun createBBoxEnvelope(
         west: Double, south: Double, east: Double, north: Double
-    ): GeometryProxy {
-        val geometryProxy = GeometryProxy()
-        geometryProxy.coordinates = PolygonCoordsProxy(
+    ): PolygonProxy {
+        val polygonProxy = PolygonProxy()
+        polygonProxy.coordinates = PolygonCoordsProxy(
             LineStringCoordsProxy(
                 PointCoordsProxy(west, south),
                 PointCoordsProxy(east, south),
@@ -31,19 +33,7 @@ object ProxyGeoUtil {
                 PointCoordsProxy(west, north),
                 PointCoordsProxy(west, south)
             )
-        ).proxy(P_AnyList::class)
-        return geometryProxy
-    }
-
-    fun pointProxy(longitude: Double, latitude: Double, altitude: Double? = null): GeometryProxy {
-        val geometryProxy = GeometryProxy()
-        geometryProxy.coordinates = PointCoordsProxy(longitude, latitude, altitude).proxy(P_AnyList::class)
-        return geometryProxy
-    }
-
-    fun lineStringProxy(vararg points: PointCoordsProxy): GeometryProxy {
-        val geometryProxy = GeometryProxy()
-        geometryProxy.coordinates = LineStringCoordsProxy(*points).proxy(P_AnyList::class)
-        return geometryProxy
+        )
+        return polygonProxy
     }
 }

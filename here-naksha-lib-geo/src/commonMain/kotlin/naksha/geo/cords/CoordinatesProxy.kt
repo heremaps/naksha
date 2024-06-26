@@ -1,4 +1,4 @@
-package naksha.geo
+package naksha.geo.cords
 
 import naksha.base.P_List
 import kotlin.js.ExperimentalJsExport

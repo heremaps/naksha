@@ -1,7 +1,8 @@
+package naksha.geo
+
 import naksha.base.JvmMap
 import naksha.base.Platform
-import naksha.geo.GeometryProxy
-import naksha.geo.PolygonCoordsProxy
+import naksha.geo.cords.PolygonCoordsProxy
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
@@ -12,7 +13,7 @@ class PolygonProxyTest {
     @Test
     fun testPolygon() {
         // given
-        val polygon = """
+        val polygonJson = """
       {
         "type": "Polygon",
         "coordinates": [
@@ -26,14 +27,6 @@ class PolygonProxyTest {
               4.796809744839422
             ],
             [
-              22.56000370152873,
-              4.42289603090056
-            ],
-            [
-              22.07061483015346,
-              6.681892425334823
-            ],
-            [
               20.6899332428942,
               6.680566836459747
             ]
@@ -43,14 +36,16 @@ class PolygonProxyTest {
         """.trimIndent()
 
         // when
-        val parsedJson = Platform.fromJSON(polygon)
-        val geometryProxy = (parsedJson as JvmMap).proxy(GeometryProxy::class)
+        val parsedJson = Platform.fromJSON(polygonJson)
+        val geometryProxy = (parsedJson as JvmMap).proxy(PolygonProxy::class)
 
         // then
         assertEquals("Polygon", geometryProxy.type)
-        assertEquals(1, geometryProxy.coordinates?.size)
-        val polygonCoords = geometryProxy.coordinates!!.proxy(PolygonCoordsProxy::class)
-        assertEquals(5, polygonCoords[0]?.size)
+        val polygon = geometryProxy.proxy(PolygonProxy::class)
+        assertEquals(1, polygon.coordinates?.size)
+        val polygonCoords = polygon.coordinates!!.proxy(PolygonCoordsProxy::class)
+        assertEquals(3, polygonCoords[0]?.size)
         assertEquals(20.6899332428942, polygonCoords[0]?.get(0)?.getLongitude())
     }
+
 }
