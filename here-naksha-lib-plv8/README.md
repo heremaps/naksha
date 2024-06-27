@@ -1,7 +1,7 @@
 # Introduction
 
+## Disable IntelliJ Auto-Formatter
 Please, disable IntelliJ Auto-Formatter, it sucks unbelievable:
-
 - Open (File|IntellilJ IDEA on Mac)
 - Settings
 - Editor
@@ -10,8 +10,43 @@ Please, disable IntelliJ Auto-Formatter, it sucks unbelievable:
 - General
 - Check "Disable formatting"
 
-# Things we need to remember
+## Multi-Platform implementation details 
+The `lib-psql` currently is supported in the JVM and in the PostgresQL database via [PLV8 extension](https://plv8.github.io/), but can 
+be extended on demand to other targets. The main business logic is implemented as multi-platform Kotlin code in 
+[commonMain](./src/commonMain/kotlin/naksha/psql), so that basically all features are available in Java and inside the PostgresQL database.
 
+The main code is implemented in [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt). It represents a storage session 
+and implements support for `IReadSession` and `IWriteSession` as specified in `lib-model`. An instance of it is created by providing a 
+[PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) in the constructor, which is a platform specific implementation.
+
+The [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) extends the `IStorage` interface with just one additional method, that 
+allows to open a PostgresQL database connection from a connection pool of the storage.
+
+The [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt) is not created directly, but returned by the platform specific 
+implementation of the `IStorage` interface.
+
+In Java, the following JVM only classes actually provide the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) implementation:
+
+- The [PsqlStorage](./src/jvmMain/kotlin/naksha/psql/PsqlStorage.kt) directly implements the 
+  [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface, it requires to provide a
+  [PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt) to the constructor, when created an instance of it. 
+- The [PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt) can be created by providing at least one   
+  [PsqlInstance](./src/jvmMain/kotlin/naksha/psql/PsqlInstance.kt) that represents the master node of the PostgresQL database. It is 
+  queried via a static getter (`Psqllnstance.get(url|...)`). In the background each instance holds an own dedicate connection pool, and 
+  the same instance (identifier by host, port, db, user and password) is kept in memory as singleton, so that all clusters and storages 
+  share the same connection pool. This reduces the amount of connections being created and kept alive.
+
+In [PLV8](https://plv8.github.io/) the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) is implemented as static member of 
+the standard `plv8` object provided out-of-the-box by the [PLV8 extension](https://plv8.github.io/). So, when the SQL function 
+`naksha_start_session()` is executed, it will create a [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt), forwarding 
+the necessary parameters, and store it in `plv8.nakshaSession`. When any other SQL function is executed, it will refer to this member 
+and throw an SQL exception, when the member does not exist, which guarantees, that `naksha_start_session()` is executed before any other 
+code is executed. The method `openSession`, of the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface, is 
+implemented in PLV8 as a thin wrapper around the native [SPI](https://plv8.github.io/#database-access-via-spi)-API, provided 
+out-of-the-box by the [PLV8 extension](https://plv8.github.io/). Actually, this implementation therefore does only support a single 
+connection, so inside the database the parallel optimization (`executeParallel`) are not supported.
+
+# Things we need to remember
 Due to partitioning of the big tables, we need to change **cluster** and **group** parameters:
 
 - `show max_parallel_workers = 16`
