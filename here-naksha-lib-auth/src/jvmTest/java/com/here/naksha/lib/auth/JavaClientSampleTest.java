@@ -73,7 +73,8 @@ class JavaClientSampleTest {
 
     // Then:
     assertNotNull(armService);
-    AbstractListProxy<ResourceAttributes> attributes = armService.getResourceAttributesForAction(ReadCollections.NAME);
+    AbstractListProxy<ResourceAttributes> attributes =
+        armService.getResourceAttributesForAction(ReadCollections.NAME);
     assertNotNull(attributes);
     assertEquals(2, attributes.size());
     ResourceAttributes x = attributes.get(0);

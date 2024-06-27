@@ -1,7 +1,10 @@
 package naksha.model
 
+import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
+import naksha.base.Int64
 import naksha.base.PlatformThreadLocal
 import naksha.base.Platform
+import naksha.base.PlatformUtil
 import naksha.base.fn.Fn0
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -114,7 +117,9 @@ open class NakshaContext protected constructor() {
             val context = constructorRef.call()
             context.appId = appId
             context.author = author
-            context.streamId = streamId;
+            if (streamId != null) {
+                context.streamId = streamId
+            }
             context.su = su
             return context
         }
