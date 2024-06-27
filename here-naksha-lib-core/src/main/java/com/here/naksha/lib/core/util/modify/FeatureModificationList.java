@@ -21,8 +21,6 @@ package com.here.naksha.lib.core.util.modify;
 import static com.here.naksha.lib.core.models.storage.IfExists.MERGE;
 import static com.here.naksha.lib.core.models.storage.IfNotExists.CREATE;
 
-import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.payload.events.feature.LoadFeaturesEvent;
 import com.here.naksha.lib.core.models.storage.IfExists;
 import com.here.naksha.lib.core.models.storage.IfNotExists;
@@ -30,6 +28,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import naksha.model.EXyzAction;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

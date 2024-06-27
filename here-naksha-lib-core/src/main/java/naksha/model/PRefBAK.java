@@ -18,9 +18,6 @@
  */
 package naksha.model;
 
-import static naksha.model.XyzFeature.ID;
-import static naksha.model.XyzFeature.PROPERTIES;
-import static naksha.geo.XyzProperties.XYZ_NAMESPACE;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.APP_ID;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.AUTHOR;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.GRID;
@@ -28,7 +25,10 @@ import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.TXN;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.TXN_NEXT;
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.UUID;
+import static naksha.geo.XyzProperties.XYZ_NAMESPACE;
 import static naksha.model.StringCache.string;
+import static naksha.model.XyzFeature.ID;
+import static naksha.model.XyzFeature.PROPERTIES;
 
 import java.util.HashMap;
 import java.util.List;
@@ -39,19 +39,19 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The property references, basically addresses all properties that can be searched.
  */
-public class PRef {
+public class PRefBAK {
 
   /**
    * Create a references to an arbitrary property at the given JSON path.
    *
    * @param path The path to the property.
    */
-  PRef(@NotNull String... path) {
+  public PRefBAK(@NotNull String... path) {
     this.propertyPath = List.of(path);
   }
 
   @NotNull
-  PRef withTagName(@NotNull String tagName) {
+  PRefBAK withTagName(@NotNull String tagName) {
     this.tagName = tagName;
     return this;
   }
@@ -66,18 +66,18 @@ public class PRef {
   public static final String[] TXN_NEXT_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TXN_NEXT};
   public static final String[] TAGS_PROP_PATH = new String[] {PROPERTIES, XYZ_NAMESPACE, TAGS};
 
-  static final PRef PREF_ID = new PRef(ID_PROP_PATH);
-  static final PRef PREF_APP_ID = new PRef(APP_ID_PROP_PATH);
-  static final PRef PREF_AUTHOR = new PRef(AUTHOR_PROP_PATH);
-  static final PRef PREF_UUID = new PRef(UUID_PROP_PATH);
-  static final PRef PREF_MRID = new PRef(MRID_PROP_PATH);
-  static final PRef PREF_GRID = new PRef(GRID_PROP_PATH);
-  static final PRef PREF_TXN = new PRef(TXN_PROP_PATH);
-  static final PRef PREF_TXN_NEXT = new PRef(TXN_NEXT_PROP_PATH);
-  static final PRef PREF_TAGS = new PRef(TAGS_PROP_PATH);
+  static final PRefBAK PREF_ID = new PRefBAK(ID_PROP_PATH);
+  static final PRefBAK PREF_APP_ID = new PRefBAK(APP_ID_PROP_PATH);
+  static final PRefBAK PREF_AUTHOR = new PRefBAK(AUTHOR_PROP_PATH);
+  static final PRefBAK PREF_UUID = new PRefBAK(UUID_PROP_PATH);
+  static final PRefBAK PREF_MRID = new PRefBAK(MRID_PROP_PATH);
+  static final PRefBAK PREF_GRID = new PRefBAK(GRID_PROP_PATH);
+  static final PRefBAK PREF_TXN = new PRefBAK(TXN_PROP_PATH);
+  static final PRefBAK PREF_TXN_NEXT = new PRefBAK(TXN_NEXT_PROP_PATH);
+  static final PRefBAK PREF_TAGS = new PRefBAK(TAGS_PROP_PATH);
 
   // Mapping of JSON Prop path to PRef object
-  public static final Map<String[], PRef> PATH_TO_PREF_MAPPING = new HashMap<>() {};
+  public static final Map<String[], PRefBAK> PATH_TO_PREF_MAPPING = new HashMap<>() {};
 
   static {
     PATH_TO_PREF_MAPPING.put(ID_PROP_PATH, PREF_ID);
@@ -118,7 +118,7 @@ public class PRef {
    *
    * @return the reference to the {@code id} property.
    */
-  public static @NotNull PRef id() {
+  public static @NotNull PRefBAK id() {
     return PREF_ID;
   }
 
@@ -127,7 +127,7 @@ public class PRef {
    *
    * @return the reference to the {@code app_id} property from the XYZ-Namespace.
    */
-  public static @NotNull PRef app_id() {
+  public static @NotNull PRefBAK app_id() {
     return PREF_APP_ID;
   }
 
@@ -136,7 +136,7 @@ public class PRef {
    *
    * @return the reference to the {@code author} property from the XYZ-Namespace.
    */
-  public static @NotNull PRef author() {
+  public static @NotNull PRefBAK author() {
     return PREF_AUTHOR;
   }
 
@@ -146,7 +146,7 @@ public class PRef {
    *
    * @return the reference to the virtual {@code mrid} property.
    */
-  public static @NotNull PRef mrid() {
+  public static @NotNull PRefBAK mrid() {
     return PREF_MRID;
   }
 
@@ -155,7 +155,7 @@ public class PRef {
    *
    * @return the reference to the {@code grid} property from the XYZ-Namespace.
    */
-  public static @NotNull PRef grid() {
+  public static @NotNull PRefBAK grid() {
     return PREF_GRID;
   }
 
@@ -164,7 +164,7 @@ public class PRef {
    *
    * @return the reference to the {@code uuid} property from the XYZ-Namespace.
    */
-  public static @NotNull PRef uuid() {
+  public static @NotNull PRefBAK uuid() {
     return PREF_UUID;
   }
 
@@ -173,10 +173,10 @@ public class PRef {
    *
    * @return the reference to a specific tag from the {@code tags} array of the XYZ-Namespace.
    */
-  public static @NotNull PRef tag(@NotNull CharSequence name) {
+  public static @NotNull PRefBAK tag(@NotNull CharSequence name) {
     final String tagName = string(name);
     assert tagName != null;
-    return new PRef(TAGS_PROP_PATH).withTagName(tagName);
+    return new PRefBAK(TAGS_PROP_PATH).withTagName(tagName);
   }
 
   /**
@@ -184,7 +184,7 @@ public class PRef {
    *
    * @return the reference to the {@code txn} property from the XYZ-Namespace.
    */
-  public static @NotNull PRef txn() {
+  public static @NotNull PRefBAK txn() {
     return PREF_TXN;
   }
 
@@ -193,7 +193,7 @@ public class PRef {
    *
    * @return the reference to the {@code txn_next} property from the XYZ-Namespace.
    */
-  public static @NotNull PRef txn_next() {
+  public static @NotNull PRefBAK txn_next() {
     return PREF_TXN_NEXT;
   }
 }

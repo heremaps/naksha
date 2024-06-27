@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core.models.geojson.declaration;
 
-import naksha.geo.BBox;
 import java.util.List;
+import naksha.geo.BBox;
 
 public interface IBoundedCoordinates {
 

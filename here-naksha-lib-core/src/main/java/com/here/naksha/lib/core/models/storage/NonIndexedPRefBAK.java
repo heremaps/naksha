@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.model.PRef;
+import naksha.model.PRefBAK;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +28,11 @@ import org.slf4j.LoggerFactory;
  * Always use it as a last "where" condition and always together with indexed conditions that will drastically decrease
  * result set first.
  */
-public class NonIndexedPRef extends PRef {
+public class NonIndexedPRefBAK extends PRefBAK {
 
-  private static final Logger log = LoggerFactory.getLogger(NonIndexedPRef.class);
+  private static final Logger log = LoggerFactory.getLogger(NonIndexedPRefBAK.class);
 
-  public NonIndexedPRef(@NotNull String... path) {
+  public NonIndexedPRefBAK(@NotNull String... path) {
     super(path);
     log.atInfo().setMessage("NonIndexedPRef: {}").addArgument(path).log();
   }

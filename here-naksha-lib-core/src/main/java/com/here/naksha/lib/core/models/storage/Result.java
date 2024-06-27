@@ -21,9 +21,9 @@ package com.here.naksha.lib.core.models.storage;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.Typed;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import java.util.Map;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

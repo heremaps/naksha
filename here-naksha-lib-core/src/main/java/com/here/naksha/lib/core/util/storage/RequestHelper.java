@@ -20,24 +20,23 @@ package com.here.naksha.lib.core.util.storage;
 
 import static naksha.model.POp.eq;
 import static naksha.model.POp.or;
-import static naksha.model.PRef.PATH_TO_PREF_MAPPING;
-import static naksha.model.PRef.id;
+import static naksha.model.request.condition.PRef.id;
+import static naksha.model.request.condition.PRef.pRefPathMap;
 
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import naksha.geo.MultiPointCoordinates;
-import naksha.geo.PointCoordinates;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
+import naksha.geo.MultiPointCoordinates;
+import naksha.geo.PointCoordinates;
+import naksha.model.NakshaVersion;
 import naksha.model.OpType;
 import naksha.model.POp;
-import naksha.model.PRef;
 import naksha.model.ReadFeatures;
+import naksha.model.XyzFeature;
+import naksha.model.request.condition.PRef;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -309,17 +308,17 @@ public class RequestHelper {
    */
   public static @NotNull PRef pRefFromPropPath(final @NotNull String[] propPath) {
     // check if we can use standard PRef (on indexed properties)
-    for (final String[] path : PATH_TO_PREF_MAPPING.keySet()) {
+    for (final String[] path : pRefPathMap().keySet()) {
       if (Arrays.equals(path, propPath)) {
-        return PATH_TO_PREF_MAPPING.get(path);
+        return pRefPathMap().get(path);
       }
     }
     // fallback to non-standard PRef (non-indexed properties)
-    return new NonIndexedPRef(propPath);
+    return PRef.nonIndexedPref(propPath);
   }
 
   public static void combineOperationsForRequestAs(
-          final @NotNull ReadFeatures request, final OpType opType, @Nullable POp... operations) {
+      final @NotNull ReadFeatures request, final OpType opType, @Nullable POp... operations) {
     if (operations == null) return;
     List<POp> opList = null;
     for (final POp crtOp : operations) {

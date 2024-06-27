@@ -23,12 +23,12 @@ import static naksha.model.StringCache.string;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.lambdas.P1;
 import com.here.naksha.lib.core.util.Unsafe;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

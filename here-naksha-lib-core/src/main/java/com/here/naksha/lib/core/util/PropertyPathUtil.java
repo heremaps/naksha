@@ -20,8 +20,8 @@ package com.here.naksha.lib.core.util;
 
 import static naksha.model.NakshaVersion.v2_0_12;
 
-import naksha.model.XyzFeature;
 import java.util.*;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

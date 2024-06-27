@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
  */
 @NotThreadSafe
 @AvailableSince(NakshaVersion.v2_0_7)
-public interface IReadSession extends ISession {
+public interface IReadSessionBAK extends ISession {
 
   /**
    * Tests whether this session is connected to the master-node.

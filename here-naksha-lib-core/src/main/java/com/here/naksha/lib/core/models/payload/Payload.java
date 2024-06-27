@@ -35,7 +35,6 @@ import java.io.OutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipException;
-
 import naksha.model.XyzResponse;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;

@@ -20,14 +20,14 @@ package naksha.model;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import com.here.naksha.lib.core.storage.CollectionInfo;
-import com.here.naksha.lib.core.storage.IMasterTransaction;
-import com.here.naksha.lib.core.storage.IReadTransaction;
-import com.here.naksha.lib.core.storage.ITransactionSettings;
 import com.here.naksha.lib.core.exceptions.StorageException;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.lambdas.Pe1;
 import com.here.naksha.lib.core.models.TxSignalSet;
+import com.here.naksha.lib.core.storage.CollectionInfo;
+import com.here.naksha.lib.core.storage.IMasterTransaction;
+import com.here.naksha.lib.core.storage.IReadTransaction;
+import com.here.naksha.lib.core.storage.ITransactionSettings;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -39,7 +39,7 @@ import org.jetbrains.annotations.Nullable;
  * Storage API to gain access to storages.
  */
 @AvailableSince(NakshaVersion.v2_0_6)
-public interface IStorage extends AutoCloseable {
+public interface IStorageBAK extends AutoCloseable {
 
   /**
    * Initializes the storage, create the transaction table, install needed scripts and extensions.

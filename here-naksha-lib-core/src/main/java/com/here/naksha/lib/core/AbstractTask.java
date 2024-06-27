@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
-
 import naksha.model.NakshaContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -217,7 +216,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
   }
 
   /**
-   * Returns the start time of the task in nanoseconds. This will differ from the {@link NakshaContext#startNanos()} time, the difference
+   * Returns the start time of the task in nanoseconds. This will differ from the {@link NakshaContext#getStartNanos()} time, the difference
    * can even be big, if this is just a child task.
    *
    * @return The start time of the task in nanoseconds.

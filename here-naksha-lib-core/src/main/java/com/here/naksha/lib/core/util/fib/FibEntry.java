@@ -18,9 +18,9 @@
  */
 package com.here.naksha.lib.core.util.fib;
 
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.util.ILike;
 import java.util.Objects;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

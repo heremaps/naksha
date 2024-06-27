@@ -21,10 +21,10 @@ package com.here.naksha.lib.core.models.payload.events.feature;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.model.EXyzAction;
 import com.here.naksha.lib.core.models.payload.events.FeatureEvent;
 import java.util.HashMap;
 import java.util.Map;
+import naksha.model.EXyzAction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

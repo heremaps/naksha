@@ -1,10 +1,25 @@
+/*
+ * Copyright (C) 2017-2024 HERE Europe B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * License-Filename: LICENSE
+ */
 package com.here.naksha.lib.core;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import kotlin.Unit;
 import naksha.base.fn.Fn0;
-import naksha.base.fn.Fn1;
-import naksha.base.fn.Fx1;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -15,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class NakshaCoreContext extends NakshaContext {
   private static final AtomicBoolean INITIALIZED = new AtomicBoolean(false);
+
   @SuppressWarnings("NotNullFieldNotInitialized")
   private static @NotNull Fn0<NakshaContext> _super;
 
@@ -28,7 +44,10 @@ public class NakshaCoreContext extends NakshaContext {
       NakshaContext.setCurrentRef(NakshaCoreContext::currentContext);
     }
   }
-  static { init(); }
+
+  static {
+    init();
+  }
 
   protected NakshaCoreContext() {}
 
@@ -41,5 +60,4 @@ public class NakshaCoreContext extends NakshaContext {
     final AbstractTask<?, ?> task = AbstractTask.currentTask();
     return task != null ? (NakshaCoreContext) task.context() : (NakshaCoreContext) _super.call();
   }
-
 }

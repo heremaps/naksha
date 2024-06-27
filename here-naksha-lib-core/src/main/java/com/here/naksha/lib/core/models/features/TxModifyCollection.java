@@ -21,9 +21,9 @@ package com.here.naksha.lib.core.models.features;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.model.NakshaVersion;
-import naksha.model.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
+import naksha.model.EXyzAction;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 

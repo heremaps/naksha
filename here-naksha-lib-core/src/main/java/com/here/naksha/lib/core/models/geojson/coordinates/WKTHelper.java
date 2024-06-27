@@ -18,11 +18,10 @@
  */
 package com.here.naksha.lib.core.models.geojson.coordinates;
 
-import naksha.geo.*;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import naksha.geo.*;
 
 public class WKTHelper {
 

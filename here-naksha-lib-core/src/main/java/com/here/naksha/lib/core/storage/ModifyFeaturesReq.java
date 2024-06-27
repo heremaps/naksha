@@ -18,9 +18,9 @@
  */
 package com.here.naksha.lib.core.storage;
 
-import naksha.model.XyzFeature;
 import java.util.ArrayList;
 import java.util.List;
+import naksha.model.XyzFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

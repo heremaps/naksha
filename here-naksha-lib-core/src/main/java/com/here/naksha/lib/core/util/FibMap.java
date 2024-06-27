@@ -27,7 +27,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 import java.util.List;
-
 import naksha.model.StringCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

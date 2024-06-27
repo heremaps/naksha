@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core.view;
 
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.view.ViewMember.Import;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 
 /** All deserialization views. */

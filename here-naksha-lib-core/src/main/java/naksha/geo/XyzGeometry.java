@@ -29,9 +29,8 @@ import com.here.naksha.lib.core.models.Typed;
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
 import com.here.naksha.lib.core.util.json.JsonObject;
-import naksha.model.XyzGeometryCollection;
-
 import java.util.List;
+import naksha.model.XyzGeometryCollection;
 
 /** Implemented following: https://tools.ietf.org/html/rfc7946#section-3.1 */
 @JsonSubTypes({

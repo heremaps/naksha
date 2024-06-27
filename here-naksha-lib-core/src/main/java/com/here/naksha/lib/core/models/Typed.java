@@ -21,12 +21,12 @@ package com.here.naksha.lib.core.models;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzGeometry;
 import com.here.naksha.lib.core.models.payload.Payload;
 import com.here.naksha.lib.core.models.payload.events.clustering.Clustering;
 import com.here.naksha.lib.core.models.payload.events.tweaks.Tweaks;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import naksha.geo.XyzGeometry;
+import naksha.model.XyzFeature;
 
 /**
  * A base interface to be implemented by all types that are serializable and have a property "type" that holds the type of the object.

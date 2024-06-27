@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereMetaNs;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
@@ -30,6 +29,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzName
 import com.here.naksha.lib.core.util.json.JsonObject;
 import java.util.List;
 import java.util.Objects;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

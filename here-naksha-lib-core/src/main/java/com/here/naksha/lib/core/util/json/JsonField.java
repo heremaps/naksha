@@ -22,11 +22,11 @@ import static com.here.naksha.lib.core.util.Unsafe.unsafe;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.lambdas.F5;
-import naksha.model.StringCache;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
+import naksha.model.StringCache;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

@@ -22,13 +22,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.model.XyzFeature;
-import naksha.model.XyzFeatureCollection;
-import naksha.model.XyzFeatureCollection.ModificationFailure;
 import com.here.naksha.lib.core.models.payload.events.FeatureEvent;
 import com.here.naksha.lib.core.models.payload.events.IfRowLock;
 import java.util.List;
 import java.util.Map;
+import naksha.model.XyzFeature;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.XyzFeatureCollection.ModificationFailure;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

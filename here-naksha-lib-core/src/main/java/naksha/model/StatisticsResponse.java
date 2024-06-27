@@ -22,9 +22,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.geo.BBox;
 import com.here.naksha.lib.core.models.payload.events.info.GetStatisticsEvent;
 import java.util.List;
+import naksha.geo.BBox;
 
 /** The response that is sent for a {@link GetStatisticsEvent}. */
 @JsonIgnoreProperties(ignoreUnknown = true)

@@ -19,15 +19,14 @@
 package com.here.naksha.lib.core;
 
 import com.here.naksha.lib.core.models.payload.Event;
-import naksha.model.XyzResponse;
-import naksha.model.XyzResponseType;
 import com.here.naksha.lib.core.models.payload.events.feature.LoadFeaturesEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.ModifyFeaturesEvent;
-import naksha.model.ErrorResponse;
 import java.util.ArrayList;
 import java.util.List;
-
+import naksha.model.ErrorResponse;
 import naksha.model.NakshaContext;
+import naksha.model.XyzResponse;
+import naksha.model.XyzResponseType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,7 +48,7 @@ public abstract class AbstractEventTask<EVENT extends Event>
    */
   @Deprecated
   protected AbstractEventTask(@NotNull INaksha naksha) {
-    super(naksha, new NakshaContext());
+    super(naksha, NakshaContext.currentContext());
     pipeline = new EventPipeline(naksha());
   }
 
@@ -62,7 +61,7 @@ public abstract class AbstractEventTask<EVENT extends Event>
   @Override
   @Deprecated
   protected @NotNull XyzResponse errorResponse(@NotNull Throwable throwable) {
-    return new ErrorResponse(throwable, context().streamId());
+    return new ErrorResponse(throwable, context().getStreamId());
   }
 
   /**

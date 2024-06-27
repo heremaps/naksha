@@ -18,9 +18,9 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.util.json.JsonEnum;
+import naksha.model.NakshaVersion;
 import naksha.model.ReadFeatures;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.ApiStatus.Experimental;

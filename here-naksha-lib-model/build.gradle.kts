@@ -36,6 +36,7 @@ kotlin {
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-geo"))
                 api(project(":here-naksha-lib-jbon"))
+                api(project(":here-naksha-lib-auth"))
             }
         }
         commonTest {
@@ -52,6 +53,7 @@ kotlin {
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-geo"))
                 api(project(":here-naksha-lib-jbon"))
+								api(project(":here-naksha-lib-auth"))
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
@@ -70,6 +72,7 @@ kotlin {
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-geo"))
                 api(project(":here-naksha-lib-jbon"))
+								api(project(":here-naksha-lib-auth"))
             }
         }
     }

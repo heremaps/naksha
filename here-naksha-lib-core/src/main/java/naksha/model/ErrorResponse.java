@@ -27,7 +27,6 @@ import com.here.naksha.lib.core.exceptions.ParameterError;
 import com.here.naksha.lib.core.exceptions.TooManyTasks;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
-
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
