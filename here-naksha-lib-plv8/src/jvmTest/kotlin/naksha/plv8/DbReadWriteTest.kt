@@ -1,4 +1,4 @@
-package naksha.plv8
+package naksha.psql
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper

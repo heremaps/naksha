@@ -1,5 +1,5 @@
 import naksha.jbon.*
-import naksha.plv8.IPlv8Plan
+import naksha.psql.IPlv8Plan
 import com.here.naksha.lib.plv8.NakshaSession
 import com.here.naksha.lib.plv8.Static
 import org.junit.jupiter.api.Order
@@ -143,7 +143,7 @@ class Plv8JbonTest : JbTest() {
         }
     }
 
-    private fun query(plan: naksha.plv8.IPlv8Plan, args: Array<Any?>?, assertion: (Map<String, Any?>) -> Unit) {
+    private fun query(plan: naksha.psql.IPlv8Plan, args: Array<Any?>?, assertion: (Map<String, Any?>) -> Unit) {
         try {
             val cursor = if (!args.isNullOrEmpty()) plan.cursor(args) else plan.cursor()
             try {

@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package naksha.plv8
+package naksha.psql
 
 import naksha.base.AbstractMapProxy
 import kotlin.js.ExperimentalJsExport

@@ -1,4 +1,4 @@
-package naksha.plv8.read
+package naksha.psql.read
 
 import naksha.model.Flags.GEO_TYPE_TWKB
 import naksha.model.Guid
@@ -7,7 +7,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadRequest
 import naksha.model.request.condition.*
 import naksha.model.request.condition.SOpType.INTERSECTS
-import naksha.plv8.*
+import naksha.psql.*
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

@@ -1,4 +1,4 @@
-package naksha.plv8.write
+package naksha.psql.write
 
 import naksha.model.Guid
 import naksha.model.request.*
@@ -6,10 +6,10 @@ import naksha.model.request.Write.Companion.XYZ_OP_CREATE
 import naksha.model.request.Write.Companion.XYZ_OP_DELETE
 import naksha.model.request.Write.Companion.XYZ_OP_PURGE
 import naksha.model.response.Row
-import naksha.plv8.ERR_UNIQUE_VIOLATION
-import naksha.plv8.NakshaException
-import naksha.plv8.NakshaSession
-import naksha.plv8.Static
+import naksha.psql.ERR_UNIQUE_VIOLATION
+import naksha.psql.NakshaException
+import naksha.psql.NakshaSession
+import naksha.psql.Static
 
 internal class NakshaRequestOp(
     val reqWrite: Write,

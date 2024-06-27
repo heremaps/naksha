@@ -1,4 +1,4 @@
-package naksha.plv8
+package naksha.psql
 
 import Plv8TestContainer.Companion.postgreSQLContainer
 import naksha.model.ACTION_CREATE

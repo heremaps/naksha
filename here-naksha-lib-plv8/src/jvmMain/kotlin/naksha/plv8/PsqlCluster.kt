@@ -1,7 +1,7 @@
-package naksha.plv8
+package naksha.psql
 
 import naksha.base.Platform
-import naksha.plv8.PgSessionOptions
+import naksha.psql.PgSessionOptions
 import kotlin.math.min
 
 /**

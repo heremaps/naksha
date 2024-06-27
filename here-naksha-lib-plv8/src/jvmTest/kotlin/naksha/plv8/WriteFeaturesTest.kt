@@ -1,15 +1,15 @@
-package naksha.plv8
+package naksha.psql
 
 import naksha.jbon.XYZ_OP_CREATE
-import naksha.plv8.PsqlPlan
+import naksha.psql.PsqlPlan
 import naksha.base.Int64
 import naksha.model.*
 import naksha.model.request.InsertRow
 import naksha.model.request.WriteRequest
 import naksha.model.response.Row
 import naksha.model.response.SuccessResponse
-import naksha.plv8.write.RowUpdater
-import naksha.plv8.write.WriteRequestExecutor
+import naksha.psql.write.RowUpdater
+import naksha.psql.write.WriteRequestExecutor
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyString

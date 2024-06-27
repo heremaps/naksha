@@ -1,4 +1,4 @@
-package naksha.plv8.write
+package naksha.psql.write
 
 import naksha.base.Fnv1a32
 import naksha.base.Platform
@@ -7,9 +7,9 @@ import naksha.model.ACTION_UPDATE
 import naksha.model.Flags
 import naksha.model.response.Metadata
 import naksha.model.response.Row
-import naksha.plv8.PgPlan
-import naksha.plv8.NakshaSession
-import naksha.plv8.Static.SC_TRANSACTIONS
+import naksha.psql.PgPlan
+import naksha.psql.NakshaSession
+import naksha.psql.Static.SC_TRANSACTIONS
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

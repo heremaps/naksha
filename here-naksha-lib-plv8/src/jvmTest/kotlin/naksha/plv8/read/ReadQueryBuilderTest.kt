@@ -1,4 +1,4 @@
-package naksha.plv8.read
+package naksha.psql.read
 
 import naksha.geo.GeometryProxy
 import naksha.model.request.ReadCollections
@@ -13,7 +13,7 @@ import naksha.model.request.condition.PRef.*
 import naksha.model.request.condition.SOp.Companion.intersects
 import naksha.model.request.condition.SOp.Companion.intersectsWithTransformation
 import naksha.model.request.condition.geometry.BufferTransformation
-import naksha.plv8.PgSession
+import naksha.psql.PgSession
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals

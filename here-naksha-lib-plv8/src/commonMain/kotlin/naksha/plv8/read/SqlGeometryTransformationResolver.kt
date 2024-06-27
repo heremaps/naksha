@@ -16,13 +16,13 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.plv8.read
+package naksha.psql.read
 
 import naksha.model.request.condition.geometry.BufferTransformation
 import naksha.model.request.condition.geometry.GeographyTransformation
 import naksha.model.request.condition.geometry.GeometryTransformation
-import naksha.plv8.PgSession
-import naksha.plv8.PgUtil
+import naksha.psql.PgSession
+import naksha.psql.PgUtil
 
 
 class SqlGeometryTransformationResolver(

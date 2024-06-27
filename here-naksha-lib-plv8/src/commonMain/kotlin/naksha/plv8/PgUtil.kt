@@ -1,4 +1,4 @@
-package naksha.plv8
+package naksha.psql
 
 expect class PgUtil {
     companion object {

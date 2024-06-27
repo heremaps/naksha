@@ -1,4 +1,4 @@
-package naksha.plv8
+package naksha.psql
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PgUtil {

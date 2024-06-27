@@ -1,6 +1,6 @@
-package naksha.plv8
+package naksha.psql
 
-import naksha.plv8.PgCursor
+import naksha.psql.PgCursor
 import java.sql.ResultSet
 
 /**

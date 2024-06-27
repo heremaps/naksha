@@ -1,4 +1,4 @@
-package naksha.plv8.write
+package naksha.psql.write
 
 import naksha.base.Platform.Companion.currentMillis
 import naksha.jbon.asArray
@@ -13,11 +13,11 @@ import naksha.model.request.Write.Companion.XYZ_OP_UPSERT
 import naksha.model.request.WriteRequest
 import naksha.model.response.Row
 import naksha.model.response.SuccessResponse
-import naksha.plv8.NakshaSession
-import naksha.plv8.PgUtil
-import naksha.plv8.Static
-import naksha.plv8.write.NakshaRequestOp.Companion.mapToOperations
-import naksha.plv8.Static.DEBUG
+import naksha.psql.NakshaSession
+import naksha.psql.PgUtil
+import naksha.psql.Static
+import naksha.psql.write.NakshaRequestOp.Companion.mapToOperations
+import naksha.psql.Static.DEBUG
 
 class SingleCollectionWriter(
     val collectionId: String,

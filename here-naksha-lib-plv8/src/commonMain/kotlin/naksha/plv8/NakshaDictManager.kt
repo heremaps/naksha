@@ -1,4 +1,4 @@
-package naksha.plv8
+package naksha.psql
 
 import naksha.jbon.IDictManager
 import naksha.jbon.JbDict

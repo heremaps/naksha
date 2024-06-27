@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package naksha.plv8
+package naksha.psql
 
 import naksha.model.response.Row
 import kotlin.js.ExperimentalJsExport

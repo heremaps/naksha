@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package naksha.plv8
+package naksha.psql
 
 import naksha.geo.PointProxy
 import naksha.model.NakshaFeatureProxy

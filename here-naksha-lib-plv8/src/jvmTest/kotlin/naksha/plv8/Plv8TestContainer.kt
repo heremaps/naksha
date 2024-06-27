@@ -1,6 +1,6 @@
-import naksha.plv8.PsqlCluster
-import naksha.plv8.PsqlInstance
-import naksha.plv8.PsqlStorage
+import naksha.psql.PsqlCluster
+import naksha.psql.PsqlInstance
+import naksha.psql.PsqlStorage
 import naksha.model.NakshaContext
 import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.ExtensionContext

@@ -1,6 +1,4 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
-package naksha.plv8
+package naksha.psql
 
 import naksha.jbon.*
 

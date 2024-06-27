@@ -4,9 +4,9 @@ package com.here.naksha.lib.plv8;
 
 import naksha.base.P_JsMap
 import naksha.base.PlatformMap
-import naksha.plv8.IPlv8Sql
-import naksha.plv8.Param
-import naksha.plv8.PgDbInfo
+import naksha.psql.IPlv8Sql
+import naksha.psql.Param
+import naksha.psql.PgDbInfo
 
 /**
  * Thin wrapper around the native plv8 engine methods. This wrapper allows to simulate this in the JVM.
@@ -40,11 +40,11 @@ class JsPlv8Sql : IPlv8Sql {
         return js("args ? plv8.execute(sql, args) : plv8.execute(sql)")
     }
 
-    override fun prepare(sql: String, typeNames: Array<String>?): naksha.plv8.IPlv8Plan {
+    override fun prepare(sql: String, typeNames: Array<String>?): naksha.psql.IPlv8Plan {
         return js("typeNames ? plv8.prepare(sql, typeNames) : plv8.execute(typeNames)")
     }
 
-    override fun executeBatch(plan: naksha.plv8.IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray {
+    override fun executeBatch(plan: naksha.psql.IPlv8Plan, bulkParams: Array<Array<Param>>): IntArray {
         for (singleQueryParams in bulkParams) {
             val executionParams = singleQueryParams.map { it.value }.toTypedArray()
             js("plan.execute(executionParams)")

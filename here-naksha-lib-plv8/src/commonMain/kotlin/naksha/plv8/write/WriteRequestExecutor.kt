@@ -1,10 +1,10 @@
-package naksha.plv8.write
+package naksha.psql.write
 
 import naksha.model.request.ResultRow
 import naksha.model.request.WriteRequest
 import naksha.model.response.SuccessResponse
-import naksha.plv8.NKC_TABLE
-import naksha.plv8.NakshaSession
+import naksha.psql.NKC_TABLE
+import naksha.psql.NakshaSession
 
 class WriteRequestExecutor(
     val session: NakshaSession,

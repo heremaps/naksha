@@ -1,6 +1,6 @@
-package naksha.plv8
+package naksha.psql
 
-import naksha.plv8.PsqlInstance
+import naksha.psql.PsqlInstance
 import kotlin.test.Test
 import kotlin.test.*
 

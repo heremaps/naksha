@@ -9,10 +9,10 @@ import naksha.model.request.WriteRow
 import naksha.model.response.ErrorResponse
 import naksha.model.response.Row
 import naksha.model.response.SuccessResponse
-import naksha.plv8.DbTest
-import naksha.plv8.NKC_TABLE
-import naksha.plv8.NakshaSession
-import naksha.plv8.Static
+import naksha.psql.DbTest
+import naksha.psql.NKC_TABLE
+import naksha.psql.NakshaSession
+import naksha.psql.Static
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 

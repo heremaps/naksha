@@ -1,8 +1,8 @@
-package naksha.plv8
+package naksha.psql
 
 import naksha.base.Int64
-import naksha.plv8.PgCursor
-import naksha.plv8.PgPlan
+import naksha.psql.PgCursor
+import naksha.psql.PgPlan
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Types

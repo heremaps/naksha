@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package naksha.plv8
+package naksha.psql
 
 import naksha.jbon.*
 import kotlinx.datetime.*
@@ -13,12 +13,12 @@ import naksha.jbon.XyzVersion
 import naksha.model.*
 import naksha.model.request.*
 import naksha.model.response.*
-import naksha.plv8.Static.SC_TRANSACTIONS
-import naksha.plv8.Static.nakshaCollectionConfig
-import naksha.plv8.read.ReadQueryBuilder
-import naksha.plv8.write.RowUpdater
-import naksha.plv8.write.SingleCollectionWriter
-import naksha.plv8.write.WriteRequestExecutor
+import naksha.psql.Static.SC_TRANSACTIONS
+import naksha.psql.Static.nakshaCollectionConfig
+import naksha.psql.read.ReadQueryBuilder
+import naksha.psql.write.RowUpdater
+import naksha.psql.write.SingleCollectionWriter
+import naksha.psql.write.WriteRequestExecutor
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalJsExport::class)
 
-package naksha.plv8
+package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.Platform

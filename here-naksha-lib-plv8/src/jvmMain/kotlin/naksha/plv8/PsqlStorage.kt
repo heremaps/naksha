@@ -1,4 +1,4 @@
-package naksha.plv8
+package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.PlatformObject
@@ -11,11 +11,11 @@ import naksha.model.response.ErrorResponse
 import naksha.model.response.Response
 import naksha.model.response.Row
 import naksha.model.response.SuccessResponse
-import naksha.plv8.*
-import naksha.plv8.NKC_TABLE
-import naksha.plv8.Static.SC_DICTIONARIES
-import naksha.plv8.Static.SC_INDICES
-import naksha.plv8.Static.SC_TRANSACTIONS
+import naksha.psql.*
+import naksha.psql.NKC_TABLE
+import naksha.psql.Static.SC_DICTIONARIES
+import naksha.psql.Static.SC_INDICES
+import naksha.psql.Static.SC_TRANSACTIONS
 
 /**
  * The Java implementation of the [IStorage] interface. This storage class is extended in `here-naksha-storage-psql`, which has a

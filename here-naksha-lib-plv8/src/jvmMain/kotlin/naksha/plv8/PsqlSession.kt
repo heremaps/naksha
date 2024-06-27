@@ -1,10 +1,10 @@
-package naksha.plv8
+package naksha.psql
 
 import naksha.base.GZip
 import naksha.base.Int64
 import naksha.base.ObjectProxy
 import naksha.jbon.*
-import naksha.plv8.*
+import naksha.psql.*
 import org.postgresql.jdbc.PgConnection
 
 /**

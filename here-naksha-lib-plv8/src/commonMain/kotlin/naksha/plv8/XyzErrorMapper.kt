@@ -1,4 +1,4 @@
-package naksha.plv8
+package naksha.psql
 
 const val ERR_UNINITIALIZED = "N0000"
 const val ERR_COLLECTION_EXISTS = "N0001"

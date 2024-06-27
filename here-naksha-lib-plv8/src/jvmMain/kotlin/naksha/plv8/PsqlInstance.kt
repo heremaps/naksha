@@ -1,6 +1,6 @@
-package naksha.plv8
+package naksha.psql
 
-import naksha.plv8.PgSessionOptions
+import naksha.psql.PgSessionOptions
 import org.postgresql.PGProperty.*
 import org.postgresql.jdbc.PgConnection
 import org.postgresql.util.HostSpec

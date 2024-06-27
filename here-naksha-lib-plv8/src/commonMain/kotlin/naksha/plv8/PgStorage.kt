@@ -1,4 +1,4 @@
-package naksha.plv8
+package naksha.psql
 
 import naksha.model.IStorage
 import naksha.model.NakshaContext
