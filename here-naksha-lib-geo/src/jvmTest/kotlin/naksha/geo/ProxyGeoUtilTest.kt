@@ -1,12 +1,24 @@
 package naksha.geo
 
+import naksha.base.JvmMap
+import naksha.base.Platform
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Test
+import org.locationtech.jts.geom.LineString
+import org.locationtech.jts.geom.MultiLineString
+import org.locationtech.jts.geom.MultiPoint
+import org.locationtech.jts.geom.MultiPolygon
+import org.locationtech.jts.geom.Point
+import org.locationtech.jts.geom.Polygon
+import org.locationtech.jts.io.geojson.GeoJsonReader
 import kotlin.test.assertEquals
 
 class ProxyGeoUtilTest {
 
+    private val jtsJsonReader = GeoJsonReader()
+
     @Test
-    fun testEnvelope(){
+    fun testEnvelope() {
         // given
         val x1 = 1.0
         val y1 = 1.1
@@ -17,7 +29,7 @@ class ProxyGeoUtilTest {
         val polygon = ProxyGeoUtil.createBBoxEnvelope(x1, y1, x2, y2)
 
         // then
-        val coords =polygon.coordinates!![0]!!
+        val coords = polygon.coordinates!![0]!!
 
         assertEquals(1.0, coords[0]!!.getLongitude())
         assertEquals(1.1, coords[0]!!.getLatitude())
@@ -33,5 +45,264 @@ class ProxyGeoUtilTest {
 
         assertEquals(1.0, coords[4]!!.getLongitude())
         assertEquals(1.1, coords[4]!!.getLatitude())
+    }
+
+    @Test
+    fun testPointToJts() {
+        // given
+        val json = """
+          {
+            "type": "Point",
+            "coordinates": [-20.26, 27.12, 0.55]
+          }
+        """.trimIndent()
+
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PointProxy::class)
+
+        // when
+        val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
+        val jtsFromJson = jtsJsonReader.read(json)
+
+        // then
+        assertInstanceOf(Point::class.java, jtsFromProxy)
+        assertEquals(jtsFromJson, jtsFromProxy)
+    }
+
+    @Test
+    fun testMultiPointToJts() {
+        // given
+        val json = """
+          {
+            "type": "MultiPoint",
+            "coordinates": [
+                [-20.26, 27.12, 0.55],
+                [-20.24, 27.13]
+               ]
+          }
+        """.trimIndent()
+
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiPointProxy::class)
+
+        // when
+        val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
+        val jtsFromJson = jtsJsonReader.read(json)
+
+        // then
+        assertInstanceOf(MultiPoint::class.java, jtsFromProxy)
+        assertEquals(jtsFromJson, jtsFromProxy)
+    }
+
+    @Test
+    fun testLineStringToJts() {
+        // given
+        val json = """
+          {
+            "type": "LineString",
+            "coordinates": [
+                [-20.26, 27.12, 0.55],
+                [-20.24, 27.13]
+               ]
+          }
+        """.trimIndent()
+
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(LineStringProxy::class)
+
+        // when
+        val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
+        val jtsFromJson = jtsJsonReader.read(json)
+
+        // then
+        assertInstanceOf(LineString::class.java, jtsFromProxy)
+        assertEquals(jtsFromJson, jtsFromProxy)
+    }
+
+    @Test
+    fun testMultiLineStringToJts() {
+        // given
+        val json = """
+          {
+            "type": "MultiLineString",
+            "coordinates": [
+               [
+                [-20.26, 27.12, 0.55],
+                [-20.24, 27.13]
+               ],
+               [
+                [-21.26, 28.12, 0.55],
+                [-21.24, 28.13, 0]
+               ]
+             ]
+          }
+        """.trimIndent()
+
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiLineStringProxy::class)
+
+        // when
+        val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
+        val jtsFromJson = jtsJsonReader.read(json)
+
+        // then
+        assertInstanceOf(MultiLineString::class.java, jtsFromProxy)
+        assertEquals(jtsFromJson, jtsFromProxy)
+    }
+
+    @Test
+    fun testPolygonToJts() {
+        // given
+        val json = """
+          {
+            "coordinates": [
+              [
+                [
+                  28.596898251874165,
+                  11.794941370567287
+                ],
+                [
+                  38.413029200628415,
+                  -5.137906502534122
+                ],
+                [
+                  41.68388501908956,
+                  11.9426922326914
+                ],
+                [
+                  28.596898251874165,
+                  11.794941370567287
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          }
+        """.trimIndent()
+
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PolygonProxy::class)
+
+        // when
+        val jtsFromProxy = ProxyGeoUtil.toJtsPolygon(proxyGeometry)
+        val jtsFromJson = jtsJsonReader.read(json)
+
+        // then
+        assertInstanceOf(Polygon::class.java, jtsFromProxy)
+        assertEquals(jtsFromJson, jtsFromProxy)
+    }
+
+    @Test
+    fun testPolygonWithHolesToJts() {
+        // given
+        val json = """
+          {
+            "coordinates": [
+              [
+                [
+                  28.596898251874165,
+                  11.794941370567287
+                ],
+                [
+                  38.413029200628415,
+                  -5.137906502534122
+                ],
+                [
+                  41.68388501908956,
+                  11.9426922326914
+                ],
+                [
+                  28.596898251874165,
+                  11.794941370567287
+                ]
+              ],
+              [
+                [
+                  34.49338528240901,
+                  8.301855939379635
+                ],
+                [
+                  38.40485302348304,
+                  8.157163482762314
+                ],
+                [
+                  35.24529722445408,
+                  5.568479831724019
+                ],
+                [
+                  34.49338528240901,
+                  8.301855939379635
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          }
+        """.trimIndent()
+
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PolygonProxy::class)
+
+        // when
+        val jtsFromProxy = ProxyGeoUtil.toJtsPolygon(proxyGeometry)
+        val jtsFromJson = jtsJsonReader.read(json)
+
+        // then
+        assertInstanceOf(Polygon::class.java, jtsFromProxy)
+        assertEquals(jtsFromJson, jtsFromProxy)
+    }
+
+    @Test
+    fun testMultiPolygonToJts() {
+        // given
+        val json = """
+          {
+            "coordinates": [
+               [
+                  [
+                    [
+                      28.596898251874165,
+                      11.794941370567287
+                    ],
+                    [
+                      38.413029200628415,
+                      -5.137906502534122
+                    ],
+                    [
+                      41.68388501908956,
+                      11.9426922326914
+                    ],
+                    [
+                      28.596898251874165,
+                      11.794941370567287
+                    ]
+                  ]
+              ],
+              [
+                  [
+                    [
+                      34.49338528240901,
+                      8.301855939379635
+                    ],
+                    [
+                      38.40485302348304,
+                      8.157163482762314
+                    ],
+                    [
+                      35.24529722445408,
+                      5.568479831724019
+                    ],
+                    [
+                      34.49338528240901,
+                      8.301855939379635
+                    ]
+                  ]
+              ]
+            ],
+            "type": "MultiPolygon"
+          }
+        """.trimIndent()
+
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiPolygonProxy::class)
+
+        // when
+        val jtsFromProxy = ProxyGeoUtil.toJtsMultiPolygon(proxyGeometry)
+        val jtsFromJson = jtsJsonReader.read(json)
+
+        // then
+        assertInstanceOf(MultiPolygon::class.java, jtsFromProxy)
+        assertEquals(jtsFromJson, jtsFromProxy)
     }
 }
