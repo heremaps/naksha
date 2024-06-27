@@ -31,10 +31,11 @@ In Java, the following JVM only classes actually provide the [PgStorage](./src/c
   [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface, it requires to provide a
   [PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt) to the constructor, when creating an instance of it.
 - The [PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt) can be created by providing at least one
-  [PsqlInstance](./src/jvmMain/kotlin/naksha/psql/PsqlInstance.kt), representing the master node of the PostgresQL database. It is
-  queried via a static getter (`Psqllnstance.get(url|...)`). In the background each instance holds an own dedicate connection pool, and
-  the same instance (identifier by host, port, db, user and password) is kept in memory as singleton, so that all clusters and storages
-  share the same connection pool. This reduces the amount of connections being created and kept alive.
+  [PsqlInstance](./src/jvmMain/kotlin/naksha/psql/PsqlInstance.kt), representing the master node of the PostgresQL database.
+- The [PsqlInstance](./src/jvmMain/kotlin/naksha/psql/PsqlInstance.kt) is queried via a static getter (`Psqllnstance.get(url|...)`). In
+  the background each instance holds an own dedicate connection pool, and the same instance (identifier by host, port, db, user and
+  password) is kept in memory as singleton, so that all clusters and storages share the same connection pool. This reduces the amount of 
+  connections being created and kept alive. Idle connections are automatically closed, idle instances are automatically removed.
 
 In [PLV8](https://plv8.github.io/) the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) is implemented as static member of 
 the standard `plv8` object provided out-of-the-box by the [PLV8 extension](https://plv8.github.io/). So, when the SQL function 
@@ -44,7 +45,7 @@ and throw an SQL exception, when the member does not exist, which guarantees, th
 code is executed. The method `openSession`, of the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface, is 
 implemented in PLV8 as a thin wrapper around the native [SPI](https://plv8.github.io/#database-access-via-spi)-API, provided 
 out-of-the-box by the [PLV8 extension](https://plv8.github.io/). Actually, this implementation therefore does only support a single 
-connection, so inside the database the parallel optimizations (`executeParallel`) are not supported.
+connection, so inside the database the parallel optimizations (like `executeParallel`) are not supported.
 
 # Things we need to remember
 Due to partitioning of the big tables, we need to change **cluster** and **group** parameters:
