@@ -23,7 +23,7 @@ class Plv8TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableRes
         private var existingUrl: String? = null
         lateinit var url: String
         lateinit var schema: String
-        val context = NakshaContext.newInstance("plv8_test", "pvl8_author", true)
+        val context = NakshaContext.newInstance("plv8_test", "pvl8_author", su = true)
         private val _storage = AtomicReference<PsqlStorage?>()
         val storage: PsqlStorage
             get() {
@@ -67,12 +67,14 @@ class Plv8TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableRes
         } else {
             val password = "password"
             postgreSQLContainer = GenericContainer("hcr.data.here.com/naksha-devops/naksha-postgres:${architecture()}-v16.2-r1")
-                    .withExposedPorts(5432)
+                .withExposedPorts(5432)
             postgreSQLContainer.addEnv("PGPASSWORD", password)
-            postgreSQLContainer.setWaitStrategy(LogMessageWaitStrategy()
+            postgreSQLContainer.setWaitStrategy(
+                LogMessageWaitStrategy()
                     .withRegEx("Start postgres.*")
                     .withTimes(2)
-                    .withStartupTimeout(Duration.of(60, ChronoUnit.SECONDS)))
+                    .withStartupTimeout(Duration.of(60, ChronoUnit.SECONDS))
+            )
             postgreSQLContainer.start()
             Thread.sleep(1000) // give it 1s more before connect
 
