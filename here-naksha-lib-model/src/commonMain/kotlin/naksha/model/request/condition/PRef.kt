@@ -46,7 +46,7 @@ sealed class PRef {
         private val TXN_NEXT_PROP_PATH = arrayOf(JSON_PROPERTIES, JSON_XYZ_NAMESPACE, JSON_TXN_NEXT)
         private val TAGS_PROP_PATH = arrayOf(JSON_PROPERTIES, JSON_XYZ_NAMESPACE, JSON_TAGS)
 
-        val PATH_TO_PREF_MAPPING = mapOf(
+        private val PATH_TO_PREF_MAPPING = mapOf(
             ID_PROP_PATH to ID,
             APP_ID_PROP_PATH to APP_ID,
             AUTHOR_PROP_PATH to AUTHOR,
@@ -56,6 +56,9 @@ sealed class PRef {
             TXN_NEXT_PROP_PATH to TXN_NEXT,
             TAGS_PROP_PATH to TAGS,
         )
+
+        @JvmStatic
+        fun pRefPathMap() = PATH_TO_PREF_MAPPING
 
         @JvmStatic
         fun id() = ID

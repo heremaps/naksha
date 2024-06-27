@@ -48,7 +48,7 @@ public abstract class AbstractEventTask<EVENT extends Event>
    */
   @Deprecated
   protected AbstractEventTask(@NotNull INaksha naksha) {
-    super(naksha, new NakshaContext());
+    super(naksha, NakshaContext.currentContext());
     pipeline = new EventPipeline(naksha());
   }
 
