@@ -19,10 +19,7 @@
 package com.here.naksha.lib.core;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import kotlin.Unit;
 import naksha.base.fn.Fn0;
-import naksha.base.fn.Fn1;
-import naksha.base.fn.Fx1;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

@@ -33,7 +33,6 @@ import static naksha.model.POpType.NULL;
 import static naksha.model.POpType.STARTS_WITH;
 
 import java.util.Objects;
-
 import naksha.model.request.condition.PRef;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
