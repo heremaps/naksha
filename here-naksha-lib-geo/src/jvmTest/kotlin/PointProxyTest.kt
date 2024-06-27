@@ -10,9 +10,9 @@ class PointProxyTest {
         val point = PointProxy(1.0, 2.0, 3.0)
 
         // expect
-        assertEquals(1.0, point.getCoordinates()?.getLongitude())
-        assertEquals(2.0, point.getCoordinates()?.getLatitude())
-        assertEquals(3.0, point.getCoordinates()?.getAltitude())
+        assertEquals(1.0, point.coordinates?.getLongitude())
+        assertEquals(2.0, point.coordinates?.getLatitude())
+        assertEquals(3.0, point.coordinates?.getAltitude())
     }
 
 }

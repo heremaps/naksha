@@ -1,7 +1,5 @@
 import naksha.base.JvmMap
-import naksha.base.P_JsMap
 import naksha.base.Platform
-import naksha.base.PlatformMap
 import naksha.geo.PolygonProxy
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -49,8 +47,13 @@ class PolygonProxyTest {
 
         // then
         assertEquals("Polygon", polygonProxy.type)
-        assertEquals(2, polygonProxy.coordinates?.size)
-        assertEquals(3, polygonProxy.getCoords()?.get(0)?.coordinates?.size)
-        assertEquals(2.0, polygonProxy.getCoords()?.get(0)?.coordinates?.get(1))
+        val coordinates = polygonProxy.coordinates
+        assertEquals(1, coordinates?.size)
+        val lineString = coordinates?.get(0)
+        assertEquals(5, lineString?.size)
+        val lastPosition = lineString?.get(4)
+        assertEquals(2, lastPosition?.size)
+        assertEquals(20.6899332428942, lastPosition?.getLongitude())
+        assertEquals(6.680566836459747, lastPosition?.getLatitude())
     }
 }
