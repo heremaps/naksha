@@ -23,15 +23,15 @@ The [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) extends the `I
 allows to open a PostgresQL database connection from a connection pool of the storage.
 
 The [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt) is not created directly, but returned by the platform specific 
-implementation of the `IStorage` interface.
+implementation of the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface.
 
 In Java, the following JVM only classes actually provide the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) implementation:
 
 - The [PsqlStorage](./src/jvmMain/kotlin/naksha/psql/PsqlStorage.kt) directly implements the
   [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface, it requires to provide a
-  [PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt) to the constructor, when created an instance of it.
+  [PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt) to the constructor, when creating an instance of it.
 - The [PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt) can be created by providing at least one
-  [PsqlInstance](./src/jvmMain/kotlin/naksha/psql/PsqlInstance.kt) that represents the master node of the PostgresQL database. It is
+  [PsqlInstance](./src/jvmMain/kotlin/naksha/psql/PsqlInstance.kt), representing the master node of the PostgresQL database. It is
   queried via a static getter (`Psqllnstance.get(url|...)`). In the background each instance holds an own dedicate connection pool, and
   the same instance (identifier by host, port, db, user and password) is kept in memory as singleton, so that all clusters and storages
   share the same connection pool. This reduces the amount of connections being created and kept alive.
