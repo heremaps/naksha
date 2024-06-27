@@ -178,7 +178,7 @@ class ProxyGeoUtilTest {
         val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PolygonProxy::class)
 
         // when
-        val jtsFromProxy = ProxyGeoUtil.toJtsPolygon(proxyGeometry)
+        val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // then
@@ -236,7 +236,7 @@ class ProxyGeoUtilTest {
         val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PolygonProxy::class)
 
         // when
-        val jtsFromProxy = ProxyGeoUtil.toJtsPolygon(proxyGeometry)
+        val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // then
@@ -298,7 +298,7 @@ class ProxyGeoUtilTest {
         val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiPolygonProxy::class)
 
         // when
-        val jtsFromProxy = ProxyGeoUtil.toJtsMultiPolygon(proxyGeometry)
+        val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // then
