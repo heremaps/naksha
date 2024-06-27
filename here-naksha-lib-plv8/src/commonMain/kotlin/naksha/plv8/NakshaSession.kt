@@ -11,11 +11,11 @@ import naksha.jbon.JbMap
 import naksha.jbon.JbMapFeature
 import naksha.jbon.XyzVersion
 import naksha.model.*
-import naksha.model.request.WriteFeature
-import naksha.model.request.WriteRequest
+import naksha.model.request.*
 import naksha.model.response.*
 import naksha.plv8.Static.SC_TRANSACTIONS
 import naksha.plv8.Static.nakshaCollectionConfig
+import naksha.plv8.read.ReadQueryBuilder
 import naksha.plv8.write.RowUpdater
 import naksha.plv8.write.SingleCollectionWriter
 import naksha.plv8.write.WriteRequestExecutor
@@ -23,36 +23,24 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * A session linked to a PostgresQL database connection with support for some special table layout and triggers. Its purpose is
- * to support the Naksha `lib-psql`. This implements the code that normally resides inside of Postgres, however, technically
- * it can be run as well in a JVM, but in this case the JVM needs to back the database connection with a JDBC connection.
+ * A session linked to a PostgresQL database.
  *
- * Therefore, in the JVM the code runs the same way it runs inside the PostgresQL database PLV8 extension, but with higher
- * latencies and with triggers being simulated.
- *
- * @property sql Access to database. In PostgresQL bound by the SQL function `naksha_start_session` to the PLV8
- * database connection wrapper. In the JVM bound by the `startSession` call of the `Plv8Env` class.
- * Technically, the `lib-psql` will always use the SQL function, therefore the only reason to use the
- * JVM function `startSession` is, when testing the code to simulate a PLV8 environment.
- * @property schema The database schema of this session.
- * @property storageId The storage-identifier of this session.
- * @param appName The name of the application starting the session, only for debugging purpose.
- * @param streamId The stream-identifier, to be added to the transaction logs for debugging purpose.
- * @param appId The UPM identifier of the application (for audit).
- * @param author The UPM identifier of the user (for audit).
+ * @param storage the reference to the storage to which to link this Naksha session. In Java invoked by `PsqlStorage` when the method
+ * `newReadSession` or `newWriteSession` is invoked. Within the database, a new Naksha session is added into to global `plv8` object,
+ * when the `naksha_start_session` SQL function is executed, which is necessary for all other Naksha SQL functions to work.
+ * to the PLV8
+ * @param context the context to use for this session.
+ * @param options the default options to use, when opening database connections.
+ * @property schema the database schema of this session.
  * @constructor Create a new session.
  */
-@Suppress("UNUSED_PARAMETER", "unused", "LocalVariableName", "MemberVisibilityCanBePrivate", "DuplicatedCode")
-@JsExport
+//@JsExport <-- when uncommenting this, we get a compiler error!
 class NakshaSession(
-    val sql: IPgConnection,
-    val schema: String,
-    val storage: IStorage,
-    var appName: String,
-    var streamId: String,
-    var appId: String,
-    var author: String? = null
-) {
+    storage: PgStorage,
+    context: NakshaContext,
+    options: PgSessionOptions,
+    val schema: String
+) : AbstractNakshaSession(storage, context, options) {
 
     /**
      * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
@@ -62,7 +50,7 @@ class NakshaSession(
     /**
      * The cached quoted schema name (double quotes).
      */
-    internal val schemaIdent = sql.quoteIdent(schema)
+    internal val schemaIdent = PgUtil.quoteIdent(schema)
 
     /**
      * The dictionary manager bound to the global dictionary.
@@ -118,28 +106,29 @@ class NakshaSession(
     var errMsg: String? = null
 
     init {
-        sql.execute(
-            """
+        val session = pgSession()
+        session.use {
+            session.apply {
+                execute(
+                    """
 SET SESSION search_path TO $schemaIdent, public, topology;
 SET SESSION enable_seqscan = OFF;
 """
-        )
-        schemaOid = sql.rows(
-            sql.execute(
-                "SELECT oid FROM pg_namespace WHERE nspname = $1",
-                arrayOf(schema)
-            )
-        )!![0]["oid"] as Int
-        collectionConfiguration = mutableMapOf()
-        collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
-        transaction.id = txn().toGuid(storage.id(), "txn", "txn").toString()
+                )
+                schemaOid = rows(
+                    execute(
+                        "SELECT oid FROM pg_namespace WHERE nspname = $1",
+                        arrayOf(schema)
+                    )
+                )!![0]["oid"] as Int
+                collectionConfiguration = mutableMapOf()
+                collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
+                transaction.id = txn().toGuid(storage.id(), "txn", "txn").toString()
+            }
+        }
     }
 
-    fun reset(appName: String, streamId: String, appId: String, author: String?) {
-        this.author = author
-        this.appName = appName
-        this.streamId = streamId
-        this.appId = appId
+    fun reset() {
         clear()
     }
 
@@ -173,60 +162,73 @@ SET SESSION enable_seqscan = OFF;
     private var uid = 0
 
     /**
-     *  Saves OLD in $hst.
+     * Saves OLD in $hst.
+     *
+     * Uses the current session, does not commit or rollback the current session.
      */
     internal fun saveInHst(collectionId: String, OLD: Row) {
         if (isHistoryEnabled(collectionId)) {
             // TODO move it outside and run it once
-            val collectionIdQuoted = sql.quoteIdent("${collectionId}\$hst")
-            val hstInsertPlan = sql.prepare(
+            val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$hst")
+            val session = pgSession()
+            val hstInsertPlan = session.prepare(
                 """INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""",
                 COL_ALL_TYPES
             )
-            val oldMeta = OLD.meta!!
-            hstInsertPlan.execute(
-                arrayOf(
-                    oldMeta.txnNext,
-                    oldMeta.txn,
-                    oldMeta.uid,
-                    oldMeta.ptxn,
-                    oldMeta.puid,
-                    oldMeta.flags,
-                    oldMeta.action,
-                    oldMeta.version,
-                    oldMeta.createdAt,
-                    oldMeta.updatedAt,
-                    oldMeta.authorTs,
-                    oldMeta.author,
-                    oldMeta.appId,
-                    oldMeta.geoGrid,
-                    OLD.id,
-                    OLD.tags,
-                    OLD.geo,
-                    OLD.feature,
-                    OLD.geoRef,
-                    OLD.type,
-                    oldMeta.fnva1
+            hstInsertPlan.use {
+                val oldMeta = OLD.meta!!
+                hstInsertPlan.execute(
+                    arrayOf(
+                        oldMeta.txnNext,
+                        oldMeta.txn,
+                        oldMeta.uid,
+                        oldMeta.ptxn,
+                        oldMeta.puid,
+                        oldMeta.flags,
+                        oldMeta.action,
+                        oldMeta.version,
+                        oldMeta.createdAt,
+                        oldMeta.updatedAt,
+                        oldMeta.authorTs,
+                        oldMeta.author,
+                        oldMeta.appId,
+                        oldMeta.geoGrid,
+                        OLD.id,
+                        OLD.tags,
+                        OLD.geo,
+                        OLD.feature,
+                        OLD.geoRef,
+                        OLD.type,
+                        oldMeta.fnva1
+                    )
                 )
-            )
+            }
         }
     }
 
+    /**
+     * Delete the feature from the shadow table.
+     *
+     * Uses the current session, does not commit or rollback the current session.
+     */
     internal fun deleteFromDel(collectionId: String, id: String) {
-        val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
-        sql.execute("""DELETE FROM $collectionIdQuoted WHERE id = $1""", arrayOf(id))
+        val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$del")
+        pgSession().execute("""DELETE FROM $collectionIdQuoted WHERE id = $1""", arrayOf(id))
     }
 
     /**
      * Updates xyz namespace and copies feature to $del table.
+     *
+     * Uses the current session, does not commit or rollback the current session.
      */
     internal fun copyToDel(collectionId: String, OLD: Row) {
         val collectionConfig = getCollectionConfig(collectionId)
         val autoPurge: Boolean? = collectionConfig.autoPurge
         if (autoPurge != true) {
-            val collectionIdQuoted = sql.quoteIdent("${collectionId}\$del")
+            val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$del")
             val oldMeta = OLD.meta!!
-            sql.execute(
+            val session = pgSession()
+            session.execute(
                 """INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""",
                 arrayOf(
                     oldMeta.txnNext,
@@ -314,12 +316,15 @@ SET SESSION enable_seqscan = OFF;
 
     /**
      * Returns the PostgresQL version.
+     *
+     * Uses the current session, does not commit or rollback the current session.
      * @return The PostgresQL version.
      */
     fun postgresVersion(): XyzVersion {
         if (!this::pgVersion.isInitialized) {
-            val r = sql.execute("select version() as version")
-            val rows = sql.rows(r)
+            val session = pgSession()
+            val r = session.execute("select version() as version")
+            val rows = session.rows(r)
             check(rows != null)
             val row = rows[0]
             // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
@@ -338,16 +343,19 @@ SET SESSION enable_seqscan = OFF;
 
     /**
      * Returns the current transaction number, if no transaction number is yet generated, generates a new one.
+     *
+     * Uses the current session, does not commit or rollback the current session.
      * @return The current transaction number.
      */
     fun txn(): Txn {
         if (_txn == null) {
+            val session = pgSession()
             val query = """
 WITH ns as (SELECT oid FROM pg_namespace WHERE nspname = $1),
      txn_seq as (SELECT cls.oid as oid FROM pg_class cls, ns WHERE cls.relname = 'naksha_txn_seq' and cls.relnamespace = ns.oid)
 SELECT nextval(txn_seq.oid) as txn, txn_seq.oid as txn_oid, (extract(epoch from transaction_timestamp())*1000)::int8 as time, ns.oid as ns_oid
 FROM ns, txn_seq;"""
-            val row = sql.rows(sql.execute(query, arrayOf(schema)))!![0]
+            val row = session.rows(session.execute(query, arrayOf(schema)))!![0]
             val schemaOid = row["ns_oid"] as Int
             val txnSeqOid = row["txn_oid"] as Int
             val txts = asInt64(row["time"])
@@ -358,11 +366,11 @@ FROM ns, txn_seq;"""
             val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
             val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
             if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
-                sql.execute("SELECT pg_advisory_lock($1)", arrayOf(Static.TXN_LOCK_ID))
+                session.execute("SELECT pg_advisory_lock($1)", arrayOf(Static.TXN_LOCK_ID))
                 try {
                     val raw = asInt64(
-                        sql.rows(
-                            sql.execute(
+                        session.rows(
+                            session.execute(
                                 "SELECT nextval($1) as v",
                                 arrayOf(txnSeqOid)
                             )
@@ -374,10 +382,10 @@ FROM ns, txn_seq;"""
                         // Rollover, we update sequence of the day.
                         txn = Txn.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
                         _txn = txn
-                        sql.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1))
+                        session.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1))
                     }
                 } finally {
-                    sql.execute("SELECT pg_advisory_unlock($1)", arrayOf(Static.TXN_LOCK_ID))
+                    session.execute("SELECT pg_advisory_unlock($1)", arrayOf(Static.TXN_LOCK_ID))
                 }
             }
         }
@@ -464,8 +472,9 @@ FROM ns, txn_seq;"""
         return if (collectionConfiguration.containsKey(collectionId)) {
             collectionConfiguration[collectionId]!!
         } else {
-            val collectionsSearchRows = sql.rows(
-                sql.execute(
+            val session = pgSession()
+            val collectionsSearchRows = session.rows(
+                session.execute(
                     "select $COL_FEATURE, $COL_FLAGS from $NKC_TABLE_ESC where $COL_ID = $1",
                     arrayOf(collectionId)
                 )
@@ -496,7 +505,7 @@ FROM ns, txn_seq;"""
         val transaction: NakshaTransactionProxy,
         writeRequest: WriteRequest
     ) {
-        private val transactionWriter: SingleCollectionWriter?  = if (writeRequest.ops.any { it.collectionId == NKC_TABLE })
+        private val transactionWriter: SingleCollectionWriter? = if (writeRequest.ops.any { it.collectionId == NKC_TABLE })
             null
         else
             SingleCollectionWriter(SC_TRANSACTIONS, this@NakshaSession, modifyCounters = false)
@@ -531,5 +540,51 @@ FROM ns, txn_seq;"""
                 logger.info(e.cause?.message!!)
             ErrorResponse(NakshaError(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}"))
         }
+    }
+
+    override fun pgSessionBeforeStart() {
+    }
+
+    override fun pgSessionAfterStart(session: PgSession) {
+    }
+
+    override fun pgSessionOnCommit(session: PgSession) {
+    }
+
+    override fun pgSessionOnRollback(session: PgSession) {
+    }
+
+    override fun writeFeature(feature: NakshaFeatureProxy): Response {
+        TODO("Not yet implemented")
+    }
+
+    override fun execute(request: Request): Response {
+        when (request) {
+            is ReadRequest -> {
+                val session = pgSession()
+                val (sql, params) = ReadQueryBuilder(session).build(request)
+                val pgResult = session.rows(session.execute(sql, params.toTypedArray()))
+                val rows = DbRowMapper.toReadRows(pgResult, storage)
+                return SuccessResponse(rows = rows)
+            }
+
+            is WriteRequest -> {
+                TODO("WriteRequest not yet implemented")
+            }
+
+            else -> throw IllegalArgumentException("Unknown request")
+        }
+    }
+
+    override fun executeParallel(request: Request): Response {
+        TODO("Not yet implemented")
+    }
+
+    override fun getFeatureById(id: String): ResultRow? {
+        TODO("Not yet implemented")
+    }
+
+    override fun getFeaturesByIds(ids: List<String>): Map<String, ResultRow> {
+        TODO("Not yet implemented")
     }
 }

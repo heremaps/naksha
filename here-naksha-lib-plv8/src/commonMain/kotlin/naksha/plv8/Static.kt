@@ -175,7 +175,7 @@ object Static {
      * @param schemaOid The OID of the schema.
      */
     @JvmStatic
-    fun createBaseInternalsIfNotExists(sql: IPgConnection, schema: String, schemaOid: Int) {
+    fun createBaseInternalsIfNotExists(sql: PgSession, schema: String, schemaOid: Int) {
         if (!tableExists(sql, SC_COLLECTIONS, schemaOid)) {
             collectionCreate(sql, SC_COLLECTIONS, schema, schemaOid, SC_COLLECTIONS, DEFAULT_GEO_INDEX, partitionCount = PARTITION_COUNT_NONE)
         }
@@ -217,7 +217,7 @@ object Static {
      * @return _true_ if a table with this name exists; _false_ otherwise.
      */
     @JvmStatic
-    fun tableExists(sql: IPgConnection, name: String, schemaOid: Int): Boolean {
+    fun tableExists(sql: PgSession, name: String, schemaOid: Int): Boolean {
         val rows = asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = $1 AND relnamespace = $2", arrayOf(name, schemaOid)))
         return rows.isNotEmpty()
     }
@@ -229,8 +229,8 @@ object Static {
      * @param history If _true_, then optimized for historic data; otherwise a volatile HEAD table.
      */
     @JvmStatic
-    private fun collectionOptimizeTable(sql: IPgConnection, tableName: String, history: Boolean) {
-        val quotedTableName = sql.quoteIdent(tableName)
+    private fun collectionOptimizeTable(sql: PgSession, tableName: String, history: Boolean) {
+        val quotedTableName = PgUtil.quoteIdent(tableName)
         var query = """ALTER TABLE $quotedTableName
 ALTER COLUMN feature SET STORAGE MAIN,
 ALTER COLUMN geo SET STORAGE MAIN,
@@ -263,50 +263,50 @@ SET (toast_tuple_target=8160"""
      * @param pgTableInfo The table information.
      */
     @JvmStatic
-    private fun collectionAddIndices(sql: IPgConnection, tableName: String, geoIndex: String, history: Boolean, pgTableInfo: PgTableInfo) {
+    private fun collectionAddIndices(sql: PgSession, tableName: String, geoIndex: String, history: Boolean, pgTableInfo: PgTableInfo) {
         val fillFactor = if (history) "100" else "70"
         // https://www.postgresql.org/docs/current/gin-tips.html
         val unique = if (history) "" else "UNIQUE "
 
         // id
-        val qtn = sql.quoteIdent(tableName) // quoted table name
-        var qin = sql.quoteIdent("${tableName}_id_idx") // quoted index name
+        val qtn = PgUtil.quoteIdent(tableName) // quoted table name
+        var qin = PgUtil.quoteIdent("${tableName}_id_idx") // quoted index name
         var query = """CREATE ${unique}INDEX IF NOT EXISTS $qin ON $qtn USING btree 
 (id text_pattern_ops DESC) 
 WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
         // txn, uid
-        qin = sql.quoteIdent("${tableName}_txn_uid_idx")
+        qin = PgUtil.quoteIdent("${tableName}_txn_uid_idx")
         query += """CREATE UNIQUE INDEX IF NOT EXISTS $qin ON $qtn USING btree 
 (txn DESC, COALESCE(uid, 0) DESC) 
 WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
         // geo, txn
-        qin = sql.quoteIdent("${tableName}_geo_idx")
+        qin = PgUtil.quoteIdent("${tableName}_geo_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING $geoIndex
 (naksha_geometry(flags,geo), txn) 
 WITH (buffering=ON,fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE} WHERE geo IS NOT NULL;"""
 
         // tags, tnx
-        qin = sql.quoteIdent("${tableName}_tags_idx")
+        qin = PgUtil.quoteIdent("${tableName}_tags_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING gin
 (tags_to_jsonb(tags), txn) 
 WITH (fastupdate=ON,gin_pending_list_limit=32768) ${pgTableInfo.TABLESPACE};"""
 
         // grid, txn
-        qin = sql.quoteIdent("${tableName}_grid_idx")
+        qin = PgUtil.quoteIdent("${tableName}_grid_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
 (geo_grid DESC, txn DESC) 
 WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
         // app_id, updated_at, txn
-        qin = sql.quoteIdent("${tableName}_app_id_idx")
+        qin = PgUtil.quoteIdent("${tableName}_app_id_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
 (app_id text_pattern_ops DESC, updated_at DESC, txn DESC) 
 WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
         // author, author_ts, txn
-        qin = sql.quoteIdent("${tableName}_author_idx")
+        qin = PgUtil.quoteIdent("${tableName}_author_idx")
         query += """CREATE INDEX IF NOT EXISTS $qin ON $qtn USING btree
 (COALESCE(author, app_id) text_pattern_ops DESC, COALESCE(author_ts, updated_at) DESC, txn DESC) 
 WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
@@ -325,14 +325,14 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
      * @param partitionCount Number of partitions, possible values: 0 (no partitioning), 2, 4, 8, 16, 32, 64, 128, 256)
      */
     @JvmStatic
-    fun collectionCreate(sql: IPgConnection, storageClass: String?, schema: String, schemaOid: Int, id: String, geoIndex: String, partitionCount: Int) {
+    fun collectionCreate(sql: PgSession, storageClass: String?, schema: String, schemaOid: Int, id: String, geoIndex: String, partitionCount: Int) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         val pgTableInfo = PgTableInfo(sql, storageClass, partitionCount)
 
         // HEAD
         var query: String = pgTableInfo.CREATE_TABLE
-        val headNameQuoted = sql.quoteIdent(id)
+        val headNameQuoted = PgUtil.quoteIdent(id)
         query += headNameQuoted
         query += pgTableInfo.CREATE_TABLE_BODY
         if (!partitionCount.isPartitioningEnabled()) {
@@ -358,7 +358,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
 //        // Create sequence.
 //        val sequenceName = id + "_uid_seq";
-//        val sequenceNameQuoted = sql.quoteIdent(sequenceName)
+//        val sequenceNameQuoted = PgUtil.quoteIdent(sequenceName)
 //        query = "CREATE SEQUENCE IF NOT EXISTS $sequenceNameQuoted AS int8 START WITH 1 CACHE 100 OWNED BY ${headNameQuoted}.uid"
 //        sql.execute(query)
 
@@ -366,7 +366,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
         if (storageClass != SC_TRANSACTIONS) {
             // DEL.
             val delName = "$id\$del"
-            val delNameQuoted = sql.quoteIdent(delName)
+            val delNameQuoted = PgUtil.quoteIdent(delName)
             query = pgTableInfo.CREATE_TABLE
             query += delNameQuoted
             query += pgTableInfo.CREATE_TABLE_BODY
@@ -387,7 +387,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
             // META.
             val metaName = "$id\$meta"
-            val metaNameQuoted = sql.quoteIdent(metaName)
+            val metaNameQuoted = PgUtil.quoteIdent(metaName)
             query = pgTableInfo.CREATE_TABLE
             query += metaNameQuoted
             query += pgTableInfo.CREATE_TABLE_BODY
@@ -399,7 +399,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
 
             // HISTORY.
             val hstName = "$id\$hst"
-            val hstNameQuoted = sql.quoteIdent(hstName)
+            val hstNameQuoted = PgUtil.quoteIdent(hstName)
             query = pgTableInfo.CREATE_TABLE
             query += hstNameQuoted
             query += pgTableInfo.CREATE_TABLE_BODY
@@ -429,13 +429,13 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
      * @param schemaOid The object-id of the schema to look into.
      */
     @JvmStatic
-    private fun collectionAttachTriggers(sql: IPgConnection, id: String, schema: String, schemaOid: Int) {
+    private fun collectionAttachTriggers(sql: PgSession, id: String, schema: String, schemaOid: Int) {
         var triggerName = id + "_before"
         var rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid)))
         if (rows.isEmpty()) {
-            val schemaQuoted = sql.quoteIdent(schema)
-            val tableNameQuoted = sql.quoteIdent(id)
-            val triggerNameQuoted = sql.quoteIdent(triggerName)
+            val schemaQuoted = PgUtil.quoteIdent(schema)
+            val tableNameQuoted = PgUtil.quoteIdent(id)
+            val triggerNameQuoted = PgUtil.quoteIdent(triggerName)
             sql.execute("""CREATE TRIGGER $triggerNameQuoted BEFORE INSERT OR UPDATE ON ${schemaQuoted}.${tableNameQuoted}
 FOR EACH ROW EXECUTE FUNCTION naksha_trigger_before();""")
         }
@@ -443,9 +443,9 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_before();""")
         triggerName = id + "_after"
         rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid)))
         if (rows.isEmpty()) {
-            val schemaQuoted = sql.quoteIdent(schema)
-            val tableNameQuoted = sql.quoteIdent(id)
-            val triggerNameQuoted = sql.quoteIdent(triggerName)
+            val schemaQuoted = PgUtil.quoteIdent(schema)
+            val tableNameQuoted = PgUtil.quoteIdent(id)
+            val triggerNameQuoted = PgUtil.quoteIdent(triggerName)
             sql.execute("""CREATE TRIGGER $triggerNameQuoted AFTER INSERT OR UPDATE OR DELETE ON ${schemaQuoted}.${tableNameQuoted}
 FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();""")
         }
@@ -457,12 +457,12 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();""")
      * @param id The collection identifier.
      */
     @JvmStatic
-    fun collectionDrop(sql: IPgConnection, id: String) {
+    fun collectionDrop(sql: PgSession, id: String) {
         require(!id.startsWith("naksha~"))
-        val headName = sql.quoteIdent(id)
-        val delName = sql.quoteIdent("$id\$del")
-        val metaName = sql.quoteIdent("$id\$meta")
-        val hstName = sql.quoteIdent("$id\$hst")
+        val headName = PgUtil.quoteIdent(id)
+        val delName = PgUtil.quoteIdent("$id\$del")
+        val metaName = PgUtil.quoteIdent("$id\$meta")
+        val hstName = PgUtil.quoteIdent("$id\$hst")
         sql.execute("""DROP TABLE IF EXISTS $headName CASCADE;
 DROP TABLE IF EXISTS $delName CASCADE;
 DROP TABLE IF EXISTS $metaName CASCADE;
@@ -478,11 +478,11 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param pgTableInfo The table info to know storage class and alike.
      */
     @JvmStatic
-    private fun createHstPartition(sql: IPgConnection, collectionId: String, year: Int, geoIndex: String, pgTableInfo: PgTableInfo): String {
+    private fun createHstPartition(sql: PgSession, collectionId: String, year: Int, geoIndex: String, pgTableInfo: PgTableInfo): String {
         val parentName = "${collectionId}\$hst"
-        val parentNameQuoted = sql.quoteIdent(parentName)
+        val parentNameQuoted = PgUtil.quoteIdent(parentName)
         val hstPartName = "${parentName}_${year}"
-        val hstPartNameQuoted = sql.quoteIdent(hstPartName)
+        val hstPartNameQuoted = PgUtil.quoteIdent(hstPartName)
         val start = Txn.of(year, 0, 0, Txn.SEQ_MIN).value
         val end = Txn.of(year, 12, 31, Txn.SEQ_MAX).value
         var query = pgTableInfo.CREATE_TABLE
@@ -513,12 +513,12 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param pgTableInfo Information about the table.
      * @param history If this is a history partition; otherwise it is
      */
-    private fun createPartitionById(sql: IPgConnection, parentName: String, geoIndex: String, part: Int, pgTableInfo: PgTableInfo, history: Boolean) {
+    private fun createPartitionById(sql: PgSession, parentName: String, geoIndex: String, part: Int, pgTableInfo: PgTableInfo, history: Boolean) {
         require(part in 0..<pgTableInfo.partitionCount) { "Invalid partition number $part" }
         val partString = PARTITION_ID[part]
         val partitionName = if (parentName.contains('$')) "${parentName}_p$partString" else "${parentName}\$p$partString"
-        val partitionNameQuoted = sql.quoteIdent(partitionName)
-        val parentTableNameQuoted = sql.quoteIdent(parentName)
+        val partitionNameQuoted = PgUtil.quoteIdent(partitionName)
+        val parentTableNameQuoted = PgUtil.quoteIdent(parentName)
         val query = pgTableInfo.CREATE_TABLE + "IF NOT EXISTS $partitionNameQuoted PARTITION OF $parentTableNameQuoted FOR VALUES FROM ($part) TO (${part + 1}) ${pgTableInfo.STORAGE_PARAMS} ${pgTableInfo.TABLESPACE};"
         sql.execute(query)
         //collectionOptimizeTable(sql, partitionName, history)
@@ -532,7 +532,7 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @return The object-id of the schema or _null_, if no such schema was found.
      */
     @Suppress("UNCHECKED_CAST")
-    fun getSchemaOid(sql: IPgConnection, schema: String): Int? {
+    fun getSchemaOid(sql: PgSession, schema: String): Int? {
         val result = sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema))
         if (result is Array<*>) {
             val array = result as Array<Any>

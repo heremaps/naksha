@@ -1,7 +1,8 @@
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
 import naksha.base.Int64
-import naksha.plv8.IPgCursor
+import naksha.plv8.PgCursor
+import naksha.plv8.PgPlan
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Types
@@ -9,7 +10,7 @@ import java.sql.Types
 /**
  * The Java implementation of a plan.
  */
-class JvmPgPlan(internal val query: JvmPlv8SqlQuery, conn: Connection) : naksha.plv8.IPgPlan {
+class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
     val stmt: PreparedStatement = query.prepare(conn)
     var closed: Boolean = false
 
@@ -18,19 +19,19 @@ class JvmPgPlan(internal val query: JvmPlv8SqlQuery, conn: Connection) : naksha.
         if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
         val hasResultSet = stmt.execute()
         if (hasResultSet) {
-            return JvmPlv8ResultSet(stmt.resultSet).toArray()
+            return PsqlResultSet(stmt.resultSet).toArray()
         }
         return stmt.updateCount
     }
 
-    override fun cursor(args: Array<Any?>?): IPgCursor {
+    override fun cursor(args: Array<Any?>?): PgCursor {
         check(!closed)
         if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
         val hasResultSet = stmt.execute()
         if (hasResultSet) {
-            return JvmPgCursor(stmt.resultSet)
+            return PsqlCursor(stmt.resultSet)
         }
-        return JvmPgCursor(null)
+        return PsqlCursor(null)
     }
 
     internal fun setString(parameterIndex: Int, value: String?) {
@@ -61,7 +62,7 @@ class JvmPgPlan(internal val query: JvmPlv8SqlQuery, conn: Connection) : naksha.
         return stmt.executeBatch()
     }
 
-    override fun free() {
+    override fun close() {
         val closed = this.closed
         if (!closed) {
             this.closed = true

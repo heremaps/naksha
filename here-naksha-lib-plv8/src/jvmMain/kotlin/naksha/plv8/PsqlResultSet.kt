@@ -1,4 +1,4 @@
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
 import naksha.base.JvmInt64
 import naksha.base.ObjectProxy
@@ -7,7 +7,7 @@ import java.sql.ResultSet
 /**
  * Internal helper class to handle results as if they were returned by PLV8 engine.
  */
-open class JvmPlv8ResultSet(private var rs: ResultSet?) {
+open class PsqlResultSet(private var rs: ResultSet?) {
     private val columnCount: Int
     private val columnNames: Array<String>?
     private val columnTypes: Array<String>?

@@ -21,11 +21,12 @@ package naksha.plv8.read
 import naksha.model.request.condition.geometry.BufferTransformation
 import naksha.model.request.condition.geometry.GeographyTransformation
 import naksha.model.request.condition.geometry.GeometryTransformation
-import naksha.plv8.IPgConnection
+import naksha.plv8.PgSession
+import naksha.plv8.PgUtil
 
 
 class SqlGeometryTransformationResolver(
-    val sql: IPgConnection
+    val sql: PgSession
 ) {
     fun wrapWithTransformation(
         transformation: GeometryTransformation?, variablePlaceholder: String
@@ -46,7 +47,7 @@ class SqlGeometryTransformationResolver(
                     .append(",")
                     .append(bufferT.distance)
                     .append(",")
-                    .append(sql.quoteLiteral(bufferT.getProperties()))
+                    .append(PgUtil.quoteLiteral(bufferT.getProperties()))
                     .append(") ")
             }
 

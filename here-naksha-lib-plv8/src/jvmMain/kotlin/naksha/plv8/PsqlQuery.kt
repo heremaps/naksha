@@ -1,4 +1,4 @@
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
 import naksha.base.JvmInt64
 import java.sql.Connection
@@ -6,7 +6,7 @@ import java.sql.PreparedStatement
 import java.util.ArrayList
 import java.util.HashMap
 
-class JvmPlv8SqlQuery(query: String) {
+class PsqlQuery(query: String) {
 
     /**
      * We map "$1" to a list of positions (`1..n`) in the prepared statement. For example

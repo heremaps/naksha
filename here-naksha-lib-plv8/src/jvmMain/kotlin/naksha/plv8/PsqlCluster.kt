@@ -1,6 +1,7 @@
-package com.here.naksha.lib.plv8.naksha.plv8
+package naksha.plv8
 
 import naksha.base.Platform
+import naksha.plv8.PgSessionOptions
 import kotlin.math.min
 
 /**
@@ -10,15 +11,14 @@ import kotlin.math.min
  */
 class PsqlCluster(val master: PsqlInstance, var replicas: MutableList<PsqlInstance> = mutableListOf()) {
     /**
-     * Returns a connection from the connection pool of either [master] or a random [replica][replicas].
-     * @param options the connect-options.
-     * @param useMaster if a connection to the _master_ is needed, for example to avoid replication lag. Only taken into consideration
-     * for read-only connections.
-     * @return the connection.
+     * Open a PostgresQL session from the session pool of either [master], or a random [replica][replicas], dependent on the
+     * [options] given.
+     * @param options the session options.
+     * @return the PostgresQL session.
      */
-    fun getConnection(options: PsqlConnectOptions, useMaster: Boolean = false): PsqlConnection {
-        if (!options.readOnly || useMaster || replicas.isEmpty()) return master.getConnection(options)
+    fun openSession(options: PgSessionOptions): PsqlSession {
+        if (!options.readOnly || options.useMaster || replicas.isEmpty()) return master.openSession(options)
         val i = min((Platform.random() * replicas.size).toInt(), replicas.size - 1)
-        return replicas[i].getConnection(options)
+        return replicas[i].openSession(options)
     }
 }

@@ -13,9 +13,9 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-internal class ReadQueryBuilder(val sql: IPgConnection) {
+internal class ReadQueryBuilder(val session: PgSession) {
 
-    private val geometryTransformer = SqlGeometryTransformationResolver(sql)
+    private val geometryTransformer = SqlGeometryTransformationResolver(session)
 
     /**
      * Builds SQL request based on given ReadRequest.
@@ -201,11 +201,11 @@ internal class ReadQueryBuilder(val sql: IPgConnection) {
     private fun ReadFeatures.getQuotedTablesToQuery(): List<String> {
         val tables = mutableListOf<String>()
         for (collection in collectionIds) {
-            tables.add(sql.quoteIdent(collection))
+            tables.add(PgUtil.quoteIdent(collection))
             if (queryDeleted)
-                tables.add(sql.quoteIdent("$collection\$del"))
+                tables.add(PgUtil.quoteIdent("$collection\$del"))
             if (queryHistory)
-                tables.add(sql.quoteIdent("$collection\$hst"))
+                tables.add(PgUtil.quoteIdent("$collection\$hst"))
         }
         return tables
     }

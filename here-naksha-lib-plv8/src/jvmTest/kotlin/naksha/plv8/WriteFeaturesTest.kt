@@ -1,7 +1,7 @@
 package naksha.plv8
 
 import naksha.jbon.XYZ_OP_CREATE
-import com.here.naksha.lib.plv8.JvmPgPlan
+import naksha.plv8.PsqlPlan
 import naksha.base.Int64
 import naksha.model.*
 import naksha.model.request.InsertRow
@@ -42,13 +42,13 @@ class WriteFeaturesTest {
 
         val createFeatureRequest = WriteRequest(ops = arrayOf(InsertRow(collectionId = collectionId, row = row)))
 
-        val storageMock = mock<IStorage> {
+        val storageMock = mock<PgStorage> {
             on { id() } doReturn "storageId"
         }
 
-        val sqlMock = mock<IPgConnection> {
-            on { quoteIdent(anyString()) } doReturn ""
-            on { prepare(any(), any()) } doReturn mock<JvmPgPlan>()
+        val sqlMock = mock<PgSession> {
+            on { PgUtil.quoteIdent(anyString()) } doReturn ""
+            on { prepare(any(), any()) } doReturn mock<PsqlPlan>()
             on { executeBatch(any(), any()) } doReturn intArrayOf(1)
         }
 
@@ -59,8 +59,6 @@ class WriteFeaturesTest {
             on { txn() } doReturn Txn(Int64(1))
             on { txnTs() } doReturn Int64(2)
             on { rowUpdater } doReturn RowUpdater(it)
-            on { appId } doReturn "appId"
-            on { sql } doReturn sqlMock
         }
 
         val executor = WriteRequestExecutor(sessionMock, false)

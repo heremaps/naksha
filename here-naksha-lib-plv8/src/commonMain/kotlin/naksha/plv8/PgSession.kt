@@ -3,6 +3,7 @@
 package naksha.plv8
 
 import naksha.base.ObjectProxy
+import naksha.model.NakshaContext
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -12,53 +13,16 @@ import kotlin.js.JsExport
  */
 @Suppress("DuplicatedCode")
 @JsExport
-interface IPgConnection {
+interface PgSession : AutoCloseable {
     /**
      * Returns general information about the database to which this API grants access.
      */
     fun info(): PgDbInfo
 
     /**
-     * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
-     * (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
-     * @param parts The literal parts to merge and quote.
-     * @return The quoted literal.
+     * The session options.
      */
-    fun quoteLiteral(vararg parts: String): String {
-        val sb = StringBuilder()
-        sb.append("E'")
-        for (part in parts) {
-            for (c in part) {
-                when (c) {
-                    '\'' -> sb.append('\'').append('\'')
-                    '\\' -> sb.append('\\').append('\\')
-                    else -> sb.append(c)
-                }
-            }
-        }
-        sb.append('\'')
-        return sb.toString()
-    }
-
-    /**
-     * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
-     * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
-     */
-    fun quoteIdent(vararg parts: String): String {
-        val sb = StringBuilder()
-        sb.append('"')
-        for (part in parts) {
-            for (c in part) {
-                when (c) {
-                    '"' -> sb.append('"').append('"')
-                    '\\' -> sb.append('\\').append('\\')
-                    else -> sb.append(c)
-                }
-            }
-        }
-        sb.append('"')
-        return sb.toString()
-    }
+    var options: PgSessionOptions
 
     /**
      * Tests if the given parameter stores the number of affected rows and if it does, returns
@@ -90,9 +54,9 @@ interface IPgConnection {
      * @param typeNames The name of the types of the arguments, to be at $n position, where $1 is the first array element.
      * @return The prepared plan.
      */
-    fun prepare(sql: String, typeNames: Array<String>? = null):IPgPlan
+    fun prepare(sql: String, typeNames: Array<String>? = null):PgPlan
 
-    fun executeBatch(plan:IPgPlan, bulkParams: Array<Array<Param>>): IntArray
+    fun executeBatch(plan:PgPlan, bulkParams: Array<Array<Param>>): IntArray
 
     /**
      * Compress bytes using GZip.
@@ -107,4 +71,20 @@ interface IPgConnection {
      * @return The inflated (decompress) bytes.
      */
     fun gzipDecompress(compressed: ByteArray): ByteArray
+
+    /**
+     * Commit the underlying database connection.
+     */
+    fun commit()
+
+    /**
+     * Rollback the underlying database connection.
+     */
+    fun rollback()
+
+    /**
+     * Rollback the underlying database connection and return it to the connection pool. Any further invocation of any method of this
+     * object will raise a [IllegalStateException] from here on.
+     */
+    override fun close()
 }

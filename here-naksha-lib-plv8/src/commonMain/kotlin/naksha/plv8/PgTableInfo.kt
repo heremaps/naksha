@@ -12,7 +12,7 @@ import kotlin.js.JsExport
  * @property partitionCount ?
  */
 @JsExport
-class PgTableInfo(val conn: IPgConnection, val storageClass: String?, val partitionCount: Int) { // TODO: Rename sql to conn
+class PgTableInfo(val conn: PgSession, val storageClass: String?, val partitionCount: Int) { // TODO: Rename sql to conn
     /**
      * The CREATE TABLE statement.
      */

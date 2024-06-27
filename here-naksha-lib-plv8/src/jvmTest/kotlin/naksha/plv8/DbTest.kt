@@ -1,9 +1,9 @@
 package naksha.plv8
 
 import Plv8TestContainer
-import com.here.naksha.lib.plv8.naksha.plv8.PsqlCluster
-import com.here.naksha.lib.plv8.naksha.plv8.PsqlInstance
-import com.here.naksha.lib.plv8.naksha.plv8.PsqlStorage
+import naksha.plv8.PsqlCluster
+import naksha.plv8.PsqlInstance
+import naksha.plv8.PsqlStorage
 import naksha.model.IReadSession
 import naksha.model.IStorage
 import naksha.model.IWriteSession

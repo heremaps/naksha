@@ -1,11 +1,11 @@
-package com.here.naksha.lib.plv8
+package naksha.plv8
 
 import naksha.base.AbstractMapProxy
 
 /**
  * Simulates the Postgres [tuple-store](https://github.com/postgres/postgres/blob/master/src/backend/utils/sort/tuplestore.c).
  */
-class JvmPlv8Table : naksha.plv8.ITable {
+class PsqlTable : naksha.plv8.ITable {
     /**
      * The rows as they have been returned.
      */

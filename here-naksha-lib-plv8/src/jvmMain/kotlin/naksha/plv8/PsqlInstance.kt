@@ -1,6 +1,6 @@
-package com.here.naksha.lib.plv8.naksha.plv8
+package naksha.plv8
 
-import org.postgresql.PGProperty
+import naksha.plv8.PgSessionOptions
 import org.postgresql.PGProperty.*
 import org.postgresql.jdbc.PgConnection
 import org.postgresql.util.HostSpec
@@ -114,14 +114,16 @@ class PsqlInstance {
      */
     val url: String
 
-    // TODO: Implement connection pool!
+    // TODO: Implement session (aka connection) pool!
 
     /**
-     * Returns a new connection from the pool, when it is closed, it will be returned to the pool.
-     * @param options the connection options.
-     * @throws IllegalArgumentException If the instance is read-only and a write-connection is requested.
+     * Returns a session from the session pool or opens a new session. When the returned session is closed, it will be returned to the
+     * instance session pool.
+     * @param options the session options.
+     * @return the session.
+     * @throws IllegalArgumentException if the instance is read-only (read-replica) and a write-session is requested.
      */
-    fun getConnection(options: PsqlConnectOptions): PsqlConnection {
+    fun openSession(options: PgSessionOptions): PsqlSession {
         if (readOnly) require(options.readOnly) { "Failed to open a write connection to read-replica" }
         val props = Properties()
         props.setProperty(PG_DBNAME.getName(), database)
@@ -139,7 +141,7 @@ class PsqlInstance {
         conn.setAutoCommit(false)
         conn.setReadOnly(options.readOnly)
         conn.setHoldability(ResultSet.CLOSE_CURSORS_AT_COMMIT)
-        return PsqlConnection(this, conn, options)
+        return PsqlSession(this, conn, options)
     }
 
     override fun equals(other: Any?): Boolean = other is PsqlInstance && url == other.url

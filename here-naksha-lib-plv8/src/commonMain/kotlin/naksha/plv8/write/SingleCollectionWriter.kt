@@ -14,6 +14,7 @@ import naksha.model.request.WriteRequest
 import naksha.model.response.Row
 import naksha.model.response.SuccessResponse
 import naksha.plv8.NakshaSession
+import naksha.plv8.PgUtil
 import naksha.plv8.Static
 import naksha.plv8.write.NakshaRequestOp.Companion.mapToOperations
 import naksha.plv8.Static.DEBUG
@@ -37,7 +38,7 @@ class SingleCollectionWriter(
         val counts = TransactionCollectionInfoProxy()
         counts.collectionId = collectionId
 
-        session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
+        session.pgSession().execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
         val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
         val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.noResults)
@@ -89,7 +90,7 @@ class SingleCollectionWriter(
     fun writeCollections(writeRequest: WriteRequest): SuccessResponse {
         val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.partitions)
 
-        session.sql.execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
+        session.pgSession().execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
         val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
         val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.noResults)
@@ -97,7 +98,7 @@ class SingleCollectionWriter(
 
         for (op in operations.operations) {
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
-            val schemaOid = (asArray(session.sql.execute(query, arrayOf(session.schema)))[0] as Map<*, *>)["oid"] as Int
+            val schemaOid = (asArray(session.pgSession().execute(query, arrayOf(session.schema)))[0] as Map<*, *>)["oid"] as Int
 
             val existingFeature: Row? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
@@ -108,7 +109,7 @@ class SingleCollectionWriter(
                         else -> throw RuntimeException("add support for WriteRow collection")
                     }
                     Static.collectionCreate(
-                        session.sql,
+                        session.pgSession(),
                         newCollection.storageClass,
                         session.schema,
                         schemaOid,
@@ -124,13 +125,13 @@ class SingleCollectionWriter(
                 }
 
                 XYZ_OP_DELETE -> {
-                    Static.collectionDrop(session.sql, op.id)
+                    Static.collectionDrop(session.pgSession(), op.id)
                     plan.addDelete(op, existingFeature)
                 }
 
                 XYZ_OP_PURGE -> {
                     if (existingFeature != null) {
-                        Static.collectionDrop(session.sql, op.id)
+                        Static.collectionDrop(session.pgSession(), op.id)
                     }
                     plan.addPurge(op, existingFeature, existingInDelFeatures[op.id])
                 }
@@ -154,7 +155,8 @@ class SingleCollectionWriter(
     }
 
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
-        if (isCollectionPartitioned == true) session.sql.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else session.sql.quoteIdent(collectionId)
+        if (isCollectionPartitioned == true) PgUtil.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else
+            PgUtil.quoteIdent(collectionId)
 
     private fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: Row?, collectionConfig: NakshaCollectionProxy): Int {
         return if (row.reqWrite.op == XYZ_OP_UPSERT) {

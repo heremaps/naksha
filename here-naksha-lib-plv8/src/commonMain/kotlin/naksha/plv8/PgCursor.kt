@@ -10,7 +10,7 @@ import kotlin.js.JsExport
  * around a `ResultSet`.
  */
 @JsExport
-interface IPgCursor {
+interface PgCursor {
 
     /**
      * Fetches the current row returns it as native map.

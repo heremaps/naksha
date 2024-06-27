@@ -45,8 +45,8 @@ internal class NakshaBulkLoaderPlan(
 
     private val headCollectionId = session.getBaseCollectionId(collectionId)
     private val delCollectionId = "${headCollectionId}\$del"
-    private val delCollectionIdQuoted = session.sql.quoteIdent(delCollectionId)
-    private val hstCollectionIdQuoted = session.sql.quoteIdent("${headCollectionId}\$hst")
+    private val delCollectionIdQuoted = PgUtil.quoteIdent(delCollectionId)
+    private val hstCollectionIdQuoted = PgUtil.quoteIdent("${headCollectionId}\$hst")
 
     internal val featureIdsToDeleteFromDel = mutableListOf<String>()
     internal val featuresToPurgeFromDel = mutableListOf<String>()
@@ -59,8 +59,8 @@ internal class NakshaBulkLoaderPlan(
     internal val deleteHeadBulkParams = mutableListOf<Array<Param>>()
     internal val copyHeadToHstBulkParams = mutableListOf<Array<Param>>()
 
-    private fun insertHeadPlan(): IPgPlan {
-        return session.sql.prepare(
+    private fun insertHeadPlan(): PgPlan {
+        return session.pgSession().prepare(
             """INSERT INTO $partitionHeadQuoted (
                 $COL_CREATED_AT,$COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_FLAGS,
                 $COL_APP_ID,$COL_AUTHOR,$COL_TYPE,$COL_ID,
@@ -76,8 +76,8 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun updateHeadPlan(): IPgPlan {
-        return session.sql.prepare(
+    private fun updateHeadPlan(): PgPlan {
+        return session.pgSession().prepare(
             """
                 UPDATE $partitionHeadQuoted 
                 SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_FLAGS=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE $COL_ID=$21
@@ -86,8 +86,8 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun deleteHeadPlan(): IPgPlan {
-        return session.sql.prepare(
+    private fun deleteHeadPlan(): PgPlan {
+        return session.pgSession().prepare(
             """
                 DELETE FROM $partitionHeadQuoted
                 WHERE $COL_ID = $1
@@ -96,9 +96,9 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun insertDelPlan(): IPgPlan {
+    private fun insertDelPlan(): PgPlan {
         // ptxn + puid = txn + uid (as we generate new state in _del)
-        return session.sql.prepare(
+        return session.pgSession().prepare(
             """
                 INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
                 SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
@@ -110,8 +110,8 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun insertDelToHstPlan(): IPgPlan {
-        return session.sql.prepare(
+    private fun insertDelToHstPlan(): PgPlan {
+        return session.pgSession().prepare(
             """
                 INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
                 SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
@@ -123,8 +123,8 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun copyHeadToHstPlan(): IPgPlan {
-        return session.sql.prepare(
+    private fun copyHeadToHstPlan(): PgPlan {
+        return session.pgSession().prepare(
             """
             INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
             SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
@@ -317,16 +317,16 @@ internal class NakshaBulkLoaderPlan(
 
     internal fun executeBatchDeleteFromDel(featureIdsToDeleteFromDel: MutableList<String>) {
         if (featureIdsToDeleteFromDel.isNotEmpty()) {
-            session.sql.execute(
+            session.pgSession().execute(
                 "DELETE FROM  $delCollectionIdQuoted WHERE id = ANY($1)",
                 arrayOf(featureIdsToDeleteFromDel.toTypedArray())
             )
         }
     }
 
-    internal fun executeBatch(stmt: KFunction0<IPgPlan>, bulkParams: List<Array<Param>>) {
+    internal fun executeBatch(stmt: KFunction0<PgPlan>, bulkParams: List<Array<Param>>) {
         if (bulkParams.isNotEmpty()) {
-            val result = session.sql.executeBatch(stmt(), bulkParams.toTypedArray())
+            val result = session.pgSession().executeBatch(stmt(), bulkParams.toTypedArray())
             if (result.isNotEmpty() && result[0] == -3) {
                 // java.sql.Statement.EXECUTE_FAILED
                 throw NakshaException.forBulk(ERR_FATAL, "error in bulk statement")

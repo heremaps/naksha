@@ -54,11 +54,12 @@ internal data class CollectionWriteOps(
         wait: Boolean
     ): Map<String, Row> = if (idsSmallFetch.isNotEmpty()) {
         val waitOp = if (wait) "" else "NOWAIT"
-        val collectionIdQuoted = session.sql.quoteIdent(collectionId)
+        val collectionIdQuoted = PgUtil.quoteIdent(collectionId)
+        val pgSession = session.pgSession()
         val basicQuery =
             "SELECT $COL_ID,$COL_TXN,$COL_UID,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR,$COL_AUTHOR_TS,$COL_GEO_GRID,$COL_FLAGS,$COL_APP_ID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp"
         val result = if (idsFullFetch.isEmpty()) {
-            session.sql.execute(basicQuery, arrayOf(idsSmallFetch.toTypedArray()))
+            pgSession.execute(basicQuery, arrayOf(idsSmallFetch.toTypedArray()))
         } else {
             val complexQuery = """
                 with 
@@ -66,9 +67,9 @@ internal data class CollectionWriteOps(
                 remaining as (SELECT $COL_ID, $COL_TXN_NEXT,$COL_PTXN,$COL_PUID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE FROM $collectionIdQuoted WHERE id = ANY($2))
                 select * from small s left join remaining r on s.$COL_ID = r.$COL_ID 
             """.trimIndent()
-            session.sql.execute(complexQuery, arrayOf(idsSmallFetch.toTypedArray(), idsFullFetch.toTypedArray()))
+            pgSession.execute(complexQuery, arrayOf(idsSmallFetch.toTypedArray(), idsFullFetch.toTypedArray()))
         }
-        val rows = session.sql.rows(result)
+        val rows = pgSession.rows(result)
         DbRowMapper.toMap(rows, session.storage)
     } else {
         mutableMapOf()

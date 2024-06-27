@@ -7,7 +7,7 @@ import naksha.model.ACTION_UPDATE
 import naksha.model.Flags
 import naksha.model.response.Metadata
 import naksha.model.response.Row
-import naksha.plv8.IPgPlan
+import naksha.plv8.PgPlan
 import naksha.plv8.NakshaSession
 import naksha.plv8.Static.SC_TRANSACTIONS
 import kotlin.js.ExperimentalJsExport
@@ -18,7 +18,7 @@ import kotlin.js.JsExport
 class RowUpdater(
     val session: NakshaSession
 ) {
-    private lateinit var gridPlan: IPgPlan
+    private lateinit var gridPlan: PgPlan
 
     /**
      * Create the XYZ namespace for an _INSERT_ operation.
@@ -59,9 +59,9 @@ class RowUpdater(
             uid = uid,
             createdAt = null, // saving space - it is same as update_at at creation,
             updatedAt = txnTs,
-            author = session.author,
+            author = session.context.author,
             authorTs = null, // saving space - only apps are allowed to create features
-            appId = session.appId,
+            appId = session.context.appId,
             flags = flags,
             fnva1 = rowHash(NEW)
         )
@@ -77,7 +77,7 @@ class RowUpdater(
         val oldMeta = OLD.meta!!
         newMeta.action = ACTION_UPDATE.toShort()
         newMeta.createdAt = oldMeta.createdAt ?: oldMeta.updatedAt
-        if (session.author == null) {
+        if (session.context.author == null) {
             newMeta.authorTs = oldMeta.authorTs ?: oldMeta.updatedAt
         } else {
             newMeta.authorTs = null
@@ -100,15 +100,15 @@ class RowUpdater(
         OLD.txn = txn.value
         OLD.txnNext = txn.value
         OLD.action = ACTION_DELETE.toShort()
-        OLD.author = session.author ?: session.appId
-        if (session.author != null) {
+        OLD.author = session.context.author ?: session.context.appId
+        if (session.context.author != null) {
             OLD.authorTs = txnTs
         }
         if (OLD.createdAt != null) {
             OLD.createdAt = OLD.updatedAt
         }
         OLD.updatedAt = txnTs
-        OLD.appId = session.appId
+        OLD.appId = session.context.appId
         OLD.uid = session.nextUid()
         val currentVersion: Int = OLD.version ?: 1
         OLD.version = currentVersion + 1

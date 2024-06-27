@@ -61,7 +61,7 @@ class JvmPlv8Env : JvmEnv() {
         // Prepare the connection, need to load the module system.
         conn.autoCommit = false
         val sql = JvmPlv8Sql(conn)
-        val schemaQuoted = sql.quoteIdent(schema)
+        val schemaQuoted = PgUtil.quoteIdent(schema)
         sql.execute("SET SESSION search_path TO $schemaQuoted, public, topology; SELECT naksha_start_session($1, $2, $3, $4);",
                 arrayOf(appName, streamId, appId, author))
         conn.commit()
@@ -162,7 +162,7 @@ class JvmPlv8Env : JvmEnv() {
     fun install(conn: Connection, version: Long, schema: String, storageId: String, appName: String) {
         conn.autoCommit = false
         val sql = JvmPlv8Sql(conn)
-        val schemaQuoted = sql.quoteIdent(schema)
+        val schemaQuoted = PgUtil.quoteIdent(schema)
         val schemaJsQuoted = Jb.env.stringify(schema)
         sql.execute("""
 CREATE SCHEMA IF NOT EXISTS $schemaQuoted;

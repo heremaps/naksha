@@ -1,6 +1,5 @@
 package naksha.plv8.read
 
-import com.here.naksha.lib.plv8.JvmPgConnection
 import naksha.geo.GeometryProxy
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
@@ -14,6 +13,7 @@ import naksha.model.request.condition.PRef.*
 import naksha.model.request.condition.SOp.Companion.intersects
 import naksha.model.request.condition.SOp.Companion.intersectsWithTransformation
 import naksha.model.request.condition.geometry.BufferTransformation
+import naksha.plv8.PgSession
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test
 @Suppress("UNCHECKED_CAST")
 class ReadQueryBuilderTest {
 
-    private val sql = JvmPgConnection(null)
+    private lateinit var sql: PgSession
     private val builder = ReadQueryBuilder(sql)
 
     @Test

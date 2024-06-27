@@ -1,3 +1,7 @@
+import naksha.plv8.PsqlCluster
+import naksha.plv8.PsqlInstance
+import naksha.plv8.PsqlStorage
+import naksha.model.NakshaContext
 import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.slf4j.LoggerFactory
@@ -5,6 +9,7 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Start and shutdown a test container.
@@ -18,6 +23,20 @@ class Plv8TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableRes
         private var existingUrl: String? = null
         lateinit var url: String
         lateinit var schema: String
+        val context = NakshaContext.newInstance("plv8_test", "pvl8_author", true)
+        private val _storage = AtomicReference<PsqlStorage?>()
+        val storage: PsqlStorage
+            get() {
+                var s = _storage.get()
+                if (s == null) {
+                    s = PsqlStorage("test", PsqlCluster(PsqlInstance.get(url)), schema)
+                    if (!_storage.compareAndSet(null, s)) {
+                        s = _storage.get()
+                        check(s != null)
+                    }
+                }
+                return s
+            }
         var initialized = false
     }
 

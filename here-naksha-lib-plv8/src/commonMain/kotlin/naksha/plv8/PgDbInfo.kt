@@ -16,7 +16,7 @@ private const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 128
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class PgDbInfo(val sql: IPgConnection) { // TODO: Rename sql into conn
+class PgDbInfo(val sql: PgSession) { // TODO: Rename sql into conn
     val pageSize: Int
     val maxTupleSize: Int
     val brittleTableSpace: String?

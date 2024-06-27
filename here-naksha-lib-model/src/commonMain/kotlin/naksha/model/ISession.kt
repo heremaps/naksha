@@ -29,7 +29,14 @@ interface ISession : AutoCloseable {
     var lockTimeout: Int
 
     /**
-     * Closing a session will invoke [IWriteSession.rollback] and return eventually still in use connections to their connection pool.
+     * Tests if the session is closed.
+     * @return _true_ if the session is closed.
+     */
+    fun isClosed(): Boolean
+
+    /**
+     * Closing a session will roll back the underlying connection, and then return it to their connection pool. After closing a session
+     * any further methods invocation will raise an [IllegalStateException].
      */
     override fun close()
 }
