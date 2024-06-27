@@ -1,7 +1,7 @@
 package naksha.plv8
 
 import naksha.jbon.XYZ_OP_CREATE
-import com.here.naksha.lib.plv8.JvmPlv8Plan
+import com.here.naksha.lib.plv8.JvmPgPlan
 import naksha.base.Int64
 import naksha.model.*
 import naksha.model.request.InsertRow
@@ -46,9 +46,9 @@ class WriteFeaturesTest {
             on { id() } doReturn "storageId"
         }
 
-        val sqlMock = mock<IPlv8Sql> {
+        val sqlMock = mock<IPgConnection> {
             on { quoteIdent(anyString()) } doReturn ""
-            on { prepare(any(), any()) } doReturn mock<JvmPlv8Plan>()
+            on { prepare(any(), any()) } doReturn mock<JvmPgPlan>()
             on { executeBatch(any(), any()) } doReturn intArrayOf(1)
         }
 

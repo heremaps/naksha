@@ -58,6 +58,11 @@ class ReadFeatures(
      */
     noGeometry: Boolean = false,
     /**
+     * @see Request.noGeoRef
+     * default: false
+     */
+    noGeoRef: Boolean = false,
+    /**
      * @see Request.noMeta
      * default: false
      */
@@ -73,7 +78,7 @@ class ReadFeatures(
      */
     resultFilter: Array<IReadRowFilter> = emptyArray()
 
-) : ReadRequest(limit, noFeature, noGeometry, noMeta, noTags, resultFilter) {
+) : ReadRequest(limit, noFeature, noGeometry, noGeoRef, noMeta, noTags, resultFilter) {
 
     companion object {
         fun readSingleHead(collectionId: String) = ReadFeatures(collectionIds = arrayOf(collectionId))

@@ -1,6 +1,6 @@
 package com.here.naksha.lib.auth.attribute
 
-import naksha.base.P_List
+import naksha.base.AbstractListProxy
 import kotlin.js.JsExport
 
 
@@ -10,7 +10,7 @@ class FeatureAttributes : NakshaAttributes<FeatureAttributes>() {
     fun storageId(storageId: String) = apply { set(STORAGE_ID_KEY, storageId) }
 
     fun storageTags(storageTags: List<String>) = apply {
-        box(storageTags, P_List::class)?.let {
+        box(storageTags, AbstractListProxy::class)?.let {
             set(STORAGE_TAGS_KEY, it)
         }
     }
@@ -18,7 +18,7 @@ class FeatureAttributes : NakshaAttributes<FeatureAttributes>() {
     fun collectionId(collectionId: String) = apply { set(COLLECTION_ID_KEY, collectionId) }
 
     fun collectionTags(collectionTags: List<String>) = apply {
-        box(collectionTags, P_List::class)?.let {
+        box(collectionTags, AbstractListProxy::class)?.let {
             set(COLLECTION_TAGS_KEY, it)
         }
     }

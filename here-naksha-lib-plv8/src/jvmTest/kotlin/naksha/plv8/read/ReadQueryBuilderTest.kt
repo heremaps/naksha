@@ -1,8 +1,7 @@
 package naksha.plv8.read
 
-import com.here.naksha.lib.plv8.JvmPlv8Sql
+import com.here.naksha.lib.plv8.JvmPgConnection
 import naksha.geo.GeometryProxy
-import naksha.geo.PointProxy
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadFeatures.Companion.readIdsBy
@@ -11,8 +10,7 @@ import naksha.model.request.condition.LOp.Companion.or
 import naksha.model.request.condition.POp.Companion.eq
 import naksha.model.request.condition.POp.Companion.isNotNull
 import naksha.model.request.condition.POp.Companion.lt
-import naksha.model.request.condition.PRef.ID
-import naksha.model.request.condition.PRef.UID
+import naksha.model.request.condition.PRef.*
 import naksha.model.request.condition.SOp.Companion.intersects
 import naksha.model.request.condition.SOp.Companion.intersectsWithTransformation
 import naksha.model.request.condition.geometry.BufferTransformation
@@ -24,7 +22,7 @@ import org.junit.jupiter.api.Test
 @Suppress("UNCHECKED_CAST")
 class ReadQueryBuilderTest {
 
-    private val sql = JvmPlv8Sql(null)
+    private val sql = JvmPgConnection(null)
     private val builder = ReadQueryBuilder(sql)
 
     @Test
@@ -269,7 +267,7 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadBySpatial() {
         // given
-        val req = readIdsBy("foo", intersects(PointProxy()))
+        val req = readIdsBy("foo", intersects(GeometryProxy()))
 
         // when
         val (sql, params) = builder.build(req)
@@ -286,7 +284,7 @@ class ReadQueryBuilderTest {
     fun testReadBySpatialWithBuffer() {
         // given
         val geometryTransformation = BufferTransformation.bufferInMeters(22.2)
-        val req = readIdsBy("foo", intersectsWithTransformation(PointProxy(), geometryTransformation))
+        val req = readIdsBy("foo", intersectsWithTransformation(GeometryProxy(), geometryTransformation))
 
         // when
         val (sql, params) = builder.build(req)
@@ -362,6 +360,24 @@ class ReadQueryBuilderTest {
             UNION ALL
             (SELECT id, type, geo_ref, flags FROM "naksha~collections${'$'}del" WHERE id in $2)
             """.trimIndent().trimMargin(),
+            removeLimitWrapper(sql)
+        )
+    }
+
+    @Test
+    fun testUuidQuery() {
+        // given
+        val uuid = "test_storage:building_delta:feature1:2024:01:23:1:0"
+
+        val req = readIdsBy("foo", eq(UUID, uuid))
+
+        // when
+        val (sql, params) = builder.build(req)
+
+        // then
+        assertEquals(2, params.size)
+        assertEquals(
+            """(SELECT id, type, geo_ref, flags FROM "foo" WHERE (txn=$1 AND uid=$2))""",
             removeLimitWrapper(sql)
         )
     }

@@ -4,7 +4,7 @@ package naksha.model
 
 import naksha.base.NullableProperty
 import naksha.geo.GeoFeature
-import naksha.geo.PointCoordsProxy
+import naksha.geo.cords.PointCoordsProxy
 import kotlin.js.JsExport
 import kotlin.js.JsName
 

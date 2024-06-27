@@ -59,7 +59,7 @@ internal class NakshaBulkLoaderPlan(
     internal val deleteHeadBulkParams = mutableListOf<Array<Param>>()
     internal val copyHeadToHstBulkParams = mutableListOf<Array<Param>>()
 
-    private fun insertHeadPlan(): IPlv8Plan {
+    private fun insertHeadPlan(): IPgPlan {
         return session.sql.prepare(
             """INSERT INTO $partitionHeadQuoted (
                 $COL_CREATED_AT,$COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_FLAGS,
@@ -76,7 +76,7 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun updateHeadPlan(): IPlv8Plan {
+    private fun updateHeadPlan(): IPgPlan {
         return session.sql.prepare(
             """
                 UPDATE $partitionHeadQuoted 
@@ -86,7 +86,7 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun deleteHeadPlan(): IPlv8Plan {
+    private fun deleteHeadPlan(): IPgPlan {
         return session.sql.prepare(
             """
                 DELETE FROM $partitionHeadQuoted
@@ -96,7 +96,7 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun insertDelPlan(): IPlv8Plan {
+    private fun insertDelPlan(): IPgPlan {
         // ptxn + puid = txn + uid (as we generate new state in _del)
         return session.sql.prepare(
             """
@@ -110,7 +110,7 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun insertDelToHstPlan(): IPlv8Plan {
+    private fun insertDelToHstPlan(): IPgPlan {
         return session.sql.prepare(
             """
                 INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
@@ -123,7 +123,7 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
-    private fun copyHeadToHstPlan(): IPlv8Plan {
+    private fun copyHeadToHstPlan(): IPgPlan {
         return session.sql.prepare(
             """
             INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
@@ -324,7 +324,7 @@ internal class NakshaBulkLoaderPlan(
         }
     }
 
-    internal fun executeBatch(stmt: KFunction0<IPlv8Plan>, bulkParams: List<Array<Param>>) {
+    internal fun executeBatch(stmt: KFunction0<IPgPlan>, bulkParams: List<Array<Param>>) {
         if (bulkParams.isNotEmpty()) {
             val result = session.sql.executeBatch(stmt(), bulkParams.toTypedArray())
             if (result.isNotEmpty() && result[0] == -3) {

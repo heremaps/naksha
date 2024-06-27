@@ -45,7 +45,7 @@ import kotlin.js.JsExport
 @Suppress("UNUSED_PARAMETER", "unused", "LocalVariableName", "MemberVisibilityCanBePrivate", "DuplicatedCode")
 @JsExport
 class NakshaSession(
-    val sql: IPlv8Sql,
+    val sql: IPgConnection,
     val schema: String,
     val storage: IStorage,
     var appName: String,

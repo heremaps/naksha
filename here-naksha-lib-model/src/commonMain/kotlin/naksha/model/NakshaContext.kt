@@ -1,11 +1,8 @@
 package naksha.model
 
-import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
-import naksha.base.BaseThreadLocal
-import naksha.base.Int64
+import naksha.base.PlatformThreadLocal
 import naksha.base.Platform
-import naksha.base.PlatformUtil
-import naksha.model.NakshaContext.Fn
+import naksha.base.fn.Fn0
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -17,14 +14,7 @@ import kotlin.jvm.JvmStatic
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-open class NakshaContext {
-    /**
-     * Any interface needed for Java compatibility.
-     */
-    fun interface Fn {
-        fun nakshaContext(): NakshaContext
-    }
-
+open class NakshaContext protected constructor() {
     private var _appId: String? = null
 
     /**
@@ -96,21 +86,21 @@ open class NakshaContext {
 
     @Suppress("OPT_IN_USAGE")
     companion object {
-        private val threadLocal: BaseThreadLocal<NakshaContext> = Platform.newThreadLocal(::NakshaContext)
+        private val threadLocal: PlatformThreadLocal<NakshaContext> = Platform.newThreadLocal(::NakshaContext)
 
         /**
          * Can be overridden by application code to modify the context creation.
          */
         @JvmStatic
         @JsStatic
-        var constructorRef: Fn = Fn(::NakshaContext)
+        var constructorRef: Fn0<NakshaContext> = Fn0(::NakshaContext)
 
         /**
          * Can be overridden by application code to modify the thread local context gathering.
          */
         @JvmStatic
         @JsStatic
-        var currentRef: Fn = Fn(threadLocal::get)
+        var currentRef: Fn0<NakshaContext> = Fn0(threadLocal::get)
 
         /**
          * Creates a new Naksha Context.
@@ -120,11 +110,11 @@ open class NakshaContext {
          */
         @JvmStatic
         @JsStatic
-        open fun newInstance(streamId: String, appId: String, author: String? = null, su: Boolean = false): NakshaContext {
-            val context = constructorRef.nakshaContext()
-            context.streamId = streamId
+        open fun newInstance(appId: String, author: String? = null, streamId: String? = null, su: Boolean = false): NakshaContext {
+            val context = constructorRef.call()
             context.appId = appId
             context.author = author
+            context.streamId = streamId;
             context.su = su
             return context
         }

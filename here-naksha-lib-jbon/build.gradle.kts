@@ -38,6 +38,7 @@ kotlin {
         }
         commonTest {
             dependencies {
+                implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
@@ -76,8 +77,18 @@ configure<JavaPluginExtension> {
 }
 
 tasks {
-    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack")
+    val jsProductionLibraryCompileSync = getByName<Task>("jsProductionLibraryCompileSync")
+    val jsProductionExecutableCompileSync = getByName<Task>("jsProductionExecutableCompileSync")
     val browserDistribution = getByName<Task>("jsBrowserDistribution")
+    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack") {
+        dependsOn(jsProductionLibraryCompileSync)
+    }
+    getByName<Task>("jsNodeProductionLibraryDistribution") {
+        dependsOn(jsProductionExecutableCompileSync)
+    }
+    getByName<Task>("jsBrowserProductionLibraryDistribution") {
+        dependsOn(jsProductionExecutableCompileSync)
+    }
     getByName<ProcessResources>("jvmProcessResources") {
         dependsOn(webpackTask, browserDistribution)
     }

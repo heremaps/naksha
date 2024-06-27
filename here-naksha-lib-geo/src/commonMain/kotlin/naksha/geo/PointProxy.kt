@@ -1,17 +1,24 @@
-@file:Suppress("OPT_IN_USAGE")
-
 package naksha.geo
 
+import naksha.base.NullableProperty
+import naksha.geo.cords.PointCoordsProxy
+import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
+@OptIn(ExperimentalJsExport::class)
 @JsExport
-class PointProxy() : GeometryProxy(PointCoordsProxy(), "Point") {
+open class PointProxy() : GeometryProxy() {
 
     @JsName("of")
     constructor(vararg coords: Double?) : this() {
-        coordinates = PointCoordsProxy(*coords)
+        this.coordinates = PointCoordsProxy(*coords)
     }
 
-    fun getCoordinates() = coordinates?.proxy(PointCoordsProxy::class)
+    companion object{
+        private val COORDINATES = NullableProperty<Any, PointProxy, PointCoordsProxy>(PointCoordsProxy::class)
+    }
+    var coordinates by COORDINATES
+    override var type: String? = "Point"
+
 }

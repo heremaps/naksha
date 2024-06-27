@@ -2,7 +2,6 @@
 
 package naksha.plv8
 
-import naksha.model.response.Metadata
 import naksha.model.response.Row
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport

@@ -574,7 +574,7 @@ actual class Platform {
         }
 
         @JvmStatic
-        private val defaultBaseLogger = object : BaseLogger {
+        private val defaultPlatformLogger = object : PlatformLogger {
             private val logger = LoggerFactory.getLogger("com.here.naksha.lib.base")
             override fun debug(msg: String, vararg args: Any?) {
                 if (logger.isDebugEnabled) logger.debug(msg, *args)
@@ -622,10 +622,10 @@ actual class Platform {
         }
 
         /**
-         * The [BaseLogger].
+         * The [PlatformLogger].
          */
         @JvmStatic
-        actual val logger: BaseLogger by newThreadLocal { defaultBaseLogger }
+        actual val logger: PlatformLogger by newThreadLocal { defaultPlatformLogger }
 
         /**
          * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).
@@ -633,7 +633,7 @@ actual class Platform {
          * @return The thread local.
          */
         @JvmStatic
-        actual fun <T> newThreadLocal(initializer: (() -> T)?): BaseThreadLocal<T> = JvmThreadLocal(initializer)
+        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> = JvmThreadLocal(initializer)
 
         /**
          * The nano-time when the class is initialized.

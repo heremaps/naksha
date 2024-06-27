@@ -1,17 +1,17 @@
 package naksha.plv8
 
 import Plv8TestContainer
-import com.here.naksha.lib.plv8.naksha.plv8.JvmPlv8Storage
+import com.here.naksha.lib.plv8.naksha.plv8.PsqlCluster
+import com.here.naksha.lib.plv8.naksha.plv8.PsqlInstance
+import com.here.naksha.lib.plv8.naksha.plv8.PsqlStorage
 import naksha.model.IReadSession
 import naksha.model.IStorage
 import naksha.model.IWriteSession
 import naksha.model.NakshaContext
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.condition.EnabledIf
 import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.function.Executable
 import java.sql.Connection
 import java.sql.DriverManager
 
@@ -23,10 +23,10 @@ import java.sql.DriverManager
 abstract class DbTest {
 
     protected fun sessionRead(): IReadSession =
-        storage.openReadSession(defaultNakshaContext, false)
+        storage.newReadSession(defaultNakshaContext, false)
 
     protected fun sessionWrite(): IWriteSession =
-        storage.openWriteSession(defaultNakshaContext, true)
+        storage.newWriteSession(defaultNakshaContext)
 
     companion object {
         @JvmStatic
@@ -39,7 +39,10 @@ abstract class DbTest {
         protected var SCHEMA = "unit-tests-schema"
 
         @JvmStatic
-        protected val defaultNakshaContext = NakshaContext(appId = "unit-test-app", su = false, author = "kotlin")
+        protected val defaultNakshaContext = NakshaContext.newInstance(appId = "unit-test-app", su = false, author = "kotlin")
+
+        @JvmStatic
+        protected lateinit var cluster: PsqlCluster
 
         @JvmStatic
         @BeforeAll
@@ -57,7 +60,7 @@ abstract class DbTest {
                 SCHEMA = params["schema"]!![0]
                 envUrl
             }
-
+            cluster = PsqlCluster(PsqlInstance.get(url))
             connection = DriverManager.getConnection(url)
         }
     }
@@ -70,7 +73,7 @@ abstract class DbTest {
     @Order(10)
     @EnabledIf("runTest")
     fun createStorage() {
-        storage = JvmPlv8Storage("test_storage", connection, SCHEMA)
+        storage = PsqlStorage("test_storage", cluster, SCHEMA)
     }
 
     @Test

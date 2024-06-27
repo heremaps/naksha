@@ -1,7 +1,7 @@
 package naksha.plv8
 
 import naksha.base.Int64
-import naksha.base.P_JsMap
+import naksha.base.ObjectProxy
 import naksha.model.ACTION_CREATE
 import naksha.model.IStorage
 import naksha.model.XYZ_EXEC_READ
@@ -22,7 +22,7 @@ object DbRowMapper {
      * @param storage - current storage reference
      * @return Map<ID, ROW>
      */
-    fun toMap(rows: Array<P_JsMap>?, storage: IStorage): Map<String, Row> {
+    fun toMap(rows: Array<ObjectProxy>?, storage: IStorage): Map<String, Row> {
         val retMap = mutableMapOf<String, Row>()
 
         if (rows.isNullOrEmpty())
@@ -42,7 +42,7 @@ object DbRowMapper {
      * @param storage - current storage reference
      * @return List<ROW>
      */
-    fun toRows(rows: Array<P_JsMap>?, storage: IStorage): List<Row> {
+    fun toRows(rows: Array<ObjectProxy>?, storage: IStorage): List<Row> {
         if (rows.isNullOrEmpty())
             return emptyList()
 
@@ -56,7 +56,7 @@ object DbRowMapper {
      * @param storage - current storage reference
      * @return List<ResultRow>
      */
-    fun toReadRows(rows: Array<P_JsMap>?, storage: IStorage): List<ResultRow> {
+    fun toReadRows(rows: Array<ObjectProxy>?, storage: IStorage): List<ResultRow> {
         if (rows.isNullOrEmpty())
             return emptyList()
 
@@ -70,7 +70,7 @@ object DbRowMapper {
      * @param storage - current storage reference
      * @return ID, ROW
      */
-    fun toRow(row: P_JsMap, storage: IStorage): Row {
+    fun toRow(row: ObjectProxy, storage: IStorage): Row {
         return Row(
             storage = storage,
             guid = null,
@@ -93,7 +93,7 @@ object DbRowMapper {
      * @param row - raw database record
      * @return Metadata object
      */
-    fun toMetadata(row: P_JsMap): Metadata {
+    fun toMetadata(row: ObjectProxy): Metadata {
         val meta = Metadata(
             id = row[COL_ID] as String,
             txnNext = row[COL_TXN_NEXT] as? Int64,

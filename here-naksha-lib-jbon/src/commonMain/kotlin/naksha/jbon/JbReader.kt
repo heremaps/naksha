@@ -189,8 +189,8 @@ open class JbReader {
          * @param jbMap The JBON map.
          * @return The platform native map.
          */
-        internal fun readMap(jbMap: JbMap): P_JsMap {
-            val imap = P_JsMap()
+        internal fun readMap(jbMap: JbMap): ObjectProxy {
+            val imap = ObjectProxy()
             while (jbMap.next()) {
                 imap[jbMap.key()] = jbMap.value().decodeValue()
             }

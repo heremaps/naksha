@@ -8,7 +8,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * Represents the database Row layout.
+ * Represents the database row layout.
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport

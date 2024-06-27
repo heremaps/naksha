@@ -129,5 +129,3 @@ interface Int64 {
      */
     fun toDoubleRawBits(): Double
 }
-
-fun asInt64(any: Any?): Int64 = any as Int64

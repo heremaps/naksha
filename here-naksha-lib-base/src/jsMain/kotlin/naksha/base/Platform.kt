@@ -610,7 +610,7 @@ return new DataView(byteArray.buffer, offset, size);
             TODO("Not yet implemented proxy")
         }
 
-        private val defaultBaseLogger = object : BaseLogger {
+        private val defaultPlatformLogger = object : PlatformLogger {
             // https://developer.mozilla.org/en-US/docs/Web/API/console
             // TODO: When the argument is a scalar, directly concat, only leave objects as own arguments.
             //       So, we expect that ("Hello {}", "World") returns ["Hello World"] and not ["Hello ", "World"]!
@@ -675,10 +675,10 @@ for (i=0; i < msg_arr.length; i++) {
         }
 
         /**
-         * The [BaseLogger].
+         * The [PlatformLogger].
          */
         @JsStatic
-        actual val logger: BaseLogger = defaultBaseLogger
+        actual val logger: PlatformLogger = defaultPlatformLogger
 
         /**
          * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).
@@ -686,7 +686,7 @@ for (i=0; i < msg_arr.length; i++) {
          * @return The thread local.
          */
         @JsStatic
-        actual fun <T> newThreadLocal(initializer: (() -> T)?): BaseThreadLocal<T> {
+        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> {
             TODO("Not yet implemented newThreadLocal")
         }
 

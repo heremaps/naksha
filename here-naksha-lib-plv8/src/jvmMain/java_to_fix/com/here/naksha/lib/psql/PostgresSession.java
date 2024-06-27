@@ -61,7 +61,7 @@ import naksha.jbon.JbSession;
 import naksha.jbon.NakshaTxn;
 import naksha.jbon.NakshaUuid;
 import com.here.naksha.lib.plv8.JvmPlv8Env;
-import com.here.naksha.lib.plv8.JvmPlv8Sql;
+import com.here.naksha.lib.plv8.JvmPgConnection;
 import com.here.naksha.lib.plv8.JvmPlv8Table;
 import com.here.naksha.lib.plv8.NakshaSession;
 import java.sql.PreparedStatement;

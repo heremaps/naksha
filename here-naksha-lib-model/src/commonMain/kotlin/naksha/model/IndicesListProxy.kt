@@ -2,9 +2,9 @@
 
 package naksha.model
 
-import naksha.base.P_List
+import naksha.base.AbstractListProxy
 import kotlin.js.JsExport
 
 @JsExport
-class IndicesListProxy: P_List<String>(String::class) {
+class IndicesListProxy: AbstractListProxy<String>(String::class) {
 }

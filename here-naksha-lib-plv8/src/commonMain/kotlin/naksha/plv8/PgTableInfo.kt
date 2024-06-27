@@ -7,11 +7,12 @@ import kotlin.js.JsExport
 
 /**
  * Configuration of a table.
- * @property sql The SQL API of the session.
+ * @property conn The SQL API of the session.
  * @property storageClass The storage class to create.
+ * @property partitionCount ?
  */
 @JsExport
-class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?, val partitionCount: Int) {
+class PgTableInfo(val conn: IPgConnection, val storageClass: String?, val partitionCount: Int) { // TODO: Rename sql to conn
     /**
      * The CREATE TABLE statement.
      */
@@ -36,12 +37,12 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?, val partitionCou
         when (storageClass) {
             Static.SC_BRITTLE -> {
                 CREATE_TABLE = "CREATE UNLOGGED TABLE "
-                TABLESPACE = if (sql.info().brittleTableSpace != null) " TABLESPACE ${sql.info().brittleTableSpace}" else ""
+                TABLESPACE = if (conn.info().brittleTableSpace != null) " TABLESPACE ${conn.info().brittleTableSpace}" else ""
             }
 
             Static.SC_TEMPORARY -> {
                 CREATE_TABLE = "CREATE UNLOGGED TABLE "
-                TABLESPACE = if (sql.info().tempTableSpace != null) " TABLESPACE ${sql.info().tempTableSpace}" else ""
+                TABLESPACE = if (conn.info().tempTableSpace != null) " TABLESPACE ${conn.info().tempTableSpace}" else ""
             }
 
             else -> {
@@ -50,7 +51,7 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?, val partitionCou
             }
         }
 
-        val featureCompression = if (sql.info().gzipSupported) "EXTERNAL" else DEFAULT_FEATURE_STORAGE
+        val featureCompression = if (conn.info().gzipSupported) "EXTERNAL" else DEFAULT_FEATURE_STORAGE
 
         val builder = StringBuilder()
         builder.append(" (")
@@ -83,7 +84,7 @@ class PgTableInfo(val sql: IPlv8Sql, val storageClass: String?, val partitionCou
         builder.setLength(0)
         builder.append(" WITH (")
                 .append("fillfactor=100")
-                .append(",toast_tuple_target=").append(sql.info().maxTupleSize)
+                .append(",toast_tuple_target=").append(conn.info().maxTupleSize)
                 .append(",parallel_workers=").append(partitionCount)
                 .append(") ")
         STORAGE_PARAMS = builder.toString()

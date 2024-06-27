@@ -7,9 +7,9 @@ import com.here.naksha.lib.auth.ServiceAccessRights
 import com.here.naksha.lib.auth.action.AccessRightsAction
 import com.here.naksha.lib.auth.attribute.ResourceAttributes
 import com.here.naksha.lib.auth.check.CheckCompiler
-import naksha.base.P_List
-import naksha.base.P_Map
-import naksha.base.P_Object
+import naksha.base.AbstractListProxy
+import naksha.base.AbstractMapProxy
+import naksha.base.ObjectProxy
 import kotlin.js.JsExport
 
 /**
@@ -44,7 +44,7 @@ import kotlin.js.JsExport
  * ```
  */
 @JsExport
-class UserRightsMatrix : P_Map<String, ServiceUserRights>(String::class, ServiceUserRights::class) {
+class UserRightsMatrix : AbstractMapProxy<String, ServiceUserRights>(String::class, ServiceUserRights::class) {
 
     /**
      * URM matches ARM when each service from URM matches corresponding service in ARM
@@ -75,7 +75,7 @@ class UserRightsMatrix : P_Map<String, ServiceUserRights>(String::class, Service
 }
 
 @JsExport
-class ServiceUserRights : P_Map<String, UserAction>(String::class, UserAction::class) {
+class ServiceUserRights : AbstractMapProxy<String, UserAction>(String::class, UserAction::class) {
 
     /**
      * Service defined in URM matches service from ARM when all actions for given service are matching
@@ -102,7 +102,7 @@ class ServiceUserRights : P_Map<String, UserAction>(String::class, UserAction::c
 }
 
 @JsExport
-class UserAction : P_List<UserRights>(UserRights::class) {
+class UserAction : AbstractListProxy<UserRights>(UserRights::class) {
 
     /**
      * If [AccessRightsAction] passed to this function is empty, it is assumed that there is no restriction
@@ -139,7 +139,7 @@ class UserAction : P_List<UserRights>(UserRights::class) {
  * The difference is, [UserRights] hold checks, while [ResourceAttributes] hold raw values that these checks
  * are being run against.
  */
-class UserRights : P_Object() {
+class UserRights : ObjectProxy() {
 
     /**
      * [UserRights] matches [ResourceAttributes] when all of it's compiled checks hold true against resource values.

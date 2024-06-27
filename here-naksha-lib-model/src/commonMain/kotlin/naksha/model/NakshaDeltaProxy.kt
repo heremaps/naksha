@@ -2,11 +2,11 @@
 
 package naksha.model
 
-import naksha.base.P_Object
+import naksha.base.ObjectProxy
 import kotlin.js.JsExport
 
 @JsExport
-class NakshaDeltaProxy : P_Object() {
+class NakshaDeltaProxy : ObjectProxy() {
 
     // TODO implement review state
 }

@@ -33,9 +33,10 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
-                implementation(project(":here-naksha-lib-base"))
-                implementation(project(":here-naksha-lib-auth"))
-                implementation(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-base"))
+                api(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-jbon"))
+                api(project(":here-naksha-lib-auth"))
             }
         }
         commonTest {
@@ -49,8 +50,10 @@ kotlin {
             jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
-                implementation(project(":here-naksha-lib-base"))
-                implementation(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-base"))
+                api(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-jbon"))
+								api(project(":here-naksha-lib-auth"))
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
@@ -66,8 +69,10 @@ kotlin {
         jsMain {
             dependencies {
                 implementation(kotlin("stdlib-js"))
-                implementation(project(":here-naksha-lib-base"))
-                implementation(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-base"))
+                api(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-jbon"))
+								api(project(":here-naksha-lib-auth"))
             }
         }
     }

@@ -25,10 +25,11 @@ class WriteRequest(
     val allowRandomOrder: Boolean = false,
     noFeature: Boolean = false,
     noGeometry: Boolean = false,
+    noGeoRef: Boolean = false,
     noMeta: Boolean = false,
     noTags: Boolean = false,
     resultFilter: Array<IReadRowFilter> = emptyArray()
-) : Request(noFeature, noGeometry, noMeta, noTags, resultFilter) {
+) : Request(noFeature, noGeometry, noGeoRef, noMeta, noTags, resultFilter) {
 
     fun newRequestWithOps(ops: Array<Write>): WriteRequest {
         return WriteRequest(

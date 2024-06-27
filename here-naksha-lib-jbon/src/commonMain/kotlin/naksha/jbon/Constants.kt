@@ -1,6 +1,6 @@
 package naksha.jbon
 
-import naksha.base.P_DataView
+import naksha.base.DataViewProxy
 
 // Encoding constants
 internal const val ENC_MASK = 0b1100_0000
@@ -179,7 +179,7 @@ val randomCharacters = CharArray(64) {
 }
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun newDataView(size: Int) = P_DataView(size)
+inline fun newDataView(size: Int) = DataViewProxy(size)
 
 @Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
 inline fun asArray(any: Any?): Array<Any?> = any as Array<Any?>

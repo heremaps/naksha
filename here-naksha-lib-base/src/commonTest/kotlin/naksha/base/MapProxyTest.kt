@@ -2,8 +2,8 @@ package naksha.base
 
 import kotlin.test.*
 
-internal class TestMapStringString : P_Map<String, String>(String::class, String::class)
-internal class TestStringList : P_List<String>(String::class)
+internal class TestMapStringString : AbstractMapProxy<String, String>(String::class, String::class)
+internal class TestStringList : AbstractListProxy<String>(String::class)
 
 class P_MapTest {
 
@@ -168,7 +168,7 @@ class P_MapTest {
         }
     }
 
-    private fun pMap(vararg keyPairs: Pair<String, String>): P_Map<String, String> {
+    private fun pMap(vararg keyPairs: Pair<String, String>): AbstractMapProxy<String, String> {
         val stdMap: Map<String, String?> = mapOf(*keyPairs)
         return TestMapStringString().apply { putAll(stdMap) }
     }

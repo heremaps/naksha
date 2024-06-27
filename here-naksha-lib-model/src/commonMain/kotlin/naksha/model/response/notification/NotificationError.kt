@@ -3,7 +3,7 @@ package naksha.model.response.notification
 import naksha.model.response.ErrorResponse
 import naksha.model.response.NakshaError
 import naksha.base.Int64
-import naksha.base.P_Map
+import naksha.base.AbstractMapProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -18,6 +18,6 @@ class NotificationError(
     reason: NakshaError,
     val seqNumber: Int64,
     val uid: Int,
-    val handlerStates: P_Map<String, Any>
+    val handlerStates: AbstractMapProxy<String, Any>
 ) : ErrorResponse(reason) {
 }

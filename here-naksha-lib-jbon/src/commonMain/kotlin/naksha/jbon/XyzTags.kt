@@ -2,8 +2,8 @@
 
 package naksha.jbon
 
-import naksha.base.P_JsMap
-import naksha.base.P_Map
+import naksha.base.ObjectProxy
+import naksha.base.AbstractMapProxy
 import naksha.base.Platform
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -14,7 +14,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
-    private lateinit var _tagsMap: P_JsMap
+    private lateinit var _tagsMap: ObjectProxy
     private lateinit var _tagsArray: Array<String>
 
     override fun parseHeader() {
@@ -29,7 +29,7 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
         }
 
         // Now all key-value pairs follow.
-        val map = P_JsMap()
+        val map = ObjectProxy()
         val array = ArrayList<String>()
         while (reader.nextUnit()) {
             var key: String
@@ -78,7 +78,7 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
     /**
      * Returns the tags as map.
      */
-    fun tagsMap(): P_Map<String, *> = _tagsMap
+    fun tagsMap(): AbstractMapProxy<String, *> = _tagsMap
 
     /**
      * Returns the tags as array.

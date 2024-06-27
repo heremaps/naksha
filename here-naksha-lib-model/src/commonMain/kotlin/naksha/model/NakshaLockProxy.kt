@@ -5,7 +5,6 @@ package naksha.model
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.P_Map
 import kotlin.js.JsExport
 
 /**

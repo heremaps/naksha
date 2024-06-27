@@ -1,4 +1,4 @@
-import com.here.naksha.lib.plv8.JvmPlv8Sql
+import com.here.naksha.lib.plv8.JvmPgConnection
 import naksha.jbon.XyzBuilder
 import naksha.model.Flags.DEFAULT_FLAGS
 import naksha.model.NakshaCollectionProxy
@@ -24,7 +24,7 @@ class NakshaSessionTest : DbTest() {
     private val session = NakshaSession(
         storage = storage,
         streamId = "stream-id",
-        sql = JvmPlv8Sql(connection),
+        sql = JvmPgConnection(connection),
         appName = "unit-tests-app",
         appId = "unit-tests-app-id",
         author = "kotlin",
