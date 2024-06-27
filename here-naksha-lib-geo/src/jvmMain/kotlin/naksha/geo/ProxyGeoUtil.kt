@@ -15,7 +15,7 @@ object ProxyGeoUtil {
      * @throws [IllegalArgumentException] when proxy type is not supported
      * @throws [RuntimeException] when proxy has null coordinates
      */
-    fun toJtsGeometry(proxy: GeometryProxy): Geometry? {
+    fun toJtsGeometry(proxy: GeometryProxy): Geometry {
         return when (proxy) {
             is PointProxy -> toJtsPoint(proxy)
             is MultiPointProxy -> toJtsMultiPoint(proxy)
