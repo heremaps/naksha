@@ -135,7 +135,7 @@ class PsqlInstance {
         //props.setProperty(RECEIVE_BUFFER_SIZE.getName(), receiveBufferSize.toString())
         //props.setProperty(SEND_BUFFER_SIZE.getName(), sendBufferSize.toString())
         props.setProperty(REWRITE_BATCHED_INSERTS.getName(), "true")
-        val conn = PgConnection(arrayOf(hostSpec), Properties(), url)
+        val conn = PgConnection(arrayOf(hostSpec), props, url)
         conn.setAutoCommit(false)
         conn.setReadOnly(options.readOnly)
         conn.setHoldability(ResultSet.CLOSE_CURSORS_AT_COMMIT)
