@@ -16,19 +16,20 @@ be extended on demand to other targets. The main business logic is implemented a
 [commonMain](./src/commonMain/kotlin/naksha/psql), so that basically all features are available in Java and inside the PostgresQL database.
 
 The main code is implemented in [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt). It represents a storage session 
-and implements support for `IReadSession` and `IWriteSession` as specified in `lib-model`. An instance of it is created by providing a 
+and implements support for `IReadSession` and `IWriteSession` as specified in `lib-model`. An instance of it can be created by providing a 
 [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) in the constructor, which is a platform specific implementation.
 
-The [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) extends the `IStorage` interface with just one additional method, that 
-allows to open a PostgresQL database connection from a connection pool of the storage.
+The [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface extends the `IStorage` interface with just one additional 
+method (`openSession`), that allows to open a PostgresQL database connection from a connection pool of the storage.
 
-The [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt) is not created directly, but returned by the platform specific 
-implementation of the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface.
+The [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt) is normally not created directly, but returned by the platform 
+specific implementation of the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface, via the `newReadSession` or 
+`newWriteSession` methods, which will simply create a [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt).
 
-In Java, the following JVM only classes actually provide the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) implementation:
+In Java, the following JVM-only classes actually provide the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) implementation:
 
 - The [PsqlStorage](./src/jvmMain/kotlin/naksha/psql/PsqlStorage.kt) directly implements the
-  [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface, it requires to provide a
+  [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface. It requires to provide a
   [PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt) to the constructor, when creating an instance of it.
 - The [PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt) can be created by providing at least one
   [PsqlInstance](./src/jvmMain/kotlin/naksha/psql/PsqlInstance.kt), representing the master node of the PostgresQL database.
@@ -36,6 +37,14 @@ In Java, the following JVM only classes actually provide the [PgStorage](./src/c
   the background each instance holds an own dedicate connection pool, and the same instance (identifier by host, port, db, user and
   password) is kept in memory as singleton, so that all clusters and storages share the same connection pool. This reduces the amount of 
   connections being created and kept alive. Idle connections are automatically closed, idle instances are automatically removed.
+
+For example, Naksha-Hub will use `storage-psql`, which provides a `naksha.storage.psql.PsqlStoragePlugin` class that implements the 
+`Plugin` interface and the `IStorage` interface. It does so by creating a [PsqlStorage](./src/jvmMain/kotlin/naksha/psql/PsqlStorage.kt) 
+instance, when a new instance of the `PsqlStoragePlugin` is created. The plugin receives a configuration feature in the constructor (a 
+feature defined by the manager of the plugin). This configuration feature will contain all necessary information to create a 
+[PsqlCluster](./src/jvmMain/kotlin/naksha/psql/PsqlCluster.kt), by getting the `Psqllnstance`'s via `Psqllnstance.get(...)`, using the 
+information provided by the configuration feature. Eventually, the plugin will simply proxy all `IStorage` methods into this private
+[PsqlStorage](./src/jvmMain/kotlin/naksha/psql/PsqlStorage.kt) instance.
 
 In [PLV8](https://plv8.github.io/) the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) is implemented as static member of 
 the standard `plv8` object provided out-of-the-box by the [PLV8 extension](https://plv8.github.io/). So, when the SQL function 
