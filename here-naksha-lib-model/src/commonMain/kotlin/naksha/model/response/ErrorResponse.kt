@@ -12,6 +12,4 @@ import kotlin.js.JsExport
 @JsExport
 open class ErrorResponse(
     val reason: NakshaError
-) : Response(ERROR_TYPE) {
-    override fun size(): Int = 0
-}
+) : Response(ERROR_TYPE)

@@ -20,11 +20,16 @@ package naksha.model;
 
 import java.util.Map;
 import naksha.model.StatisticsResponse.Value;
+import naksha.model.response.Response;
 
-public class StorageStatistics extends XyzResponse {
+public class StorageStatistics extends Response {
 
   private Map<String, SpaceByteSizes> byteSizes;
   private long createdAt;
+
+  public StorageStatistics() {
+    super(STORAGE_STATS_TYPE);
+  }
 
   /**
    * @return A map of which the keys are the space IDs and the values are the according byte size

@@ -28,6 +28,10 @@ public class ModifiedEventResponse extends ModifiedPayloadResponse {
 
   private Event event;
 
+  public ModifiedEventResponse() {
+    super(MODIFIED_EVENT_TYPE);
+  }
+
   public Event getEvent() {
     return this.event;
   }
@@ -39,5 +43,10 @@ public class ModifiedEventResponse extends ModifiedPayloadResponse {
   public ModifiedEventResponse withEvent(Event event) {
     setEvent(event);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

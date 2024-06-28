@@ -24,12 +24,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.Map;
 import java.util.Set;
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.Response;
 
 /** TBD send back an {@link ErrorResponse}. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "ConnectorStatus")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class ConnectorStatus extends XyzResponse {
+public class ConnectorStatus extends Response {
   public static final String AUTO_INDEXING = "AUTO_INDEXING";
 
   private boolean initialized;
@@ -40,6 +42,10 @@ public class ConnectorStatus extends XyzResponse {
   private Map<String, Integer> scriptVersions;
 
   private Map<String, MaintenanceStatus> maintenanceStatus;
+
+  public ConnectorStatus() {
+    super(CONNECTOR_STATUS_TYPE);
+  }
 
   public void setInitialized(boolean initialized) {
     this.initialized = initialized;

@@ -35,6 +35,7 @@ import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
 import java.util.ArrayList;
 import java.util.List;
 import naksha.geo.BBox;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
 @JsonTypeName(value = "FeatureCollection")
 @JsonInclude(Include.NON_EMPTY)
 @SuppressWarnings({"unused", "unchecked"})
-public class XyzFeatureCollection extends XyzResponse {
+public class XyzFeatureCollection extends Response {
 
   @JsonIgnore
   private final @NotNull LazyParsableFeatureList features;
@@ -97,6 +98,7 @@ public class XyzFeatureCollection extends XyzResponse {
   private Integer version;
 
   public XyzFeatureCollection() {
+    super(XYZ_COLLECTION_TYPE);
     features = new LazyParsableFeatureList();
   }
 
@@ -468,14 +470,14 @@ public class XyzFeatureCollection extends XyzResponse {
   public @NotNull XyzFeatureCollection withUpdatedFeatures(
       final @NotNull List<? extends @NotNull XyzFeature> updatedFeatures) {
     ((List<XyzFeature>) this.features.get()).addAll(updatedFeatures); // append features
-    withUpdated(updatedFeatures.stream().map(XyzFeature::getId).toList()); // overwrite updated
+    withUpdated(updatedFeatures.stream().map(XyzFeature::getId).collect(toList())); // overwrite updated
     return this;
   }
 
   public @NotNull XyzFeatureCollection withDeletedFeatures(
       final @NotNull List<? extends @NotNull XyzFeature> deletedFeatures) {
     ((List<XyzFeature>) this.features.get()).addAll(deletedFeatures); // append features
-    withDeleted(deletedFeatures.stream().map(XyzFeature::getId).toList()); // overwrite deleted
+    withDeleted(deletedFeatures.stream().map(XyzFeature::getId).collect(toList())); // overwrite deleted
     return this;
   }
 

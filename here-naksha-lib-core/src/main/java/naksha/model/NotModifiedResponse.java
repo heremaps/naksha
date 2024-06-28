@@ -19,6 +19,11 @@
 package naksha.model;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import naksha.model.response.Response;
 
 @JsonTypeName(value = "NotModifiedResponse")
-public class NotModifiedResponse extends XyzResponse {}
+public class NotModifiedResponse extends Response {
+  public NotModifiedResponse() {
+    super(NOT_MODIFIED_TYPE);
+  }
+}

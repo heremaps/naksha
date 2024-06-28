@@ -18,9 +18,16 @@
  */
 package naksha.model;
 
-public abstract class ModifiedPayloadResponse extends XyzResponse {
+import naksha.model.response.Response;
+import org.jetbrains.annotations.NotNull;
+
+public abstract class ModifiedPayloadResponse extends Response {
 
   private String eventType;
+
+  public ModifiedPayloadResponse(@NotNull String type) {
+    super(type);
+  }
 
   @SuppressWarnings("unused")
   public String getEventType() {

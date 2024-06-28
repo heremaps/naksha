@@ -19,5 +19,4 @@ class NotificationError(
     val seqNumber: Int64,
     val uid: Int,
     val handlerStates: AbstractMapProxy<String, Any>
-) : ErrorResponse(reason) {
-}
+) : ErrorResponse(reason)

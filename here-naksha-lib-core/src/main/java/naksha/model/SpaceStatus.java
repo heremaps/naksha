@@ -23,11 +23,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.List;
 import java.util.Map;
+import naksha.model.response.Response;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "SpaceStatus")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class SpaceStatus extends XyzResponse {
+public class SpaceStatus extends Response {
   private long runts;
 
   private long count;
@@ -45,6 +46,10 @@ public class SpaceStatus extends XyzResponse {
   private List<PropStat> propStats;
 
   private IDXManual idxManual;
+
+  public SpaceStatus() {
+    super(SPACE_STATUS_TYPE);
+  }
 
   public long getRunts() {
     return runts;

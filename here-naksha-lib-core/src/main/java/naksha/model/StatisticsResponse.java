@@ -25,11 +25,12 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.events.info.GetStatisticsEvent;
 import java.util.List;
 import naksha.geo.BBox;
+import naksha.model.response.Response;
 
 /** The response that is sent for a {@link GetStatisticsEvent}. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "StatisticsResponse")
-public class StatisticsResponse extends XyzResponse {
+public class StatisticsResponse extends Response {
 
   private Value<Long> count;
 
@@ -41,6 +42,10 @@ public class StatisticsResponse extends XyzResponse {
   private PropertiesStatistics properties;
   private Value<List<PropertyStatistics>> tags;
   private Value<List<String>> geometryTypes;
+
+  public StatisticsResponse() {
+    super(STATISTICS_TYPE);
+  }
 
   /**
    * Returns the amount of features stored in the space.

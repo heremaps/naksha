@@ -28,6 +28,10 @@ public class ModifiedResponseResponse extends ModifiedPayloadResponse {
 
   private Payload response;
 
+  public ModifiedResponseResponse() {
+    super(MODIFIED_RESPONSE_TYPE);
+  }
+
   public Payload getResponse() {
     return this.response;
   }

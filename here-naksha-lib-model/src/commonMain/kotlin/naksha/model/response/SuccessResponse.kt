@@ -16,5 +16,5 @@ class SuccessResponse(
     val handle: String? = null,
     val rows: List<ResultRow>
 ) : Response(SUCCESS_TYPE) {
-    override fun size(): Int = rows.size
+    fun size(): Int = rows.size
 }
