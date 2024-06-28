@@ -1,5 +1,8 @@
 package naksha.psql
 
+import TestContainer.Companion.context
+import TestContainer.Companion.adminConnection
+import TestContainer.Companion.storage
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
@@ -166,8 +169,8 @@ class DbReadWriteTest : DbCollectionTest() {
             guid.luid.txn.seq()
         ) // seq txn (first for internal collections, second for feature create collection, third for create feature)
         assertEquals(0, guid.luid.uid) // uid seq
-        assertEquals(defaultNakshaContext.appId, xyz?.appId)
-        assertEquals(defaultNakshaContext.author, xyz?.author)
+        assertEquals(context.appId, xyz?.appId)
+        assertEquals(context.author, xyz?.author)
         assertEquals(xyz?.createdAt, xyz?.updatedAt)
 
         // FIXME after merge
@@ -377,8 +380,8 @@ class DbReadWriteTest : DbCollectionTest() {
         // - Upsert the single feature (2) <- commit
         // - Update the single feature (3) <- commit
 
-        assertEquals(defaultNakshaContext.appId, xyz?.appId)
-        assertEquals(defaultNakshaContext.author, xyz?.author)
+        assertEquals(context.appId, xyz?.appId)
+        assertEquals(context.author, xyz?.author)
 
         val centroid: Point = toJtsGeometry(geometry!!).getCentroid()
         assertEquals(encodeLatLon(centroid.getY(), centroid.getX(), 14), xyz?.get("grid"))
@@ -1013,7 +1016,7 @@ class DbReadWriteTest : DbCollectionTest() {
     }
 
     private fun getFeatureFromTable(table: String, featureId: String): ResultSet {
-        val stmt = connection.prepareStatement("SELECT * from $table WHERE id = ? ;")
+        val stmt = adminConnection.prepareStatement("SELECT * from $table WHERE id = ? ;")
         stmt.setString(1, featureId)
         return stmt.executeQuery()
     }

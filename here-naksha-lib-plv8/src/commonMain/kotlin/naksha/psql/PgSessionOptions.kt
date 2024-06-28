@@ -20,5 +20,5 @@ data class PgSessionOptions(
     val socketTimeout: Int = 60_000,
     val stmtTimeout: Int = 60_000,
     val lockTimeout: Int = 60_000,
-    val useMaster: Boolean = if (readOnly) false else true
+    val useMaster: Boolean = !readOnly
 )

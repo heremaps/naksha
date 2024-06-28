@@ -81,7 +81,7 @@ open class PsqlStorage(val id: String, val pgCluster: PsqlCluster, val schema: S
         TODO("Not yet implemented")
     }
 
-    override fun openSession(context: NakshaContext, options: PgSessionOptions): PgSession {
+    override fun openSession(context: NakshaContext, options: PgSessionOptions): PsqlSession {
         // TODO: We need to initialize the connection for the given context!
         return pgCluster.openSession(options)
     }

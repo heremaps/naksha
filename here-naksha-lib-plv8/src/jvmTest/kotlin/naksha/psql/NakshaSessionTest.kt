@@ -1,3 +1,4 @@
+import TestContainer.Companion.storage
 import naksha.jbon.XyzBuilder
 import naksha.model.Flags.DEFAULT_FLAGS
 import naksha.model.NakshaCollectionProxy
@@ -19,7 +20,7 @@ import org.junit.jupiter.api.Test
 class NakshaSessionTest : DbTest() {
 
     private val collectionId = "foo_common"
-    private val writeSession = Plv8TestContainer.storage.newWriteSession(Plv8TestContainer.context)
+    private val writeSession = storage.newWriteSession(TestContainer.context)
 
     @Test
     fun testGetBaseCollectionId() {

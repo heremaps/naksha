@@ -108,23 +108,22 @@ class NakshaSession(
     init {
         val session = pgSession()
         session.use {
-            session.apply {
-                execute(
-                    """
+            it.execute(
+                """
 SET SESSION search_path TO $schemaIdent, public, topology;
 SET SESSION enable_seqscan = OFF;
 """
+            )
+            val rows = it.rows(
+                it.execute(
+                    "SELECT oid FROM pg_namespace WHERE nspname = $1",
+                    arrayOf(schema)
                 )
-                schemaOid = rows(
-                    execute(
-                        "SELECT oid FROM pg_namespace WHERE nspname = $1",
-                        arrayOf(schema)
-                    )
-                )!![0]["oid"] as Int
-                collectionConfiguration = mutableMapOf()
-                collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
-                transaction.id = txn().toGuid(storage.id(), "txn", "txn").toString()
-            }
+            )
+            schemaOid = rows!![0]["oid"] as Int
+            collectionConfiguration = mutableMapOf()
+            collectionConfiguration[NKC_TABLE] = nakshaCollectionConfig
+            transaction.id = txn().toGuid(storage.id(), "txn", "txn").toString()
         }
     }
 

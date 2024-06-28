@@ -1,6 +1,7 @@
 package naksha.psql
 
-import Plv8TestContainer.Companion.postgreSQLContainer
+import TestContainer.Companion.adminConnection
+import TestContainer.Companion.postgreSQLContainer
 import naksha.model.ACTION_CREATE
 import naksha.model.NakshaCollectionProxy
 import naksha.model.NakshaCollectionProxy.Companion.DEFAULT_GEO_INDEX
@@ -124,9 +125,9 @@ abstract class DbCollectionTest : DbTest() {
 
     @Throws(SQLException::class)
     private fun getTablespace(table: String): String {
-        connection.prepareStatement("select tablespace from pg_tables where tablename=?").use { statement ->
-            statement.setString(1, table)
-            val resultSet: ResultSet = statement.executeQuery()
+        adminConnection.prepareStatement("select tablespace from pg_tables where tablename=?").use {
+            it.setString(1, table)
+            val resultSet: ResultSet = it.executeQuery()
             assertTrue(resultSet.next()) { "no table found: $table" }
             return resultSet.getString(1)
         }
@@ -134,13 +135,13 @@ abstract class DbCollectionTest : DbTest() {
 
     @Throws(IOException::class, InterruptedException::class)
     private fun createCatalogsForTablespace() {
-        postgreSQLContainer.execInContainer("mkdir", "-p", "/tmp/temporary_space")
-        postgreSQLContainer.execInContainer("chown", "postgres:postgres", "-R", "/tmp/temporary_space")
+        postgreSQLContainer!!.execInContainer("mkdir", "-p", "/tmp/temporary_space")
+        postgreSQLContainer!!.execInContainer("chown", "postgres:postgres", "-R", "/tmp/temporary_space")
     }
 
     @Throws(IOException::class, InterruptedException::class)
     private fun createTablespace() {
-        postgreSQLContainer.execInContainer(
+        postgreSQLContainer!!.execInContainer(
             "psql",
             "-U",
             "postgres",
@@ -153,7 +154,8 @@ abstract class DbCollectionTest : DbTest() {
 
     @Throws(SQLException::class)
     private fun isLockReleased(collectionId: String): Boolean {
-        connection.prepareStatement("select count(*) from pg_locks where locktype = 'advisory' and ((classid::bigint << 32) | objid::bigint) = ?;")
+        adminConnection.prepareStatement("select count(*) from pg_locks where locktype = 'advisory' and ((classid::bigint << 32) | objid::bigint) =" +
+                " ?;")
             .use { stmt ->
                 stmt.setLong(1, Static.lockId(collectionId).toLong())
                 val resultSet: ResultSet = stmt.executeQuery()

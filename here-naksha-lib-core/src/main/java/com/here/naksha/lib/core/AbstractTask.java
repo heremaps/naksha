@@ -216,7 +216,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
   }
 
   /**
-   * Returns the start time of the task in nanoseconds. This will differ from the {@link NakshaContext#getStartNanos()} time, the difference
+   * Returns the start time of the task in nanoseconds. This will differ from the {@link NakshaContext#getStartMicros()} time, the difference
    * can even be big, if this is just a child task.
    *
    * @return The start time of the task in nanoseconds.

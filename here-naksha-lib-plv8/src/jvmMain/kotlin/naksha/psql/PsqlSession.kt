@@ -123,9 +123,9 @@ class PsqlSession(val instance: PsqlInstance, conn: PgConnection, options: PgSes
         val c = _pgConnection
         this._pgConnection = null
         if (c != null) {
-            pgConnection.rollback()
+            c.rollback()
             // TODO: Return the connection to pool of instance, instead of just closing it!
-            pgConnection.close()
+            c.close()
         }
     }
 }
