@@ -4,7 +4,6 @@ import naksha.base.GZip
 import naksha.base.Int64
 import naksha.base.ObjectProxy
 import naksha.jbon.*
-import naksha.psql.*
 import org.postgresql.jdbc.PgConnection
 
 /**
@@ -31,10 +30,10 @@ class PsqlSession(val instance: PsqlInstance, conn: PgConnection, options: PgSes
     private var _pgConnection: PgConnection? = conn
 
     /**
-     * The JDBC connection backing this Postgres connection.
+     * The JDBC connection backing this Postgres session.
      * @throws IllegalStateException If the connection was closed.
      */
-    val pgConnection: PgConnection
+    val jdbcConnection: PgConnection
         get() {
             val c = _pgConnection
             check(c != null)
@@ -60,7 +59,7 @@ class PsqlSession(val instance: PsqlInstance, conn: PgConnection, options: PgSes
     } else null
 
     override fun execute(sql: String, args: Array<Any?>?): Any {
-        val conn = pgConnection
+        val conn = jdbcConnection
         if (args.isNullOrEmpty()) {
             val stmt = conn.createStatement()
             stmt.use {
@@ -75,7 +74,7 @@ class PsqlSession(val instance: PsqlInstance, conn: PgConnection, options: PgSes
         }
     }
 
-    override fun prepare(sql: String, typeNames: Array<String>?): PgPlan = PsqlPlan(PsqlQuery(sql), pgConnection)
+    override fun prepare(sql: String, typeNames: Array<String>?): PgPlan = PsqlPlan(PsqlQuery(sql), jdbcConnection)
 
     override fun executeBatch(plan: PgPlan, bulkParams: Array<Array<Param>>): IntArray {
         plan as PsqlPlan

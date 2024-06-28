@@ -8,7 +8,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * An abstract API that grants access to a single Postgres SQL connection. This interface is made in a way, so that it is
+ * An abstract API that grants access to a single Postgres SQL session (aka connection). This interface is made in a way, so that it is
  * naturally compatible with [PLV8](https://plv8.github.io/). In Java there is a thin wrapper on top of a JDBC connection.
  */
 @Suppress("DuplicatedCode")

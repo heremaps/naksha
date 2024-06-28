@@ -31,15 +31,13 @@ import kotlin.js.JsExport
  * to the PLV8
  * @param context the context to use for this session.
  * @param options the default options to use, when opening database connections.
- * @property schema the database schema of this session.
  * @constructor Create a new session.
  */
-//@JsExport <-- when uncommenting this, we get a compiler error!
+// @JsExport // <-- when uncommenting this, we get a compiler error!
 class NakshaSession(
     storage: PgStorage,
     context: NakshaContext,
-    options: PgSessionOptions,
-    val schema: String
+    options: PgSessionOptions
 ) : AbstractNakshaSession(storage, context, options) {
 
     /**
@@ -50,7 +48,7 @@ class NakshaSession(
     /**
      * The cached quoted schema name (double quotes).
      */
-    internal val schemaIdent = PgUtil.quoteIdent(schema)
+    internal val schemaIdent = PgUtil.quoteIdent(options.schema)
 
     /**
      * The dictionary manager bound to the global dictionary.
@@ -117,7 +115,7 @@ SET SESSION enable_seqscan = OFF;
             val rows = it.rows(
                 it.execute(
                     "SELECT oid FROM pg_namespace WHERE nspname = $1",
-                    arrayOf(schema)
+                    arrayOf(options.schema)
                 )
             )
             schemaOid = rows!![0]["oid"] as Int
@@ -354,7 +352,7 @@ WITH ns as (SELECT oid FROM pg_namespace WHERE nspname = $1),
      txn_seq as (SELECT cls.oid as oid FROM pg_class cls, ns WHERE cls.relname = 'naksha_txn_seq' and cls.relnamespace = ns.oid)
 SELECT nextval(txn_seq.oid) as txn, txn_seq.oid as txn_oid, (extract(epoch from transaction_timestamp())*1000)::int8 as time, ns.oid as ns_oid
 FROM ns, txn_seq;"""
-            val row = session.rows(session.execute(query, arrayOf(schema)))!![0]
+            val row = session.rows(session.execute(query, arrayOf(options.schema)))!![0]
             val schemaOid = row["ns_oid"] as Int
             val txnSeqOid = row["txn_oid"] as Int
             val txts = asInt64(row["time"])

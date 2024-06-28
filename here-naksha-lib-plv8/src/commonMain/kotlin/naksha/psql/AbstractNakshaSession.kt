@@ -10,15 +10,28 @@ import kotlin.js.JsExport
  * The abstract Naksha Session based upon a PostgresQL storage.
  * @property storage the storage to which this session is bound.
  * @property context the context with which to initialize new sessions. Changing the options, will only affect new sessions.
- * @property options the options when opening new connections. Changing the options, will only affect new sessions.
+ * @param options the options when opening new connections.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
 abstract class AbstractNakshaSession(
     val storage: PgStorage,
     override var context: NakshaContext,
-    var options: PgSessionOptions
+    options: PgSessionOptions
 ) : IWriteSession, IReadSession, ISession {
+
+    /**
+     * The options when opening new connections. The options are mostly immutable, except for the timeout values, for which there are
+     * dedicated setter.
+     */
+    var options: PgSessionOptions = options
+        internal set
+
+    override var socketTimeout: Int
+        get() = options.socketTimeout
+        set(value) {
+            options = options.copy(socketTimeout = value)
+        }
 
     override var stmtTimeout: Int
         get() = options.stmtTimeout

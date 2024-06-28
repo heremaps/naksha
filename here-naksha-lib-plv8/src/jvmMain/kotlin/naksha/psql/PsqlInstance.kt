@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Fnv1a32
 import naksha.psql.PgSessionOptions
 import org.postgresql.PGProperty.*
 import org.postgresql.jdbc.PgConnection
@@ -43,7 +44,6 @@ class PsqlInstance {
         this.user = user
         this.password = password
         this.readOnly = readOnly
-        this.url = "jdbc:postgresql://$host${if (port == 5432) "" else ":$port"}/$database?user=$user&password=$password"
     }
 
     private constructor(url: String) {
@@ -69,7 +69,6 @@ class PsqlInstance {
         this.user = user
         this.password = password
         this.readOnly = params.contains("readOnly") || params.contains("readonly")
-        this.url = url
     }
 
     /**
@@ -109,10 +108,20 @@ class PsqlInstance {
      */
     val readOnly: Boolean
 
+    private var _url: String? = null
+
     /**
-     * The JDBC url.
+     * The JDBC url. **Beware** that this URL does contain the password in clear text.
      */
     val url: String
+        get() {
+            var url = _url
+            if (url == null) {
+                url = "jdbc:postgresql://$host${if (port == 5432) "" else ":$port"}/$database?user=$user&password=$password"
+                _url = url
+            }
+            return url
+        }
 
     // TODO: Implement session (aka connection) pool!
 
@@ -146,5 +155,19 @@ class PsqlInstance {
 
     override fun equals(other: Any?): Boolean = other is PsqlInstance && url == other.url
     override fun hashCode(): Int = url.hashCode()
-    override fun toString(): String = url
+    private var _string: String? = null
+
+    /**
+     * Returns the JDBC URL of this instance, but the password is obfuscated (replace with a FNV1a hash).
+     * @return the JDBC URL of this instance with obfuscated password.
+     */
+    override fun toString(): String {
+        var string = _string
+        if (string == null) {
+            val pwdHash = Fnv1a32.string(0, password)
+            string = "jdbc:postgresql://$host${if (port == 5432) "" else ":$port"}/$database?user=$user&password=$pwdHash"
+            _string = string
+        }
+        return string
+    }
 }

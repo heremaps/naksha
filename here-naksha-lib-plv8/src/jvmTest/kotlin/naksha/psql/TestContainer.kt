@@ -54,7 +54,7 @@ class TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableResourc
         /**
          * The context to be use for testing.
          */
-        val context = NakshaContext.newInstance("plv8_test", "pvl8_author", su = true)
+        val context = NakshaContext.newInstance("psql_test_app_id", "psql_author", su = true)
 
         /**
          * The storage to use for testing.
@@ -63,7 +63,7 @@ class TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableResourc
             get() {
                 var s = _storage.get()
                 if (s == null) {
-                    s = PsqlStorage("test", PsqlCluster(PsqlInstance.get(url)), schema)
+                    s = PsqlStorage("test", PsqlCluster(PsqlInstance.get(url)), PgSessionOptions("psql_test", schema))
                     if (!_storage.compareAndSet(null, s)) {
                         s = _storage.get()
                         check(s != null)
@@ -79,7 +79,7 @@ class TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableResourc
             get() {
                 var s = _session
                 if (s == null) {
-                    s = storage.openSession(context, PgSessionOptions(false))
+                    s = storage.openSession(context, storage.options.copy(readOnly = false, useMaster = true))
                     _session = s
                 }
                 return s
@@ -89,7 +89,7 @@ class TestContainer : BeforeAllCallback, ExtensionContext.Store.CloseableResourc
          * The underlying JDBC connection of the [adminSession].
          */
         val adminConnection: PgConnection
-            get() = adminSession.pgConnection
+            get() = adminSession.jdbcConnection
     }
 
     private fun architecture(): String {

@@ -573,9 +573,15 @@ actual class Platform {
             return proxy
         }
 
+        /**
+         * The default logger singleton to be used as initial value by the default [loggerThreadLocal]. This is based upon
+         * [SLF4j](https://www.slf4j.org/). If an application has a different logger singleton, it can simply place this variable. If the
+         * application requires a dedicated thread-local logger instances, it should rather replace the [loggerThreadLocal] with an own
+         * version that creates a correct initial thread local logger.
+         */
         @JvmStatic
-        private val defaultPlatformLogger = object : PlatformLogger {
-            private val logger = LoggerFactory.getLogger("com.here.naksha.lib.base")
+        var loggerDefault = object : PlatformLogger {
+            private val logger = LoggerFactory.getLogger("naksha.base")
             override fun debug(msg: String, vararg args: Any?) {
                 if (logger.isDebugEnabled) logger.debug(msg, *args)
             }
@@ -622,10 +628,17 @@ actual class Platform {
         }
 
         /**
-         * The [PlatformLogger].
+         * The thread local platform logger. Applications can replace this, if they want an own implementation that is different per
+         * thread (e.g. requires thread local string builders or alike). By default, the thread local is initialized with [loggerDefault].
+         */
+        @Suppress("MemberVisibilityCanBePrivate")
+        var loggerThreadLocal: JvmThreadLocal<PlatformLogger> = JvmThreadLocal { loggerDefault }
+
+        /**
+         * The [PlatformLogger], in Java redirected to [loggerThreadLocal].
          */
         @JvmStatic
-        actual val logger: PlatformLogger by newThreadLocal { defaultPlatformLogger }
+        actual val logger: PlatformLogger by loggerThreadLocal
 
         /**
          * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).
