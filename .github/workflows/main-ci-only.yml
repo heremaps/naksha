@@ -4,9 +4,9 @@ name: CI-Only Workflow
 on:
   push:
     branches-ignore:
-      - master
-      - int
-      - develop
+      - v1_master
+      - v1_int
+      - v1_develop
 
 jobs:
   ### Job to Build and Publish artifacts
