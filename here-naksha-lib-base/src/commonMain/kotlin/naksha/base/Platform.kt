@@ -46,6 +46,11 @@ expect class Platform {
         val MIN_SAFE_INT: Double
 
         /**
+         * The difference between 1 and the smallest floating point number greater than 1.
+         */
+        val EPSILON: Double
+
+        /**
          * The KClass for [Any].
          */
         val anyKlass: KClass<Any>
@@ -122,10 +127,9 @@ expect class Platform {
         /**
          * Must be called ones in the lifetime of an application to initialize the multi-platform code. The method is thread safe and
          * only does something when first called.
-         * @param parameters Some arbitrary platform specific parameters to be forwarded.
          * @return _true_ if this was the first call and the platform was initialized; _false_ if the platform is already initialized.
          */
-        fun initialize(vararg parameters: Any?): Boolean
+        fun initialize(): Boolean
 
         /**
          * Tests if the [target] class or interface is either the same as, or is a superclass or superinterface of, the class
@@ -473,6 +477,15 @@ expect class Platform {
          * @return The inflated (decompress) bytes.
          */
         fun gzipInflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+
+        /**
+         * Create a stack-trace as string for debugging purpose.
+         *
+         * In Kotlin, you can simply invoke [Throwable.stackTraceToString], which is how this method is implemented.
+         * @param t the throwable for which to return the stack-trace.
+         * @return the stack-trace as string.
+         */
+        fun stackTrace(t: Throwable): String
     }
 }
 /*

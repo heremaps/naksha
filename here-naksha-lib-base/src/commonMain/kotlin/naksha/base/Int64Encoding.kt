@@ -10,57 +10,54 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class Int64Encoding private constructor(value: String) : JsEnum(value) {
+class Int64Encoding : JsEnum() {
     companion object {
         /**
          * Encode as 64-bit integer (_default_).
          */
         @JvmStatic
         @JsStatic
-        val AS_INTEGER = Int64Encoding("int")
+        val AS_INTEGER = def(Int64Encoding::class, "int")
 
         /**
          * Encode as double, accept the risk of losing precision.
          */
         @JvmStatic
         @JsStatic
-        val AS_DOUBLE = Int64Encoding("double")
+        val AS_DOUBLE = def(Int64Encoding::class, "double")
 
         /**
          * Encode as decimal string.
          */
         @JvmStatic
         @JsStatic
-        val AS_STRING = Int64Encoding("string")
+        val AS_STRING = def(Int64Encoding::class, "string")
 
         /**
          * Encode as decimal [Data-URL](https://datatracker.ietf.org/doc/html/rfc2397), e.g. `data:int64;dec,123456789`.
          */
         @JvmStatic
         @JsStatic
-        val AS_DECIMAL_DATA_URL = Int64Encoding("decimal_data_url")
+        val AS_DECIMAL_DATA_URL = def(Int64Encoding::class, "decimal_data_url")
 
         /**
          * Encode as decimal [Data-URL](https://datatracker.ietf.org/doc/html/rfc2397), e.g. `data:int64;hex,1f3e4495`.
          */
         @JvmStatic
         @JsStatic
-        val AS_HEX_DATA_URL = Int64Encoding("hex_data_url")
+        val AS_HEX_DATA_URL = def(Int64Encoding::class, "hex_data_url")
 
         /**
          * Encode as decimal [Data-URL](https://datatracker.ietf.org/doc/html/rfc2397), e.g. `data:int64;base64,fewE2ed23=`.
          */
         @JvmStatic
         @JsStatic
-        val AS_BASE64_DATA_URL = Int64Encoding("base64_data_url")
+        val AS_BASE64_DATA_URL = def(Int64Encoding::class, "base64_data_url")
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun namespace(): KClass<out JsEnum> = Int64Encoding::class
     override fun initClass() {
-        register(Int64Encoding::class, Int64Encoding::class)
-    }
-
-    override fun init() {
+        register(Int64Encoding::class, Companion, Int64Encoding::class)
     }
 }

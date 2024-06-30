@@ -33,8 +33,8 @@ interface Int64 {
     operator fun rem(other: Any): Int64
 
     /**
-     * Compares this integer with the specified number. Returns zero if this integer is equal to the specified other number,
-     * a negative number if it's less than other, or a positive number if it's greater than other.
+     * Compares this integer with the specified [other] number. Returns zero if this integer is equal to the specified [other] number,
+     * a negative number if it's less than [other], or a positive number if it's greater than [other].
      */
     operator fun compareTo(other: Any?): Int
     override operator fun equals(other: Any?): Boolean

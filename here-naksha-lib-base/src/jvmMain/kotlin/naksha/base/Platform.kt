@@ -97,59 +97,65 @@ actual class Platform {
          * The cache stores the 64-bit integers between -1024 and +1023 with 0 being at index 0, 1023 at index 1023, -1024 at index 1024
          * and -1 at index 2047. To query, do: `cached[(value.toInt() shl 21) ushr 21)]`
          */
-        @JvmStatic
+        @JvmField
         internal val int64Cache = Array(2048) { JvmInt64(((it shl 21) shr 21).toLong()) }
 
         /**
          * The cache for all declared symbols.
          */
-        @JvmStatic
+        @JvmField
         internal val symbolsCache = ConcurrentHashMap<String, Symbol>()
 
         /**
          * The symbol (_com.here.naksha.lib.nak_) to store the default Naksha multi-platform types in.
          */
-        @JvmStatic
+        @JvmField
         actual val DEFAULT_SYMBOL: Symbol = Symbols.forName("com.here.naksha.lib.nak")
 
         /**
          * The maximum value of a 64-bit integer.
          * @return The maximum value of a 64-bit integer.
          */
-        @JvmStatic
+        @JvmField
         actual val INT64_MAX_VALUE: Int64 = JvmInt64(Long.MAX_VALUE)
 
         /**
          * The minimum value of a 64-bit integer.
          * @return The minimum value of a 64-bit integer.
          */
-        @JvmStatic
+        @JvmField
         actual val INT64_MIN_VALUE: Int64 = JvmInt64(Long.MIN_VALUE)
 
         /**
          * The minimum integer that can safely stored in a double.
          * @return The minimum integer that can safely stored in a double.
          */
-        @JvmStatic
+        @JvmField
         actual val MAX_SAFE_INT: Double = 9007199254740991.0
 
         /**
          * The maximum integer that can safely stored in a double.
          * @return The maximum integer that can safely stored in a double.
          */
-        @JvmStatic
+        @JvmField
         actual val MIN_SAFE_INT: Double = -9007199254740991.0
+
+        /**
+         * The difference between 1 and the smallest floating point number greater than 1.
+         */
+        @JvmField
+        actual val EPSILON: Double = Math.ulp(1.0)
 
         /**
          * The reference to TheUnsafe class.
          */
-        @JvmStatic
+        @JvmField
         val unsafe: Unsafe
 
         /**
          * The base-offset in a byte-array.
          */
-        @JvmStatic
+        @JvmField
         val baseOffset: Int
 
         @JvmStatic
@@ -164,7 +170,7 @@ actual class Platform {
         }
 
         @JvmStatic
-        actual fun initialize(vararg parameters: Any?): Boolean {
+        actual fun initialize(): Boolean {
             if (initialized.compareAndSet(false, true)) {
                 // TODO: Do we need to do anything?
                 return true
@@ -457,79 +463,68 @@ actual class Platform {
         /**
          * The KClass for [Any].
          */
-        @JvmStatic
-        actual val anyKlass: KClass<Any>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val anyKlass: KClass<Any> = Any::class
 
         /**
          * The KClass for [Boolean].
          */
-        @JvmStatic
-        actual val booleanKlass: KClass<Boolean>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val booleanKlass: KClass<Boolean> = Boolean::class
 
         /**
          * The KClass for [Short].
          */
-        @JvmStatic
-        actual val shortKlass: KClass<Short>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val shortKlass: KClass<Short> = Short::class
 
         /**
          * The KClass for [Int].
          */
-        @JvmStatic
-        actual val intKlass: KClass<Int>
-            get() = Int::class
+        @JvmField
+        actual val intKlass: KClass<Int> = Int::class
 
         /**
          * The KClass for [Int64].
          */
-        @JvmStatic
-        actual val int64Klass: KClass<Int64>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val int64Klass: KClass<Int64> = Int64::class
 
         /**
          * The KClass for [Double].
          */
-        @JvmStatic
-        actual val doubleKlass: KClass<Double>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val doubleKlass: KClass<Double> = Double::class
 
         /**
          * The KClass for [String].
          */
-        @JvmStatic
-        actual val stringKlass: KClass<String>
-            get() = String::class
+        @JvmField
+        actual val stringKlass: KClass<String> = String::class
 
         /**
          * The KClass for [PlatformObject].
          */
-        @JvmStatic
-        actual val objectKlass: KClass<PlatformObject>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val objectKlass: KClass<PlatformObject> = PlatformObject::class
 
         /**
          * The KClass for [PlatformList].
          */
-        @JvmStatic
-        actual val listKlass: KClass<PlatformList>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val listKlass: KClass<PlatformList> = PlatformList::class
 
         /**
          * The KClass for [PlatformMap].
          */
-        @JvmStatic
-        actual val mapKlass: KClass<PlatformMap>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val mapKlass: KClass<PlatformMap> = PlatformMap::class
 
         /**
          * The KClass for [PlatformDataViewApi].
          */
-        @JvmStatic
-        actual val dataViewKlass: KClass<PlatformDataView>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val dataViewKlass: KClass<PlatformDataView> = PlatformDataView::class
 
         /**
          * Tests if the given value is _null_ or _undefined_.
@@ -821,6 +816,12 @@ actual class Platform {
             size: Int
         ): ByteArray {
             TODO("Not yet implemented")
+        }
+
+        actual fun stackTrace(t: Throwable): String = t.stackTraceToString()
+
+        init {
+            initialize()
         }
     }
 }

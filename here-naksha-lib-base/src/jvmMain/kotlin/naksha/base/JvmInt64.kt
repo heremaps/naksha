@@ -40,6 +40,6 @@ class JvmInt64(private val value: Long) : Number(), Int64 {
         require(other is Number)
         return value == other.toLong()
     }
-    override fun hashCode(): Int = value.hashCode()
+    override fun hashCode(): Int = (value ushr 32).toInt() xor value.toInt()
     override fun toString(): String = value.toString()
 }
