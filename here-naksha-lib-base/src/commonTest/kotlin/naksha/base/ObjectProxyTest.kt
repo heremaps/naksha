@@ -4,9 +4,9 @@ import kotlin.test.*
 
 class Foo : ObjectProxy() {
     companion object {
-        private val NAME = NotNullProperty<Any, Foo, String>(String::class, { "Bernd" })
-        private val XYZ = NullableProperty<Any, Foo, String>(String::class, name = "@ns:com:here:xyz")
-        private val AGE = NotNullProperty<Any, Foo, Int>(Int::class, { 0 })
+        val NAME = NotNullProperty<Any, Foo, String>(String::class, { "Bernd" })
+        val AGE = NotNullProperty<Any, Foo, Int>(Int::class, { 0 })
+        val XYZ = NullableProperty<Any, Foo, String>(String::class, name = "@ns:com:here:xyz")
     }
 
     var name: String by NAME
@@ -16,8 +16,8 @@ class Foo : ObjectProxy() {
 
 class Bar : ObjectProxy() {
     companion object {
-        private val FOO = NotNullProperty<Any, Bar, Foo>(Foo::class)
-        private val FOO2 = NullableProperty<Any, Bar, Foo>(Foo::class)
+        val FOO = NotNullProperty<Any, Bar, Foo>(Foo::class)
+        val FOO2 = NullableProperty<Any, Bar, Foo>(Foo::class)
     }
 
     var foo: Foo by FOO
@@ -25,6 +25,17 @@ class Bar : ObjectProxy() {
 }
 
 class ObjectProxyTest {
+    @BeforeTest
+    fun beforeAll() {
+        Foo.Companion
+        Foo.NAME
+        Foo.AGE
+        Foo.XYZ
+        Bar.Companion
+        Bar.FOO
+        Bar.FOO2
+    }
+
     @Test
     fun testSingleton() {
         val foo1 = Foo()
@@ -42,11 +53,18 @@ class ObjectProxyTest {
         val foo = bar.foo
         assertNotNull(foo)
         assertSame(foo, bar.foo)
+        Platform.logger.info("-- 3 --: {}", bar)
+        Platform.logger.info("-- 3 --: {}", bar.foo.age)
         bar.foo.age = 12
+        Platform.logger.info("-- 4 --")
         assertEquals(12, bar.foo.age)
+        Platform.logger.info("-- 5 --")
         assertFalse(bar.foo.hasRaw("name"))
+        Platform.logger.info("-- 6 --")
         assertEquals("Bernd", bar.foo.name)
+        Platform.logger.info("-- 7 --")
         assertTrue(bar.foo.hasRaw("name"))
+        Platform.logger.info("-- 8 --")
         assertEquals("Bernd", bar.foo.getRaw("name"))
         bar.foo.name = "Hello World"
         assertEquals("Hello World", bar.foo.name)

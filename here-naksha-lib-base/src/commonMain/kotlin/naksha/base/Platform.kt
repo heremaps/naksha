@@ -495,24 +495,3 @@ expect class Platform {
         fun stackTrace(t: Throwable): String
     }
 }
-/*
-
-The code for "fromJSON" and "toJSON" Map and BigInt's:
-
-var m = JSON.parse('{"a":{"b":1231232131231231321323213,"c":5,"big":"data:bigint,18446744073709551615"}}', (key, value) => {
-  if (!value) return value;
-  if (typeof value === "string" && value.startsWith("data:bigint,")) return BigInt(value.substring("data:bigint,".length));
-  if (!Array.isArray(value) && !(value instanceof Map) && typeof value === "object") return new Map(Object.entries(value));
-  return value;
-});
-
-var s = JSON.stringify(m, function(k, v) {
-  if (!v) return v;
-  if (v.valueOf() instanceof Map) return Object.fromEntries(v.valueOf().entries());
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs
-  // data:[<mediatype>][;base64],<data>
-  if (typeof v.valueOf() === "bigint") return "data:bigint,"+String(v);
-  return v;
-})
-
-*/

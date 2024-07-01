@@ -3,36 +3,28 @@ package naksha.base
 import kotlin.math.round
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.createInstance
 
 @OptIn(ExperimentalJsExport::class)
-@Suppress("MemberVisibilityCanBePrivate", "NON_EXPORTABLE_TYPE", "EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
+@Suppress("MemberVisibilityCanBePrivate", "NON_EXPORTABLE_TYPE", "EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
 @JsExport
 actual class Platform {
 
-    @Suppress("NOTHING_TO_INLINE")
     @OptIn(ExperimentalJsStatic::class)
     actual companion object {
         private var isInitialized: Boolean = false
 
         val objectTemplate = object : PlatformObject {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-                TODO("Not yet implemented 1")
-            }
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
         }
         val listTemplate = object : PlatformList {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-                TODO("Not yet implemented 2")
-            }
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
         }
         val mapTemplate = object : PlatformMap {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-                TODO("Not yet implemented 3")
-            }
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
         }
         val dataViewTemplate = object : PlatformDataView {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T {
-                TODO("Not yet implemented 4")
-            }
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
         }
         val symbolTemplate = object : Symbol {}
 
@@ -179,19 +171,18 @@ Object.assign(DataView.prototype, {
         //@JsStatic
         private fun symbol(key: String?): Symbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<Symbol>()
 
-        @Suppress("UNUSED_VARIABLE")
         @JsStatic
         actual fun newMap(vararg entries: Any?): PlatformMap {
-            val map = js("new Map()").unsafeCast<PlatformMap>()
+            val map = js("new Map()")
             if (entries.isNotEmpty()) {
                 var i = 0
                 while (i < entries.size) {
                     val key = entries[i++]
                     val value = if (i < entries.size) entries[i++] else null
-                    js("map.set(key, value)")
+                    map.set(key, value)
                 }
             }
-            return map
+            return map.unsafeCast<PlatformMap>()
         }
 
         @JsStatic
@@ -223,7 +214,11 @@ return new DataView(byteArray.buffer, offset, size);
         ).unsafeCast<PlatformDataView>()
 
         @JsStatic
-        actual fun valueOf(value: Any?): Any? = if (value is Proxy) value.platformObject() else value
+        actual fun valueOf(value: Any?): Any? {
+            if (value === null || value === undefined) return value
+            if (value is Proxy) return value.platformObject()
+            return value.asDynamic().valueOf()
+        }
 
         @JsStatic
         actual fun toInt(value: Any): Int = when (value) {
@@ -502,7 +497,13 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
-            TODO("Not yet implemented toJSON")
+            val o = if (obj is Proxy) obj.platformObject() else obj
+            return js("""JSON.stringify(o, function(k, v) {
+  if (!v) return v;
+  if (v.valueOf() instanceof Map) return Object.fromEntries(v.valueOf().entries());
+  if (typeof v.valueOf() === "bigint") return "data:bigint;dec,"+String(v);
+  return v;
+})""").unsafeCast<String>()
         }
 
         /**
@@ -511,9 +512,15 @@ return new DataView(byteArray.buffer, offset, size);
          * @return The parsed JSON.
          */
         @JsStatic
-        actual fun fromJSON(json: String, options: FromJsonOptions): Any? {
-            TODO("Not yet implemented fromJSON")
-        }
+        actual fun fromJSON(json: String, options: FromJsonOptions): Any? = js("""JSON.parse(json, function(k, v) {
+  if (!v) return v;
+  if (typeof v === "string" && v.startsWith("data:bigint")) {
+    var i = v.indexOf(",");
+    return BigInt(v.substring(i+1));
+  }
+  if (!Array.isArray(v) && typeof v === "object") return new Map(Object.entries(v));
+  return v;
+})""").unsafeCast<Any?>()
 
         /**
          * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap],
@@ -553,7 +560,14 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
-            TODO("Not yet implemented proxy")
+            val o = pobject.asDynamic()
+            val sym = Symbols.of(klass)
+            val p = o[sym]
+            if (klass.isInstance(p)) return p.unsafeCast<T>()
+            check(!doNotOverride || p !is Proxy) { "new proxy forbidden, because doNotOverride set" }
+            val proxy = klass.createInstance()
+            proxy.bind(pobject, sym)
+            return proxy
         }
 
         /**
@@ -572,6 +586,7 @@ return new DataView(byteArray.buffer, offset, size);
             // TODO: When the argument is a scalar, directly concat, only leave objects as own arguments.
             //       So, we expect that ("Hello {}", "World") returns ["Hello World"] and not ["Hello ", "World"]!
             private fun toString(msg: String, vararg args: Any?): String {
+                // TODO: Use Platform.toJSON, otherwise Map is not serialized correctly!
                 val r: String = ""
                 js(
                     """
