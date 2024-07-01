@@ -118,13 +118,6 @@ expect class Platform {
         fun isNil(any: Any?): Boolean
 
         /**
-         * Creates an undefined value for the given type or returns the cached one.
-         * @param klass The type for which to create an undefined value.
-         * @return The undefined value.
-         */
-        fun <T : Any> undefinedOf(klass: KClass<T>): T
-
-        /**
          * Must be called ones in the lifetime of an application to initialize the multi-platform code. The method is thread safe and
          * only does something when first called.
          * @return _true_ if this was the first call and the platform was initialized; _false_ if the platform is already initialized.

@@ -25,17 +25,6 @@ class Bar : ObjectProxy() {
 }
 
 class ObjectProxyTest {
-    @BeforeTest
-    fun beforeAll() {
-        Foo.Companion
-        Foo.NAME
-        Foo.AGE
-        Foo.XYZ
-        Bar.Companion
-        Bar.FOO
-        Bar.FOO2
-    }
-
     @Test
     fun testSingleton() {
         val foo1 = Foo()
@@ -53,18 +42,11 @@ class ObjectProxyTest {
         val foo = bar.foo
         assertNotNull(foo)
         assertSame(foo, bar.foo)
-        Platform.logger.info("-- 3 --: {}", bar)
-        Platform.logger.info("-- 3 --: {}", bar.foo.age)
         bar.foo.age = 12
-        Platform.logger.info("-- 4 --")
         assertEquals(12, bar.foo.age)
-        Platform.logger.info("-- 5 --")
         assertFalse(bar.foo.hasRaw("name"))
-        Platform.logger.info("-- 6 --")
         assertEquals("Bernd", bar.foo.name)
-        Platform.logger.info("-- 7 --")
         assertTrue(bar.foo.hasRaw("name"))
-        Platform.logger.info("-- 8 --")
         assertEquals("Bernd", bar.foo.getRaw("name"))
         bar.foo.name = "Hello World"
         assertEquals("Hello World", bar.foo.name)

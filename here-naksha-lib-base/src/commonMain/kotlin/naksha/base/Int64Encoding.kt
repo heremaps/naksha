@@ -58,6 +58,6 @@ class Int64Encoding : JsEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun namespace(): KClass<out JsEnum> = Int64Encoding::class
     override fun initClass() {
-        register(Int64Encoding::class, Companion, Int64Encoding::class)
+        register(Int64Encoding::class, Int64Encoding::class)
     }
 }

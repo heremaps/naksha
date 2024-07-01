@@ -241,12 +241,10 @@ abstract class JsEnum : CharSequence {
     /**
      * Register a enumeration type.
      * @param childKlass The enumeration-class.
-     * @param companion The companion of the child-class.
      * @param namespace The namespace.
      */
     protected fun <NS : JsEnum, CHILD : NS> register(
         childKlass: KClass<out CHILD>,
-        companion: Any,
         namespace: KClass<out NS>
     ) {
         val existing = klassToNamespace.putIfAbsent(childKlass, namespace)
@@ -265,18 +263,15 @@ abstract class JsEnum : CharSequence {
      * with two extending enumeration classes being `Car` and `Truck`, then the `initClass` method of the `Vehicle` should do:
      * ```
      * protected fun initClass() {
-     *   register(Vehicle::class, Companion, Vehicle::class)
-     *   register(Car::class, Car.Companion, Vehicle::class)
-     *   register(Truck::class, Truck.Companion, Vehicle::class)
+     *   register(Vehicle::class, Vehicle::class)
+     *   register(Car::class, Vehicle::class)
+     *   register(Truck::class, Vehicle::class)
      * }
      * ```
      * This is needed to resolve the chicken-egg problem of the JVM class loading mechanism. The order is not relevant.
      *
      * **Notes**:
      * - The minimal requirement is to register itself.
-     * - The `Companion` is only needed, because in JavaScript there is no other way to force the initialization of the companion. Java
-     * code extending JsEnum may simply provide an empty string, the parameter is not really used, it only forces the Kotlin compiler to
-     * add initialization code for the companion object (the static members).
      *
      * ## Details
      *

@@ -15,9 +15,9 @@ class JsEnumTest {
 
         override fun namespace(): KClass<out JsEnum> = Vehicle::class
         override fun initClass() {
-            register(Vehicle::class, Companion, Vehicle::class)
-            register(Car::class, Car.Companion, Vehicle::class)
-            register(Truck::class, Truck.Companion, Vehicle::class)
+            register(Vehicle::class, Vehicle::class)
+            register(Car::class, Vehicle::class)
+            register(Truck::class, Vehicle::class)
         }
 
         open fun type(): String = "Vehicle"

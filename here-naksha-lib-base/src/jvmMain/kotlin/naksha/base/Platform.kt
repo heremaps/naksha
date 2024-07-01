@@ -538,16 +538,6 @@ actual class Platform {
         actual fun isNil(any: Any?): Boolean = any == null
 
         /**
-         * Creates an undefined value for the given type or returns the cached one.
-         * @param klass The type for which to create an undefined value.
-         * @return The undefined value.
-         */
-        @JvmStatic
-        actual fun <T : Any> undefinedOf(klass: KClass<T>): T {
-            TODO("Not yet implemented")
-        }
-
-        /**
          * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
          * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
          * @param pobject The object at which to query for the proxy.

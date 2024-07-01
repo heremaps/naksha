@@ -83,7 +83,7 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
 
     override fun removeAt(index: Int): E? {
         val data = platformObject()
-        if (index < 0 || index >= array_get_length(data)) return Platform.undefinedOf(elementKlass)
+        if (index < 0 || index >= array_get_length(data)) return null
         return box(array_delete(data, index), elementKlass)
     }
 

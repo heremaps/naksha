@@ -445,16 +445,6 @@ return new DataView(byteArray.buffer, offset, size);
         actual fun isNil(any: Any?): Boolean = js("any===null || any===undefined").unsafeCast<Boolean>()
 
         /**
-         * Creates an undefined value for the given type or returns the cached one.
-         * @param klass The type for which to create an undefined value.
-         * @return The undefined value.
-         */
-        @JsStatic
-        actual fun <T : Any> undefinedOf(klass: KClass<T>): T {
-            TODO("Not yet implemented undefinedOf")
-        }
-
-        /**
          * Creates a new instance of the given type.
          * @param klass The type of which to create a new instance.
          * @return The new instance.
@@ -463,8 +453,7 @@ return new DataView(byteArray.buffer, offset, size);
         @JsStatic
         actual fun <T : Any> newInstanceOf(klass: KClass<T>): T {
             try {
-                val constructor = klass.js
-                return js("new constructor()").unsafeCast<T>()
+                return klass.createInstance()
             } catch (e: Exception) {
                 if (e is IllegalArgumentException) throw e
                 throw IllegalArgumentException(e)
@@ -478,16 +467,25 @@ return new DataView(byteArray.buffer, offset, size);
          */
         @JsStatic
         actual fun <T : Any> allocateInstance(klass: KClass<T>): T {
+            // We can bypass the constructor, but before we do this, we need to ensure that the companion object
+            // is created, and all other things of the class are ready. We can only do this by initializing the class!
+            initializeKlass(klass)
             val constructor = klass.js
             return js("Object.create(constructor.prototype)").unsafeCast<T>()
         }
 
+        private val initializedClasses = HashMap<KClass<*>, Boolean>()
+
         @JsStatic
         actual fun initializeKlass(klass: KClass<*>) {
-            val constructor = klass.js
-            try {
-                js("new constructor()")
-            } catch (ignore: Throwable) {}
+            if (!initializedClasses.containsKey(klass)) {
+                try {
+                    klass.createInstance()
+                } catch (ignore: Throwable) {
+                } finally {
+                    initializedClasses[klass] = true
+                }
+            }
         }
 
         /**
