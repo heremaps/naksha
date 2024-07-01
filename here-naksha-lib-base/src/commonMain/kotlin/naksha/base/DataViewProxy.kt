@@ -46,6 +46,6 @@ open class DataViewProxy(internal val binary: Binary = Binary()) : Proxy(), Bina
         binary.end = dataview_get_size(data)
         super.bind(data, symbol)
     }
-    override fun data(): PlatformDataView = super.data() as PlatformDataView
+    override fun platformObject(): PlatformDataView = super.platformObject() as PlatformDataView
     override fun createData(): PlatformDataView = newDataView(ByteArray(defaultDataViewSize))
 }

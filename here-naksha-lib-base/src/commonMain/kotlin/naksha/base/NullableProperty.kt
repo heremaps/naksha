@@ -46,7 +46,7 @@ open class NullableProperty<MAP_VALUE_TYPE : Any, MAP : AbstractMapProxy<String,
             val defaultValue = defaultValue ?: return self.getOrCreate(key, klass)
             return self.getOrSet(key, defaultValue.invoke())
         }
-        return Proxy.box(map_get(self.data(), key), klass, defaultValue?.invoke())
+        return Proxy.box(map_get(self.platformObject(), key), klass, defaultValue?.invoke())
     }
 
     open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) = self.put(this.name ?: property.name, value)

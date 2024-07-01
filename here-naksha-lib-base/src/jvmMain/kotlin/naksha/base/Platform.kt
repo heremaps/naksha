@@ -262,7 +262,7 @@ actual class Platform {
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView = JvmDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun valueOf(value: Any?): Any? = if (value is Proxy) value.data() as? JvmObject else value
+        actual fun valueOf(value: Any?): Any? = if (value is Proxy) value.platformObject() as? JvmObject else value
 
         /**
          * Returns the [JvmObject] of the given object.
@@ -270,7 +270,7 @@ actual class Platform {
          * @return The [JvmObject] or _null_.
          */
         @JvmStatic
-        fun toJvmObject(o: Any?): JvmObject? = if (o is Proxy) o.data() as? JvmObject else if (o is JvmObject) o else null
+        fun toJvmObject(o: Any?): JvmObject? = if (o is Proxy) o.platformObject() as? JvmObject else if (o is JvmObject) o else null
 
         @JvmStatic
         actual fun toInt(value: Any): Int = when (value) {
@@ -319,6 +319,9 @@ actual class Platform {
 
         @JvmStatic
         actual fun isNumber(o: Any?): Boolean = o is Number
+
+        @JvmStatic
+        actual fun isScalar(o: Any?): Boolean = o==null || o is Number || o is String || o is Boolean
 
         @JvmStatic
         actual fun isInteger(o: Any?): Boolean = o is Byte || o is Short || o is Int || o is Long || o is JvmInt64

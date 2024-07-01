@@ -23,7 +23,7 @@ import kotlin.reflect.KClass
 @JsExport
 abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
     override fun createData(): PlatformMap = Platform.newMap()
-    override fun data(): PlatformMap = super.data() as PlatformMap
+    override fun platformObject(): PlatformMap = super.platformObject() as PlatformMap
 
     override fun bind(data: PlatformObject, symbol: Symbol) {
         require(data is PlatformMap)
@@ -39,7 +39,7 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
      * @return The value.
      */
     fun <T : Any> getOrSet(key: K, alternative: T): T {
-        val data = data()
+        val data = platformObject()
         val raw = map_get(data, key)
         var value = box(raw, Platform.klassOf(alternative))
         if (value == null) {
@@ -58,7 +58,7 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
      * @return The value.
      */
     fun <T : Any> getOrCreate(key: K, klass: KClass<out T>): T {
-        val data = data()
+        val data = platformObject()
         val raw = map_get(data, key)
         var value = box(raw, klass)
         if (value == null) {
@@ -75,7 +75,7 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
      * @param key The key to query.
      * @return The value.
      */
-    fun <T : Any> getAs(key: K, klass: KClass<out T>): T? = box(map_get(data(), key), klass)
+    fun <T : Any> getAs(key: K, klass: KClass<out T>): T? = box(map_get(platformObject(), key), klass)
 
     /**
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, _null_ is returned.
@@ -84,7 +84,7 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
      * @return The value or _null_.
      */
     @Deprecated("Does the same as getAs()", ReplaceWith("getAs(key, klass)"))
-    fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? = box(map_get(data(), key), klass)
+    fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? = box(map_get(platformObject(), key), klass)
 
     /**
      * Convert the given value into a key.
@@ -126,7 +126,7 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
         }
 
     override val size: Int
-        get() = map_size(data())
+        get() = map_size(platformObject())
     override val values: MutableCollection<V?>
         get() {
             return rawEntries()
@@ -137,18 +137,18 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
                 .toMutableSet()
         }
 
-    override fun clear() = map_clear(data())
+    override fun clear() = map_clear(platformObject())
 
-    override fun isEmpty(): Boolean = map_size(data()) == 0
+    override fun isEmpty(): Boolean = map_size(platformObject()) == 0
 
-    override fun remove(key: K): V? = toValue(key, map_remove(data(), key))
+    override fun remove(key: K): V? = toValue(key, map_remove(platformObject(), key))
 
     override fun putAll(from: Map<out K, V?>) {
         from.onEach { (key, value) -> put(key, value) }
     }
 
     fun addAll(vararg items: Any?) {
-        val data = data()
+        val data = platformObject()
         var i = 0
         while (i < items.size) {
             val key = toKey(items[i++])
@@ -158,16 +158,16 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
         }
     }
 
-    override fun put(key: K, value: V?): V? = toValue(key, map_set(data(), key, unbox(value)))
+    override fun put(key: K, value: V?): V? = toValue(key, map_set(platformObject(), key, unbox(value)))
 
-    override fun get(key: K): V? = toValue(key, map_get(data(), key))
+    override fun get(key: K): V? = toValue(key, map_get(platformObject(), key))
 
     /**
      * Returns the raw value stored in the underlying base map.
      * @param key The key to read.
      * @return The raw value, being either a scalar or [PlatformObject].
      */
-    fun getRaw(key: Any): Any? = map_get(data(), key)
+    fun getRaw(key: Any): Any? = map_get(platformObject(), key)
 
     /**
      * Sets the raw value stored in the underlying base map.
@@ -175,25 +175,25 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
      * @param value The value to set.
      * @return The previously set value.
      */
-    fun setRaw(key: Any, value: Any?): Any? = map_set(data(), key, unbox(value))
+    fun setRaw(key: Any, value: Any?): Any? = map_set(platformObject(), key, unbox(value))
 
     /**
      * Tests if the underlying base map stored the given key.
      * @param key The key to test.
      * @return _true_ if the underlying map contains the given key; _false_ otherwise.
      */
-    fun hasRaw(key: Any): Boolean = map_contains_key(data(), key)
+    fun hasRaw(key: Any): Boolean = map_contains_key(platformObject(), key)
 
     /**
      * Removes the key from the underlying base map.
      * @param key The key to remove.
      * @return The value that was removed; _null_ if either the value was _null_ or no such key existed.
      */
-    fun removeRaw(key: Any): Any? = map_remove(data(), key)
+    fun removeRaw(key: Any): Any? = map_remove(platformObject(), key)
 
-    override fun containsValue(value: V?): Boolean = map_contains_value(data(), value)
+    override fun containsValue(value: V?): Boolean = map_contains_value(platformObject(), value)
 
-    override fun containsKey(key: K): Boolean = map_contains_key(data(), key)
+    override fun containsKey(key: K): Boolean = map_contains_key(platformObject(), key)
 
     class Entry<K, V>(override val key: K, initialValue: V) : MutableEntry<K, V> {
 
@@ -210,7 +210,7 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
     }
 
     private fun rawEntries(): Sequence<PlatformList> {
-        val platformIterator = map_iterator(data())
+        val platformIterator = map_iterator(platformObject())
         return generateSequence(platformIterator.next().value) {
             platformIterator.next().value
         }

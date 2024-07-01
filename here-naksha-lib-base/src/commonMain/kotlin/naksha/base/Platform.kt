@@ -308,6 +308,13 @@ expect class Platform {
         fun int64ToLong(value: Int64): Long
 
         /**
+         * Tests if the given object is a scalar, so _null_, _undefined_, any [Number], [String] or [Boolean].
+         * @param o The object to test.
+         * @return _true_ if the object is a scalar; _false_ otherwise.
+         */
+        fun isScalar(o: Any?): Boolean
+
+        /**
          * Tests if the given object is a [Number] or [Int64].
          * @param o The object to test.
          * @return _true_ if the object is a [Number] or [Int64]; _false_ otherwise.

@@ -38,7 +38,7 @@ object CheckCompiler {
         return when (value) {
             is String -> getStringCheckFor(value)
             is PlatformList -> getListCheckFor(value)
-            is AbstractListProxy<*> -> getListCheckFor(value.data())
+            is AbstractListProxy<*> -> getListCheckFor(value.platformObject())
             else -> UndefinedCheck().apply { add(value) }
         }
     }

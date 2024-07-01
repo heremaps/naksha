@@ -29,7 +29,7 @@ abstract class Proxy : PlatformObject {
             val data = unbox(raw)
             if (isNil(data)) return alternative
             // The data value is a complex object
-            if (data is PlatformObject) {
+            if (!Platform.isScalar(data) && data is PlatformObject) {
                 // If a proxy is requested.
                 if (Platform.isProxyKlass(klass)) {
                     if (klass.isInstance(data)) return data as T
@@ -103,8 +103,7 @@ abstract class Proxy : PlatformObject {
     /**
      * Returns the data (native) object to which this proxy is bound via the [symbol].
      */
-    // TODO: Rename to platformObject()
-    open fun data(): PlatformObject {
+    open fun platformObject(): PlatformObject {
         var data = this.data
         if (data == null) {
             data = createData()
@@ -114,7 +113,7 @@ abstract class Proxy : PlatformObject {
     }
 
     /**
-     * Returns the symbol through which this proxy is bound to the [data] object.
+     * Returns the symbol through which this proxy is bound to the [platformObject] object.
      */
     fun symbol(): Symbol {
         var symbol = this.symbol
@@ -133,5 +132,5 @@ abstract class Proxy : PlatformObject {
      * @return The proxy instance.
      * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
      */
-    override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = Platform.proxy(data(), klass, doNotOverride)
+    override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = Platform.proxy(platformObject(), klass, doNotOverride)
 }

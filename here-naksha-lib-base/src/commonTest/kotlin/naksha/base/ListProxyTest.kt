@@ -56,7 +56,8 @@ class ListProxyTest {
 
         // expect
         assertFailsWith<RuntimeException> { list.add(-1, 12) }
-        assertFailsWith<RuntimeException> { list.add(13, 12) }
+        // Adding at the end should work!
+        list.add(13, 12)
     }
 
     @Test

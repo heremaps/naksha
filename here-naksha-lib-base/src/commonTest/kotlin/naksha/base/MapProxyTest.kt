@@ -23,7 +23,7 @@ class P_MapTest {
         // The order need to the insertion order!
 
         // Test keys.
-        val keyIt = PlatformMapApi.map_key_iterator(map.data())
+        val keyIt = PlatformMapApi.map_key_iterator(map.platformObject())
         assertNotNull(keyIt)
         apply {
             var next = keyIt.next()
@@ -38,7 +38,7 @@ class P_MapTest {
         }
 
         // Test values.
-        val valueIt = PlatformMapApi.map_value_iterator(map.data())
+        val valueIt = PlatformMapApi.map_value_iterator(map.platformObject())
         assertNotNull(keyIt)
         apply {
             var next = valueIt.next()
@@ -53,7 +53,7 @@ class P_MapTest {
         }
 
         // Test entries.
-        val entryIt = PlatformMapApi.map_iterator(map.data())
+        val entryIt = PlatformMapApi.map_iterator(map.platformObject())
         assertNotNull(entryIt)
         apply {
             var next = entryIt.next()

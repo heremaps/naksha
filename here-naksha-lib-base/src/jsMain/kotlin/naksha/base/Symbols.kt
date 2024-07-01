@@ -1,5 +1,6 @@
 package naksha.base
 
+import naksha.base.Platform.Companion.DEFAULT_SYMBOL
 import kotlin.reflect.KClass
 
 /**
@@ -15,9 +16,7 @@ actual class Symbols {
          * @return A new symbol with the given description.
          */
         @JsStatic
-        actual fun newInstance(description: String?): Symbol {
-            TODO("Not yet implemented newInstance")
-        }
+        actual fun newInstance(description: String?): Symbol = js("Symbol(description)").unsafeCast<Symbol>()
 
         /**
          * Returns the symbol for the given string from the global registry. It is recommended to use a package name, for example
@@ -26,9 +25,9 @@ actual class Symbols {
          * @return The existing symbol, if no such symbol exist yet, creates a new one.
          */
         @JsStatic
-        actual fun forName(key: String?): Symbol {
-            TODO("Not yet implemented forName")
-        }
+        actual fun forName(key: String?): Symbol = js("Symbol.for(description)").unsafeCast<Symbol>()
+
+        private var symbolResolvers: List<SymbolResolver>? = null
 
         /**
          * Returns the default symbol to bind the given [KClass] against. If no symbol is returned by the registered symbol resolvers,
@@ -37,7 +36,18 @@ actual class Symbols {
          * @return The default symbol to bind the given [KClass] against.
          */
         actual fun <T : Any> of(klass: KClass<out T>): Symbol {
-            TODO("Not yet implemented of")
+            val resolvers = symbolResolvers
+            if (resolvers != null) {
+                for (resolver in resolvers) {
+                    try {
+                        val symbol = resolver.call(klass)
+                        if (symbol != null) return symbol
+                    } catch (e: Exception) {
+                        Platform.logger.error("The symbol resolver raised an exception: {}", e.stackTraceToString())
+                    }
+                }
+            }
+            return DEFAULT_SYMBOL
         }
 
         /**
@@ -45,9 +55,7 @@ actual class Symbols {
          * @return The list of all currently registered symbol resolvers.
          */
         @JsStatic
-        actual fun getSymbolResolvers(): List<SymbolResolver> {
-            TODO("Not yet implemented getSymbolResolvers")
-        }
+        actual fun getSymbolResolvers(): List<SymbolResolver> = symbolResolvers ?: emptyList()
 
         /**
          * Compares and sets the symbol resolvers in an atomic way.
@@ -60,7 +68,11 @@ actual class Symbols {
             expect: List<SymbolResolver>,
             value: List<SymbolResolver>
         ): Boolean {
-            TODO("Not yet implemented compareAndSetSymbolResolvers")
+            if (symbolResolvers === expect) {
+                symbolResolvers = value
+                return true
+            }
+            return false
         }
 
         /**
@@ -70,9 +82,7 @@ actual class Symbols {
          * @return The value or _undefined_ if no such symbol exist.
          */
         @JsStatic
-        actual fun get(obj: PlatformObject, symbol: Symbol): Any? {
-            TODO("Not yet implemented get")
-        }
+        actual fun get(obj: PlatformObject, symbol: Symbol): Any? = obj.asDynamic()[symbol]
 
         /**
          * Sets the value of a symbol, stored with the platform object.
@@ -87,7 +97,10 @@ actual class Symbols {
             symbol: Symbol,
             value: Any?
         ): Any? {
-            TODO("Not yet implemented set")
+            val o = obj.asDynamic()
+            val old = o[symbol]
+            o[symbol] = value
+            return old
         }
 
         /**
@@ -97,9 +110,7 @@ actual class Symbols {
          * @return _true_ if the symbol exists; _false_ otherwise.
          */
         @JsStatic
-        actual fun has(obj: PlatformObject, symbol: Symbol): Boolean {
-            TODO("Not yet implemented has")
-        }
+        actual fun has(obj: PlatformObject, symbol: Symbol): Boolean = js("Object.hasOwn(obj, symbol)").unsafeCast<Boolean>()
 
         /**
          * Removes the symbol, stored with the platform object.
@@ -109,7 +120,10 @@ actual class Symbols {
          */
         @JsStatic
         actual fun remove(obj: PlatformObject, symbol: Symbol): Any? {
-            TODO("Not yet implemented remove")
+            val o = obj.asDynamic()
+            val old = o[symbol]
+            js("delete o[symbol]")
+            return old
         }
 
         /**
@@ -119,9 +133,8 @@ actual class Symbols {
          * and the element at index 1 being the value.
          */
         @JsStatic
-        actual fun iterator(obj: PlatformObject): PlatformIterator<PlatformList> {
-            TODO("Not yet implemented iterator")
-        }
+        actual fun iterator(obj: PlatformObject): PlatformIterator<PlatformList> =
+            js("Object.getOwnPropertySymbols(obj)[Symbol.iterator]()").unsafeCast<PlatformIterator<PlatformList>>()
 
         /**
          * Collect all the keys of the object properties (being [String]).
@@ -129,9 +142,7 @@ actual class Symbols {
          * @return The keys of the object properties.
          */
         @JsStatic
-        actual fun keys(obj: PlatformObject): Array<Symbol> {
-            TODO("Not yet implemented keys")
-        }
+        actual fun keys(obj: PlatformObject): Array<Symbol> = js("Object.getOwnPropertySymbols(obj)").unsafeCast<Array<Symbol>>()
 
         /**
          * Returns the amount of symbols assigned to the given platform object.
@@ -139,15 +150,19 @@ actual class Symbols {
          * @return The amount of symbols.
          */
         @JsStatic
-        actual fun count(obj: PlatformObject): Int {
-            TODO("Not yet implemented count")
-        }
+        actual fun count(obj: PlatformObject): Int = js("Object.getOwnPropertySymbols(obj)").length.unsafeCast<Int>()
 
         /**
          * A simple helper that adds the given symbol resolver to the end of the resolver list.
          * @param symbolResolver The symbol resolved to add.
          */
         actual fun pushSymbolResolver(symbolResolver: SymbolResolver) {
+            val resolvers = symbolResolvers
+            symbolResolvers = if (resolvers == null) {
+                listOf(symbolResolver)
+            } else {
+                listOf(*resolvers.toTypedArray(), symbolResolver)
+            }
         }
 
         /**
@@ -155,6 +170,12 @@ actual class Symbols {
          * @param symbolResolver The symbol resolved to add.
          */
         actual fun unshiftSymbolResolver(symbolResolver: SymbolResolver) {
+            val resolvers = symbolResolvers
+            symbolResolvers = if (resolvers == null) {
+                listOf(symbolResolver)
+            } else {
+                listOf(symbolResolver, *resolvers.toTypedArray())
+            }
         }
 
     }

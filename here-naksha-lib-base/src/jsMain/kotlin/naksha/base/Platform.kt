@@ -223,7 +223,7 @@ return new DataView(byteArray.buffer, offset, size);
         ).unsafeCast<PlatformDataView>()
 
         @JsStatic
-        actual fun valueOf(value: Any?): Any? = if (value is Proxy) value.data() else value
+        actual fun valueOf(value: Any?): Any? = if (value is Proxy) value.platformObject() else value
 
         @JsStatic
         actual fun toInt(value: Any): Int = when (value) {
@@ -291,6 +291,15 @@ return new DataView(byteArray.buffer, offset, size);
             js("o && (typeof o.valueOf()==='number' || typeof o.valueOf()==='bigint')").unsafeCast<Boolean>()
 
         @JsStatic
+        actual fun isScalar(o: Any?): Boolean {
+            if (o===null || o===undefined) return true
+            return when(jsTypeOf(o.asDynamic().valueOf())) {
+                "string", "number", "bigint", "boolean" -> true
+                else -> false
+            }
+        }
+
+        @JsStatic
         actual fun isInteger(o: Any?): Boolean = js("o && (Number.isInteger(o) || typeof o.valueOf()==='bigint')").unsafeCast<Boolean>()
 
         @JsStatic
@@ -338,11 +347,25 @@ return new DataView(byteArray.buffer, offset, size);
             return Fnv1a32.string(Fnv1a32.start(), nak.toString())
         }
 
-        @JsStatic
-        actual fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean = TODO("Fix me, see documentation!")
+        private val assignables = HashMap<KClass<*>, HashMap<KClass<*>, Boolean>>()
 
         @JsStatic
-        actual fun isProxyKlass(klass: KClass<*>): Boolean = TODO("Fix me, see documentation!")
+        actual fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean {
+            var assignable = assignables[target]
+            if (assignable == null) {
+                assignable = HashMap()
+                assignables[target] = assignable
+            }
+            var isAssignable = assignable[source]
+            if (isAssignable == null) {
+                isAssignable = target.isInstance(allocateInstance(source))
+                assignable[source] = isAssignable
+            }
+            return isAssignable
+        }
+
+        @JsStatic
+        actual fun isProxyKlass(klass: KClass<*>): Boolean = isAssignable(klass, Proxy::class)
 
         // TODO: Find the constructor in namespace of module.
         @JsStatic
