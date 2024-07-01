@@ -35,7 +35,9 @@ open class DataViewProxy(internal val binary: Binary = Binary()) : Proxy(), Bina
     constructor(byteArray: ByteArray, offset: Int? = null, length: Int? = null) : this(Binary()) {
         val off = offset ?: 0
         val len = length ?: (byteArray.size - off)
-        bind(newDataView(byteArray, off, len), Symbols.of(this::class))
+        val data = newDataView(byteArray, off, len)
+        val sym = Symbols.of(this::class)
+        bind(data, sym)
     }
 
     override fun bind(data: PlatformObject, symbol: Symbol) {

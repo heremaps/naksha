@@ -73,14 +73,14 @@ class JsInt64 : Int64 {
 
     override fun shl(bits: Int): Int64 = js("BigInt.asIntN(64, this.valueOf() << BigInt(bits))").unsafeCast<Int64>()
 
-    override fun and(other: Int64): Int64
-    = js("BigInt.asIntN(64, BigInt.asUintN(64,this.valueOf()) & BigInt.asUintN(64,other.valueOf()))").unsafeCast<Int64>()
+    override fun and(other: Int64): Int64 =
+        js("BigInt.asIntN(64, BigInt.asUintN(64,this.valueOf()) & BigInt.asUintN(64,other.valueOf()))").unsafeCast<Int64>()
 
-    override fun or(other: Int64): Int64
-    = js("BigInt.asIntN(64, BigInt.asUintN(64,this.valueOf()) | BigInt.asUintN(64,other.valueOf()))").unsafeCast<Int64>()
+    override fun or(other: Int64): Int64 =
+        js("BigInt.asIntN(64, BigInt.asUintN(64,this.valueOf()) | BigInt.asUintN(64,other.valueOf()))").unsafeCast<Int64>()
 
-    override fun xor(other: Int64): Int64
-    = js("BigInt.asIntN(64, BigInt.asUintN(64,this.valueOf()) ^ BigInt.asUintN(64,other.valueOf()))").unsafeCast<Int64>()
+    override fun xor(other: Int64): Int64 =
+        js("BigInt.asIntN(64, BigInt.asUintN(64,this.valueOf()) ^ BigInt.asUintN(64,other.valueOf()))").unsafeCast<Int64>()
 
     override fun inv(): Int64 = js("BigInt.asIntN(64, ~(BigInt.asUintN(64,this.valueOf())))").unsafeCast<Int64>()
 

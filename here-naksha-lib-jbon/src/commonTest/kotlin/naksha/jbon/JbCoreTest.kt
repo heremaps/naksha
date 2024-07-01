@@ -36,11 +36,11 @@ class JbCoreTest {
     @Test
     fun testDoubleToFloat() {
         assertTrue(Platform.canBeFloat32(12.0))
-        assertTrue(Platform.canBeFloat32(Float.MAX_VALUE.toDouble()))
+        assertTrue(Platform.canBeFloat32(PlatformUtil.FLOAT_MAX))
         // Note: Technically the conversion is possible, but when widening to double, the exponent is inflated to -149
         //       Even while this is technically correct, our simple method then rejects this, because it only allows
         //       the exponent to be -126 for safe-conversion.
-        assertFalse(Platform.canBeFloat32(Float.MIN_VALUE.toDouble()))
+        assertFalse(Platform.canBeFloat32(PlatformUtil.FLOAT_MIN))
     }
 
     @Test

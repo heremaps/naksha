@@ -40,7 +40,6 @@ kotlin {
             }
         }
         commonTest {
-            // TODO: https://kotlinlang.org/docs/js-running-tests.html
             dependencies {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))

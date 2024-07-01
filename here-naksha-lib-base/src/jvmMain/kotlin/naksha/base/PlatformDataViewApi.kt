@@ -13,10 +13,6 @@ actual class PlatformDataViewApi {
             (view as JvmDataView).getStart()
 
         @JvmStatic
-        actual fun dataview_get_end(view: PlatformDataView): Int =
-            (view as JvmDataView).getEnd()
-
-        @JvmStatic
         actual fun dataview_get_size(view: PlatformDataView): Int =
             (view as JvmDataView).getSize()
 

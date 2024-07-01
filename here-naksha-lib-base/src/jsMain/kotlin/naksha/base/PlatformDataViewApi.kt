@@ -6,33 +6,20 @@ actual class PlatformDataViewApi {
     @OptIn(ExperimentalJsStatic::class)
     actual companion object {
         @JsStatic
-        actual fun dataview_get_byte_array(view: PlatformDataView): ByteArray {
-            TODO("Not yet implemented dataview_get_byte_array")
-        }
+        actual fun dataview_get_byte_array(view: PlatformDataView): ByteArray = js("new Int8Array(view.buffer)").unsafeCast<ByteArray>()
 
         @JsStatic
-        actual fun dataview_get_start(view: PlatformDataView): Int {
-            TODO("Not yet implemented dataview_get_start")
-        }
+        actual fun dataview_get_start(view: PlatformDataView): Int = view.asDynamic().byteOffset.unsafeCast<Int>()
 
         @JsStatic
-        actual fun dataview_get_end(view: PlatformDataView): Int {
-            TODO("Not yet implemented dataview_get_end")
-        }
-
-        @JsStatic
-        actual fun dataview_get_size(view: PlatformDataView): Int {
-            TODO("Not yet implemented dataview_get_size")
-        }
+        actual fun dataview_get_size(view: PlatformDataView): Int = view.asDynamic().byteLength.unsafeCast<Int>()
 
         @JsStatic
         actual fun dataview_get_float32(
             view: PlatformDataView,
             pos: Int,
             littleEndian: Boolean
-        ): Float {
-            TODO("Not yet implemented dataview_get_float32")
-        }
+        ): Float = view.asDynamic().getFloat32(pos, littleEndian).unsafeCast<Float>()
 
         @JsStatic
         actual fun dataview_set_float32(
@@ -41,6 +28,7 @@ actual class PlatformDataViewApi {
             value: Float,
             littleEndian: Boolean
         ) {
+            view.asDynamic().setFloat32(pos, value, littleEndian)
         }
 
         @JsStatic
@@ -48,9 +36,7 @@ actual class PlatformDataViewApi {
             view: PlatformDataView,
             pos: Int,
             littleEndian: Boolean
-        ): Double {
-            TODO("Not yet implemented dataview_get_float64")
-        }
+        ): Double = view.asDynamic().getFloat64(pos, littleEndian).unsafeCast<Double>()
 
         @JsStatic
         actual fun dataview_set_float64(
@@ -59,15 +45,15 @@ actual class PlatformDataViewApi {
             value: Double,
             littleEndian: Boolean
         ) {
+            view.asDynamic().setFloat64(pos, value, littleEndian)
         }
 
         @JsStatic
-        actual fun dataview_get_int8(view: PlatformDataView, pos: Int): Byte {
-            TODO("Not yet implemented dataview_get_int8")
-        }
+        actual fun dataview_get_int8(view: PlatformDataView, pos: Int): Byte = view.asDynamic().getInt8(pos).unsafeCast<Byte>()
 
         @JsStatic
         actual fun dataview_set_int8(view: PlatformDataView, pos: Int, value: Byte) {
+            view.asDynamic().setInt8(pos, value)
         }
 
         @JsStatic
@@ -75,9 +61,7 @@ actual class PlatformDataViewApi {
             view: PlatformDataView,
             pos: Int,
             littleEndian: Boolean
-        ): Short {
-            TODO("Not yet implemented dataview_get_int16")
-        }
+        ): Short = view.asDynamic().getInt16(pos, littleEndian).unsafeCast<Short>()
 
         @JsStatic
         actual fun dataview_set_int16(
@@ -86,6 +70,7 @@ actual class PlatformDataViewApi {
             value: Short,
             littleEndian: Boolean
         ) {
+            view.asDynamic().setInt16(pos, value, littleEndian)
         }
 
         @JsStatic
@@ -93,9 +78,7 @@ actual class PlatformDataViewApi {
             view: PlatformDataView,
             pos: Int,
             littleEndian: Boolean
-        ): Int {
-            TODO("Not yet implemented dataview_get_int32")
-        }
+        ): Int = view.asDynamic().getInt32(pos, littleEndian).unsafeCast<Int>()
 
         @JsStatic
         actual fun dataview_set_int32(
@@ -104,6 +87,7 @@ actual class PlatformDataViewApi {
             value: Int,
             littleEndian: Boolean
         ) {
+            view.asDynamic().setInt32(pos, value, littleEndian)
         }
 
         @JsStatic
@@ -111,9 +95,7 @@ actual class PlatformDataViewApi {
             view: PlatformDataView,
             pos: Int,
             littleEndian: Boolean
-        ): Int64 {
-            TODO("Not yet implemented dataview_get_int64")
-        }
+        ): Int64 = view.asDynamic().getInt64(pos, littleEndian).unsafeCast<Int64>()
 
         @JsStatic
         actual fun dataview_set_int64(
@@ -122,6 +104,7 @@ actual class PlatformDataViewApi {
             value: Int64,
             littleEndian: Boolean
         ) {
+            view.asDynamic().setInt64(pos, value, littleEndian)
         }
 
     }

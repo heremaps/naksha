@@ -112,6 +112,7 @@ Object.assign(DataView.prototype, {
                 copyPrototypeToPrototype(mapTemplate, js("new Map()").unsafeCast<Any>())
                 copyPrototypeToPrototype(objectTemplate, js("{}").unsafeCast<Any>())
                 copyPrototypeToPrototype(symbolTemplate, js("Symbol()").unsafeCast<Any>())
+                copyPrototypeToPrototype(dataViewTemplate, js("new DataView(new ArrayBuffer(0))").unsafeCast<Any>())
                 copyPrototypeToPrototype(JsInt64(), js("BigInt(0)").unsafeCast<Any>())
                 return true
             }
@@ -128,7 +129,7 @@ Object.assign(DataView.prototype, {
         actual val INT64_MAX_VALUE: Int64 = js("BigInt('9223372036854775807')").unsafeCast<Int64>()
 
         @JsStatic
-        actual val INT64_MIN_VALUE: Int64 = js("BigInt('9223372036854775808')").unsafeCast<Int64>()
+        actual val INT64_MIN_VALUE: Int64 = js("BigInt('-9223372036854775808')").unsafeCast<Int64>()
 
         @JsStatic
         actual val MAX_SAFE_INT: Double = 9007199254740991.0
@@ -186,7 +187,7 @@ Object.assign(DataView.prototype, {
         }
 
         @JsStatic
-        actual fun <K : Any, V : Any> newCMap(): CMap<K, V> = JsCMap<K,V>()
+        actual fun <K : Any, V : Any> newCMap(): CMap<K, V> = JsCMap<K, V>()
 
         @JsStatic
         actual fun newList(vararg entries: Any?): PlatformList {
@@ -205,13 +206,8 @@ Object.assign(DataView.prototype, {
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
 
         @JsStatic
-        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView = js(
-            """
-offset = offset ? Math.ceil(offset) : 0;
-size = size ? Math.floor(size) : byteArray.byteLength - offset;
-return new DataView(byteArray.buffer, offset, size);
-"""
-        ).unsafeCast<PlatformDataView>()
+        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView =
+            js("new DataView(byteArray.buffer, offset, size)").unsafeCast<PlatformDataView>()
 
         @JsStatic
         actual fun valueOf(value: Any?): Any? {
@@ -267,7 +263,7 @@ return new DataView(byteArray.buffer, offset, size);
             return ((hi.toLong() and 0xffff_ffff) shl 32) or (lo.toLong() and 0xffff_ffff).unsafeCast<Long>()
         }
 
-        private val convertView: dynamic = js("new DataView(new ArrayBuffer(16))")
+        internal val convertView: dynamic = js("new DataView(new ArrayBuffer(16))")
 
         @JsStatic
         actual fun toInt64RawBits(d: Double): Int64 {
@@ -287,8 +283,8 @@ return new DataView(byteArray.buffer, offset, size);
 
         @JsStatic
         actual fun isScalar(o: Any?): Boolean {
-            if (o===null || o===undefined) return true
-            return when(jsTypeOf(o.asDynamic().valueOf())) {
+            if (o === null || o === undefined) return true
+            return when (jsTypeOf(o.asDynamic().valueOf())) {
                 "string", "number", "bigint", "boolean" -> true
                 else -> false
             }
@@ -496,12 +492,14 @@ return new DataView(byteArray.buffer, offset, size);
         @JsStatic
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
             val o = if (obj is Proxy) obj.platformObject() else obj
-            return js("""JSON.stringify(o, function(k, v) {
+            return js(
+                """JSON.stringify(o, function(k, v) {
   if (!v) return v;
   if (v.valueOf() instanceof Map) return Object.fromEntries(v.valueOf().entries());
   if (typeof v.valueOf() === "bigint") return "data:bigint;dec,"+String(v);
   return v;
-})""").unsafeCast<String>()
+})"""
+            ).unsafeCast<String>()
         }
 
         /**
@@ -510,7 +508,8 @@ return new DataView(byteArray.buffer, offset, size);
          * @return The parsed JSON.
          */
         @JsStatic
-        actual fun fromJSON(json: String, options: FromJsonOptions): Any? = js("""JSON.parse(json, function(k, v) {
+        actual fun fromJSON(json: String, options: FromJsonOptions): Any? = js(
+            """JSON.parse(json, function(k, v) {
   if (!v) return v;
   if (typeof v === "string" && v.startsWith("data:bigint")) {
     var i = v.indexOf(",");
@@ -518,7 +517,8 @@ return new DataView(byteArray.buffer, offset, size);
   }
   if (!Array.isArray(v) && typeof v === "object") return new Map(Object.entries(v));
   return v;
-})""").unsafeCast<Any?>()
+})"""
+        ).unsafeCast<Any?>()
 
         /**
          * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap],
@@ -584,27 +584,25 @@ return new DataView(byteArray.buffer, offset, size);
             // TODO: When the argument is a scalar, directly concat, only leave objects as own arguments.
             //       So, we expect that ("Hello {}", "World") returns ["Hello World"] and not ["Hello ", "World"]!
             private fun toString(msg: String, vararg args: Any?): String {
-                // TODO: Use Platform.toJSON, otherwise Map is not serialized correctly!
-                val r: String = ""
-                js(
-                    """
-var ai = 0;
-var msg_arr = msg.split(/(?={})/g);
-var i, v, t;
-for (i=0; i < msg_arr.length; i++) {
-  var m = msg_arr[i].replace("%","%%");
-  if (m.startsWith("{}")) {
-    v=args[ai++];
-    if (v!==undefined && v!==null && (typeof v.valueOf())=="object") {
-      r += JSON.stringify(v,null,2) + m.substring(2);
-    } else {
-      r += v + m.substring(2);
-    }
-  } else {
-    r += m;
-  }
-}"""
-                )
+                var r = ""
+                var ai = 0
+                val msg_arr = js("msg.split(/(?={})/g)")
+                var v: dynamic
+                var i = 0
+                while (i < msg_arr.length.unsafeCast<Int>()) {
+                    val m = msg_arr[i].replace("%", "%%").unsafeCast<String>()
+                    if (m.startsWith("{}")) {
+                        v = args[ai++]
+                        if (v !== null && v !== undefined && (jsTypeOf(v.valueOf()) == "object")) {
+                            r += toJSON(v) + m.substring(2)
+                        } else {
+                            r += v + m.substring(2)
+                        }
+                    } else {
+                        r += m;
+                    }
+                    i++
+                }
                 return r
             }
 
@@ -689,6 +687,9 @@ for (i=0; i < msg_arr.length; i++) {
         @JsStatic
         actual fun random(): Double = js("Math.random()").unsafeCast<Double>()
 
+        private val MANTISSA_MASK = Int64(0x000f_ffff_ffff_ffffL)
+        private val MANTISSA_LO_MASK = Int64(0x0000_0000_1fff_ffffL)
+
         /**
          * Tests if the given 64-bit floating point number can be converted into a 32-bit floating point number without losing information.
          * @param value The 64-bit floating point number.
@@ -696,25 +697,23 @@ for (i=0; i < msg_arr.length; i++) {
          */
         @JsStatic
         actual fun canBeFloat32(value: Double): Boolean {
-            TODO("Fix me!")
-//            // IEEE-754, 32-bit = One sign-bit, 8-bit exponent biased by 127, then 23-bit mantissa
-//            // IEEE-754, 64-bit = One sign-bit, 11-bit exponent biased by 1023, then 52-bit mantissa
-//            // E = 0 means denormalized number (M>0) or null (M=0)
-//            // E = 255|2047 means either endless (M=0) or not a number (M>0)
-//            val view = view()
-//            view.setFloat64(0, value)
-//            var exponent = (view.getInt16(0).toInt() ushr 4) and 0x7ff
-//            if (exponent == 0 || exponent == 2047) return false
-//            // Remove bias: -1023 (0) .. 1024 (2047)
-//            exponent -= 1023
-//            // 32-bit exponent is 8-bit with bias 127: -127 (0) .. 128 (255)
-//            // We want to avoid extremes as they encode special states.
-//            if (exponent < -126 || exponent > 127) return false
-//            // We do not want to lose precision in mantissa either.
-//            // Either the lower 29-bit of mantissa are zero (only 23-bit used) or all bits are set.
-//            val mantissaHi = view.getInt32(0) and 0x000f_ffff
-//            val mantissaLo = view.getInt32(4)
-//            return mantissaLo and 0x1fff_ffff == 0 || (mantissaHi == 0x000f_ffff && mantissaLo == 0xffff_ffffu.toInt())
+            // IEEE-754, 32-bit = One sign-bit, 8-bit exponent biased by 127, then 23-bit mantissa
+            // IEEE-754, 64-bit = One sign-bit, 11-bit exponent biased by 1023, then 52-bit mantissa
+            // E = 0 means denormalized number (M>0) or null (M=0)
+            // E = 255|2047 means either endless (M=0) or not a number (M>0)
+            val view = convertView
+            view.setFloat64(0, value)
+            var exponent = (view.getInt16(0).unsafeCast<Int>() ushr 4) and 0x7ff
+            if (exponent == 0 || exponent == 2047) return false
+            // Remove bias: -1023 (0) .. 1024 (2047)
+            exponent -= 1023
+            // 32-bit exponent is 8-bit with bias 127: -127 (0) .. 128 (255)
+            // We want to avoid extremes as they encode special states.
+            if (exponent < -126 || exponent > 127) return false
+            // We do not want to lose precision in mantissa either.
+            // Either the lower 29-bit of mantissa are zero (only 23-bit used) or all bits are set.
+            val mantissa = view.getBigInt64(0).unsafeCast<Int64>() and MANTISSA_MASK
+            return (mantissa and MANTISSA_LO_MASK) == I64_ZERO || mantissa == MANTISSA_MASK
         }
 
         private const val MIN_INT_VALUE_AS_DOUBLE = Int.MIN_VALUE.toDouble()

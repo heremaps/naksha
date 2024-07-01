@@ -50,9 +50,11 @@ class PlatformTest {
         (data["array"] as AnyListProxy).add("a")
         (data["array"] as AnyListProxy).add("b")
         (data["array"] as AnyListProxy).add("c")
+        data["map"] = ObjectProxy()
+        (data["map"] as ObjectProxy)["foo"] = "bar"
         val json = Platform.toJSON(data)
         Platform.logger.info("json: {}", json)
-        val jsonString = "{\"name\":\"Mustermann\",\"age\":69,\"boolean\":true,\"array\":[\"a\",\"b\",\"c\"]}"
+        val jsonString = "{\"name\":\"Mustermann\",\"age\":69,\"boolean\":true,\"array\":[\"a\",\"b\",\"c\"],\"map\":{\"foo\":\"bar\"}}"
         assertEquals(jsonString, json)
     }
 }

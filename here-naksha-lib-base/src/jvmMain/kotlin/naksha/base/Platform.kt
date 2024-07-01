@@ -702,8 +702,8 @@ actual class Platform {
             if (exponent < -126 || exponent > 127) return false
             // We do not want to lose precision in mantissa either.
             // Either the lower 29-bit of mantissa are zero (only 23-bit used) or all bits are set.
-            val mantissa = binary and 0x000f_ffff_ffff_ffff
-            return (mantissa and 0x0000_0000_1fff_ffff) == 0L || mantissa == 0x000f_ffff_ffff_ffff
+            val mantissa = binary and 0x000f_ffff_ffff_ffffL
+            return (mantissa and 0x0000_0000_1fff_ffffL) == 0L || mantissa == 0x000f_ffff_ffff_ffffL
         }
 
         private const val MIN_INT_VALUE_AS_DOUBLE = Int.MIN_VALUE.toDouble()
