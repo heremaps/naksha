@@ -1,7 +1,6 @@
 package naksha.geo
 
-import naksha.geo.cords.PointCoordsProxy
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PointProxyTest {
@@ -9,7 +8,7 @@ class PointProxyTest {
     @Test
     fun testPoint() {
         // given
-        val point = PointCoordsProxy(1.0, 2.0, 3.0)
+        val point = PointCoord(1.0, 2.0, 3.0)
 
         // expect
         assertEquals(1.0, point.getLongitude())

@@ -13,7 +13,7 @@ import org.locationtech.jts.geom.Polygon
 import org.locationtech.jts.io.geojson.GeoJsonReader
 import kotlin.test.assertEquals
 
-class ProxyGeoUtilTest {
+class JtsTest {
 
     private val jtsJsonReader = GeoJsonReader()
 
@@ -26,10 +26,10 @@ class ProxyGeoUtilTest {
         val y2 = 2.1
 
         // when
-        val polygon = ProxyGeoUtil.createBBoxEnvelope(x1, y1, x2, y2)
+        val polygon = PolygonGeometry(BoundingBoxProxy(x1, y1, x2, y2))
 
         // then
-        val coords = polygon.coordinates!![0]!!
+        val coords = polygon.getCoordinates()[0]!!
 
         assertEquals(1.0, coords[0]!!.getLongitude())
         assertEquals(1.1, coords[0]!!.getLatitude())
@@ -57,7 +57,7 @@ class ProxyGeoUtilTest {
           }
         """.trimIndent()
 
-        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PointProxy::class)
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PointGeometry::class)
 
         // when
         val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
@@ -81,7 +81,7 @@ class ProxyGeoUtilTest {
           }
         """.trimIndent()
 
-        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiPointProxy::class)
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiPointGeometry::class)
 
         // when
         val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
@@ -105,7 +105,7 @@ class ProxyGeoUtilTest {
           }
         """.trimIndent()
 
-        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(LineStringProxy::class)
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(LineStringGeometry::class)
 
         // when
         val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
@@ -135,7 +135,7 @@ class ProxyGeoUtilTest {
           }
         """.trimIndent()
 
-        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiLineStringProxy::class)
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiLineStringGeometry::class)
 
         // when
         val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
@@ -175,7 +175,7 @@ class ProxyGeoUtilTest {
           }
         """.trimIndent()
 
-        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PolygonProxy::class)
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PolygonGeometry::class)
 
         // when
         val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
@@ -233,7 +233,7 @@ class ProxyGeoUtilTest {
           }
         """.trimIndent()
 
-        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PolygonProxy::class)
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(PolygonGeometry::class)
 
         // when
         val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)
@@ -295,7 +295,7 @@ class ProxyGeoUtilTest {
           }
         """.trimIndent()
 
-        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiPolygonProxy::class)
+        val proxyGeometry = (Platform.fromJSON(json) as JvmMap).proxy(MultiPolygonGeometry::class)
 
         // when
         val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyGeometry)

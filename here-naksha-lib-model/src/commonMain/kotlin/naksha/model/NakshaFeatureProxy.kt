@@ -3,16 +3,16 @@
 package naksha.model
 
 import naksha.base.NullableProperty
-import naksha.geo.GeoFeature
-import naksha.geo.cords.PointCoordsProxy
+import naksha.geo.GeoFeatureProxy
+import naksha.geo.PointGeometry
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * The Naksha Feature extending the default [GeoFeature].
+ * The Naksha Feature extending the default [GeoFeatureProxy].
  */
 @JsExport
-open class NakshaFeatureProxy() : GeoFeature() {
+open class NakshaFeatureProxy() : GeoFeatureProxy() {
 
     @JsName("of")
     constructor(id: String): this(){
@@ -20,15 +20,15 @@ open class NakshaFeatureProxy() : GeoFeature() {
     }
 
     companion object {
-        private val REFERENCE_POINT = NullableProperty<Any, NakshaFeatureProxy, PointCoordsProxy>(
-            PointCoordsProxy::class
+        private val REFERENCE_POINT = NullableProperty<Any, NakshaFeatureProxy, PointGeometry>(
+            PointGeometry::class
         )
     }
 
     /**
      * Reference point of the feature. Used for grid calculation.
      */
-    var referencePoint: PointCoordsProxy? by REFERENCE_POINT
+    var referencePoint: PointGeometry? by REFERENCE_POINT
 
     fun nakshaProperties(): NakshaPropertiesProxy = properties.proxy(NakshaPropertiesProxy::class)
 
