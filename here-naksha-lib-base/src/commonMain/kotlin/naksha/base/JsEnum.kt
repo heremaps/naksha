@@ -317,7 +317,7 @@ abstract class JsEnum : CharSequence {
      * @return this.
      */
     protected fun <SELF : JsEnum> alias(selfClass: KClass<SELF>, value: Any?) {
-
+        TODO("JsEnum::alias is not yet implemented")
     }
 
     final override fun toString(): String {
@@ -331,6 +331,16 @@ abstract class JsEnum : CharSequence {
 
     fun toJSON(): String = toString()
 
+    /**
+     * Tests if this object is like the given value.
+     * @param other the other value to compare against.
+     * @return _true_ if the other value represents the same as this object; _false_ otherwise.
+     */
+    fun like(other: Any?): Boolean {
+        if (this === other) return true
+        if (other is JsEnum) return other.value == value
+        return value == other
+    }
     final override fun equals(other: Any?): Boolean = this === other || (other is JsEnum && other.value == value)
     final override fun hashCode(): Int = toString().hashCode()
 

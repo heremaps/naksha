@@ -59,7 +59,7 @@ kotlin {
                 implementation("org.slf4j:slf4j-simple:2.0.13")
                 api("org.lz4:lz4-java:1.8.0")
             }
-            resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
         jsMain {
             dependencies {
