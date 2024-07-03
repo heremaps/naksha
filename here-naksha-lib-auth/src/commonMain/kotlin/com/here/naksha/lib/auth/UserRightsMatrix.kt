@@ -71,7 +71,7 @@ class UserRightsMatrix : AbstractMapProxy<String, ServiceUserRights>(String::cla
     }
 
     fun useService(name: String): ServiceUserRights =
-        getOrCreate(name, ServiceUserRights::class)
+        getOrCreate<ServiceUserRights, String, UserRightsMatrix>(name, ServiceUserRights::class)
 }
 
 @JsExport

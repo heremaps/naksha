@@ -3,6 +3,8 @@
 package naksha.base
 
 import naksha.base.Platform.Companion.isNil
+import naksha.base.fn.Fn0
+import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
@@ -15,32 +17,35 @@ import kotlin.reflect.KClass
 @JsExport
 abstract class Proxy : PlatformObject {
     companion object {
+        @Suppress("UNCHECKED_CAST")
+        private fun <T : Any> proxyOf(data: PlatformObject, klass: KClass<out T>): T {
+            if (klass.isInstance(data)) return data as T
+            val symbol = Symbols.of(klass)
+            val existing = Symbols.get(data, symbol)
+            if (klass.isInstance(existing)) return existing as T
+            // Create a new instance.
+            val instance = Platform.newInstanceOf(klass)
+            (instance as Proxy).bind(data, symbol)
+            return instance
+        }
+
         /**
          * Convert the given raw value into a value of the given type.
-         * @param <E> The type to convert into.
-         * @param raw The raw value to convert.
-         * @param alternative The alternative to return when the raw can't be converted.
-         * @return The given raw as given type or the [alternative].
+         * @param raw the raw value to convert.
+         * @param alternative the alternative to return, when the raw value can't be converted.
+         * @param init the initializer, when the raw value can't be converted, preferred above [alternative] if given.
+         * @return the given raw as given type, the result of [init] or the given [alternative] (in that order).
          */
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         @JsStatic
-        fun <T : Any> box(raw: Any?, klass: KClass<out T>, alternative: T? = null): T? {
+        fun <T : Any> box(raw: Any?, klass: KClass<out T>, alternative: T? = null, init: Fn0<out T?>? = null): T? {
             val data = unbox(raw)
-            if (isNil(data)) return alternative
+            if (isNil(data)) return if (init != null) init.call() else alternative
             // The data value is a complex object
             if (!Platform.isScalar(data) && data is PlatformObject) {
                 // If a proxy is requested.
-                if (Platform.isProxyKlass(klass)) {
-                    if (klass.isInstance(data)) return data as T
-                    val symbol = Symbols.of(klass)
-                    val existing = Symbols.get(data, symbol)
-                    if (klass.isInstance(existing)) return existing as T
-                    // Create a new instance.
-                    val instance = Platform.newInstanceOf(klass)
-                    (instance as Proxy).bind(data, symbol)
-                    return instance
-                }
+                if (Platform.isProxyKlass(klass)) return proxyOf(data, klass)
                 // A scalar type was requested, but a complex type found.
                 // The only acceptable situation is that Any was requested.
                 // Then, return the standard types.
@@ -50,7 +55,41 @@ abstract class Proxy : PlatformObject {
                     if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
                 }
             } else if (klass.isInstance(data)) return data as T
-            return alternative
+            return if (init != null) init.call() else alternative
+        }
+
+        /**
+         * Convert the given raw value into a value of the given type.
+         * @param raw the raw value to convert.
+         * @param key the key to forward to the [init] function.
+         * @param init the initializer, when the raw value can't be converted, preferred above [alternative] if given.
+         * @return the given raw as given type, the result of [init] or the given [alternative] (in that order).
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        @JsStatic
+        fun <T : Any, K : Any> boxPair(
+            raw: Any?,
+            klass: KClass<out T>,
+            key: K,
+            init: Fn1<out T?, in K>
+        ): T? {
+            val data = unbox(raw)
+            if (isNil(data)) return init.call(key)
+            // The data value is a complex object
+            if (!Platform.isScalar(data) && data is PlatformObject) {
+                // If a proxy is requested.
+                if (Platform.isProxyKlass(klass)) return proxyOf(data, klass)
+                // A scalar type was requested, but a complex type found.
+                // The only acceptable situation is that Any was requested.
+                // Then, return the standard types.
+                if (klass == Any::class) {
+                    if (data is PlatformMap) return data.proxy(ObjectProxy::class) as T
+                    if (data is PlatformList) return data.proxy(AnyListProxy::class) as T
+                    if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
+                }
+            } else if (klass.isInstance(data)) return data as T
+            return init.call(key)
         }
 
         /**

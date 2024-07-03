@@ -1,13 +1,11 @@
 package naksha.base
 
-import naksha.base.Platform.Companion.I64_BYTE_MASK
 import naksha.base.Platform.Companion.I64_INT_MASK
-import naksha.base.Platform.Companion.I64_SHORT_MASK
 import naksha.base.Platform.Companion.I64_ZERO
 import naksha.base.Platform.Companion._int64
 import naksha.base.Platform.Companion.i64_arr
 
-class JsInt64 : Int64 {
+class JsInt64 internal constructor(): Int64 {
     override fun unaryPlus(): Int64 = this
 
     override fun unaryMinus(): Int64 {
@@ -84,20 +82,11 @@ class JsInt64 : Int64 {
 
     override fun inv(): Int64 = js("BigInt.asIntN(64, ~(BigInt.asUintN(64,this.valueOf())))").unsafeCast<Int64>()
 
-    override fun toByte(): Byte {
-        val mask = I64_BYTE_MASK
-        return js("Number(this.valueOf() & mask)").unsafeCast<Byte>()
-    }
+    override fun toByte(): Byte = js("Number(BigInt.asIntN(8,this.valueOf()))").unsafeCast<Byte>()
 
-    override fun toShort(): Short {
-        val mask = I64_SHORT_MASK
-        return js("Number(this.valueOf() & mask)").unsafeCast<Short>()
-    }
+    override fun toShort(): Short = js("Number(BigInt.asIntN(16,this.valueOf()))").unsafeCast<Short>()
 
-    override fun toInt(): Int {
-        val mask = I64_INT_MASK
-        return js("Number(this.valueOf() & mask)").unsafeCast<Int>()
-    }
+    override fun toInt(): Int = js("Number(BigInt.asIntN(32,this.valueOf()))").unsafeCast<Int>()
 
     override fun toLong(): Long = Platform.int64ToLong(this)
 

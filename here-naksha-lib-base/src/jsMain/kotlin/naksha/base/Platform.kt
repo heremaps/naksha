@@ -14,42 +14,6 @@ actual class Platform {
     actual companion object {
         private var isInitialized: Boolean = false
 
-        val objectTemplate = object : PlatformObject {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
-        }
-        val listTemplate = object : PlatformList {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
-        }
-        val mapTemplate = object : PlatformMap {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
-        }
-        val dataViewTemplate = object : PlatformDataView {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
-        }
-        val symbolTemplate = object : Symbol {}
-
-        // TODO: Find out what really need to be copied to make "is" working and only copy this!
-        @Suppress("UNUSED_PARAMETER")
-        fun copyPrototypeToPrototype(source: Any, target: Any) = js(
-            """
-var tp = Object.getPrototypeOf(target);
-var sp = Object.getPrototypeOf(source);
-var symbols = Object.getOwnPropertySymbols(sp);
-var i;
-for (i in symbols) {
-    var symbol = symbols[i];
-    tp[symbol] = sp[symbol];
-};
-var desc = {enumerable:false,writable:true,value:null};
-var keys = Object.getOwnPropertyNames(sp);
-for (i in keys) {
-    var key = keys[i];
-    desc.value = sp[key]
-    Object.defineProperty(tp, key, desc);
-};
-"""
-        )
-
         internal val U64_MAX_VALUE = js("BigInt.asUintN(64,BigInt('18446744073709551615'))").unsafeCast<Int64>()
         internal val I64_MAX_VALUE = js("BigInt.asIntN(64,BigInt('9223372036854775807'))").unsafeCast<Int64>()
         internal val I64_MIN_VALUE = js("BigInt.asIntN(64,BigInt('-9223372036854775808'))").unsafeCast<Int64>()
@@ -93,27 +57,70 @@ for (i in keys) {
          */
         internal val u64_arr: dynamic = js("new BigUint64Array(16)")
 
+        // TODO: Find out what really need to be copied to make "is" working and only copy this!
+        @Suppress("UNUSED_PARAMETER")
+        private fun copyPrototypeToPrototype(source: Any, target: Any) = js(
+            """
+        var sp = Object.getPrototypeOf(source);
+        var tp = Object.getPrototypeOf(target);
+        var symbols = Object.getOwnPropertySymbols(sp);
+        var i;
+        for (i in symbols) {
+            var symbol = symbols[i];
+            tp[symbol] = sp[symbol];
+        };
+        var desc = {enumerable:false,writable:true,value:null};
+        var keys = Object.getOwnPropertyNames(sp);
+        for (i in keys) {
+            var key = keys[i];
+            desc.value = sp[key];
+            if ("constructor"==key) continue;
+            Object.defineProperty(tp, key, desc);
+        };"""
+        )
+
+        val objectTemplate = object : PlatformObject {
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
+        }
+        val listTemplate = object : PlatformList {
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
+        }
+        val mapTemplate = object : PlatformMap {
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
+        }
+        val dataViewTemplate = object : PlatformDataView {
+            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
+        }
+        val symbolTemplate = object : Symbol {}
+
         actual fun initialize(): Boolean {
             if (!isInitialized) {
                 isInitialized = true
-                js(
-                    """
-Object.assign(DataView.prototype, {
-    getByteArray: function() { if (!this.__byteArray) this.__byteArray = new Int8Array(this.buffer); return this.__byteArray; },
-    getStart: function() { return this.byteOffset; },
-    getEnd: function() { return this.byteOffset + this.byteLength; },
-    getSize: function() { return this.byteLength; },
-    getInt64: DataView.prototype.getBigInt64,
-    setInt64: DataView.prototype.setBigInt64
-});
-"""
-                )
                 copyPrototypeToPrototype(listTemplate, js("[]").unsafeCast<Any>())
                 copyPrototypeToPrototype(mapTemplate, js("new Map()").unsafeCast<Any>())
                 copyPrototypeToPrototype(objectTemplate, js("{}").unsafeCast<Any>())
                 copyPrototypeToPrototype(symbolTemplate, js("Symbol()").unsafeCast<Any>())
                 copyPrototypeToPrototype(dataViewTemplate, js("new DataView(new ArrayBuffer(0))").unsafeCast<Any>())
                 copyPrototypeToPrototype(JsInt64(), js("BigInt(0)").unsafeCast<Any>())
+                // Patch the Int64::class, so that it works as expected (it should only detect BigInt!)
+                val i64Class = Int64::class
+                js(
+                    """
+            var pt = Object.getPrototypeOf(i64Class);
+            var keys = Object.getOwnPropertyNames(pt);
+            var isInstanceOfName = null;
+            var i;
+            for (i in keys) {
+                var key = keys[i];
+                if (key.startsWith("isInstance")) isInstanceOfName = key;
+            };
+            // Note: Do not override pt[isInstanceOfName]!
+            //       If we do this, then all isInstanceOf calls are overloaded, 
+            //       but we only want to overload the one of Int64::class!
+            i64Class[isInstanceOfName] = function(value) {
+              return value != null && typeof value.valueOf()==="bigint";
+            };"""
+                )
                 return true
             }
             return false
@@ -230,8 +237,8 @@ Object.assign(DataView.prototype, {
             is Long -> longToInt64(value)
             is Int64 -> value
             is Byte, Short, Int -> js("BigInt(value)").unsafeCast<Int64>()
-            is Number -> js("BigInt64(Number(value))").unsafeCast<Int64>()
-            is String -> js("BigInt64(value)").unsafeCast<Int64>()
+            is Float, Double -> js("BigInt(Math.round(value))").unsafeCast<Int64>()
+            is String -> js("BigInt(value)").unsafeCast<Int64>()
             else -> throw IllegalArgumentException("Failed to convert object to int64")
         }
 
@@ -268,12 +275,12 @@ Object.assign(DataView.prototype, {
         @JsStatic
         actual fun toInt64RawBits(d: Double): Int64 {
             convertView.setFloat64(0, d)
-            return convertView.getInt64(0).unsafeCast<Int64>()
+            return convertView.getBigInt64(0).unsafeCast<Int64>()
         }
 
         @JsStatic
         actual fun toDoubleRawBits(i: Int64): Double {
-            convertView.setInt64(0, i)
+            convertView.setBigInt64(0, i)
             return convertView.getFloat64(0).unsafeCast<Double>()
         }
 

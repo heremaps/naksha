@@ -12,7 +12,7 @@ class TransactionCollectionInfoProxy : ObjectProxy() {
 
     companion object {
         private val COLLECTION_ID = NullableProperty<Any, TransactionCollectionInfoProxy, String>(String::class)
-        private val COUNT = NotNullProperty<Any, TransactionCollectionInfoProxy, Int>(Int::class, defaultValue = { 0 })
+        private val COUNT = NotNullProperty<Any, TransactionCollectionInfoProxy, Int>(Int::class) { _,_ -> 0 }
     }
 
     var collectionId: String? by COLLECTION_ID

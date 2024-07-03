@@ -1,10 +1,10 @@
 package naksha.model
 
 import naksha.base.Int64
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
+import naksha.base.Platform
+import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class NakshaCollectionProxyTest {
 
@@ -18,6 +18,7 @@ class NakshaCollectionProxyTest {
             disableHistory = true
         )
         collection.maxAge = Int64(42)
+        Platform.logger.info("maxAge: {} vs {}", collection.maxAge, Int64(42))
 
         // expect
         assertEquals("ID", collection.id)

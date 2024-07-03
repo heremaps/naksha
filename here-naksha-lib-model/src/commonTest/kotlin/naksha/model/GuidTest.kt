@@ -1,7 +1,7 @@
 package naksha.model
 
 import naksha.base.Int64
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class GuidTest {

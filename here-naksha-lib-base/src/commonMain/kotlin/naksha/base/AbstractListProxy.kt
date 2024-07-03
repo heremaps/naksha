@@ -13,7 +13,13 @@ import naksha.base.PlatformListApi.Companion.array_retain_all
 import naksha.base.PlatformListApi.Companion.array_set
 import naksha.base.PlatformListApi.Companion.array_set_length
 import naksha.base.PlatformListApi.Companion.array_splice
+import naksha.base.PlatformMapApi.Companion.map_contains_key
+import naksha.base.PlatformMapApi.Companion.map_get
+import naksha.base.PlatformMapApi.Companion.map_set
+import naksha.base.fn.Fn1
+import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.math.max
 import kotlin.reflect.KClass
 
 /**
@@ -40,21 +46,59 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
      * @param alternative The alternative to return, when the element is not of the specified type.
      * @return The element.
      */
-    protected open fun getOr(index: Int, alternative: E?): E? = box(array_get(platformObject(), index), elementKlass, alternative)
+    protected open fun getOr(index: Int, alternative: E): E? = box(array_get(platformObject(), index), elementKlass, alternative)
 
     /**
-     * Returns the element at the given index. If no such key element exists or the element is not of the specified type,
-     * creates a new element, assigns it and returns it.
-     * @param index The key to query.
-     * @return The element.
+     * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new value is created, stored
+     * with the key and returned.
+     * @param index the key to query.
+     * @param klass the [KClass] of the expected value type.
+     * @param init the initialize method to invoke, when the value is not of the expected type.
+     * @return the value.
      */
-    protected open fun getOrCreate(index: Int): E {
+    fun <T : Any, SELF: AbstractListProxy<E>> getOrInit(index: Int, klass: KClass<out T>, init: Fn2<out T, in SELF, in Int>): T {
         val data = platformObject()
-        val raw = array_get(data, index)
-        var value = box(raw, elementKlass, null)
+        val i = if (index < 0) max(0, array_get_length(data) + index) else index
+        var value: T? = null
+        if (i < array_get_length(data)) {
+            val raw = array_get(data, i)
+            value = box(raw, klass)
+        }
         if (value == null) {
-            value = Platform.newInstanceOf(elementKlass)
-            array_set(data, index, Platform.valueOf(value))
+            @Suppress("UNCHECKED_CAST")
+            value = init.call(this as SELF, i)
+            array_set(data, i, unbox(value))
+        }
+        return value
+    }
+
+    /**
+     * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new
+     * value is created, stored with the key and returned.
+     * @param index the key to query.
+     * @param klass the [KClass] of the expected value.
+     * @param init the initialize method to invoke, when the value is not of the expected type.
+     * @return The value.
+     */
+    fun <T : Any, SELF: AbstractListProxy<E>> getOrCreate(index: Int, klass: KClass<out T>, init: Fn2<out T?, in SELF, in Int>? = null): T {
+        val data = platformObject()
+        val i = if (index < 0) max(0, array_get_length(data) + index) else index
+        var value: T? = null
+        if (i < array_get_length(data)) {
+            val raw = array_get(data, i)
+            value = box(raw, klass)
+        }
+        if (value == null) {
+            if (init != null) {
+                @Suppress("UNCHECKED_CAST")
+                value = init.call(this as SELF, i)
+                if (value != null) {
+                    array_set(data, i, unbox(value))
+                    return value
+                }
+            }
+            value = Platform.newInstanceOf(klass)
+            array_set(data, i, unbox(value))
         }
         return value
     }

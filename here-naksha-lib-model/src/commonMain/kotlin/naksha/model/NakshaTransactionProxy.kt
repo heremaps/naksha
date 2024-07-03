@@ -11,14 +11,16 @@ class NakshaTransactionProxy() : NakshaFeatureProxy() {
 
     companion object {
         private val FEATURES_MODIFIED =
-            NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class, defaultValue = { 0 })
-        private val FEATURES_BYTES = NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class, defaultValue = { 0 })
+            NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class, init = { _, _ -> 0 })
+        private val FEATURES_BYTES = NotNullProperty<Any, NakshaTransactionProxy, Int>(Int::class, init = { _, _ -> 0 })
         private val COLLECTIONS = NotNullProperty<Any, NakshaTransactionProxy, TransactionCollectionInfoMapProxy>(
-            TransactionCollectionInfoMapProxy::class, defaultValue = { TransactionCollectionInfoMapProxy() }
+            TransactionCollectionInfoMapProxy::class, init = { _, _ -> TransactionCollectionInfoMapProxy() }
         )
         private val SEQ_NUMBER = NotNullProperty<Any, NakshaTransactionProxy, Int64>(Int64::class)
         private val SEQ_TS = NotNullProperty<Any, NakshaTransactionProxy, Int64>(Int64::class)
     }
+
+    override fun typeDefaultValue(): String = "naksha.Tx"
 
     /**
      * Number of features modified in the transaction - total number of features from all touched collections.

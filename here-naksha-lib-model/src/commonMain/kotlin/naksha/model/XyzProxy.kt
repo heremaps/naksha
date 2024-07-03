@@ -14,7 +14,7 @@ import kotlin.js.JsExport
 @JsExport
 class XyzProxy : ObjectProxy() {
     companion object {
-        private val ACTION = NullableProperty<Any, XyzProxy, String>(String::class, defaultValue = { XYZ_EXEC_CREATED })
+        private val ACTION = NullableProperty<Any, XyzProxy, String>(String::class) { _,_ -> XYZ_EXEC_CREATED }
         private val UUID = NullableProperty<Any, XyzProxy, String>(String::class)
         private val FNVA1 = NullableProperty<Any, XyzProxy, String>(String::class)
         private val VERSION = NullableProperty<Any, XyzProxy, Int>(Int::class)

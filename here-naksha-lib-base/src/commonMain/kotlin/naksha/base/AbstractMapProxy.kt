@@ -12,6 +12,8 @@ import naksha.base.PlatformMapApi.Companion.map_iterator
 import naksha.base.PlatformMapApi.Companion.map_remove
 import naksha.base.PlatformMapApi.Companion.map_set
 import naksha.base.PlatformMapApi.Companion.map_size
+import naksha.base.fn.Fn1
+import naksha.base.fn.Fn2
 import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
@@ -21,7 +23,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
+abstract class AbstractMapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
     override fun createData(): PlatformMap = Platform.newMap()
     override fun platformObject(): PlatformMap = super.platformObject() as PlatformMap
 
@@ -31,12 +33,11 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
     }
 
     /**
-     * Helper to return the value of the key, if the key does not exist or is not of the expected type, the
-     * provided alternative is returned and the key is set to the alternative.
-     * @param <T> The expected type.
-     * @param key The key to query.
-     * @param alternative The alternative to set and return, when the key does not exist or the value is not of the expected type.
-     * @return The value.
+     * Helper to return the value of the key, if the key does not exist or the value is not of the expected type, the alternative is set
+     * and returned.
+     * @param key the key to query.
+     * @param alternative the alternative to set and return, when the value is not of the expected type.
+     * @return the value.
      */
     fun <T : Any> getOrSet(key: K, alternative: T): T {
         val data = platformObject()
@@ -50,18 +51,56 @@ abstract class AbstractMapProxy<K:Any, V:Any>(val keyKlass: KClass<out K>, val v
     }
 
     /**
+     * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new value is created, stored
+     * with the key and returned.
+     * @param key the key to query.
+     * @param klass the [KClass] of the expected value type.
+     * @param init the initialize method to invoke, when the value is not of the expected type.
+     * @return the value.
+     */
+    fun <T : Any, KEY: K, SELF: AbstractMapProxy<K, V>> getOrInit(key: KEY, klass: KClass<out T>, init: Fn2<out T, in SELF, in KEY>): T {
+        val data = platformObject()
+        var value: T? = null
+        if (map_contains_key(data, key)) {
+            val raw = map_get(data, key)
+            value = box(raw, klass)
+        }
+        if (value == null) {
+            @Suppress("UNCHECKED_CAST")
+            value = init.call(this as SELF, key)
+            map_set(data, key, unbox(value))
+        }
+        return value
+    }
+
+    /**
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new
      * value is created, stored with the key and returned.
-     * @param <T> The expected type.
-     * @param key The key to query.
-     * @param klass The [KClass] of the expected value.
+     * @param key the key to query.
+     * @param klass the [KClass] of the expected value.
+     * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return The value.
      */
-    fun <T : Any> getOrCreate(key: K, klass: KClass<out T>): T {
+    fun <T : Any, KEY: K, SELF: AbstractMapProxy<K, V>> getOrCreate(
+        key: KEY,
+        klass: KClass<out T>,
+        init: Fn2<out T?, in SELF, in KEY>? = null
+    ): T {
         val data = platformObject()
-        val raw = map_get(data, key)
-        var value = box(raw, klass)
+        var value: T? = null
+        if (map_contains_key(data, key)) {
+            val raw = map_get(data, key)
+            value = box(raw, klass)
+        }
         if (value == null) {
+            if (init != null) {
+                @Suppress("UNCHECKED_CAST")
+                value = init.call(this as SELF, key)
+                if (value != null) {
+                    map_set(data, key, unbox(value))
+                    return value
+                }
+            }
             value = Platform.newInstanceOf(klass)
             map_set(data, key, unbox(value))
         }

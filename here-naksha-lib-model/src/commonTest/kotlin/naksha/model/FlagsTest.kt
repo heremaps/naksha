@@ -6,13 +6,8 @@ import naksha.model.Flags.FEATURE_ENCODING_JSON
 import naksha.model.Flags.FEATURE_ENCODING_JSON_GZIP
 import naksha.model.Flags.GEOMETRY_FLAG_ENCODER
 import naksha.model.Flags.GEO_TYPE_EWKB
-import naksha.model.Flags.GEO_TYPE_NULL
 import naksha.model.Flags.GEO_TYPE_TWKB
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
+import kotlin.test.*
 
 class FlagsTest {
 
@@ -84,10 +79,10 @@ class FlagsTest {
 
     @Test
     fun shouldNotBeAbleToExceedValues() {
-        assertThrows(Exception::class.java) { Flags.encodeFeatureFlag(0, 16) }
-        assertThrows(Exception::class.java) { Flags.encodeGeometryFlag(0, 16) }
-        assertThrows(Exception::class.java) { Flags.encodeAction(0, 4) }
-        assertThrows(Exception::class.java) { Flags.encodeTagsFlag(0, 16) }
+        assertFailsWith<Exception> { Flags.encodeFeatureFlag(0, 16) }
+        assertFailsWith<Exception> { Flags.encodeGeometryFlag(0, 16) }
+        assertFailsWith<Exception> { Flags.encodeAction(0, 4) }
+        assertFailsWith<Exception> { Flags.encodeTagsFlag(0, 16) }
     }
 
     @Test

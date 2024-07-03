@@ -95,7 +95,7 @@ actual class PlatformDataViewApi {
             view: PlatformDataView,
             pos: Int,
             littleEndian: Boolean
-        ): Int64 = view.asDynamic().getInt64(pos, littleEndian).unsafeCast<Int64>()
+        ): Int64 = view.asDynamic().getBigInt64(pos, littleEndian).unsafeCast<Int64>()
 
         @JsStatic
         actual fun dataview_set_int64(
@@ -104,7 +104,7 @@ actual class PlatformDataViewApi {
             value: Int64,
             littleEndian: Boolean
         ) {
-            view.asDynamic().setInt64(pos, value, littleEndian)
+            view.asDynamic().setBigInt64(pos, value, littleEndian)
         }
 
     }

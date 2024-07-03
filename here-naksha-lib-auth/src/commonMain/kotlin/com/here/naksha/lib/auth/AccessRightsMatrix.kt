@@ -5,6 +5,7 @@ package com.here.naksha.lib.auth
 import com.here.naksha.lib.auth.action.ACTIONS_BY_NAME
 import com.here.naksha.lib.auth.action.AccessRightsAction
 import com.here.naksha.lib.auth.attribute.ResourceAttributes
+import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
 import naksha.base.AbstractListProxy
 import naksha.base.AbstractMapProxy
 import kotlin.js.JsExport
@@ -17,8 +18,7 @@ import kotlin.js.JsExport
  * for given incoming user request bearing [UserRightsMatrix] - see its documentation for details.
  */
 @JsExport
-class AccessRightsMatrix :
-    AbstractMapProxy<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
+class AccessRightsMatrix : AbstractMapProxy<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
 
     fun useNaksha(): ServiceAccessRights = useService(NAKSHA_SERVICE_NAME)
 
@@ -31,8 +31,8 @@ class AccessRightsMatrix :
         }
     }
 
-    fun useService(name: String): ServiceAccessRights =
-        getOrCreate(name, ServiceAccessRights::class)
+    fun useService(name: String): ServiceAccessRights
+        = getOrCreate<ServiceAccessRights, String, AccessRightsMatrix>(name, ServiceAccessRights::class)
 
     companion object {
         const val NAKSHA_SERVICE_NAME: String = "naksha"
@@ -40,8 +40,7 @@ class AccessRightsMatrix :
 }
 
 @JsExport
-class ServiceAccessRights :
-    AbstractMapProxy<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
+class ServiceAccessRights : AbstractMapProxy<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
 
     override fun toValue(
         key: String,

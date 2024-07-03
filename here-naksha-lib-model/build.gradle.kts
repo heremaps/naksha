@@ -1,7 +1,9 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
+    kotlin("plugin.js-plain-objects")
 }
 
 kotlin {
@@ -18,6 +20,7 @@ kotlin {
             }
         }
         useEsModules()
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             target.set("es2015")
         }
@@ -41,6 +44,7 @@ kotlin {
         }
         commonTest {
             dependencies {
+                implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
@@ -56,15 +60,6 @@ kotlin {
 								api(project(":here-naksha-lib-auth"))
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
-        }
-        jvmTest {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
-                runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
-            }
         }
         jsMain {
             dependencies {
@@ -84,22 +79,29 @@ configure<JavaPluginExtension> {
 }
 
 tasks {
-    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack")
+    val jsProductionLibraryCompileSync = getByName<Task>("jsProductionLibraryCompileSync")
+    val jsProductionExecutableCompileSync = getByName<Task>("jsProductionExecutableCompileSync")
     val browserDistribution = getByName<Task>("jsBrowserDistribution")
-    getByName<Test>("jvmTest") {
-        useJUnitPlatform()
-        maxHeapSize = "8g"
+    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack") {
+        dependsOn(jsProductionLibraryCompileSync)
     }
-    getByName<Jar>("jvmJar") {
-        dependsOn(webpackTask)
+    getByName<Task>("jsNodeProductionLibraryDistribution") {
+        dependsOn(jsProductionExecutableCompileSync)
+    }
+    getByName<Task>("jsBrowserProductionLibraryDistribution") {
+        dependsOn(jsProductionExecutableCompileSync)
     }
     getByName<ProcessResources>("jvmProcessResources") {
         dependsOn(webpackTask, browserDistribution)
     }
     getByName<ProcessResources>("jvmTestProcessResources") {
-        dependsOn(webpackTask)
+        dependsOn(webpackTask, browserDistribution)
     }
-    getByName<Task>("jsProductionLibraryCompileSync") {
+    getByName<Test>("jvmTest") {
+        useJUnitPlatform()
+        maxHeapSize = "8g"
+    }
+    getByName<Jar>("jvmJar") {
         dependsOn(webpackTask)
     }
 }
