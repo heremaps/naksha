@@ -18,7 +18,6 @@ class NakshaCollectionProxyTest {
             disableHistory = true
         )
         collection.maxAge = Int64(42)
-        Platform.logger.info("maxAge: {} vs {}", collection.maxAge, Int64(42))
 
         // expect
         assertEquals("ID", collection.id)
