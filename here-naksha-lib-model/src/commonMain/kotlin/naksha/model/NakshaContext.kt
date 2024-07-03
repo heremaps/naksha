@@ -1,6 +1,6 @@
 package naksha.model
 
-import com.here.naksha.lib.base.com.here.naksha.lib.auth.UserRightsMatrix
+import naksha.auth.UserRightsMatrix
 import naksha.base.Int64
 import naksha.base.PlatformThreadLocal
 import naksha.base.Platform
