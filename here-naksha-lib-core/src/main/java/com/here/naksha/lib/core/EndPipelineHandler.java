@@ -19,8 +19,8 @@
 package com.here.naksha.lib.core;
 
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Result;
+import naksha.model.ErrorResult;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

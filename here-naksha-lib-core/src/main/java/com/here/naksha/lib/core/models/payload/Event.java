@@ -53,14 +53,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import naksha.model.NakshaVersion;
-import naksha.model.XyzResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * The base class of all events that are sent by the Hub to a {@link IEventHandler handler}. All events extend this event. All
  * {@link IEventHandler handler} can be sure to receive events that extend this class and need to respond with an object extending the
- * {@link XyzResponse} class.
+ * {@link naksha.model.response.ErrorResponse} class.
  *
  * <p>An event can be serialized and send to another instance to be processed there, this is decided
  * by the {@link EventPipeline}. When a handler sends an event {@link IEvent#sendUpstream() upstream}, the handler itself does not

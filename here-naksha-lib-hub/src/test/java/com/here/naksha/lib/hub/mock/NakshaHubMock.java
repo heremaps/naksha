@@ -31,7 +31,7 @@ import com.here.naksha.lib.core.models.PluginCache;
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Result;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;

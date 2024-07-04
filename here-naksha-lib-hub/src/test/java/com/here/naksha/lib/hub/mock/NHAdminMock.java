@@ -27,7 +27,7 @@ import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import com.here.naksha.lib.core.models.storage.IfConflict;
 import com.here.naksha.lib.core.models.storage.IfExists;
 import com.here.naksha.lib.core.models.storage.Result;

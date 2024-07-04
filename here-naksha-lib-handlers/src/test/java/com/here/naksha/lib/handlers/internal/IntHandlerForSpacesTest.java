@@ -19,7 +19,7 @@ import com.here.naksha.lib.core.INaksha;
 import naksha.model.NakshaContext;
 import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import com.here.naksha.lib.core.models.storage.HeapCacheCursor;
 import naksha.model.ReadFeatures;
 import naksha.model.Request;

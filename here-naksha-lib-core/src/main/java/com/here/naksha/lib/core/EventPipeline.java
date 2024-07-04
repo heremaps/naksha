@@ -18,15 +18,18 @@
  */
 package com.here.naksha.lib.core;
 
-import com.here.naksha.lib.core.models.XyzError;
+import static naksha.model.response.ErrorResponse.EXCEPTION;
+import static naksha.model.response.ErrorResponse.NOT_IMPLEMENTED;
+
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Result;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
-import naksha.model.Request;
+import naksha.model.request.Request;
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.NakshaError;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -45,15 +48,15 @@ public class EventPipeline extends NakshaBound {
 
   class Event implements IEvent {
 
-    Event(@NotNull Request<?> request) {
+    Event(@NotNull Request request) {
       this.request = request;
     }
 
     @NotNull
-    Request<?> request;
+    Request request;
 
     @Override
-    public @NotNull Request<?> getRequest() {
+    public @NotNull Request getRequest() {
       // This must only be called from within the pipeline, prevent calling from outside!
       if (!mutex.isHeldByCurrentThread()) {
         throw new IllegalStateException(LOCKED_MSG);
@@ -62,18 +65,18 @@ public class EventPipeline extends NakshaBound {
     }
 
     @Override
-    public @NotNull Request<?> setRequest(@NotNull Request<?> request) {
+    public @NotNull Request setRequest(@NotNull Request request) {
       // This must only be called from within the pipeline, prevent calling from outside!
       if (!mutex.isHeldByCurrentThread()) {
         throw new IllegalStateException(LOCKED_MSG);
       }
-      final Request<?> oldRequest = this.request;
+      final Request oldRequest = this.request;
       this.request = request;
       return oldRequest;
     }
 
     @Override
-    public @NotNull Result sendUpstream() {
+    public @NotNull Response sendUpstream() {
       // This must only be called from within the pipeline, prevent calling from outside!
       if (!mutex.isHeldByCurrentThread()) {
         throw new IllegalStateException(LOCKED_MSG);
@@ -98,8 +101,14 @@ public class EventPipeline extends NakshaBound {
         final String msg = "Event processing failed at handler #" + (next - 1) + " ["
             + handler.getClass().getSimpleName() + "]. " + t.getMessage();
         log.atWarn().setMessage(msg).setCause(t).log();
-        return new ErrorResult(XyzError.EXCEPTION, msg, t);
+        return new ErrorResponse(new NakshaError(EXCEPTION, msg, null, t));
       }
+    }
+
+    @NotNull
+    @Override
+    public Response sendUpstream(@NotNull Request request) {
+      return IEvent.super.sendUpstream(request);
     }
   }
 
@@ -139,7 +148,7 @@ public class EventPipeline extends NakshaBound {
    */
   private final ReentrantLock mutex = new ReentrantLock();
 
-  private @Nullable Consumer<Result> callback;
+  private @Nullable Consumer<Response> callback;
 
   /**
    * The creation time of the pipeline.
@@ -170,7 +179,7 @@ public class EventPipeline extends NakshaBound {
    * @param callback The callback to invoke, when the response is available.
    * @return this.
    */
-  public @NotNull EventPipeline setCallback(@Nullable Consumer<Result> callback) {
+  public @NotNull EventPipeline setCallback(@Nullable Consumer<Response> callback) {
     lock();
     try {
       this.callback = callback;
@@ -185,7 +194,7 @@ public class EventPipeline extends NakshaBound {
    *
    * @return The currently set callback.
    */
-  public @Nullable Consumer<Result> getCallback() {
+  public @Nullable Consumer<Response> getCallback() {
     return callback;
   }
 
@@ -231,10 +240,10 @@ public class EventPipeline extends NakshaBound {
    * @return The generated response.
    * @throws IllegalStateException If the pipeline is already in use.
    */
-  public @NotNull Result sendEvent(@NotNull Request<?> request) {
+  public @NotNull Response sendEvent(@NotNull Request request) {
     lock();
     try {
-      Result response;
+      Response response;
       this.event = new Event(request);
       // addEventHandler(this::pipelineEnd);
       addEventHandler(new EndPipelineHandler());
@@ -281,7 +290,7 @@ public class EventPipeline extends NakshaBound {
    */
   @Deprecated
   @NotNull
-  Result pipelineEnd(@NotNull IEvent event) {
+  Response pipelineEnd(@NotNull IEvent event) {
     log.atInfo()
         .setMessage("End of pipeline reached and no handle created a response")
         .setCause(new IllegalStateException())
@@ -290,8 +299,8 @@ public class EventPipeline extends NakshaBound {
   }
 
   @NotNull
-  Result notImplemented(@NotNull IEvent event) {
-    return new ErrorResult(
-        XyzError.NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported");
+  Response notImplemented(@NotNull IEvent event) {
+    return new ErrorResponse(
+        new NakshaError(NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported"));
   }
 }

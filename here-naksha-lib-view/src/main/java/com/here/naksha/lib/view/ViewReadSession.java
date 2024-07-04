@@ -25,7 +25,7 @@ import static java.util.stream.Collectors.toList;
 
 import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
 import com.here.naksha.lib.core.models.storage.HeapCacheCursor;

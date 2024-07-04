@@ -21,7 +21,7 @@ package com.here.naksha.lib.handlers.exceptions;
 import static com.here.naksha.lib.core.models.XyzError.NOT_FOUND;
 
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import org.jetbrains.annotations.NotNull;
 
 public final class MissingCollectionsException extends RuntimeException {

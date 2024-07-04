@@ -27,7 +27,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import naksha.model.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;

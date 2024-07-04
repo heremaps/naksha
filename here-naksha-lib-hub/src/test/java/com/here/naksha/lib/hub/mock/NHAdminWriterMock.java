@@ -31,7 +31,7 @@ import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Result;
 import naksha.model.WriteRequest;
 import com.here.naksha.lib.core.models.storage.WriteXyzCollections;

@@ -61,7 +61,7 @@ import naksha.geo.XyzGeometry;
 import naksha.geo.XyzPoint;
 import naksha.model.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import naksha.model.OpType;
 import naksha.model.POp;
 import naksha.model.ReadFeatures;

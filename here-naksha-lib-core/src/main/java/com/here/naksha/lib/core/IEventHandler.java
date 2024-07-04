@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core;
 
-import com.here.naksha.lib.core.models.storage.Result;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -38,5 +38,5 @@ public interface IEventHandler {
    * @return the result.
    */
   @NotNull
-  Result processEvent(@NotNull IEvent event);
+  Response processEvent(@NotNull IEvent event);
 }

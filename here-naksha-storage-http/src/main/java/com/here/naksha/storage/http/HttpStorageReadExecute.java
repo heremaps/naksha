@@ -26,7 +26,7 @@ import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import naksha.model.XyzFeature;
 import naksha.model.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import naksha.model.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.lib.core.models.storage.Result;

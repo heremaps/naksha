@@ -35,12 +35,12 @@ import java.io.OutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipException;
-import naksha.model.XyzResponse;
+import naksha.model.response.ErrorResponse;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@JsonSubTypes({@JsonSubTypes.Type(value = Event.class), @JsonSubTypes.Type(value = XyzResponse.class)})
+@JsonSubTypes({@JsonSubTypes.Type(value = Event.class), @JsonSubTypes.Type(value = ErrorResponse.class)})
 public class Payload extends JsonObject implements Typed {
 
   protected static final Logger logger = LoggerFactory.getLogger(Payload.class);
