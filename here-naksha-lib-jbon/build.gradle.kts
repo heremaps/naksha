@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
@@ -18,6 +19,7 @@ kotlin {
             }
         }
         useEsModules()
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             target.set("es2015")
         }
@@ -33,7 +35,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
-                implementation(project(":here-naksha-lib-base"))
+                api(project(":here-naksha-lib-base"))
             }
         }
         commonTest {
@@ -50,18 +52,9 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 api("org.lz4:lz4-java:1.8.0")
+                implementation("org.slf4j:slf4j-simple:2.0.13")
             }
-            resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
-        }
-        jvmTest {
-            jvmToolchain(11)
-            dependencies {
-                implementation(kotlin("test"))
-                implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
-                runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
-            }
+            resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
         jsMain {
             dependencies {

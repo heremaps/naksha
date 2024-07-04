@@ -27,12 +27,7 @@ expect class PlatformListApi {
          * - If fromIndex >= length, the array is not searched and -1 is returned.
          * @return The first index of searchElement in the array; -1 if not found.
          */
-        fun array_index_of(array: PlatformList?, searchElement: Any?, fromIndex: Int? = null): Int
-
-        /**
-         * Returns index of searchElement, -1 if not found.
-         */
-        fun array_first_index_of(array: PlatformList?, searchElement: Any?): Int
+        fun array_index_of(array: PlatformList?, searchElement: Any?, fromIndex: Int = 0): Int
 
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
@@ -45,20 +40,21 @@ expect class PlatformListApi {
          * - If fromIndex >= length or fromIndex is omitted, length - 1 is used, causing the entire array to be searched. You can think of it conceptually as starting at a nonexistent position beyond the end of the array and going backwards from there. It eventually reaches the real end position of the array, at which point it starts searching backwards through the actual array elements.
          * @return The last index of searchElement in the array; -1 if not found.
          */
-        fun array_last_index_of(array: PlatformList?, searchElement: Any?, fromIndex: Int? = null): Int
+        fun array_last_index_of(array: PlatformList?, searchElement: Any?, fromIndex: Int = array_get_length(array)): Int
 
         /**
          * Returns an iterator above the values of the array.
          * @return The iterator above the values of the array.
          */
-        fun array_entries(array: PlatformList): PlatformIterator<Any?>
+        fun array_entries(array: PlatformList?): PlatformIterator<Any?>
 
         /**
          * Appends values to the start of the array.
+         * @param array Base array to operate on.
          * @param elements The elements to append.
          * @return The new length of the array.
          */
-        fun array_unshift(vararg elements: Any?): Int
+        fun array_unshift(array: PlatformList?, vararg elements: Any?): Int
 
         /**
          * Appends values to the end of the array.
@@ -71,13 +67,15 @@ expect class PlatformListApi {
         /**
          * Removes the element at the zeroth index and shifts the values at consecutive indexes down, then returns the removed
          * value. If the length is 0, _undefined_ is returned.
+         * @param array Base array to operate on.
          */
-        fun array_shift(): Any?
+        fun array_shift(array: PlatformList?): Any?
 
         /**
          * Removes the last element from the array and returns that value. Calling [array_pop] on an empty array, returns _undefined_.
+         * @param array Base array to operate on.
          */
-        fun array_pop(): Any?
+        fun array_pop(array: PlatformList?): Any?
 
         /**
          * Sort the elements of this array in place and return the reference to this array, sorted. The default sort order is
@@ -86,6 +84,7 @@ expect class PlatformListApi {
          * The time and space complexity of the sort cannot be guaranteed as it depends on the implementation.
          *
          * To sort the elements in an array without mutating the original array, use [array_to_sorted].
+         * @param array Base array to operate on.
          * @param compareFn The (optional) compare function; if _null_ sorting will be ascending by [toString] UTF-16 code units.
          * A function that determines the order of the elements. The function is called with the following arguments:
          * - a: The first element for comparison. Will never be _undefined_.
@@ -100,12 +99,13 @@ expect class PlatformListApi {
          * To memorize this, remember that (a, b) => a - b sorts numbers in ascending order.
          * @return _this_.
          */
-        fun array_sort(compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
+        fun array_sort(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
 
         /**
          * This is the copying version of the [array_sort] method. It returns a new array with the elements sorted in ascending order
          * or sorting using the given compare-function.
          *
+         * @param array Base array to operate on.
          * @param compareFn The (optional) compare function; if _null_ sorting will be ascending by [toString] UTF-16 code units.
          * A function that determines the order of the elements. The function is called with the following arguments:
          * - a: The first element for comparison. Will never be _undefined_.
@@ -120,6 +120,6 @@ expect class PlatformListApi {
          * To memorize this, remember that (a, b) => a - b sorts numbers in ascending order.
          * @return A copy of this array, but sorted.
          */
-        fun array_to_sorted(compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
+        fun array_to_sorted(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
     }
 }

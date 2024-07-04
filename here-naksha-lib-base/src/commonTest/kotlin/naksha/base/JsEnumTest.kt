@@ -3,6 +3,7 @@
 package naksha.base
 
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 import kotlin.test.Test
@@ -10,33 +11,33 @@ import kotlin.test.assertEquals
 import kotlin.test.assertSame
 
 class JsEnumTest {
-    open class Vehicle protected constructor(value: String) : JsEnum(value) {
+    open class Vehicle : JsEnum() {
+
+        override fun namespace(): KClass<out JsEnum> = Vehicle::class
         override fun initClass() {
             register(Vehicle::class, Vehicle::class)
             register(Car::class, Vehicle::class)
             register(Truck::class, Vehicle::class)
         }
 
-        override fun namespace(): KClass<out JsEnum> = Vehicle::class
-        override fun init() {}
         open fun type(): String = "Vehicle"
     }
 
-    class Car private constructor(value: String) : Vehicle(value) {
+    class Car : Vehicle() {
         companion object {
-            @JvmStatic
+            @JvmField
             @JsStatic
-            val BAR = Car("bar")
+            val BAR = def(Car::class, "bar")
         }
 
         override fun type(): String = "Car"
     }
 
-    class Truck private constructor(value: String) : Vehicle(value) {
+    class Truck : Vehicle() {
         companion object {
-            @JvmStatic
+            @JvmField
             @JsStatic
-            val FOO = Truck("foo")
+            val FOO = def(Truck::class, "foo")
         }
 
         override fun type(): String = "Truck"
@@ -45,6 +46,8 @@ class JsEnumTest {
     @Test
     fun testJsEnumExample() {
         // Tests the code given as example in the JsEnum class!
+        //Platform.logger.info("bar: {}", Car.BAR)
+        //Platform.logger.info("foo: {}", Truck.FOO)
         val bar = JsEnum.get("bar", Vehicle::class)
         assertSame(Car.BAR, bar)
         val foo = JsEnum.get("foo", Vehicle::class)

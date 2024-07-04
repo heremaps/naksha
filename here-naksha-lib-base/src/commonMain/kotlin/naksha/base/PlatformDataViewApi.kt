@@ -8,8 +8,6 @@ expect class PlatformDataViewApi {
         fun dataview_get_byte_array(view: PlatformDataView): ByteArray
         // TODO: Rename to dataview_get_byte_offset
         fun dataview_get_start(view: PlatformDataView): Int
-        @Deprecated("To be removed in next releases.", level = DeprecationLevel.WARNING)
-        fun dataview_get_end(view: PlatformDataView): Int
         // TODO: Rename to dataview_get_byte_length
         fun dataview_get_size(view: PlatformDataView): Int
 

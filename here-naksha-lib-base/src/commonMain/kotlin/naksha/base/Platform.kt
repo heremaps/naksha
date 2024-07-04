@@ -46,6 +46,11 @@ expect class Platform {
         val MIN_SAFE_INT: Double
 
         /**
+         * The difference between 1 and the smallest floating point number greater than 1.
+         */
+        val EPSILON: Double
+
+        /**
          * The KClass for [Any].
          */
         val anyKlass: KClass<Any>
@@ -113,19 +118,11 @@ expect class Platform {
         fun isNil(any: Any?): Boolean
 
         /**
-         * Creates an undefined value for the given type or returns the cached one.
-         * @param klass The type for which to create an undefined value.
-         * @return The undefined value.
-         */
-        fun <T : Any> undefinedOf(klass: KClass<T>): T
-
-        /**
          * Must be called ones in the lifetime of an application to initialize the multi-platform code. The method is thread safe and
          * only does something when first called.
-         * @param parameters Some arbitrary platform specific parameters to be forwarded.
          * @return _true_ if this was the first call and the platform was initialized; _false_ if the platform is already initialized.
          */
-        fun initialize(vararg parameters: Any?): Boolean
+        fun initialize(): Boolean
 
         /**
          * Tests if the [target] class or interface is either the same as, or is a superclass or superinterface of, the class
@@ -171,8 +168,8 @@ expect class Platform {
          * @return The [KClass] **of** the given object.
          * @throws IllegalArgumentException If the given object has no valid [KClass].
          */
-        fun <T : Any> klassOf(o: T): KClass<out T>
-        // TODO: In Java add: fun <T: Any> klassOf(javaClass: Class<T>): KClass<out T>
+        fun <T : Any> klassOf(o: T): KClass<T>
+        // fun <T: Any> klassOf(javaClass: Class<T>): KClass<T> // <-- Java-only
 
         /**
          * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
@@ -246,7 +243,7 @@ expect class Platform {
          * @param value The object to access.
          * @return The [PlatformObject] if a [Proxy] given; otherwise the value itself.
          */
-        fun valueOf(value: Any?): Any?
+        fun unbox(value: Any?): Any?
 
         /**
          * Create a 32-bit integer from the given value.
@@ -304,6 +301,13 @@ expect class Platform {
         fun int64ToLong(value: Int64): Long
 
         /**
+         * Tests if the given object is a scalar, so _null_, _undefined_, any [Number], [String] or [Boolean].
+         * @param o The object to test.
+         * @return _true_ if the object is a scalar; _false_ otherwise.
+         */
+        fun isScalar(o: Any?): Boolean
+
+        /**
          * Tests if the given object is a [Number] or [Int64].
          * @param o The object to test.
          * @return _true_ if the object is a [Number] or [Int64]; _false_ otherwise.
@@ -348,14 +352,14 @@ expect class Platform {
          * @return The new instance.
          * @throws IllegalArgumentException If there is no parameterless constructor.
          */
-        fun <T : Any> newInstanceOf(klass: KClass<T>): T
+        fun <T : Any> newInstanceOf(klass: KClass<out T>): T
 
         /**
          * Creates a new instance of the given type, bypassing the constructor, so it returns the uninitialized class.
          * @param klass The type of which to create a new instance.
          * @return The new instance.
          */
-        fun <T : Any> allocateInstance(klass: KClass<T>): T
+        fun <T : Any> allocateInstance(klass: KClass<out T>): T
 
         /**
          * Forces the class loader to initialize the given Kotlin class.
@@ -473,26 +477,14 @@ expect class Platform {
          * @return The inflated (decompress) bytes.
          */
         fun gzipInflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+
+        /**
+         * Create a stack-trace as string for debugging purpose.
+         *
+         * In Kotlin, you can simply invoke [Throwable.stackTraceToString], which is how this method is implemented.
+         * @param t the throwable for which to return the stack-trace.
+         * @return the stack-trace as string.
+         */
+        fun stackTrace(t: Throwable): String
     }
 }
-/*
-
-The code for "fromJSON" and "toJSON" Map and BigInt's:
-
-var m = JSON.parse('{"a":{"b":1231232131231231321323213,"c":5,"big":"data:bigint,18446744073709551615"}}', (key, value) => {
-  if (!value) return value;
-  if (typeof value === "string" && value.startsWith("data:bigint,")) return BigInt(value.substring("data:bigint,".length));
-  if (!Array.isArray(value) && !(value instanceof Map) && typeof value === "object") return new Map(Object.entries(value));
-  return value;
-});
-
-var s = JSON.stringify(m, function(k, v) {
-  if (!v) return v;
-  if (v.valueOf() instanceof Map) return Object.fromEntries(v.valueOf().entries());
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs
-  // data:[<mediatype>][;base64],<data>
-  if (typeof v.valueOf() === "bigint") return "data:bigint,"+String(v);
-  return v;
-})
-
-*/

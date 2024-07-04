@@ -9,38 +9,29 @@ import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
- * A custom enumeration implementation that supports more flexible enumerations. Creating enumeration values
- * requires to implement [initClass], [init], and [namespace]. The implementation is only done in the class
- * directly extending the [JsEnum], which is called as well the **namespace**.
+ * A custom enumeration implementation that supports more flexible enumerations. Creating enumeration values requires to implement
+ * [namespace]. The implementation is only done in the class directly extending the [JsEnum], which is called as well the **namespace**.
  *
- * The constructor should be kept _protected_ or _private_, because the creation of values through any other
- * means than [get] or as static member should be avoided. The default implementation looks like:
+ * An implementation normally looks like:
  * ```
- * open class Vehicle protected constructor(value: String)
- *   : JsEnum(value)
+ * open class Vehicle : JsEnum()
  * {
- *   override fun initClass() {
- *     register(Vehicle::class, Vehicle::class)
- *     register(Car::class, Vehicle::class)
- *     register(Truck::class, Vehicle::class)
- *   }
  *   override fun namespace(): KClass<out JsEnum> = Vehicle::class
- *   override fun init() {}
  *   open fun type(): String = "Vehicle"
  * }
- * class Car private constructor(value: String) : Vehicle(value) {
+ * class Car : Vehicle() {
  *   companion object {
  *     @JvmStatic
  *     @JsStatic
- *     val BAR = Car("bar")
+ *     val BAR = def(Car::class, "bar")
  *   }
  *   override fun type(): String = "Car"
  * }
- * class Truck private constructor(value: String) : Vehicle(value) {
+ * class Truck : Vehicle() {
  *   companion object {
  *     @JvmStatic
  *     @JsStatic
- *     val FOO = Truck("foo")
+ *     val FOO = def(Truck::class, "foo")
  *   }
  *   override fun type(): String = "Truck"
  * }
@@ -56,13 +47,15 @@ import kotlin.reflect.KClass
  * ```
  * This should print "bar is Car", "foo is Truck" and "unknown is Vehicle".
  *
- * @constructor Create a new pre-defined enumeration value.
- * @param value The value for which to create a pre-defined value.
- * @property namespace The root Kotlin class that forms the namespace for all value, so the Kotlin class that directly extends [JsEnum].
+ * @constructor Should not be called, please us [def] or [defIgnoreCase].
  */
 @Suppress("OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
 @JsExport
-abstract class JsEnum protected constructor(value: Any?) : CharSequence {
+abstract class JsEnum : CharSequence {
+    init {
+        check(false) { "Do not directly invoke enumeration constructor, please always use def or defIgnoreCase" }
+    }
+
     /**
      * The value that represents NULL in the internal registry.
      */
@@ -85,22 +78,6 @@ abstract class JsEnum protected constructor(value: Any?) : CharSequence {
      */
     var isDefined: Boolean = false
         private set
-
-    init {
-        var registerNamespace = false
-        var ns = klassToNamespace[this::class]
-        if (ns == null) {
-            // This is the first time an instance of this enumeration type is created!
-            ns = namespace()
-            registerNamespace = true
-        }
-        val raw = alignValue(value)
-        this.value = raw
-        this.isDefined = true
-        val nsMap = nsMap(ns)
-        check(nsMap.putIfAbsent(raw ?: NULL, this) == null)
-        if (registerNamespace) initClass()
-    }
 
     companion object {
         private fun alignValue(value: Any?): Any? {
@@ -134,16 +111,76 @@ abstract class JsEnum protected constructor(value: Any?) : CharSequence {
          * All registered enumeration values of a namespace. The first level is the namespace (the Kotlin class
          * that directly extend [JsEnum]), the second level maps values to registered instances.
          */
-        private val registry = CMap<KClass<*>, CMap<Any, JsEnum>>()
+        private val registryMain = CMap<KClass<*>, CMap<Any, JsEnum>>()
 
-        private fun nsMap(ns: KClass<out JsEnum>): CMap<Any, JsEnum> {
-            var nsMap = registry[ns]
-            if (nsMap == null) {
-                nsMap = CMap()
-                val existing = registry.putIfAbsent(ns, nsMap)
-                if (existing != null) nsMap = existing
+        /**
+         * All registered enumeration aliases. The first level is the namespace (the Kotlin class that directly extend [JsEnum]), the
+         * second level maps values to registered instances.
+         */
+        private val registryAlias = CMap<KClass<*>, CMap<Any, JsEnum>>()
+
+        private fun mainMap(ns: KClass<out JsEnum>): CMap<Any, JsEnum> {
+            var mainMap = registryMain[ns]
+            if (mainMap == null) {
+                mainMap = CMap()
+                val existing = registryMain.putIfAbsent(ns, mainMap)
+                if (existing != null) mainMap = existing
             }
-            return nsMap
+            return mainMap
+        }
+
+        private fun aliasMap(ns: KClass<out JsEnum>): CMap<Any, JsEnum> {
+            var aliasMap = registryAlias[ns]
+            if (aliasMap == null) {
+                aliasMap = CMap()
+                val existing = registryAlias.putIfAbsent(ns, aliasMap)
+                if (existing != null) aliasMap = existing
+            }
+            return aliasMap
+        }
+
+        /**
+         * Defines a new enumeration value that is not case-sensitive. Beware, that the provided value is still used exactly as given when
+         * serializing the value.
+         *
+         * @param enumKlass the enumeration class.
+         * @param value     the value.
+         * @return the defined instance.
+         * @throws IllegalStateException if another class is already registered for the value (there is a conflict).
+         */
+        @JvmStatic
+        @JsStatic
+        fun <ENUM : JsEnum> defIgnoreCase(enumKlass: KClass<ENUM>, value: String, init: Fx1<ENUM>? = null): ENUM {
+            val e = def(enumKlass, value, init)
+            val s = value.lowercase()
+            val aliasMap = aliasMap(e.namespace())
+            check(aliasMap.putIfAbsent(s, e) == null) {
+                "Conflict, there is already an enumeration value for ${e.value} registered: ${aliasMap[s]!!::class.simpleName}"
+            }
+            return e
+        }
+
+        /**
+         * Defines a new enumeration value.
+         *
+         * @param enumKlass the enumeration class.
+         * @param value     the value.
+         * @return the defined instance.
+         * @throws IllegalStateException if another class is already registered for the value (there is a conflict).
+         */
+        fun <ENUM : JsEnum> def(enumKlass: KClass<ENUM>, value: Any?, init: Fx1<ENUM>? = null): ENUM {
+            require(value === null || value is String || value is Number || value is Int64) {
+                "Invalid enumeration value, require null, String or Number"
+            }
+            val e = __get(value, enumKlass, false)
+            e.isDefined = true
+            val mainMap = mainMap(e.namespace())
+            check(mainMap.putIfAbsent(e.value ?: NULL, e) == null) {
+                "Conflict, there is already an enumeration value for ${e.value} registered: ${mainMap[e.value]!!::class.simpleName}"
+            }
+            e.init()
+            init?.call(e)
+            return e
         }
 
         /**
@@ -153,33 +190,39 @@ abstract class JsEnum protected constructor(value: Any?) : CharSequence {
          * @param enumKlass The enumeration klass to query.
          * @return The enumeration for the given value.
          */
-        @Suppress("UNCHECKED_CAST")
         @JvmStatic
         @JsStatic
-        fun <T : JsEnum> get(value: Any?, enumKlass: KClass<out T>): T {
+        fun <ENUM : JsEnum> get(value: Any?, enumKlass: KClass<out ENUM>): ENUM = __get(value, enumKlass, true)
+
+        @Suppress("UNCHECKED_CAST")
+        private fun <ENUM : JsEnum> __get(value: Any?, enumKlass: KClass<out ENUM>, doInit: Boolean): ENUM {
             var ns = klassToNamespace[enumKlass]
             if (ns == null) {
                 // The class is not yet initialized, allocate an instance.
                 // Allocating an instance, should cause the companion object to be initialized.
                 val instance = Platform.allocateInstance(enumKlass)
-                ns = klassToNamespace[enumKlass]
-                if (ns == null) {
-                    // Edge case: The enumeration class exists, but has no pre-defined values!
-                    // Calling registerAll should at least register the namespace.
-                    instance.initClass()
-                    ns = klassToNamespace[instance.namespace()]
+                ns = instance.namespace()
+                val existing = klassToNamespace.putIfAbsent(enumKlass, ns)
+                check(existing === null || existing === ns) {
+                    "There is already another class (${existing!!.simpleName}) registered for namespace ${ns.simpleName}"
                 }
-                require(ns != null)
+                instance.initClass()
             }
-            val nsMap = nsMap(ns)
+            val mainMap = mainMap(ns)
             val key = alignValue(value) ?: NULL
-            var e = nsMap[key] as T?
+            var e = mainMap[key] as ENUM?
+            if (e == null) {
+                val aliasMap = aliasMap(ns)
+                e = aliasMap[key] as ENUM?
+                if (e == null && key is String) {
+                    e = aliasMap[key.lowercase()] as ENUM?
+                }
+            }
             if (e == null) {
                 // The value is not pre-defined, create it on-the-fly.
                 e = Platform.allocateInstance(enumKlass)
                 e.value = alignValue(value)
-                e.isDefined = false
-                e.init()
+                if (doInit) e.init()
             }
             return e
         }
@@ -196,11 +239,28 @@ abstract class JsEnum protected constructor(value: Any?) : CharSequence {
     abstract fun namespace(): KClass<out JsEnum>
 
     /**
-     * This method is invoked exactly ones per namespace, when the enumeration namespace is not yet initialized. It
-     * simplifies auto-initialization. Actually, it is required that the namespace class (the class directly extending
-     * the [JsEnum]) implements this method and invokes [register] for itself and all extending classes. For example,
-     * when an enumeration class `Vehicle` is created with two extending enumeration classes being `Car` and `Truck`,
-     * then the `initClass` method of the `Vehicle` should do:
+     * Register a enumeration type.
+     * @param childKlass The enumeration-class.
+     * @param namespace The namespace.
+     */
+    protected fun <NS : JsEnum, CHILD : NS> register(
+        childKlass: KClass<out CHILD>,
+        namespace: KClass<out NS>
+    ) {
+        val existing = klassToNamespace.putIfAbsent(childKlass, namespace)
+        check(existing === null || existing === namespace) {
+            "Failed to register '${childKlass.simpleName}' to namespace '${namespace.simpleName}'" +
+                    ", '${childKlass.simpleName}' is already registered to '${existing!!.simpleName}'"
+        }
+        Platform.initializeKlass(childKlass)
+    }
+
+
+    /**
+     * This method is invoked exactly ones per namespace, when the enumeration namespace is not yet initialized. It simplifies
+     * auto-initialization. Actually, it is required that the namespace class (the class directly extending the [JsEnum]) implements this
+     * method and invokes [register] for itself and all extending classes. For example, when an enumeration class `Vehicle` is created
+     * with two extending enumeration classes being `Car` and `Truck`, then the `initClass` method of the `Vehicle` should do:
      * ```
      * protected fun initClass() {
      *   register(Vehicle::class, Vehicle::class)
@@ -210,10 +270,8 @@ abstract class JsEnum protected constructor(value: Any?) : CharSequence {
      * ```
      * This is needed to resolve the chicken-egg problem of the JVM class loading mechanism. The order is not relevant.
      *
-     * **Note**: The minimal requirement is to register itself, like
-     * ```
-     * register(Self::class, Self::class)
-     * ```
+     * **Notes**:
+     * - The minimal requirement is to register itself.
      *
      * ## Details
      *
@@ -230,23 +288,12 @@ abstract class JsEnum protected constructor(value: Any?) : CharSequence {
      * to default values, because the constructor is bypassed by the reflection construction. It is invoked after the [value]
      * has been set, so [value] can be read.
      */
-    protected abstract fun init()
+    protected fun init() {}
 
     /**
      * A method that can be overridden, if the enumeration requires special handling in turning the value into a string.
      */
     protected open fun createString(): String = value?.toString() ?: "null"
-
-    /**
-     * Register a enumeration type.
-     * @param childKlass The enumeration-class.
-     * @param namespace The namespace.
-     */
-    protected fun <NS : JsEnum, C : NS> register(childKlass: KClass<out C>, namespace: KClass<out NS>) {
-        val existing = klassToNamespace.putIfAbsent(childKlass, namespace)
-        check(existing == null || existing === namespace)
-        Platform.initializeKlass(childKlass)
-    }
 
     /**
      * Runs a lambda against this enumeration instance. In Kotlin it is better to simply use `.apply {}`.
@@ -270,7 +317,7 @@ abstract class JsEnum protected constructor(value: Any?) : CharSequence {
      * @return this.
      */
     protected fun <SELF : JsEnum> alias(selfClass: KClass<SELF>, value: Any?) {
-
+        TODO("JsEnum::alias is not yet implemented")
     }
 
     final override fun toString(): String {
@@ -282,6 +329,18 @@ abstract class JsEnum protected constructor(value: Any?) : CharSequence {
         return s
     }
 
+    fun toJSON(): String = toString()
+
+    /**
+     * Tests if this object is like the given value.
+     * @param other the other value to compare against.
+     * @return _true_ if the other value represents the same as this object; _false_ otherwise.
+     */
+    fun like(other: Any?): Boolean {
+        if (this === other) return true
+        if (other is JsEnum) return other.value == value
+        return value == other
+    }
     final override fun equals(other: Any?): Boolean = this === other || (other is JsEnum && other.value == value)
     final override fun hashCode(): Int = toString().hashCode()
 

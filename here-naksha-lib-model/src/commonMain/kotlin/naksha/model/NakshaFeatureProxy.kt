@@ -1,36 +1,36 @@
-@file:Suppress("OPT_IN_USAGE")
-
 package naksha.model
 
+import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.geo.GeoFeature
-import naksha.geo.cords.PointCoordsProxy
+import naksha.geo.GeoFeatureProxy
+import naksha.geo.PointGeometry
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * The Naksha Feature extending the default [GeoFeature].
+ * The Naksha Feature extending the default [GeoFeatureProxy].
  */
+@Suppress("OPT_IN_USAGE")
 @JsExport
-open class NakshaFeatureProxy() : GeoFeature() {
+open class NakshaFeatureProxy() : GeoFeatureProxy() {
 
     @JsName("of")
-    constructor(id: String): this(){
+    constructor(id: String) : this() {
         this.id = id
     }
 
     companion object {
-        private val REFERENCE_POINT = NullableProperty<Any, NakshaFeatureProxy, PointCoordsProxy>(
-            PointCoordsProxy::class
-        )
+        private val REFERENCE_POINT = NullableProperty<Any, NakshaFeatureProxy, PointGeometry>(PointGeometry::class)
+        private val PROPERTIES = NotNullProperty<Any, NakshaFeatureProxy, NakshaPropertiesProxy>(NakshaPropertiesProxy::class)
     }
 
     /**
      * Reference point of the feature. Used for grid calculation.
      */
-    var referencePoint: PointCoordsProxy? by REFERENCE_POINT
+    open var referencePoint by REFERENCE_POINT
 
-    fun nakshaProperties(): NakshaPropertiesProxy = properties.proxy(NakshaPropertiesProxy::class)
-
-    fun xyz() = nakshaProperties().xyz
+    /**
+     * The properties of the feature.
+     */
+    open var properties by PROPERTIES
 }

@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.base.Platform.Companion.logger
 import naksha.base.PlatformObject
 import naksha.jbon.*
 import naksha.model.*
@@ -11,8 +12,6 @@ import naksha.model.response.ErrorResponse
 import naksha.model.response.Response
 import naksha.model.response.Row
 import naksha.model.response.SuccessResponse
-import naksha.psql.*
-import naksha.psql.NKC_TABLE
 import naksha.psql.Static.SC_DICTIONARIES
 import naksha.psql.Static.SC_INDICES
 import naksha.psql.Static.SC_TRANSACTIONS
@@ -23,17 +22,91 @@ import naksha.psql.Static.SC_TRANSACTIONS
  * to **Naksha-Hub** as storage plugin. It parses the configuration from feature properties given, and calls this constructor.
  * @constructor Creates a new PSQL storage.
  * @property id the identifier of the storage.
- * @property pgCluster the PostgresQL instances used by this storage.
- * @property schema the schema to use.
+ * @property cluster the PostgresQL instances used by this storage.
+ * @property options the default connection options, ignores the [PgSessionOptions.readOnly] and [PgSessionOptions.useMaster].
  */
-open class PsqlStorage(val id: String, val pgCluster: PsqlCluster, val schema: String) : PgStorage, IStorage {
+open class PsqlStorage(val id: String, val cluster: PsqlCluster, val options: PgSessionOptions) : PgStorage, IStorage {
 
     override fun id(): String = id
 
+    /**
+     * Connects to the configured PostgresQL database and verifies if the database is initialized.
+     *
+     * If the database is not initialized, it checks if the [current NakshaContext][NakshaContext.currentContext] is a supervisor
+     * context, so the [NakshaContext.su] is _true_. If not, it will throw an [IllegalStateException].
+     *
+     * Eventually, when the database is not initialized and the current actor is a supervisor, it tries to install the
+     * [PLV8 extension](https://plv8.github.io/), if being available. If that succeeds, it will install the `commonjs2`, `lz4`, `jbon`,
+     * and `naksha` JavaScript modules.
+     *
+     * Generally, it will create the schema and all needed admin-tables (for transactions, global dictionary aso.). The server side
+     * (database) code is only supported, if the database supports the [PLV8 extension](https://plv8.github.io/).
+     *
+     * @throws IllegalStateException if the data is not yet initialized, and the [current NakshaContext][NakshaContext.currentContext] is
+     * not a supervisor context, so the [NakshaContext.su] is _false_.
+     */
     override fun initStorage(params: Map<String, *>?) {
-        val conn = pgCluster.openSession(PgSessionOptions(false))
-        conn.use {
-            install(conn, 0, schema, id, appName = "fixme")
+        var version = NakshaVersion.latest
+        if (params != null && params.contains("version")) {
+            val v = params["version"]
+            version = when (v) {
+                is String -> NakshaVersion.of(v)
+                is Number -> NakshaVersion(v.toLong())
+                is Int64 -> NakshaVersion(v)
+                else -> throw IllegalArgumentException("params.version must be a valid Naksha version string or binary encoding")
+            }
+        }
+        val pgSession = cluster.openSession(options)
+        pgSession.use {
+            pgSession.jdbcConnection.autoCommit = false
+            logger.info("Initialize database {}", pgSession.jdbcConnection.url)
+            val schemaQuoted = PgUtil.quoteIdent(options.schema)
+            pgSession.execute(
+                """
+CREATE SCHEMA IF NOT EXISTS $schemaQuoted;
+SET SESSION search_path TO $schemaQuoted, public, topology;
+"""
+            )
+            val result = pgSession.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(options.schema))
+            val rows = pgSession.rows(result)
+            check(rows != null)
+            check(rows.size == 1)
+            val schemaOid: Int = rows[0]["oid"]!! as Int
+            executeSqlFromResource(pgSession, "/commonjs2.sql")
+            installModuleFromResource(pgSession, "beautify", "/beautify.min.js")
+            executeSqlFromResource(pgSession, "/beautify.sql")
+            pgSession.execute(
+                """DO $$
+var commonjs2_init = plv8.find_function("commonjs2_init");
+commonjs2_init();
+$$ LANGUAGE 'plv8';"""
+            )
+            installModuleFromResource(pgSession, "lz4_util", "/lz4_util.js")
+            installModuleFromResource(pgSession, "lz4_xxhash", "/lz4_xxhash.js")
+            installModuleFromResource(pgSession, "lz4", "/lz4.js")
+            executeSqlFromResource(pgSession, "/lz4.sql")
+            // Note: We know, that we do not need the replacements and code is faster without them!
+            val replacements = mapOf("version" to version.toString(), "schema" to options.schema, "storage_id" to id)
+            // Note: The compiler embeds the JBON classes into plv8.
+            //       Therefore, we must not have it standalone, because otherwise we
+            //       have two distinct instances in memory.
+            //       A side effect sadly is that you need to require naksha, before you can require jbon!
+            // TODO: Extend the commonjs2 code so that it allows to declare that one module contains another!
+            installModuleFromResource(
+                pgSession, "naksha", "/here-naksha-lib-plv8.js",
+                beautify = true,
+                replacements = replacements,
+                extraCode = """
+plv8.moduleCache["base"] = module.exports["here-naksha-lib-base"];
+plv8.moduleCache["jbon"] = module.exports["here-naksha-lib-jbon"];
+module.exports = module.exports["here-naksha-lib-plv8"];
+"""
+            )
+            executeSqlFromResource(pgSession, "/naksha.sql", replacements)
+            executeSqlFromResource(pgSession, "/jbon.sql")
+            Static.createBaseInternalsIfNotExists(pgSession, options.schema, schemaOid)
+            createInternalsIfNotExists()
+            pgSession.commit()
         }
     }
 
@@ -66,11 +139,11 @@ open class PsqlStorage(val id: String, val pgCluster: PsqlCluster, val schema: S
     }
 
     override fun newReadSession(context: NakshaContext, useMaster: Boolean): NakshaSession {
-        return NakshaSession(this, context, PgSessionOptions(true), schema)
+        return NakshaSession(this, context, options.copy(readOnly = true, useMaster = useMaster))
     }
 
     override fun newWriteSession(context: NakshaContext): NakshaSession {
-        return NakshaSession(this, context, PgSessionOptions(false), schema)
+        return NakshaSession(this, context, options.copy(readOnly = false, useMaster = true))
     }
 
     override fun close() {
@@ -81,9 +154,9 @@ open class PsqlStorage(val id: String, val pgCluster: PsqlCluster, val schema: S
         TODO("Not yet implemented")
     }
 
-    override fun openSession(context: NakshaContext, options: PgSessionOptions): PgSession {
+    override fun openSession(context: NakshaContext, options: PgSessionOptions): PsqlSession {
         // TODO: We need to initialize the connection for the given context!
-        return pgCluster.openSession(options)
+        return cluster.openSession(options)
     }
 
     private fun getResourceAsText(path: String): String? =
@@ -145,60 +218,6 @@ open class PsqlStorage(val id: String, val pgCluster: PsqlCluster, val schema: S
         conn.execute(query, arrayOf(name, autoload, code))
     }
 
-    /**
-     * Installs the `commonjs2`, `lz4`, `jbon` and `naksha` modules into a PostgresQL database with a _PLV8_ extension. Must only
-     * be executed ones per storage. This as well creates the needed admin-tables (for transactions, global dictionary aso.).
-     * @param conn The connection to use for the installation.
-     * @param version The Naksha Version.
-     */
-    fun install(conn: PsqlSession, version: Long, schema: String, storageId: String, appName: String) {
-        conn.pgConnection.autoCommit = false
-        val schemaQuoted = PgUtil.quoteIdent(schema)
-        conn.execute(
-            """
-CREATE SCHEMA IF NOT EXISTS $schemaQuoted;
-SET SESSION search_path TO $schemaQuoted, public, topology;
-"""
-        )
-        val schemaOid: Int = conn.rows(conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)))!![0]["oid"]!! as
-                Int
-
-        executeSqlFromResource(conn, "/commonjs2.sql")
-        installModuleFromResource(conn, "beautify", "/beautify.min.js")
-        executeSqlFromResource(conn, "/beautify.sql")
-        conn.execute(
-            """DO $$
-var commonjs2_init = plv8.find_function("commonjs2_init");
-commonjs2_init();
-$$ LANGUAGE 'plv8';"""
-        )
-        installModuleFromResource(conn, "lz4_util", "/lz4_util.js")
-        installModuleFromResource(conn, "lz4_xxhash", "/lz4_xxhash.js")
-        installModuleFromResource(conn, "lz4", "/lz4.js")
-        executeSqlFromResource(conn, "/lz4.sql")
-        // Note: We know, that we do not need the replacements and code is faster without them!
-        val replacements = mapOf("version" to version.toString(), "schema" to schema, "storage_id" to storageId)
-        // Note: The compiler embeds the JBON classes into plv8.
-        //       Therefore, we must not have it standalone, because otherwise we
-        //       have two distinct instances in memory.
-        //       A side effect sadly is that you need to require naksha, before you can require jbon!
-        // TODO: Extend the commonjs2 code so that it allows to declare that one module contains another!
-        installModuleFromResource(
-            conn, "naksha", "/here-naksha-lib-plv8.js",
-            beautify = true,
-            replacements = replacements,
-            extraCode = """
-plv8.moduleCache["base"] = module.exports["here-naksha-lib-base"];
-plv8.moduleCache["jbon"] = module.exports["here-naksha-lib-jbon"];
-module.exports = module.exports["here-naksha-lib-plv8"];
-"""
-        )
-        executeSqlFromResource(conn, "/naksha.sql", replacements)
-        executeSqlFromResource(conn, "/jbon.sql")
-        Static.createBaseInternalsIfNotExists(conn, schema, schemaOid)
-        createInternalsIfNotExists()
-        conn.commit()
-    }
 
     private fun createInternalsIfNotExists() {
         val verifyCreation: (Response) -> Unit = {

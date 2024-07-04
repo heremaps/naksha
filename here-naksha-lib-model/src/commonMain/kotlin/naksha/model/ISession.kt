@@ -19,12 +19,17 @@ interface ISession : AutoCloseable {
     val context: NakshaContext
 
     /**
+     * The socket timeout in milliseconds.
+     */
+    var socketTimeout: Int
+
+    /**
      * The statement timeout in milliseconds.
      */
     var stmtTimeout: Int
 
     /**
-     * The statement timeout in milliseconds.
+     * The lock timeout in milliseconds.
      */
     var lockTimeout: Int
 

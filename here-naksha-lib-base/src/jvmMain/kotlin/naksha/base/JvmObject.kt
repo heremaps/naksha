@@ -79,7 +79,7 @@ open class JvmObject : PlatformObject {
             return if (s.containsKey(sym)) s.remove(sym) else null
         }
         if (sym === DEFAULT_SYMBOL) {
-            val old = if (baseSym == undefined) null else baseSym
+            val old = if (baseSym === undefined) null else baseSym
             baseSym = undefined
             return old
         }
@@ -118,7 +118,7 @@ open class JvmObject : PlatformObject {
         if (value === undefined) return removeSymbol(sym)
         var s = symbols
         if (s == null && sym === DEFAULT_SYMBOL) {
-            val old = if (baseSym == undefined) null else baseSym
+            val old = if (baseSym === undefined) null else baseSym
             baseSym = value
             return old
         }
@@ -132,9 +132,7 @@ open class JvmObject : PlatformObject {
      * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
      * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
      * @param klass The proxy class.
-     * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
      * @return The proxy instance.
-     * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
      */
-    override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = Platform.proxy(this, klass, doNotOverride)
+    override fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(this, klass)
 }

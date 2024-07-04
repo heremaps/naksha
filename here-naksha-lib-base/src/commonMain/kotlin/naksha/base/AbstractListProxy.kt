@@ -4,16 +4,18 @@ package naksha.base
 
 import naksha.base.PlatformListApi.Companion.array_delete
 import naksha.base.PlatformListApi.Companion.array_entries
-import naksha.base.PlatformListApi.Companion.array_first_index_of
 import naksha.base.PlatformListApi.Companion.array_get
 import naksha.base.PlatformListApi.Companion.array_get_length
+import naksha.base.PlatformListApi.Companion.array_index_of
 import naksha.base.PlatformListApi.Companion.array_last_index_of
 import naksha.base.PlatformListApi.Companion.array_push
 import naksha.base.PlatformListApi.Companion.array_retain_all
 import naksha.base.PlatformListApi.Companion.array_set
 import naksha.base.PlatformListApi.Companion.array_set_length
 import naksha.base.PlatformListApi.Companion.array_splice
+import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.math.max
 import kotlin.reflect.KClass
 
 /**
@@ -26,7 +28,7 @@ import kotlin.reflect.KClass
 abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
 
     override fun createData(): PlatformList = Platform.newList()
-    override fun data(): PlatformList = super.data() as PlatformList
+    override fun platformObject(): PlatformList = super.platformObject() as PlatformList
 
     override fun bind(data: PlatformObject, symbol: Symbol) {
         require(data is PlatformList)
@@ -40,66 +42,104 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
      * @param alternative The alternative to return, when the element is not of the specified type.
      * @return The element.
      */
-    protected open fun getOr(index: Int, alternative: E?): E? = box(array_get(data(), index), elementKlass, alternative)
+    protected open fun getOr(index: Int, alternative: E): E? = box(array_get(platformObject(), index), elementKlass, alternative)
 
     /**
-     * Returns the element at the given index. If no such key element exists or the element is not of the specified type,
-     * creates a new element, assigns it and returns it.
-     * @param index The key to query.
-     * @return The element.
+     * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new value is created, stored
+     * with the key and returned.
+     * @param index the key to query.
+     * @param klass the [KClass] of the expected value type.
+     * @param init the initialize method to invoke, when the value is not of the expected type.
+     * @return the value.
      */
-    protected open fun getOrCreate(index: Int): E {
-        val data = data()
-        val raw = array_get(data, index)
-        var value = box(raw, elementKlass, null)
+    fun <T : Any, SELF: AbstractListProxy<E>> getOrInit(index: Int, klass: KClass<out T>, init: Fn2<out T, in SELF, in Int>): T {
+        val data = platformObject()
+        val i = if (index < 0) max(0, array_get_length(data) + index) else index
+        var value: T? = null
+        if (i < array_get_length(data)) {
+            val raw = array_get(data, i)
+            value = box(raw, klass)
+        }
         if (value == null) {
-            value = Platform.newInstanceOf(elementKlass)
-            array_set(data, index, Platform.valueOf(value))
+            @Suppress("UNCHECKED_CAST")
+            value = init.call(this as SELF, i)
+            array_set(data, i, unbox(value))
+        }
+        return value
+    }
+
+    /**
+     * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new
+     * value is created, stored with the key and returned.
+     * @param index the key to query.
+     * @param klass the [KClass] of the expected value.
+     * @param init the initialize method to invoke, when the value is not of the expected type.
+     * @return The value.
+     */
+    fun <T : Any, SELF: AbstractListProxy<E>> getOrCreate(index: Int, klass: KClass<out T>, init: Fn2<out T?, in SELF, in Int>? = null): T {
+        val data = platformObject()
+        val i = if (index < 0) max(0, array_get_length(data) + index) else index
+        var value: T? = null
+        if (i < array_get_length(data)) {
+            val raw = array_get(data, i)
+            value = box(raw, klass)
+        }
+        if (value == null) {
+            if (init != null) {
+                @Suppress("UNCHECKED_CAST")
+                value = init.call(this as SELF, i)
+                if (value != null) {
+                    array_set(data, i, unbox(value))
+                    return value
+                }
+            }
+            value = Platform.newInstanceOf(klass)
+            array_set(data, i, unbox(value))
         }
         return value
     }
 
     override var size: Int
-        get() = array_get_length(data())
-        set(newLength) = array_set_length(data(), newLength)
+        get() = array_get_length(platformObject())
+        set(newLength) = array_set_length(platformObject(), newLength)
 
-    override fun clear() = array_set_length(data(), 0)
+    override fun clear() = array_set_length(platformObject(), 0)
 
-    override fun get(index: Int): E? = box(array_get(data(), index), elementKlass)
+    override fun get(index: Int): E? = box(array_get(platformObject(), index), elementKlass)
 
-    override fun isEmpty(): Boolean = array_get_length(data()) == 0
+    override fun isEmpty(): Boolean = array_get_length(platformObject()) == 0
 
     override fun iterator(): MutableIterator<E?> {
-        return toMutableList(data()).listIterator()
+        return toMutableList(platformObject()).listIterator()
     }
 
     override fun listIterator(): MutableListIterator<E?> {
-        return toMutableList(data()).listIterator()
+        return toMutableList(platformObject()).listIterator()
     }
 
     override fun listIterator(index: Int): MutableListIterator<E?> {
-        return toMutableList(data()).listIterator(index)
+        return toMutableList(platformObject()).listIterator(index)
     }
 
     override fun removeAt(index: Int): E? {
-        val data = data()
-        if (index < 0 || index >= array_get_length(data)) return Platform.undefinedOf(elementKlass)
+        val data = platformObject()
+        if (index < 0 || index >= array_get_length(data)) return null
         return box(array_delete(data, index), elementKlass)
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<E?> {
-        val mutableList: MutableList<E?> = toMutableList(data())
+        val mutableList: MutableList<E?> = toMutableList(platformObject())
         return mutableList.subList(fromIndex, toIndex)
     }
 
     override fun set(index: Int, element: E?): E? {
-        val data = data()
+        val data = platformObject()
         return box(array_set(data, index, unbox(element)), elementKlass)
     }
 
     override fun retainAll(elements: Collection<E?>): Boolean {
-        val unboxed: Array<Any?> = elements.map { Platform.valueOf(it) }.toTypedArray()
-        return array_retain_all(data(), *unboxed)
+        val unboxed: Array<Any?> = elements.map { Platform.unbox(it) }.toTypedArray()
+        return array_retain_all(platformObject(), *unboxed)
     }
 
     override fun removeAll(elements: Collection<E?>): Boolean {
@@ -111,18 +151,18 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
     }
 
     override fun remove(element: E?): Boolean {
-        val data = data()
-        val i = array_first_index_of(data, element)
+        val data = platformObject()
+        val i = array_index_of(data, element, 0)
         if (i >= 0) {
-            array_delete(data(), i)
+            array_delete(data, i)
             return true
         }
         return false
     }
 
-    override fun lastIndexOf(element: E?): Int = array_last_index_of(data(), element)
+    override fun lastIndexOf(element: E?): Int = array_last_index_of(platformObject(), element)
 
-    override fun indexOf(element: E?): Int = array_first_index_of(data(), element)
+    override fun indexOf(element: E?): Int = array_index_of(platformObject(), element)
 
     override fun containsAll(elements: Collection<E?>): Boolean {
         for (element in elements) {
@@ -136,20 +176,20 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
     override fun contains(element: E?): Boolean = indexOf(element) >= 0
 
     override fun addAll(elements: Collection<E?>): Boolean {
-        val data = data()
+        val data = platformObject()
         if (elements.isNotEmpty()) {
-            for (e in elements) array_push(data, Platform.valueOf(e))
+            for (e in elements) array_push(data, Platform.unbox(e))
             return true
         }
         return false
     }
 
     override fun addAll(index: Int, elements: Collection<E?>): Boolean {
-        val data = data()
+        val data = platformObject()
         if (elements.isNotEmpty()) {
             val array = arrayOfNulls<Any?>(elements.size)
             var i = 0
-            for (e in elements) array[i++] = Platform.valueOf(e)
+            for (e in elements) array[i++] = Platform.unbox(e)
             array_splice(data, index, 0, *array)
             return true
         }
@@ -157,11 +197,12 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
     }
 
     override fun add(index: Int, element: E?) {
-        array_splice(data(), index, 0, Platform.valueOf(element))
+        if(index < 0) throw IndexOutOfBoundsException(index.toString())
+        array_splice(platformObject(), index, 0, Platform.unbox(element))
     }
 
     override fun add(element: E?): Boolean {
-        array_push(data(), Platform.valueOf(element))
+        array_push(platformObject(), Platform.unbox(element))
         return true
     }
 

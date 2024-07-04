@@ -18,6 +18,7 @@ kotlin {
             }
         }
         useEsModules()
+        @Suppress("OPT_IN_USAGE")
         compilerOptions {
             target.set("es2015")
         }
@@ -38,32 +39,22 @@ kotlin {
         }
         commonTest {
             dependencies {
+                implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
-        jvmMain {
-            jvmToolchain(11)
-            dependencies {
-                implementation(kotlin("stdlib-jdk8"))
-                implementation(project(":here-naksha-lib-base"))
-            }
-            resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
-        }
         jvmTest {
+            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("test"))
                 implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
                 runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
-            }
-        }
-        jsMain {
-            dependencies {
-                implementation(kotlin("stdlib-js"))
-                implementation(project(":here-naksha-lib-base"))
+                api("org.slf4j:slf4j-api:2.0.13")
+                implementation("org.slf4j:slf4j-simple:2.0.13")
             }
         }
     }

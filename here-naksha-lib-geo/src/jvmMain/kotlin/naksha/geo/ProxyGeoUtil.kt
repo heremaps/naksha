@@ -1,126 +1,118 @@
 package naksha.geo
 
-import naksha.geo.cords.*
 import org.locationtech.jts.geom.*
 
+@Suppress("MemberVisibilityCanBePrivate")
 object ProxyGeoUtil {
 
     private val factory: GeometryFactory = GeometryFactory(PrecisionModel(), 4326)
 
     /**
+     * Converts [PointCoord] to JTS [Coordinate] with or without altitude.
+     *
+     * @param coords [PointCoord] to convert
+     * @return [Coordinate]
+     */
+    fun toJtsCoordinate(coords: PointCoord): Coordinate =
+        if(coords.hasAltitude())
+            Coordinate(coords.getLongitude(), coords.getLatitude())
+        else
+            Coordinate(coords.getLongitude(), coords.getLatitude(), coords.getAltitude())
+
+    /**
      * Converts proxy model to JTS [Geometry] using [factory] with default SRID: 4326
      *
-     * @param proxy - proxy geometry to convert
+     * @param geometry - proxy geometry to convert
      * @return JTS Geometry
      * @throws [IllegalArgumentException] when proxy type is not supported
      * @throws [RuntimeException] when proxy has null coordinates
      */
-    fun toJtsGeometry(proxy: GeometryProxy): Geometry {
-        return when (proxy) {
-            is PointProxy -> toJtsPoint(proxy)
-            is MultiPointProxy -> toJtsMultiPoint(proxy)
-            is LineStringProxy -> toJtsLineString(proxy)
-            is MultiLineStringProxy -> toJtsMultiLineString(proxy)
-            is PolygonProxy -> toJtsPolygon(proxy)
-            is MultiPolygonProxy -> toJtsMultiPolygon(proxy)
-            else -> throw IllegalArgumentException("Unknown proxy type ${proxy.javaClass}")
+    fun toJtsGeometry(geometry: GeometryProxy): Geometry {
+        return when (geometry.type) {
+            GeoType.Point.toString() -> toJtsPoint(geometry.asPoint())
+            GeoType.MultiPoint.toString() -> toJtsMultiPoint(geometry.asMultiPoint())
+            GeoType.LineString.toString() -> toJtsLineString(geometry.asLineString())
+            GeoType.MultiLineString.toString() -> toJtsMultiLineString(geometry.asMultiLineString())
+            GeoType.Polygon.toString() -> toJtsPolygon(geometry.asPolygon())
+            GeoType.MultiPolygon.toString() -> toJtsMultiPolygon(geometry.asMultiPolygon())
+            else -> throw IllegalArgumentException("Unknown proxy type ${geometry::class.simpleName}")
         }
     }
 
     /**
-     * Converts [PointProxy] to JTS [Point]
+     * Converts [PointGeometry] to JTS [Point]
      *
-     * @param proxy [PointProxy] to convert
+     * @param geometry [PointGeometry] to convert
      * @return [Point]
      * @throws [RuntimeException] when proxy has null coordinates
      */
-    fun toJtsPoint(proxy: PointProxy): Point {
-        require(proxy.coordinates != null)
-        return toJtsPoint(proxy.coordinates!!)
-    }
+    fun toJtsPoint(geometry: PointGeometry): Point = toJtsPoint(geometry.getCoordinates())
 
     /**
-     * Converts [PointCoordsProxy] to JTS [Point]
+     * Converts [PointCoord] to JTS [Point]
      *
-     * @param coords [PointCoordsProxy] to convert
+     * @param coords [PointCoord] to convert
      * @return [Point]
      */
-    fun toJtsPoint(coords: PointCoordsProxy): Point {
-        return if (coords.getAltitude() == null) {
-            factory.createPoint(Coordinate(coords.getLongitude()!!, coords.getLatitude()!!))
-        } else {
-            factory.createPoint(Coordinate(coords.getLongitude()!!, coords.getLatitude()!!, coords.getAltitude()!!))
-        }
-    }
+    fun toJtsPoint(coords: PointCoord): Point = factory.createPoint(toJtsCoordinate(coords))
 
     /**
-     * Converts [MultiPointProxy] to JTS [MultiPoint]
+     * Converts [MultiPointGeometry] to JTS [MultiPoint]
      *
-     * @param proxy [MultiPointProxy] to convert
+     * @param geometry [MultiPointGeometry] to convert
      * @return [MultiPoint]
      * @throws [RuntimeException] when proxy has null coordinates
      */
-    fun toJtsMultiPoint(proxy: MultiPointProxy): MultiPoint {
-        require(proxy.coordinates != null)
-        return toJtsMultiPoint(proxy.coordinates!!)
-    }
+    fun toJtsMultiPoint(geometry: MultiPointGeometry): MultiPoint = toJtsMultiPoint(geometry.getCoordinates())
 
     /**
-     * Converts [MultiPointCoordsProxy] to JTS [MultiPoint]
+     * Converts [MultiPointCoord] to JTS [MultiPoint]
      *
-     * @param coords [MultiPointCoordsProxy] to convert
+     * @param coords [MultiPointCoord] to convert
      * @return [MultiPoint]
      * @throws [RuntimeException] when proxy has null coordinates
      */
-    fun toJtsMultiPoint(coords: MultiPointCoordsProxy): MultiPoint {
+    fun toJtsMultiPoint(coords: MultiPointCoord): MultiPoint {
         val points = coords.map { toJtsPoint(it!!) }.toTypedArray()
         return factory.createMultiPoint(points)
     }
 
     /**
-     * Converts [LineStringCoordsProxy] to JTS [LineString]
+     * Converts [LineStringGeometry] to JTS [LineString]
      *
-     * @param coords [LineStringCoordsProxy] to convert
+     * @param geometry [LineStringGeometry] to convert
+     * @return [LineString]
+     */
+    fun toJtsLineString(geometry: LineStringGeometry): LineString = toJtsLineString(geometry.getCoordinates())
+
+    /**
+     * Converts [LineStringCoord] to JTS [LineString]
+     *
+     * @param coords [LineStringCoord] to convert
      * @return [LineString]
      * @throws [RuntimeException] when proxy has null coordinates
      */
-    fun toJtsLineString(coords: LineStringCoordsProxy): LineString {
+    fun toJtsLineString(coords: LineStringCoord): LineString {
         val points = coords.map { toJtsCoordinate(it!!) }.toTypedArray()
         return factory.createLineString(points)
     }
 
     /**
-     * Converts [LineStringProxy] to JTS [LineString]
+     * Converts [PolygonGeometry] to JTS [Polygon]
      *
-     * @param coords [LineStringProxy] to convert
-     * @return [LineString]
+     * @param geometry [PolygonGeometry] to convert
+     * @return [Polygon]
+     * @throws [RuntimeException] when proxy has null coordinates
      */
-    fun toJtsLineString(proxy: LineStringProxy): LineString {
-        require(proxy.coordinates != null)
-        return toJtsLineString(proxy.coordinates!!)
-    }
+    fun toJtsPolygon(geometry: PolygonGeometry): Polygon = toJtsPolygon(geometry.getCoordinates())
 
     /**
-     * Converts [PointCoordsProxy] to JTS [Coordinate] with or without altitude.
+     * Converts [PolygonCoord] to JTS [Polygon]
      *
-     * @param coords [PointCoordsProxy] to convert
-     * @return [MultiPoint]
-     */
-    fun toJtsCoordinate(coords: PointCoordsProxy): Coordinate {
-        return if (coords.getAltitude() == null) {
-            Coordinate(coords.getLongitude()!!, coords.getLatitude()!!)
-        } else {
-            Coordinate(coords.getLongitude()!!, coords.getLatitude()!!, coords.getAltitude()!!)
-        }
-    }
-
-    /**
-     * Converts [PolygonCoordsProxy] to JTS [Polygon]
-     *
-     * @param coords [PolygonCoordsProxy] to convert
+     * @param coords [PolygonCoord] to convert
      * @return [Polygon]
      */
-    fun toJtsPolygon(coords: PolygonCoordsProxy): Polygon {
+    fun toJtsPolygon(coords: PolygonCoord): Polygon {
         if (coords.size == 0) {
             return factory.createPolygon()
         }
@@ -141,24 +133,21 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts [PolygonProxy] to JTS [Polygon]
+     * Converts [MultiLineStringGeometry] to JTS [MultiLineString]
      *
-     * @param proxy [PolygonProxy] to convert
-     * @return [Polygon]
+     * @param geometry [MultiLineStringGeometry] to convert
+     * @return [MultiLineString]
      * @throws [RuntimeException] when proxy has null coordinates
      */
-    fun toJtsPolygon(proxy: PolygonProxy): Polygon {
-        require(proxy.coordinates != null)
-        return toJtsPolygon(proxy.coordinates!!)
-    }
+    fun toJtsMultiLineString(geometry: MultiLineStringGeometry): MultiLineString = toJtsMultiLineString(geometry.getCoordinates())
 
     /**
-     * Converts [PolygonCoordsProxy] to JTS [MultiLineString]
+     * Converts [MultiLineStringCoord] to JTS [MultiLineString]
      *
-     * @param coords [PolygonCoordsProxy] to convert
+     * @param coords [MultiLineStringCoord] to convert
      * @return [MultiLineString]
      */
-    fun toJtsMultiLineString(coords: MultiLineStringCoordsProxy): MultiLineString {
+    fun toJtsMultiLineString(coords: MultiLineStringCoord): MultiLineString {
         if (coords.size == 0) {
             return factory.createMultiLineString()
         }
@@ -168,24 +157,21 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts [MultiLineStringProxy] to JTS [MultiLineString]
+     * Converts [MultiPolygonGeometry] to JTS [MultiPolygon]
      *
-     * @param proxy [MultiLineStringProxy] to convert
-     * @return [MultiLineString]
+     * @param geometry [MultiPolygonGeometry] to convert
+     * @return [MultiPolygon]
      * @throws [RuntimeException] when proxy has null coordinates
      */
-    fun toJtsMultiLineString(proxy: MultiLineStringProxy): MultiLineString {
-        require(proxy.coordinates != null)
-        return toJtsMultiLineString(proxy.coordinates!!)
-    }
+    fun toJtsMultiPolygon(geometry: MultiPolygonGeometry): MultiPolygon = toJtsMultiPolygon(geometry.getCoordinates())
 
     /**
-     * Converts [MultiPolygonCoordsProxy] to JTS [MultiPolygon]
+     * Converts [MultiPolygonCoord] to JTS [MultiPolygon]
      *
-     * @param coords [MultiPolygonCoordsProxy] to convert
+     * @param coords [MultiPolygonCoord] to convert
      * @return [MultiPolygon]
      */
-    fun toJtsMultiPolygon(coords: MultiPolygonCoordsProxy): MultiPolygon {
+    fun toJtsMultiPolygon(coords: MultiPolygonCoord): MultiPolygon {
         if (coords.size == 0) {
             return factory.createMultiPolygon()
         }
@@ -195,54 +181,16 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts [MultiPolygonProxy] to JTS [MultiPolygon]
+     * Converts [LineStringCoord] to JTS [LinearRing]
      *
-     * @param proxy [MultiPolygonProxy] to convert
-     * @return [MultiPolygon]
-     * @throws [RuntimeException] when proxy has null coordinates
-     */
-    fun toJtsMultiPolygon(proxy: MultiPolygonProxy): MultiPolygon {
-        require(proxy.coordinates != null)
-        return toJtsMultiPolygon(proxy.coordinates!!)
-    }
-
-    /**
-     * Converts [LineStringCoordsProxy] to JTS [LinearRing]
-     *
-     * @param coords [LineStringCoordsProxy] to convert
+     * @param coords [LineStringCoord] to convert
      * @return [LinearRing]
      */
-    fun toJtsLinearRing(coords: LineStringCoordsProxy): LinearRing {
+    fun toJtsLinearRing(coords: LineStringCoord): LinearRing {
         if (coords.isEmpty()) {
             return factory.createLinearRing()
         }
         val jtsCoordinateArray = coords.map { toJtsCoordinate(it!!) }.toTypedArray()
         return factory.createLinearRing(jtsCoordinateArray)
-    }
-
-    /**
-     * Helper function that returns Geometry representing BoundingBox for the co-ordinates
-     * supplied as arguments.
-     *
-     * @param west west co-ordinate
-     * @param south south co-ordinate
-     * @param east east co-ordinate
-     * @param north north co-ordinate
-     * @return Geometry representing BBox envelope
-     */
-    fun createBBoxEnvelope(
-        west: Double, south: Double, east: Double, north: Double
-    ): PolygonProxy {
-        val polygonProxy = PolygonProxy()
-        polygonProxy.coordinates = PolygonCoordsProxy(
-            LineStringCoordsProxy(
-                PointCoordsProxy(west, south),
-                PointCoordsProxy(east, south),
-                PointCoordsProxy(east, north),
-                PointCoordsProxy(west, north),
-                PointCoordsProxy(west, south)
-            )
-        )
-        return polygonProxy
     }
 }

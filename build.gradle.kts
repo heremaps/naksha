@@ -26,8 +26,8 @@ plugins {
     id("jacoco-report-aggregation")
     // For latest dev version:
     // https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap/org/jetbrains/kotlin/kotlin-compiler/maven-metadata.xml
-    //id("org.jetbrains.kotlin.multiplatform").version("2.0.20-dev-6501").apply(false)
-    //kotlin("plugin.js-plain-objects").version("2.0.20-dev-6501")
+    //id("org.jetbrains.kotlin.multiplatform").version("2.0.20-dev-7572").apply(false)
+    //kotlin("plugin.js-plain-objects").version("2.0.20-dev-7572")
     id("org.jetbrains.kotlin.multiplatform").version("2.0.20-Beta1").apply(false)
     kotlin("plugin.js-plain-objects").version("2.0.20-Beta1")
 }

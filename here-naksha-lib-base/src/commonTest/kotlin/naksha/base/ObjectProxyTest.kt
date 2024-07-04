@@ -4,9 +4,9 @@ import kotlin.test.*
 
 class Foo : ObjectProxy() {
     companion object {
-        private val NAME = NotNullProperty<Any, Foo, String>(String::class, { "Bernd" })
-        private val XYZ = NullableProperty<Any, Foo, String>(String::class, name = "@ns:com:here:xyz")
-        private val AGE = NotNullProperty<Any, Foo, Int>(Int::class, { 0 })
+        val NAME = NotNullProperty<Any, Foo, String>(String::class) { _, _ -> "Bernd" }
+        val AGE = NotNullProperty<Any, Foo, Int>(Int::class) { _, _ -> 0 }
+        val XYZ = NullableProperty<Any, Foo, String>(String::class, name = "@ns:com:here:xyz")
     }
 
     var name: String by NAME
@@ -16,8 +16,8 @@ class Foo : ObjectProxy() {
 
 class Bar : ObjectProxy() {
     companion object {
-        private val FOO = NotNullProperty<Any, Bar, Foo>(Foo::class)
-        private val FOO2 = NullableProperty<Any, Bar, Foo>(Foo::class)
+        val FOO = NotNullProperty<Any, Bar, Foo>(Foo::class)
+        val FOO2 = NullableProperty<Any, Bar, Foo>(Foo::class)
     }
 
     var foo: Foo by FOO

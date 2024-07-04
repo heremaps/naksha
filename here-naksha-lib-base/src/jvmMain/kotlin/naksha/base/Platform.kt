@@ -97,59 +97,65 @@ actual class Platform {
          * The cache stores the 64-bit integers between -1024 and +1023 with 0 being at index 0, 1023 at index 1023, -1024 at index 1024
          * and -1 at index 2047. To query, do: `cached[(value.toInt() shl 21) ushr 21)]`
          */
-        @JvmStatic
+        @JvmField
         internal val int64Cache = Array(2048) { JvmInt64(((it shl 21) shr 21).toLong()) }
 
         /**
          * The cache for all declared symbols.
          */
-        @JvmStatic
+        @JvmField
         internal val symbolsCache = ConcurrentHashMap<String, Symbol>()
 
         /**
          * The symbol (_com.here.naksha.lib.nak_) to store the default Naksha multi-platform types in.
          */
-        @JvmStatic
+        @JvmField
         actual val DEFAULT_SYMBOL: Symbol = Symbols.forName("com.here.naksha.lib.nak")
 
         /**
          * The maximum value of a 64-bit integer.
          * @return The maximum value of a 64-bit integer.
          */
-        @JvmStatic
+        @JvmField
         actual val INT64_MAX_VALUE: Int64 = JvmInt64(Long.MAX_VALUE)
 
         /**
          * The minimum value of a 64-bit integer.
          * @return The minimum value of a 64-bit integer.
          */
-        @JvmStatic
+        @JvmField
         actual val INT64_MIN_VALUE: Int64 = JvmInt64(Long.MIN_VALUE)
 
         /**
          * The minimum integer that can safely stored in a double.
          * @return The minimum integer that can safely stored in a double.
          */
-        @JvmStatic
+        @JvmField
         actual val MAX_SAFE_INT: Double = 9007199254740991.0
 
         /**
          * The maximum integer that can safely stored in a double.
          * @return The maximum integer that can safely stored in a double.
          */
-        @JvmStatic
+        @JvmField
         actual val MIN_SAFE_INT: Double = -9007199254740991.0
+
+        /**
+         * The difference between 1 and the smallest floating point number greater than 1.
+         */
+        @JvmField
+        actual val EPSILON: Double = Math.ulp(1.0)
 
         /**
          * The reference to TheUnsafe class.
          */
-        @JvmStatic
+        @JvmField
         val unsafe: Unsafe
 
         /**
          * The base-offset in a byte-array.
          */
-        @JvmStatic
+        @JvmField
         val baseOffset: Int
 
         @JvmStatic
@@ -164,7 +170,7 @@ actual class Platform {
         }
 
         @JvmStatic
-        actual fun initialize(vararg parameters: Any?): Boolean {
+        actual fun initialize(): Boolean {
             if (initialized.compareAndSet(false, true)) {
                 // TODO: Do we need to do anything?
                 return true
@@ -187,8 +193,9 @@ actual class Platform {
             TODO("Implement me!")
         }
 
+        @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        actual fun <T : Any> klassOf(o: T): KClass<out T> = o::class
+        actual fun <T : Any> klassOf(o: T): KClass<T> = o::class as KClass<T>
 
         /**
          * Returns the Kotlin class of the given Java class.
@@ -196,7 +203,7 @@ actual class Platform {
          * @return The Kotlin class.
          */
         @JvmStatic
-        fun <T : Any> klassOf(javaClass: Class<out T>): KClass<out T> = javaClass.kotlin
+        fun <T : Any> klassOf(javaClass: Class<T>): KClass<T> = javaClass.kotlin
 
         /**
          * Returns the Java class of the given Kotlin class.
@@ -256,7 +263,11 @@ actual class Platform {
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView = JvmDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun valueOf(value: Any?): Any? = if (value is Proxy) value.data() as? JvmObject else value
+        actual fun unbox(value: Any?): Any? {
+            if (value is Proxy) return value.platformObject() as? JvmObject
+            if (value is Array<*>) return JvmList(*value)
+            return value
+        }
 
         /**
          * Returns the [JvmObject] of the given object.
@@ -264,7 +275,7 @@ actual class Platform {
          * @return The [JvmObject] or _null_.
          */
         @JvmStatic
-        fun toJvmObject(o: Any?): JvmObject? = if (o is Proxy) o.data() as? JvmObject else if (o is JvmObject) o else null
+        fun toJvmObject(o: Any?): JvmObject? = if (o is Proxy) o.platformObject() as? JvmObject else if (o is JvmObject) o else null
 
         @JvmStatic
         actual fun toInt(value: Any): Int = when (value) {
@@ -313,6 +324,9 @@ actual class Platform {
 
         @JvmStatic
         actual fun isNumber(o: Any?): Boolean = o is Number
+
+        @JvmStatic
+        actual fun isScalar(o: Any?): Boolean = o==null || o is Number || o is String || o is Boolean
 
         @JvmStatic
         actual fun isInteger(o: Any?): Boolean = o is Byte || o is Short || o is Int || o is Long || o is JvmInt64
@@ -395,11 +409,11 @@ actual class Platform {
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
 
         @JvmStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<T>): T = klass.primaryConstructor?.call() ?: throw IllegalArgumentException()
+        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T = klass.primaryConstructor?.call() ?: throw IllegalArgumentException()
 
         @JvmStatic
         @Suppress("UNCHECKED_CAST")
-        actual fun <T: Any> allocateInstance(klass: KClass<T>): T = unsafe.allocateInstance(klass.java) as T
+        actual fun <T: Any> allocateInstance(klass: KClass<out T>): T = unsafe.allocateInstance(klass.java) as T
 
         @JvmStatic
         actual fun initializeKlass(klass: KClass<*>) {
@@ -457,79 +471,68 @@ actual class Platform {
         /**
          * The KClass for [Any].
          */
-        @JvmStatic
-        actual val anyKlass: KClass<Any>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val anyKlass: KClass<Any> = Any::class
 
         /**
          * The KClass for [Boolean].
          */
-        @JvmStatic
-        actual val booleanKlass: KClass<Boolean>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val booleanKlass: KClass<Boolean> = Boolean::class
 
         /**
          * The KClass for [Short].
          */
-        @JvmStatic
-        actual val shortKlass: KClass<Short>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val shortKlass: KClass<Short> = Short::class
 
         /**
          * The KClass for [Int].
          */
-        @JvmStatic
-        actual val intKlass: KClass<Int>
-            get() = Int::class
+        @JvmField
+        actual val intKlass: KClass<Int> = Int::class
 
         /**
          * The KClass for [Int64].
          */
-        @JvmStatic
-        actual val int64Klass: KClass<Int64>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val int64Klass: KClass<Int64> = Int64::class
 
         /**
          * The KClass for [Double].
          */
-        @JvmStatic
-        actual val doubleKlass: KClass<Double>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val doubleKlass: KClass<Double> = Double::class
 
         /**
          * The KClass for [String].
          */
-        @JvmStatic
-        actual val stringKlass: KClass<String>
-            get() = String::class
+        @JvmField
+        actual val stringKlass: KClass<String> = String::class
 
         /**
          * The KClass for [PlatformObject].
          */
-        @JvmStatic
-        actual val objectKlass: KClass<PlatformObject>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val objectKlass: KClass<PlatformObject> = PlatformObject::class
 
         /**
          * The KClass for [PlatformList].
          */
-        @JvmStatic
-        actual val listKlass: KClass<PlatformList>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val listKlass: KClass<PlatformList> = PlatformList::class
 
         /**
          * The KClass for [PlatformMap].
          */
-        @JvmStatic
-        actual val mapKlass: KClass<PlatformMap>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val mapKlass: KClass<PlatformMap> = PlatformMap::class
 
         /**
          * The KClass for [PlatformDataViewApi].
          */
-        @JvmStatic
-        actual val dataViewKlass: KClass<PlatformDataView>
-            get() = TODO("Not yet implemented")
+        @JvmField
+        actual val dataViewKlass: KClass<PlatformDataView> = PlatformDataView::class
 
         /**
          * Tests if the given value is _null_ or _undefined_.
@@ -538,16 +541,6 @@ actual class Platform {
          */
         @JvmStatic
         actual fun isNil(any: Any?): Boolean = any == null
-
-        /**
-         * Creates an undefined value for the given type or returns the cached one.
-         * @param klass The type for which to create an undefined value.
-         * @return The undefined value.
-         */
-        @JvmStatic
-        actual fun <T : Any> undefinedOf(klass: KClass<T>): T {
-            TODO("Not yet implemented")
-        }
 
         /**
          * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
@@ -573,9 +566,15 @@ actual class Platform {
             return proxy
         }
 
+        /**
+         * The default logger singleton to be used as initial value by the default [loggerThreadLocal]. This is based upon
+         * [SLF4j](https://www.slf4j.org/). If an application has a different logger singleton, it can simply place this variable. If the
+         * application requires a dedicated thread-local logger instances, it should rather replace the [loggerThreadLocal] with an own
+         * version that creates a correct initial thread local logger.
+         */
         @JvmStatic
-        private val defaultPlatformLogger = object : PlatformLogger {
-            private val logger = LoggerFactory.getLogger("com.here.naksha.lib.base")
+        var loggerDefault = object : PlatformLogger {
+            private val logger = LoggerFactory.getLogger("naksha.base")
             override fun debug(msg: String, vararg args: Any?) {
                 if (logger.isDebugEnabled) logger.debug(msg, *args)
             }
@@ -622,10 +621,17 @@ actual class Platform {
         }
 
         /**
-         * The [PlatformLogger].
+         * The thread local platform logger. Applications can replace this, if they want an own implementation that is different per
+         * thread (e.g. requires thread local string builders or alike). By default, the thread local is initialized with [loggerDefault].
+         */
+        @Suppress("MemberVisibilityCanBePrivate")
+        var loggerThreadLocal: JvmThreadLocal<PlatformLogger> = JvmThreadLocal { loggerDefault }
+
+        /**
+         * The [PlatformLogger], in Java redirected to [loggerThreadLocal].
          */
         @JvmStatic
-        actual val logger: PlatformLogger by newThreadLocal { defaultPlatformLogger }
+        actual val logger: PlatformLogger by loggerThreadLocal
 
         /**
          * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).
@@ -701,8 +707,8 @@ actual class Platform {
             if (exponent < -126 || exponent > 127) return false
             // We do not want to lose precision in mantissa either.
             // Either the lower 29-bit of mantissa are zero (only 23-bit used) or all bits are set.
-            val mantissa = binary and 0x000f_ffff_ffff_ffff
-            return (mantissa and 0x0000_0000_1fff_ffff) == 0L || mantissa == 0x000f_ffff_ffff_ffff
+            val mantissa = binary and 0x000f_ffff_ffff_ffffL
+            return (mantissa and 0x0000_0000_1fff_ffffL) == 0L || mantissa == 0x000f_ffff_ffff_ffffL
         }
 
         private const val MIN_INT_VALUE_AS_DOUBLE = Int.MIN_VALUE.toDouble()
@@ -808,6 +814,12 @@ actual class Platform {
             size: Int
         ): ByteArray {
             TODO("Not yet implemented")
+        }
+
+        actual fun stackTrace(t: Throwable): String = t.stackTraceToString()
+
+        init {
+            initialize()
         }
     }
 }

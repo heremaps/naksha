@@ -1,5 +1,6 @@
 package naksha.base
 
+import naksha.base.Platform.Companion.DEFAULT_SYMBOL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
@@ -29,7 +30,7 @@ actual class Symbols {
         }
 
         @JvmStatic
-        private val symbolResolverRef = AtomicReference<List<SymbolResolver>>()
+        private val symbolResolverRef = AtomicReference<List<SymbolResolver>?>()
 
         @JvmStatic
         actual fun <T : Any> of(klass: KClass<out T>): Symbol {
@@ -40,11 +41,11 @@ actual class Symbols {
                         val symbol = resolver.call(klass)
                         if (symbol != null) return symbol
                     } catch (e: Exception) {
-                        // TODO: Log an error
+                        Platform.logger.error("The symbol resolver raised an exception: {}", e.stackTraceToString())
                     }
                 }
             }
-            return Platform.DEFAULT_SYMBOL
+            return DEFAULT_SYMBOL
         }
 
         @JvmStatic
@@ -147,8 +148,12 @@ actual class Symbols {
          */
         actual fun unshiftSymbolResolver(symbolResolver: SymbolResolver) {
             while (true) {
-                val current = symbolResolverRef.get()
-                val _new = List((current?.size ?: 0) + 1) {
+                var current = symbolResolverRef.get()
+                if (current == null) {
+                    current = listOf(symbolResolver)
+                    current = symbolResolverRef.compareAndExchange(null, current) ?: return
+                }
+                val _new = List(current.size + 1) {
                     if (it == 0) symbolResolver else current[it - 1]
                 }
                 if (symbolResolverRef.compareAndSet(current, _new)) break

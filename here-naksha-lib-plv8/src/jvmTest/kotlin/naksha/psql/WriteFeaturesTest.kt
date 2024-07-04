@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.jbon.XYZ_OP_CREATE
-import naksha.psql.PsqlPlan
 import naksha.base.Int64
 import naksha.model.*
 import naksha.model.request.InsertRow

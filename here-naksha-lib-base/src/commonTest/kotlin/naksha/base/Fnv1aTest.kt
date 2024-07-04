@@ -9,7 +9,7 @@ class Fnv1aTest {
     fun testFnv1a32() {
         // See: https://md5calc.com/hash/fnv1a32/
         val testString = "test"
-        val expectedHash : Int = 0xafd071e5.toInt()
+        val expectedHash: Int = 0xafd071e5.toInt()
         var hash = Fnv1a32.start()
         var i = 0
         while (i < testString.length) {
@@ -23,7 +23,7 @@ class Fnv1aTest {
     fun testFnv1a32Reverse() {
         // See: https://md5calc.com/hash/fnv1a32
         val testString = "test"
-        val expectedHash : Int = 0xffcdb2a1.toInt()
+        val expectedHash: Int = 0xffcdb2a1.toInt()
         val hash = Fnv1a32.stringReverse(Fnv1a32.start(), testString)
         assertEquals(expectedHash, hash)
     }
