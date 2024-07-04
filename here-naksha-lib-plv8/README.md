@@ -11,20 +11,29 @@ Please, disable IntelliJ Auto-Formatter, it sucks unbelievable:
 - Check "Disable formatting"
 
 ## Multi-Platform implementation details 
-The `lib-psql` currently is supported in the JVM and in the PostgresQL database via [PLV8 extension](https://plv8.github.io/), but can 
-be extended on demand to other targets. The main business logic is implemented as multi-platform Kotlin code in 
-[commonMain](./src/commonMain/kotlin/naksha/psql), so that basically all features are available in Java and inside the PostgresQL database.
+The `lib-psql` currently is supported in the JVM, NodeJS and in the PostgresQL database via [PLV8 extension](https://plv8.github.io/), but can be extended on demand to other targets. The main business logic is implemented as multi-platform Kotlin code in [commonMain](./src/commonMain/kotlin/naksha/psql), so that basically all features are available in Java, JavaScript, TypeScript and inside the PostgresQL database.
 
-The main code is implemented in [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt). It represents a storage session 
-and implements support for `IReadSession` and `IWriteSession` as specified in `lib-model`. An instance of it can be created by providing a 
-[PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) in the constructor, which is a platform specific implementation.
+The main code is implemented in [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt). It represents a storage session and implements support for `IReadSession` and `IWriteSession` as specified in `lib-model`. An instance of it can be created by providing a [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) in the constructor, which is a platform specific implementation.
 
-The [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface extends the `IStorage` interface with just one additional 
-method (`openSession`), that allows to open a PostgresQL database connection from a connection pool of the storage.
+The [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface extends the `IStorage` interface and adds one method (`openSession`), that allows to open a PostgresQL database connection from a connection pool of the storage.
 
-The [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt) is normally not created directly, but returned by the platform 
-specific implementation of the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface, via the `newReadSession` or 
-`newWriteSession` methods, which will simply create a [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt).
+Access to the implementation is provided by the [PgUtil](src/commonMain/kotlin/naksha/psql/PgUtil.kt) tooling class. Example of usage:
+
+```kotlin
+val storage = if (PgUtil.isPlv8())
+    PgUtil.getPlv8() 
+else
+    PgUtil.newStorage(
+        PgUtil.newCluster(PgUtil.getInstance("jdbc:postgresql://localhost/unimap?user=postgres&password=postgres")),
+        PgSessionOptions("appName", "schema")
+    )
+val context = NakshaContext.newInstance("appId","author", su=true)
+storage.initStorage(mapOf("id" to "{the-storage-id}", "context" to context))
+val session: NakshaSession = storage.newWriteSession(context)
+// Use session to execute Naksha requests.
+```
+
+As shown in the above example, the [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt) is normally not created directly, but returned by the platform specific implementation of the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) interface, when calling the `newReadSession` or `newWriteSession` methods, which will create a [NakshaSession](./src/commonMain/kotlin/naksha/psql/NakshaSession.kt).
 
 In Java, the following JVM-only classes actually provide the [PgStorage](./src/commonMain/kotlin/naksha/psql/PgStorage.kt) implementation:
 
