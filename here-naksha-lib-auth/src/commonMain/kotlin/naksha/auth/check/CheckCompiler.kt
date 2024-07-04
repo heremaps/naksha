@@ -30,7 +30,7 @@ object CheckCompiler {
      */
     fun compile(userRights: UserRights): Map<String, CompiledCheck> {
         return userRights.asSequence().associate { (key, value) ->
-            key to compile(requireNotNull(value) { "Values shouldn't be null" })
+            key to compile(requireNotNull(value) { "Value for key '$key' shouldn't be null" })
         }
     }
 

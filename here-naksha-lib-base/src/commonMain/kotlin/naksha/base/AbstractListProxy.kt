@@ -13,10 +13,6 @@ import naksha.base.PlatformListApi.Companion.array_retain_all
 import naksha.base.PlatformListApi.Companion.array_set
 import naksha.base.PlatformListApi.Companion.array_set_length
 import naksha.base.PlatformListApi.Companion.array_splice
-import naksha.base.PlatformMapApi.Companion.map_contains_key
-import naksha.base.PlatformMapApi.Companion.map_get
-import naksha.base.PlatformMapApi.Companion.map_set
-import naksha.base.fn.Fn1
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.math.max
@@ -142,7 +138,7 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
     }
 
     override fun retainAll(elements: Collection<E?>): Boolean {
-        val unboxed: Array<Any?> = elements.map { Platform.valueOf(it) }.toTypedArray()
+        val unboxed: Array<Any?> = elements.map { Platform.unbox(it) }.toTypedArray()
         return array_retain_all(platformObject(), *unboxed)
     }
 
@@ -182,7 +178,7 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
     override fun addAll(elements: Collection<E?>): Boolean {
         val data = platformObject()
         if (elements.isNotEmpty()) {
-            for (e in elements) array_push(data, Platform.valueOf(e))
+            for (e in elements) array_push(data, Platform.unbox(e))
             return true
         }
         return false
@@ -193,7 +189,7 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
         if (elements.isNotEmpty()) {
             val array = arrayOfNulls<Any?>(elements.size)
             var i = 0
-            for (e in elements) array[i++] = Platform.valueOf(e)
+            for (e in elements) array[i++] = Platform.unbox(e)
             array_splice(data, index, 0, *array)
             return true
         }
@@ -202,11 +198,11 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
 
     override fun add(index: Int, element: E?) {
         if(index < 0) throw IndexOutOfBoundsException(index.toString())
-        array_splice(platformObject(), index, 0, Platform.valueOf(element))
+        array_splice(platformObject(), index, 0, Platform.unbox(element))
     }
 
     override fun add(element: E?): Boolean {
-        array_push(platformObject(), Platform.valueOf(element))
+        array_push(platformObject(), Platform.unbox(element))
         return true
     }
 

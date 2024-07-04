@@ -80,16 +80,16 @@ actual class Platform {
         )
 
         val objectTemplate = object : PlatformObject {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
+            override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
         }
         val listTemplate = object : PlatformList {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
+            override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
         }
         val mapTemplate = object : PlatformMap {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
+            override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
         }
         val dataViewTemplate = object : PlatformDataView {
-            override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = proxy(this, klass, doNotOverride)
+            override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
         }
         val symbolTemplate = object : Symbol {}
 
@@ -217,10 +217,10 @@ actual class Platform {
             js("new DataView(byteArray.buffer, offset, size)").unsafeCast<PlatformDataView>()
 
         @JsStatic
-        actual fun valueOf(value: Any?): Any? {
+        actual fun unbox(value: Any?): Any? {
             if (value === null || value === undefined) return value
             if (value is Proxy) return value.platformObject()
-            return value.asDynamic().valueOf()
+            return if (isScalar(value)) value.asDynamic().valueOf() else value
         }
 
         @JsStatic
@@ -370,8 +370,9 @@ actual class Platform {
         actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T> =
             js("""require('module_name').package.full.path.ClassName""").unsafeCast<KClass<T>>()
 
+        @Suppress("UNCHECKED_CAST")
         @JsStatic
-        actual fun <T : Any> klassOf(o: T): KClass<out T> = o::class
+        actual fun <T : Any> klassOf(o: T): KClass<T> = o::class as KClass<T>
 
         /**
          * The KClass for [Any].
@@ -454,7 +455,7 @@ actual class Platform {
          * @throws IllegalArgumentException If the given class does not have a parameterless constructor.
          */
         @JsStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<T>): T {
+        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T {
             try {
                 return klass.createInstance()
             } catch (e: Exception) {
@@ -469,7 +470,7 @@ actual class Platform {
          * @return The new instance.
          */
         @JsStatic
-        actual fun <T : Any> allocateInstance(klass: KClass<T>): T {
+        actual fun <T : Any> allocateInstance(klass: KClass<out T>): T {
             // We can bypass the constructor, but before we do this, we need to ensure that the companion object
             // is created, and all other things of the class are ready. We can only do this by initializing the class!
             initializeKlass(klass)

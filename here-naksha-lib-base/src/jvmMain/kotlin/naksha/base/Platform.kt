@@ -193,8 +193,9 @@ actual class Platform {
             TODO("Implement me!")
         }
 
+        @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        actual fun <T : Any> klassOf(o: T): KClass<out T> = o::class
+        actual fun <T : Any> klassOf(o: T): KClass<T> = o::class as KClass<T>
 
         /**
          * Returns the Kotlin class of the given Java class.
@@ -202,7 +203,7 @@ actual class Platform {
          * @return The Kotlin class.
          */
         @JvmStatic
-        fun <T : Any> klassOf(javaClass: Class<out T>): KClass<out T> = javaClass.kotlin
+        fun <T : Any> klassOf(javaClass: Class<T>): KClass<T> = javaClass.kotlin
 
         /**
          * Returns the Java class of the given Kotlin class.
@@ -262,7 +263,11 @@ actual class Platform {
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView = JvmDataView(byteArray, offset, size)
 
         @JvmStatic
-        actual fun valueOf(value: Any?): Any? = if (value is Proxy) value.platformObject() as? JvmObject else value
+        actual fun unbox(value: Any?): Any? {
+            if (value is Proxy) return value.platformObject() as? JvmObject
+            if (value is Array<*>) return JvmList(*value)
+            return value
+        }
 
         /**
          * Returns the [JvmObject] of the given object.
@@ -404,11 +409,11 @@ actual class Platform {
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
 
         @JvmStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<T>): T = klass.primaryConstructor?.call() ?: throw IllegalArgumentException()
+        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T = klass.primaryConstructor?.call() ?: throw IllegalArgumentException()
 
         @JvmStatic
         @Suppress("UNCHECKED_CAST")
-        actual fun <T: Any> allocateInstance(klass: KClass<T>): T = unsafe.allocateInstance(klass.java) as T
+        actual fun <T: Any> allocateInstance(klass: KClass<out T>): T = unsafe.allocateInstance(klass.java) as T
 
         @JvmStatic
         actual fun initializeKlass(klass: KClass<*>) {

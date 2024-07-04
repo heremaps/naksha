@@ -46,10 +46,9 @@ class ServiceAccessRights : AbstractMapProxy<String, AccessRightsAction<*, *>>(S
         value: Any?,
         alt: AccessRightsAction<*, *>?
     ): AccessRightsAction<*, *>? {
-        return ACTIONS_BY_NAME[key]
-            ?.let { actionType ->
-                box(value, actionType, alt)
-            } ?: super.toValue(key, value, alt)
+        val actionKlass = ACTIONS_BY_NAME[key]
+        if (actionKlass != null) return box(value, actionKlass, alt)
+        return super.toValue(key, value, alt)
     }
 
     fun <T : AccessRightsAction<*, T>> withAction(action: T): ServiceAccessRights = apply {

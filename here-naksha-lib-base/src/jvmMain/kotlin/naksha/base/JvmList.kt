@@ -231,4 +231,9 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         d[index] = element
         return old
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        return other is JvmList && list != null && list == other.list
+    }
 }

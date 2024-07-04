@@ -99,7 +99,7 @@ abstract class Proxy : PlatformObject {
          */
         @JvmStatic
         @JsStatic
-        fun unbox(value: Any?): Any? = Platform.valueOf(value)
+        fun unbox(value: Any?): Any? = Platform.unbox(value)
     }
 
     /**
@@ -140,7 +140,9 @@ abstract class Proxy : PlatformObject {
     fun isBound(): Boolean = data != null
 
     /**
-     * Returns the data (native) object to which this proxy is bound via the [symbol].
+     * Returns the platform object to which this proxy is bound via the [symbol].
+     * - Java: `JvmList`, `JvmMap` or `JvmDataView`
+     * - JavaScript: `Array`, `Map` or `DataView`
      */
     open fun platformObject(): PlatformObject {
         var data = this.data
@@ -167,9 +169,16 @@ abstract class Proxy : PlatformObject {
      * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
      * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
      * @param klass The proxy class.
-     * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
      * @return The proxy instance.
-     * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
      */
-    override fun <T : Proxy> proxy(klass: KClass<T>, doNotOverride: Boolean): T = Platform.proxy(platformObject(), klass, doNotOverride)
+    override fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(platformObject(), klass)
+
+    override fun equals(other: Any?): Boolean {
+        Platform.logger.info("Proxy::equals")
+        if (this === other) return true
+        if (other is PlatformObject) return platformObject() == other
+        if (other is Proxy) return platformObject() == other.platformObject()
+        Platform.logger.info("Proxy::equals -> false")
+        return false
+    }
 }

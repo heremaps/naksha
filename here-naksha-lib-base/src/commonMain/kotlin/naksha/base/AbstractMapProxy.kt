@@ -12,7 +12,6 @@ import naksha.base.PlatformMapApi.Companion.map_iterator
 import naksha.base.PlatformMapApi.Companion.map_remove
 import naksha.base.PlatformMapApi.Companion.map_set
 import naksha.base.PlatformMapApi.Companion.map_size
-import naksha.base.fn.Fn1
 import naksha.base.fn.Fn2
 import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
@@ -24,6 +23,7 @@ import kotlin.reflect.KClass
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 abstract class AbstractMapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
+
     override fun createData(): PlatformMap = Platform.newMap()
     override fun platformObject(): PlatformMap = super.platformObject() as PlatformMap
 

@@ -7,7 +7,7 @@ import kotlin.js.JsExport
 /**
  * An action persists out of a list of [ResourceAttributes]'s.
  */
-@Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE", "UNCHECKED_CAST")
+@Suppress("OPT_IN_USAGE", "UNCHECKED_CAST")
 @JsExport
 sealed class AccessRightsAction<T : ResourceAttributes, SELF : AccessRightsAction<T, SELF>> :
     AbstractListProxy<ResourceAttributes>(ResourceAttributes::class) {

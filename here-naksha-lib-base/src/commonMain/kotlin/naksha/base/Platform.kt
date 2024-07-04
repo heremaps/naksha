@@ -168,8 +168,8 @@ expect class Platform {
          * @return The [KClass] **of** the given object.
          * @throws IllegalArgumentException If the given object has no valid [KClass].
          */
-        fun <T : Any> klassOf(o: T): KClass<out T>
-        // TODO: In Java add: fun <T: Any> klassOf(javaClass: Class<T>): KClass<out T>
+        fun <T : Any> klassOf(o: T): KClass<T>
+        // fun <T: Any> klassOf(javaClass: Class<T>): KClass<T> // <-- Java-only
 
         /**
          * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
@@ -243,7 +243,7 @@ expect class Platform {
          * @param value The object to access.
          * @return The [PlatformObject] if a [Proxy] given; otherwise the value itself.
          */
-        fun valueOf(value: Any?): Any?
+        fun unbox(value: Any?): Any?
 
         /**
          * Create a 32-bit integer from the given value.
@@ -352,14 +352,14 @@ expect class Platform {
          * @return The new instance.
          * @throws IllegalArgumentException If there is no parameterless constructor.
          */
-        fun <T : Any> newInstanceOf(klass: KClass<T>): T
+        fun <T : Any> newInstanceOf(klass: KClass<out T>): T
 
         /**
          * Creates a new instance of the given type, bypassing the constructor, so it returns the uninitialized class.
          * @param klass The type of which to create a new instance.
          * @return The new instance.
          */
-        fun <T : Any> allocateInstance(klass: KClass<T>): T
+        fun <T : Any> allocateInstance(klass: KClass<out T>): T
 
         /**
          * Forces the class loader to initialize the given Kotlin class.

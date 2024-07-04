@@ -2,6 +2,7 @@ package naksha.auth.check
 
 import naksha.auth.check.CheckMapCompilerTest.CheckAssertion.Companion.assertThat
 import naksha.auth.UserRights
+import naksha.base.ObjectProxy
 import naksha.base.StringListProxy
 import kotlin.reflect.KClass
 import kotlin.test.Test
@@ -62,15 +63,15 @@ class CheckMapCompilerTest {
     @Test
     fun shouldReturnUndefinedCheckForUnknownValue() {
         // Given:
-        val userRights = UserRights()
-            .withPropertyCheck("unsupported_object", object {})
+        val userRights = UserRights().withPropertyCheck("unsupported_object", ObjectProxy())
 
         // When:
         val checkMap = CheckCompiler.compile(userRights)
 
         // Then:
-        assertThat(checkMap["unsupported_object"])
-            .isOfType(UndefinedCheck::class)
+        val unsupportedObject = checkMap["unsupported_object"]
+        assertNotNull(unsupportedObject)
+        assertIs<UndefinedCheck>(unsupportedObject)
     }
 
     class CheckAssertion private constructor(val subject: CompiledCheck){
