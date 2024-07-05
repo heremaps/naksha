@@ -22,7 +22,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-abstract class AbstractMapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
+open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
 
     override fun createData(): PlatformMap = Platform.newMap()
     override fun platformObject(): PlatformMap = super.platformObject() as PlatformMap
@@ -58,7 +58,7 @@ abstract class AbstractMapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, v
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return the value.
      */
-    fun <T : Any, KEY: K, SELF: AbstractMapProxy<K, V>> getOrInit(key: KEY, klass: KClass<out T>, init: Fn2<out T, in SELF, in KEY>): T {
+    fun <T : Any, KEY: K, SELF: MapProxy<K, V>> getOrInit(key: KEY, klass: KClass<out T>, init: Fn2<out T, in SELF, in KEY>): T {
         val data = platformObject()
         var value: T? = null
         if (map_contains_key(data, key)) {
@@ -81,7 +81,7 @@ abstract class AbstractMapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, v
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return The value.
      */
-    fun <T : Any, KEY: K, SELF: AbstractMapProxy<K, V>> getOrCreate(
+    fun <T : Any, KEY: K, SELF: MapProxy<K, V>> getOrCreate(
         key: KEY,
         klass: KClass<out T>,
         init: Fn2<out T?, in SELF, in KEY>? = null

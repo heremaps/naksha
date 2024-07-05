@@ -2,7 +2,7 @@
 package naksha.jbon
 
 import naksha.base.ObjectProxy
-import naksha.base.AbstractMapProxy
+import naksha.base.MapProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -51,7 +51,7 @@ class XyzOp : XyzStruct<XyzOp>() {
     fun id(): String? = id
     fun uuid(): String? = uuid
     fun grid(): Int? = grid
-    fun toIMap() : AbstractMapProxy<String, *> {
+    fun toIMap() : MapProxy<String, *> {
         val map = ObjectProxy()
         map["op"] = getOpName(op)
         map["id"] = id

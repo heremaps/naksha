@@ -316,8 +316,13 @@ abstract class JsEnum : CharSequence {
      * @param <SELF>    The type of this.
      * @return this.
      */
-    protected fun <SELF : JsEnum> alias(selfClass: KClass<SELF>, value: Any?) {
-        TODO("JsEnum::alias is not yet implemented")
+    protected fun <SELF : JsEnum> alias(selfClass: KClass<SELF>, value: Any): SELF {
+        val aliasMap = aliasMap(namespace())
+        check(aliasMap.putIfAbsent(value, this) == null) {
+            "Conflict, there is already an enumeration value for '$value' registered: ${aliasMap[value]!!::class.simpleName}"
+        }
+        @Suppress("UNCHECKED_CAST")
+        return this as SELF
     }
 
     final override fun toString(): String {

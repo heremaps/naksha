@@ -1,12 +1,12 @@
 package naksha.geo
 
-import naksha.base.AbstractListProxy
+import naksha.base.ListProxy
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate", "unused")
 @JsExport
-class BoundingBoxProxy() : AbstractListProxy<Double>(Double::class) {
+class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
 
     @JsName("of2D")
     constructor(west: Double, south: Double, east: Double, north: Double) : this() {

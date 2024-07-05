@@ -5,8 +5,8 @@ package naksha.auth
 import naksha.auth.action.AccessRightsAction
 import naksha.auth.attribute.ResourceAttributes
 import naksha.auth.check.CheckCompiler
-import naksha.base.AbstractListProxy
-import naksha.base.AbstractMapProxy
+import naksha.base.ListProxy
+import naksha.base.MapProxy
 import naksha.base.ObjectProxy
 import kotlin.js.JsExport
 
@@ -42,7 +42,7 @@ import kotlin.js.JsExport
  * ```
  */
 @JsExport
-class UserRightsMatrix : AbstractMapProxy<String, ServiceUserRights>(String::class, ServiceUserRights::class) {
+class UserRightsMatrix : MapProxy<String, ServiceUserRights>(String::class, ServiceUserRights::class) {
 
     /**
      * URM matches ARM when each service from URM matches corresponding service in ARM
@@ -73,7 +73,7 @@ class UserRightsMatrix : AbstractMapProxy<String, ServiceUserRights>(String::cla
 }
 
 @JsExport
-class ServiceUserRights : AbstractMapProxy<String, UserAction>(String::class, UserAction::class) {
+class ServiceUserRights : MapProxy<String, UserAction>(String::class, UserAction::class) {
 
     /**
      * Service defined in URM matches service from ARM when all actions for given service are matching
@@ -100,7 +100,7 @@ class ServiceUserRights : AbstractMapProxy<String, UserAction>(String::class, Us
 }
 
 @JsExport
-class UserAction : AbstractListProxy<UserRights>(UserRights::class) {
+class UserAction : ListProxy<UserRights>(UserRights::class) {
 
     /**
      * If [AccessRightsAction] passed to this function is empty, it is assumed that there is no restriction

@@ -1,7 +1,7 @@
 package naksha.model.request.notification
 
-import naksha.base.AbstractListProxy
-import naksha.base.AbstractMapProxy
+import naksha.base.ListProxy
+import naksha.base.MapProxy
 import naksha.model.NakshaFeatureProxy
 import naksha.model.NakshaTransactionProxy
 import naksha.model.SubscriptionStateProxy
@@ -14,8 +14,8 @@ class ExtendedSubscriptionNotification(
     storageId: String,
     subscriptionId: String,
     subscriptionState: SubscriptionStateProxy,
-    transactions: AbstractListProxy<NakshaTransactionProxy>,
+    transactions: ListProxy<NakshaTransactionProxy>,
     // The features is a map, where the key is the transaction number and the value is a list of features that are part of this transaction. The features are ordered by their uid.
-    val features: AbstractMapProxy<String, AbstractListProxy<NakshaFeatureProxy>>
+    val features: MapProxy<String, ListProxy<NakshaFeatureProxy>>
 ) : SubscriptionNotification(storageId, subscriptionId, subscriptionState, transactions) {
 }

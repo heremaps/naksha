@@ -2,6 +2,7 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.PlatformObject
+import naksha.base.ToJsonOptions
 import naksha.base.fn.Fn1
 import naksha.jbon.IDictManager
 import naksha.model.response.Row
@@ -23,15 +24,16 @@ interface IStorage : AutoCloseable {
 
     /**
      * The storage-id.
+     * @throws IllegalStateException if [initStorage] has not been called before.
      */
     fun id(): String
 
     /**
-     * Initializes the storage, create the transaction table, install needed scripts and extensions. If the storage is
+     * Initializes the storage. First tries to read the storage identifier from the storage. If , create the transaction table, install
+     * needed scripts and extensions. If the storage is
      * already initialized; does nothing.
-     *
-     * @param params Special parameters that are storage dependent to influence how a storage is initialized.
-     * @throws StorageException If the initialization failed.
+     * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
+     * @throws StorageException if the initialization failed.
      * @since 2.0.8
      */
     fun initStorage(params: Map<String, *>? = null)

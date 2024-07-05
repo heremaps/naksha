@@ -134,5 +134,5 @@ open class JvmObject : PlatformObject {
      * @param klass The proxy class.
      * @return The proxy instance.
      */
-    override fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(this, klass)
+    fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(this, klass)
 }

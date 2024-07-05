@@ -5,5 +5,5 @@ package naksha.base
 import kotlin.js.JsExport
 
 @JsExport
-open class StringListProxy : AbstractListProxy<String>(String::class)
+open class StringListProxy : ListProxy<String>(String::class)
 

@@ -2,8 +2,8 @@ package naksha.base
 
 import kotlin.test.*
 
-private class TestListInt : AbstractListProxy<Int>(Int::class)
-private class TestListString : AbstractListProxy<String>(String::class)
+private class TestListInt : ListProxy<Int>(Int::class)
+private class TestListString : ListProxy<String>(String::class)
 
 class ListProxyTest {
 

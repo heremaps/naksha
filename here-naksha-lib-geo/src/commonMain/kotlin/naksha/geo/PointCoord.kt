@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.AbstractListProxy
+import naksha.base.ListProxy
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -9,7 +9,7 @@ import kotlin.js.JsName
  */
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate", "unused")
 @JsExport
-class PointCoord() : AbstractListProxy<Double>(Double::class), ICoordinates {
+class PointCoord() : ListProxy<Double>(Double::class), ICoordinates {
 
     @JsName("of")
     constructor(longitude: Double, latitude: Double, vararg altitude: Double) : this() {
