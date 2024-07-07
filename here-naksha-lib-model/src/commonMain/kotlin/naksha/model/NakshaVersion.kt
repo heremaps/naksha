@@ -35,7 +35,7 @@ import kotlin.jvm.JvmStatic
  * @property preReleaseVersion the pre-release version (0-255 or null).
  * @since 2.0.3
  */
-@Suppress("MayBeConstant")
+@Suppress("MayBeConstant", "OPT_IN_USAGE")
 @JsExport
 class NakshaVersion(
     var major: Int,

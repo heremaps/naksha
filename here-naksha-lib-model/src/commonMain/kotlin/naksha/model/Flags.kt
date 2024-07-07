@@ -1,153 +1,155 @@
-@file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("NOTHING_TO_INLINE", "unused")
 
 package naksha.model
 
-import kotlin.js.ExperimentalJsExport
-import kotlin.js.JsExport
-import kotlin.math.pow
+import naksha.model.FlagsBits.Companion.ACTION_CLEAR
+import naksha.model.FlagsBits.Companion.ACTION_MASK
+import naksha.model.FlagsBits.Companion.FEATURE_CLEAR
+import naksha.model.FlagsBits.Companion.FEATURE_GZIP_BIT
+import naksha.model.FlagsBits.Companion.FEATURE_MASK
+import naksha.model.FlagsBits.Companion.GEO_CLEAR
+import naksha.model.FlagsBits.Companion.GEO_GZIP_BIT
+import naksha.model.FlagsBits.Companion.GEO_MASK
+import naksha.model.FlagsBits.Companion.TAGS_CLEAR
+import naksha.model.FlagsBits.Companion.TAGS_GZIP_BIT
+import naksha.model.FlagsBits.Companion.TAGS_MASK
 
 /**
- * Keeps flags on different bits of integer
- * GE - geometry encoding - bits: 0-4
- * FE - feature encoding - bits: 5-8
- * TE - tags encoding - bits: 9-12
- * AE - action - bits: 13-14
- * RE - reserved for future - bits: 15-31
- *
- *     15-31 RE    AE   TE    FE    GE
- * [00000000000000[00][0000][0000][0000]
+ * Type alias for the flags encoding in the storage, it stores how the binaries are encoded:
+ * ```
+ *       Reserved         R1  AE   TE    FE    GE
+ * [0000-0000-0000-0000]-[00][00][0000][0000][0000]
+ * ```
+ * - GE: geometry (and reference point) encoding - bits: 0-3
+ * - FE: feature encoding - bits: 4-7
+ * - TE: tags encoding - bits: 8-11
+ * - AE: action - bits: 12+13
+ * - R1: reserved - bits: 14+15
+ * - ---
+ * - Reserved - bits: 16-31
  */
-@JsExport
-object Flags {
+typealias Flags = Int
 
-    val GEOMETRY_FLAG_ENCODER = FlagsReader(4, 0)
-    val FEATURE_FLAG_ENCODER = FlagsReader(4, 4)
-    val TAGS_FLAG_ENCODER = FlagsReader(4, 8)
-    val ACTION_FLAG_ENCODER = FlagsReader(2, 12)
+/**
+ * Create flags from an integer value or using the defaults.
+ * @param flags the integer value of flags.
+ * @return the give value, cast to [Flags] alias.
+ */
+inline fun Flags(flags: Int = 0): Flags = flags
 
-    const val GEO_TYPE_NULL: Int = 0
-    const val GEO_TYPE_WKB: Int = 1
-    const val GEO_TYPE_EWKB: Int = 2
-    const val GEO_TYPE_TWKB: Int = 3
+/**
+ * Create new flags from the given encoding values.
+ * @param geoEncoding the geometry encoding.
+ * @param featureEncoding the feature encoding.
+ * @param tagsEncoding the tags encoding.
+ * @param action the action.
+ * @return the flags binary.
+ */
+inline fun Flags(geoEncoding: Int, featureEncoding: Int, tagsEncoding: Int, action: Int): Flags =
+    geoEncoding or featureEncoding or tagsEncoding or action
 
-    const val FEATURE_ENCODING_JBON = 1
-    const val FEATURE_ENCODING_JBON_GZIP = 2
-    const val FEATURE_ENCODING_JSON = 3
-    const val FEATURE_ENCODING_JSON_GZIP = 4
+/**
+ * Decodes the geometry encoding from flags.
+ * @return the geometry encoding from flags.
+ */
+inline fun Flags.geoEncoding(): Int = this and GEO_MASK
 
-    const val DEFAULT_FEATURE_ENCODING = FEATURE_ENCODING_JBON
-    const val DEFAULT_GEOMETRY_ENCODING = GEO_TYPE_TWKB
+/**
+ * Updates the geometry encoding in the given flags.
+ * @param encoding the encoding to set.
+ * @return the new flags.
+ */
+inline fun Flags.geoEncoding(encoding: Int): Flags = (this and GEO_CLEAR) or (encoding and GEO_MASK)
 
-    val DEFAULT_FLAGS: Int =
-        encodeTagsFlag(
-            encodeGeometryFlag(
-                encodeFeatureFlag(0, DEFAULT_FEATURE_ENCODING), DEFAULT_GEOMETRY_ENCODING
-            ),
-            DEFAULT_FEATURE_ENCODING
-        )
+/**
+ * Tests if the geometry is GZIP compressed.
+ * @return _true_ when the geometry is GZIP compressed; _false_ otherwise.
+ */
+inline fun Flags.geoGzip(): Boolean = (this and GEO_GZIP_BIT) == GEO_GZIP_BIT
 
+/**
+ * Enable GZIP compression for geometry.
+ * @return the new flags.
+ */
+inline fun Flags.geoGzipOn(): Flags = this or GEO_GZIP_BIT
 
-    fun readGeometryEncoding(flags: Int) = GEOMETRY_FLAG_ENCODER.read(flags)
+/**
+ * Disable GZIP compression for geometry.
+ * @return the new flags.
+ */
+inline fun Flags.geoGzipOff(): Flags = this and GEO_GZIP_BIT.inv()
 
-    /**
-     * Returns new flags value with geometry encoding partset to new value.
-     * @param flags - current flags value
-     * @param ge new geometry encoding value
-     * @return flags with new value included.
-     */
-    fun encodeGeometryFlag(flags: Int, ge: Int) = GEOMETRY_FLAG_ENCODER.encodeNew(flags, ge)
+/**
+ * Returns the feature encoding.
+ * @return the feature encoding.
+ */
+inline fun Flags.featureEncoding(): Int = this and FEATURE_MASK
 
-    fun readFeatureEncoding(flags: Int) = FEATURE_FLAG_ENCODER.read(flags)
+/**
+ * Updates the feature encoding in the given flags.
+ * @param encoding the encoding to set.
+ * @return the new flags.
+ */
+inline fun Flags.featureEncoding(encoding: Int): Flags = (this and FEATURE_CLEAR) or (encoding and FEATURE_MASK)
 
-    /**
-     * Returns new flags value with feature encoding part set to new value.
-     * @param flags - current flags value
-     * @param fe - new feature encoding value
-     * @return flags with new value included.
-     */
-    fun encodeFeatureFlag(flags: Int, fe: Int) = FEATURE_FLAG_ENCODER.encodeNew(flags, fe)
+/**
+ * Tests if the feature is GZIP compressed.
+ * @return _true_ when the feature is GZIP compressed; _false_ otherwise.
+ */
+inline fun Flags.featureGzip(): Boolean = (this and FEATURE_GZIP_BIT) == FEATURE_GZIP_BIT
 
-    fun readTagsEncoding(flags: Int) = TAGS_FLAG_ENCODER.read(flags)
+/**
+ * Enable GZIP compression for the feature.
+ * @return the new flags.
+ */
+inline fun Flags.featureGzipOn(): Flags = this or FEATURE_GZIP_BIT
 
-    /**
-     * Returns new flags value with tags encoding part set to new value.
-     * @param flags - current flags value
-     * @param te - new tags encoding value
-     * @return flags with new value included.
-     */
-    fun encodeTagsFlag(flags: Int, te: Int) = TAGS_FLAG_ENCODER.encodeNew(flags, te)
+/**
+ * Disable GZIP compression for the feature.
+ * @return the new flags.
+ */
+inline fun Flags.featureGzipOff(): Flags = this and FEATURE_GZIP_BIT.inv()
 
-    fun readAction(flags: Int) = ACTION_FLAG_ENCODER.read(flags)
+/**
+ * Returns the tags encoding.
+ * @return the tags encoding.
+ */
+inline fun Flags.tagsEncoding(): Int = this and TAGS_MASK
 
-    /**
-     * Returns new flags value with `action` part set to new value.
-     * @param flags - current flags value
-     * @param action - new tags encoding value
-     * @return flags with new value included.
-     */
-    fun encodeAction(flags: Int, action: Int) = ACTION_FLAG_ENCODER.encodeNew(flags, action)
+/**
+ * Updates the tags encoding in the given flags.
+ * @param encoding the encoding to set.
+ * @return the new flags.
+ */
+inline fun Flags.tagsEncoding(encoding: Int): Flags = (this and TAGS_CLEAR) or (encoding and TAGS_MASK)
 
-    /**
-     * Returns new flags with feature encoding set to _GZIP.
-     */
-    fun forceGzipOnFeatureEncoding(flags: Int): Int {
-        return when (readFeatureEncoding(flags)) {
-            FEATURE_ENCODING_JSON -> encodeFeatureFlag(
-                flags,
-                FEATURE_ENCODING_JSON_GZIP
-            )
+/**
+ * Tests if the tags is GZIP compressed.
+ * @return _true_ when the tags is GZIP compressed; _false_ otherwise.
+ */
+inline fun Flags.tagsGzip(): Boolean = (this and TAGS_GZIP_BIT) == TAGS_GZIP_BIT
 
-            FEATURE_ENCODING_JBON -> encodeFeatureFlag(
-                flags,
-                FEATURE_ENCODING_JBON_GZIP
-            )
+/**
+ * Enable GZIP compression for the tags.
+ * @return the new flags.
+ */
+inline fun Flags.tagsGzipOn(): Flags = this or TAGS_GZIP_BIT
 
-            else -> flags
-        }
-    }
+/**
+ * Disable GZIP compression for the tags.
+ * @return the new flags.
+ */
+inline fun Flags.tagsGzipOff(): Flags = this and TAGS_GZIP_BIT.inv()
 
-    /**
-     * Returns new flags with feature encoding without _GZIP.
-     */
-    fun turnOffGzipOnFeatureEncoding(flags: Int): Int {
-        return when (readFeatureEncoding(flags)) {
-            FEATURE_ENCODING_JSON_GZIP -> encodeFeatureFlag(
-                flags,
-                FEATURE_ENCODING_JSON
-            )
+/**
+ * Returns the action encoding.
+ * @return the action encoding.
+ */
+inline fun Flags.action(): Int = this and ACTION_MASK
 
-            FEATURE_ENCODING_JBON_GZIP -> encodeFeatureFlag(
-                flags,
-                FEATURE_ENCODING_JBON
-            )
-
-            else -> flags
-        }
-    }
-
-    fun isFeatureEncodedWithGZip(flags: Int): Boolean {
-        val featureEncoding = readFeatureEncoding(flags)
-        return featureEncoding == FEATURE_ENCODING_JSON_GZIP || featureEncoding == FEATURE_ENCODING_JBON_GZIP
-    }
-
-    data class FlagsReader(
-        val sizeInBits: Int,
-        val shift: Int
-    ) {
-        private val maxFlagValue = (2.toDouble().pow(sizeInBits) - 1).toInt()
-        private val minFlagValue = 0
-        private val mask = maxFlagValue.shl(shift)
-
-        fun read(flags: Int): Int = flags.and(mask).shr(shift)
-
-        fun encodeNew(flags: Int, newFlagValue: Int): Int {
-            check(newFlagValue in minFlagValue..maxFlagValue)
-            // clear space for new flag
-            val flagsWithClearedSpace = mask.inv().and(flags)
-            // position flag to it's bits
-            val flagPositioned = newFlagValue.shl(shift)
-            // combine and return old flags with new flag
-            return flagsWithClearedSpace.or(flagPositioned)
-        }
-    }
-}
+/**
+ * Updates the action encoding in the given flags.
+ * @param encoding the encoding to set.
+ * @return the new flags.
+ */
+inline fun Flags.action(encoding: Int): Flags = (this and ACTION_CLEAR) or (encoding and ACTION_MASK)

@@ -162,7 +162,7 @@ open class NakshaCollectionProxy() : NakshaFeatureProxy() {
         private val STORAGE_CLASS = NullableProperty<Any, NakshaCollectionProxy, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<Any, NakshaCollectionProxy, String>(String::class)
         private val DEFAULT_TYPE = NotNullProperty<Any, NakshaCollectionProxy, String>(String::class) { _, _ -> "Feature" }
-        private val DEFAULT_FLAGS = NotNullProperty<Any, NakshaCollectionProxy, Int>(Int::class) { _, _ -> Flags.DEFAULT_FLAGS }
+        private val DEFAULT_FLAGS = NotNullProperty<Any, NakshaCollectionProxy, Flags>(Flags::class) { _, _ -> Flags() }
         private val DISABLE_HISTORY = NotNullProperty<Any, NakshaCollectionProxy, Boolean>(Boolean::class) { _, _ -> false }
         private val AUTO_PURGE = NotNullProperty<Any, NakshaCollectionProxy, Boolean>(Boolean::class) { _, _ -> false }
         private val INDICES = NotNullProperty<Any, NakshaCollectionProxy, IndicesListProxy>(IndicesListProxy::class)

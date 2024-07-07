@@ -1,0 +1,54 @@
+package naksha.model
+
+import kotlin.js.JsExport
+
+/**
+ * Helper for geometry encoding in [Flags].
+ */
+@Suppress("OPT_IN_USAGE")
+@JsExport
+object GeoEncoding : FlagsBits() {
+    /**
+     * Geometry encoded in [TWKB](https://github.com/TWKB/Specification/blob/master/twkb.md) with precision 7.
+     */
+    const val TWKB = 0 shl GEO_SHIFT
+
+    /**
+     * Geometry encoded in [TWKB](https://github.com/TWKB/Specification/blob/master/twkb.md) with precision 7, compressed using
+     * [GZIP](https://en.wikipedia.org/wiki/Gzip).
+     */
+    const val TWKB_GZIP = 1 shl GEO_SHIFT
+
+    /**
+     * Geometry encoded in [WKB](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry).
+     */
+    const val WKB = 2 shl GEO_SHIFT
+
+    /**
+     * Geometry encoded in [WKB](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry), compressed using
+     * [GZIP](https://en.wikipedia.org/wiki/Gzip).
+     */
+    const val WKB_GZIP = 3 shl GEO_SHIFT
+
+    /**
+     * Geometry encoded in [EWKB](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry).
+     */
+    const val EWKB = 4 shl GEO_SHIFT
+
+    /**
+     * Geometry encoded in [EWKB](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry), compressed using
+     * [GZIP](https://en.wikipedia.org/wiki/Gzip).
+     */
+    const val EWKB_GZIP = 5 shl GEO_SHIFT
+
+    /**
+     * Geometry stored in [GeoJSON](https://datatracker.ietf.org/doc/html/rfc7946).
+     */
+    const val GEO_JSON = 6 shl GEO_SHIFT
+
+    /**
+     * Geometry stored in [GeoJSON](https://datatracker.ietf.org/doc/html/rfc7946), compressed using
+     * [GZIP](https://en.wikipedia.org/wiki/Gzip).
+     */
+    const val GEO_JSON_GZIP = 7 shl GEO_SHIFT
+}

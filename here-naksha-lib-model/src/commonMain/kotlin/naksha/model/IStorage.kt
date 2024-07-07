@@ -1,11 +1,8 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.base.PlatformObject
-import naksha.base.ToJsonOptions
-import naksha.base.fn.Fn1
+import naksha.base.PlatformMap
 import naksha.jbon.IDictManager
-import naksha.model.response.Row
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -43,14 +40,14 @@ interface IStorage : AutoCloseable {
      * @param row The row to convert.
      * @return The feature generated from the row.
      */
-    fun convertRowToFeature(row: Row): NakshaFeatureProxy
+    fun rowToFeature(row: Row): NakshaFeatureProxy
 
     /**
      * Convert the given feature into a [Row].
-     * @param feature The feature to convert.
-     * @return The [Row] generated from the given feature.
+     * @param feature the feature to convert.
+     * @return the [Row] generated from the given feature.
      */
-    fun convertFeatureToRow(feature: PlatformObject): Row
+    fun featureToRow(feature: PlatformMap): Row
 
     /**
      * Returns the dictionary manager of the storage.

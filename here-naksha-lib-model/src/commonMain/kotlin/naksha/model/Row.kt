@@ -1,70 +1,93 @@
-package naksha.model.response
+package naksha.model
 
-import naksha.model.Guid
-import naksha.model.IStorage
-import naksha.model.NakshaFeatureProxy
-import naksha.model.response.Metadata
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
- * Represents the database row layout.
+ * A row represents all information stored about a feature in a storage. It is not required that the storage stores the information
+ * exactly in this form, this is only the exchange format.
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 data class Row(
     /**
-     * Reference to specific storage implementation allows row to feature conversion.
+     * Reference to specific storage implementation that allows to decode rows to feature.
      */
+    @JvmField
     val storage: IStorage,
+
     /**
-     * Flags to describe: feature, geometry, geo_ref, tags encodings and action flags.
-     * @see Flags for more.
+     * The feature id.
      */
-    val flags: Int,
-    /**
-     * Feature id.
-     */
+    @JvmField
     val id: String,
+
     /**
-     * Guid of the feature, leave it empty for Insert operation (it will be calculated automatically).
+     * The GUID (global unique identifier) of the feature, read-only, the value is ignored when writing to the storage.
      */
+    @JvmField
     val guid: Guid? = null,
+
     /**
-     * Feature type, null - indicates the type is default for collection.
+     * Feature type, extracted from `properties.featureType`, if this is no string, then `type` from the root is used, which normally is
+     * always `Feature` for _Geo-JSON_ features. The value _null_ indicates the type is the collection default type, it saves a lot of
+     * storage space, when all features in a collection are of the same type, to encode the type in the collection, when creating the
+     * collection. Beware, the default feature-type of a collection is an immutable property!
      */
+    @JvmField
     val type: String? = null,
+
     /**
-     * Metadata.
-     * In response might be null when proper request flag was set.
+     * Metadata, this is going into the [XYZ namespace][XyzProxy], when decoding the [Row] into a [NakshaFeatureProxy].
+     * In response might be _null_ when proper request flag was set.
      */
+    @JvmField
     var meta: Metadata? = null,
+
     /**
-     * Feature encoded with algorithm described by flags.
-     * In response might be null when proper request flag was set.
+     * The flags of the row, this bitmask stores how the geometry, reference-point, feature and tags are encoded, as well as the action.
+     * @see GeoEncoding
+     * @see FeatureEncoding
+     * @see TagsEncoding
+     * @see Action
      */
+    @JvmField
+    val flags: Flags,
+
+    /**
+     * Feature encoded with [FeatureEncoding] algorithm described by [flags].
+     * In response might be _null_ when proper request flag was set.
+     */
+    @JvmField
     val feature: ByteArray? = null,
+
     /**
-     * Geometry encoded with algorithm described by flags.
-     * In response might be null when proper request flag was set.
+     * Geometry encoded with [GeoEncoding] algorithm described by [flags].
+     * In response might be _null_ when proper request flag was set.
      */
+    @JvmField
     val geo: ByteArray? = null,
+
     /**
-     * GeoRef encoded with algorithm described by flags.
-     * In response might be null when proper request flag was set.
+     * Geometry-Reference-Point, encoded with the [GeoEncoding] algorithm described by [flags].
+     * In response might be _null_ when proper request flag was set.
      */
+    @JvmField
     val geoRef: ByteArray? = null,
+
     /**
-     * Tags encoded with algorithm described by flags.
-     * In response might be null when proper request flag was set.
+     * Tags encoded with [TagsEncoding] algorithm described by [flags].
+     * In response might be _null_ when proper request flag was set.
      */
+    @JvmField
     val tags: ByteArray? = null
 ) {
     /**
      * Maps row into memory model.
      */
     fun toMemoryModel(): NakshaFeatureProxy? {
-        return storage.convertRowToFeature(this)
+        return storage.rowToFeature(this)
     }
 
     override fun equals(other: Any?): Boolean {
