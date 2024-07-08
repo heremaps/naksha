@@ -148,7 +148,7 @@ module.exports = module.exports["here-naksha-lib-plv8"];
         val nakshaFeature = feature.proxy(NakshaFeatureProxy::class)
         return Row(
             storage = this,
-            flags = GeoEncoding.DEFAULT_FLAGS,
+            flags = Flags(),
             id = nakshaFeature.id,
             feature = XyzBuilder().buildFeatureFromMap(nakshaFeature), // FIXME split feature to geo etc
             geoRef = null,
@@ -185,7 +185,7 @@ module.exports = module.exports["here-naksha-lib-plv8"];
         if (pgDbInfo == null) {
             val conn = cluster.newConnection(defaultOptions.copy(readOnly = false, useMaster = true))
             conn.use {
-                pgDbInfo = PgInfo(conn)
+                pgDbInfo = PgInfo(conn, defaultOptions.schema)
                 this.pgInfo = pgDbInfo
             }
         }

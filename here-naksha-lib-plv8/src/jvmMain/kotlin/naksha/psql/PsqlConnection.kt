@@ -56,7 +56,7 @@ class PsqlConnection internal constructor(
     override fun info(): PgInfo {
         var dbInfo = this.dbInfo
         if (dbInfo == null) {
-            dbInfo = PgInfo(this)
+            dbInfo = PgInfo(this, options.schema)
             this.dbInfo = dbInfo
         }
         return dbInfo
