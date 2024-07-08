@@ -92,7 +92,7 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
 CREATE SCHEMA IF NOT EXISTS $schemaQuoted;
 SET SESSION search_path TO $schemaQuoted, public, topology;
 """
-            )
+            ).close()
             val cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(options.schema)).fetch()
             val schemaOid: Int = cursor["oid"]
             executeSqlFromResource(conn, "/commonjs2.sql")

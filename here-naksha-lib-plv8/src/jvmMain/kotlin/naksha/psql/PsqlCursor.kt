@@ -4,6 +4,7 @@ import naksha.base.JvmInt64
 import naksha.base.ObjectProxy
 import naksha.base.Platform
 import java.sql.ResultSet
+import java.sql.Statement
 import kotlin.reflect.KClass
 
 /**
@@ -194,5 +195,6 @@ class PsqlCursor private constructor(var rs: ResultSet?, var affectedRows: Int) 
         val rs = this.rs
         this.rs = null
         rs?.close()
+        rs?.statement?.close()
     }
 }
