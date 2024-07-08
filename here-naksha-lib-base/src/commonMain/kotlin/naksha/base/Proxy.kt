@@ -171,7 +171,7 @@ abstract class Proxy : PlatformObject {
      * @param klass The proxy class.
      * @return The proxy instance.
      */
-    override fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(platformObject(), klass)
+    fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(platformObject(), klass)
 
     override fun equals(other: Any?): Boolean {
         Platform.logger.info("Proxy::equals")

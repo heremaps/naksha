@@ -8,4 +8,4 @@ import kotlin.js.JsExport
  */
 @Suppress("unused", "OPT_IN_USAGE")
 @JsExport
-open class ObjectProxy : AbstractMapProxy<String, Any>(String::class, Any::class)
+open class ObjectProxy : MapProxy<String, Any>(String::class, Any::class)

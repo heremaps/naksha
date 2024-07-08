@@ -12,13 +12,4 @@ import kotlin.reflect.KClass
  */
 @JsExport
 @JsName("Object")
-interface PlatformObject {
-    /**
-     * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
-     * is _true_, the method will throw an [IllegalStateException]; otherwise the current type is simply overridden.
-     * @param klass The proxy class.
-     * @return The proxy instance.
-     */
-    @Suppress("NON_EXPORTABLE_TYPE")
-    fun <T : Proxy> proxy(klass: KClass<T>): T
-}
+interface PlatformObject

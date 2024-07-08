@@ -1,88 +1,52 @@
 package naksha.model
 
-import naksha.model.Flags.FEATURE_ENCODING_JBON
-import naksha.model.Flags.FEATURE_ENCODING_JBON_GZIP
-import naksha.model.Flags.FEATURE_ENCODING_JSON
-import naksha.model.Flags.FEATURE_ENCODING_JSON_GZIP
-import naksha.model.Flags.GEOMETRY_FLAG_ENCODER
-import naksha.model.Flags.GEO_TYPE_EWKB
-import naksha.model.Flags.GEO_TYPE_TWKB
+import naksha.model.FlagsBits.Companion.ACTION_SHIFT
+import naksha.model.FlagsBits.Companion.FEATURE_CLEAR
+import naksha.model.FlagsBits.Companion.FEATURE_SHIFT
+import naksha.model.FlagsBits.Companion.GEO_CLEAR
+import naksha.model.FlagsBits.Companion.GEO_SHIFT
+import naksha.model.FlagsBits.Companion.TAGS_CLEAR
+import naksha.model.FlagsBits.Companion.TAGS_SHIFT
 import kotlin.test.*
 
 class FlagsTest {
-
     @Test
     fun shouldProperlySetDefaultValues() {
         // given
-        var flags = Flags.encodeGeometryFlag(0, Flags.DEFAULT_GEOMETRY_ENCODING)
-        flags = Flags.encodeFeatureFlag(flags, Flags.DEFAULT_FEATURE_ENCODING)
+        val flags = Flags()
 
         // expect default values
-        assertEquals(GEO_TYPE_TWKB, Flags.readGeometryEncoding(flags))
-        assertEquals(FEATURE_ENCODING_JBON, Flags.readFeatureEncoding(flags))
+        assertEquals(GeoEncoding.TWKB, flags.geoEncoding())
+        assertEquals(FeatureEncoding.JBON, flags.featureEncoding())
+        assertEquals(TagsEncoding.JSON, flags.tagsEncoding())
+        assertEquals(Action.CREATE, flags.action())
     }
 
     @Test
     fun shouldProperlySetGeometryEncoding() {
-        // given
-        var flags = Flags.encodeFeatureFlag(0, Flags.DEFAULT_FEATURE_ENCODING)
+        val flags = Flags().geoEncoding(GeoEncoding.EWKB)
 
-        // when
-        flags = GEOMETRY_FLAG_ENCODER.encodeNew(flags, GEO_TYPE_EWKB)
-
-        // then
-        assertEquals(GEO_TYPE_EWKB, Flags.readGeometryEncoding(flags))
-        // untouched other flags
-        assertEquals(FEATURE_ENCODING_JBON, Flags.readFeatureEncoding(flags))
-        assertEquals(0, Flags.readAction(flags))
+        assertEquals(GeoEncoding.EWKB, flags.geoEncoding())
+        assertEquals(GeoEncoding.EWKB, flags)
+        assertEquals(0, flags and GEO_CLEAR)
     }
 
     @Test
     fun shouldProperlySetFeatureEncoding() {
-        // given
-        var flags = 0
+        val flags = Flags(0).featureEncoding(FeatureEncoding.JBON_GZIP)
 
-        // when
-        flags = Flags.encodeFeatureFlag(flags, FEATURE_ENCODING_JSON_GZIP)
-
-        // then
-        assertEquals(FEATURE_ENCODING_JSON_GZIP, Flags.readFeatureEncoding(flags))
-        // untouched other flags
-        assertEquals(0, Flags.readGeometryEncoding(flags))
+        assertEquals(FeatureEncoding.JBON_GZIP, flags.featureEncoding())
+        assertEquals(FeatureEncoding.JBON_GZIP, flags)
+        assertEquals(0, flags and FEATURE_CLEAR)
     }
 
     @Test
-    fun maxGeometryEncodingShouldNotModifyFeatureEncoding() {
-        // given
-        var flags = 0
+    fun shouldProperlySetTagsEncoding() {
+        val flags = Flags(0).tagsEncoding(TagsEncoding.JBON_GZIP)
 
-        // when
-        flags = GEOMETRY_FLAG_ENCODER.encodeNew(flags, 15)
-
-        // then
-        assertEquals(15, Flags.readGeometryEncoding(flags))
-        assertEquals(0, Flags.readFeatureEncoding(flags))
-    }
-
-    @Test
-    fun maxFeatureEncodingShouldNotModifyGeometryEncoding() {
-        // given
-        var flags = 0
-
-        // when
-        flags = Flags.encodeFeatureFlag(flags, 15)
-
-        // then
-        assertEquals(15, Flags.readFeatureEncoding(flags))
-        assertEquals(0, Flags.readGeometryEncoding(flags))
-    }
-
-    @Test
-    fun shouldNotBeAbleToExceedValues() {
-        assertFailsWith<Exception> { Flags.encodeFeatureFlag(0, 16) }
-        assertFailsWith<Exception> { Flags.encodeGeometryFlag(0, 16) }
-        assertFailsWith<Exception> { Flags.encodeAction(0, 4) }
-        assertFailsWith<Exception> { Flags.encodeTagsFlag(0, 16) }
+        assertEquals(TagsEncoding.JBON_GZIP, flags.tagsEncoding())
+        assertEquals(TagsEncoding.JBON_GZIP, flags)
+        assertEquals(0, flags and TAGS_CLEAR)
     }
 
     @Test
@@ -91,44 +55,58 @@ class FlagsTest {
         var flags = 0
 
         // when
-        flags = Flags.encodeFeatureFlag(flags, 15)
-        flags = Flags.encodeGeometryFlag(flags, 15)
-        flags = Flags.encodeTagsFlag(flags, 15)
-        flags = Flags.encodeAction(flags, 3)
+        flags = flags.geoEncoding(15 shl GEO_SHIFT)
+        flags = flags.featureEncoding(15 shl FEATURE_SHIFT)
+        flags = flags.tagsEncoding(15 shl TAGS_SHIFT)
+        flags = flags.action(3 shl ACTION_SHIFT)
 
         // then
         assertEquals(16383, flags)
-        assertEquals(15, Flags.readFeatureEncoding(flags))
-        assertEquals(15, Flags.readGeometryEncoding(flags))
-        assertEquals(15, Flags.readTagsEncoding(flags))
-        assertEquals(3, Flags.readAction(flags))
-
+        assertEquals(15, flags.geoEncoding() shr GEO_SHIFT)
+        assertEquals(15, flags.featureEncoding() shr FEATURE_SHIFT)
+        assertEquals(15, flags.tagsEncoding() shr TAGS_SHIFT)
+        assertEquals(3, flags.action() shr ACTION_SHIFT)
     }
 
     @Test
-    fun testEnforceGzipCompression() {
-        // given
-        var flags = 0
+    fun testGeometryGzip() {
+        var flags: Flags = Flags().geoEncoding(GeoEncoding.GEO_JSON)
+        assertFalse(flags.geoGzip())
 
-        // when
-        flags = Flags.encodeFeatureFlag(flags, FEATURE_ENCODING_JSON)
-        flags = Flags.forceGzipOnFeatureEncoding(flags)
+        flags = flags.geoGzipOn()
+        assertEquals(GeoEncoding.GEO_JSON_GZIP, flags.geoEncoding())
+        assertTrue(flags.geoGzip())
 
-        // then
-        assertEquals(FEATURE_ENCODING_JSON_GZIP, Flags.readFeatureEncoding(flags))
+        flags = flags.geoGzipOff()
+        assertEquals(GeoEncoding.GEO_JSON, flags.geoEncoding())
+        assertFalse(flags.geoGzip())
+    }
 
-        // when
-        flags = Flags.encodeFeatureFlag(flags, FEATURE_ENCODING_JBON)
-        flags = Flags.forceGzipOnFeatureEncoding(flags)
+    @Test
+    fun testFeatureGzip() {
+        var flags: Flags = Flags().featureEncoding(FeatureEncoding.JSON)
+        assertFalse(flags.featureGzip())
 
-        // then
-        assertEquals(FEATURE_ENCODING_JBON_GZIP, Flags.readFeatureEncoding(flags))
-        assertTrue(Flags.isFeatureEncodedWithGZip(flags))
+        flags = flags.featureGzipOn()
+        assertEquals(FeatureEncoding.JSON_GZIP, flags.featureEncoding())
+        assertTrue(flags.featureGzip())
 
-        // when
-        flags = Flags.turnOffGzipOnFeatureEncoding(flags)
+        flags = flags.featureGzipOff()
+        assertEquals(FeatureEncoding.JSON, flags.featureEncoding())
+        assertFalse(flags.featureGzip())
+    }
 
-        assertEquals(FEATURE_ENCODING_JBON, Flags.readFeatureEncoding(flags))
-        assertFalse(Flags.isFeatureEncodedWithGZip(flags))
+    @Test
+    fun testTagsGzip() {
+        var flags: Flags = Flags().tagsEncoding(TagsEncoding.JSON)
+        assertFalse(flags.tagsGzip())
+
+        flags = flags.tagsGzipOn()
+        assertEquals(TagsEncoding.JSON_GZIP, flags.tagsEncoding())
+        assertTrue(flags.tagsGzip())
+
+        flags = flags.tagsGzipOff()
+        assertEquals(TagsEncoding.JSON, flags.tagsEncoding())
+        assertFalse(flags.tagsGzip())
     }
 }

@@ -227,13 +227,15 @@ expect class Platform {
         fun <T> newThreadLocal(initializer: (() -> T)? = null): PlatformThreadLocal<T>
 
         /**
-         * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
-         * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
-         * @param pobject The object at which to query for the proxy.
-         * @param klass The proxy class.
-         * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
-         * @return The proxy instance.
-         * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
+         * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride] is _true_,
+         * the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
+         * @param pobject the object at which to query for the proxy ([PlatformMap], [PlatformList] or [PlatformDataView]).
+         * @param klass the proxy class.
+         * @param doNotOverride if _true_, do not override existing symbols bound to incompatible types, but throw an
+         * [IllegalStateException]
+         * @return the proxy instance.
+         * @throws IllegalArgumentException if the given `object` is not [PlatformMap], [PlatformList] or [PlatformDataView].
+         * @throws IllegalStateException if [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
          */
         fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean = false): T
 

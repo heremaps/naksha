@@ -23,16 +23,12 @@ class XyzProxy : ObjectProxy() {
         private val APP_ID = NullableProperty<Any, XyzProxy, String>(String::class)
         private val AUTHOR = NullableProperty<Any, XyzProxy, String>(String::class)
         private val TIMESTAMP = NullableProperty<Any, XyzProxy, Int64>(Int64::class)
-        private val TAGS = NotNullProperty<Any, XyzProxy, TagsProxy>(
-            TagsProxy::class)
+        private val TAGS = NotNullProperty<Any, XyzProxy, TagsProxy>(TagsProxy::class)
     }
 
-    /**
-     * FIXME not sure if we need it here since we keep it on flags
-     */
+    // TODO: Add link to MOM shift to document what is part of MOM model, and what an extension
     var action: String? by ACTION
     var uuid: String? by UUID
-    var uuidNext: String? by UUID
     var puuid: String? by UUID
     var version: Int? by VERSION
     var appId: String? by APP_ID

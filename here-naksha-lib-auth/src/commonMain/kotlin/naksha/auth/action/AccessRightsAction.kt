@@ -1,7 +1,7 @@
 package naksha.auth.action
 
 import naksha.auth.attribute.ResourceAttributes
-import naksha.base.AbstractListProxy
+import naksha.base.ListProxy
 import kotlin.js.JsExport
 
 /**
@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE", "UNCHECKED_CAST")
 @JsExport
 sealed class AccessRightsAction<T : ResourceAttributes, SELF : AccessRightsAction<T, SELF>> :
-    AbstractListProxy<ResourceAttributes>(ResourceAttributes::class) {
+    ListProxy<ResourceAttributes>(ResourceAttributes::class) {
 
    open val name: String = "unknownAction"
 

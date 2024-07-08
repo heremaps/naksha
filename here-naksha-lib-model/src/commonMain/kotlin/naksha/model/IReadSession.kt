@@ -21,7 +21,7 @@ interface IReadSession: ISession {
 
     /**
      * Execute the given [Request] in parallel, if possible. For [WriteRequest] this method is performing a form of auto-commit. This
-     * means, all writes are executed in parallel and when all requests are successfully done, all are committed, if any error happens,
+     * means, all writes are executed in parallel, and when all requests are successfully done, all are committed, if any error happens,
      * all are auto-rolled back.
      *
      * **Warning**: There is a minor risk to create a broken state in the storage! Even after all requests have been executed

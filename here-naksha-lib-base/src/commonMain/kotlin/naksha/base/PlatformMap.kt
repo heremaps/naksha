@@ -13,4 +13,12 @@ import kotlin.reflect.KClass
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 @JsName("Map")
-interface PlatformMap : PlatformObject
+interface PlatformMap : PlatformObject {
+    /**
+     * Create a proxy or return the existing proxy.
+     * @param klass the proxy class.
+     * @return the proxy instance.
+     * @throws IllegalArgumentException if this is no [PlatformMap], [PlatformList] or [PlatformMap].
+     */
+    fun <T : Proxy> proxy(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
+}

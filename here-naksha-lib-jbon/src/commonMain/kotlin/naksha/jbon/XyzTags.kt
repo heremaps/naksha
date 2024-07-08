@@ -3,7 +3,7 @@
 package naksha.jbon
 
 import naksha.base.ObjectProxy
-import naksha.base.AbstractMapProxy
+import naksha.base.MapProxy
 import naksha.base.Platform
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -78,7 +78,7 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
     /**
      * Returns the tags as map.
      */
-    fun tagsMap(): AbstractMapProxy<String, *> = _tagsMap
+    fun tagsMap(): MapProxy<String, *> = _tagsMap
 
     /**
      * Returns the tags as array.

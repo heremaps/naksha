@@ -206,6 +206,7 @@ abstract class JsEnum : CharSequence {
                 check(existing === null || existing === ns) {
                     "There is already another class (${existing!!.simpleName}) registered for namespace ${ns.simpleName}"
                 }
+                instance.register(ns)
                 instance.initClass()
             }
             val mainMap = mainMap(ns)
@@ -239,42 +240,34 @@ abstract class JsEnum : CharSequence {
     abstract fun namespace(): KClass<out JsEnum>
 
     /**
-     * Register a enumeration type.
-     * @param childKlass The enumeration-class.
-     * @param namespace The namespace.
+     * Register an enumeration child-class.
+     * @param enumKlass the enumeration child-class.
      */
-    protected fun <NS : JsEnum, CHILD : NS> register(
-        childKlass: KClass<out CHILD>,
-        namespace: KClass<out NS>
-    ) {
-        val existing = klassToNamespace.putIfAbsent(childKlass, namespace)
+    protected fun <CHILD : JsEnum> register(enumKlass: KClass<out CHILD>) {
+        val namespace = namespace()
+        val existing = klassToNamespace.putIfAbsent(enumKlass, namespace)
         check(existing === null || existing === namespace) {
-            "Failed to register '${childKlass.simpleName}' to namespace '${namespace.simpleName}'" +
-                    ", '${childKlass.simpleName}' is already registered to '${existing!!.simpleName}'"
+            "Failed to register '${enumKlass.simpleName}' to namespace '${namespace.simpleName}'" +
+                    ", '${enumKlass.simpleName}' is already registered to '${existing!!.simpleName}'"
         }
-        Platform.initializeKlass(childKlass)
+        Platform.initializeKlass(enumKlass)
     }
 
 
     /**
      * This method is invoked exactly ones per namespace, when the enumeration namespace is not yet initialized. It simplifies
      * auto-initialization. Actually, it is required that the namespace class (the class directly extending the [JsEnum]) implements this
-     * method and invokes [register] for itself and all extending classes. For example, when an enumeration class `Vehicle` is created
-     * with two extending enumeration classes being `Car` and `Truck`, then the `initClass` method of the `Vehicle` should do:
+     * method and invokes [register] for all extending (child) classes. For example, when an enumeration class `Vehicle` is created
+     * with two extending (child) enumeration classes, being `Car` and `Truck`, then the `initClass` method of the `Vehicle` should do:
      * ```
      * protected fun initClass() {
-     *   register(Vehicle::class, Vehicle::class)
-     *   register(Car::class, Vehicle::class)
-     *   register(Truck::class, Vehicle::class)
+     *   register(Car::class)
+     *   register(Truck::class)
      * }
      * ```
      * This is needed to resolve the chicken-egg problem of the JVM class loading mechanism. The order is not relevant.
      *
-     * **Notes**:
-     * - The minimal requirement is to register itself.
-     *
      * ## Details
-     *
      * There is a chicken-egg problem in the JVM. A class is not loaded before it is needed and even when the class is
      * loaded, it is not directly initialized. In other words, when we create an enumeration class and make constants for
      * possible value, the JVM runtime will not be aware of them unless we force it to load and initialize the class.
@@ -288,7 +281,7 @@ abstract class JsEnum : CharSequence {
      * to default values, because the constructor is bypassed by the reflection construction. It is invoked after the [value]
      * has been set, so [value] can be read.
      */
-    protected fun init() {}
+    protected open fun init() {}
 
     /**
      * A method that can be overridden, if the enumeration requires special handling in turning the value into a string.
@@ -316,8 +309,13 @@ abstract class JsEnum : CharSequence {
      * @param <SELF>    The type of this.
      * @return this.
      */
-    protected fun <SELF : JsEnum> alias(selfClass: KClass<SELF>, value: Any?) {
-        TODO("JsEnum::alias is not yet implemented")
+    protected fun <SELF : JsEnum> alias(selfClass: KClass<SELF>, value: Any): SELF {
+        val aliasMap = aliasMap(namespace())
+        check(aliasMap.putIfAbsent(value, this) == null) {
+            "Conflict, there is already an enumeration value for '$value' registered: ${aliasMap[value]!!::class.simpleName}"
+        }
+        @Suppress("UNCHECKED_CAST")
+        return this as SELF
     }
 
     final override fun toString(): String {
@@ -328,6 +326,12 @@ abstract class JsEnum : CharSequence {
         }
         return s
     }
+
+    /**
+     * The [value] converted to string, the same as [toString], just shorted notation in Kotlin.
+     */
+    val str: String
+        get() = toString()
 
     fun toJSON(): String = toString()
 

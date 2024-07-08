@@ -2,6 +2,8 @@
 
 package naksha.base
 
+import kotlin.reflect.KClass
+
 inline fun Int64(value: Long) = Platform.longToInt64(value)
 inline fun Int64(value: Int) = Platform.toInt64(value)
 inline fun Int64(value: Double, rawBits: Boolean = false) = if (rawBits) Platform.toInt64RawBits(value) else Platform.toInt64(value)
@@ -51,3 +53,15 @@ inline fun Double.toLongRawBits(value: Double): Long = Platform.toInt64RawBits(v
 inline fun Long.toInt64(): Int64 = Platform.longToInt64(this)
 
 inline fun <K: Any, V:Any> CMap(): CMap<K, V> = Platform.newCMap()
+
+/**
+ * Create a proxy or return the existing proxy.
+ * @param klass the proxy class.
+ * @return the proxy instance.
+ * @throws IllegalArgumentException if this is no [PlatformMap], [PlatformList] or [PlatformMap].
+ */
+inline fun <T : Proxy> PlatformObject?.proxy(klass: KClass<T>): T {
+    require(this != null)
+    require(this is PlatformMap || this is PlatformList || this is PlatformDataView)
+    return Platform.proxy(this, klass)
+}

@@ -25,7 +25,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
+open class ListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
 
     override fun createData(): PlatformList = Platform.newList()
     override fun platformObject(): PlatformList = super.platformObject() as PlatformList
@@ -52,7 +52,7 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return the value.
      */
-    fun <T : Any, SELF: AbstractListProxy<E>> getOrInit(index: Int, klass: KClass<out T>, init: Fn2<out T, in SELF, in Int>): T {
+    fun <T : Any, SELF: ListProxy<E>> getOrInit(index: Int, klass: KClass<out T>, init: Fn2<out T, in SELF, in Int>): T {
         val data = platformObject()
         val i = if (index < 0) max(0, array_get_length(data) + index) else index
         var value: T? = null
@@ -76,7 +76,7 @@ abstract class AbstractListProxy<E : Any>(val elementKlass: KClass<out E>) : Pro
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return The value.
      */
-    fun <T : Any, SELF: AbstractListProxy<E>> getOrCreate(index: Int, klass: KClass<out T>, init: Fn2<out T?, in SELF, in Int>? = null): T {
+    fun <T : Any, SELF: ListProxy<E>> getOrCreate(index: Int, klass: KClass<out T>, init: Fn2<out T?, in SELF, in Int>? = null): T {
         val data = platformObject()
         val i = if (index < 0) max(0, array_get_length(data) + index) else index
         var value: T? = null

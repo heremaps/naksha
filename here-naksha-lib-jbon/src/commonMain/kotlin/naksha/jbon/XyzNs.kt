@@ -4,7 +4,7 @@ package naksha.jbon
 
 import naksha.base.Int64
 import naksha.base.ObjectProxy
-import naksha.base.AbstractMapProxy
+import naksha.base.MapProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -122,7 +122,7 @@ class XyzNs : XyzStruct<XyzNs>() {
      * @param tags The tags to merge into, if any.
      * @return the XYZ namespace as map.
      */
-    fun toIMap(storageId: String, tags: Array<String>?): AbstractMapProxy<String, *> {
+    fun toIMap(storageId: String, tags: Array<String>?): MapProxy<String, *> {
         val map = ObjectProxy()
         map["createdAt"] = createdAt().toDouble()
         map["updatedAt"] = updatedAt().toDouble()

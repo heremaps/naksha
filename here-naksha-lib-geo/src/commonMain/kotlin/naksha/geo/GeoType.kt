@@ -15,9 +15,7 @@ class GeoType : JsEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun namespace(): KClass<out JsEnum> = GeoType::class
 
-    override fun initClass() {
-        register(GeoType::class, GeoType::class)
-    }
+    override fun initClass() {}
 
     companion object {
         /**

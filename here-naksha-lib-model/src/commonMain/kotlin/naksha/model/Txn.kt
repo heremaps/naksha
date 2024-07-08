@@ -6,9 +6,7 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class Txn(
-    val value: Int64
-) : Comparable<Txn> {
+data class Txn(val value: Int64) : Comparable<Txn> {
     companion object {
         /**
          * The minimum value of the sequence, so just zero.

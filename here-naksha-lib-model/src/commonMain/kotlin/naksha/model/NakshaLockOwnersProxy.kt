@@ -3,8 +3,8 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.base.AbstractMapProxy
+import naksha.base.MapProxy
 import kotlin.js.JsExport
 
 @JsExport
-class NakshaLockOwnersProxy : AbstractMapProxy<String, Int64>(String::class, Int64::class)
+class NakshaLockOwnersProxy : MapProxy<String, Int64>(String::class, Int64::class)

@@ -79,9 +79,7 @@ actual class Platform {
         };"""
         )
 
-        val objectTemplate = object : PlatformObject {
-            override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
-        }
+        val objectTemplate = object : PlatformObject {}
         val listTemplate = object : PlatformList {
             override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
         }
@@ -96,11 +94,12 @@ actual class Platform {
         actual fun initialize(): Boolean {
             if (!isInitialized) {
                 isInitialized = true
+                copyPrototypeToPrototype(objectTemplate, js("{}").unsafeCast<Any>())
                 copyPrototypeToPrototype(listTemplate, js("[]").unsafeCast<Any>())
                 copyPrototypeToPrototype(mapTemplate, js("new Map()").unsafeCast<Any>())
-                copyPrototypeToPrototype(objectTemplate, js("{}").unsafeCast<Any>())
-                copyPrototypeToPrototype(symbolTemplate, js("Symbol()").unsafeCast<Any>())
                 copyPrototypeToPrototype(dataViewTemplate, js("new DataView(new ArrayBuffer(0))").unsafeCast<Any>())
+
+                copyPrototypeToPrototype(symbolTemplate, js("Symbol()").unsafeCast<Any>())
                 copyPrototypeToPrototype(JsInt64(), js("BigInt(0)").unsafeCast<Any>())
                 // Patch the Int64::class, so that it works as expected (it should only detect BigInt!)
                 val i64Class = Int64::class
@@ -218,7 +217,7 @@ actual class Platform {
 
         @JsStatic
         actual fun unbox(value: Any?): Any? {
-            if (value === null || value === undefined) return value
+            if (value == null) return value
             if (value is Proxy) return value.platformObject()
             return if (isScalar(value)) value.asDynamic().valueOf() else value
         }
@@ -290,7 +289,7 @@ actual class Platform {
 
         @JsStatic
         actual fun isScalar(o: Any?): Boolean {
-            if (o === null || o === undefined) return true
+            if (o == null) return true
             return when (jsTypeOf(o.asDynamic().valueOf())) {
                 "string", "number", "bigint", "boolean" -> true
                 else -> false

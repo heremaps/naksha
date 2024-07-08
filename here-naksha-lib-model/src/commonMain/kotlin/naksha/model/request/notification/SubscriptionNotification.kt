@@ -1,6 +1,6 @@
 package naksha.model.request.notification
 
-import naksha.base.AbstractListProxy
+import naksha.base.ListProxy
 import naksha.model.NakshaTransactionProxy
 import naksha.model.SubscriptionStateProxy
 import kotlin.js.ExperimentalJsExport
@@ -15,6 +15,6 @@ open class SubscriptionNotification(
     storageId: String,
     val subscriptionId: String,
     val subscriptionState: SubscriptionStateProxy,
-    val transactions: AbstractListProxy<NakshaTransactionProxy>
+    val transactions: ListProxy<NakshaTransactionProxy>
     ): Notification(storageId){
 }
