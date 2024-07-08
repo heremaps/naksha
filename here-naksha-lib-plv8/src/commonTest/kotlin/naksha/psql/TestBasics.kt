@@ -10,7 +10,7 @@ import kotlin.test.Test
  * @property run if the test should run.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-open class TestBasics(val dropSchema: Boolean = true, val initStorage: Boolean = true, val run: Boolean = true) {
+abstract class TestBasics(val dropSchema: Boolean = true, val initStorage: Boolean = true, val run: Boolean = true) {
 
     companion object {
         /**
