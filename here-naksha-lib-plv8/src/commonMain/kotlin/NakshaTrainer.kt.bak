@@ -1,0 +1,31 @@
+@file:OptIn(ExperimentalJsExport::class)
+
+package com.here.naksha.lib.plv8
+
+import kotlin.js.ExperimentalJsExport
+import kotlin.js.JsExport
+
+/**
+ * A trainer that allow to auto-generate dictionaries from sample data (JBON encoded).
+ */
+@JsExport
+class NakshaTrainer {
+
+    /**
+     * Train the given data.
+     * @param data The training data.
+     */
+    fun sample(data: ByteArray) {
+        TODO("Implement me!")
+    }
+
+    /**
+     * Build a collection local or global dictionary out of the training set. If the _id_ argument is _null_, then a random identifier
+     * is generated.
+     * @param id The dictionary identifier; if _null_, a random one is generated.
+     * @return The generated dictionary.
+     */
+    fun buildDictionary(id: String? = null): ByteArray {
+        TODO("Implement me!")
+    }
+}

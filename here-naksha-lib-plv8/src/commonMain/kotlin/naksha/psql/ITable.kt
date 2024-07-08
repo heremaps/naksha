@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.base.AbstractMapProxy
+import naksha.base.MapProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -25,5 +25,5 @@ interface ITable {
      * Returns a new row.
      * @param ret The return row.
      */
-    fun returnNext(ret: AbstractMapProxy<String, Any>)
+    fun returnNext(ret: MapProxy<String, Any>)
 }

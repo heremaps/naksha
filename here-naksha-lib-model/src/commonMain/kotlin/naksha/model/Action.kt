@@ -1,8 +1,6 @@
 package naksha.model
 
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmField
 
 /**
  * Helper for action encoding in [Flags].
@@ -13,15 +11,20 @@ object Action : FlagsBits() {
     /**
      * Create action.
      */
-    const val CREATE = 0 shl ACTION_SHIFT
+    const val CREATED = 0 shl ACTION_SHIFT
 
     /**
      * Update action.
      */
-    const val UPDATE = 1 shl ACTION_SHIFT
+    const val UPDATED = 1 shl ACTION_SHIFT
 
     /**
      * Delete action.
      */
-    const val DELETE = 2 shl ACTION_SHIFT
+    const val DELETED = 2 shl ACTION_SHIFT
+
+    /**
+     * Unknown action.
+     */
+    const val UNKNOWN = 3 shl ACTION_SHIFT
 }

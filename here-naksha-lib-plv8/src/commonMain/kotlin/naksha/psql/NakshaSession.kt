@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalJsExport::class)
-
 package naksha.psql
 
 import naksha.jbon.*
@@ -13,32 +11,35 @@ import naksha.jbon.XyzVersion
 import naksha.model.*
 import naksha.model.request.*
 import naksha.model.response.*
-import naksha.psql.Static.SC_TRANSACTIONS
-import naksha.psql.Static.nakshaCollectionConfig
+import naksha.psql.PgStatic.SC_TRANSACTIONS
+import naksha.psql.PgStatic.nakshaCollectionConfig
 import naksha.psql.read.ReadQueryBuilder
 import naksha.psql.write.RowUpdater
 import naksha.psql.write.SingleCollectionWriter
 import naksha.psql.write.WriteRequestExecutor
-import kotlin.js.ExperimentalJsExport
-import kotlin.js.JsExport
 
 /**
  * A session linked to a PostgresQL database.
  *
+ * @constructor Create a new session.
  * @param storage the reference to the storage to which to link this Naksha session. In Java invoked by `PsqlStorage` when the method
  * `newReadSession` or `newWriteSession` is invoked. Within the database, a new Naksha session is added into to global `plv8` object,
  * when the `naksha_start_session` SQL function is executed, which is necessary for all other Naksha SQL functions to work.
  * to the PLV8
  * @param context the context to use for this session.
  * @param options the default options to use, when opening database connections.
- * @constructor Create a new session.
  */
 // @JsExport // <-- when uncommenting this, we get a compiler error!
-class NakshaSession(
-    storage: PgStorage,
-    context: NakshaContext,
-    options: PgSessionOptions
-) : AbstractNakshaSession(storage, context, options) {
+class NakshaSession(storage: PgStorage, context: NakshaContext, options: PgOptions) : AbstractNakshaSession(storage, context, options) {
+
+    // TODO: Add a NakshaCollectionRow, which should hold the reference to a Row of the collection, plus
+    //       the JbNakshaCollection, which is a JBON reader of the collection JBON. We need this, because
+    //       for caching we want the data to be immutable, otherwise we can't cache it internally.
+    //       We can return the cached row then to the client, when he asks for the collection.
+    // Note: We should remove the 'estimatedFeatureCount' and the 'estimatedDeletedCount' from the JBON.
+    //       These values are always calculated on-the-fly, and should not be persisted, but the can be
+    //       cached at the NakshaCollectionRow, so that the values can be added into the collection feature,
+    //       when the client decodes it. This need to be done on-the-fly while decoding the row into a feature!
 
     /**
      * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
@@ -104,21 +105,15 @@ class NakshaSession(
     var errMsg: String? = null
 
     init {
-        val session = pgSession()
-        session.use {
-            it.execute(
-                """
+        val conn = usePgConnection()
+        conn.execute(
+            """
 SET SESSION search_path TO $schemaIdent, public, topology;
 SET SESSION enable_seqscan = OFF;
-"""
-            )
-            val rows = it.rows(
-                it.execute(
-                    "SELECT oid FROM pg_namespace WHERE nspname = $1",
-                    arrayOf(options.schema)
-                )
-            )
-            schemaOid = rows!![0]["oid"] as Int
+SELECT oid FROM pg_namespace WHERE nspname = $1;
+""", arrayOf(options.schema)
+        ).fetch().use {
+            schemaOid = it["oid"]
             collectionConfiguration = mutableMapOf()
             collectionConfiguration[NKC_TABLE] = nakshaCollectionConfig
             transaction.id = txn().toGuid(storage.id(), "txn", "txn").toString()
@@ -167,7 +162,7 @@ SET SESSION enable_seqscan = OFF;
         if (isHistoryEnabled(collectionId)) {
             // TODO move it outside and run it once
             val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$hst")
-            val session = pgSession()
+            val session = usePgConnection()
             val hstInsertPlan = session.prepare(
                 """INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""",
                 COL_ALL_TYPES
@@ -210,7 +205,7 @@ SET SESSION enable_seqscan = OFF;
      */
     internal fun deleteFromDel(collectionId: String, id: String) {
         val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$del")
-        pgSession().execute("""DELETE FROM $collectionIdQuoted WHERE id = $1""", arrayOf(id))
+        usePgConnection().execute("""DELETE FROM $collectionIdQuoted WHERE id = $1""", arrayOf(id))
     }
 
     /**
@@ -224,7 +219,7 @@ SET SESSION enable_seqscan = OFF;
         if (autoPurge != true) {
             val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$del")
             val oldMeta = OLD.meta!!
-            val session = pgSession()
+            val session = usePgConnection()
             session.execute(
                 """INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""",
                 arrayOf(
@@ -311,31 +306,6 @@ SET SESSION enable_seqscan = OFF;
      */
     private lateinit var pgVersion: XyzVersion
 
-    /**
-     * Returns the PostgresQL version.
-     *
-     * Uses the current session, does not commit or rollback the current session.
-     * @return The PostgresQL version.
-     */
-    fun postgresVersion(): XyzVersion {
-        if (!this::pgVersion.isInitialized) {
-            val session = pgSession()
-            val r = session.execute("select version() as version")
-            val rows = session.rows(r)
-            check(rows != null)
-            val row = rows[0]
-            // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
-            val versionString: String = row["version"]!! as String
-            val firstSpace = versionString.indexOf(' ')
-            check(firstSpace > 0)
-            val secondSpace = versionString.indexOf(' ', firstSpace + 1)
-            check(secondSpace > firstSpace)
-            val pgv = versionString.substring(firstSpace + 1, secondSpace)
-            pgVersion = XyzVersion.fromString(pgv)
-        }
-        return pgVersion
-    }
-
     internal fun nextUid() = uid++
 
     /**
@@ -346,43 +316,40 @@ SET SESSION enable_seqscan = OFF;
      */
     fun txn(): Txn {
         if (_txn == null) {
-            val session = pgSession()
-            val query = """
+            val conn = usePgConnection()
+            conn.execute(
+                """
 WITH ns as (SELECT oid FROM pg_namespace WHERE nspname = $1),
      txn_seq as (SELECT cls.oid as oid FROM pg_class cls, ns WHERE cls.relname = 'naksha_txn_seq' and cls.relnamespace = ns.oid)
 SELECT nextval(txn_seq.oid) as txn, txn_seq.oid as txn_oid, (extract(epoch from transaction_timestamp())*1000)::int8 as time, ns.oid as ns_oid
-FROM ns, txn_seq;"""
-            val row = session.rows(session.execute(query, arrayOf(options.schema)))!![0]
-            val schemaOid = row["ns_oid"] as Int
-            val txnSeqOid = row["txn_oid"] as Int
-            val txts = asInt64(row["time"])
-            var txn = Txn(asInt64(row["txn"]))
-            verifyCache(schemaOid)
-            _txts = txts
-            _txn = txn
-            val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
-            val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
-            if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
-                session.execute("SELECT pg_advisory_lock($1)", arrayOf(Static.TXN_LOCK_ID))
-                try {
-                    val raw = asInt64(
-                        session.rows(
-                            session.execute(
-                                "SELECT nextval($1) as v",
-                                arrayOf(txnSeqOid)
-                            )
-                        )!![0]["v"]
-                    )
-                    txn = Txn(raw)
-                    _txn = txn
-                    if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
-                        // Rollover, we update sequence of the day.
-                        txn = Txn.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
+FROM ns, txn_seq;
+""", arrayOf(options.schema)
+            ).fetch().use {
+                val schemaOid: Int = it["ns_oid"]
+                val txnSeqOid: Int = it["txn_oid"]
+                val txts: Int64 = it["time"]
+                var txn = Txn(it["txn"])
+                verifyCache(schemaOid)
+                _txts = txts
+                _txn = txn
+                val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
+                val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
+                if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
+                    conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgStatic.TXN_LOCK_ID)).close()
+                    try {
+                        conn.execute("SELECT nextval($1) as v", arrayOf(txnSeqOid)).fetch().use {
+                            txn = Txn(it["v"])
+                        }
                         _txn = txn
-                        session.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1))
+                        if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
+                            // Rollover, we update sequence of the day.
+                            txn = Txn.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
+                            _txn = txn
+                            conn.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1)).close()
+                        }
+                    } finally {
+                        conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgStatic.TXN_LOCK_ID)).close()
                     }
-                } finally {
-                    session.execute("SELECT pg_advisory_unlock($1)", arrayOf(Static.TXN_LOCK_ID))
                 }
             }
         }
@@ -469,27 +436,22 @@ FROM ns, txn_seq;"""
         return if (collectionConfiguration.containsKey(collectionId)) {
             collectionConfiguration[collectionId]!!
         } else {
-            val session = pgSession()
-            val collectionsSearchRows = session.rows(
-                session.execute(
-                    "select $COL_FEATURE, $COL_FLAGS from $NKC_TABLE_ESC where $COL_ID = $1",
-                    arrayOf(collectionId)
+            val conn = usePgConnection()
+            conn.execute(
+                "select $COL_FEATURE, $COL_FLAGS from $NKC_TABLE_ESC where $COL_ID = $1",
+                arrayOf(collectionId)
+            ).fetch().use {
+                val row = Row(
+                    storage = storage,
+                    flags = it[COL_FLAGS],
+                    feature = it[COL_FEATURE],
+                    id = collectionId,
+                    guid = null
                 )
-            )
-            if (collectionsSearchRows.isNullOrEmpty()) {
-                throw RuntimeException("collection $collectionId does not exist in $NKC_TABLE_ESC")
+                val nakCollection = row.toMemoryModel()!!.proxy(NakshaCollectionProxy::class)
+                collectionConfiguration[collectionId] = nakCollection
+                nakCollection
             }
-            val cols = collectionsSearchRows[0]
-            val row = Row(
-                storage = storage,
-                flags = cols[COL_FLAGS]!! as Int,
-                feature = cols[COL_FEATURE]!! as ByteArray,
-                id = collectionId,
-                guid = null
-            )
-            val nakCollection = row.toMemoryModel()!!.proxy(NakshaCollectionProxy::class)
-            collectionConfiguration.put(collectionId, nakCollection)
-            nakCollection
         }
     }
 
@@ -530,10 +492,10 @@ FROM ns, txn_seq;"""
             transactionAction.write()
             writeFeaturesResult
         } catch (e: NakshaException) {
-            if (Static.PRINT_STACK_TRACES) logger.info(e.stackTraceToString())
+            if (PgStatic.PRINT_STACK_TRACES) logger.info(e.stackTraceToString())
             ErrorResponse(NakshaError(e.errNo, e.errMsg))
         } catch (e: Throwable) {
-            if (Static.PRINT_STACK_TRACES)
+            if (PgStatic.PRINT_STACK_TRACES)
                 logger.info(e.cause?.message!!)
             ErrorResponse(NakshaError(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}"))
         }
@@ -542,13 +504,13 @@ FROM ns, txn_seq;"""
     override fun pgSessionBeforeStart() {
     }
 
-    override fun pgSessionAfterStart(session: PgSession) {
+    override fun pgSessionAfterStart(session: PgConnection) {
     }
 
-    override fun pgSessionOnCommit(session: PgSession) {
+    override fun pgSessionOnCommit(session: PgConnection) {
     }
 
-    override fun pgSessionOnRollback(session: PgSession) {
+    override fun pgSessionOnRollback(session: PgConnection) {
     }
 
     override fun writeFeature(feature: NakshaFeatureProxy): Response {
@@ -558,11 +520,12 @@ FROM ns, txn_seq;"""
     override fun execute(request: Request): Response {
         when (request) {
             is ReadRequest -> {
-                val session = pgSession()
-                val (sql, params) = ReadQueryBuilder(session).build(request)
-                val pgResult = session.rows(session.execute(sql, params.toTypedArray()))
-                val rows = DbRowMapper.toReadRows(pgResult, storage)
-                return SuccessResponse(rows = rows)
+                val conn = usePgConnection()
+                val (sql, params) = ReadQueryBuilder(conn).build(request)
+                val pgResult = conn.execute(sql, params.toTypedArray())
+                TODO("Fix me!")
+                //val rows = DbRowMapper.toReadRows(pgResult, storage)
+                //return SuccessResponse(rows = rows)
             }
 
             is WriteRequest -> {

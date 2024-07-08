@@ -1,25 +1,26 @@
 package naksha.psql
 
 import naksha.base.Fnv1a32
-import naksha.psql.PgSessionOptions
+import naksha.base.Platform.Companion.logger
 import org.postgresql.PGProperty.*
-import org.postgresql.jdbc.PgConnection
 import org.postgresql.util.HostSpec
+import java.lang.ref.WeakReference
 import java.sql.ResultSet
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.min
 
 /**
  * Information about a PostgresQL instance.
  */
-class PsqlInstance {
+class PsqlInstance : PgInstance {
     companion object {
         private const val EXPECTED_URL_FORMAT = "jdbc:postgresql://{host}[:{port}]/{db}?user={user}&password={password}"
 
-        // TODO: Implement auto-closer of idle connections
-        // TODO: Implement keep-alive of idle connections
         private val instancePool = ConcurrentHashMap<String, PsqlInstance>()
+        private val connCounter = AtomicLong(1)
 
         @JvmStatic
         fun get(host: String, port: Int = 5432, database: String, user: String, password: String, readOnly: Boolean = false): PsqlInstance {
@@ -45,6 +46,27 @@ class PsqlInstance {
         this.password = password
         this.readOnly = readOnly
     }
+
+    internal class PooledPgConnection(
+        val jdbcConn: org.postgresql.jdbc.PgConnection,
+        val id: Long = connCounter.getAndDecrement(),
+        val session: AtomicReference<WeakReference<PsqlConnection>?> = AtomicReference(),
+        var e: Exception? = null
+    ) {
+        fun setSession(session: PsqlConnection): Boolean {
+            if (this.session.compareAndSet(null, session.weakRef)) {
+                e = Exception()
+                return true
+            }
+            return false
+        }
+    }
+
+
+    /**
+     * All open connections (the connection pool).
+     */
+    internal val connectionPool = ConcurrentHashMap<Long, PooledPgConnection>()
 
     private constructor(url: String) {
         // TODO: Improve parsing
@@ -79,41 +101,41 @@ class PsqlInstance {
     /**
      * The host to connect to.
      */
-    val host: String
+    override val host: String
         get() = hostSpec.host
 
     /**
      * The port to connect to.
      */
-    val port: Int
+    override val port: Int
         get() = hostSpec.port
 
     /**
      * The database to open.
      */
-    val database: String
+    override val database: String
 
     /**
      * The user to authenticate with.
      */
-    val user: String
+    override val user: String
 
     /**
      * The password to authenticate with.
      */
-    val password: String
+    override val password: String
 
     /**
      * If the instance is a read-replica (read-only instance).
      */
-    val readOnly: Boolean
+    override val readOnly: Boolean
 
     private var _url: String? = null
 
     /**
      * The JDBC url. **Beware** that this URL does contain the password in clear text.
      */
-    val url: String
+    override val url: String
         get() {
             var url = _url
             if (url == null) {
@@ -126,31 +148,63 @@ class PsqlInstance {
     // TODO: Implement session (aka connection) pool!
 
     /**
-     * Returns a session from the session pool or opens a new session. When the returned session is closed, it will be returned to the
-     * instance session pool.
-     * @param options the session options.
-     * @return the session.
-     * @throws IllegalArgumentException if the instance is read-only (read-replica) and a write-session is requested.
+     * Returns a connection from the connection pool or opens a new connection. When the returned connection is closed, it will be
+     * returned to the instance connection pool.
+     * @param options the connection options.
+     * @return the connection.
+     * @throws IllegalArgumentException if the instance is read-only (read-replica) and a write-connection is requested.
      */
-    fun openSession(options: PgSessionOptions): PsqlSession {
+    override fun openConnection(options: PgOptions): PsqlConnection {
         if (readOnly) require(options.readOnly) { "Failed to open a write connection to read-replica" }
+        var psqlConn: PsqlConnection?
+
+        val poolEnum = connectionPool.elements()
+        while (poolEnum.hasMoreElements()) {
+            val pooledConn = poolEnum.nextElement()
+            val sessionRef = pooledConn.session.get()
+            if (sessionRef != null) {
+                psqlConn = sessionRef.get()
+                if (psqlConn == null) {
+                    logger.warn("Found PostgresQL database connection that was not closed: {}", pooledConn.e?.stackTraceToString())
+                    connectionPool.remove(pooledConn.id, pooledConn)
+                    try {
+                        pooledConn.jdbcConn.close()
+                    } catch (_: Exception) {
+                    }
+                }
+                continue
+            }
+            // Idle connection found.
+            psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
+            if (pooledConn.setSession(psqlConn)) {
+                pooledConn.jdbcConn.isReadOnly = options.readOnly
+                return psqlConn
+            }
+            // Concurrent allocation, another thread was faster, go on.
+        }
+
         val props = Properties()
         props.setProperty(PG_DBNAME.getName(), database)
         props.setProperty(USER.getName(), user)
         props.setProperty(PASSWORD.getName(), password)
         props.setProperty(BINARY_TRANSFER.getName(), "true")
-        if (readOnly) props.setProperty(READ_ONLY.getName(), "true")
         props.setProperty(CONNECT_TIMEOUT.getName(), min(Int.MAX_VALUE, (options.connectTimeout / 1000L).toInt()).toString())
         props.setProperty(SOCKET_TIMEOUT.getName(), min(Int.MAX_VALUE, (options.socketTimeout / 1000L).toInt()).toString())
         //props.setProperty(CANCEL_SIGNAL_TIMEOUT.getName(), min(Int.MAX_VALUE, (? / 1000L).toDouble()).toString())
         //props.setProperty(RECEIVE_BUFFER_SIZE.getName(), receiveBufferSize.toString())
         //props.setProperty(SEND_BUFFER_SIZE.getName(), sendBufferSize.toString())
         props.setProperty(REWRITE_BATCHED_INSERTS.getName(), "true")
-        val conn = PgConnection(arrayOf(hostSpec), props, url)
-        conn.setAutoCommit(false)
-        conn.setReadOnly(options.readOnly)
-        conn.setHoldability(ResultSet.CLOSE_CURSORS_AT_COMMIT)
-        return PsqlSession(this, conn, options)
+        val jdbcConn = org.postgresql.jdbc.PgConnection(arrayOf(hostSpec), props, url)
+        jdbcConn.setAutoCommit(false)
+        jdbcConn.setReadOnly(options.readOnly)
+        jdbcConn.setHoldability(ResultSet.CLOSE_CURSORS_AT_COMMIT)
+
+        val pooledConn = PooledPgConnection(jdbcConn)
+        pooledConn.jdbcConn.isReadOnly = options.readOnly
+        psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
+        check(pooledConn.setSession(psqlConn))
+        check(connectionPool.putIfAbsent(pooledConn.id, pooledConn) != null)
+        return psqlConn
     }
 
     override fun equals(other: Any?): Boolean = other is PsqlInstance && url == other.url

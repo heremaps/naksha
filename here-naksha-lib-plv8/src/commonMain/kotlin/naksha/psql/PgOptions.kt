@@ -17,7 +17,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-data class PgSessionOptions(
+data class PgOptions(
     val appName: String,
     val schema: String,
     val readOnly: Boolean = false,

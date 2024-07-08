@@ -1,6 +1,8 @@
 package naksha.psql
 
+import naksha.base.PlatformObject
 import naksha.jbon.*
+import kotlin.reflect.KClass
 
 internal const val NKC_TABLE = "naksha~collections"
 internal const val NKC_TABLE_ESC = "\"naksha~collections\""

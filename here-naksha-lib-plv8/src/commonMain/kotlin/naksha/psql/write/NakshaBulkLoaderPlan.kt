@@ -7,8 +7,8 @@ import naksha.model.XYZ_EXEC_DELETED
 import naksha.model.XYZ_EXEC_PURGED
 import naksha.model.XYZ_EXEC_RETAINED
 import naksha.model.request.ResultRow
-import naksha.model.response.Metadata
-import naksha.model.response.Row
+import naksha.model.Metadata
+import naksha.model.Row
 import naksha.psql.*
 import naksha.psql.COL_ACTION
 import naksha.psql.COL_ALL
@@ -60,7 +60,7 @@ internal class NakshaBulkLoaderPlan(
     internal val copyHeadToHstBulkParams = mutableListOf<Array<Param>>()
 
     private fun insertHeadPlan(): PgPlan {
-        return session.pgSession().prepare(
+        return session.usePgConnection().prepare(
             """INSERT INTO $partitionHeadQuoted (
                 $COL_CREATED_AT,$COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_FLAGS,
                 $COL_APP_ID,$COL_AUTHOR,$COL_TYPE,$COL_ID,
@@ -77,7 +77,7 @@ internal class NakshaBulkLoaderPlan(
     }
 
     private fun updateHeadPlan(): PgPlan {
-        return session.pgSession().prepare(
+        return session.usePgConnection().prepare(
             """
                 UPDATE $partitionHeadQuoted 
                 SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_FLAGS=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE $COL_ID=$21
@@ -87,7 +87,7 @@ internal class NakshaBulkLoaderPlan(
     }
 
     private fun deleteHeadPlan(): PgPlan {
-        return session.pgSession().prepare(
+        return session.usePgConnection().prepare(
             """
                 DELETE FROM $partitionHeadQuoted
                 WHERE $COL_ID = $1
@@ -98,7 +98,7 @@ internal class NakshaBulkLoaderPlan(
 
     private fun insertDelPlan(): PgPlan {
         // ptxn + puid = txn + uid (as we generate new state in _del)
-        return session.pgSession().prepare(
+        return session.usePgConnection().prepare(
             """
                 INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
                 SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
@@ -111,7 +111,7 @@ internal class NakshaBulkLoaderPlan(
     }
 
     private fun insertDelToHstPlan(): PgPlan {
-        return session.pgSession().prepare(
+        return session.usePgConnection().prepare(
             """
                 INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
                 SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
@@ -124,7 +124,7 @@ internal class NakshaBulkLoaderPlan(
     }
 
     private fun copyHeadToHstPlan(): PgPlan {
-        return session.pgSession().prepare(
+        return session.usePgConnection().prepare(
             """
             INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
             SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
@@ -317,7 +317,7 @@ internal class NakshaBulkLoaderPlan(
 
     internal fun executeBatchDeleteFromDel(featureIdsToDeleteFromDel: MutableList<String>) {
         if (featureIdsToDeleteFromDel.isNotEmpty()) {
-            session.pgSession().execute(
+            session.usePgConnection().execute(
                 "DELETE FROM  $delCollectionIdQuoted WHERE id = ANY($1)",
                 arrayOf(featureIdsToDeleteFromDel.toTypedArray())
             )
@@ -326,7 +326,7 @@ internal class NakshaBulkLoaderPlan(
 
     internal fun executeBatch(stmt: KFunction0<PgPlan>, bulkParams: List<Array<Param>>) {
         if (bulkParams.isNotEmpty()) {
-            val result = session.pgSession().executeBatch(stmt(), bulkParams.toTypedArray())
+            val result = session.usePgConnection().executeBatch(stmt(), bulkParams.toTypedArray())
             if (result.isNotEmpty() && result[0] == -3) {
                 // java.sql.Statement.EXECUTE_FAILED
                 throw NakshaException.forBulk(ERR_FATAL, "error in bulk statement")

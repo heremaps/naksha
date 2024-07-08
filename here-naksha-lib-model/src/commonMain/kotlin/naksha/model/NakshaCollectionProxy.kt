@@ -1,5 +1,3 @@
-@file:Suppress("OPT_IN_USAGE")
-
 package naksha.model
 
 import naksha.base.Int64
@@ -10,6 +8,11 @@ import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
+// TODO: We need storage-class as JsEnum in lib-psql!
+//       We need the geo-index as JsEnum in lib-psql!
+//
+
+@Suppress("OPT_IN_USAGE")
 @JsExport
 open class NakshaCollectionProxy() : NakshaFeatureProxy() {
 
@@ -36,7 +39,23 @@ open class NakshaCollectionProxy() : NakshaFeatureProxy() {
      * If partitions is given, then collection is internally partitioned in the storage and optimised for large quantities of features.
      * The default is one partition (so no partitioning), for around every 10 to 20 million features expected to be stored in a collection one more partition should be requested.
      * Note that lib-psql will only allow values 1, 2, 4, 8, 16 and 32 (given number will be rounded up or down).
-     * <br>
+     *
+     * Beware that in AWS ever point-to-point connection is generally limited to 5 Gbps. To reach the full limit of a database, the
+     * maximum number of partitions is needed, which allow 32 * 5 Gbps = 160 Gbps throughput. The database instances currently have a
+     * maximum of 200 Gbps network bandwidth, plus 100 Gbps of EBS throughput, plus a large in-memory cache, which normally allows to
+     * satisfy up to 160 Gbps. As the CPU load is very high in this use-case, it is strongly recommended to use the following encodings:
+     * - [GeoEncoding.TWKB_GZIP]
+     * - [FeatureEncoding.JBON_GZIP]
+     * - [TagsEncoding.JSON_GZIP]
+     *
+     * Using these values allows to avoid the usage of server side JavaScript code, when indexing the tags, while at the same time keep
+     * the data in the smallest possible size. Using these encodings with 32-partitions, an [executeParallel][IReadSession.executeParallel]
+     * should be able to read and write millions of features per second, with a very small risk of crashing while writing. Recovering
+     * from a crashed write is possible, if the write is idempotent, but requires a quick read of the transaction log, which partitions
+     * were written and which rolled-back, to repeat the writing of those, not being written successfully. Beware, that this requires a
+     * lock on the table or to be the only writer, otherwise conflicts can be encountered, which will make recovery not impossible, but
+     * much more complicated.
+     *
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
      */
     var partitions: Int by PARTITIONS
@@ -49,7 +68,7 @@ open class NakshaCollectionProxy() : NakshaFeatureProxy() {
     /**
      * The geoIndex to be used for this collection.
      * The possible varues are implementation specific, for lib-psql there are gist, sp-gist and brin with gist being the default.
-     * The virtual table naksha~indices should expose the supported varues. {Create-Only}
+     * The virtual table naksha~indices should expose the supported values. {Create-Only}
      * <br>
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
      */
@@ -91,13 +110,13 @@ open class NakshaCollectionProxy() : NakshaFeatureProxy() {
     var defaultFlags: Int by DEFAULT_FLAGS
 
     /**
-     * true - disables history of features' modifications.
+     * _true_ - disables history of features' modifications.
      */
     var disableHistory: Boolean by DISABLE_HISTORY
 
     /**
      * If autoPurge is enabled, deleted features are automatically purged and no shadow state is kept available.
-     * Note that if disableHistory is false, the deleted features will still be around in the history. This mainly effects lib-view.
+     * Note that if [disableHistory] is false, the deleted features will still be around in the history. This mainly effects lib-view.
      */
     var autoPurge: Boolean by AUTO_PURGE
 

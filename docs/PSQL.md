@@ -115,19 +115,22 @@ All features stored by the Naksha storage engine are part of a transaction. The 
 
 The transaction-number is a 64-bit integers, split into four parts:
 
-* _Year_: The year in which the transactions started (e.g. 2023).
+* _Year_: The year in which the transactions started (e.g. 2024).
 * _Month_: The month of the year in which the transaction started (e.g. 9 for September).
 * _Day_: The day of the month in which the transaction started (1 to 31).
 * _Seq_: The local **sequence-number** in this day.
 
 The local **sequence-number** is stored in a sequence named `naksha_txn_seq`. Every day starts with the sequence-number reset to zero. The final 64-bit value is combined as:
 
-- 13-bit **year**, between 0 and 8191 {_shift-by 51_}.
-- 4-bit **month**, between 1 (January) and 12 (December) {_shift-by 47_}.
-- 5-bit **day**, between 1 and 31 {_shift-by 42_}.
-- 42-bit **seq**uence number.
+- 23-bit **year**, biased 0 and 8388607 {_shift-by 41_}.
+- 4-bit **month**, between 1 (January) and 12 (December) {_shift-by 37_}.
+- 5-bit **day**, between 1 and 31 {_shift-by 32_}.
+- 32-bit **seq**uence number.
 
-This concept allows up to 4096 billion transactions per day (between 0 and 2^42-1). It will work up until the year 8191, where it will overflow. Should there be more than 4096 billion transaction in a single day, this will overflow as into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible.
+This concept allows up to 4 billion transactions per day (between 0 and 2^32-1). It will overflow in browsers in the year 4096, because 
+in that year the transaction number needs 53-bit to be encoded, which is beyond the precision of a double floating point number. Should 
+there be more than 4 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, 
+should it happen at the last day of a given month. We ignore this situation, it seems currently impossible.
 
 The human-readable (Javascript compatible) representation is as a string in the format:
 

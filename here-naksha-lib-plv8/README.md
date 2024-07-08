@@ -24,7 +24,7 @@ val storage = if (PgUtil.isPlv8())
     PgUtil.getPlv8() 
 else
     PgUtil.newStorage(
-        PgUtil.newCluster(PgUtil.getInstance("jdbc:postgresql://localhost/unimap?user=postgres&password=postgres")),
+        PgUtil.newCluster(PgUtil.getInstance("localhost",5432,"database","user","password")),
         PgSessionOptions("appName", "schema")
     )
 val context = NakshaContext.newInstance("appId","author", su=true)

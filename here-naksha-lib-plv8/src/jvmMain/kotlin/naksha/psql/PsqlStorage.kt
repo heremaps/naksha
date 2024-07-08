@@ -2,7 +2,8 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.Platform.Companion.logger
-import naksha.base.PlatformObject
+import naksha.base.PlatformMap
+import naksha.base.PlatformUtil
 import naksha.jbon.*
 import naksha.model.*
 import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
@@ -10,11 +11,14 @@ import naksha.model.request.WriteFeature
 import naksha.model.request.WriteRequest
 import naksha.model.response.ErrorResponse
 import naksha.model.response.Response
-import naksha.model.response.Row
+import naksha.model.Row
 import naksha.model.response.SuccessResponse
-import naksha.psql.Static.SC_DICTIONARIES
-import naksha.psql.Static.SC_INDICES
-import naksha.psql.Static.SC_TRANSACTIONS
+import naksha.psql.PgUtil.Companion.ID
+import naksha.psql.PgUtil.Companion.OPTIONS
+import naksha.psql.PgUtil.Companion.VERSION
+import naksha.psql.PgStatic.SC_DICTIONARIES
+import naksha.psql.PgStatic.SC_INDICES
+import naksha.psql.PgStatic.SC_TRANSACTIONS
 
 /**
  * The Java implementation of the [IStorage] interface. This storage class is extended in `here-naksha-storage-psql`, which has a
@@ -23,11 +27,20 @@ import naksha.psql.Static.SC_TRANSACTIONS
  * @constructor Creates a new PSQL storage.
  * @property id the identifier of the storage.
  * @property cluster the PostgresQL instances used by this storage.
- * @property options the default connection options, ignores the [PgSessionOptions.readOnly] and [PgSessionOptions.useMaster].
+ * @property defaultOptions the default connection options, ignores the [PgOptions.readOnly] and [PgOptions.useMaster].
  */
-open class PsqlStorage(val id: String, val cluster: PsqlCluster, val options: PgSessionOptions) : PgStorage, IStorage {
+open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOptions: PgOptions) : PgStorage, IStorage {
+    private var id: String? = null
 
-    override fun id(): String = id
+    /**
+     * The storage-id.
+     * @throws IllegalStateException if [initStorage] has not been called before.
+     */
+    override fun id(): String {
+        val id = this.id
+        check(id != null) { "PsqlStorage not initialized" }
+        return id
+    }
 
     /**
      * Connects to the configured PostgresQL database and verifies if the database is initialized.
@@ -46,54 +59,64 @@ open class PsqlStorage(val id: String, val cluster: PsqlCluster, val options: Pg
      * not a supervisor context, so the [NakshaContext.su] is _false_.
      */
     override fun initStorage(params: Map<String, *>?) {
+        if (id != null) return
+        var options = defaultOptions
+        if (params != null && params.containsKey(OPTIONS)) {
+            val v = params[OPTIONS]
+            require(v is PgOptions) {"params.${OPTIONS} must be an instance of PgSessionOptions"}
+            options = v
+        }
+        val id: String = if (params != null && params.containsKey(ID)) {
+            val _id = params[ID]
+            require(_id is String && _id.length > 0) {"params.${ID} must be a string with a minimal length of 1"}
+            _id
+        } else PlatformUtil.randomString()
         var version = NakshaVersion.latest
-        if (params != null && params.contains("version")) {
-            val v = params["version"]
+        if (params != null && params.contains(VERSION)) {
+            val v = params[VERSION]
             version = when (v) {
                 is String -> NakshaVersion.of(v)
                 is Number -> NakshaVersion(v.toLong())
                 is Int64 -> NakshaVersion(v)
-                else -> throw IllegalArgumentException("params.version must be a valid Naksha version string or binary encoding")
+                is NakshaVersion -> v
+                else -> throw IllegalArgumentException("params.${VERSION} must be a valid Naksha version string or binary encoding")
             }
         }
-        val pgSession = cluster.openSession(options)
-        pgSession.use {
-            pgSession.jdbcConnection.autoCommit = false
-            logger.info("Initialize database {}", pgSession.jdbcConnection.url)
+        val conn = cluster.newConnection(defaultOptions.copy(readOnly = false, useMaster = true))
+        conn.use {
+            conn.jdbc.autoCommit = false
+            logger.info("Initialize database {}", conn.jdbc.url)
             val schemaQuoted = PgUtil.quoteIdent(options.schema)
-            pgSession.execute(
+            conn.execute(
                 """
 CREATE SCHEMA IF NOT EXISTS $schemaQuoted;
 SET SESSION search_path TO $schemaQuoted, public, topology;
 """
             )
-            val result = pgSession.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(options.schema))
-            val rows = pgSession.rows(result)
-            check(rows != null)
-            check(rows.size == 1)
-            val schemaOid: Int = rows[0]["oid"]!! as Int
-            executeSqlFromResource(pgSession, "/commonjs2.sql")
-            installModuleFromResource(pgSession, "beautify", "/beautify.min.js")
-            executeSqlFromResource(pgSession, "/beautify.sql")
-            pgSession.execute(
+            val cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(options.schema)).fetch()
+            val schemaOid: Int = cursor["oid"]
+            executeSqlFromResource(conn, "/commonjs2.sql")
+            installModuleFromResource(conn, "beautify", "/beautify.min.js")
+            executeSqlFromResource(conn, "/beautify.sql")
+            conn.execute(
                 """DO $$
 var commonjs2_init = plv8.find_function("commonjs2_init");
 commonjs2_init();
 $$ LANGUAGE 'plv8';"""
             )
-            installModuleFromResource(pgSession, "lz4_util", "/lz4_util.js")
-            installModuleFromResource(pgSession, "lz4_xxhash", "/lz4_xxhash.js")
-            installModuleFromResource(pgSession, "lz4", "/lz4.js")
-            executeSqlFromResource(pgSession, "/lz4.sql")
+            installModuleFromResource(conn, "lz4_util", "/lz4_util.js")
+            installModuleFromResource(conn, "lz4_xxhash", "/lz4_xxhash.js")
+            installModuleFromResource(conn, "lz4", "/lz4.js")
+            executeSqlFromResource(conn, "/lz4.sql")
             // Note: We know, that we do not need the replacements and code is faster without them!
-            val replacements = mapOf("version" to version.toString(), "schema" to options.schema, "storage_id" to id)
+            val replacements = mapOf(VERSION to version.toString(), "schema" to options.schema, "storage_id" to id)
             // Note: The compiler embeds the JBON classes into plv8.
             //       Therefore, we must not have it standalone, because otherwise we
             //       have two distinct instances in memory.
             //       A side effect sadly is that you need to require naksha, before you can require jbon!
             // TODO: Extend the commonjs2 code so that it allows to declare that one module contains another!
             installModuleFromResource(
-                pgSession, "naksha", "/here-naksha-lib-plv8.js",
+                conn, "naksha", "/here-naksha-lib-plv8.js",
                 beautify = true,
                 replacements = replacements,
                 extraCode = """
@@ -102,15 +125,15 @@ plv8.moduleCache["jbon"] = module.exports["here-naksha-lib-jbon"];
 module.exports = module.exports["here-naksha-lib-plv8"];
 """
             )
-            executeSqlFromResource(pgSession, "/naksha.sql", replacements)
-            executeSqlFromResource(pgSession, "/jbon.sql")
-            Static.createBaseInternalsIfNotExists(pgSession, options.schema, schemaOid)
+            executeSqlFromResource(conn, "/naksha.sql", replacements)
+            executeSqlFromResource(conn, "/jbon.sql")
+            PgStatic.createBaseInternalsIfNotExists(conn, options.schema, schemaOid)
             createInternalsIfNotExists()
-            pgSession.commit()
+            conn.commit()
         }
     }
 
-    override fun convertRowToFeature(row: Row): NakshaFeatureProxy {
+    override fun rowToFeature(row: Row): NakshaFeatureProxy {
         return if (row.feature != null) {
             // TODO: FIXME, we need the XYZ namespace
             val featureReader = JbMapFeature(JbDictManager()).mapBytes(row.feature!!).reader
@@ -121,11 +144,11 @@ module.exports = module.exports["here-naksha-lib-plv8"];
         }
     }
 
-    override fun convertFeatureToRow(feature: PlatformObject): Row {
+    override fun featureToRow(feature: PlatformMap): Row {
         val nakshaFeature = feature.proxy(NakshaFeatureProxy::class)
         return Row(
             storage = this,
-            flags = Flags.DEFAULT_FLAGS,
+            flags = GeoEncoding.DEFAULT_FLAGS,
             id = nakshaFeature.id,
             feature = XyzBuilder().buildFeatureFromMap(nakshaFeature), // FIXME split feature to geo etc
             geoRef = null,
@@ -139,11 +162,34 @@ module.exports = module.exports["here-naksha-lib-plv8"];
     }
 
     override fun newReadSession(context: NakshaContext, useMaster: Boolean): NakshaSession {
-        return NakshaSession(this, context, options.copy(readOnly = true, useMaster = useMaster))
+        return NakshaSession(this, context, defaultOptions.copy(readOnly = true, useMaster = useMaster))
     }
 
     override fun newWriteSession(context: NakshaContext): NakshaSession {
-        return NakshaSession(this, context, options.copy(readOnly = false, useMaster = true))
+        return NakshaSession(this, context, defaultOptions.copy(readOnly = false, useMaster = true))
+    }
+
+    override fun newNakshaSession(context: NakshaContext, options: PgOptions): NakshaSession {
+        TODO("Not yet implemented")
+    }
+
+    override fun newConnection(context: NakshaContext, options: PgOptions): PsqlConnection {
+        // TODO: We need to initialize the connection for the given context!
+        return cluster.newConnection(options)
+    }
+
+    private var pgInfo: PgInfo? = null
+
+    override fun getPgDbInfo(): PgInfo {
+        var pgDbInfo = this.pgInfo
+        if (pgDbInfo == null) {
+            val conn = cluster.newConnection(defaultOptions.copy(readOnly = false, useMaster = true))
+            conn.use {
+                pgDbInfo = PgInfo(conn)
+                this.pgInfo = pgDbInfo
+            }
+        }
+        return pgDbInfo!!
     }
 
     override fun close() {
@@ -154,13 +200,8 @@ module.exports = module.exports["here-naksha-lib-plv8"];
         TODO("Not yet implemented")
     }
 
-    override fun openSession(context: NakshaContext, options: PgSessionOptions): PsqlSession {
-        // TODO: We need to initialize the connection for the given context!
-        return cluster.openSession(options)
-    }
-
     private fun getResourceAsText(path: String): String? =
-        object {}.javaClass.getResource(path)?.readText()
+       this.javaClass.getResource(path)?.readText()
 
     private fun applyReplacements(text: String, replacements: Map<String, String>?): String {
         if (replacements != null) {
@@ -183,7 +224,7 @@ module.exports = module.exports["here-naksha-lib-plv8"];
      * @param path The file-path, for example `/lz4.sql`.
      * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
-    private fun executeSqlFromResource(conn: PsqlSession, path: String, replacements: Map<String, String>? = null) {
+    private fun executeSqlFromResource(conn: PsqlConnection, path: String, replacements: Map<String, String>? = null) {
         val resourceAsText = getResourceAsText(path)
         check(resourceAsText != null)
         conn.execute(applyReplacements(resourceAsText, replacements))
@@ -200,7 +241,7 @@ module.exports = module.exports["here-naksha-lib-plv8"];
      * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
      */
     private fun installModuleFromResource(
-        conn: PsqlSession,
+        conn: PsqlConnection,
         name: String,
         path: String,
         autoload: Boolean = false,

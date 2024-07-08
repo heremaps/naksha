@@ -1,6 +1,6 @@
 package naksha.model
 
-import naksha.base.NullableProperty
+import naksha.base.NotNullProperty
 import naksha.base.ObjectProxy
 import naksha.base.Platform
 import kotlin.js.JsExport
@@ -15,11 +15,11 @@ open class NakshaPropertiesProxy : ObjectProxy() {
         @JsStatic
         val XYZ_KEY = Platform.intern("@ns:com:here:xyz")
 
-        private val XYZ = NullableProperty<Any, NakshaPropertiesProxy, XyzProxy>(XyzProxy::class, name = XYZ_KEY)
+        private val XYZ = NotNullProperty<Any, NakshaPropertiesProxy, XyzProxy>(XyzProxy::class, name = XYZ_KEY) { _, _ -> XyzProxy() }
     }
 
     /**
-     * The XYZ namespace.
+     * The XYZ namespace, a must in all Naksha features (`@ns:com:here:xyz`).
      */
     var xyz by XYZ
 }

@@ -17,10 +17,9 @@ import kotlin.js.JsExport
 @JsExport
 class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     /**
-     * The number of partitions. We use partitioning for tables that are expected to store more than
-     * ten million features. With eight partitions we can split 10 million features into partitions
-     * of each 1.25 million, 100 million into 12.5 million per partition and for the supported maximum
-     * of 1 billion features, each partition holds 125 million features.
+     * The number of partitions. We use partitioning for tables that are expected to store more than ten million features. With eight
+     * partitions we can split 10 million features into partitions of each 1.25 million, 100 million into 12.5 million per partition and
+     * for the supported maximum of 1 billion features, each partition holds 125 million features.
      *
      * This value must be a value of 2^n with n between 1 and 8 (2, 4, 8, 16, 32, 64, 128).
      */
@@ -70,5 +69,5 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     fun autoPurge(): Boolean = _autoPurge
     fun maxAge(): Int64 = _maxAge ?: Platform.INT64_MAX_VALUE
     fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollectionProxy.BEFORE_ESTIMATION
-    fun storageClass(): String = _storageClass ?: Static.SC_DEFAULT
+    fun storageClass(): String = _storageClass ?: PgStatic.SC_DEFAULT
 }
