@@ -109,7 +109,7 @@ $$ LANGUAGE 'plv8';"""
             installModuleFromResource(conn, "lz4", "/lz4.js")
             executeSqlFromResource(conn, "/lz4.sql")
             // Note: We know, that we do not need the replacements and code is faster without them!
-            val replacements = mapOf(VERSION to version.toString(), "schema" to options.schema, "storage_id" to id)
+            val replacements = mapOf(VERSION to version.toInt64().toString(), "schema" to options.schema, "storage_id" to id)
             // Note: The compiler embeds the JBON classes into plv8.
             //       Therefore, we must not have it standalone, because otherwise we
             //       have two distinct instances in memory.
