@@ -1,23 +1,25 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
+    kotlin("plugin.js-plain-objects")
 }
 
 kotlin {
     jvm {
-        //jvmToolchain(11)
         withJava()
     }
 
     js(IR) {
-        moduleName = "plv8"
+        moduleName = "psql"
         browser {
             webpackTask {
                 output.libraryTarget = "commonjs2"
             }
         }
         useEsModules()
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             target.set("es2015")
         }
@@ -40,6 +42,14 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
+        commonTest {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(kotlin("test-common"))
+                implementation(kotlin("test-annotations-common"))
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+            }
+        }
         jvmMain {
             jvmToolchain(11)
             dependencies {
@@ -51,6 +61,7 @@ kotlin {
 
                 implementation("org.apache.commons:commons-lang3:3.12.0")
                 implementation("org.postgresql:postgresql:42.5.4")
+                implementation("org.testcontainers:postgresql:1.19.4")
                 implementation("commons-dbutils:commons-dbutils:1.7")
                 implementation("org.locationtech.jts:jts-core:1.19.0")
                 implementation("org.locationtech.jts.io:jts-io-common:1.19.0")
@@ -58,7 +69,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
                 implementation("org.postgresql:postgresql:42.5.4")
             }
-            resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
         jvmTest {
             dependencies {
@@ -84,6 +95,7 @@ kotlin {
                 api(project(":here-naksha-lib-geo"))
 
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                //implementation(npm("postgres", "3.4.4"))
             }
         }
     }

@@ -26,7 +26,7 @@ import kotlin.math.absoluteValue
  * global dictionaries and the table for the collection management.
  */
 @JsExport
-object Static {
+object PgStatic {
 
     /**
      * Config for naksha_collection
@@ -148,21 +148,22 @@ object Static {
     @JvmStatic
     fun gridFromId(id: String): String {
         // = Fnv1a32.string(Fnv1a32.start(), id) and 0x7fff_ffff
+        val BASE32 = PgStatic.BASE32
         val sb = StringBuilder()
         var hash = Fnv1a32.string(Fnv1a32.start(), id)
         var i = 0
-        sb.append(Static.BASE32[id[0].code and 31])
+        sb.append(BASE32[id[0].code and 31])
         while (i++ < 6) {
             val b32 = hash and 31
-            sb.append(Static.BASE32[b32])
+            sb.append(BASE32[b32])
             hash = hash ushr 5
         }
         hash = Fnv1a32.stringReverse(Fnv1a32.start(), id)
         i = 0
-        sb.append(Static.BASE32[id[0].code and 31])
+        sb.append(BASE32[id[0].code and 31])
         while (i++ < 6) {
             val b32 = hash and 31
-            sb.append(Static.BASE32[b32])
+            sb.append(BASE32[b32])
             hash = hash ushr 5
         }
         return sb.toString()
@@ -175,7 +176,7 @@ object Static {
      * @param schemaOid The OID of the schema.
      */
     @JvmStatic
-    fun createBaseInternalsIfNotExists(sql: PgSession, schema: String, schemaOid: Int) {
+    fun createBaseInternalsIfNotExists(sql: PgConnection, schema: String, schemaOid: Int) {
         if (!tableExists(sql, SC_COLLECTIONS, schemaOid)) {
             collectionCreate(sql, SC_COLLECTIONS, schema, schemaOid, SC_COLLECTIONS, DEFAULT_GEO_INDEX, partitionCount = PARTITION_COUNT_NONE)
         }
@@ -217,7 +218,7 @@ object Static {
      * @return _true_ if a table with this name exists; _false_ otherwise.
      */
     @JvmStatic
-    fun tableExists(sql: PgSession, name: String, schemaOid: Int): Boolean {
+    fun tableExists(sql: PgConnection, name: String, schemaOid: Int): Boolean {
         val rows = asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = $1 AND relnamespace = $2", arrayOf(name, schemaOid)))
         return rows.isNotEmpty()
     }
@@ -229,7 +230,7 @@ object Static {
      * @param history If _true_, then optimized for historic data; otherwise a volatile HEAD table.
      */
     @JvmStatic
-    private fun collectionOptimizeTable(sql: PgSession, tableName: String, history: Boolean) {
+    private fun collectionOptimizeTable(sql: PgConnection, tableName: String, history: Boolean) {
         val quotedTableName = PgUtil.quoteIdent(tableName)
         var query = """ALTER TABLE $quotedTableName
 ALTER COLUMN feature SET STORAGE MAIN,
@@ -263,7 +264,7 @@ SET (toast_tuple_target=8160"""
      * @param pgTableInfo The table information.
      */
     @JvmStatic
-    private fun collectionAddIndices(sql: PgSession, tableName: String, geoIndex: String, history: Boolean, pgTableInfo: PgTableInfo) {
+    private fun collectionAddIndices(sql: PgConnection, tableName: String, geoIndex: String, history: Boolean, pgTableInfo: PgTableInfo) {
         val fillFactor = if (history) "100" else "70"
         // https://www.postgresql.org/docs/current/gin-tips.html
         val unique = if (history) "" else "UNIQUE "
@@ -325,7 +326,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
      * @param partitionCount Number of partitions, possible values: 0 (no partitioning), 2, 4, 8, 16, 32, 64, 128, 256)
      */
     @JvmStatic
-    fun collectionCreate(sql: PgSession, storageClass: String?, schema: String, schemaOid: Int, id: String, geoIndex: String, partitionCount: Int) {
+    fun collectionCreate(sql: PgConnection, storageClass: String?, schema: String, schemaOid: Int, id: String, geoIndex: String, partitionCount: Int) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         val pgTableInfo = PgTableInfo(sql, storageClass, partitionCount)
@@ -429,7 +430,7 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
      * @param schemaOid The object-id of the schema to look into.
      */
     @JvmStatic
-    private fun collectionAttachTriggers(sql: PgSession, id: String, schema: String, schemaOid: Int) {
+    private fun collectionAttachTriggers(sql: PgConnection, id: String, schema: String, schemaOid: Int) {
         var triggerName = id + "_before"
         var rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid)))
         if (rows.isEmpty()) {
@@ -453,17 +454,17 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();""")
 
     /**
      * Deletes the collection with the given identifier.
-     * @param sql The SQL API.
+     * @param pgConnection The SQL API.
      * @param id The collection identifier.
      */
     @JvmStatic
-    fun collectionDrop(sql: PgSession, id: String) {
+    fun collectionDrop(pgConnection: PgConnection, id: String) {
         require(!id.startsWith("naksha~"))
         val headName = PgUtil.quoteIdent(id)
         val delName = PgUtil.quoteIdent("$id\$del")
         val metaName = PgUtil.quoteIdent("$id\$meta")
         val hstName = PgUtil.quoteIdent("$id\$hst")
-        sql.execute("""DROP TABLE IF EXISTS $headName CASCADE;
+        pgConnection.execute("""DROP TABLE IF EXISTS $headName CASCADE;
 DROP TABLE IF EXISTS $delName CASCADE;
 DROP TABLE IF EXISTS $metaName CASCADE;
 DROP TABLE IF EXISTS $hstName CASCADE;""")
@@ -471,14 +472,14 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
 
     /**
      * Create the history partition, which optionally is sub-partitioned by id.
-     * @param sql The SQL API of the session.
+     * @param pgConnection The SQL API of the session.
      * @param collectionId has to be pure (without _hst suffix).
      * @param year The year for which to create the history partition.
      * @param geoIndex The geo-index to use in the history.
      * @param pgTableInfo The table info to know storage class and alike.
      */
     @JvmStatic
-    private fun createHstPartition(sql: PgSession, collectionId: String, year: Int, geoIndex: String, pgTableInfo: PgTableInfo): String {
+    private fun createHstPartition(pgConnection: PgConnection, collectionId: String, year: Int, geoIndex: String, pgTableInfo: PgTableInfo): String {
         val parentName = "${collectionId}\$hst"
         val parentNameQuoted = PgUtil.quoteIdent(parentName)
         val hstPartName = "${parentName}_${year}"
@@ -490,59 +491,51 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
         if (pgTableInfo.partitionCount.isPartitioningEnabled()) {
             query += "PARTITION BY RANGE (naksha_partition_number(id, ${pgTableInfo.partitionCount}))"
             query += pgTableInfo.TABLESPACE
-            sql.execute(query)
+            pgConnection.execute(query)
             for (subPartition in 0..<pgTableInfo.partitionCount) {
-                createPartitionById(sql, hstPartName, geoIndex, subPartition, pgTableInfo, true)
+                createPartitionById(pgConnection, hstPartName, geoIndex, subPartition, pgTableInfo, true)
             }
         } else {
             query += pgTableInfo.STORAGE_PARAMS
             query += pgTableInfo.TABLESPACE
-            sql.execute(query)
+            pgConnection.execute(query)
             //collectionOptimizeTable(sql, hstPartName, true)
-            collectionAddIndices(sql, hstPartName, geoIndex, true, pgTableInfo)
+            collectionAddIndices(pgConnection, hstPartName, geoIndex, true, pgTableInfo)
         }
         return hstPartName
     }
 
     /**
      * Create a child partition that partitions by id. This is used for huge tables to split the features equally into partitions.
-     * @param sql The SQL API of the session.
+     * @param pgConnection The SQL API of the session.
      * @param parentName The name of the parent table.
      * @param geoIndex The geo-index to use.
      * @param part The partition number.
      * @param pgTableInfo Information about the table.
      * @param history If this is a history partition; otherwise it is
      */
-    private fun createPartitionById(sql: PgSession, parentName: String, geoIndex: String, part: Int, pgTableInfo: PgTableInfo, history: Boolean) {
+    private fun createPartitionById(pgConnection: PgConnection, parentName: String, geoIndex: String, part: Int, pgTableInfo: PgTableInfo, history: Boolean) {
         require(part in 0..<pgTableInfo.partitionCount) { "Invalid partition number $part" }
         val partString = PARTITION_ID[part]
         val partitionName = if (parentName.contains('$')) "${parentName}_p$partString" else "${parentName}\$p$partString"
         val partitionNameQuoted = PgUtil.quoteIdent(partitionName)
         val parentTableNameQuoted = PgUtil.quoteIdent(parentName)
         val query = pgTableInfo.CREATE_TABLE + "IF NOT EXISTS $partitionNameQuoted PARTITION OF $parentTableNameQuoted FOR VALUES FROM ($part) TO (${part + 1}) ${pgTableInfo.STORAGE_PARAMS} ${pgTableInfo.TABLESPACE};"
-        sql.execute(query)
+        pgConnection.execute(query)
         //collectionOptimizeTable(sql, partitionName, history)
-        collectionAddIndices(sql, partitionName, geoIndex, history, pgTableInfo)
+        collectionAddIndices(pgConnection, partitionName, geoIndex, history, pgTableInfo)
     }
 
     /**
      * Queries the database for the schema **oid** (object id). The result should be cached as calling this method is expensive.
-     * @param sql The SQL API.
+     * @param pgConnection The SQL API.
      * @param schema The name of the schema.
      * @return The object-id of the schema or _null_, if no such schema was found.
      */
-    @Suppress("UNCHECKED_CAST")
-    fun getSchemaOid(sql: PgSession, schema: String): Int? {
-        val result = sql.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema))
-        if (result is Array<*>) {
-            val array = result as Array<Any>
-            if (array.isNotEmpty()) {
-                val rows = sql.rows(result)!!
-                val oid = rows[0]["oid"]
-                if (oid is Int) return oid
-            }
-        }
-        return null
+    fun getSchemaOid(pgConnection: PgConnection, schema: String): Int? {
+        val cursor = pgConnection.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schema)).fetch()
+        val oid = cursor.column("oid")
+        return if (oid is Int) oid else null
     }
 
     /**

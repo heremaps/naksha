@@ -1,8 +1,5 @@
-@file:OptIn(ExperimentalJsExport::class)
-
 package naksha.psql
 
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
@@ -11,8 +8,9 @@ import kotlin.js.JsExport
  * @property storageClass The storage class to create.
  * @property partitionCount ?
  */
+@Suppress("OPT_IN_USAGE")
 @JsExport
-class PgTableInfo(val conn: PgSession, val storageClass: String?, val partitionCount: Int) { // TODO: Rename sql to conn
+class PgTableInfo(val conn: PgConnection, val storageClass: String?, val partitionCount: Int) { // TODO: Rename sql to conn
     /**
      * The CREATE TABLE statement.
      */
@@ -35,12 +33,12 @@ class PgTableInfo(val conn: PgSession, val storageClass: String?, val partitionC
 
     init {
         when (storageClass) {
-            Static.SC_BRITTLE -> {
+            PgStatic.SC_BRITTLE -> {
                 CREATE_TABLE = "CREATE UNLOGGED TABLE "
                 TABLESPACE = if (conn.info().brittleTableSpace != null) " TABLESPACE ${conn.info().brittleTableSpace}" else ""
             }
 
-            Static.SC_TEMPORARY -> {
+            PgStatic.SC_TEMPORARY -> {
                 CREATE_TABLE = "CREATE UNLOGGED TABLE "
                 TABLESPACE = if (conn.info().tempTableSpace != null) " TABLESPACE ${conn.info().tempTableSpace}" else ""
             }

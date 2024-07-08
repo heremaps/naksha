@@ -6,8 +6,8 @@ import naksha.model.ACTION_CREATE
 import naksha.model.IStorage
 import naksha.model.XYZ_EXEC_READ
 import naksha.model.request.ResultRow
-import naksha.model.response.Metadata
-import naksha.model.response.Row
+import naksha.model.Metadata
+import naksha.model.Row
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

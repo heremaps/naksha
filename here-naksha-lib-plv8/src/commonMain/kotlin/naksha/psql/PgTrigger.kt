@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.model.response.Row
+import naksha.model.Row
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -31,13 +31,13 @@ internal const val TG_LEVEL_STATEMENT = "STATEMENT"
 @Suppress("MemberVisibilityCanBePrivate", "PropertyName")
 @JsExport
 class PgTrigger(
-        val TG_OP: String,
-        val TG_NAME: String,
-        val TG_WHEN: String,
-        val TG_LEVEL: String,
-        val TG_RELID: Int,
-        val TG_TABLE_NAME: String,
-        val TG_TABLE_SCHEMA: String,
-        val NEW: Row?,
-        val OLD: Row?
+    val TG_OP: String,
+    val TG_NAME: String,
+    val TG_WHEN: String,
+    val TG_LEVEL: String,
+    val TG_RELID: Int,
+    val TG_TABLE_NAME: String,
+    val TG_TABLE_SCHEMA: String,
+    val NEW: Row?,
+    val OLD: Row?
 )

@@ -1,6 +1,6 @@
 package naksha.psql.read
 
-import naksha.model.Flags.GEO_TYPE_TWKB
+import naksha.model.GeoEncoding.GEO_TWKB
 import naksha.model.Guid
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
@@ -13,7 +13,7 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-internal class ReadQueryBuilder(val session: PgSession) {
+internal class ReadQueryBuilder(val session: PgConnection) {
 
     private val geometryTransformer = SqlGeometryTransformationResolver(session)
 
@@ -165,7 +165,7 @@ internal class ReadQueryBuilder(val session: PgSession) {
             INTERSECTS -> {
                 val wrapperForReqValuePlaceholder = geometryTransformer.wrapWithTransformation(
                     sop.geometryTransformation,
-                    "ST_Force3D(naksha_geometry_in_type($GEO_TYPE_TWKB::int2,$valuePlaceholder))"
+                    "ST_Force3D(naksha_geometry_in_type($GEO_TWKB::int2,$valuePlaceholder))"
                 )
                 whereSql.append("ST_Intersects(naksha_geometry(flags,geo), $wrapperForReqValuePlaceholder)")
 

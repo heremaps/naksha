@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Platform
-import naksha.psql.PgSessionOptions
 import kotlin.math.min
 
 /**
@@ -9,16 +8,22 @@ import kotlin.math.min
  * @property master the master instance.
  * @property replicas a mutable list of read-replicas, can be changed at runtime.
  */
-class PsqlCluster(val master: PsqlInstance, var replicas: MutableList<PsqlInstance> = mutableListOf()) {
+class PsqlCluster(override val master: PgInstance, override var replicas: MutableList<PgInstance> = mutableListOf()) : PgCluster {
     /**
-     * Open a PostgresQL session from the session pool of either [master], or a random [replica][replicas], dependent on the
+     * Open a PostgresQL connection from the connection pool of either [master], or a random [replica][replicas], dependent on the
      * [options] given.
-     * @param options the session options.
-     * @return the PostgresQL session.
+     * @param options the connection options.
+     * @return the PostgresQL connection.
      */
-    fun openSession(options: PgSessionOptions): PsqlSession {
-        if (!options.readOnly || options.useMaster || replicas.isEmpty()) return master.openSession(options)
+    override fun newConnection(options: PgOptions): PsqlConnection {
+        if (!options.readOnly || options.useMaster || replicas.isEmpty()) {
+            val master = this.master
+            check(master is PsqlInstance) { "This implementation requires PsqlInstance's"}
+            return master.openConnection(options)
+        }
         val i = min((Platform.random() * replicas.size).toInt(), replicas.size - 1)
-        return replicas[i].openSession(options)
+        val pgInstance = replicas[i]
+        check(pgInstance is PsqlInstance) { "This implementation requires PsqlInstance's"}
+        return pgInstance.openConnection(options)
     }
 }

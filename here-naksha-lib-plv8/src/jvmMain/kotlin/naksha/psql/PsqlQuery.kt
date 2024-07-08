@@ -1,11 +1,15 @@
 package naksha.psql
 
-import naksha.base.JvmInt64
+import naksha.base.Int64
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.ArrayList
 import java.util.HashMap
 
+/**
+ * A helper to parse SQL queries and find the dollar-placeholders, replacing them with `?`, escape question-marks, and finally provide a
+ * way to bind the arguments (basically via [].
+ */
 class PsqlQuery(query: String) {
 
     /**
@@ -64,7 +68,7 @@ class PsqlQuery(query: String) {
                 is Short -> stmt.setShort(index, arg)
                 is Int -> stmt.setInt(index, arg)
                 is Long -> stmt.setLong(index, arg)
-                is JvmInt64 -> stmt.setLong(index, arg.toLong())
+                is Int64 -> stmt.setLong(index, arg.toLong())
                 is Float -> stmt.setFloat(index, arg)
                 is Double -> stmt.setDouble(index, arg)
                 is String -> stmt.setString(index, arg)
@@ -77,7 +81,7 @@ class PsqlQuery(query: String) {
                         is Short -> stmt.setArray(index, stmt.connection.createArrayOf("int2", arg))
                         is Int -> stmt.setArray(index, stmt.connection.createArrayOf("int4", arg))
                         is Long -> stmt.setArray(index, stmt.connection.createArrayOf("int8", arg))
-                        is JvmInt64 -> stmt.setArray(index, stmt.connection.createArrayOf("int8", arg))
+                        is Int64 -> stmt.setArray(index, stmt.connection.createArrayOf("int8", arg))
                         is Float -> stmt.setArray(index, stmt.connection.createArrayOf("real", arg))
                         is Double -> stmt.setArray(index, stmt.connection.createArrayOf("double precision", arg))
                         is String -> stmt.setArray(index, stmt.connection.createArrayOf("text", arg))
@@ -86,7 +90,7 @@ class PsqlQuery(query: String) {
                     }
                 }
                 null -> stmt.setNull(index, 0)
-                else -> throw IllegalArgumentException("args[" + (index - 1) + "]")
+                else -> throw IllegalArgumentException("args[${index - 1}], unknown type: ${arg.javaClass.name}")
             }
         }
     }

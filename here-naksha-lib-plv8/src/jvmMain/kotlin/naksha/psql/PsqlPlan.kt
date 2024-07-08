@@ -1,11 +1,7 @@
 package naksha.psql
 
-import naksha.base.Int64
-import naksha.psql.PgCursor
-import naksha.psql.PgPlan
 import java.sql.Connection
 import java.sql.PreparedStatement
-import java.sql.Types
 
 /**
  * The Java implementation of a plan.
@@ -14,59 +10,42 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
     val stmt: PreparedStatement = query.prepare(conn)
     var closed: Boolean = false
 
-    override fun execute(args: Array<Any?>?): Any {
+    /**
+     * Execute the prepared plan with the given arguments. The types must match to the prepared statement.
+     * @param args the arguments to be set at $n position, where $1 is the first array element.
+     * @return either the number of affected rows or the rows.
+     */
+    override fun execute(args: Array<Any?>?): PgCursor {
         check(!closed)
         if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
         val hasResultSet = stmt.execute()
-        if (hasResultSet) {
-            return PsqlResultSet(stmt.resultSet).toArray()
-        }
-        return stmt.updateCount
+        if (hasResultSet) return PsqlCursor(stmt.resultSet)
+        return PsqlCursor(stmt.updateCount)
     }
 
-    override fun cursor(args: Array<Any?>?): PgCursor {
+    /**
+     * Adds the prepared statement with the given arguments into batch-execution queue. This requires a mutation query like UPDATE or
+     * INSERT. The types of the arguments must match to the prepared statement. This does not return anything, it queues the execution
+     * until [executeBatch] is invoked.
+     * @param args the arguments to be set at $n position, where $1 is the first array element.
+     */
+    override fun addBatch(args: Array<Any?>?) {
         check(!closed)
         if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
-        val hasResultSet = stmt.execute()
-        if (hasResultSet) {
-            return PsqlCursor(stmt.resultSet)
-        }
-        return PsqlCursor(null)
-    }
-
-    internal fun setString(parameterIndex: Int, value: String?) {
-        stmt.setString(parameterIndex, value)
-    }
-
-    internal fun setBytes(parameterIndex: Int, value: ByteArray?) {
-        stmt.setBytes(parameterIndex, value)
-    }
-
-    internal fun setLong(parameterIndex: Int, value: Int64?) {
-        if (value == null) stmt.setNull(parameterIndex, Types.BIGINT) else stmt.setLong(parameterIndex, value.toLong())
-    }
-
-    internal fun setInt(parameterIndex: Int, value: Int?) {
-        if (value == null) stmt.setNull(parameterIndex, Types.INTEGER) else stmt.setInt(parameterIndex, value)
-    }
-
-    internal fun setShort(parameterIndex: Int, value: Short?) {
-        if (value == null) stmt.setNull(parameterIndex, Types.SMALLINT) else stmt.setShort(parameterIndex, value)
-    }
-
-    internal fun addBatch() {
         stmt.addBatch()
     }
 
-    internal fun executeBatch(): IntArray {
+    /**
+     * Execute all queued (batched) executions.
+     * @return an array with the amount of effected rows by each queued execution.
+     */
+    override fun executeBatch(): IntArray {
         return stmt.executeBatch()
     }
 
     override fun close() {
         val closed = this.closed
-        if (!closed) {
-            this.closed = true
-            stmt.close()
-        }
+        this.closed = true
+        if (!closed) stmt.close()
     }
 }

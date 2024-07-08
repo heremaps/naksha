@@ -11,13 +11,13 @@ import naksha.model.request.Write.Companion.XYZ_OP_PURGE
 import naksha.model.request.Write.Companion.XYZ_OP_UPDATE
 import naksha.model.request.Write.Companion.XYZ_OP_UPSERT
 import naksha.model.request.WriteRequest
-import naksha.model.response.Row
+import naksha.model.Row
 import naksha.model.response.SuccessResponse
 import naksha.psql.NakshaSession
 import naksha.psql.PgUtil
-import naksha.psql.Static
+import naksha.psql.PgStatic
 import naksha.psql.write.NakshaRequestOp.Companion.mapToOperations
-import naksha.psql.Static.DEBUG
+import naksha.psql.PgStatic.DEBUG
 
 class SingleCollectionWriter(
     val collectionId: String,
@@ -38,7 +38,7 @@ class SingleCollectionWriter(
         val counts = TransactionCollectionInfoProxy()
         counts.collectionId = collectionId
 
-        session.pgSession().execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
+        session.usePgConnection().execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
         val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
         val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.noResults)
@@ -90,7 +90,7 @@ class SingleCollectionWriter(
     fun writeCollections(writeRequest: WriteRequest): SuccessResponse {
         val operations = mapToOperations(headCollectionId, writeRequest, session, collectionConfig.partitions)
 
-        session.pgSession().execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
+        session.usePgConnection().execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
         val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
         val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.noResults)
@@ -98,7 +98,7 @@ class SingleCollectionWriter(
 
         for (op in operations.operations) {
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
-            val schemaOid = (asArray(session.pgSession().execute(query, arrayOf(session.options.schema)))[0] as Map<*, *>)["oid"] as Int
+            val schemaOid = (asArray(session.usePgConnection().execute(query, arrayOf(session.options.schema)))[0] as Map<*, *>)["oid"] as Int
 
             val existingFeature: Row? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
@@ -108,8 +108,8 @@ class SingleCollectionWriter(
                         is FeatureOp ->op.reqWrite.feature.proxy(NakshaCollectionProxy::class)
                         else -> throw RuntimeException("add support for WriteRow collection")
                     }
-                    Static.collectionCreate(
-                        session.pgSession(),
+                    PgStatic.collectionCreate(
+                        session.usePgConnection(),
                         newCollection.storageClass,
                         session.options.schema,
                         schemaOid,
@@ -125,13 +125,13 @@ class SingleCollectionWriter(
                 }
 
                 XYZ_OP_DELETE -> {
-                    Static.collectionDrop(session.pgSession(), op.id)
+                    PgStatic.collectionDrop(session.usePgConnection(), op.id)
                     plan.addDelete(op, existingFeature)
                 }
 
                 XYZ_OP_PURGE -> {
                     if (existingFeature != null) {
-                        Static.collectionDrop(session.pgSession(), op.id)
+                        PgStatic.collectionDrop(session.usePgConnection(), op.id)
                     }
                     plan.addPurge(op, existingFeature, existingInDelFeatures[op.id])
                 }
@@ -155,7 +155,7 @@ class SingleCollectionWriter(
     }
 
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
-        if (isCollectionPartitioned == true) PgUtil.quoteIdent("${headCollectionId}\$p${Static.PARTITION_ID[partitionKey]}") else
+        if (isCollectionPartitioned == true) PgUtil.quoteIdent("${headCollectionId}\$p${PgStatic.PARTITION_ID[partitionKey]}") else
             PgUtil.quoteIdent(collectionId)
 
     private fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: Row?, collectionConfig: NakshaCollectionProxy): Int {

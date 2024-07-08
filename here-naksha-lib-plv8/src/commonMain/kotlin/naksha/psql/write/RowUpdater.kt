@@ -4,12 +4,12 @@ import naksha.base.Fnv1a32
 import naksha.base.Platform
 import naksha.model.ACTION_DELETE
 import naksha.model.ACTION_UPDATE
-import naksha.model.Flags
-import naksha.model.response.Metadata
-import naksha.model.response.Row
+import naksha.model.GeoEncoding
+import naksha.model.Metadata
+import naksha.model.Row
 import naksha.psql.PgPlan
 import naksha.psql.NakshaSession
-import naksha.psql.Static.SC_TRANSACTIONS
+import naksha.psql.PgStatic.SC_TRANSACTIONS
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -33,12 +33,12 @@ class RowUpdater(
         var geoGrid: Int? = NEW.meta?.geoGrid
 
         // FIXME: default flags should be taken from collectionConfig
-        val flags = NEW.meta?.flags ?: Flags.DEFAULT_FLAGS
+        val flags = NEW.meta?.flags ?: GeoEncoding.DEFAULT_FLAGS
 
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
             val id: String = NEW.id
-            geoGrid = grid(id, Flags.readGeometryEncoding(flags), NEW.geo)
+            geoGrid = grid(id, GeoEncoding.readGeometryEncoding(flags), NEW.geo)
         }
 
         val uid = if (collectionId == SC_TRANSACTIONS) {

@@ -21,12 +21,12 @@ package naksha.psql.read
 import naksha.model.request.condition.geometry.BufferTransformation
 import naksha.model.request.condition.geometry.GeographyTransformation
 import naksha.model.request.condition.geometry.GeometryTransformation
-import naksha.psql.PgSession
+import naksha.psql.PgConnection
 import naksha.psql.PgUtil
 
 
 class SqlGeometryTransformationResolver(
-    val sql: PgSession
+    val sql: PgConnection
 ) {
     fun wrapWithTransformation(
         transformation: GeometryTransformation?, variablePlaceholder: String

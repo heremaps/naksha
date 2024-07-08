@@ -5,11 +5,11 @@ import naksha.model.request.*
 import naksha.model.request.Write.Companion.XYZ_OP_CREATE
 import naksha.model.request.Write.Companion.XYZ_OP_DELETE
 import naksha.model.request.Write.Companion.XYZ_OP_PURGE
-import naksha.model.response.Row
+import naksha.model.Row
 import naksha.psql.ERR_UNIQUE_VIOLATION
 import naksha.psql.NakshaException
 import naksha.psql.NakshaSession
-import naksha.psql.Static
+import naksha.psql.PgStatic
 
 internal class NakshaRequestOp(
     val reqWrite: Write,
@@ -19,10 +19,10 @@ internal class NakshaRequestOp(
     val collectionPartitionCount: Int
 ) {
     val id: String = reqWrite.getId()
-    val partition: Int = Static.partitionNumber(id, collectionPartitionCount)
+    val partition: Int = PgStatic.partitionNumber(id, collectionPartitionCount)
 
     // Used for sorting
-    val key = "${Static.PARTITION_ID[partition]}_${id}"
+    val key = "${PgStatic.PARTITION_ID[partition]}_${id}"
 
     companion object {
         private const val UNDETERMINED_PARTITION = -2
@@ -93,7 +93,7 @@ internal class NakshaRequestOp(
 
         private fun prepareRow(session: NakshaSession, nakWriteOp: Write): Row? {
             return when (nakWriteOp) {
-                is FeatureOp -> session.storage.convertFeatureToRow(nakWriteOp.feature)
+                is FeatureOp -> session.storage.featureToRow(nakWriteOp.feature)
                 is RowOp -> nakWriteOp.row
                 else -> null
             }
