@@ -58,7 +58,7 @@ internal data class CollectionWriteOps(
         val conn = session.usePgConnection()
         val basicQuery =
             "SELECT $COL_ID,$COL_TXN,$COL_UID,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR,$COL_AUTHOR_TS,$COL_GEO_GRID,$COL_FLAGS,$COL_APP_ID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp"
-        val result = if (idsFullFetch.isEmpty()) {
+        val cursor = if (idsFullFetch.isEmpty()) {
             conn.execute(basicQuery, arrayOf(idsSmallFetch.toTypedArray()))
         } else {
             val complexQuery = """
@@ -69,8 +69,10 @@ internal data class CollectionWriteOps(
             """.trimIndent()
             conn.execute(complexQuery, arrayOf(idsSmallFetch.toTypedArray(), idsFullFetch.toTypedArray()))
         }
-        val rows = conn.asRows(result)
-        DbRowMapper.toMap(rows, session.storage)
+        cursor.use {
+            TODO("Fix me, what is the map returned?")
+            //DbRowMapper.readRow(session.storage, collectionId, cursor, true)
+        }
     } else {
         mutableMapOf()
     }
