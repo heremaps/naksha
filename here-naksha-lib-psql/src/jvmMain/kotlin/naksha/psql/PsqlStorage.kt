@@ -92,7 +92,7 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
 CREATE SCHEMA IF NOT EXISTS $schemaQuoted;
 SET SESSION search_path TO $schemaQuoted, public, topology;
 """
-            )
+            ).close()
             val cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(options.schema)).fetch()
             val schemaOid: Int = cursor["oid"]
             executeSqlFromResource(conn, "/commonjs2.sql")
@@ -109,14 +109,14 @@ $$ LANGUAGE 'plv8';"""
             installModuleFromResource(conn, "lz4", "/lz4.js")
             executeSqlFromResource(conn, "/lz4.sql")
             // Note: We know, that we do not need the replacements and code is faster without them!
-            val replacements = mapOf(VERSION to version.toString(), "schema" to options.schema, "storage_id" to id)
+            val replacements = mapOf(VERSION to version.toInt64().toString(), "schema" to options.schema, "storage_id" to id)
             // Note: The compiler embeds the JBON classes into plv8.
             //       Therefore, we must not have it standalone, because otherwise we
             //       have two distinct instances in memory.
             //       A side effect sadly is that you need to require naksha, before you can require jbon!
             // TODO: Extend the commonjs2 code so that it allows to declare that one module contains another!
             installModuleFromResource(
-                conn, "naksha", "/here-naksha-lib-plv8.js",
+                conn, "naksha", "/here-naksha-lib-psql.js",
                 beautify = true,
                 replacements = replacements,
                 extraCode = """

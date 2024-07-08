@@ -8,11 +8,13 @@ import kotlin.reflect.KClass
 
 /**
  * Internal helper class to handle results as if they were returned by PLV8 engine.
+ * @property rs the result-set to handle, if any.
+ * @property closeStmt if the statement should be closed, when the cursor is closed.
+ * @property affectedRows if no result-set, the number of affected rows.
  */
-class PsqlCursor private constructor(var rs: ResultSet?, var affectedRows: Int) : PgCursor {
-    constructor(result: Any) : this(if (result is ResultSet) result else null, if (result is Int) result else -1)
-    constructor(rs: ResultSet) : this(rs, -1)
-    constructor(affectedRows: Int) : this(null, affectedRows)
+class PsqlCursor private constructor(private var rs: ResultSet?, private val closeStmt: Boolean, private var affectedRows: Int) : PgCursor {
+    constructor(rs: ResultSet, closeStmt: Boolean) : this(rs, closeStmt,-1)
+    constructor(affectedRows: Int) : this(null, false, affectedRows)
 
     private val columnCount: Int
     private val columnIndices: MutableMap<String, Int>?
@@ -38,7 +40,7 @@ class PsqlCursor private constructor(var rs: ResultSet?, var affectedRows: Int) 
                 val columnName = metaData.getColumnLabel(columnIndex)
                 columnNames[i] = columnName
                 columnTypes[i] = metaData.getColumnTypeName(columnIndex)
-                columnIndices[columnName] = columnIndex
+                columnIndices[columnName] = i
                 i++
             }
             this.columnCount = 0
@@ -70,10 +72,21 @@ class PsqlCursor private constructor(var rs: ResultSet?, var affectedRows: Int) 
         return rs
     }
 
+    /**
+     * The names of the columns, indexed from 0, while in a SQL statement the index starts with 1.
+     */
     private fun columnNames(): Array<String> =
         columnNames ?: throw IllegalStateException("Initialization error: Missing column names array")
+
+    /**
+     * The types of the columns, indexed from 0, while in a SQL statement the index starts with 1.
+     */
     private fun columnTypes(): Array<String> =
         columnTypes ?: throw IllegalStateException("Initialization error: Missing column type array")
+
+    /**
+     * A map between the name of a column and the index in [columnNames] and [columnTypes].
+     */
     private fun columnIndices(): MutableMap<String, Int> =
         columnIndices ?: throw IllegalStateException("Initialization error: Missing column indices map")
 
@@ -124,6 +137,13 @@ class PsqlCursor private constructor(var rs: ResultSet?, var affectedRows: Int) 
         return columnIndices()[name] != null
     }
 
+    /**
+     * Returns the value as returned by the database.
+     * @param index the SQL index, starting from 1.
+     * @param type the type to read.
+     * @param rs the result from which to read.
+     * @return the value.
+     */
     private fun columnValue(index: Int, type: String, rs: ResultSet): Any? = when (type) {
         "null" -> null
         "text", "varchar", "character", "char", "json", "uuid", "inet", "cidr", "macaddr", "xml", "internal",
@@ -155,7 +175,7 @@ class PsqlCursor private constructor(var rs: ResultSet?, var affectedRows: Int) 
         val rs = rsAtRow()
         val i = columnIndices()[name] ?: return null
         val type = columnTypes()[i]
-        return columnValue(i, type, rs)
+        return columnValue(i + 1, type, rs)
     }
 
     /**
@@ -194,5 +214,6 @@ class PsqlCursor private constructor(var rs: ResultSet?, var affectedRows: Int) 
         val rs = this.rs
         this.rs = null
         rs?.close()
+        if (closeStmt) rs?.statement?.close()
     }
 }

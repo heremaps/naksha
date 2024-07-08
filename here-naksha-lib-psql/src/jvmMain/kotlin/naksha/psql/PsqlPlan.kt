@@ -19,7 +19,7 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
         check(!closed)
         if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
         val hasResultSet = stmt.execute()
-        if (hasResultSet) return PsqlCursor(stmt.resultSet)
+        if (hasResultSet) return PsqlCursor(stmt.resultSet, false)
         return PsqlCursor(stmt.updateCount)
     }
 

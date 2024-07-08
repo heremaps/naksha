@@ -203,7 +203,7 @@ class PsqlInstance : PgInstance {
         pooledConn.jdbcConn.isReadOnly = options.readOnly
         psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
         check(pooledConn.setSession(psqlConn))
-        check(connectionPool.putIfAbsent(pooledConn.id, pooledConn) != null)
+        check(connectionPool.putIfAbsent(pooledConn.id, pooledConn) == null)
         return psqlConn
     }
 

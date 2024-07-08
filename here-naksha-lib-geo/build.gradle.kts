@@ -15,6 +15,7 @@ kotlin {
         browser {
             webpackTask {
                 output.libraryTarget = "commonjs2"
+                output.library = "naksha.geo"
             }
         }
         useEsModules()

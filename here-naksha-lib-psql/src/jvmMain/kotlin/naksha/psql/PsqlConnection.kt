@@ -72,15 +72,19 @@ class PsqlConnection internal constructor(
         val conn = jdbc
         if (args.isNullOrEmpty()) {
             val stmt = conn.createStatement()
-            stmt.use {
-                return if (stmt.execute(sql)) PsqlCursor(stmt.resultSet) else PsqlCursor(stmt.updateCount)
+            return if (stmt.execute(sql)) PsqlCursor(stmt.resultSet, true) else {
+                val cursor = PsqlCursor(stmt.updateCount)
+                stmt.close()
+                cursor
             }
         }
         val query = PsqlQuery(sql)
         val stmt = query.prepare(conn)
-        stmt.use {
-            if (args.isNotEmpty()) query.bindArguments(stmt, args)
-            return if (stmt.execute()) PsqlCursor(stmt.resultSet) else PsqlCursor(stmt.updateCount)
+        if (args.isNotEmpty()) query.bindArguments(stmt, args)
+        return if (stmt.execute()) PsqlCursor(stmt.resultSet, true) else {
+            val cursor = PsqlCursor(stmt.updateCount)
+            stmt.close()
+            cursor
         }
     }
 

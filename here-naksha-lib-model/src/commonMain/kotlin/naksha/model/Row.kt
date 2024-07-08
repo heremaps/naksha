@@ -24,7 +24,8 @@ data class Row(
     val id: String,
 
     /**
-     * The GUID (global unique identifier) of the feature, read-only, the value is ignored when writing to the storage.
+     * The GUID (global unique identifier) of the feature. When features are written, the value can be provided by the client (using the
+     * [XyzProxy]) to signal that an existing state was modified.
      */
     @JvmField
     val guid: Guid? = null,

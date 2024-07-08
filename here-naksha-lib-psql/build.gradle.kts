@@ -16,6 +16,7 @@ kotlin {
         browser {
             webpackTask {
                 output.libraryTarget = "commonjs2"
+                output.library = "naksha.psql"
             }
         }
         useEsModules()
@@ -69,7 +70,10 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
                 implementation("org.postgresql:postgresql:42.5.4")
             }
-            resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
+            // TODO: We should replace ${project.buildDir} with ${layout.buildDirectory}, but this is not the same:
+            // println("------------ ${project.buildDir}/dist/js/productionExecutable/")
+            // println("------------ ${layout.buildDirectory}/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${project.buildDir}/dist/js/productionExecutable/")
         }
         jvmTest {
             dependencies {
