@@ -270,29 +270,29 @@ SELECT oid FROM pg_namespace WHERE nspname = $1;
      */
     fun triggerAfter(data: PgTrigger) {
         // FIXME
-        throw RuntimeException("Forbidden, please use API")
-        val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
-        if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
-            deleteFromDel(collectionId, data.OLD.id)
-            // save current head in hst
-            data.OLD.meta?.txnNext = data.OLD.meta?.txn
-            saveInHst(collectionId, data.OLD)
-            rowUpdater.xyzDel(data.OLD.meta!!)
-            copyToDel(collectionId, data.OLD)
-            // save del state in hst
-            saveInHst(collectionId, data.OLD)
-        }
-        if (data.TG_OP == TG_OP_UPDATE) {
-            check(data.NEW != null) { "Missing NEW for UPDATE" }
-            check(data.OLD != null) { "Missing OLD for UPDATE" }
-            deleteFromDel(collectionId, data.NEW.id)
-            data.OLD.meta?.txnNext = data.NEW.meta?.txn
-            saveInHst(collectionId, data.OLD)
-        }
-        if (data.TG_OP == TG_OP_INSERT) {
-            check(data.NEW != null) { "Missing NEW for INSERT" }
-            deleteFromDel(collectionId, data.NEW.id)
-        }
+        TODO("Forbidden, please use API")
+//        val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
+//        if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
+//            deleteFromDel(collectionId, data.OLD.id)
+//            // save current head in hst
+//            data.OLD.meta?.txnNext = data.OLD.meta?.txn
+//            saveInHst(collectionId, data.OLD)
+//            rowUpdater.xyzDel(data.OLD.meta!!)
+//            copyToDel(collectionId, data.OLD)
+//            // save del state in hst
+//            saveInHst(collectionId, data.OLD)
+//        }
+//        if (data.TG_OP == TG_OP_UPDATE) {
+//            check(data.NEW != null) { "Missing NEW for UPDATE" }
+//            check(data.OLD != null) { "Missing OLD for UPDATE" }
+//            deleteFromDel(collectionId, data.NEW.id)
+//            data.OLD.meta?.txnNext = data.NEW.meta?.txn
+//            saveInHst(collectionId, data.OLD)
+//        }
+//        if (data.TG_OP == TG_OP_INSERT) {
+//            check(data.NEW != null) { "Missing NEW for INSERT" }
+//            deleteFromDel(collectionId, data.NEW.id)
+//        }
     }
 
     /**
