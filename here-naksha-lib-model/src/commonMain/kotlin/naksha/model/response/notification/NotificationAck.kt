@@ -17,6 +17,4 @@ class NotificationAck(
     val seqNumber: Int64,
     val uid: Int,
     val handlerStates: MapProxy<String, Any>
-) : Response(SUCCESS_TYPE) {
-    override fun size(): Int = 0
-}
+) : Response(SUCCESS_TYPE)
