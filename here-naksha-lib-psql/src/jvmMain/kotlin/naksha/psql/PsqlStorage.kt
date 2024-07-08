@@ -116,7 +116,7 @@ $$ LANGUAGE 'plv8';"""
             //       A side effect sadly is that you need to require naksha, before you can require jbon!
             // TODO: Extend the commonjs2 code so that it allows to declare that one module contains another!
             installModuleFromResource(
-                conn, "naksha", "/here-naksha-lib-plv8.js",
+                conn, "naksha", "/here-naksha-lib-psql.js",
                 beautify = true,
                 replacements = replacements,
                 extraCode = """
