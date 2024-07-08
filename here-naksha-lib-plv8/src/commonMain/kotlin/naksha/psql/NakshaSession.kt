@@ -163,10 +163,7 @@ SELECT oid FROM pg_namespace WHERE nspname = $1;
             // TODO move it outside and run it once
             val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$hst")
             val session = usePgConnection()
-            val hstInsertPlan = session.prepare(
-                """INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""",
-                COL_ALL_TYPES
-            )
+            val hstInsertPlan = session.prepare("INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($COL_ALL_DOLLAR)", COL_ALL_TYPES)
             hstInsertPlan.use {
                 val oldMeta = OLD.meta!!
                 hstInsertPlan.execute(
@@ -177,7 +174,6 @@ SELECT oid FROM pg_namespace WHERE nspname = $1;
                         oldMeta.ptxn,
                         oldMeta.puid,
                         oldMeta.flags,
-                        oldMeta.action,
                         oldMeta.version,
                         oldMeta.createdAt,
                         oldMeta.updatedAt,
@@ -219,9 +215,8 @@ SELECT oid FROM pg_namespace WHERE nspname = $1;
         if (autoPurge != true) {
             val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$del")
             val oldMeta = OLD.meta!!
-            val session = usePgConnection()
-            session.execute(
-                """INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)""",
+            val conn = usePgConnection()
+            conn.execute("INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($COL_ALL_DOLLAR)",
                 arrayOf(
                     oldMeta.txnNext,
                     oldMeta.txn,
@@ -229,7 +224,6 @@ SELECT oid FROM pg_namespace WHERE nspname = $1;
                     oldMeta.ptxn,
                     oldMeta.puid,
                     oldMeta.flags,
-                    oldMeta.action,
                     oldMeta.version,
                     oldMeta.createdAt,
                     oldMeta.updatedAt,
@@ -245,7 +239,7 @@ SELECT oid FROM pg_namespace WHERE nspname = $1;
                     OLD.type,
                     oldMeta.fnva1
                 )
-            )
+            ).close()
         }
     }
 
@@ -276,29 +270,29 @@ SELECT oid FROM pg_namespace WHERE nspname = $1;
      */
     fun triggerAfter(data: PgTrigger) {
         // FIXME
-        throw RuntimeException("Forbidden, please use API")
-        val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
-        if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
-            deleteFromDel(collectionId, data.OLD.id)
-            // save current head in hst
-            data.OLD.meta?.txnNext = data.OLD.meta?.txn
-            saveInHst(collectionId, data.OLD)
-            rowUpdater.xyzDel(data.OLD.meta!!)
-            copyToDel(collectionId, data.OLD)
-            // save del state in hst
-            saveInHst(collectionId, data.OLD)
-        }
-        if (data.TG_OP == TG_OP_UPDATE) {
-            check(data.NEW != null) { "Missing NEW for UPDATE" }
-            check(data.OLD != null) { "Missing OLD for UPDATE" }
-            deleteFromDel(collectionId, data.NEW.id)
-            data.OLD.meta?.txnNext = data.NEW.meta?.txn
-            saveInHst(collectionId, data.OLD)
-        }
-        if (data.TG_OP == TG_OP_INSERT) {
-            check(data.NEW != null) { "Missing NEW for INSERT" }
-            deleteFromDel(collectionId, data.NEW.id)
-        }
+        TODO("Forbidden, please use API")
+//        val collectionId = getBaseCollectionId(data.TG_TABLE_NAME)
+//        if (data.TG_OP == TG_OP_DELETE && data.OLD != null) {
+//            deleteFromDel(collectionId, data.OLD.id)
+//            // save current head in hst
+//            data.OLD.meta?.txnNext = data.OLD.meta?.txn
+//            saveInHst(collectionId, data.OLD)
+//            rowUpdater.xyzDel(data.OLD.meta!!)
+//            copyToDel(collectionId, data.OLD)
+//            // save del state in hst
+//            saveInHst(collectionId, data.OLD)
+//        }
+//        if (data.TG_OP == TG_OP_UPDATE) {
+//            check(data.NEW != null) { "Missing NEW for UPDATE" }
+//            check(data.OLD != null) { "Missing OLD for UPDATE" }
+//            deleteFromDel(collectionId, data.NEW.id)
+//            data.OLD.meta?.txnNext = data.NEW.meta?.txn
+//            saveInHst(collectionId, data.OLD)
+//        }
+//        if (data.TG_OP == TG_OP_INSERT) {
+//            check(data.NEW != null) { "Missing NEW for INSERT" }
+//            deleteFromDel(collectionId, data.NEW.id)
+//        }
     }
 
     /**

@@ -1,23 +1,14 @@
 package naksha.psql.write
 
 import naksha.base.Fnv1a32
+import naksha.base.Int64
 import naksha.base.Platform
-import naksha.model.ACTION_DELETE
-import naksha.model.ACTION_UPDATE
-import naksha.model.GeoEncoding
-import naksha.model.Metadata
-import naksha.model.Row
+import naksha.model.*
 import naksha.psql.PgPlan
 import naksha.psql.NakshaSession
 import naksha.psql.PgStatic.SC_TRANSACTIONS
-import kotlin.js.ExperimentalJsExport
-import kotlin.js.JsExport
 
-@OptIn(ExperimentalJsExport::class)
-@JsExport
-class RowUpdater(
-    val session: NakshaSession
-) {
+internal class RowUpdater(val session: NakshaSession) {
     private lateinit var gridPlan: PgPlan
 
     /**
@@ -27,18 +18,19 @@ class RowUpdater(
      * @return The new XYZ namespace for this feature.
      */
     internal fun xyzInsert(collectionId: String, NEW: Row) {
+        TODO("We need to adjust this, because Row is immutable now!")
         val txn = session.txn()
         val txnTs = session.txnTs()
 
         var geoGrid: Int? = NEW.meta?.geoGrid
 
         // FIXME: default flags should be taken from collectionConfig
-        val flags = NEW.meta?.flags ?: GeoEncoding.DEFAULT_FLAGS
+        val flags = NEW.meta?.flags ?: Flags()
 
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
             val id: String = NEW.id
-            geoGrid = grid(id, GeoEncoding.readGeometryEncoding(flags), NEW.geo)
+            geoGrid = grid(id, flags, NEW.geo)
         }
 
         val uid = if (collectionId == SC_TRANSACTIONS) {
@@ -47,71 +39,76 @@ class RowUpdater(
             session.nextUid()
         }
 
-        val newMeta = Metadata(
-            id = NEW.id,
-            txn = txn.value,
-            txnNext = null,
-            ptxn = null,
-            puid = null,
-            geoGrid = geoGrid,
-            action = null, // saving space null means 0 (create)
-            version = null, // saving space null means 1
-            uid = uid,
-            createdAt = null, // saving space - it is same as update_at at creation,
-            updatedAt = txnTs,
-            author = session.context.author,
-            authorTs = null, // saving space - only apps are allowed to create features
-            appId = session.context.appId,
-            flags = flags,
-            fnva1 = rowHash(NEW)
-        )
-        NEW.meta = newMeta
+//        val newMeta = Metadata(
+//            id = NEW.id,
+//            txn = txn.value,
+//            txnNext = null,
+//            ptxn = null,
+//            puid = null,
+//            geoGrid = geoGrid,
+//            version = null, // saving space null means 1
+//            uid = uid,
+//            createdAt = null, // saving space - it is same as update_at at creation,
+//            updatedAt = txnTs,
+//            author = session.context.author,
+//            authorTs = null, // saving space - only apps are allowed to create features
+//            appId = session.context.appId,
+//            flags = flags,
+//            fnva1 = rowHash(NEW)
+//        )
+//        NEW.meta = newMeta
     }
 
     /**
      *  Prepares XyzNamespace columns for head table.
      */
     internal fun xyzUpdateHead(collectionId: String, NEW: Row, OLD: Row) {
+        TODO("We need to adjust this, because Row is immutable now!")
         xyzInsert(collectionId, NEW)
-        val newMeta = NEW.meta!!
-        val oldMeta = OLD.meta!!
-        newMeta.action = ACTION_UPDATE.toShort()
-        newMeta.createdAt = oldMeta.createdAt ?: oldMeta.updatedAt
+        val oldMeta = OLD.meta
+        require(oldMeta != null)
+        val newMeta = NEW.meta
+        val updatedAt = Platform.currentMillis()
+        //val createdAt = oldMeta.createdAt ?:
+        val author: String?
+        val authorTs: Int64?
         if (session.context.author == null) {
-            newMeta.authorTs = oldMeta.authorTs ?: oldMeta.updatedAt
+            author = oldMeta?.author
+            authorTs = oldMeta?.authorTs
         } else {
-            newMeta.authorTs = null
+            author = session.context.author
+            authorTs = newMeta!!.updatedAt
         }
-        val oldVersion: Int = oldMeta.version ?: 1
-        newMeta.version = oldVersion + 1
-        newMeta.ptxn = oldMeta.txn
-        newMeta.puid = oldMeta.uid
-        if (collectionId == SC_TRANSACTIONS) {
-            newMeta.updatedAt = Platform.currentMillis()
-        }
+        val version: Int = (oldMeta?.version ?: 0) + 1
+        val ptxn = oldMeta?.txn
+        val puid = oldMeta?.uid
+//        if (collectionId == SC_TRANSACTIONS) {
+//            newMeta.updatedAt =
+//        }
     }
 
     /**
      * Prepares row before putting into $del table.
      */
     internal fun xyzDel(OLD: Metadata) {
-        val txn = session.txn()
-        val txnTs = session.txnTs()
-        OLD.txn = txn.value
-        OLD.txnNext = txn.value
-        OLD.action = ACTION_DELETE.toShort()
-        OLD.author = session.context.author ?: session.context.appId
-        if (session.context.author != null) {
-            OLD.authorTs = txnTs
-        }
-        if (OLD.createdAt != null) {
-            OLD.createdAt = OLD.updatedAt
-        }
-        OLD.updatedAt = txnTs
-        OLD.appId = session.context.appId
-        OLD.uid = session.nextUid()
-        val currentVersion: Int = OLD.version ?: 1
-        OLD.version = currentVersion + 1
+        TODO("We need to adjust this, because Row is immutable now!")
+//        val txn = session.txn()
+//        val txnTs = session.txnTs()
+//        OLD.txn = txn.value
+//        OLD.txnNext = txn.value
+//        OLD.action = ACTION_DELETE.toShort()
+//        OLD.author = session.context.author ?: session.context.appId
+//        if (session.context.author != null) {
+//            OLD.authorTs = txnTs
+//        }
+//        if (OLD.createdAt != null) {
+//            OLD.createdAt = OLD.updatedAt
+//        }
+//        OLD.updatedAt = txnTs
+//        OLD.appId = session.context.appId
+//        OLD.uid = session.nextUid()
+//        val currentVersion: Int = OLD.version ?: 1
+//        OLD.version = currentVersion + 1
     }
 
     /**
@@ -128,7 +125,7 @@ class RowUpdater(
      * @param geo The feature geometry; if any.
      * @return The GRID (14 character long string).
      */
-    internal fun grid(id: String, flags: Int, geo: ByteArray?): Int {
+    internal fun grid(id: String, flags: Flags, geo: ByteArray?): Int {
         // FIXME TODO use point to here tile function after merge
         return 0
 //        if (geo == null) return Static.gridFromId(id)

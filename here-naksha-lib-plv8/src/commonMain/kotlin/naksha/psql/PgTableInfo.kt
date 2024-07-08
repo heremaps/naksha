@@ -67,7 +67,6 @@ class PgTableInfo(val conn: PgConnection, val storageClass: String?, val partiti
                 version     int4,
                 geo_grid    int4,
                 flags       int4,
-                action      int2,
                 app_id      text STORAGE PLAIN NOT NULL,
                 author      text STORAGE PLAIN,
                 type        text STORAGE PLAIN,

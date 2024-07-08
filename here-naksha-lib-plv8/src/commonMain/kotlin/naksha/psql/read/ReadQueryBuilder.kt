@@ -1,6 +1,5 @@
 package naksha.psql.read
 
-import naksha.model.GeoEncoding.GEO_TWKB
 import naksha.model.Guid
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
@@ -13,9 +12,9 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-internal class ReadQueryBuilder(val session: PgConnection) {
+internal class ReadQueryBuilder(val conn: PgConnection) {
 
-    private val geometryTransformer = SqlGeometryTransformationResolver(session)
+    private val geometryTransformer = SqlGeometryTransformationResolver(conn)
 
     /**
      * Builds SQL request based on given ReadRequest.
@@ -67,7 +66,7 @@ internal class ReadQueryBuilder(val session: PgConnection) {
     private fun resolveColumns(req: ReadRequest): String {
         var columns = "$COL_ID, $COL_TYPE, $COL_GEO_REF, $COL_FLAGS"
         if (!req.noMeta) {
-            columns += ", $COL_TXN_NEXT, $COL_TXN, $COL_UID, $COL_PTXN, $COL_PUID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR_TS, $COL_AUTHOR, $COL_APP_ID, $COL_GEO_GRID"
+            columns += ", $COL_TXN_NEXT, $COL_TXN, $COL_UID, $COL_PTXN, $COL_PUID, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR_TS, $COL_AUTHOR, $COL_APP_ID, $COL_GEO_GRID"
         }
         if (!req.noTags) {
             columns += ", $COL_TAGS"
@@ -161,6 +160,7 @@ internal class ReadQueryBuilder(val session: PgConnection) {
      */
     private fun addSop(whereSql: StringBuilder, paramsList: MutableList<Any?>, sop: SOp) {
         val valuePlaceholder = paramsList.nextPlaceHolder()
+        val GEO_TWKB = 0
         when (sop.op) {
             INTERSECTS -> {
                 val wrapperForReqValuePlaceholder = geometryTransformer.wrapWithTransformation(
@@ -173,6 +173,7 @@ internal class ReadQueryBuilder(val session: PgConnection) {
                 paramsList.add(sop.geometry)
             }
         }
+        TODO("Fix me, we changed to flags!")
     }
 
     /**

@@ -1,8 +1,10 @@
 package naksha.psql
 
-import naksha.base.PlatformObject
-import naksha.jbon.*
-import kotlin.reflect.KClass
+import naksha.psql.PgType.Companion.BYTE_ARRAY
+import naksha.psql.PgType.Companion.INT
+import naksha.psql.PgType.Companion.INT64
+import naksha.psql.PgType.Companion.SHORT
+import naksha.psql.PgType.Companion.STRING
 
 internal const val NKC_TABLE = "naksha~collections"
 internal const val NKC_TABLE_ESC = "\"naksha~collections\""
@@ -21,7 +23,6 @@ internal const val COL_UID = "uid"
 internal const val COL_PTXN = "ptxn"
 internal const val COL_PUID = "puid"
 internal const val COL_FLAGS = "flags"
-internal const val COL_ACTION = "action"
 internal const val COL_VERSION = "version"
 internal const val COL_CREATED_AT = "created_at"
 internal const val COL_UPDATE_AT = "updated_at"
@@ -37,8 +38,57 @@ internal const val COL_FEATURE = "feature"
 internal const val COL_TYPE = "type"
 internal const val COL_ORIGIN = "origin"
 internal const val COL_FNVA1 = "fnva1"
-internal const val COL_ALL = "$COL_TXN_NEXT,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1"
-internal val COL_ALL_TYPES = arrayOf(SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT64,SQL_INT32, SQL_INT32, SQL_INT16, SQL_INT16, SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_INT32, SQL_STRING, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_BYTE_ARRAY, SQL_STRING, SQL_INT32)
+internal val COL_ALL: String = arrayOf(
+    COL_TXN_NEXT,
+    COL_TXN,
+    COL_UID,
+    COL_PTXN,
+    COL_PUID,
+    COL_FLAGS,
+    COL_VERSION,
+    COL_CREATED_AT,
+    COL_UPDATE_AT,
+    COL_AUTHOR_TS,
+    COL_AUTHOR,
+    COL_APP_ID,
+    COL_GEO_GRID,
+    COL_ID,
+    COL_TAGS,
+    COL_GEOMETRY,
+    COL_FEATURE,
+    COL_GEO_REF,
+    COL_TYPE,
+    COL_FNVA1
+).joinToString(",")
+internal val COL_ALL_TYPES: Array<String> = arrayOf(
+    INT64.str,
+    INT64.str,
+    INT.str,
+    INT64.str,
+    INT.str,
+    INT.str,
+    SHORT.str,
+    INT64.str,
+    INT64.str,
+    INT64.str,
+    STRING.str,
+    STRING.str,
+    INT.str,
+    STRING.str,
+    BYTE_ARRAY.str,
+    BYTE_ARRAY.str,
+    BYTE_ARRAY.str,
+    BYTE_ARRAY.str,
+    STRING.str,
+    INT.str)
+private fun createJoiner(): (_: String) -> String {
+    var i = 0
+    return {
+        i++
+        "${'$'}${i}"
+    }
+}
+internal val COL_ALL_DOLLAR = COL_ALL_TYPES.joinToString(transform = createJoiner())
 
 /**
  * id, grid, flags, geo, tags, feature
