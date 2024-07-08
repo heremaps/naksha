@@ -1,13 +1,10 @@
 package naksha.psql
 
-import naksha.base.PlatformObject
-import naksha.jbon.*
 import naksha.psql.PgType.Companion.BYTE_ARRAY
 import naksha.psql.PgType.Companion.INT
 import naksha.psql.PgType.Companion.INT64
 import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.STRING
-import kotlin.reflect.KClass
 
 internal const val NKC_TABLE = "naksha~collections"
 internal const val NKC_TABLE_ESC = "\"naksha~collections\""
@@ -26,7 +23,6 @@ internal const val COL_UID = "uid"
 internal const val COL_PTXN = "ptxn"
 internal const val COL_PUID = "puid"
 internal const val COL_FLAGS = "flags"
-internal const val COL_ACTION = "action"
 internal const val COL_VERSION = "version"
 internal const val COL_CREATED_AT = "created_at"
 internal const val COL_UPDATE_AT = "updated_at"
@@ -49,7 +45,6 @@ internal val COL_ALL: String = arrayOf(
     COL_PTXN,
     COL_PUID,
     COL_FLAGS,
-    COL_ACTION,
     COL_VERSION,
     COL_CREATED_AT,
     COL_UPDATE_AT,
@@ -72,7 +67,6 @@ internal val COL_ALL_TYPES: Array<String> = arrayOf(
     INT64.str,
     INT.str,
     INT.str,
-    SHORT.str,
     SHORT.str,
     INT64.str,
     INT64.str,

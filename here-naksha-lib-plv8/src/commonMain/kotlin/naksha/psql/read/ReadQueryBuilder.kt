@@ -66,7 +66,7 @@ internal class ReadQueryBuilder(val conn: PgConnection) {
     private fun resolveColumns(req: ReadRequest): String {
         var columns = "$COL_ID, $COL_TYPE, $COL_GEO_REF, $COL_FLAGS"
         if (!req.noMeta) {
-            columns += ", $COL_TXN_NEXT, $COL_TXN, $COL_UID, $COL_PTXN, $COL_PUID, $COL_ACTION, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR_TS, $COL_AUTHOR, $COL_APP_ID, $COL_GEO_GRID"
+            columns += ", $COL_TXN_NEXT, $COL_TXN, $COL_UID, $COL_PTXN, $COL_PUID, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR_TS, $COL_AUTHOR, $COL_APP_ID, $COL_GEO_GRID"
         }
         if (!req.noTags) {
             columns += ", $COL_TAGS"

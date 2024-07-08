@@ -10,7 +10,6 @@ import naksha.model.request.ResultRow
 import naksha.model.Metadata
 import naksha.model.Row
 import naksha.psql.*
-import naksha.psql.COL_ACTION
 import naksha.psql.COL_ALL
 import naksha.psql.COL_ALL_TYPES
 import naksha.psql.COL_APP_ID
@@ -80,7 +79,7 @@ internal class NakshaBulkLoaderPlan(
         return session.usePgConnection().prepare(
             """
                 UPDATE $partitionHeadQuoted 
-                SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_FLAGS=$6,$COL_ACTION=$7,$COL_VERSION=$8,$COL_CREATED_AT=$9,$COL_UPDATE_AT=$10,$COL_AUTHOR_TS=$11,$COL_AUTHOR=$12,$COL_APP_ID=$13,$COL_GEO_GRID=$14,$COL_ID=$15,$COL_TAGS=$16,$COL_GEOMETRY=$17,$COL_FEATURE=$18,$COL_GEO_REF=$19,$COL_TYPE=$20 WHERE $COL_ID=$21
+                SET $COL_TXN_NEXT=$1, $COL_TXN=$2, $COL_UID=$3, $COL_PTXN=$4,$COL_PUID=$5,$COL_FLAGS=$6,$COL_VERSION=$7,$COL_CREATED_AT=$8,$COL_UPDATE_AT=$9,$COL_AUTHOR_TS=$10,$COL_AUTHOR=$11,$COL_APP_ID=$12,$COL_GEO_GRID=$13,$COL_ID=$14,$COL_TAGS=$15,$COL_GEOMETRY=$16,$COL_FEATURE=$17,$COL_GEO_REF=$18,$COL_TYPE=$19 WHERE $COL_ID=$20
                 """.trimIndent(),
             arrayOf(*COL_ALL_TYPES, SQL_STRING)
         )
@@ -101,10 +100,10 @@ internal class NakshaBulkLoaderPlan(
         return session.usePgConnection().prepare(
             """
                 INSERT INTO $delCollectionIdQuoted ($COL_ALL) 
-                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$10,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
-                    FROM $partitionHeadQuoted WHERE $COL_ID = $11""".trimIndent(),
+                SELECT $1,$2,$3,$COL_TXN,$COL_UID,$COL_FLAGS,$4,$5,$6,$7,$8,$9,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
+                    FROM $partitionHeadQuoted WHERE $COL_ID = $10""".trimIndent(),
             arrayOf(
-                SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT16, SQL_INT32,
+                SQL_INT64, SQL_INT64, SQL_INT32, SQL_INT32,
                 SQL_INT64, SQL_INT64, SQL_INT64, SQL_STRING, SQL_STRING, SQL_STRING
             )
         )
@@ -127,7 +126,7 @@ internal class NakshaBulkLoaderPlan(
         return session.usePgConnection().prepare(
             """
             INSERT INTO $hstCollectionIdQuoted ($COL_ALL) 
-            SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
+            SELECT $1,$COL_TXN,$COL_UID,$COL_PTXN,$COL_PUID,$COL_FLAGS,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR_TS,$COL_AUTHOR,$COL_APP_ID,$COL_GEO_GRID,$COL_ID,$COL_TAGS,$COL_GEOMETRY,$COL_FEATURE,$COL_GEO_REF,$COL_TYPE,$COL_FNVA1 
                 FROM $partitionHeadQuoted WHERE $COL_ID = $2
             """.trimIndent(), arrayOf(SQL_INT64, SQL_STRING)
         )
@@ -255,14 +254,13 @@ internal class NakshaBulkLoaderPlan(
                 Param(1, SQL_INT64, newMeta.txnNext),
                 Param(2, SQL_INT64, newMeta.txn),
                 Param(3, SQL_INT32, newMeta.uid),
-                Param(4, SQL_INT16, newMeta.action),
-                Param(5, SQL_INT32, newMeta.version),
-                Param(6, SQL_INT64, newMeta.createdAt),
-                Param(7, SQL_INT64, newMeta.updatedAt),
-                Param(8, SQL_INT64, newMeta.authorTs),
-                Param(9, SQL_STRING, newMeta.author),
-                Param(10, SQL_STRING, newMeta.appId),
-                Param(11, SQL_STRING, newMeta.id)
+                Param(4, SQL_INT32, newMeta.version),
+                Param(5, SQL_INT64, newMeta.createdAt),
+                Param(6, SQL_INT64, newMeta.updatedAt),
+                Param(7, SQL_INT64, newMeta.authorTs),
+                Param(8, SQL_STRING, newMeta.author),
+                Param(9, SQL_STRING, newMeta.appId),
+                Param(10, SQL_STRING, newMeta.id)
             )
         )
     }
@@ -277,21 +275,20 @@ internal class NakshaBulkLoaderPlan(
                 Param(4, SQL_INT64, meta.ptxn),
                 Param(5, SQL_INT32, meta.puid),
                 Param(6, SQL_INT32, meta.flags),
-                Param(7, SQL_INT16, meta.action),
-                Param(8, SQL_INT32, meta.version),
-                Param(9, SQL_INT64, meta.createdAt),
-                Param(10, SQL_INT64, meta.updatedAt),
-                Param(11, SQL_INT64, meta.authorTs),
-                Param(12, SQL_STRING, meta.author),
-                Param(13, SQL_STRING, meta.appId),
-                Param(14, SQL_INT32, meta.geoGrid),
-                Param(15, SQL_STRING, row.id),
-                Param(16, SQL_BYTE_ARRAY, row.tags),
-                Param(17, SQL_BYTE_ARRAY, row.geo),
-                Param(18, SQL_BYTE_ARRAY, row.feature),
-                Param(19, SQL_BYTE_ARRAY, row.geoRef),
-                Param(20, SQL_STRING, row.type),
-                Param(21, SQL_STRING, row.id)
+                Param(7, SQL_INT32, meta.version),
+                Param(8, SQL_INT64, meta.createdAt),
+                Param(9, SQL_INT64, meta.updatedAt),
+                Param(10, SQL_INT64, meta.authorTs),
+                Param(11, SQL_STRING, meta.author),
+                Param(12, SQL_STRING, meta.appId),
+                Param(13, SQL_INT32, meta.geoGrid),
+                Param(14, SQL_STRING, row.id),
+                Param(15, SQL_BYTE_ARRAY, row.tags),
+                Param(16, SQL_BYTE_ARRAY, row.geo),
+                Param(17, SQL_BYTE_ARRAY, row.feature),
+                Param(18, SQL_BYTE_ARRAY, row.geoRef),
+                Param(19, SQL_STRING, row.type),
+                Param(20, SQL_STRING, row.id)
             )
         )
     }
@@ -326,7 +323,9 @@ internal class NakshaBulkLoaderPlan(
 
     internal fun executeBatch(stmt: KFunction0<PgPlan>, bulkParams: List<Array<Param>>) {
         if (bulkParams.isNotEmpty()) {
-            val result = session.usePgConnection().executeBatch(stmt(), bulkParams.toTypedArray())
+            val statement = stmt()
+            statement.addBatch(bulkParams.toTypedArray())
+            val result = statement.executeBatch()
             if (result.isNotEmpty() && result[0] == -3) {
                 // java.sql.Statement.EXECUTE_FAILED
                 throw NakshaException.forBulk(ERR_FATAL, "error in bulk statement")
@@ -338,7 +337,7 @@ internal class NakshaBulkLoaderPlan(
         if (reqUuid != null) {
             check(currentHead != null)
             val headUuid =
-                Guid(session.storage.id(), collectionId, currentHead.id, currentHead.meta!!.getLuid()).toString()
+                Guid(session.storage.id(), collectionId, currentHead.id, Luid(Txn(currentHead.meta!!.txn), currentHead.meta!!.uid)).toString()
             if (reqUuid != headUuid) {
                 throw NakshaException.forId(
                     ERR_CHECK_VIOLATION,
@@ -350,7 +349,6 @@ internal class NakshaBulkLoaderPlan(
     }
 
     private fun addResult(op: String, row: Row? = null) {
-        if (row != null)  DbRowMapper.evaluateOptimizedValues(row.meta!!)
         val resultRow = ResultRow(row = row, op = op)
         result.add(resultRow)
     }

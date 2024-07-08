@@ -2,7 +2,6 @@ package naksha.psql.write
 
 import naksha.model.Row
 import naksha.psql.*
-import naksha.psql.COL_ACTION
 import naksha.psql.COL_APP_ID
 import naksha.psql.COL_AUTHOR
 import naksha.psql.COL_AUTHOR_TS
@@ -57,7 +56,7 @@ internal data class CollectionWriteOps(
         val collectionIdQuoted = PgUtil.quoteIdent(collectionId)
         val conn = session.usePgConnection()
         val basicQuery =
-            "SELECT $COL_ID,$COL_TXN,$COL_UID,$COL_ACTION,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR,$COL_AUTHOR_TS,$COL_GEO_GRID,$COL_FLAGS,$COL_APP_ID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp"
+            "SELECT $COL_ID,$COL_TXN,$COL_UID,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR,$COL_AUTHOR_TS,$COL_GEO_GRID,$COL_FLAGS,$COL_APP_ID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp"
         val cursor = if (idsFullFetch.isEmpty()) {
             conn.execute(basicQuery, arrayOf(idsSmallFetch.toTypedArray()))
         } else {
