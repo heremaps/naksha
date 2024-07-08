@@ -148,8 +148,26 @@ inline fun Flags.tagsGzipOff(): Flags = this and TAGS_GZIP_BIT.inv()
 inline fun Flags.action(): Int = this and ACTION_MASK
 
 /**
+ * Returns the action-enumeration value from the encoding.
+ * @return the action-enumeration value from the encoding.
+ */
+inline fun Flags.actionEnum(): ActionEnum = when (this.action()) {
+    Action.CREATED -> ActionEnum.CREATED
+    Action.UPDATED -> ActionEnum.UPDATED
+    Action.DELETED -> ActionEnum.DELETED
+    else -> ActionEnum.UNKNOWN
+}
+
+/**
  * Updates the action encoding in the given flags.
  * @param encoding the encoding to set.
  * @return the new flags.
  */
 inline fun Flags.action(encoding: Int): Flags = (this and ACTION_CLEAR) or (encoding and ACTION_MASK)
+
+/**
+ * Updates the action encoding in the given flags.
+ * @param action the action-enumeration value to set.
+ * @return the new flags.
+ */
+inline fun Flags.action(action: ActionEnum): Flags = (this and ACTION_CLEAR) or (action.action and ACTION_MASK)

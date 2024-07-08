@@ -11,20 +11,20 @@ import kotlin.js.JsExport
 @JsExport
 data class Metadata(
     val updatedAt: Int64,
-    val createdAt: Int64 = updatedAt,
-    val authorTs: Int64 = createdAt,
-    val txnNext: Int64? = null,
+    val createdAt: Int64,
+    val authorTs: Int64,
+    val txnNext: Int64?,
     val txn: Int64,
-    val ptxn: Int64? = null,
+    val ptxn: Int64?,
     val uid: Int,
-    val puid: Int = 0,
+    val puid: Int,
     val fnva1: Int,
-    val version: Int = 1,
+    val version: Int,
     val geoGrid: Int,
     val flags: Int,
-    val origin: String? = null,
+    val origin: String?,
     val appId: String,
     val author: String?,
-    val type: String? = null,
+    val type: String?,
     val id: String
 )
