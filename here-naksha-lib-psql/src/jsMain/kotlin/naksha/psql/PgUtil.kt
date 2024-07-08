@@ -1,6 +1,7 @@
 package naksha.psql
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
+@JsExport
 actual class PgUtil {
     @Suppress("OPT_IN_USAGE")
     actual companion object {
@@ -78,6 +79,7 @@ actual class PgUtil {
          * @throws UnsupportedOperationException if executed in `PLV8` extension.
          */
         @JsStatic
+        @JsName("getInstanceFromJdbcUrl")
         actual fun getInstance(url: String): PgInstance {
             plv8Forbidden("PgUtil.getInstance")
             TODO("Not yet implemented")
@@ -93,7 +95,6 @@ actual class PgUtil {
         actual fun newCluster(master: PgInstance, vararg replicas: PgInstance): PgCluster {
             plv8Forbidden("PgUtil.newCluster")
             TODO("Not yet implemented")
-
         }
 
         /**
