@@ -27,5 +27,6 @@ abstract class Response(
         const val XYZ_COLLECTION_TYPE = "XYZ_COLLECTION"
         const val CHANGE_SET_TYPE = "CHANGE_SET"
         const val CHANGE_SET_COLLECTION_TYPE = "CHANGE_SET_COLLECTION"
+        const val BINARY_TYPE = "BINARY"
     }
 }
