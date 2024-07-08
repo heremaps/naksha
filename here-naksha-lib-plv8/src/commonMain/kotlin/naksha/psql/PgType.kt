@@ -83,7 +83,5 @@ class PgType : JsEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun namespace(): KClass<out JsEnum> = PgType::class
 
-    override fun initClass() {
-        register(PgType::class, PgType::class)
-    }
+    override fun initClass() {}
 }
