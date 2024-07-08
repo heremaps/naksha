@@ -43,7 +43,7 @@ class NakshaVersion(
     var revision: Int,
     var preReleaseTag: PreReleaseTag = PreReleaseTag.none,
     var preReleaseVersion: Int = FINAL_PRE_RELEASE_VERSION
-): Comparable<NakshaVersion> {
+) : Comparable<NakshaVersion> {
 
     @Suppress("OPT_IN_USAGE")
     companion object {
@@ -199,16 +199,19 @@ class NakshaVersion(
         @Throws(NumberFormatException::class)
         fun of(version: String): NakshaVersion {
             val majorEnd = version.indexOf('.')
-            val minorEnd = version.indexOf('.', majorEnd + 1)
+            val optionalMinorEnd = version.indexOf('.', majorEnd + 1)
+            val minorEnd = if (optionalMinorEnd == -1) version.length else optionalMinorEnd
             val revisionEnd = version.indexOf('-', minorEnd + 1)
             val preReleaseTagEnd = if (revisionEnd == -1) -1 else version.indexOf('.', revisionEnd + 1)
             val major = version.substring(0, majorEnd).toInt()
             val minor = version.substring(majorEnd + 1, minorEnd).toInt()
-            val revision = if (revisionEnd == -1
-            ) version.substring(minorEnd + 1).toInt() else version.substring(minorEnd + 1, revisionEnd).toInt()
+            val revision = if (optionalMinorEnd == -1) 0 else if (revisionEnd == -1) version.substring(minorEnd + 1)
+                .toInt() else version.substring(minorEnd + 1, revisionEnd).toInt()
             val preTagString = if (revisionEnd == -1) null else version.substring(revisionEnd + 1, preReleaseTagEnd)
             val preTag = if (preTagString == null) PreReleaseTag.none else PreReleaseTag.valueOf(preTagString)
-            val preVersion = if (preReleaseTagEnd == -1) FINAL_PRE_RELEASE_VERSION else version.substring(preReleaseTagEnd + 1).toInt()
+            val preVersion =
+                if (preReleaseTagEnd == -1) FINAL_PRE_RELEASE_VERSION else version.substring(preReleaseTagEnd + 1)
+                    .toInt()
             return NakshaVersion(major, minor, revision, preTag, preVersion)
         }
     }

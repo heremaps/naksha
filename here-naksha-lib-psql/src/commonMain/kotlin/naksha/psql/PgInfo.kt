@@ -54,33 +54,33 @@ class PgInfo(conn: PgConnection, schema: String) { // TODO: Rename sql into conn
     val schemaOid: Int
 
     init {
-        val cursor = conn.execute("""
+        val cursor = conn.execute(
+            """
             SELECT 
                 current_setting('block_size')::int4 as bs, 
                 (select oid FROM pg_tablespace WHERE spcname = '$TEMPORARY_TABLESPACE') as temp_oid,
                 (select oid FROM pg_extension WHERE extname = 'gzip') as gzip_oid,
                 (select oid FROM pg_namespace WHERE nspname = $1) as schema_oid,
                 version() as version
-            """, arrayOf(schema)).fetch()
-        cursor.use {
-            pageSize = cursor["bs"]
-            val tupleSize = pageSize - 32
-            maxTupleSize = if (tupleSize > MAX_POSTGRES_TOAST_TUPLE_TARGET) {
-                MAX_POSTGRES_TOAST_TUPLE_TARGET
-            } else if (tupleSize < MIN_POSTGRES_TOAST_TUPLE_TARGET) {
-                MIN_POSTGRES_TOAST_TUPLE_TARGET
-            } else {
-                tupleSize
-            }
-            brittleTableSpace = if (cursor.column("temp_oid") is Int) TEMPORARY_TABLESPACE else null
-            schemaOid = cursor["schema_oid"]
-            tempTableSpace = brittleTableSpace
-            gzipSupported = cursor.column("gzip_oid") is Int
-            // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
-            val v: String = cursor["version"]
-            val start = v.indexOf(' ')
-            val end = v.indexOf(' ', start + 1)
-            postgresVersion = NakshaVersion.of(v.substring(start + 1, end))
+            """, arrayOf(schema)
+        ).fetch()
+        pageSize = cursor["bs"]
+        val tupleSize = pageSize - 32
+        maxTupleSize = if (tupleSize > MAX_POSTGRES_TOAST_TUPLE_TARGET) {
+            MAX_POSTGRES_TOAST_TUPLE_TARGET
+        } else if (tupleSize < MIN_POSTGRES_TOAST_TUPLE_TARGET) {
+            MIN_POSTGRES_TOAST_TUPLE_TARGET
+        } else {
+            tupleSize
         }
+        brittleTableSpace = if (cursor.column("temp_oid") is Int) TEMPORARY_TABLESPACE else null
+        schemaOid = cursor["schema_oid"]
+        tempTableSpace = brittleTableSpace
+        gzipSupported = cursor.column("gzip_oid") is Int
+        // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
+        val v: String = cursor["version"]
+        val start = v.indexOf(' ')
+        val end = v.indexOf(' ', start + 1)
+        postgresVersion = NakshaVersion.of(v.substring(start + 1, end))
     }
 }

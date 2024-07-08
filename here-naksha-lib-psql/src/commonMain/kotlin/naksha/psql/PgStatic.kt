@@ -219,8 +219,7 @@ object PgStatic {
      */
     @JvmStatic
     fun tableExists(sql: PgConnection, name: String, schemaOid: Int): Boolean {
-        val rows = asArray(sql.execute("SELECT oid FROM pg_class WHERE relname = $1 AND relnamespace = $2", arrayOf(name, schemaOid)))
-        return rows.isNotEmpty()
+        return sql.execute("SELECT oid FROM pg_class WHERE relname = $1 AND relnamespace = $2", arrayOf(name, schemaOid)).isRow()
     }
 
     /**
@@ -432,8 +431,8 @@ WITH (fillfactor=$fillFactor) ${pgTableInfo.TABLESPACE};"""
     @JvmStatic
     private fun collectionAttachTriggers(sql: PgConnection, id: String, schema: String, schemaOid: Int) {
         var triggerName = id + "_before"
-        var rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid)))
-        if (rows.isEmpty()) {
+        var rows =sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid))
+        if (rows.isRow()) {
             val schemaQuoted = PgUtil.quoteIdent(schema)
             val tableNameQuoted = PgUtil.quoteIdent(id)
             val triggerNameQuoted = PgUtil.quoteIdent(triggerName)
@@ -442,8 +441,8 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_before();""")
         }
 
         triggerName = id + "_after"
-        rows = asArray(sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid)))
-        if (rows.isEmpty()) {
+        rows = sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid))
+        if (rows.isRow()) {
             val schemaQuoted = PgUtil.quoteIdent(schema)
             val tableNameQuoted = PgUtil.quoteIdent(id)
             val triggerNameQuoted = PgUtil.quoteIdent(triggerName)
