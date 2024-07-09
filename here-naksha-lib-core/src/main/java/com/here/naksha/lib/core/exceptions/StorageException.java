@@ -18,9 +18,8 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.ErrorResult;
 import naksha.model.NakshaVersion;
+import naksha.model.response.NakshaError;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -34,13 +33,13 @@ public class StorageException extends RuntimeException {
   /**
    * Wrap the given error result into an exception.
    *
-   * @param errorResult The error result to wrap.
+   * @param nakshaError The error to wrap.
    */
   @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageException(@NotNull ErrorResult errorResult) {
-    super(errorResult.message);
-    this.reason = errorResult.reason;
-    this.errorResult = errorResult;
+  public StorageException(@NotNull NakshaError nakshaError) {
+    super(nakshaError.getMessage());
+    this.reason = nakshaError.getMessage();
+    this.nakshaError = nakshaError;
   }
 
   /**
@@ -49,32 +48,9 @@ public class StorageException extends RuntimeException {
    * @param reason The error reason.
    */
   @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageException(@NotNull XyzError reason) {
-    super(reason.toString());
+  public StorageException(@NotNull String reason) {
+    super(reason);
     this.reason = reason;
-  }
-
-  /**
-   * Create a new storage exception with the given reason.
-   *
-   * @param message The error message.
-   */
-  @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageException(@NotNull String message) {
-    super(message);
-    this.reason = XyzError.get(message);
-  }
-
-  /**
-   * Create a new storage exception with the given reason.
-   *
-   * @param message The error message.
-   * @param cause   The cause.
-   */
-  @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageException(@NotNull String message, @Nullable Throwable cause) {
-    super(message, cause);
-    this.reason = XyzError.get(message);
   }
 
   /**
@@ -84,8 +60,8 @@ public class StorageException extends RuntimeException {
    * @param message An arbitrary error message.
    */
   @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageException(@NotNull XyzError reason, @Nullable String message) {
-    super(message == null ? reason.toString() : message);
+  public StorageException(@NotNull String reason, @Nullable String message) {
+    super(message == null ? reason : message);
     this.reason = reason;
   }
 
@@ -96,7 +72,7 @@ public class StorageException extends RuntimeException {
    * @param cause  The cause.
    */
   @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageException(@NotNull XyzError reason, @Nullable Throwable cause) {
+  public StorageException(@NotNull String reason, @Nullable Throwable cause) {
     super(reason.toString(), cause);
     this.reason = reason;
   }
@@ -109,13 +85,13 @@ public class StorageException extends RuntimeException {
    * @param cause   The cause.
    */
   @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageException(@NotNull XyzError reason, @Nullable String message, @Nullable Throwable cause) {
-    super(message == null ? reason.toString() : message, cause);
+  public StorageException(@NotNull String reason, @Nullable String message, @Nullable Throwable cause) {
+    super(message == null ? reason : message, cause);
     this.reason = reason;
   }
 
-  private final @NotNull XyzError reason;
-  private @Nullable ErrorResult errorResult;
+  private final @NotNull String reason;
+  private @Nullable NakshaError nakshaError;
 
   /**
    * Convert this exception into an error-result.
@@ -123,10 +99,10 @@ public class StorageException extends RuntimeException {
    * @return this exception converted into an error-result.
    */
   @AvailableSince(NakshaVersion.v2_0_8)
-  public @NotNull ErrorResult toErrorResult() {
-    if (errorResult == null) {
-      errorResult = new ErrorResult(reason, getMessage());
+  public @NotNull NakshaError toNakshaError() {
+    if (nakshaError == null) {
+      nakshaError = new NakshaError(reason, getMessage());
     }
-    return errorResult;
+    return nakshaError;
   }
 }

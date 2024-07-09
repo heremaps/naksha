@@ -44,9 +44,4 @@ public class ModifiedEventResponse extends ModifiedPayloadResponse {
     setEvent(event);
     return this;
   }
-
-  @Override
-  public int size() {
-    return 0;
-  }
 }

@@ -18,6 +18,9 @@
  */
 package com.here.naksha.lib.core;
 
+import static naksha.model.response.NakshaError.EXCEPTION;
+import static naksha.model.response.NakshaError.NOT_IMPLEMENTED;
+
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
@@ -31,9 +34,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static naksha.model.response.NakshaError.EXCEPTION;
-import static naksha.model.response.NakshaError.NOT_IMPLEMENTED;
 
 /**
  * Default implementation of an event pipeline that wraps {@link Request requests} into an event.

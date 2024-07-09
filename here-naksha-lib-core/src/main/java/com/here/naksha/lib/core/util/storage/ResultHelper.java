@@ -20,17 +20,14 @@ package com.here.naksha.lib.core.util.storage;
 
 import static java.util.Collections.emptyList;
 
-import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+
+import java.util.*;
+
 import naksha.model.XyzFeature;
+import naksha.model.request.ResultRow;
+import naksha.model.response.Response;
+import naksha.model.response.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,8 +44,8 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends XyzFeature> List<R> readFeaturesFromResult(Result result, Class<R> featureType)
-      throws NoCursor, NoSuchElementException {
+  public static <R extends XyzFeature> List<R> readFeaturesFromResult(Response result, Class<R> featureType)
+      throws NoSuchElementException {
     return readFeaturesFromResult(result, featureType, 0, Long.MAX_VALUE);
   }
 
@@ -64,23 +61,20 @@ public class ResultHelper {
    * @return list of features extracted from ReadResult
    */
   public static <R extends XyzFeature> List<R> readFeaturesFromResult(
-      Result result, Class<R> featureType, long offset, long limit) throws NoCursor, NoSuchElementException {
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
-      if (!resultCursor.hasNext()) {
-        throw new NoSuchElementException("Result Cursor is empty");
-      }
-      List<R> features = new ArrayList<>();
+      Response result, Class<R> featureType, long offset, long limit) {
+    List<R> features = new ArrayList<>();
+    //if response is not of type SuccessResponse
+    if (result instanceof SuccessResponse) {
+      Iterator<ResultRow> iterator = ((SuccessResponse) result).getRows().iterator();
       int pos = 0;
       int cnt = 0;
-      while (resultCursor.hasNext() && cnt < limit) {
-        if (!resultCursor.next()) {
-          throw new RuntimeException("Unexpected invalid result");
-        }
+      while (iterator.hasNext() && cnt < limit) {
         if (pos++ < offset) {
           continue; // skip initial records till we reach to desired offset
         }
         try {
           features.add(featureType.cast(resultCursor.getFeature()));
+          iterator.next().getFeature().
           cnt++;
         } catch (ClassCastException | NullPointerException e) {
           throw new RuntimeException(e);

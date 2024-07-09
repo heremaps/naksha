@@ -34,7 +34,6 @@ import naksha.geo.PointCoordinates;
 import naksha.model.NakshaVersion;
 import naksha.model.OpType;
 import naksha.model.POp;
-import naksha.model.ReadFeatures;
 import naksha.model.XyzFeature;
 import naksha.model.request.condition.PRef;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

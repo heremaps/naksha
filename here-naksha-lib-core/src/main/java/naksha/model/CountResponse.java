@@ -89,9 +89,4 @@ public class CountResponse extends Response {
     setEstimated(estimated);
     return this;
   }
-
-  @Override
-  public int size() {
-    return 0;
-  }
 }
