@@ -19,6 +19,8 @@
 package com.here.naksha.lib.core;
 
 import static com.here.naksha.lib.core.NakshaLogger.currentLogger;
+import static naksha.model.response.NakshaError.EXCEPTION;
+import static naksha.model.response.NakshaError.NOT_IMPLEMENTED;
 
 import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.admin.ModifySubscriptionEvent;
@@ -38,7 +40,8 @@ import com.here.naksha.lib.core.models.payload.events.info.GetStorageStatisticsE
 import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
 import com.here.naksha.lib.core.models.payload.events.space.ModifySpaceEvent;
 import javax.annotation.Nonnull;
-
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.NakshaError;
 import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 
@@ -125,21 +128,21 @@ public interface IExtendedEventHandler {
         initialize(eventContext);
         return processGetStorageStatisticsEvent((GetStorageStatisticsEvent) event);
       }
-      return new ErrorResponse()
-          .withStreamId(event.getStreamId())
-          .withError(Error.NOT_IMPLEMENTED)
-          .withErrorMessage("Unknown event type '" + event.getClass().getSimpleName() + "'");
-    } catch (ErrorException e) {
-      return new ErrorResponse(e, event.getStreamId());
+      return new ErrorResponse(new NakshaError(
+          NOT_IMPLEMENTED,
+          "Unknown event type '" + event.getClass().getSimpleName() + "'",
+          event.getStreamId(),
+          null));
     } catch (Exception e) {
       currentLogger()
           .atError("Uncaught exception in event processor")
           .setCause(e)
           .log();
-      return new ErrorResponse()
-          .withStreamId(event.getStreamId())
-          .withError(Error.EXCEPTION)
-          .withErrorMessage("Unexpected exception in storage connector: " + e.getMessage());
+      return new ErrorResponse(new NakshaError(
+          EXCEPTION,
+          "Unexpected exception in storage connector: " + e.getMessage(),
+          event.getStreamId(),
+          null));
     }
   }
 

@@ -38,7 +38,6 @@ import com.here.naksha.lib.core.models.payload.events.info.GetStorageStatisticsE
 import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
 import com.here.naksha.lib.core.models.payload.events.space.ModifySpaceEvent;
 import javax.annotation.Nonnull;
-
 import naksha.model.response.ErrorResponse;
 import naksha.model.response.NakshaError;
 import naksha.model.response.Response;
@@ -88,7 +87,7 @@ public class ExtendedEventHandler<HANDLER extends EventHandler> implements IExte
    */
   @Deprecated
   protected @NotNull Response errorResponse(@NotNull String error, @NotNull CharSequence message) {
-    return new ErrorResponse(new NakshaError(error,message.toString(),event.getStreamId(),null));
+    return new ErrorResponse(new NakshaError(error, message.toString(), event.getStreamId(), null));
   }
 
   /**
@@ -171,8 +170,7 @@ public class ExtendedEventHandler<HANDLER extends EventHandler> implements IExte
 
   @Deprecated
   @Override
-  public @NotNull Response processDeleteFeaturesByTagEvent(@NotNull DeleteFeaturesByTagEvent event)
-      throws Exception {
+  public @NotNull Response processDeleteFeaturesByTagEvent(@NotNull DeleteFeaturesByTagEvent event) throws Exception {
     return sendUpstream(event);
   }
 
@@ -196,8 +194,7 @@ public class ExtendedEventHandler<HANDLER extends EventHandler> implements IExte
 
   @Override
   @Deprecated
-  public @NotNull Response processModifySubscriptionEvent(@NotNull ModifySubscriptionEvent event)
-      throws Exception {
+  public @NotNull Response processModifySubscriptionEvent(@NotNull ModifySubscriptionEvent event) throws Exception {
     return sendUpstream(event);
   }
 
