@@ -27,10 +27,9 @@ interface PgConnection : AutoCloseable {
      * Execute an SQL query with the given arguments. The placeholder should be **$1** to **$n**.
      * @param sql The SQL query to execute.
      * @param args The arguments to be set at $n position, where $1 is the first array element.
-     * @param useLastResult - default true - when true in multi-query statements will use last result in response, otherwise first.
      * @return the cursor.
      */
-    fun execute(sql: String, args: Array<Any?>? = null, useLastResult: Boolean = true): PgCursor
+    fun execute(sql: String, args: Array<Any?>? = null): PgCursor
 
     /**
      * Prepare the given SQL statement using parameters of the given types.
