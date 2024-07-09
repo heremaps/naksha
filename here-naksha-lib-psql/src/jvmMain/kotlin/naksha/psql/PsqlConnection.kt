@@ -68,10 +68,9 @@ class PsqlConnection internal constructor(
      * Execute an SQL query with the given arguments. The placeholder should be **$1** to **$n**.
      * @param sql The SQL query to execute.
      * @param args The arguments to be set at $n position, where $1 is the first array element.
-     * @param useLastResult - default true - when true in multi-query statements will use last result in response, otherwise first.
      * @return the cursor.
      */
-    override fun execute(sql: String, args: Array<Any?>?, useLastResult: Boolean): PsqlCursor {
+    override fun execute(sql: String, args: Array<Any?>?): PsqlCursor {
         val conn = jdbc
         val stmt = if (args.isNullOrEmpty()) {
             // no args execute
@@ -87,12 +86,10 @@ class PsqlConnection internal constructor(
         }
 
         var rs: ResultSet? = stmt.resultSet
-        if (useLastResult) {
-            // refer to getMoreResults() documentation to see how to detect end of result sets.
-            // iterate to last result set.
-            while (!(!stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT) && (stmt.updateCount == -1))) {
-                rs = stmt.resultSet
-            }
+        // refer to getMoreResults() documentation to see how to detect end of result sets.
+        // iterate to last result set.
+        while (!(!stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT) && (stmt.updateCount == -1))) {
+            rs = stmt.resultSet
         }
         return if (rs != null) {
             PsqlCursor(rs, true)

@@ -75,8 +75,9 @@ class SingleCollectionWriter(
         plan.executeAll()
         if (modifyCounters) {
             // no exception was thrown - execution succeeded, we can increase transaction counter
-            session.transaction.incFeaturesModified(writeRequest.ops.size)
-            session.transaction.addCollectionCounts(counts)
+            val transaction = session.transaction()
+            transaction.incFeaturesModified(writeRequest.ops.size)
+            transaction.addCollectionCounts(counts)
         }
         val END_EXECUTION = currentMillis()
 
