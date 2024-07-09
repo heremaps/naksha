@@ -13,35 +13,5 @@ CREATE TABLE IF NOT EXISTS commonjs2_modules (module text primary key, source te
 -- Note: After having called this function ones, all requires are done lazy!
 -- returns true, when initialization work was done, false if it is already initialized.
 CREATE OR REPLACE FUNCTION commonjs2_init() RETURNS bool AS $$
-  if (typeof require === "function") {
-    return false;
-  }
-  plv8.moduleCache = {};
-  load = function(key, source) {
-      plv8.elog(INFO, "Load module " + key);
-      var module = {exports: {}};
-      if (typeof plv8.js_beautify === "function") source = plv8.js_beautify(source, {"indent_size":2,"space_in_empty_paren":true});
-      eval("(function(module, exports) {\n" + source + ";\n})")(module, module.exports);
-      plv8.moduleCache[key] = module.exports;
-      return plv8.moduleCache[key];
-  };
-  require = function(module) {
-      let m = plv8.moduleCache[module];
-      if(m) return m;
-      var rows = plv8.execute(
-          "SELECT source FROM commonjs2_modules WHERE module = $1",
-          [module]
-      );
-      if(rows.length === 0) {
-          //plv8.elog(ERROR, 'No such module: ' + module);
-          return null;
-      }
-      return load(module, rows[0].source);
-  };
-  plv8.execute("SELECT module, source FROM commonjs2_modules WHERE autoload = true").forEach((row) => {
-      load(row.module, row.source);
-  });
-  let beautify = require("beautify");
-  if (beautify && typeof beautify.js_beautify === "function") plv8.js_beautify = beautify.js_beautify;
-  return true;
+  ${common.js}
 $$ LANGUAGE 'plv8' IMMUTABLE;

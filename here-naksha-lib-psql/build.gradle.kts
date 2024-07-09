@@ -57,6 +57,7 @@ kotlin {
                 implementation(kotlin("stdlib-jdk8"))
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-jbon"))
+                api(project(":here-naksha-lib-geo"))
                 api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-geo"))
 
@@ -73,7 +74,11 @@ kotlin {
             // TODO: We should replace ${project.buildDir} with ${layout.buildDirectory}, but this is not the same:
             // println("------------ ${project.buildDir}/dist/js/productionExecutable/")
             // println("------------ ${layout.buildDirectory}/dist/js/productionExecutable/")
-            resources.setSrcDirs(resources.srcDirs + "${project.buildDir}/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-base/build/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-jbon/build/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-geo/build/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-model/build/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-psql/build/dist/js/productionExecutable/")
         }
         jvmTest {
             dependencies {
@@ -111,24 +116,21 @@ configure<JavaPluginExtension> {
 }
 
 tasks {
-    val jsProductionLibraryCompileSync = getByName<Task>("jsProductionLibraryCompileSync")
-    val jsProductionExecutableCompileSync = getByName<Task>("jsProductionExecutableCompileSync")
-    val browserDistribution = getByName<Task>("jsBrowserDistribution")
-    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack") {
-        dependsOn(jsProductionLibraryCompileSync)
+    getByName<KotlinWebpack>("jsBrowserProductionWebpack") {
+        dependsOn("jsProductionLibraryCompileSync")
     }
     getByName<Task>("jsNodeProductionLibraryDistribution") {
-        dependsOn(jsProductionExecutableCompileSync)
+        dependsOn("jsProductionExecutableCompileSync")
     }
     getByName<Task>("jsBrowserProductionLibraryDistribution") {
-        dependsOn(jsProductionExecutableCompileSync)
+        dependsOn("jsProductionExecutableCompileSync")
     }
     getByName<Test>("jvmTest") {
         useJUnitPlatform()
         maxHeapSize = "8g"
     }
     getByName<Jar>("jvmJar") {
-        dependsOn(webpackTask)
+        dependsOn("jsBrowserProductionWebpack")
         from({
             val list = ArrayList<Any>()
             configurations.runtimeClasspath.get().forEach {
@@ -139,9 +141,15 @@ tasks {
         }).duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
     getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn(webpackTask, browserDistribution)
+        dependsOn(
+            ":here-naksha-lib-base:jsBrowserDistribution",
+            ":here-naksha-lib-geo:jsBrowserDistribution",
+            ":here-naksha-lib-jbon:jsBrowserDistribution",
+            ":here-naksha-lib-model:jsBrowserDistribution",
+            "jsBrowserProductionWebpack",
+            "jsBrowserDistribution")
     }
     getByName<ProcessResources>("jvmTestProcessResources") {
-        dependsOn(webpackTask)
+        dependsOn("jsBrowserProductionWebpack")
     }
 }
