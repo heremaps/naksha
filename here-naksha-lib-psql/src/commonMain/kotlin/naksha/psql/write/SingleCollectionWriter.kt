@@ -98,7 +98,7 @@ class SingleCollectionWriter(
 
         for (op in operations.operations) {
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
-            val schemaOid = (asArray(session.usePgConnection().execute(query, arrayOf(session.options.schema)))[0] as Map<*, *>)["oid"] as Int
+            val schemaOid: Int = session.usePgConnection().execute(query, arrayOf(session.options.schema)).fetch()["oid"]
 
             val existingFeature: Row? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)

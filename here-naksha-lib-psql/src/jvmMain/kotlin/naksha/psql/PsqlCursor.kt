@@ -213,7 +213,9 @@ class PsqlCursor private constructor(private var rs: ResultSet?, private val clo
     override fun close() {
         val rs = this.rs
         this.rs = null
-        rs?.close()
-        if (closeStmt) rs?.statement?.close()
+        if (closeStmt)
+            rs?.statement?.close()
+        else
+            rs?.close()
     }
 }
