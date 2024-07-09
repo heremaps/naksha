@@ -125,6 +125,8 @@ $$ LANGUAGE 'plv8';"""
             executeSqlFromResource(conn, "/naksha.sql", replacements)
             //executeSqlFromResource(conn, "/jbon.sql")
             PgStatic.createBaseInternalsIfNotExists(conn, options.schema, schemaOid)
+
+            this.id = id
             createInternalsIfNotExists()
             conn.commit()
         }

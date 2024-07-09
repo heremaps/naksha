@@ -2,6 +2,8 @@ package naksha.psql
 
 import naksha.base.GZip
 import java.lang.ref.WeakReference
+import java.sql.ResultSet
+import java.sql.Statement
 
 /**
  * A thin wrapper around a JDBC PostgresQL connection, which implements the [PgConnection] interface.
@@ -66,22 +68,35 @@ class PsqlConnection internal constructor(
      * Execute an SQL query with the given arguments. The placeholder should be **$1** to **$n**.
      * @param sql The SQL query to execute.
      * @param args The arguments to be set at $n position, where $1 is the first array element.
+     * @param useLastResult - default true - when true in multi-query statements will use last result in response, otherwise first.
      * @return the cursor.
      */
-    override fun execute(sql: String, args: Array<Any?>?): PsqlCursor {
+    override fun execute(sql: String, args: Array<Any?>?, useLastResult: Boolean): PsqlCursor {
         val conn = jdbc
-        if (args.isNullOrEmpty()) {
+        val stmt = if (args.isNullOrEmpty()) {
+            // no args execute
             val stmt = conn.createStatement()
-            return if (stmt.execute(sql)) PsqlCursor(stmt.resultSet, true) else {
-                val cursor = PsqlCursor(stmt.updateCount)
-                stmt.close()
-                cursor
+            stmt.execute(sql)
+            stmt
+        } else {
+            val query = PsqlQuery(sql)
+            val stmt = query.prepare(conn)
+            if (args.isNotEmpty()) query.bindArguments(stmt, args)
+            stmt.execute()
+            stmt
+        }
+
+        var rs: ResultSet? = stmt.resultSet
+        if (useLastResult) {
+            // refer to getMoreResults() documentation to see how to detect end of result sets.
+            // iterate to last result set.
+            while (!(!stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT) && (stmt.updateCount == -1))) {
+                rs = stmt.resultSet
             }
         }
-        val query = PsqlQuery(sql)
-        val stmt = query.prepare(conn)
-        if (args.isNotEmpty()) query.bindArguments(stmt, args)
-        return if (stmt.execute()) PsqlCursor(stmt.resultSet, true) else {
+        return if (rs != null) {
+            PsqlCursor(rs, true)
+        } else {
             val cursor = PsqlCursor(stmt.updateCount)
             stmt.close()
             cursor

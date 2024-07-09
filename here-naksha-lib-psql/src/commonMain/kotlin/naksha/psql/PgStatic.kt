@@ -219,7 +219,7 @@ object PgStatic {
      */
     @JvmStatic
     fun tableExists(sql: PgConnection, name: String, schemaOid: Int): Boolean {
-        return sql.execute("SELECT oid FROM pg_class WHERE relname = $1 AND relnamespace = $2", arrayOf(name, schemaOid)).isRow()
+        return sql.execute("SELECT oid FROM pg_class WHERE relname = $1 AND relnamespace = $2", arrayOf(name, schemaOid)).fetch().isRow()
     }
 
     /**
