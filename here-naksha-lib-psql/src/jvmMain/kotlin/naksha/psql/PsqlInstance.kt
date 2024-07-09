@@ -202,6 +202,10 @@ class PsqlInstance : PgInstance {
         val pooledConn = PooledPgConnection(jdbcConn)
         pooledConn.jdbcConn.isReadOnly = options.readOnly
         psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
+        psqlConn.execute("""
+            SET SESSION search_path TO ${options.schema}, public, topology;
+            SET SESSION enable_seqscan = OFF;
+        """.trimIndent()).close()
         check(pooledConn.setSession(psqlConn))
         check(connectionPool.putIfAbsent(pooledConn.id, pooledConn) == null)
         return psqlConn

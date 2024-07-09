@@ -42,11 +42,6 @@ class NakshaSession(storage: PgStorage, context: NakshaContext, options: PgOptio
     //       when the client decodes it. This need to be done on-the-fly while decoding the row into a feature!
 
     /**
-     * The [object identifier](https://www.postgresql.org/docs/current/datatype-oid.html) of the schema.
-     */
-    internal var schemaOid: Int
-
-    /**
      * The cached quoted schema name (double quotes).
      */
     internal val schemaIdent = PgUtil.quoteIdent(options.schema)
@@ -87,7 +82,7 @@ class NakshaSession(storage: PgStorage, context: NakshaContext, options: PgOptio
     /**
      * Keeps transaction's counters.
      */
-    var transaction: NakshaTransactionProxy = NakshaTransactionProxy()
+    var transaction: NakshaTransactionProxy? = null
 
     /**
      * A cache to remember collections configuration <collectionId, configMap>
@@ -105,19 +100,8 @@ class NakshaSession(storage: PgStorage, context: NakshaContext, options: PgOptio
     var errMsg: String? = null
 
     init {
-        val conn = usePgConnection()
-        conn.execute(
-            """
-SET SESSION search_path TO $schemaIdent, public, topology;
-SET SESSION enable_seqscan = OFF;
-SELECT oid FROM pg_namespace WHERE nspname = $1;
-""", arrayOf(options.schema)
-        ).fetch().use {
-            schemaOid = it["oid"]
             collectionConfiguration = mutableMapOf()
             collectionConfiguration[NKC_TABLE] = nakshaCollectionConfig
-            transaction.id = txn().toGuid(storage.id(), "txn", "txn").toString()
-        }
     }
 
     fun reset() {
@@ -132,8 +116,7 @@ SELECT oid FROM pg_namespace WHERE nspname = $1;
         errMsg = null
         collectionConfiguration = mutableMapOf()
         collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
-        transaction = NakshaTransactionProxy()
-        transaction.id = txn().toGuid(storage.id(), "txn", "txn").toString()
+        transaction = null
     }
 
     /**
@@ -142,8 +125,7 @@ SELECT oid FROM pg_namespace WHERE nspname = $1;
      * @param oid The new schema oid.
      */
     internal fun verifyCache(oid: Int) {
-        if (schemaOid != oid) {
-            this.schemaOid = oid
+        if (usePgConnection().info().schemaOid != oid) {
             clear()
         }
     }
@@ -479,7 +461,7 @@ FROM ns, txn_seq;
      */
     fun write(writeRequest: WriteRequest): Response {
         val executor = WriteRequestExecutor(this, true)
-        val transactionAction = TransactionAction(transaction, writeRequest)
+        val transactionAction = TransactionAction(transaction(), writeRequest)
         return try {
             transactionAction.write()
             val writeFeaturesResult = executor.write(writeRequest)
@@ -493,6 +475,14 @@ FROM ns, txn_seq;
                 logger.info(e.cause?.message!!)
             ErrorResponse(NakshaError(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}"))
         }
+    }
+
+    internal fun transaction(): NakshaTransactionProxy {
+        if (transaction == null) {
+            transaction = NakshaTransactionProxy()
+            transaction!!.id = txn().toGuid(storage.id(), "txn", "txn").toString()
+        }
+        return transaction!!
     }
 
     override fun pgSessionBeforeStart() {

@@ -69,8 +69,7 @@ internal data class CollectionWriteOps(
             conn.execute(complexQuery, arrayOf(idsSmallFetch.toTypedArray(), idsFullFetch.toTypedArray()))
         }
         cursor.use {
-            TODO("Fix me, what is the map returned?")
-            //DbRowMapper.readRow(session.storage, collectionId, cursor, true)
+            DbRowMapper.toMap(session.storage, collectionId, cursor, true)
         }
     } else {
         mutableMapOf()

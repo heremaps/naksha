@@ -44,7 +44,7 @@ internal class RowUpdater(val session: NakshaSession) {
 //            txn = txn.value,
 //            txnNext = null,
 //            ptxn = null,
-//            puid = null,
+//            puid = 0,
 //            geoGrid = geoGrid,
 //            version = null, // saving space null means 1
 //            uid = uid,
@@ -54,9 +54,10 @@ internal class RowUpdater(val session: NakshaSession) {
 //            authorTs = null, // saving space - only apps are allowed to create features
 //            appId = session.context.appId,
 //            flags = flags,
-//            fnva1 = rowHash(NEW)
+//            fnva1 = rowHash(NEW),
+//            origin = NEW.meta?.origin, //TODO FIXME
+//            type = NEW.meta?.type //TODO FIXME
 //        )
-//        NEW.meta = newMeta
     }
 
     /**

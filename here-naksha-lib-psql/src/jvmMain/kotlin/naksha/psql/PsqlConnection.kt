@@ -2,6 +2,8 @@ package naksha.psql
 
 import naksha.base.GZip
 import java.lang.ref.WeakReference
+import java.sql.ResultSet
+import java.sql.Statement
 
 /**
  * A thin wrapper around a JDBC PostgresQL connection, which implements the [PgConnection] interface.
@@ -70,18 +72,28 @@ class PsqlConnection internal constructor(
      */
     override fun execute(sql: String, args: Array<Any?>?): PsqlCursor {
         val conn = jdbc
-        if (args.isNullOrEmpty()) {
+        val stmt = if (args.isNullOrEmpty()) {
+            // no args execute
             val stmt = conn.createStatement()
-            return if (stmt.execute(sql)) PsqlCursor(stmt.resultSet, true) else {
-                val cursor = PsqlCursor(stmt.updateCount)
-                stmt.close()
-                cursor
-            }
+            stmt.execute(sql)
+            stmt
+        } else {
+            val query = PsqlQuery(sql)
+            val stmt = query.prepare(conn)
+            if (args.isNotEmpty()) query.bindArguments(stmt, args)
+            stmt.execute()
+            stmt
         }
-        val query = PsqlQuery(sql)
-        val stmt = query.prepare(conn)
-        if (args.isNotEmpty()) query.bindArguments(stmt, args)
-        return if (stmt.execute()) PsqlCursor(stmt.resultSet, true) else {
+
+        var rs: ResultSet? = stmt.resultSet
+        // refer to getMoreResults() documentation to see how to detect end of result sets.
+        // iterate to last result set.
+        while (!(!stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT) && (stmt.updateCount == -1))) {
+            rs = stmt.resultSet
+        }
+        return if (rs != null) {
+            PsqlCursor(rs, true)
+        } else {
             val cursor = PsqlCursor(stmt.updateCount)
             stmt.close()
             cursor

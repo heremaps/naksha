@@ -75,8 +75,9 @@ class SingleCollectionWriter(
         plan.executeAll()
         if (modifyCounters) {
             // no exception was thrown - execution succeeded, we can increase transaction counter
-            session.transaction.incFeaturesModified(writeRequest.ops.size)
-            session.transaction.addCollectionCounts(counts)
+            val transaction = session.transaction()
+            transaction.incFeaturesModified(writeRequest.ops.size)
+            transaction.addCollectionCounts(counts)
         }
         val END_EXECUTION = currentMillis()
 
@@ -98,7 +99,7 @@ class SingleCollectionWriter(
 
         for (op in operations.operations) {
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"
-            val schemaOid = (asArray(session.usePgConnection().execute(query, arrayOf(session.options.schema)))[0] as Map<*, *>)["oid"] as Int
+            val schemaOid: Int = session.usePgConnection().execute(query, arrayOf(session.options.schema)).fetch()["oid"]
 
             val existingFeature: Row? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)

@@ -63,12 +63,12 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
         var options = defaultOptions
         if (params != null && params.containsKey(OPTIONS)) {
             val v = params[OPTIONS]
-            require(v is PgOptions) {"params.${OPTIONS} must be an instance of PgSessionOptions"}
+            require(v is PgOptions) { "params.${OPTIONS} must be an instance of PgSessionOptions" }
             options = v
         }
         val id: String = if (params != null && params.containsKey(ID)) {
             val _id = params[ID]
-            require(_id is String && _id.length > 0) {"params.${ID} must be a string with a minimal length of 1"}
+            require(_id is String && _id.length > 0) { "params.${ID} must be a string with a minimal length of 1" }
             _id
         } else PlatformUtil.randomString()
         var version = NakshaVersion.latest
@@ -95,39 +95,38 @@ SET SESSION search_path TO $schemaQuoted, public, topology;
             ).close()
             val cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(options.schema)).fetch()
             val schemaOid: Int = cursor["oid"]
-            executeSqlFromResource(conn, "/commonjs2.sql")
-            installModuleFromResource(conn, "beautify", "/beautify.min.js")
-            executeSqlFromResource(conn, "/beautify.sql")
+            val commonJs = getResourceAsText("/common.js")
+            check(commonJs != null) { "Failed to load common.js from resources" }
+            executeSqlFromResource(conn, "/commonjs2.sql", replacements = mapOf("common.js" to commonJs))
+            // Init the common-js code for this session.
             conn.execute(
                 """DO $$
 var commonjs2_init = plv8.find_function("commonjs2_init");
 commonjs2_init();
 $$ LANGUAGE 'plv8';"""
             )
+            // Install default modules and SQL functions.
+            installModuleFromResource(conn, "beautify", "/beautify.min.js", autoload = true)
+            executeSqlFromResource(conn, "/beautify.sql")
+
             installModuleFromResource(conn, "lz4_util", "/lz4_util.js")
             installModuleFromResource(conn, "lz4_xxhash", "/lz4_xxhash.js")
             installModuleFromResource(conn, "lz4", "/lz4.js")
             executeSqlFromResource(conn, "/lz4.sql")
+
+            installModuleFromResource(conn, "naksha.base", "/here-naksha-lib-base.js", beautify = true)
+            installModuleFromResource(conn, "naksha.jbon", "/here-naksha-lib-jbon.js", beautify = true)
+            installModuleFromResource(conn, "naksha.geo", "/here-naksha-lib-geo.js", beautify = true)
+            installModuleFromResource(conn, "naksha.model", "/here-naksha-lib-model.js", beautify = true)
+            installModuleFromResource(conn, "naksha.psql", "/here-naksha-lib-psql.js", beautify = true)
+
             // Note: We know, that we do not need the replacements and code is faster without them!
             val replacements = mapOf(VERSION to version.toInt64().toString(), "schema" to options.schema, "storage_id" to id)
-            // Note: The compiler embeds the JBON classes into plv8.
-            //       Therefore, we must not have it standalone, because otherwise we
-            //       have two distinct instances in memory.
-            //       A side effect sadly is that you need to require naksha, before you can require jbon!
-            // TODO: Extend the commonjs2 code so that it allows to declare that one module contains another!
-            installModuleFromResource(
-                conn, "naksha", "/here-naksha-lib-psql.js",
-                beautify = true,
-                replacements = replacements,
-                extraCode = """
-plv8.moduleCache["base"] = module.exports["here-naksha-lib-base"];
-plv8.moduleCache["jbon"] = module.exports["here-naksha-lib-jbon"];
-module.exports = module.exports["here-naksha-lib-plv8"];
-"""
-            )
             executeSqlFromResource(conn, "/naksha.sql", replacements)
-            executeSqlFromResource(conn, "/jbon.sql")
+            //executeSqlFromResource(conn, "/jbon.sql")
             PgStatic.createBaseInternalsIfNotExists(conn, options.schema, schemaOid)
+
+            this.id = id
             createInternalsIfNotExists()
             conn.commit()
         }
@@ -201,8 +200,14 @@ module.exports = module.exports["here-naksha-lib-plv8"];
     }
 
     private fun getResourceAsText(path: String): String? =
-       this.javaClass.getResource(path)?.readText()
+        this.javaClass.getResource(path)?.readText()
 
+    /**
+     * Replace all occurrences of `${key}` with `value`.
+     * @param text the text in which to replace.
+     * @param replacements a map where the key, expanded to `${key}`, should be replaced with the values.
+     * @return the given text, but with replacements done.
+     */
     private fun applyReplacements(text: String, replacements: Map<String, String>?): String {
         if (replacements != null) {
             var t = text
@@ -210,7 +215,10 @@ module.exports = module.exports["here-naksha-lib-plv8"];
             for (entry in replacements) {
                 sb.setLength(0)
                 sb.append('$').append('{').append(entry.key).append('}')
-                t = t.replace(sb.toString(), entry.value, true)
+                val key = sb.toString()
+                while (t.indexOf(key) >= 0) {
+                    t = t.replace(key, entry.value, true)
+                }
             }
             return t
         } else {
