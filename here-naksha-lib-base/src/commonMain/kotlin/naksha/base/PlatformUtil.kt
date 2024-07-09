@@ -15,15 +15,19 @@ class PlatformUtil {
         /**
          * The maximal 32-bit floating point number that can be encoded without losing precision.
          */
+        @JsStatic
         val FLOAT_MAX: Double = Platform.toDoubleRawBits(Int64(0x47efffffe0000000L))
+
         /**
          * The minimal 32-bit floating point number that can be encoded without losing precision.
          */
+        @JsStatic
         val FLOAT_MIN: Double = Platform.toDoubleRawBits(Int64(0x36a0000000000000L))
 
         /**
          * The default size of a view. This is used at various placed.
          */
+        @JsStatic
         var defaultDataViewSize = 128
 
         /**

@@ -114,11 +114,11 @@ $$ LANGUAGE 'plv8';"""
             installModuleFromResource(conn, "lz4", "/lz4.js")
             executeSqlFromResource(conn, "/lz4.sql")
 
-            installModuleFromResource(conn, "naksha.base", "/here-naksha-lib-base.js", beautify = true)
-            installModuleFromResource(conn, "naksha.jbon", "/here-naksha-lib-jbon.js", beautify = true)
-            installModuleFromResource(conn, "naksha.geo", "/here-naksha-lib-geo.js", beautify = true)
-            installModuleFromResource(conn, "naksha.model", "/here-naksha-lib-model.js", beautify = true)
-            installModuleFromResource(conn, "naksha.psql", "/here-naksha-lib-psql.js", beautify = true)
+            installModuleFromResource(conn, "naksha.base", "/here-naksha-lib-base.js", beautify = false)
+            installModuleFromResource(conn, "naksha.jbon", "/here-naksha-lib-jbon.js", beautify = false)
+            installModuleFromResource(conn, "naksha.geo", "/here-naksha-lib-geo.js", beautify = false)
+            installModuleFromResource(conn, "naksha.model", "/here-naksha-lib-model.js", beautify = false)
+            installModuleFromResource(conn, "naksha.psql", "/here-naksha-lib-psql.js", beautify = false)
 
             // Note: We know, that we do not need the replacements and code is faster without them!
             val replacements = mapOf(VERSION to version.toInt64().toString(), "schema" to options.schema, "storage_id" to id)
