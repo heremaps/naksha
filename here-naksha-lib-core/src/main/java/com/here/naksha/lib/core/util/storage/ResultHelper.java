@@ -21,10 +21,8 @@ package com.here.naksha.lib.core.util.storage;
 import static java.util.Collections.emptyList;
 
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
-
 import java.util.*;
-
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.request.ResultRow;
 import naksha.model.response.Response;
 import naksha.model.response.SuccessResponse;
@@ -44,7 +42,7 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends XyzFeature> List<R> readFeaturesFromResult(Response result, Class<R> featureType)
+  public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(Response result, Class<R> featureType)
       throws NoSuchElementException {
     return readFeaturesFromResult(result, featureType, 0, Long.MAX_VALUE);
   }
@@ -60,10 +58,10 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends XyzFeature> List<R> readFeaturesFromResult(
+  public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(
       Response result, Class<R> featureType, long offset, long limit) {
     List<R> features = new ArrayList<>();
-    //if response is not of type SuccessResponse
+    // if response is not of type SuccessResponse
     if (result instanceof SuccessResponse) {
       Iterator<ResultRow> iterator = ((SuccessResponse) result).getRows().iterator();
       int pos = 0;
@@ -74,8 +72,7 @@ public class ResultHelper {
         }
         try {
           features.add(featureType.cast(resultCursor.getFeature()));
-          iterator.next().getFeature().
-          cnt++;
+          iterator.next().getFeature().cnt++;
         } catch (ClassCastException | NullPointerException e) {
           throw new RuntimeException(e);
         }

@@ -20,12 +20,13 @@ package com.here.naksha.lib.core.models.storage;
 
 import java.util.List;
 import naksha.model.NakshaVersion;
+import naksha.model.response.SuccessResponse;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ContextResult<FEATURE, CTX_TYPE, V_TYPE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-    extends SuccessResult {
+    extends SuccessResponse {
 
   /**
    * The list of features to be returned as context

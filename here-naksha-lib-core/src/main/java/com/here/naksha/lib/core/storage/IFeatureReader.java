@@ -21,7 +21,8 @@ package com.here.naksha.lib.core.storage;
 import static naksha.model.NakshaVersion.v2_0_5;
 
 import java.util.List;
-import naksha.model.XyzFeature;
+
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -31,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @Deprecated
 @AvailableSince(v2_0_5)
-public interface IFeatureReader<FEATURE extends XyzFeature> {
+public interface IFeatureReader<FEATURE extends NakshaFeatureProxy> {
 
   /**
    * Returns a single feature by its identifier.

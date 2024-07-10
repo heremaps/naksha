@@ -30,8 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import naksha.geo.XyzProperties;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -168,7 +168,8 @@ public final class Space extends EventTarget<Space> implements Typed {
     String collectionIdFromProps = null;
     Object collectionProps = getProperties().get(SpaceProperties.XYZ_COLLECTION);
     if (collectionProps != null) {
-      collectionIdFromProps = ((Map) collectionProps).get(XyzFeature.ID).toString();
+      collectionIdFromProps =
+          ((Map) collectionProps).get(NakshaFeatureProxy.ID).toString();
     }
     return collectionIdFromProps != null ? collectionIdFromProps : getId();
   }

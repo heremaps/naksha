@@ -9,7 +9,7 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class SuccessResponse(
+open class SuccessResponse(
     /**
      * A handler (available if requested) to fetch more (next) rows from DB.
      */

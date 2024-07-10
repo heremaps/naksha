@@ -20,7 +20,7 @@ package com.here.naksha.lib.core;
 
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import naksha.model.IStorage;
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -58,7 +58,7 @@ public interface INaksha {
    * @return the config
    */
   @NotNull
-  <T extends XyzFeature> T getConfig();
+  <T extends NakshaFeatureProxy> T getConfig();
 
   @NotNull
   ExtensionConfig getExtensionConfig();
