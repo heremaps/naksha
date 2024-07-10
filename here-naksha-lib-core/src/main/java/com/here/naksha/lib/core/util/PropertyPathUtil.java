@@ -21,7 +21,7 @@ package com.here.naksha.lib.core.util;
 import static naksha.model.NakshaVersion.v2_0_12;
 
 import java.util.*;
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -73,7 +73,7 @@ public class PropertyPathUtil {
    */
   @ApiStatus.AvailableSince(v2_0_12)
   public static @NotNull Map<String, Object> extractPropertyMapFromFeature(
-      final @NotNull XyzFeature feature, final @Nullable Set<@Nullable String> paths) {
+      final @NotNull NakshaFeatureProxy feature, final @Nullable Set<@Nullable String> paths) {
     return extractPropertyMapFromMap(feature.asMap(), paths);
   }
 

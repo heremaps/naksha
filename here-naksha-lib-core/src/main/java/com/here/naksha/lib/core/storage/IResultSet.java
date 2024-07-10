@@ -23,7 +23,6 @@ import static naksha.model.NakshaVersion.v2_0_5;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-
 import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;

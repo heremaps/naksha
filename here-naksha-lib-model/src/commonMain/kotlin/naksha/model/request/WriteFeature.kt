@@ -10,7 +10,7 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class WriteFeature(
+open class WriteFeature(
     collectionId: String,
     feature: NakshaFeatureProxy,
     /**

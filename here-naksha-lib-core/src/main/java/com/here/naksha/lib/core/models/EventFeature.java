@@ -26,8 +26,8 @@ import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.payload.Event;
 import java.util.List;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,7 +41,7 @@ import org.jetbrains.annotations.Nullable;
 @SuppressWarnings("unused")
 @AvailableSince(NakshaVersion.v2_0_0)
 @Deprecated
-public abstract class EventFeature extends XyzFeature {
+public abstract class EventFeature extends NakshaFeatureProxy {
 
   /**
    * Create a new empty pipeline.

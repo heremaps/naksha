@@ -19,8 +19,10 @@
 package com.here.naksha.lib.core.models.storage;
 
 import java.util.List;
+
+import naksha.model.NakshaContext;
 import naksha.model.NakshaVersion;
-import naksha.model.WriteFeatures;
+import naksha.model.request.WriteFeature;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,19 +32,13 @@ import org.jetbrains.annotations.Nullable;
  * Implementing class will define actual data type of context and violations.
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-public abstract class ContextWriteFeatures<
-        FEATURE,
-        CTX_TYPE,
-        V_TYPE,
-        CODEC extends FeatureCodec<FEATURE, CODEC>,
-        SELF extends WriteFeatures<FEATURE, CODEC, SELF>>
-    extends WriteFeatures<FEATURE, CODEC, SELF> {
+public abstract class ContextWriteFeatures extends WriteFeature {
 
   /**
    * The list of features passed as context, as part of Write request
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  private @Nullable List<@NotNull CTX_TYPE> context;
+  private @Nullable List<@NotNull NakshaContext> context;
 
   /**
    * The list of violations passed as part of Write request
@@ -72,12 +68,12 @@ public abstract class ContextWriteFeatures<
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public @Nullable List<CTX_TYPE> getContext() {
+  public @Nullable List<NakshaContext> getContext() {
     return context;
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public void setContext(@Nullable List<CTX_TYPE> context) {
+  public void setContext(@Nullable List<NakshaContext> context) {
     this.context = context;
   }
 

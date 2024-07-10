@@ -32,7 +32,7 @@ import naksha.diff.Difference;
 import naksha.diff.MergeConflictException;
 import naksha.diff.Patcher;
 import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,7 +41,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param <FEATURE> the feature-type.
  */
-public class FeatureModificationEntry<FEATURE extends XyzFeature> {
+public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
 
   /**
    * The input state of the caller.

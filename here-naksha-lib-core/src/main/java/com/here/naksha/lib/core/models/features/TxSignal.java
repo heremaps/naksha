@@ -27,7 +27,6 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzName
 import com.here.naksha.lib.core.models.naksha.Storage;
 import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
