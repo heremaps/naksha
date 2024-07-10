@@ -1,4 +1,7 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
@@ -8,28 +11,29 @@ plugins {
 
 kotlin {
     jvm {
-        //jvmToolchain(11)
         withJava()
     }
 
     js(IR) {
-        moduleName = "model"
-        browser {
-            webpackTask {
-                output.libraryTarget = "commonjs2"
-                output.library = "naksha.model"
-            }
-        }
+        moduleName = "naksha_model"
         useEsModules()
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             target.set("es2015")
         }
         nodejs {
+            compilerOptions {
+                moduleKind = JsModuleKind.MODULE_ES
+                moduleName = "naksha_model"
+                sourceMap = true
+                useEsClasses = true
+                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
+                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
+            }
+            generateTypeScriptDefinitions()
+            binaries.library()
+            binaries.executable()
         }
-        generateTypeScriptDefinitions()
-        binaries.library() // gradle jsBrowserProductionLibraryDistribution
-        binaries.executable() // gradle jsBrowserProductionWebpack
     }
 
     sourceSets {
@@ -80,29 +84,18 @@ configure<JavaPluginExtension> {
 }
 
 tasks {
-    val jsProductionLibraryCompileSync = getByName<Task>("jsProductionLibraryCompileSync")
-    val jsProductionExecutableCompileSync = getByName<Task>("jsProductionExecutableCompileSync")
-    val browserDistribution = getByName<Task>("jsBrowserDistribution")
-    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack") {
-        dependsOn(jsProductionLibraryCompileSync)
-    }
     getByName<Task>("jsNodeProductionLibraryDistribution") {
-        dependsOn(jsProductionExecutableCompileSync)
+        dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
     }
-    getByName<Task>("jsBrowserProductionLibraryDistribution") {
-        dependsOn(jsProductionExecutableCompileSync)
-    }
+    // Release
     getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn(webpackTask, browserDistribution)
+        dependsOn("jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
     }
-    getByName<ProcessResources>("jvmTestProcessResources") {
-        dependsOn(webpackTask, browserDistribution)
-    }
+    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+    // Test
+    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
     getByName<Test>("jvmTest") {
         useJUnitPlatform()
         maxHeapSize = "8g"
-    }
-    getByName<Jar>("jvmJar") {
-        dependsOn(webpackTask)
     }
 }

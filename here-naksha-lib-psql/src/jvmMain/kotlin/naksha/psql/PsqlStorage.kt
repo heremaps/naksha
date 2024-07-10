@@ -123,6 +123,7 @@ $$ LANGUAGE 'plv8';"""
             // Note: We know, that we do not need the replacements and code is faster without them!
             val replacements = mapOf(VERSION to version.toInt64().toString(), "schema" to options.schema, "storage_id" to id)
             executeSqlFromResource(conn, "/naksha.sql", replacements)
+            // TODO: Fix me!!!!!!!
             //executeSqlFromResource(conn, "/jbon.sql")
             PgStatic.createBaseInternalsIfNotExists(conn, options.schema, schemaOid)
 

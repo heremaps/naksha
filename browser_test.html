@@ -1,17 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script language="JavaScript">
-    var module = {exports: {}};
-    var exports = module.exports;
-  </script>
+  <!-- start webserver:
+    python -m http.server 8000
+
+    open: http://localhost:8000/browser_test.html
+   -->
   <script type="text/javascript" src="./here-naksha-lib-psql/src/jvmMain/resources/common.js"></script>
-  <script type="text/javascript" src="./here-naksha-lib-psql/src/jvmMain/resources/beautify.min.js"></script>
-  <script type="text/javascript" src="./here-naksha-lib-base/build/dist/js/productionExecutable/here-naksha-lib-base.js"></script>
-  <script type="text/javascript" src="./here-naksha-lib-geo/build/dist/js/productionExecutable/here-naksha-lib-geo.js"></script>
-  <script type="text/javascript" src="./here-naksha-lib-jbon/build/dist/js/productionExecutable/here-naksha-lib-jbon.js"></script>
-  <script type="text/javascript" src="./here-naksha-lib-model/build/dist/js/productionExecutable/here-naksha-lib-model.js"></script>
-  <script type="text/javascript" src="./here-naksha-lib-psql/build/dist/js/productionExecutable/here-naksha-lib-psql.js"></script>
+  <script type="text/javascript" src=""></script>
+  <script language="JavaScript">
+    naksha.nameToUri["beautify"]='http://localhost:8000/here-naksha-lib-psql/src/jvmMain/resources/beautify.min.js';
+
+    naksha.nameToUri["joda"]='http://localhost:8000/here-naksha-lib-psql/src/jvmMain/resources/js-joda.js';
+    naksha.nameToUri["kotlin"]='http://localhost:8000/here-naksha-lib-psql/build/dist/js/productionLibrary/kotlin-kotlin-stdlib.mjs';
+    naksha.nameToUri["kotlinx_date_time"]='http://localhost:8000/here-naksha-lib-psql/build/dist/js/productionLibrary/Kotlin-DateTime-library-kotlinx-datetime.mjs';
+    naksha.pathToModuleName["@js-joda/core"] = "joda";
+    naksha.pathToModuleName["./kotlin-kotlin-stdlib.mjs"] = "kotlin";
+    naksha.pathToModuleName["./Kotlin-DateTime-library-kotlinx-datetime.mjs"] = "kotlinx_date_time";
+
+    naksha.nameToUri["naksha_base"]='http://localhost:8000/here-naksha-lib-psql/build/dist/js/productionLibrary/naksha_base.mjs';
+    naksha.nameToUri["naksha_jbon"]='http://localhost:8000/here-naksha-lib-psql/build/dist/js/productionLibrary/naksha_jbon.mjs';
+    naksha.nameToUri["naksha_auth"]='http://localhost:8000/here-naksha-lib-psql/build/dist/js/productionLibrary/naksha_auth.mjs';
+    naksha.nameToUri["naksha_geo"]='http://localhost:8000/here-naksha-lib-psql/build/dist/js/productionLibrary/naksha_geo.mjs';
+    naksha.nameToUri["naksha_model"]='http://localhost:8000/here-naksha-lib-psql/build/dist/js/productionLibrary/naksha_model.mjs';
+    naksha.nameToUri["naksha_psql"]='http://localhost:8000/here-naksha-lib-psql/build/dist/js/productionLibrary/naksha_psql.mjs';
+    naksha.pathToModuleName["./naksha_base.mjs"] = "naksha_base";
+    naksha.pathToModuleName["./naksha_jbon.mjs"] = "naksha_jbon";
+    naksha.pathToModuleName["./naksha_auth.mjs"] = "naksha_auth";
+    naksha.pathToModuleName["./naksha_geo.mjs"] = "naksha_geo";
+    naksha.pathToModuleName["./naksha_model.mjs"] = "naksha_model";
+    naksha.pathToModuleName["./naksha_psql.mjs"] = "naksha_psql";
+
+    let beautify = require("beautify");
+    let naksha_base = require("naksha_base");
+    let naksha_jbon = require("naksha_jbon");
+    let naksha_auth = require("naksha_auth");
+    let naksha_geo = require("naksha_geo");
+    let naksha_model = require("naksha_model");
+    let naksha_psql = require("naksha_psql");
+
+    const { js_beautify } = require("beautify");
+    const { Platform, PlatformUtil } = require("naksha_base");
+    const { PgUtil } = require("naksha_psql");
+  </script>
 </head>
 <body>
   <p>Hello World!</p>

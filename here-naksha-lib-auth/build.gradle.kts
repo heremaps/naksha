@@ -1,32 +1,39 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
+    kotlin("plugin.js-plain-objects")
 }
 
 kotlin {
     jvm {
-        //jvmToolchain(11)
         withJava()
     }
 
     js(IR) {
-        moduleName = "auth"
-        browser {
-            webpackTask {
-                output.libraryTarget = "commonjs2"
-            }
-        }
+        moduleName = "naksha_auth"
         useEsModules()
-        @Suppress("OPT_IN_USAGE")
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             target.set("es2015")
         }
         nodejs {
+            compilerOptions {
+                moduleKind = JsModuleKind.MODULE_ES
+                moduleName = "naksha_auth"
+                sourceMap = true
+                useEsClasses = true
+                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
+                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
+            }
+            generateTypeScriptDefinitions()
+            binaries.library()
+            binaries.executable()
         }
-        generateTypeScriptDefinitions()
-        binaries.library() // gradle jsBrowserProductionLibraryDistribution
-        binaries.executable() // gradle jsBrowserProductionWebpack
     }
 
     sourceSets {
@@ -66,19 +73,18 @@ configure<JavaPluginExtension> {
 }
 
 tasks {
-    val webpackTask = getByName<KotlinWebpack>("jsBrowserProductionWebpack")
-    val browserDistribution = getByName<Task>("jsBrowserDistribution")
+    getByName<Task>("jsNodeProductionLibraryDistribution") {
+        dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
+    }
+    // Release
+    getByName<ProcessResources>("jvmProcessResources") {
+        dependsOn("jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
+    }
+    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+    // Test
+    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
     getByName<Test>("jvmTest") {
         useJUnitPlatform()
         maxHeapSize = "8g"
-    }
-    getByName<Jar>("jvmJar") {
-        dependsOn(webpackTask)
-    }
-    getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn(webpackTask, browserDistribution)
-    }
-    getByName<ProcessResources>("jvmTestProcessResources") {
-        dependsOn(webpackTask, browserDistribution)
     }
 }
