@@ -20,21 +20,22 @@ package com.here.naksha.lib.core.storage;
 
 import java.util.ArrayList;
 import java.util.List;
-import naksha.model.XyzFeature;
+
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Deprecated
 public class ModifyFeaturesResp {
 
-  private final List<@Nullable XyzFeature> inserted;
-  private final List<@Nullable XyzFeature> updated;
-  private final List<@Nullable XyzFeature> deleted;
+  private final List<@Nullable NakshaFeatureProxy> inserted;
+  private final List<@Nullable NakshaFeatureProxy> updated;
+  private final List<@Nullable NakshaFeatureProxy> deleted;
 
   public ModifyFeaturesResp(
-      @NotNull List<@Nullable XyzFeature> inserted,
-      @NotNull List<@Nullable XyzFeature> updated,
-      @NotNull List<@Nullable XyzFeature> deleted) {
+      @NotNull List<@Nullable NakshaFeatureProxy> inserted,
+      @NotNull List<@Nullable NakshaFeatureProxy> updated,
+      @NotNull List<@Nullable NakshaFeatureProxy> deleted) {
     this.inserted = inserted;
     this.updated = updated;
     this.deleted = deleted;
@@ -44,15 +45,15 @@ public class ModifyFeaturesResp {
     this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
   }
 
-  public List<XyzFeature> getInserted() {
+  public List<NakshaFeatureProxy> getInserted() {
     return inserted;
   }
 
-  public List<XyzFeature> getUpdated() {
+  public List<NakshaFeatureProxy> getUpdated() {
     return updated;
   }
 
-  public List<XyzFeature> getDeleted() {
+  public List<NakshaFeatureProxy> getDeleted() {
     return deleted;
   }
 }

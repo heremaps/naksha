@@ -19,7 +19,6 @@
 package com.here.naksha.lib.core.models.storage;
 
 import java.util.List;
-
 import naksha.model.NakshaContext;
 import naksha.model.NakshaVersion;
 import naksha.model.request.WriteFeature;

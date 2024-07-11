@@ -20,7 +20,8 @@ package com.here.naksha.lib.core.storage;
 
 import java.util.ArrayList;
 import java.util.List;
-import naksha.model.XyzFeature;
+
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
  * @param <FEATURE> the feature type store.
  */
 @Deprecated
-public class ModifyFeaturesReq<FEATURE extends XyzFeature> {
+public class ModifyFeaturesReq<FEATURE extends NakshaFeatureProxy> {
 
   private final List<FEATURE> insert;
   private final List<FEATURE> update;

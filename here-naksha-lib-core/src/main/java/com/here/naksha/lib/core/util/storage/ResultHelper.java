@@ -71,8 +71,8 @@ public class ResultHelper {
           continue; // skip initial records till we reach to desired offset
         }
         try {
-          features.add(featureType.cast(resultCursor.getFeature()));
-          iterator.next().getFeature().cnt++;
+          features.add(featureType.cast(iterator.next().getFeature()));
+          cnt++;
         } catch (ClassCastException | NullPointerException e) {
           throw new RuntimeException(e);
         }

@@ -83,11 +83,11 @@ public class XyzFeatureCollection extends Response {
 
   @JsonProperty
   @JsonInclude(Include.NON_EMPTY)
-  private List<XyzFeature> oldFeatures;
+  private List<NakshaFeatureProxy> oldFeatures;
 
   @JsonProperty
   @JsonInclude(Include.NON_EMPTY)
-  private List<XyzFeature> violations;
+  private List<NakshaFeatureProxy> violations;
 
   @JsonProperty
   @JsonInclude(Include.NON_EMPTY)
@@ -113,7 +113,7 @@ public class XyzFeatureCollection extends Response {
     double maxLon = Double.NEGATIVE_INFINITY;
     double maxLat = Double.NEGATIVE_INFINITY;
 
-    for (final XyzFeature feature : getFeatures()) {
+    for (final NakshaFeatureProxy feature : getFeatures()) {
       if (recalculateChildrenBoxes || feature.getBbox() == null) {
         feature.calculateAndSetBbox(recalculateChildrenBoxes);
       }
@@ -160,16 +160,16 @@ public class XyzFeatureCollection extends Response {
     return this;
   }
 
-  public @NotNull List<XyzFeature> getFeatures() {
-    return (List<XyzFeature>) features.get();
+  public @NotNull List<NakshaFeatureProxy> getFeatures() {
+    return (List<NakshaFeatureProxy>) features.get();
   }
 
-  public void setFeatures(@NotNull List<? extends XyzFeature> features) {
+  public void setFeatures(@NotNull List<? extends NakshaFeatureProxy> features) {
     this.features.set(features);
   }
 
   @SuppressWarnings("unused")
-  public @NotNull XyzFeatureCollection withFeatures(final @NotNull List<? extends @NotNull XyzFeature> features) {
+  public @NotNull XyzFeatureCollection withFeatures(final @NotNull List<? extends @NotNull NakshaFeatureProxy> features) {
     setFeatures(features);
     return this;
   }
@@ -188,7 +188,7 @@ public class XyzFeatureCollection extends Response {
       this.features.set(string);
     } else if (features instanceof List<?>) {
       List<?> list = (List<?>) features;
-      this.features.set((List<XyzFeature>) list);
+      this.features.set((List<NakshaFeatureProxy>) list);
     }
   }
 
@@ -444,52 +444,52 @@ public class XyzFeatureCollection extends Response {
   }
 
   @SuppressWarnings("unused")
-  public List<XyzFeature> getOldFeatures() {
+  public List<NakshaFeatureProxy> getOldFeatures() {
     return oldFeatures;
   }
 
   @SuppressWarnings("WeakerAccess")
-  public void setOldFeatures(List<XyzFeature> oldFeatures) {
+  public void setOldFeatures(List<NakshaFeatureProxy> oldFeatures) {
     this.oldFeatures = oldFeatures;
   }
 
   @SuppressWarnings("unused")
-  public XyzFeatureCollection withOldFeatures(List<XyzFeature> oldFeatures) {
+  public XyzFeatureCollection withOldFeatures(List<NakshaFeatureProxy> oldFeatures) {
     setOldFeatures(oldFeatures);
     return this;
   }
 
   @SuppressWarnings("unused")
   public @NotNull XyzFeatureCollection withInsertedFeatures(
-      final @NotNull List<? extends @NotNull XyzFeature> insertedFeatures) {
-    ((List<XyzFeature>) this.features.get()).addAll(insertedFeatures); // append features
-    withInserted(insertedFeatures.stream().map(XyzFeature::getId).collect(toList())); // overwrite inserted
+      final @NotNull List<? extends @NotNull NakshaFeatureProxy> insertedFeatures) {
+    ((List<NakshaFeatureProxy>) this.features.get()).addAll(insertedFeatures); // append features
+    withInserted(insertedFeatures.stream().map(NakshaFeatureProxy::getId).collect(toList())); // overwrite inserted
     return this;
   }
 
   public @NotNull XyzFeatureCollection withUpdatedFeatures(
-      final @NotNull List<? extends @NotNull XyzFeature> updatedFeatures) {
-    ((List<XyzFeature>) this.features.get()).addAll(updatedFeatures); // append features
-    withUpdated(updatedFeatures.stream().map(XyzFeature::getId).collect(toList())); // overwrite updated
+      final @NotNull List<? extends @NotNull NakshaFeatureProxy> updatedFeatures) {
+    ((List<NakshaFeatureProxy>) this.features.get()).addAll(updatedFeatures); // append features
+    withUpdated(updatedFeatures.stream().map(NakshaFeatureProxy::getId).collect(toList())); // overwrite updated
     return this;
   }
 
   public @NotNull XyzFeatureCollection withDeletedFeatures(
-      final @NotNull List<? extends @NotNull XyzFeature> deletedFeatures) {
-    ((List<XyzFeature>) this.features.get()).addAll(deletedFeatures); // append features
-    withDeleted(deletedFeatures.stream().map(XyzFeature::getId).collect(toList())); // overwrite deleted
+      final @NotNull List<? extends @NotNull NakshaFeatureProxy> deletedFeatures) {
+    ((List<NakshaFeatureProxy>) this.features.get()).addAll(deletedFeatures); // append features
+    withDeleted(deletedFeatures.stream().map(NakshaFeatureProxy::getId).collect(toList())); // overwrite deleted
     return this;
   }
 
-  public @Nullable List<XyzFeature> getViolations() {
+  public @Nullable List<NakshaFeatureProxy> getViolations() {
     return violations;
   }
 
-  public void setViolations(final @Nullable List<XyzFeature> violations) {
+  public void setViolations(final @Nullable List<NakshaFeatureProxy> violations) {
     this.violations = violations;
   }
 
-  public @NotNull XyzFeatureCollection withViolations(final @Nullable List<XyzFeature> violations) {
+  public @NotNull XyzFeatureCollection withViolations(final @Nullable List<NakshaFeatureProxy> violations) {
     setViolations(violations);
     return this;
   }
