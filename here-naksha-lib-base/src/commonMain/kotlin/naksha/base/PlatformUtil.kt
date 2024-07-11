@@ -38,15 +38,16 @@ class PlatformUtil {
                 in 0..9 -> ('0'.code + it).toChar()
                 in 10..35 -> ('a'.code + (it - 10)).toChar()
                 in 36..61 -> ('A'.code + (it - 36)).toChar()
-                62 -> '_'
-                63 -> '-'
+                // This duplicates a and z, but we for random strings we do not care that much
+                62 -> 'a'
+                63 -> 'z'
                 else -> throw IllegalStateException()
             }
         }
 
         /**
          * Generates a random string that Web-URL safe and matches those of the Web-Safe Base64 encoding, so persists
-         * only out of `a` to `z`, `A` to `Z`, `0` to `9`, `_` or `-`.
+         * only out of `a` to `z`, `A` to `Z`, `0` to `9`.
          * @param length The amount of characters to return, if less than or equal zero, 12 characters are used.
          * @return The random string.
          */

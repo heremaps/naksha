@@ -79,10 +79,6 @@ kotlin {
             // TODO: We should replace ${project.buildDir} with ${layout.buildDirectory}, but this is not the same:
             // println("------------ ${project.buildDir}/dist/js/productionExecutable/")
             // println("------------ ${layout.buildDirectory}/dist/js/productionExecutable/")
-            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-base/build/dist/js/productionLibrary/")
-            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-jbon/build/dist/js/productionLibrary/")
-            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-geo/build/dist/js/productionLibrary/")
-            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-model/build/dist/js/productionLibrary/")
             resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-psql/build/dist/js/productionLibrary/")
         }
         jvmTest {

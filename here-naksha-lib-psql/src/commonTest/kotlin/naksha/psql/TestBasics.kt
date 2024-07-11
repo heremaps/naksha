@@ -1,17 +1,14 @@
 package naksha.psql
 
 import naksha.model.NakshaContext
-import kotlin.test.Test
+import naksha.psql.PgUtil.Companion.quoteIdent
 
 /**
  * Abstract class for all tests using connection to db.
- * @property dropSchema if the schema should be dropped before running the test.
- * @property initStorage if the storage should be initialized before running the test.
- * @property run if the test should run.
  */
 @Suppress("MemberVisibilityCanBePrivate")
 
-abstract class TestBasics(val dropSchema: Boolean = true, val initStorage: Boolean = true, val run: Boolean = true) {
+abstract class TestBasics {
 
     companion object {
         /**
@@ -39,14 +36,11 @@ abstract class TestBasics(val dropSchema: Boolean = true, val initStorage: Boole
         const val STORAGE_ID = "naksha_psql_test"
     }
 
-    @Test
-    fun t001_drop_schema_if_exists() {
-        if (run && dropSchema) nakshaSession.usePgConnection()
-            .execute("DROP SCHEMA IF EXISTS ${PgUtil.quoteIdent(nakshaSession.options.schema)} CASCADE")
+    fun drop_schema() {
+        nakshaSession.usePgConnection().execute("DROP SCHEMA IF EXISTS ${quoteIdent(nakshaSession.options.schema)} CASCADE").close()
     }
 
-    @Test
-    fun t002_init_storage() {
-        if (run && initStorage) storage.initStorage(mapOf(PgUtil.ID to STORAGE_ID, PgUtil.CONTEXT to testContext))
+    fun init_storage() {
+        storage.initStorage(mapOf(PgUtil.ID to STORAGE_ID, PgUtil.CONTEXT to testContext))
     }
 }

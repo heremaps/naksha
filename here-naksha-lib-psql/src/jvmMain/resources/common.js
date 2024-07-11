@@ -3,6 +3,7 @@
     function wrapSource(source) {
       // Function to transform import statements
       function transformImports(imports, path) {
+        // noinspection JSUnusedLocalSymbols
         const importMap = imports.split(',')
         .map(part => part.trim().split(/\s+as\s+/))
         .map(([name, alias]) => alias)
@@ -12,6 +13,7 @@
       }
       // Function to transform export statements
       function transformExports(exports) {
+        // noinspection JSUnusedLocalSymbols
         const exportMap = exports.replace(/,\s*$/, '').split(',')
         .map(part => part.trim().split(/\s+as\s+/))
         .filter(Boolean) // Remove empty entries
@@ -58,16 +60,16 @@
     function error(msg, ...args) { if (isPlv8()) plv8.elog(ERROR, msg, ...args); else console.error(msg, ...args); }
 
     globalThis.naksha = {
-      // module-name -> module-code
+      // module cache, module-name -> module-code
       modules: {},
-      // matches path to module name, require tries to translate path to module name.
-      pathToModuleName: {},
-      // matches path to URI, used when loading from web to translate path to URI.
-      nameToUri: {}
+      // matches require to module name
+      toName: {},
+      // matches require URI
+      toUri: {}
     };
     let modules = naksha.modules;
-    let pathToModuleName = naksha.pathToModuleName;
-    let nameToUri = naksha.nameToUri;
+    let toName = naksha.toName;
+    let toUri = naksha.toUri;
     let sources = {};
 
     function defineModule(name, source) {
@@ -77,31 +79,50 @@
       source = patchSources(source, name)
       modules[name] = {exports:{}};
       (() => {
+        // Note: We need to declare these variables via "var" here to allow loading of commonjs modules!
+        // noinspection ES6ConvertVarToLetConst
         var module = modules[name];
+        // noinspection ES6ConvertVarToLetConst
         var exports = module.exports;
+        // noinspection ES6ConvertVarToLetConst,JSUnusedLocalSymbols
         var exportAs = function exportAs(map) {
           for (let key in map) {
-            exports[key] = map[key];
+            module.exports[key] = map[key];
           }
         }
+        // Note: The source may replace module.exports with a different object!
         eval(source);
       })();
       info("Done, defined module " + name);
       return modules[name].exports;
     }
 
-    function fetchFromPostgres(name) {
-      info("Fetch source of "+name+" from 'commonjs2_modules' table");
+    function getSourceFromRow(row) {
+      let name = row.name;
+      let paths = row.paths;
+      let source = row.source;
+      if (Array.isArray(paths)) for (let path in paths) toName[path] = name;
+      source += "\n//# sourceURL=" + row.name + "\n";
+      return source
+    }
+
+    function fetchFromPostgres(id) {
+      info("Fetch module "+id+" from 'es_modules' table");
+      // noinspection SqlDialectInspection
       let rows = plv8.execute(
-          "SELECT source FROM commonjs2_modules WHERE module = $1",
-          [name]
+          "SELECT name, paths, source FROM es_modules WHERE name=$1 or $1=ANY(paths)",
+          [id]
       );
       if (rows.length === 0) {
-        error("No such module: " + name);
+        error("No such module: " + id);
         return null;
       }
-      let source = rows[0].source;
-      source += "\n//# sourceURL=" + name + "\n";
+      let row = rows[0]
+      let source = getSourceFromRow(row)
+      if (id !== row.name) {
+        toName[id] = row.name;
+        info("Loaded module '"+row.name+" for id '"+id+"'")
+      }
       return source
     }
 
@@ -119,19 +140,24 @@
       }
     }
 
-    function loadSource(name, beautify) {
+    function loadSource(id, beautify) {
       beautify=beautify===true;
+      if (sources[id]!=null) return sources[id];
+      let name = toName[id] || id
       if (sources[name]!=null) return sources[name];
       let uri = null;
       let source;
       if (isPlv8()) {
-        source = fetchFromPostgres(name)
+        source = fetchFromPostgres(id)
+        // Translate id to name again, because the fetchFromPostgres will register aliases!
+        name = toName[id] || id
       } else {
-        uri = nameToUri[name];
-        if (uri == null) throw Error("Failed to get URI of module "+name+" into URI");
+        uri = toUri[id];
+        if (uri == null) uri = toUri[name]
+        if (uri == null) throw Error("Failed to get URI of module '"+id+"', register first in naksha. into URI");
         source = fetchFromUri(uri);
       }
-      if (source == null) throw Error("Failed to load source of module: "+name+", uri:"+uri);
+      if (source == null) throw Error("Failed to load source of module: "+id+", uri:"+uri);
       if (beautify && isGlobal("js_beautify")) {
         source = js_beautify(source, {"indent_size": 2, "space_in_empty_paren": true});
       }
@@ -139,21 +165,23 @@
       return source;
     }
 
-    function require(nameOrPath, beautify) {
-      let name = pathToModuleName[nameOrPath]||nameOrPath;
-      let path = nameOrPath;
+    function require(name, beautify) {
+      name = toName[name] || name
       let module = modules[name];
       if (module != null) return module.exports;
-      return defineModule(name, loadSource(name, path, beautify));
+      let source = loadSource(name, beautify)
+      name = toName[name] || name;
+      return defineModule(name, source);
     }
     globalThis.require = require;
 
+    // Auto load modules on plv8.
     if (isGlobal("plv8")) {
-      // Auto-Load.
-      plv8.execute("SELECT module, source FROM commonjs2_modules WHERE autoload = true").forEach((row) => {
-        let name = row.module;
-        let source = row.source;
-        info("Autoload "+name);
+      // noinspection SqlDialectInspection
+      plv8.execute("SELECT name, paths, source FROM es_modules WHERE autoload = true").forEach((row) => {
+        let source = getSourceFromRow(row);
+        let name = row.name;
+        info("Auto loaded module "+name);
         sources[name] = source;
         defineModule(name, source);
       });

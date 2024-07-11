@@ -334,7 +334,7 @@ actual class Platform {
             if (o == null) return 0
             val S = DEFAULT_SYMBOL
             val nak: dynamic = o
-            if (js("nak[S] && typeof nak[S].hashCode === 'function'").unsafeCast<Boolean>()) {
+            if (nak[S] != null && jsTypeOf(nak[S].hashCode) == "function") {
                 try {
                     return nak[DEFAULT_SYMBOL].hashCode().unsafeCast<Int>()
                 } catch (ignore: Throwable) {
@@ -578,6 +578,7 @@ actual class Platform {
         /**
          * The [PlatformLogger].
          */
+        @Suppress("SENSELESS_COMPARISON")
         @JsStatic
         actual val logger: PlatformLogger = object : PlatformLogger {
             // https://plv8.github.io/#-code-plv8-elog-code-
@@ -614,7 +615,14 @@ actual class Platform {
             }
 
             override fun debug(msg: String, vararg args: Any?) {
-                val m = toString(msg, *args)
+                // TODO: Report compiler bug, and add FAQ to describe coding hints for JavaScript
+                //       this compiles into `toString_1(this, msg, args.slice())`, but if called
+                //       from JavaScript, and it implements an @JsExport, the user will call without
+                //       arguments, which means that args is undefined, so the compiler need to
+                //       adjust for this, and if something is explicitly exported to JavaScript,
+                //       it needs to adjust, so at least something like:
+                //       `toString_1(this, msg, args ? args.slice() : [])`
+                val m = if (args == null || args.size == 0) msg else toString(msg, *args)
                 if (plv8 != null) plv8.log(_DEBUG, m) else console.log(m)
             }
 
@@ -624,7 +632,7 @@ actual class Platform {
             }
 
             override fun info(msg: String, vararg args: Any?) {
-                val m = toString(msg, *args)
+                val m = if (args == null || args.size == 0) msg else toString(msg, *args)
                 if (plv8 != null) plv8.log(_INFO, m) else console.info(m)
             }
 
@@ -634,7 +642,7 @@ actual class Platform {
             }
 
             override fun warn(msg: String, vararg args: Any?) {
-                val m = toString(msg, *args)
+                val m = if (args == null || args.size == 0) msg else toString(msg, *args)
                 if (plv8 != null) plv8.log(_WARN, m) else console.info(m)
             }
 
@@ -644,7 +652,7 @@ actual class Platform {
             }
 
             override fun error(msg: String, vararg args: Any?) {
-                val m = toString(msg, *args)
+                val m = if (args == null || args.size == 0) msg else toString(msg, *args)
                 if (plv8 != null) plv8.log(_ERROR, m) else console.info(m)
             }
 

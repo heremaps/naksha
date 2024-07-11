@@ -4,6 +4,13 @@ package naksha.psql
 actual class PgUtil {
     actual companion object {
         /**
+         * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
+         * the existing installed version of Naksha code is up-to-date.
+         */
+        @JvmField
+        actual val OVERRIDE: String = "override"
+
+        /**
          * Given as parameter for [PgStorage.initStorage], `options` can be a [PgOptions] object to be used for the initialization
          * connection (specific changed defaults to timeouts and locks).
          */
@@ -55,42 +62,14 @@ actual class PgUtil {
          * @return The quoted literal.
          */
         @JvmStatic
-        actual fun quoteLiteral(vararg parts: String): String {
-            val sb = StringBuilder()
-            sb.append("E'")
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '\'' -> sb.append('\'').append('\'')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('\'')
-            return sb.toString()
-        }
+        actual fun quoteLiteral(vararg parts: String): String = PgStatic.quote_literal(*parts)
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
          * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
          */
         @JvmStatic
-        actual fun quoteIdent(vararg parts: String): String {
-            val sb = StringBuilder()
-            sb.append('"')
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '"' -> sb.append('"').append('"')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('"')
-            return sb.toString()
-        }
+        actual fun quoteIdent(vararg parts: String): String = PgStatic.quote_ident(*parts)
 
         /**
          * Returns the instance.

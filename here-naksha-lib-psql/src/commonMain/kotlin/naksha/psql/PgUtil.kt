@@ -9,6 +9,12 @@ import naksha.model.NakshaContext
 expect class PgUtil {
     companion object {
         /**
+         * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
+         * the existing installed version of Naksha code is up-to-date.
+         */
+        val OVERRIDE: String
+
+        /**
          * Given as parameter for [PgStorage.initStorage], `options` can be a [PgOptions] object to be used for the initialization
          * connection (specific changed defaults to timeouts and locks).
          */

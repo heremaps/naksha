@@ -10,6 +10,13 @@ actual class PgUtil {
         }
 
         /**
+         * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
+         * the existing installed version of Naksha code is up-to-date.
+         */
+        @JsStatic
+        actual val OVERRIDE: String = "override"
+
+        /**
          * Given as parameter for [PgStorage.initStorage], `options` can be a [PgOptions] object to be used for the initialization
          * connection (specific changed defaults to timeouts and locks).
          */
@@ -40,14 +47,20 @@ actual class PgUtil {
          * @return The quoted literal.
          */
         @JsStatic
-        actual fun quoteLiteral(vararg parts: String): String = js("plv8.quote_literal(parts.join(''))").unsafeCast<String>()
+        actual fun quoteLiteral(vararg parts: String): String {
+            if (isPlv8()) return js("parts?plv8.quote_literal(parts.join('')):''").unsafeCast<String>()
+            return PgStatic.quote_literal(*parts)
+        }
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
          * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
          */
         @JsStatic
-        actual fun quoteIdent(vararg parts: String): String = js("plv8.quote_ident(parts.join(''))").unsafeCast<String>()
+        actual fun quoteIdent(vararg parts: String): String {
+            if (isPlv8()) return js("parts?plv8.quote_ident(parts.join('')):''").unsafeCast<String>()
+            return PgStatic.quote_ident(*parts)
+        }
 
         /**
          * Returns the instance.
