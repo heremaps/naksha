@@ -24,7 +24,6 @@ import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import java.util.*;
 import naksha.model.NakshaFeatureProxy;
 import naksha.model.request.ResultRow;
-import naksha.model.response.Response;
 import naksha.model.response.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -42,7 +41,7 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(Response result, Class<R> featureType)
+  public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(SuccessResponse result, Class<R> featureType)
       throws NoSuchElementException {
     return readFeaturesFromResult(result, featureType, 0, Long.MAX_VALUE);
   }
@@ -59,11 +58,9 @@ public class ResultHelper {
    * @return list of features extracted from ReadResult
    */
   public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(
-      Response result, Class<R> featureType, long offset, long limit) {
-    List<R> features = new ArrayList<>();
-    // if response is not of type SuccessResponse
-    if (result instanceof SuccessResponse) {
-      Iterator<ResultRow> iterator = ((SuccessResponse) result).getRows().iterator();
+          SuccessResponse result, Class<R> featureType, long offset, long limit) {
+    final List<R> features = new ArrayList<>();
+      final Iterator<ResultRow> iterator = result.getRows().iterator();
       int pos = 0;
       int cnt = 0;
       while (iterator.hasNext() && cnt < limit) {
@@ -78,7 +75,6 @@ public class ResultHelper {
         }
       }
       return features;
-    }
   }
 
   /**
@@ -89,28 +85,24 @@ public class ResultHelper {
    * @param type   the type of feature
    * @return the feature of type T if found, else null
    */
-  public static <T> @Nullable T readFeatureFromResult(final @NotNull Result result, final @NotNull Class<T> type) {
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
-      if (resultCursor.hasNext() && resultCursor.next()) {
-        return type.cast(resultCursor.getFeature());
-      }
-      return null;
-    } catch (NoCursor e) {
+  public static <T> @Nullable T readFeatureFromResult(final @NotNull SuccessResponse result, final @NotNull Class<T> type) {
+    final List<ResultRow> rows = result.getRows();
+    if (rows.isEmpty()) {
       return null;
     }
+    return type.cast(rows.get(0).getFeature());
   }
 
-  public static List<String> readIdsFromResult(final @NotNull Result result) {
-    try (final ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
-      List<String> ids = new ArrayList<>();
-      while (resultCursor.hasNext()) {
-        resultCursor.next();
-        ids.add(resultCursor.getId());
-      }
-      return ids;
-    } catch (NoCursor e) {
+  public static List<String> readIdsFromResult(final @NotNull SuccessResponse result) {
+    final Iterator<ResultRow> iterator = result.getRows().iterator();
+    if (result.getRows().isEmpty()) {
       return emptyList();
     }
+      final List<String> ids = new ArrayList<>();
+      while (iterator.hasNext()) {
+        ids.add(iterator.next().getFeature().getId());
+      }
+      return ids;
   }
 
   /**
@@ -123,8 +115,8 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends XyzFeature> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
-      Result result, Class<R> featureType, long limit) throws NoCursor {
+  public static <R extends NakshaFeatureProxy> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
+      SuccessResponse result, Class<R> featureType, long limit) {
     try (ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
       if (!resultCursor.hasNext()) {
         throw new NoSuchElementException("Result Cursor is empty");
@@ -162,8 +154,8 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends XyzFeature> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
-      Result result, Class<R> featureType) throws NoCursor, NoSuchElementException {
+  public static <R extends NakshaFeatureProxy> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
+      SuccessResponse result, Class<R> featureType) throws NoSuchElementException {
     return readFeaturesGroupedByOp(result, featureType, Long.MAX_VALUE);
   }
 }
