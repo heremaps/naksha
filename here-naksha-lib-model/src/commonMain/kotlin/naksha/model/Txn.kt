@@ -4,6 +4,9 @@ import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
+/**
+ * Wrapper for transaction numbers. The Naksha specification
+ */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 data class Txn(val value: Int64) : Comparable<Txn> {
@@ -16,43 +19,58 @@ data class Txn(val value: Int64) : Comparable<Txn> {
         /**
          * The maximum value for the sequence, can be used as well as bitmask.
          */
-        val SEQ_MAX = Int64(0x0000_03ff_ffff_ffff)
+        val SEQ_MAX = Int64(0x0000_0000_ffff_ffff)
 
         /**
          * The value to be added to calculate the end of a day.
          */
-        val SEQ_NEXT = Int64(0x0000_0400_0000_0000)
+        val SEQ_NEXT = Int64(0x0000_0001_0000_0000)
 
         /**
          * Create a transaction number from its parts.
-         * @param year The year to encode, between 0 and 8191.
-         * @param month The month to encode, between 1 and 12.
-         * @param day The day to encode, between 1 and 31.
-         * @param seq The sequence in the day, between 0 and 2^42-1.
+         * @param year The year to encode, between 0 and 8388608 (23-bit).
+         * @param month The month to encode, between 1 and 12 (4-bit).
+         * @param day The day to encode, between 1 and 31 (5-bit).
+         * @param seq The sequence in the day, between 0 and 4294967295 (32-bit).
          */
         fun of(year: Int, month: Int, day: Int, seq: Int64): Txn =
-            Txn((Int64(year) shl 51) or (Int64(month) shl 47) or (Int64(day) shl 42) + seq)
+            Txn((Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) + seq)
     }
 
     private var _year = -1
+
+    /**
+     * The year when the transaction happened, a value between 0 and 8388608 (23-bit).
+     */
     fun year(): Int {
-        if (_year < 0) _year = (value ushr 51).toInt()
+        if (_year < 0) _year = (value ushr 41).toInt()
         return _year
     }
 
     private var _month = -1
+
+    /**
+     * The month when the transaction happened, a value between 1 and 12 (4-bit).
+     */
     fun month(): Int {
-        if (_month < 0) _month = (value ushr 47).toInt() and 15
+        if (_month < 0) _month = (value ushr 37).toInt() and 15
         return _month
     }
 
     private var _day = -1
+    /**
+     * The day when the transaction happened, a value between 1 and 12 (4-bit).
+     */
     fun day(): Int {
-        if (_day < 0) _day = (value ushr 42).toInt() and 31
+        if (_day < 0) _day = (value ushr 32).toInt() and 31
         return _day
     }
 
     private var _seq: Int64? = null
+
+    /**
+     * The sequence number within the day, a value between 0 and 4294967295 (32-bit).
+     */
     fun seq(): Int64 {
         if (_seq == null) _seq = value and SEQ_MAX
         return _seq!!

@@ -263,6 +263,12 @@ actual class Platform {
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView = JvmDataView(byteArray, offset, size)
 
         @JvmStatic
+        actual fun <T: Any> newWeakRef(referent: T): WeakRef<T> = JvmWeakRef(referent)
+
+        @JvmStatic
+        actual fun newLock(): PlatformLock = JvmLock()
+
+        @JvmStatic
         actual fun unbox(value: Any?): Any? {
             if (value is Proxy) return value.platformObject() as? JvmObject
             if (value is Array<*>) return JvmList(*value)

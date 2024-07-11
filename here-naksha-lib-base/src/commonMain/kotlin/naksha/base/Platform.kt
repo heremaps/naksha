@@ -227,6 +227,19 @@ expect class Platform {
         fun <T> newThreadLocal(initializer: (() -> T)? = null): PlatformThreadLocal<T>
 
         /**
+         * Creates a new weak reference to the given referent.
+         * @param referent the referent.
+         * @return the weak reference to the referent.
+         */
+        fun <T: Any> newWeakRef(referent: T): WeakRef<T>
+
+        /**
+         * Creates a new reentrant lock.
+         * @return the created reentrant lock.
+         */
+        fun newLock(): PlatformLock
+
+        /**
          * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride] is _true_,
          * the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
          * @param pobject the object at which to query for the proxy ([PlatformMap], [PlatformList] or [PlatformDataView]).

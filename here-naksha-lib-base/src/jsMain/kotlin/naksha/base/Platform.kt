@@ -90,6 +90,9 @@ actual class Platform {
             override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
         }
         val symbolTemplate = object : Symbol {}
+        val weakRefTemplate = object : WeakRef<Int> {
+            override fun deref(): Int = 0
+        }
 
         actual fun initialize(): Boolean {
             if (!isInitialized) {
@@ -100,6 +103,7 @@ actual class Platform {
                 copyPrototypeToPrototype(dataViewTemplate, js("new DataView(new ArrayBuffer(0))").unsafeCast<Any>())
 
                 copyPrototypeToPrototype(symbolTemplate, js("Symbol()").unsafeCast<Any>())
+                copyPrototypeToPrototype(weakRefTemplate, js("new WeakRef()").unsafeCast<Any>())
                 copyPrototypeToPrototype(JsInt64(), js("BigInt(0)").unsafeCast<Any>())
                 // Patch the Int64::class, so that it works as expected (it should only detect BigInt!)
                 val i64Class = Int64::class
@@ -214,6 +218,19 @@ actual class Platform {
         @JsStatic
         actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView =
             js("new DataView(byteArray.buffer, offset, size)").unsafeCast<PlatformDataView>()
+
+        // Note: Some values in JavaScript must be wrapped into an object (like string literals or numbers), however,
+        //       not all numbers of string literals, so we only wrap, when really necessary!
+        @JsStatic
+        actual fun <T: Any> newWeakRef(referent: T): WeakRef<T>
+            = js("try { return new WeakRef(referent); } catch(e) { return new WeakRef(Object(referent)); }").unsafeCast<WeakRef<T>>()
+
+        /**
+         * Creates a new reentrant lock.
+         * @return the created reentrant lock.
+         */
+        @JsStatic
+        actual fun newLock(): PlatformLock = JsLock()
 
         @JsStatic
         actual fun unbox(value: Any?): Any? {
