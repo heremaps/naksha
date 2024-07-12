@@ -53,6 +53,9 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.*;
 
 import naksha.model.ErrorResult;
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.NakshaError;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
@@ -63,8 +66,8 @@ import org.slf4j.LoggerFactory;
 /**
  * An abstract class that can be used for all Http API specific custom Task implementations.
  */
-public abstract class AbstractApiTask<T extends XyzResponse>
-    extends AbstractTask<XyzResponse, AbstractApiTask<XyzResponse>> {
+public abstract class AbstractApiTask<T extends Response>
+    extends AbstractTask<Response, AbstractApiTask<Response>> {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractApiTask.class);
   protected final @NotNull RoutingContext routingContext;
@@ -86,10 +89,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     this.routingContext = routingContext;
   }
 
-  protected @NotNull XyzResponse errorResponse(@NotNull Throwable throwable) {
+  protected @NotNull Response errorResponse(@NotNull Throwable throwable) {
     logger.warn("The task failed with an exception. ", throwable);
     return verticle.sendErrorResponse(
-        routingContext, XyzError.EXCEPTION, "Task failed processing! " + throwable.getMessage());
+        routingContext, NakshaError.EXCEPTION, "Task failed processing! " + throwable.getMessage());
   }
 
   public @NotNull XyzResponse executeUnsupported() {

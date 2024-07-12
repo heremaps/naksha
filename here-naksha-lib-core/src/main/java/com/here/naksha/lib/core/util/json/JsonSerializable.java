@@ -140,7 +140,7 @@ public interface JsonSerializable {
     }
 
     boolean timeout = errorMessage.contains("timed out");
-    return new ErrorResponse(new NakshaError(ErrorResponse.STORAGE_NOT_INITIALIZED, errorMessage));
+    return new ErrorResponse(new NakshaError(NakshaError.STORAGE_NOT_INITIALIZED, errorMessage));
   }
 
   /**

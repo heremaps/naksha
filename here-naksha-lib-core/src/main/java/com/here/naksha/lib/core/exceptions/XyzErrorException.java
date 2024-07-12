@@ -30,8 +30,8 @@ public class XyzErrorException extends RuntimeException {
     this.nakshaError = new NakshaError(NakshaError.EXCEPTION, reason.getMessage());
   }
 
-  public XyzErrorException(@NotNull NakshaError nakshaError, @NotNull String errorMessage) {
-    this(nakshaError, errorMessage, null);
+  public XyzErrorException(@NotNull NakshaError nakshaError) {
+    this(nakshaError, nakshaError.getMessage(), null);
   }
 
   public XyzErrorException(@NotNull NakshaError nakshaError, @NotNull Throwable reason) {

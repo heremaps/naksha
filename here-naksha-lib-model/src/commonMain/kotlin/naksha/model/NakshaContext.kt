@@ -145,6 +145,8 @@ open class NakshaContext protected constructor() {
         return this
     }
 
+    var streamInfo: StreamInfo? = null
+
     @Suppress("OPT_IN_USAGE")
     companion object {
         /**
