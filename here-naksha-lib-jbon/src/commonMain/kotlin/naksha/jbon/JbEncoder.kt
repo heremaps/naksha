@@ -13,7 +13,7 @@ import kotlin.math.floor
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
 @JsExport
-open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
+open class JbEncoder(var global: JbDict? = null) : Binary() {
 
     /**
      * Create a new resizable editor with a new byte-array of the given size backing it.
@@ -109,7 +109,7 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
          */
         @JvmStatic
         @Deprecated("There is now a explict real static constructor, use it", ReplaceWith("JbBuilder(size, global)"))
-        fun create(size: Int? = null, global: JbDict? = null): JbBinaryBuilder = JbBinaryBuilder(size ?: defaultDataViewSize, global)
+        fun create(size: Int? = null, global: JbDict? = null): JbEncoder = JbEncoder(size ?: defaultDataViewSize, global)
 
         /**
          * Returns the maximal encoding size of a string.
@@ -539,7 +539,7 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
                 }
                 if (size >= 3) {
                     sb.clear()
-                    JbReader.readSubstring(this, wordStart, pos, sb)
+                    JbDecoder.readSubstring(this, wordStart, pos, sb)
                     val subString = sb.toString()
                     val isGlobal: Boolean
                     var index = -1
@@ -556,7 +556,7 @@ open class JbBinaryBuilder(var global: JbDict? = null) : Binary() {
                                     // We found a colon at reversePos
                                     // Try to look it up in the global dictionary (reversePos is excluded below).
                                     sb.clear()
-                                    JbReader.readSubstring(this, wordStart, reversePos, sb)
+                                    JbDecoder.readSubstring(this, wordStart, reversePos, sb)
                                     val prefix = sb.toString()
                                     index = global.indexOf(prefix)
                                     if (index >= 0) {

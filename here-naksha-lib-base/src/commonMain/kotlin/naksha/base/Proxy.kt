@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.Companion.isNil
+import naksha.base.Platform.isNil
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport

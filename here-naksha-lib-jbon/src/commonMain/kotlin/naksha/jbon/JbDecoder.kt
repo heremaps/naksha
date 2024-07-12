@@ -15,7 +15,7 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("DuplicatedCode", "PropertyName")
 @JsExport
-open class JbReader {
+open class JbDecoder {
 
     @OptIn(ExperimentalJsStatic::class)
     companion object {
@@ -211,12 +211,35 @@ open class JbReader {
             }
             return arr
         }
+
+        // TODO: KtCompiler
+        @Deprecated("Compiler bug, it does not export the variables from Jbon", level = DeprecationLevel.WARNING)
+        private val EMPTY_BYTE_ARRAY = ByteArray(0)
+        @Deprecated("Compiler bug, it does not export the variables from Jbon", level = DeprecationLevel.WARNING)
+        private val EMPTY_PLATFORM_VIEW = Platform.newDataView(EMPTY_BYTE_ARRAY)
+        @Deprecated("Compiler bug, it does not export the variables from Jbon", level = DeprecationLevel.WARNING)
+        private var EMPTY_IMMUTABLE = object : Binary() {
+            override var byteArray = JbDecoder.EMPTY_BYTE_ARRAY
+                set(value) = throw UnsupportedOperationException()
+            override var view = JbDecoder.EMPTY_PLATFORM_VIEW
+                set(value) = throw UnsupportedOperationException()
+            override var readOnly = false
+                set(value) {
+                    require(!value)
+                    field = value
+                }
+            override var resize = false
+                set(value) {
+                    require(!value)
+                    field = value
+                }
+        }
     }
 
     /**
      * The binary that is read. When assigned, by default the
      */
-    var binary: BinaryView = Binary.EMPTY_IMMUTABLE
+    var binary: BinaryView = EMPTY_IMMUTABLE
         set(value) {
             field = value
             this.end = value.end
@@ -285,7 +308,7 @@ open class JbReader {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    open fun mapBinary(binary: BinaryView, pos: Int = binary.pos, end: Int = binary.end, localDict: JbDict? = null, globalDict: JbDict? = null): JbReader {
+    open fun mapBinary(binary: BinaryView, pos: Int = binary.pos, end: Int = binary.end, localDict: JbDict? = null, globalDict: JbDict? = null): JbDecoder {
         check(pos <= end)
         clear()
         this.binary = binary
@@ -300,7 +323,7 @@ open class JbReader {
      * Maps the given foreign reader into this reader. Will share the global and local dictionaries, but not caches or offset.
      * @param reader The reader to map.
      */
-    open fun mapReader(reader: JbReader) {
+    open fun mapReader(reader: JbDecoder) {
         clear()
         this.binary = reader.binary
         this.localDict = reader.localDict

@@ -14,7 +14,7 @@ import kotlin.js.JsExport
  * they are produced.
  *
  * For the PostgresQL implementation, this interface does nothing, but redirecting calls to `plv8.return_next(object)`.,
- * For the JVM implementation it will create an in-memory virtual tuple-store. The function, e.g. [NakshaSession.writeFeatures],
+ * For the JVM implementation it will create an in-memory virtual tuple-store. The function, e.g. [PgSession.writeFeatures],
  * will then return the table so that the results can be verified.
  */
 @Suppress("DuplicatedCode")

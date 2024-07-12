@@ -1,7 +1,6 @@
 package naksha.psql.write
 
-import naksha.base.Platform.Companion.currentMillis
-import naksha.jbon.asArray
+import naksha.base.Platform.currentMillis
 import naksha.model.NakshaCollectionProxy
 import naksha.model.TransactionCollectionInfoProxy
 import naksha.model.request.FeatureOp
@@ -13,7 +12,7 @@ import naksha.model.request.Write.Companion.XYZ_OP_UPSERT
 import naksha.model.request.WriteRequest
 import naksha.model.Row
 import naksha.model.response.SuccessResponse
-import naksha.psql.NakshaSession
+import naksha.psql.PgSession
 import naksha.psql.PgUtil
 import naksha.psql.PgStatic
 import naksha.psql.write.NakshaRequestOp.Companion.mapToOperations
@@ -21,7 +20,7 @@ import naksha.psql.PgStatic.DEBUG
 
 class SingleCollectionWriter(
     val collectionId: String,
-    val session: NakshaSession,
+    val session: PgSession,
     val modifyCounters: Boolean = true
 ) {
 

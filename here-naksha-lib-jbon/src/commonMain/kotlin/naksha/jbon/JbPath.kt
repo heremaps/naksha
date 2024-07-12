@@ -58,7 +58,7 @@ class JbPath(var dictManager: JbDictManager, private var binaryView: BinaryView)
         return alternative
     }
 
-    private fun readElement(elementBytes: ByteArray, path: String): JbReader? {
+    private fun readElement(elementBytes: ByteArray, path: String): JbDecoder? {
         if (!binaryView.byteArray.contentEquals(elementBytes)) {
             binaryView = Binary(elementBytes)
             feature = feature.mapBinary(binaryView)
@@ -72,7 +72,7 @@ class JbPath(var dictManager: JbDictManager, private var binaryView: BinaryView)
         return null
     }
 
-    fun goToElement(map: JbMap, path: List<String>): JbReader? {
+    fun goToElement(map: JbMap, path: List<String>): JbDecoder? {
         if (path.isEmpty()) {
             return null
         }

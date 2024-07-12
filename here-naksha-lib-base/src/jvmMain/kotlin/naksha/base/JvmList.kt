@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.Companion.unsafe
+import naksha.base.Platform.unsafe
 import java.util.*
 import kotlin.math.max
 import kotlin.math.round

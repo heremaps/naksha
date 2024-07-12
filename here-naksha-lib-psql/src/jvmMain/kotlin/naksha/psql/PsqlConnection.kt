@@ -46,7 +46,7 @@ class PsqlConnection internal constructor(
     val jdbc: org.postgresql.jdbc.PgConnection
         get() {
             val c = _jdbc
-            check(c != null)
+            check(c != null) { "Connection is closed" }
             return c
         }
 

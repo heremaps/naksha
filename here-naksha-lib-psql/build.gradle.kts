@@ -1,4 +1,7 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 plugins {
@@ -12,23 +15,25 @@ kotlin {
     }
 
     js(IR) {
-        moduleName = "psql"
-        browser {
-            webpackTask {
-                output.libraryTarget = "commonjs2"
-                output.library = "naksha.psql"
-            }
-        }
+        moduleName = "naksha_psql"
         useEsModules()
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             target.set("es2015")
         }
         nodejs {
+            compilerOptions {
+                moduleKind = JsModuleKind.MODULE_ES
+                moduleName = "naksha_psql"
+                sourceMap = true
+                useEsClasses = true
+                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
+                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
+            }
+            generateTypeScriptDefinitions()
+            binaries.library()
+            binaries.executable()
         }
-        generateTypeScriptDefinitions()
-        binaries.library() // gradle jsBrowserProductionLibraryDistribution
-        binaries.executable() // gradle jsBrowserProductionWebpack
     }
 
     sourceSets {
@@ -74,11 +79,7 @@ kotlin {
             // TODO: We should replace ${project.buildDir} with ${layout.buildDirectory}, but this is not the same:
             // println("------------ ${project.buildDir}/dist/js/productionExecutable/")
             // println("------------ ${layout.buildDirectory}/dist/js/productionExecutable/")
-            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-base/build/dist/js/productionExecutable/")
-            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-jbon/build/dist/js/productionExecutable/")
-            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-geo/build/dist/js/productionExecutable/")
-            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-model/build/dist/js/productionExecutable/")
-            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-psql/build/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-psql/build/dist/js/productionLibrary/")
         }
         jvmTest {
             dependencies {
@@ -87,9 +88,10 @@ kotlin {
                 runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
                 implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
+                implementation("org.slf4j:slf4j-api:2.0.13")
+                implementation("org.slf4j:slf4j-simple:2.0.13")
                 implementation("org.testcontainers:postgresql:1.19.4")
                 implementation("org.postgresql:postgresql:42.5.4")
-                implementation(project(":here-naksha-lib-jbon"))
                 implementation("org.mockito:mockito-core:5.8.0")
                 implementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
                 implementation("org.locationtech.spatial4j:spatial4j:0.8")
@@ -116,40 +118,24 @@ configure<JavaPluginExtension> {
 }
 
 tasks {
-    getByName<KotlinWebpack>("jsBrowserProductionWebpack") {
-        dependsOn("jsProductionLibraryCompileSync")
-    }
     getByName<Task>("jsNodeProductionLibraryDistribution") {
-        dependsOn("jsProductionExecutableCompileSync")
+        dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
     }
-    getByName<Task>("jsBrowserProductionLibraryDistribution") {
-        dependsOn("jsProductionExecutableCompileSync")
+    // Release
+    getByName<ProcessResources>("jvmProcessResources") {
+        dependsOn(
+            ":here-naksha-lib-base:jsNodeProductionLibraryDistribution",
+            ":here-naksha-lib-geo:jsNodeProductionLibraryDistribution",
+            ":here-naksha-lib-jbon:jsNodeProductionLibraryDistribution",
+            ":here-naksha-lib-model:jsNodeProductionLibraryDistribution",
+            "jsNodeProductionLibraryDistribution"
+        )
     }
+    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+    // Test
+    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
     getByName<Test>("jvmTest") {
         useJUnitPlatform()
         maxHeapSize = "8g"
-    }
-    getByName<Jar>("jvmJar") {
-        dependsOn("jsBrowserProductionWebpack")
-        from({
-            val list = ArrayList<Any>()
-            configurations.runtimeClasspath.get().forEach {
-                val f = if (it.isDirectory()) it else zipTree(it)
-                list.add(f)
-            }
-            list
-        }).duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
-    getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn(
-            ":here-naksha-lib-base:jsBrowserDistribution",
-            ":here-naksha-lib-geo:jsBrowserDistribution",
-            ":here-naksha-lib-jbon:jsBrowserDistribution",
-            ":here-naksha-lib-model:jsBrowserDistribution",
-            "jsBrowserProductionWebpack",
-            "jsBrowserDistribution")
-    }
-    getByName<ProcessResources>("jvmTestProcessResources") {
-        dependsOn("jsBrowserProductionWebpack")
     }
 }

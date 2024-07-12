@@ -1,8 +1,7 @@
 package naksha.base
 
-import naksha.base.Platform.Companion.DEFAULT_SYMBOL
+import naksha.base.Platform.DEFAULT_SYMBOL
 import kotlin.reflect.KClass
-import kotlin.reflect.full.primaryConstructor
 
 /**
  * The base class of all other platform objects.

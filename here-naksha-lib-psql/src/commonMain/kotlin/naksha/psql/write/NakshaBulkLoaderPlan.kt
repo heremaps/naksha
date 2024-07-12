@@ -1,5 +1,6 @@
 package naksha.psql.write
 
+import naksha.base.JsEnum
 import naksha.jbon.*
 import naksha.model.*
 import naksha.model.XYZ_EXEC_CREATED
@@ -9,6 +10,7 @@ import naksha.model.XYZ_EXEC_RETAINED
 import naksha.model.request.ResultRow
 import naksha.model.Metadata
 import naksha.model.Row
+import naksha.model.response.ExecutedOp
 import naksha.psql.*
 import naksha.psql.COL_ALL
 import naksha.psql.COL_ALL_TYPES
@@ -36,7 +38,7 @@ import kotlin.reflect.KFunction0
 internal class NakshaBulkLoaderPlan(
     val collectionId: String,
     val partitionHeadQuoted: String,
-    val session: NakshaSession,
+    val session: PgSession,
     val isHistoryDisabled: Boolean?,
     val autoPurge: Boolean,
     val minResult: Boolean
@@ -349,7 +351,7 @@ internal class NakshaBulkLoaderPlan(
     }
 
     private fun addResult(op: String, row: Row? = null) {
-        val resultRow = ResultRow(row = row, op = op)
+        val resultRow = ResultRow(row = row, op = JsEnum.get(op, ExecutedOp::class))
         result.add(resultRow)
     }
 }

@@ -5,10 +5,10 @@ import naksha.base.Int64
 import naksha.base.Platform
 import naksha.model.*
 import naksha.psql.PgPlan
-import naksha.psql.NakshaSession
-import naksha.psql.PgStatic.SC_TRANSACTIONS
+import naksha.psql.PgSession
+import naksha.psql.PgStatic.TRANSACTIONS_COL
 
-internal class RowUpdater(val session: NakshaSession) {
+internal class RowUpdater(val session: PgSession) {
     private lateinit var gridPlan: PgPlan
 
     /**
@@ -33,7 +33,7 @@ internal class RowUpdater(val session: NakshaSession) {
             geoGrid = grid(id, flags, NEW.geo)
         }
 
-        val uid = if (collectionId == SC_TRANSACTIONS) {
+        val uid = if (collectionId == TRANSACTIONS_COL) {
             0
         } else {
             session.nextUid()
@@ -73,11 +73,11 @@ internal class RowUpdater(val session: NakshaSession) {
         //val createdAt = oldMeta.createdAt ?:
         val author: String?
         val authorTs: Int64?
-        if (session.context.author == null) {
+        if (session.options.author == null) {
             author = oldMeta?.author
             authorTs = oldMeta?.authorTs
         } else {
-            author = session.context.author
+            author = session.options.author
             authorTs = newMeta!!.updatedAt
         }
         val version: Int = (oldMeta?.version ?: 0) + 1

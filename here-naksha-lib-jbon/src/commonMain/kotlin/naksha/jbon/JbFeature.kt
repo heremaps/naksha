@@ -1,7 +1,5 @@
 package naksha.jbon
 
-import naksha.base.Binary
-import naksha.base.BinaryView
 import kotlin.js.JsExport
 
 /**
@@ -25,25 +23,25 @@ open class JbFeature(var dictManager: IDictManager) : JbStruct<JbFeature>() {
     }
 
     override fun parseHeader() {
-        check(unitType == TYPE_FEATURE) { "Mapped structure is no feature, but ${JbReader.unitTypeName(unitType)}" }
+        check(unitType == TYPE_FEATURE) { "Mapped structure is no feature, but ${JbDecoder.unitTypeName(unitType)}" }
         // The id of global dictionary (optional).
         if (reader.isString()) {
             val dictId = reader.decodeString()
             reader.globalDict = dictManager.getDictionary(dictId)
             check(reader.globalDict != null) { "Unable to load necessary dictionary '$dictId'" }
         } else {
-            check(reader.isNull()) { "Expected dictionary ID to be either a string or null, but found ${JbReader.unitTypeName(reader.unitType())}" }
+            check(reader.isNull()) { "Expected dictionary ID to be either a string or null, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
         }
         check(reader.nextUnit()) { "Failed to seek forward to feature-id field" }
         // The feature-id (optional).
         if (reader.isString()) {
             id = reader.decodeString()
         } else {
-            check(reader.isNull()) { "Expected feature-id to be either a string or null, but found ${JbReader.unitTypeName(reader.unitType())}" }
+            check(reader.isNull()) { "Expected feature-id to be either a string or null, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
         }
         check(reader.nextUnit()) { "Failed to seek forward to local dictionary field" }
         // The embedded local dictionary.
-        check(reader.isDictionary()) { "Expect local dictionary, but found ${JbReader.unitTypeName(reader.unitType())}" }
+        check(reader.isDictionary()) { "Expect local dictionary, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
         reader.localDict = JbDict().mapReader(reader)
         check(reader.nextUnit()) { "Failed to seek forward to the feature payload" }
         featureType = reader.unitType()

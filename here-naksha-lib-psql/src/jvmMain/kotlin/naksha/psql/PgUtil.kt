@@ -1,8 +1,17 @@
 package naksha.psql
 
+import java.security.MessageDigest
+
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PgUtil {
     actual companion object {
+        /**
+         * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
+         * the existing installed version of Naksha code is up-to-date.
+         */
+        @JvmField
+        actual val OVERRIDE: String = "override"
+
         /**
          * Given as parameter for [PgStorage.initStorage], `options` can be a [PgOptions] object to be used for the initialization
          * connection (specific changed defaults to timeouts and locks).
@@ -55,41 +64,35 @@ actual class PgUtil {
          * @return The quoted literal.
          */
         @JvmStatic
-        actual fun quoteLiteral(vararg parts: String): String {
-            val sb = StringBuilder()
-            sb.append("E'")
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '\'' -> sb.append('\'').append('\'')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('\'')
-            return sb.toString()
-        }
+        actual fun quoteLiteral(vararg parts: String): String = PgStatic.quote_literal(*parts)
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
          * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
          */
         @JvmStatic
-        actual fun quoteIdent(vararg parts: String): String {
-            val sb = StringBuilder()
-            sb.append('"')
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '"' -> sb.append('"').append('"')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('"')
-            return sb.toString()
+        actual fun quoteIdent(vararg parts: String): String = PgStatic.quote_ident(*parts)
+
+        private val md5Digest = ThreadLocal.withInitial {
+            MessageDigest.getInstance("MD5")
+        }
+
+        /**
+         * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
+         * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions and the rest
+         * addresses the partition, for example for 4 partitions we get `partitionNumber(id) % 4`, what will be a value between 0 and 3.
+         * In PVL8 this is implemented using the native code as `get_byte(digest(id,'md5'),0)`, which is as well what the partitioning
+         * statement will do.
+         * @param featureId the feature id.
+         * @return the partition number of the feature, a value between 0 and 255.
+         */
+        @JvmStatic
+        actual fun partitionNumber(featureId: String): Int {
+            val digest = md5Digest.get()
+            digest.reset()
+            digest.update(featureId.toByteArray(Charsets.UTF_8))
+            val hash = digest.digest()
+            return hash[0].toInt() and 0xff
         }
 
         /**

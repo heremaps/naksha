@@ -47,11 +47,11 @@ interface PgInstance {
     val url: String
 
     /**
-     * Returns a session from the session pool or opens a new session. When the returned session is closed, it will be returned to the
-     * session pool of the instance.
-     * @param options the session options.
-     * @return the session.
-     * @throws IllegalArgumentException if the instance is read-only (read-replica) and a write-session is requested.
+     * Returns a connection from the connection pool or opens a new connection. When the returned connection is closed, it will be
+     * returned to the connection pool of the instance.
+     * @param options the connection options.
+     * @return the connection.
+     * @throws IllegalArgumentException if the instance is read-only (read-replica) and a write-connection is requested.
      */
     fun openConnection(options: PgOptions): PgConnection
 }

@@ -1,7 +1,7 @@
 package naksha.base
 
 import naksha.base.PlatformUtil.Companion.defaultDataViewSize
-import naksha.base.Platform.Companion.newDataView
+import naksha.base.Platform.newDataView
 import naksha.base.PlatformDataViewApi.Companion.dataview_get_byte_array
 import naksha.base.PlatformDataViewApi.Companion.dataview_get_float32
 import naksha.base.PlatformDataViewApi.Companion.dataview_get_float64
@@ -20,6 +20,7 @@ import naksha.base.PlatformDataViewApi.Companion.dataview_set_int8
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 import kotlin.math.max
 
@@ -82,21 +83,21 @@ open class Binary() : BinaryView {
         /**
          * The default empty byte-array.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val EMPTY_BYTE_ARRAY = ByteArray(0)
 
         /**
          * The default empty [PlatformDataView] using the [EMPTY_BYTE_ARRAY].
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val EMPTY_PLATFORM_VIEW = newDataView(EMPTY_BYTE_ARRAY)
 
         /**
          * A special instance that represents an immutable empty binary using the [EMPTY_PLATFORM_VIEW] and [EMPTY_BYTE_ARRAY].
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         var EMPTY_IMMUTABLE = object : Binary() {
             override var byteArray = EMPTY_BYTE_ARRAY

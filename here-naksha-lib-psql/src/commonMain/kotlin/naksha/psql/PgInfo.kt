@@ -5,7 +5,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 private const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
-private const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 128
+private const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048
 
 /**
  * Information about the database and connection, that need only to be queried ones per session.
@@ -39,9 +39,10 @@ class PgInfo(conn: PgConnection, schema: String) { // TODO: Rename sql into conn
 
     /**
      * If the [pgsql-gzip][https://github.com/pramsey/pgsql-gzip] extension is installed, therefore PostgresQL supported `gzip`/`gunzip`
-     * as standalone SQL function by the database.
+     * as standalone SQL function by the database. Note, that if this is not the case, we're installing code that is implemented in
+     * JavaScript.
      */
-    val gzipSupported: Boolean
+    val gzipExtension: Boolean
 
     /**
      * The PostgresQL version parsed into a [NakshaVersion].
@@ -52,6 +53,11 @@ class PgInfo(conn: PgConnection, schema: String) { // TODO: Rename sql into conn
      * The [OID](https://www.postgresql.org/docs/current/datatype-oid.html) (Object Identifier) of the schema.
      */
     val schemaOid: Int
+
+    /**
+     * The quoted schema, for example `"foo"`.
+     */
+    val schemaQuoted = PgUtil.quoteIdent(schema)
 
     init {
         val cursor = conn.execute(
@@ -76,7 +82,7 @@ class PgInfo(conn: PgConnection, schema: String) { // TODO: Rename sql into conn
         brittleTableSpace = if (cursor.column("temp_oid") is Int) TEMPORARY_TABLESPACE else null
         schemaOid = cursor["schema_oid"]
         tempTableSpace = brittleTableSpace
-        gzipSupported = cursor.column("gzip_oid") is Int
+        gzipExtension = cursor.column("gzip_oid") is Int
         // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
         val v: String = cursor["version"]
         val start = v.indexOf(' ')

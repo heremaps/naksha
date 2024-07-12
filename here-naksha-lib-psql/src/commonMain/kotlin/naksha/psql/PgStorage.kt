@@ -1,5 +1,7 @@
 package naksha.psql
 
+import naksha.base.fn.Fx2
+import naksha.base.fn.Fx3
 import naksha.model.IStorage
 import naksha.model.IWriteSession
 import naksha.model.NakshaContext
@@ -7,8 +9,12 @@ import naksha.model.StorageException
 import kotlin.js.JsExport
 
 /**
- * The PostgresQL storage that manages session (aka connections). This is basically the [IStorage], but extended with some special methods
+ * The PostgresQL storage that manages session and connections. This is basically the [IStorage], but extended with some special methods
  * to acquire real PostgresQL database connections.
+ *
+ * In Java multiple instances can be created. Within the database, a new storage instance is created as singleton and added into to global
+ * `plv8` object, when the `naksha_start_session` SQL function is executed, which is necessary for all other Naksha SQL functions to work.
+ * This singleton will hold only a single [PgSession], trying to acquire a second one, will always throw an [IllegalStateException].
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
@@ -46,34 +52,34 @@ interface PgStorage : IStorage {
     override fun initStorage(params: Map<String, *>?)
 
     override fun newWriteSession(context: NakshaContext): IWriteSession =
-        newNakshaSession(context, defaultOptions.copy(readOnly = false, useMaster = true))
+        newSession(defaultOptions.copy(readOnly = false, useMaster = true, appId=context.appId, author = context.author))
 
     override fun newReadSession(context: NakshaContext, useMaster: Boolean): IWriteSession =
-        newNakshaSession(context, defaultOptions.copy(readOnly = true, useMaster = useMaster))
+        newSession(defaultOptions.copy(readOnly = true, useMaster = useMaster, appId=context.appId, author = context.author))
 
     /**
-     * Returns a new Naksha session.
-     * @param context the context to use for this session.
-     * @param options the options to use for the database connection used by this Naksha session.
-     * @return the Naksha session.
+     * Returns a new PostgresQL session.
+     * @param options the options to use for the database connection used by this session.
+     * @return the session.
      */
-    fun newNakshaSession(context: NakshaContext, options: PgOptions): NakshaSession
+    fun newSession(options: PgOptions): PgSession
 
     /**
-     * Opens a new PostgresQL database session (a PostgresQL database connection). A session received through this method will not
-     * really close, then [PgConnection.close] is invoked, but return to the connection pool.
+     * Opens a new PostgresQL database connection. A connection received through this method will not really close when
+     * [PgConnection.close] is invoked, but the wrapper returns the underlying JDBC connection to the connection pool of the instance.
      *
      * If this is the [PLV8 engine](https://plv8.github.io/), then there is only one connection available, so calling this before closing
-     * the previously returned connection will always cause an [IllegalStateException].
-     * @param context the context for which to initialize the session.
+     * the previous returned connection will always cause an [IllegalStateException].
      * @param options the options for the session; defaults to [defaultOptions].
+     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the
+     * connection. It may just do the work or perform arbitrary additional work.
      * @throws IllegalStateException if all connections are in use.
      */
-    fun newConnection(context: NakshaContext, options: PgOptions = defaultOptions): PgConnection
+    fun newConnection(options: PgOptions = defaultOptions, init: Fx2<PgConnection, String>? = null): PgConnection
 
     /**
      * Returns the database information.
-     * @return the database information.
+     * @return the database information, cached when [conn] is _null_.
      */
     fun getPgDbInfo(): PgInfo
 }
