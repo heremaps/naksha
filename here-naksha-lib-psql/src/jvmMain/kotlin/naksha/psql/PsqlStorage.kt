@@ -1,11 +1,10 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.base.Platform.Companion.logger
+import naksha.base.Platform.logger
 import naksha.base.PlatformMap
 import naksha.base.PlatformUtil
 import naksha.base.fn.Fx2
-import naksha.base.fn.Fx3
 import naksha.jbon.*
 import naksha.model.*
 import naksha.model.Row
@@ -285,7 +284,7 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
             storage = this,
             flags = Flags(),
             id = nakshaFeature.id,
-            feature = XyzBuilder().buildFeatureFromMap(nakshaFeature), // FIXME split feature to geo etc
+            feature = XyzEncoder().buildFeatureFromMap(nakshaFeature), // FIXME split feature to geo etc
             geoRef = null,
             geo = null,
             tags = null

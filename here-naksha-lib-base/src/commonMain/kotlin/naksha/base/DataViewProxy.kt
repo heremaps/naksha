@@ -1,7 +1,7 @@
 package naksha.base
 
 import naksha.base.PlatformUtil.Companion.defaultDataViewSize
-import naksha.base.Platform.Companion.newDataView
+import naksha.base.Platform.newDataView
 import naksha.base.PlatformDataViewApi.Companion.dataview_get_size
 import kotlin.js.JsExport
 import kotlin.js.JsName

@@ -32,16 +32,17 @@
     naksha.toName["./naksha_psql.mjs"] = "naksha_psql";
 
     let beautify = require("beautify");
-    let naksha_base = require("naksha_base");
-    let naksha_jbon = require("naksha_jbon");
-    let naksha_auth = require("naksha_auth");
-    let naksha_geo = require("naksha_geo");
-    let naksha_model = require("naksha_model");
-    let naksha_psql = require("naksha_psql");
+    let base = require("naksha_base");
+    let jbon = require("naksha_jbon");
+    let auth = require("naksha_auth");
+    let geo = require("naksha_geo");
+    let model = require("naksha_model");
+    let psql = require("naksha_psql");
 
     const { js_beautify } = require("beautify");
     const { Platform, PlatformUtil } = require("naksha_base");
     const { PgUtil } = require("naksha_psql");
+    const { JbEncoder, JbDecoder } = require("naksha_jbon");
   </script>
 </head>
 <body>

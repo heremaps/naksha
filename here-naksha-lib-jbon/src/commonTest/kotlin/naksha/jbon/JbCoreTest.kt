@@ -102,8 +102,8 @@ class JbCoreTest {
 
     @Test
     fun testNull() {
-        val builder = JbBinaryBuilder(256)
-        val reader = JbReader().mapBinary(builder, 0, 256)
+        val builder = JbEncoder(256)
+        val reader = JbDecoder().mapBinary(builder, 0, 256)
         builder.encodeNull()
         assertEquals(ENC_MIXED_CONST_NULL, builder.getInt8(0).toInt())
         assertEquals(TYPE_NULL, reader.unitType())
@@ -115,8 +115,8 @@ class JbCoreTest {
 
     @Test
     fun testUndefined() {
-        val builder = JbBinaryBuilder(256)
-        val reader = JbReader().mapBinary(builder, 0, 256)
+        val builder = JbEncoder(256)
+        val reader = JbDecoder().mapBinary(builder, 0, 256)
         builder.encodeUndefined()
         assertEquals(ENC_MIXED_CONST_UNDEFINED, reader.binary.getInt8(0).toInt())
         assertEquals(TYPE_UNDEFINED, reader.unitType())
@@ -128,8 +128,8 @@ class JbCoreTest {
 
     @Test
     fun testBoolean() {
-        val builder = JbBinaryBuilder(256)
-        val reader = JbReader().mapBinary(builder, 0, 256)
+        val builder = JbEncoder(256)
+        val reader = JbDecoder().mapBinary(builder, 0, 256)
         builder.encodeBool(true)
         assertEquals(ENC_MIXED_CONST_TRUE, reader.binary.getInt8(0).toInt())
         assertEquals(TYPE_BOOL, reader.unitType())
@@ -149,8 +149,8 @@ class JbCoreTest {
 
     @Test
     fun testIntEncoding() {
-        val builder = JbBinaryBuilder(256)
-        val reader = JbReader().mapBinary(builder, 0, 256)
+        val builder = JbEncoder(256)
+        val reader = JbDecoder().mapBinary(builder, 0, 256)
         // the values -16 to 15 should be encoded in one byte
         builder.encodeInt(-16);
         assertTrue(reader.isInt())
@@ -251,8 +251,8 @@ class JbCoreTest {
 
     @Test
     fun testFloat32Encoding() {
-        val builder = JbBinaryBuilder(1024)
-        val reader = JbReader().mapBinary(builder, 0, 1024)
+        val builder = JbEncoder(1024)
+        val reader = JbDecoder().mapBinary(builder, 0, 1024)
         for (i in -16..15) {
             builder.encodeFloat(i.toFloat())
             assertEquals(i, ((reader.binary.getInt8(0).toInt() shl 27) shr 27))
@@ -283,8 +283,8 @@ class JbCoreTest {
 
     @Test
     fun testFloat64Encoding() {
-        val builder = JbBinaryBuilder(1024)
-        val reader = JbReader().mapBinary(builder, 0, 1024)
+        val builder = JbEncoder(1024)
+        val reader = JbDecoder().mapBinary(builder, 0, 1024)
         for (i in -16..15) {
             builder.encodeDouble(i.toDouble())
             assertEquals(i, ((reader.binary.getInt8(0).toInt() shl 27) shr 27))
@@ -313,8 +313,8 @@ class JbCoreTest {
 
     @Test
     fun testEncodingTwoInts() {
-        val builder = JbBinaryBuilder(1024)
-        val reader = JbReader().mapBinary(builder, 0, 1024)
+        val builder = JbEncoder(1024)
+        val reader = JbDecoder().mapBinary(builder, 0, 1024)
 
         val firstPos = builder.encodeInt(100_000)
         assertEquals(0, firstPos)
@@ -355,8 +355,8 @@ class JbCoreTest {
 
     @Test
     fun testStringEncoding() {
-        val builder = JbBinaryBuilder(256)
-        val reader = JbReader().mapBinary(builder, 0, 256)
+        val builder = JbEncoder(256)
+        val reader = JbDecoder().mapBinary(builder, 0, 256)
 
         // should encode in 1 byte lead-in plus 1 byte character
         builder.encodeString("a")
@@ -401,8 +401,8 @@ class JbCoreTest {
 
     @Test
     fun testReference() {
-        val builder = JbBinaryBuilder(1024)
-        val reader = JbReader().mapBinary(builder, 0, 1024)
+        val builder = JbEncoder(1024)
+        val reader = JbDecoder().mapBinary(builder, 0, 1024)
 
         // Write null reference (encoded in one byte).
         builder.encodeRef(-1, true)
@@ -446,7 +446,7 @@ class JbCoreTest {
 
     @Test
     fun testDictionaryCreation() {
-        val builder = JbBinaryBuilder()
+        val builder = JbEncoder()
 
         val foo = builder.addToLocalDictionary("foo")
         assertEquals(0, foo)
@@ -461,7 +461,7 @@ class JbCoreTest {
         val dictId = "test"
         val dictArray = builder.buildDictionary(dictId)
         val dictView = DataViewProxy(dictArray)
-        val dictReader = JbReader().mapBinary(dictView)
+        val dictReader = JbDecoder().mapBinary(dictView)
         assertEquals(TYPE_DICTIONARY, dictReader.unitType())
         // size
         dictReader.pos += 1
@@ -501,8 +501,8 @@ class JbCoreTest {
 
     @Test
     fun testText() {
-        val builder = JbBinaryBuilder(8192)
-        val reader = JbReader().mapBinary(builder)
+        val builder = JbEncoder(8192)
+        val reader = JbDecoder().mapBinary(builder)
 
         // We assume that this stores three words in the local dictionary:
         // 0 = Hello
@@ -523,7 +523,7 @@ class JbCoreTest {
 
     @Test
     fun testSmallTextFeature() {
-        val builder = JbBinaryBuilder()
+        val builder = JbEncoder()
         builder.encodeText("Hello World Hello Test")
         val featureBytes = builder.buildFeature(null, 0)
         val feature = JbFeature(dictManager)
@@ -656,13 +656,13 @@ class JbCoreTest {
 
     @Test
     fun testArray() {
-        val builder = JbBinaryBuilder(8192)
+        val builder = JbEncoder(8192)
         val arrayStart = builder.startArray()
         builder.encodeString("foo")
         builder.encodeString("bar")
         builder.endArray(arrayStart)
 
-        val reader = JbReader().mapBinary(builder, 0, builder.byteLength)
+        val reader = JbDecoder().mapBinary(builder, 0, builder.byteLength)
         assertTrue(reader.isArray())
         // 1-byte lead-in, 1-byte size, 4 byte for string "foo" and 4 byte for string "bar"
         assertEquals(2 + 4 + 4, reader.unitSize())
@@ -720,8 +720,8 @@ class JbCoreTest {
 
     @Test
     fun testMap() {
-        val builder = JbBinaryBuilder()
-        val reader = JbReader().mapBinary(builder)
+        val builder = JbEncoder()
+        val reader = JbDecoder().mapBinary(builder)
 
         val mapStartPos = builder.startMap()
         builder.writeKey("foo")
@@ -808,8 +808,8 @@ class JbCoreTest {
     fun testJbonTimestamp() {
         val nowLong = 1707491351417L
         val nowBigInt64 = Int64(nowLong)
-        val builder = JbBinaryBuilder(1024)
-        val reader = JbReader().mapBinary(builder, 0, 1024)
+        val builder = JbEncoder(1024)
+        val reader = JbDecoder().mapBinary(builder, 0, 1024)
         builder.encodeTimestamp(nowBigInt64)
         assertEquals(ENC_MIXED_SCALAR_TIMESTAMP, builder.getInt8(0).toInt())
         assertEquals(TYPE_TIMESTAMP, reader.unitType())
@@ -838,7 +838,7 @@ class JbCoreTest {
 
     @Test
     fun testBuildingCollectionWithOnlyId() {
-        val builder = JbBinaryBuilder()
+        val builder = JbEncoder()
         val featureJson = """{"id":"bar"}"""
         val featureMap = Platform.fromJSON(featureJson) as PlatformMap
         val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(ObjectProxy::class))

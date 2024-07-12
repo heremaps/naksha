@@ -17,7 +17,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzName
 import naksha.jbon.JbDictManager;
 import naksha.jbon.JbFeature;
 import naksha.jbon.JbMap;
-import naksha.jbon.XyzBuilder;
+import naksha.jbon.XyzEncoder;
 import naksha.jbon.XyzOp;
 import naksha.jbon.XyzTags;
 import java.time.Instant;
@@ -43,7 +43,7 @@ public class XyzFeatureCodecTest extends SessionTest {
     encoder.setOp("CREATE");
     encoder.decodeParts(true);
 
-    XyzBuilder xyzBuilder = new XyzBuilder(newDataView(512), null);
+    XyzEncoder xyzBuilder = new XyzEncoder(newDataView(512), null);
     Instant now = Instant.now();
     byte[] jbonNs = xyzBuilder.buildXyzNs(
         BigInt64(now.toEpochMilli()),

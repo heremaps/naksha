@@ -105,7 +105,7 @@ data class Txn(val value: Int64) : Comparable<Txn> {
     }
 
     override fun toString(): String {
-        if (!this::_string.isInitialized) _string = "" + year() + ":" + month() + ":" + day() + ":" + seq()
+        if (!this::_string.isInitialized) _string = "${year()}:${month()}:${day()}:${seq()}"
         return _string
     }
 

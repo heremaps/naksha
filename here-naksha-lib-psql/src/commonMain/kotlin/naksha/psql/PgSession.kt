@@ -3,7 +3,7 @@ package naksha.psql
 import naksha.jbon.*
 import kotlinx.datetime.*
 import naksha.base.*
-import naksha.base.Platform.Companion.logger
+import naksha.base.Platform.logger
 import naksha.jbon.IDictManager
 import naksha.jbon.JbMap
 import naksha.jbon.JbMapFeature

@@ -1,7 +1,5 @@
 package naksha.jbon
 
-import naksha.base.Binary
-import naksha.base.BinaryView
 import kotlin.js.JsExport
 
 /**
@@ -13,7 +11,7 @@ import kotlin.js.JsExport
 class JbArray : JbEntryArray<JbArray>() {
 
     override fun parseHeader() {
-        check(unitType == TYPE_ARRAY) { "Mapped structure is no array, but ${JbReader.unitTypeName(unitType)}" }
+        check(unitType == TYPE_ARRAY) { "Mapped structure is no array, but ${JbDecoder.unitTypeName(unitType)}" }
         index = -1
         length = if (bodySize() == 0) 0 else Int.MAX_VALUE
     }
@@ -37,7 +35,7 @@ class JbArray : JbEntryArray<JbArray>() {
      * @return The reader, positioned at the value of the entry.
      * @throws IllegalStateException If the position is invalid.
      */
-    fun value(): JbReader {
+    fun value(): JbDecoder {
         check(index >= 0)
         return reader
     }

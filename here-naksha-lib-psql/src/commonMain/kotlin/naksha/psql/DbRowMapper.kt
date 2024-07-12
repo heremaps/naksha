@@ -1,8 +1,10 @@
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.base.JsEnum
 import naksha.model.*
 import naksha.model.request.ResultRow
+import naksha.model.response.ExecutedOp
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -96,7 +98,7 @@ internal object DbRowMapper {
         val retList = mutableListOf<ResultRow>()
         while (cursor.next()) {
             val row = readRow(storage,collection,cursor,decodeMeta)
-            ResultRow(XYZ_EXEC_READ, row)
+            ResultRow(JsEnum.get(XYZ_EXEC_READ, ExecutedOp::class), row)
         }
         return retList
     }

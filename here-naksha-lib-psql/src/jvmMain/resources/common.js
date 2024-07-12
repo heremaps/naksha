@@ -1,26 +1,49 @@
 (() => {
   if (typeof globalThis["require"] !== "function") {
-    function wrapSource(source) {
+    function wrapSource(source, moduleName) {
+      let patchedImport = false
+      let patchedExport = false
+
       // Function to transform import statements
       function transformImports(imports, path) {
         // noinspection JSUnusedLocalSymbols
-        const importMap = imports.split(',')
+        let importMap = imports.split(',')
         .map(part => part.trim().split(/\s+as\s+/))
         .map(([name, alias]) => alias)
         .filter(Boolean) // Remove empty entries
         .join(', ');
+        // TODO: KtCompiler
+        if (!patchedImport
+            && moduleName === 'naksha_psql'
+            && path === "./kotlin-kotlin-stdlib.mjs"
+            && importMap.indexOf("copyOf") < 0
+        ) {
+          info("Apply patch for naksha_psql, import 'copyOf' from kotlin standard library")
+          importMap += ", copyOf"
+          patchedImport = true
+        }
         return `const { ${importMap} } = require('${path}');`;
       }
+
       // Function to transform export statements
       function transformExports(exports) {
         // noinspection JSUnusedLocalSymbols
-        const exportMap = exports.replace(/,\s*$/, '').split(',')
+        let exportMap = exports.replace(/,\s*$/, '').split(',')
         .map(part => part.trim().split(/\s+as\s+/))
         .filter(Boolean) // Remove empty entries
-        .map(([name, alias]) => '"'+name+'": '+name)
+        .map(([name, alias]) => '"' + name + '": ' + name)
         .filter(Boolean) // Remove empty entries
         .join(', ');
-        exports=`exportAs({${exportMap}});`;
+        // TODO: KtCompiler
+        if (!patchedExport
+            && moduleName === 'kotlin'
+            && exportMap.indexOf("copyOf") < 0
+        ) {
+          info("Apply patch for kotlin standard library, export 'copyOf'")
+          exportMap += ', "copyOf": copyOf'
+          patchedExport = true
+        }
+        exports = `exportAs({${exportMap}});`;
         return exports;
       }
 
@@ -34,8 +57,10 @@
       });
       return source;
     }
+
     globalThis.wrapSource = wrapSource;
 
+    // TODO: KtCompiler
     function patchSources(source, moduleName) {
       let patchesByModuleName = {
         "kotlin": {
@@ -45,19 +70,40 @@
         }
       }
       let patches = patchesByModuleName[moduleName];
-      if (!patches) return source;
-      info("Apply patches for "+moduleName)
+      if (!patches) {
+        return source;
+      }
+      info("Apply patches for " + moduleName)
       for (let key in patches) {
-        info("Replace '"+key+"' with '"+patches[key]+"'")
+        info("Replace '" + key + "' with '" + patches[key] + "'")
         source = source.replace(key, patches[key]);
       }
       return source
     }
 
-    function isGlobal(name) { return globalThis[name] != null; }
-    function isPlv8() { return isGlobal("plv8"); }
-    function info(msg, ...args) { if (isPlv8()) plv8.elog(INFO, msg, ...args); else console.log(msg, ...args); }
-    function error(msg, ...args) { if (isPlv8()) plv8.elog(ERROR, msg, ...args); else console.error(msg, ...args); }
+    function isGlobal(name) {
+      return globalThis[name] != null;
+    }
+
+    function isPlv8() {
+      return isGlobal("plv8");
+    }
+
+    function info(msg, ...args) {
+      if (isPlv8()) {
+        plv8.elog(INFO, msg, ...args);
+      } else {
+        console.log(msg, ...args);
+      }
+    }
+
+    function error(msg, ...args) {
+      if (isPlv8()) {
+        plv8.elog(ERROR, msg, ...args);
+      } else {
+        console.error(msg, ...args);
+      }
+    }
 
     globalThis.naksha = {
       // module cache, module-name -> module-code
@@ -73,11 +119,13 @@
     let sources = {};
 
     function defineModule(name, source) {
-      if (modules[name] != null) return modules[name].exports;
+      if (modules[name] != null) {
+        return modules[name].exports;
+      }
       info("Start defining module " + name);
-      source = wrapSource(source);
+      source = wrapSource(source, name);
       source = patchSources(source, name)
-      modules[name] = {exports:{}};
+      modules[name] = {exports: {}};
       (() => {
         // Note: We need to declare these variables via "var" here to allow loading of commonjs modules!
         // noinspection ES6ConvertVarToLetConst
@@ -101,13 +149,17 @@
       let name = row.name;
       let paths = row.paths;
       let source = row.source;
-      if (Array.isArray(paths)) for (let path in paths) toName[path] = name;
+      if (Array.isArray(paths)) {
+        for (let path in paths) {
+          toName[path] = name;
+        }
+      }
       source += "\n//# sourceURL=" + row.name + "\n";
       return source
     }
 
     function fetchFromPostgres(id) {
-      info("Fetch module "+id+" from 'es_modules' table");
+      info("Fetch module " + id + " from 'es_modules' table");
       // noinspection SqlDialectInspection
       let rows = plv8.execute(
           "SELECT name, paths, source FROM es_modules WHERE name=$1 or $1=ANY(paths)",
@@ -121,7 +173,7 @@
       let source = getSourceFromRow(row)
       if (id !== row.name) {
         toName[id] = row.name;
-        info("Loaded module '"+row.name+" for id '"+id+"'")
+        info("Loaded module '" + row.name + " for id '" + id + "'")
       }
       return source
     }
@@ -141,10 +193,14 @@
     }
 
     function loadSource(id, beautify) {
-      beautify=beautify===true;
-      if (sources[id]!=null) return sources[id];
+      beautify = beautify === true;
+      if (sources[id] != null) {
+        return sources[id];
+      }
       let name = toName[id] || id
-      if (sources[name]!=null) return sources[name];
+      if (sources[name] != null) {
+        return sources[name];
+      }
       let uri = null;
       let source;
       if (isPlv8()) {
@@ -153,11 +209,17 @@
         name = toName[id] || id
       } else {
         uri = toUri[id];
-        if (uri == null) uri = toUri[name]
-        if (uri == null) throw Error("Failed to get URI of module '"+id+"', register first in naksha. into URI");
+        if (uri == null) {
+          uri = toUri[name]
+        }
+        if (uri == null) {
+          throw Error("Failed to get URI of module '" + id + "', register first in naksha. into URI");
+        }
         source = fetchFromUri(uri);
       }
-      if (source == null) throw Error("Failed to load source of module: "+id+", uri:"+uri);
+      if (source == null) {
+        throw Error("Failed to load source of module: " + id + ", uri:" + uri);
+      }
       if (beautify && isGlobal("js_beautify")) {
         source = js_beautify(source, {"indent_size": 2, "space_in_empty_paren": true});
       }
@@ -168,11 +230,14 @@
     function require(name, beautify) {
       name = toName[name] || name
       let module = modules[name];
-      if (module != null) return module.exports;
+      if (module != null) {
+        return module.exports;
+      }
       let source = loadSource(name, beautify)
       name = toName[name] || name;
       return defineModule(name, source);
     }
+
     globalThis.require = require;
 
     // Auto load modules on plv8.
@@ -181,7 +246,7 @@
       plv8.execute("SELECT name, paths, source FROM es_modules WHERE autoload = true").forEach((row) => {
         let source = getSourceFromRow(row);
         let name = row.name;
-        info("Auto loaded module "+name);
+        info("Auto loaded module " + name);
         sources[name] = source;
         defineModule(name, source);
       });

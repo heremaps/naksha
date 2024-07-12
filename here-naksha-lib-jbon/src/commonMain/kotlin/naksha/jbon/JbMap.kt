@@ -12,7 +12,7 @@ import kotlin.js.JsExport
 class JbMap : JbEntryArray<JbMap>() {
 
     override fun parseHeader() {
-        check(unitType == TYPE_MAP) { "Mapped structure is no map, but ${JbReader.unitTypeName(unitType)}" }
+        check(unitType == TYPE_MAP) { "Mapped structure is no map, but ${JbDecoder.unitTypeName(unitType)}" }
         valueReader.mapReader(reader)
         index = -1
         key = null
@@ -52,7 +52,7 @@ class JbMap : JbEntryArray<JbMap>() {
     /**
      * A reader we use flexible, when reading of values is requested.
      */
-    private val valueReader = JbReader()
+    private val valueReader = JbDecoder()
 
     /**
      * The [reader] offset that currently is cached.
@@ -72,7 +72,7 @@ class JbMap : JbEntryArray<JbMap>() {
         return key
     }
 
-    fun value(): JbReader {
+    fun value(): JbDecoder {
         check(index >= 0)
         loadEntry()
         return valueReader
@@ -99,6 +99,6 @@ class JbMap : JbEntryArray<JbMap>() {
      * @return This binary as [ObjectProxy].
      */
     fun toIMap(): ObjectProxy {
-        return JbReader.readMap(this)
+        return JbDecoder.readMap(this)
     }
 }

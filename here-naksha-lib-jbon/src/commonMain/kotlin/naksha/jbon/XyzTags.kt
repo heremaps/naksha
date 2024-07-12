@@ -25,7 +25,7 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
             reader.globalDict = dictManager.getDictionary(dictId)
             check(reader.globalDict != null) { "Failed to load dictionary with ID '$dictId'" }
         } else {
-            check(reader.isNull()) { "Invalid header, expected null, but found ${JbReader.unitTypeName(reader.unitType())}" }
+            check(reader.isNull()) { "Invalid header, expected null, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
         }
 
         // Now all key-value pairs follow.

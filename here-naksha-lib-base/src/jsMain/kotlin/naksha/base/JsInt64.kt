@@ -1,9 +1,9 @@
 package naksha.base
 
-import naksha.base.Platform.Companion.I64_INT_MASK
-import naksha.base.Platform.Companion.I64_ZERO
-import naksha.base.Platform.Companion._int64
-import naksha.base.Platform.Companion.i64_arr
+import naksha.base.Platform.I64_INT_MASK
+import naksha.base.Platform.I64_ZERO
+import naksha.base.Platform._int64
+import naksha.base.Platform.i64_arr
 
 class JsInt64 internal constructor(): Int64 {
     override fun unaryPlus(): Int64 = this

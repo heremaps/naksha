@@ -20,7 +20,7 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
     /**
      * The reader used to read from the structure.
      */
-    val reader = JbReader()
+    val reader = JbDecoder()
 
     /**
      * The lead-in byte of the structure.
@@ -157,7 +157,7 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * @param reader The reader from which to use the view and offset.
      * @return this.
      */
-    fun mapReader(reader: JbReader): SELF {
+    fun mapReader(reader: JbDecoder): SELF {
         map(reader.binary, reader.pos, reader.localDict, reader.globalDict)
         return this as SELF
     }

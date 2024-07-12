@@ -33,7 +33,7 @@ abstract class XyzStruct<SELF : XyzStruct<SELF>> : JbStruct<SELF>() {
     }
 
     open fun parseXyzHeader(expectedVariant: Int) {
-        check(unitType == TYPE_XYZ) { "Mapped structure is no XYZ structure, but ${JbReader.unitTypeName(unitType)}" }
+        check(unitType == TYPE_XYZ) { "Mapped structure is no XYZ structure, but ${JbDecoder.unitTypeName(unitType)}" }
         check(variant == expectedVariant) {"Mapping XYZ variant ${xyzVariantName(expectedVariant)}, but found ${xyzVariantName(variant)}"}
     }
 

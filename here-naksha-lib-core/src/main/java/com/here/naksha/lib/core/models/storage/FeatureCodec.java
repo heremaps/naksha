@@ -39,7 +39,7 @@ import naksha.jbon.JbDictManager;
 import naksha.jbon.JbFeature;
 import naksha.jbon.JbMap;
 import naksha.jbon.JvmEnv;
-import naksha.jbon.XyzBuilder;
+import naksha.jbon.XyzEncoder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.algorithm.Centroid;
@@ -569,7 +569,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
   }
 
   public void decodeXyzOp(@Nullable JbDict globalDict) {
-    XyzBuilder xyzBuilder = new XyzBuilder(newDataView(1024), globalDict);
+    XyzEncoder xyzBuilder = new XyzEncoder(newDataView(1024), globalDict);
     xyzOp = xyzBuilder.buildXyzOp(mapOperationToPerform(op), id, uuid, calculateGrid());
   }
 

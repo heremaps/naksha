@@ -27,12 +27,12 @@ import com.here.naksha.lib.nak.Flags;
 import java.util.List;
 import naksha.geo.XyzGeometry;
 import naksha.jbon.IMap;
-import naksha.jbon.JbBinaryBuilder;
+import naksha.jbon.JbEncoder;
 import naksha.jbon.JbDict;
 import naksha.jbon.JbDictManager;
 import naksha.jbon.JvmEnv;
 import naksha.jbon.JvmMap;
-import naksha.jbon.XyzBuilder;
+import naksha.jbon.XyzEncoder;
 import naksha.jbon.XyzNs;
 import naksha.model.XyzFeature;
 import naksha.model.XyzTags;
@@ -92,7 +92,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     feature.getProperties().setXyzNamespace(new XyzNamespace());
 
     IMap featureAsMap = JvmEnv.get().convert(feature, JvmMap.class);
-    JbBinaryBuilder builder = new JbBinaryBuilder(newDataView(65536), globalDict);
+    JbEncoder builder = new JbEncoder(newDataView(65536), globalDict);
     featureBytes = builder.buildFeatureFromMap(featureAsMap);
 
     feature.getProperties().setXyzNamespace(xyz);
@@ -103,7 +103,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
   }
 
   private void decodeTags(@Nullable List<@NotNull String> tags, @Nullable JbDict globalDict) {
-    XyzBuilder xyzBuilder = new XyzBuilder(newDataView(512), globalDict);
+    XyzEncoder xyzBuilder = new XyzEncoder(newDataView(512), globalDict);
     tagsBytes = null;
     if (tags != null && !tags.isEmpty()) {
       xyzBuilder.startTags();

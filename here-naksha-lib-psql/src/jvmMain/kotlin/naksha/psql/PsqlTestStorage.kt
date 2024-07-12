@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.Platform.Companion.logger
+import naksha.base.Platform.logger
 import naksha.psql.PgUtil.Companion.TEST_URL
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
