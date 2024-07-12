@@ -60,6 +60,8 @@ public class TxSignal extends NakshaFeatureProxy {
   @AvailableSince(NakshaVersion.v2_0_0)
   public static final String PUBLISH_TS = "publishTs";
 
+  public static final String ID = "id";
+
   /**
    * Create a new transaction signal.
    *
