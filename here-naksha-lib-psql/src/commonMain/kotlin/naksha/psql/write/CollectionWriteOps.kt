@@ -33,10 +33,10 @@ internal data class CollectionWriteOps(
      */
     val partition: Int?
 ) {
-    fun getExistingHeadFeatures(session: NakshaSession, minResult: Boolean) =
+    fun getExistingHeadFeatures(session: PgSession, minResult: Boolean) =
         queryForExistingFeatures(session, headCollectionId, idsToModify, emptyIfMinResult(idsToDel, minResult), false)
 
-    fun getExistingDelFeatures(session: NakshaSession, minResult: Boolean) =
+    fun getExistingDelFeatures(session: PgSession, minResult: Boolean) =
         queryForExistingFeatures(
             session,
             "${headCollectionId}\$del",
@@ -46,7 +46,7 @@ internal data class CollectionWriteOps(
         )
 
     fun queryForExistingFeatures(
-        session: NakshaSession,
+        session: PgSession,
         collectionId: String,
         idsSmallFetch: List<String>,
         idsFullFetch: List<String>,

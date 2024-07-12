@@ -103,7 +103,7 @@ actual class Platform {
                 copyPrototypeToPrototype(dataViewTemplate, js("new DataView(new ArrayBuffer(0))").unsafeCast<Any>())
 
                 copyPrototypeToPrototype(symbolTemplate, js("Symbol()").unsafeCast<Any>())
-                copyPrototypeToPrototype(weakRefTemplate, js("new WeakRef()").unsafeCast<Any>())
+                copyPrototypeToPrototype(weakRefTemplate, js("new WeakRef(Object(0))").unsafeCast<Any>())
                 copyPrototypeToPrototype(JsInt64(), js("BigInt(0)").unsafeCast<Any>())
                 // Patch the Int64::class, so that it works as expected (it should only detect BigInt!)
                 val i64Class = Int64::class

@@ -36,7 +36,7 @@ import kotlin.reflect.KFunction0
 internal class NakshaBulkLoaderPlan(
     val collectionId: String,
     val partitionHeadQuoted: String,
-    val session: NakshaSession,
+    val session: PgSession,
     val isHistoryDisabled: Boolean?,
     val autoPurge: Boolean,
     val minResult: Boolean

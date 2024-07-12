@@ -7,6 +7,8 @@ import kotlin.js.JsExport
  * @property appName the application name to be registered against the PostgresQL database, appears in the
  * [pg_stat_activity](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW) table as `name`.
  * @property schema the schema to select as default schema.
+ * @property appId the application identifier of the change, stored in the [naksha.model.Metadata.appId].
+ * @property author the author of the change, stored in the [naksha.model.Metadata.author]. Special rules apply for author handling.
  * @property readOnly if the connection should be read-only.
  * @property connectTimeout the time in milliseconds to wait for the TCP handshake.
  * @property socketTimeout the time in milliseconds to wait for the TCP socket when reading or writing from it.
@@ -20,6 +22,8 @@ import kotlin.js.JsExport
 data class PgOptions(
     val appName: String,
     val schema: String,
+    var appId: String,
+    var author: String? = null,
     val readOnly: Boolean = false,
     val connectTimeout: Int = 60_000,
     val socketTimeout: Int = 60_000,

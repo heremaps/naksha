@@ -3,7 +3,7 @@ package naksha.psql
 import naksha.model.NakshaContext
 
 /**
- * PostgresQL
+ * PostgresQL utility and factory functions. They are implemented differently on every platform.
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class PgUtil {
@@ -50,6 +50,17 @@ expect class PgUtil {
         fun quoteIdent(vararg parts: String): String
 
         /**
+         * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
+         * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions and the rest
+         * addresses the partition, for example for 4 partitions we get `partitionNumber(id) % 4`, what will be a value between 0 and 3.
+         * In PVL8 this is implemented using the native code as `get_byte(digest(id,'md5'),0)`, which is as well what the partitioning
+         * statement will do.
+         * @param featureId the feature id.
+         * @return the partition number of the feature, a value between 0 and 255.
+         */
+        fun partitionNumber(featureId: String): Int
+
+        /**
          * Returns the instance.
          * @param host the PostgresQL server host.
          * @param port the PostgresQL server port.
@@ -60,25 +71,32 @@ expect class PgUtil {
          * @return the instance that represents this host.
          * @throws UnsupportedOperationException if executed in `PLV8` extension.
          */
-        fun getInstance(host: String, port: Int = 5432, database: String, user: String, password: String, readOnly: Boolean = false): PgInstance
+        fun getInstance(
+            host: String,
+            port: Int = 5432,
+            database: String,
+            user: String,
+            password: String,
+            readOnly: Boolean = false
+        ): PgInstance
 
         /**
-         * Returns the instance for the given JDBC URL.
+         * Returns the instance for the given JDBC URL. Not supported by all environments, for example `PLV8` does not support this.
          * @param url the JDBC URL, for example `jdbc:postgresql://foo.com/bar_db?user=postgres&password=password`
-         * @throws UnsupportedOperationException if executed in `PLV8` extension.
+         * @throws UnsupportedOperationException if executed in `PLV8` environment.
          */
         fun getInstance(url: String): PgInstance
 
         /**
-         * Creates a new cluster configuration.
+         * Creates a new cluster configuration. Clusters are not supported by all environments, for example `PLV8` does not support them.
          * @param master the master PostgresQL server.
          * @param replicas the read-replicas; if any.
-         * @throws UnsupportedOperationException if executed in `PLV8` extension.
+         * @throws UnsupportedOperationException if executed in `PLV8` environment.
          */
         fun newCluster(master: PgInstance, vararg replicas: PgInstance): PgCluster
 
         /**
-         * Creates a new PostgresQL storage engine.
+         * Creates a new PostgresQL storage engine. The [PgStorage] is implemented very differently on every platform.
          * @param cluster the PostgresQL server cluster to use.
          * @param options the default options when opening new connections.
          */
@@ -91,8 +109,8 @@ expect class PgUtil {
         fun isPlv8(): Boolean
 
         /**
-         * Returns the [PLV8 extension](https://plv8.github.io/) storage.
-         * @return the [PLV8 extension](https://plv8.github.io/) storage; _null_ if this code is not executed within PostgresQL database.
+         * Returns the [PLV8 storage singleton](https://plv8.github.io/).
+         * @return the [PLV8 storage singleton](https://plv8.github.io/).
          * @throws UnsupportedOperationException if called, when [isPlv8] returns _false_.
          */
         fun getPlv8(): PgStorage

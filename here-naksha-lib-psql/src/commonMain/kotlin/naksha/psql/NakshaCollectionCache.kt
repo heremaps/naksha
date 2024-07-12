@@ -13,7 +13,7 @@ import naksha.model.Row
 internal data class NakshaCollectionCache(
     val storage: PgStorage,
     val row: Row,
-    val reader: NakshaCollection,
+    val reader: JbNakshaCollection,
     var estimatedFeatureCount: Int = -1,
     var estimatedDeletedCount: Int = -1
 )

@@ -4,10 +4,10 @@ import naksha.model.request.ResultRow
 import naksha.model.request.WriteRequest
 import naksha.model.response.SuccessResponse
 import naksha.psql.NKC_TABLE
-import naksha.psql.NakshaSession
+import naksha.psql.PgSession
 
 class WriteRequestExecutor(
-    val session: NakshaSession,
+    val session: PgSession,
     private val modifyCounters: Boolean = true
 ) {
 

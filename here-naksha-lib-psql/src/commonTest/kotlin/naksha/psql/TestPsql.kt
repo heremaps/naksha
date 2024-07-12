@@ -11,5 +11,6 @@ class TestPsql : TestBasics() {
     fun test_feature_insertion() {
         drop_schema()
         init_storage()
+        pgConnection.commit()
     }
 }

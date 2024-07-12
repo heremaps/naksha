@@ -63,6 +63,23 @@ actual class PgUtil {
         }
 
         /**
+         * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
+         * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions and the rest
+         * addresses the partition, for example for 4 partitions we get `partitionNumber(id) % 4`, what will be a value between 0 and 3.
+         * In PVL8 this is implemented using the native code as `get_byte(digest(id,'md5'),0)`, which is as well what the partitioning
+         * statement will do.
+         * @param featureId the feature id.
+         * @return the partition number of the feature, a value between 0 and 255.
+         */
+        @JsStatic
+        actual fun partitionNumber(featureId: String): Int {
+            if (isPlv8()) {
+                return js("plv8.execute(\"SELECT get_byte(digest(\$1,'md5'),0) as i\",[featureId])[0].i").unsafeCast<Int>()
+            }
+            throw UnsupportedOperationException("PgUtil::partitionNumber is not implemented in the browser yet")
+        }
+
+        /**
          * Returns the instance.
          * @param host the PostgresQL server host.
          * @param port the PostgresQL server port.

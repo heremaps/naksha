@@ -22,13 +22,22 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
 
     companion object {
         @JvmField
+        val DEFAULT_APP_NAME = "naksha.psql.testApp"
+
+        @JvmField
+        val DEFAULT_APP_ID = "naksha.psql.testAppId"
+
+        @JvmField
+        val DEFAULT_APP_AUTHOR = "naksha.psql.testAuthor"
+
+        @JvmField
         internal val storage = AtomicReference<PsqlTestStorage?>()
 
         @JvmField
         internal val DEFAULT_SCHEMA = "naksha_psql_test"
 
         @JvmField
-        internal val DEFAULT_OPTIONS = PgOptions("naksha.psql.testApp", "naksha_psql_test")
+        internal val DEFAULT_OPTIONS = PgOptions(DEFAULT_APP_NAME, DEFAULT_SCHEMA, DEFAULT_APP_ID, DEFAULT_APP_AUTHOR)
 
         /**
          * The default schema used when creating a new test-storage.

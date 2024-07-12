@@ -11,7 +11,7 @@ import naksha.jbon.XyzVersion
 import naksha.model.*
 import naksha.model.request.*
 import naksha.model.response.*
-import naksha.psql.PgStatic.SC_TRANSACTIONS
+import naksha.psql.PgStatic.TRANSACTIONS_COL
 import naksha.psql.PgStatic.nakshaCollectionConfig
 import naksha.psql.read.ReadQueryBuilder
 import naksha.psql.write.RowUpdater
@@ -22,15 +22,11 @@ import naksha.psql.write.WriteRequestExecutor
  * A session linked to a PostgresQL database.
  *
  * @constructor Create a new session.
- * @param storage the reference to the storage to which to link this Naksha session. In Java invoked by `PsqlStorage` when the method
- * `newReadSession` or `newWriteSession` is invoked. Within the database, a new Naksha session is added into to global `plv8` object,
- * when the `naksha_start_session` SQL function is executed, which is necessary for all other Naksha SQL functions to work.
- * to the PLV8
- * @param context the context to use for this session.
- * @param options the default options to use, when opening database connections.
+ * @param storage the storage to which this session is bound.
+ * @param options the default options to use, when opening new database connections.
  */
 // @JsExport // <-- when uncommenting this, we get a compiler error!
-class NakshaSession(storage: PgStorage, context: NakshaContext, options: PgOptions) : AbstractNakshaSession(storage, context, options) {
+class PgSession(storage: PgStorage, options: PgOptions) : AbstractSession<Any>(storage, options), PgTx {
 
     // TODO: Add a NakshaCollectionRow, which should hold the reference to a Row of the collection, plus
     //       the JbNakshaCollection, which is a JBON reader of the collection JBON. We need this, because
@@ -99,6 +95,7 @@ class NakshaSession(storage: PgStorage, context: NakshaContext, options: PgOptio
      */
     var errMsg: String? = null
 
+    // TODO: Remove this, creating a new session should be free of cost, we can do this lazy!
     init {
             collectionConfiguration = mutableMapOf()
             collectionConfiguration[NKC_TABLE] = nakshaCollectionConfig
@@ -290,7 +287,7 @@ class NakshaSession(storage: PgStorage, context: NakshaContext, options: PgOptio
      * Uses the current session, does not commit or rollback the current session.
      * @return The current transaction number.
      */
-    fun txn(): Txn {
+    override fun txn(): Txn {
         if (_txn == null) {
             val conn = usePgConnection()
             conn.execute(
@@ -330,6 +327,14 @@ FROM ns, txn_seq;
             }
         }
         return _txn!!
+    }
+
+    override fun uid(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun newGuid(): Luid {
+        TODO("Not yet implemented")
     }
 
     /**
@@ -443,12 +448,12 @@ FROM ns, txn_seq;
         private val transactionWriter: SingleCollectionWriter? = if (writeRequest.ops.any { it.collectionId == NKC_TABLE })
             null
         else
-            SingleCollectionWriter(SC_TRANSACTIONS, this@NakshaSession, modifyCounters = false)
+            SingleCollectionWriter(TRANSACTIONS_COL, this@PgSession, modifyCounters = false)
 
         fun write() {
             transactionWriter?.writeFeatures(
                 WriteRequest(
-                    arrayOf(WriteFeature(SC_TRANSACTIONS, transaction)),
+                    arrayOf(WriteFeature(TRANSACTIONS_COL, transaction)),
                     noResults = true
                 )
             )
@@ -485,16 +490,16 @@ FROM ns, txn_seq;
         return transaction!!
     }
 
-    override fun pgSessionBeforeStart() {
+    override fun txBeforeStart() {
     }
 
-    override fun pgSessionAfterStart(session: PgConnection) {
+    override fun txAfterStart(conn: PgConnection) {
     }
 
-    override fun pgSessionOnCommit(session: PgConnection) {
+    override fun txOnCommit(session: PgConnection) {
     }
 
-    override fun pgSessionOnRollback(session: PgConnection) {
+    override fun txOnRollback(session: PgConnection) {
     }
 
     override fun writeFeature(feature: NakshaFeatureProxy): Response {

@@ -49,7 +49,7 @@ class PgTableInfo(val conn: PgConnection, val storageClass: String?, val partiti
             }
         }
 
-        val featureCompression = if (conn.info().gzipSupported) "EXTERNAL" else DEFAULT_FEATURE_STORAGE
+        val featureCompression = if (conn.info().gzipExtension) "EXTERNAL" else DEFAULT_FEATURE_STORAGE
 
         val builder = StringBuilder()
         builder.append(" (")

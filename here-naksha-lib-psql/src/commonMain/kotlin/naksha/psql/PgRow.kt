@@ -8,12 +8,12 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class NakshaRow : ObjectProxy() {
+class PgRow : ObjectProxy() {
     companion object {
-        private val INT64 = NullableProperty<Any, NakshaRow, Int64>(Int64::class)
-        private val INT = NullableProperty<Any, NakshaRow, Int>(Int::class)
-        private val STRING = NullableProperty<Any, NakshaRow, String>(String::class)
-        private val BYTE_ARRAY = NullableProperty<Any, NakshaRow, ByteArray>(ByteArray::class)
+        private val INT64 = NullableProperty<Any, PgRow, Int64>(Int64::class)
+        private val INT = NullableProperty<Any, PgRow, Int>(Int::class)
+        private val STRING = NullableProperty<Any, PgRow, String>(String::class)
+        private val BYTE_ARRAY = NullableProperty<Any, PgRow, ByteArray>(ByteArray::class)
     }
 
     val created_at by INT64

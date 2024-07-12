@@ -15,7 +15,7 @@ import kotlin.js.JsExport
  * A collection feature as defined in the Naksha architecture. This class will instantly read the well known properties.
  */
 @JsExport
-class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
+class JbNakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     /**
      * The number of partitions. We use partitioning for tables that are expected to store more than ten million features. With eight
      * partitions we can split 10 million features into partitions of each 1.25 million, 100 million into 12.5 million per partition and
@@ -32,7 +32,7 @@ class NakshaCollection(dictManager: IDictManager) : JbMapFeature(dictManager) {
     private var _estimatedDeletedCount: Int64? = null
     private var _storageClass: String? = null
 
-    override fun clear(): NakshaCollection {
+    override fun clear(): JbNakshaCollection {
         super.clear()
         _partitionCount = PARTITION_COUNT_NONE
         _geoIndex = null

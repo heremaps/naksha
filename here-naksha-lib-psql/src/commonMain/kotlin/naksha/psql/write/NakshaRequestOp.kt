@@ -10,7 +10,7 @@ import naksha.model.Row
 import naksha.model.Txn
 import naksha.psql.ERR_UNIQUE_VIOLATION
 import naksha.psql.NakshaException
-import naksha.psql.NakshaSession
+import naksha.psql.PgSession
 import naksha.psql.PgStatic
 
 internal class NakshaRequestOp(
@@ -33,7 +33,7 @@ internal class NakshaRequestOp(
         fun mapToOperations(
             collectionId: String,
             writeRequest: WriteRequest,
-            session: NakshaSession,
+            session: PgSession,
             collectionPartitionCount: Int
         ): CollectionWriteOps {
             var partition: Int = UNDETERMINED_PARTITION
@@ -93,7 +93,7 @@ internal class NakshaRequestOp(
         }
 
 
-        private fun prepareRow(session: NakshaSession, nakWriteOp: Write): Row? {
+        private fun prepareRow(session: PgSession, nakWriteOp: Write): Row? {
             return when (nakWriteOp) {
                 is FeatureOp -> session.storage.featureToRow(nakWriteOp.feature.platformObject())
                 is RowOp -> nakWriteOp.row

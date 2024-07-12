@@ -14,11 +14,6 @@ import kotlin.js.JsExport
 @JsExport
 interface ISession : AutoCloseable {
     /**
-     * The [NakshaContext] bound to this session.
-     */
-    val context: NakshaContext
-
-    /**
      * The socket timeout in milliseconds.
      */
     var socketTimeout: Int

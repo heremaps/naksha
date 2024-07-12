@@ -22,29 +22,29 @@ Actually, the storage engine will split this information apart as show in the fo
 ## Table layout
 All tables used in the Naksha PostgresQL implementation have the same general layout, what simplifies access:
 
-| Column     | Type  | RO  | Modifiers | Description                                                                                       |
-|------------|-------|-----|-----------|---------------------------------------------------------------------------------------------------|
-| created_at | int8  | yes |           | `f.p.xyz->createdAt` - `COALESCE(created_at, updated_at)`                                         |
-| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                                                              |
-| author_ts  | int8  | yes |           | `f.p.xyz->authorTs` - `COALESCE(author_ts, updated_at)`                                           |
-| txn_next   | int8  | yes |           | `f.p.xyz->uuid_next` - **Only in history**.                                                       |
-| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Transaction number.                                                             |
-| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Transaction number of the previous state.                                      |
-| uid        | int4  | yes |           | `f.p.xyz->uuid` - Transaction local unique ID - `COALESCE(uid, 0)`                                |
-| puid       | int4  | yes |           | `f.p.xyz->puuid` - Transaction local unique ID - `COALESCE(puid, 0)`                              |
-| fnva1      | int4  | yes |           | `f.p.xyz->fnva1` - Hash above feature, tags, geometry and geo_ref bytes.                          |
-| version    | int4  | yes |           | `f.p.xyz->version` - `COALESCE(version, 1)`                                                       |
-| geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                                  |
-| flags      | int4  | no  |           | Options like feature, geometry encoding, and the action.                                          |
-| origin     | text  | no  |           | `f.p.xyz->origin` - Origin GUID from which forked; only set if forked.                            |
-| app_id     | text  | yes | NOT NULL  | `f.p.xyz->appId`                                                                                  |
-| author     | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                                    |
-| type       | text  | yes |           | `COALESCE(f.momType, f.type)` - The **type** of the feature, `NULL` means collection.defaultType. |
-| id         | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                                               |
-| feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.                                |
-| tags       | bytea | no  |           | `f.p.xyz->tags` - Tags are labels attached to features to filter features.                        |
-| geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                                                      |
-| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`).                                    |
+| Column     | Type  | RO  | Modifiers | Description                                                                                     |
+|------------|-------|-----|-----------|-------------------------------------------------------------------------------------------------|
+| created_at | int8  | yes |           | `f.p.xyz->createdAt` - `COALESCE(created_at, updated_at)`                                       |
+| updated_at | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                                                            |
+| author_ts  | int8  | yes |           | `f.p.xyz->authorTs` - `COALESCE(author_ts, updated_at)`                                         |
+| txn_next   | int8  | yes |           | `f.p.xyz->uuid_next` - **Only in history**.                                                     |
+| txn        | int8  | yes | NOT NULL  | `f.p.xyz->uuid` - Transaction number.                                                           |
+| ptxn       | int8  | yes |           | `f.p.xyz->puuid` - Transaction number of the previous state.                                    |
+| uid        | int4  | yes |           | `f.p.xyz->uuid` - Transaction local unique ID - `COALESCE(uid, 0)`                              |
+| puid       | int4  | yes |           | `f.p.xyz->puuid` - Transaction local unique ID - `COALESCE(puid, 0)`                            |
+| fnva1      | int4  | yes |           | `f.p.xyz->fnva1` - Hash above feature, tags, geometry and geo_ref bytes.                        |
+| version    | int4  | yes |           | `f.p.xyz->version` - `COALESCE(version, 1)`                                                     |
+| geo_grid   | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.                                |
+| flags      | int4  | no  |           | Options like feature, geometry encoding, and the action.                                        |
+| origin     | text  | no  |           | `f.p.xyz->origin` - Origin GUID from which forked; only set if forked.                          |
+| app_id     | text  | yes | NOT NULL  | `f.p.xyz->appId`                                                                                |
+| author     | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                                  |
+| type       | text  | yes |           | `COALESCE(f.momType, f.type)` - The **type** of the feature, `NULL` for collection.defaultType. |
+| id         | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                                             |
+| tags       | bytea | no  |           | `f.p.xyz->tags` - Tags are labels attached to features to filter features.                      |
+| geo        | bytea | no  |           | `f.geometry` - The geometry of the features.                                                    |
+| geo_ref    | bytea | no  |           | `f.referencePoint` - The reference point (`ST_Centroid(geo)`).                                  |
+| feature    | bytea | no  |           | `f` - The Geo-JSON feature in JBON, except for what was extracted.                              |
 
 In the table above `f` refers to the feature root, `f.p` refers to the content of the `properties` of the feature, and `f.p.xyz` refers to the `@ns:com:here:xyz` key in the `properties` of the feature (which is called XYZ namespace for historical reason).
 

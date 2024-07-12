@@ -11,24 +11,24 @@ import naksha.psql.PgUtil.Companion.quoteIdent
 abstract class TestBasics {
 
     companion object {
+        val storage = PgUtil.getTestStorage()
         /**
          * The default [NakshaContext] to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or
          * [PgStorage.newReadSession].
          */
-        val testContext = NakshaContext.newInstance("naksha.psql.testAppId", "naksha.psql.TestUser", su = true)
-
-        val storage = PgUtil.getTestStorage()
-        private var _nakshaSession: NakshaSession? = null
+        val context = NakshaContext.newInstance(storage.defaultOptions.appId, storage.defaultOptions.author, su = true)
+        val options = storage.defaultOptions.copy(readOnly = false, useMaster = true)
+        private var _pgSession: PgSession? = null
 
         /**
          * The PostgresQL session to be used to testing, late initialized to capture errors.
          */
-        val nakshaSession: NakshaSession
+        val pgSession: PgSession
             get() {
-                var s = _nakshaSession
+                var s = _pgSession
                 if (s == null) {
-                    s = storage.newNakshaSession(testContext, storage.defaultOptions.copy(readOnly = false, useMaster = true))
-                    _nakshaSession = s
+                    s = storage.newSession(options)
+                    _pgSession = s
                 }
                 return s
             }
@@ -36,11 +36,26 @@ abstract class TestBasics {
         const val STORAGE_ID = "naksha_psql_test"
     }
 
+    private var _pgConnection: PgConnection? = null
+    val pgConnection: PgConnection
+        get() {
+            var c = _pgConnection
+            if (c == null) {
+                c = pgSession.usePgConnection()
+                _pgConnection = c
+            }
+            return c
+        }
+
     fun drop_schema() {
-        nakshaSession.usePgConnection().execute("DROP SCHEMA IF EXISTS ${quoteIdent(nakshaSession.options.schema)} CASCADE").close()
+        val conn = storage.newConnection(options) { _, _ -> }
+        conn.use {
+            conn.execute("DROP SCHEMA IF EXISTS ${quoteIdent(options.schema)} CASCADE").close()
+            conn.commit()
+        }
     }
 
     fun init_storage() {
-        storage.initStorage(mapOf(PgUtil.ID to STORAGE_ID, PgUtil.CONTEXT to testContext))
+        storage.initStorage(mapOf(PgUtil.ID to STORAGE_ID, PgUtil.CONTEXT to context))
     }
 }

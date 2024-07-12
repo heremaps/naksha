@@ -4,21 +4,15 @@ import naksha.base.Int64
 import naksha.base.Platform.Companion.logger
 import naksha.base.PlatformMap
 import naksha.base.PlatformUtil
+import naksha.base.fn.Fx2
+import naksha.base.fn.Fx3
 import naksha.jbon.*
 import naksha.model.*
-import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
-import naksha.model.request.WriteFeature
-import naksha.model.request.WriteRequest
-import naksha.model.response.ErrorResponse
-import naksha.model.response.Response
 import naksha.model.Row
-import naksha.model.response.SuccessResponse
 import naksha.psql.PgUtil.Companion.ID
 import naksha.psql.PgUtil.Companion.OPTIONS
 import naksha.psql.PgUtil.Companion.VERSION
-import naksha.psql.PgStatic.SC_DICTIONARIES
-import naksha.psql.PgStatic.SC_INDICES
-import naksha.psql.PgStatic.SC_TRANSACTIONS
+import naksha.psql.PgStatic.quote_ident
 import naksha.psql.PgUtil.Companion.OVERRIDE
 import java.util.concurrent.atomic.AtomicReference
 
@@ -65,7 +59,7 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
         if (this.id.get() != null) return
         synchronized(this) {
             if (this.id.get() != null) return
-            var options = defaultOptions
+            var options = defaultOptions.copy(readOnly = false, useMaster = true)
             if (params != null && params.containsKey(OPTIONS)) {
                 val v = params[OPTIONS]
                 require(v is PgOptions) { "params.${OPTIONS} must be an instance of PgSessionOptions" }
@@ -93,7 +87,7 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
                     else -> throw IllegalArgumentException("params.${VERSION} must be a valid Naksha version string or binary encoding")
                 }
             }
-            val conn = cluster.newConnection(defaultOptions.copy(readOnly = false, useMaster = true))
+            val conn = cluster.newConnection(options)
             conn.use {
                 logger.info("Start init of database {}", conn.jdbc.url)
                 conn.jdbc.autoCommit = false
@@ -234,18 +228,42 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                     autoload = true
                 )
                 conn.commit()
-
-                // Init the common-js code for this session.
-                conn.execute("select es_modules_init();").close()
+                this.id.set(storageId)
 
                 // Note: We know, that we do not need the replacements and code is faster without them!
                 val replacements = mapOf(VERSION to version.toInt64().toString(), "schema" to options.schema, "storage_id" to initId)
                 executeSqlFromResource(conn, "/naksha.sql", replacements as Map<String,String>)
                 PgStatic.createBaseInternalsIfNotExists(conn, options.schema, schemaOid)
-
-                createInternalsIfNotExists()
                 conn.commit()
-                this.id.set(storageId)
+
+//                val nakshaSession = newWriteSession(NakshaContext.currentContext())
+//
+//                val scTransaction = NakshaCollectionProxy(
+//                    id = TRANSACTIONS_COL,
+//                    partitions = PARTITION_COUNT_NONE,
+//                    storageClass = TRANSACTIONS_COL,
+//                    autoPurge = true,
+//                    disableHistory = true
+//                )
+//                nakshaSession.write(WriteRequest(arrayOf(WriteFeature(NKC_TABLE, feature = scTransaction)))).let(verifyCreation)
+//
+//                val scDictionaries = NakshaCollectionProxy(
+//                    id = DICTIONARIES_COL,
+//                    partitions = PARTITION_COUNT_NONE,
+//                    storageClass = DICTIONARIES_COL,
+//                    autoPurge = false,
+//                    disableHistory = false
+//                )
+//                nakshaSession.write(WriteRequest(arrayOf(WriteFeature(NKC_TABLE, feature = scDictionaries)))).let(verifyCreation)
+//
+//                val scIndices = NakshaCollectionProxy(
+//                    id = INDICES_COL,
+//                    partitions = PARTITION_COUNT_NONE,
+//                    storageClass = INDICES_COL,
+//                    autoPurge = false,
+//                    disableHistory = false
+//                )
+//                nakshaSession.write(WriteRequest(arrayOf(WriteFeature(NKC_TABLE, feature = scIndices)))).let(verifyCreation)
             }
         }
     }
@@ -278,22 +296,44 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
         TODO("Not yet implemented")
     }
 
-    override fun newReadSession(context: NakshaContext, useMaster: Boolean): NakshaSession {
-        return NakshaSession(this, context, defaultOptions.copy(readOnly = true, useMaster = useMaster))
+    /**
+     * Returns a new PostgresQL session.
+     * @param options the options to use for the database connection used by this session.
+     * @return the session.
+     */
+    override fun newSession(options: PgOptions): PgSession = PgSession(this, options)
+
+    /**
+     * Opens a new PostgresQL database connection. A connection received through this method will not really close when
+     * [PgConnection.close] is invoked, but the wrapper returns the underlying JDBC connection to the connection pool of the instance.
+     *
+     * If this is the [PLV8 engine](https://plv8.github.io/), then there is only one connection available, so calling this before closing
+     * the previous returned connection will always cause an [IllegalStateException].
+     * @param options the options for the session; defaults to [defaultOptions].
+     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the
+     * connection. It may just do the work or perform arbitrary additional work.
+     * @throws IllegalStateException if all connections are in use.
+     */
+    override fun newConnection(options: PgOptions, init: Fx2<PgConnection, String>?): PgConnection {
+        val conn = cluster.newConnection(options)
+        val quotedSchema = if (options.schema == defaultOptions.schema) this.quotedSchema else quote_ident(options.schema)
+        // TODO: Do we need more initialization work here?
+        val query = "SET SESSION search_path TO $quotedSchema, public, topology;\n"
+        if (init != null) init.call(conn, query) else conn.execute(query).close()
+        return conn
     }
 
-    override fun newWriteSession(context: NakshaContext): NakshaSession {
-        return NakshaSession(this, context, defaultOptions.copy(readOnly = false, useMaster = true))
-    }
 
-    override fun newNakshaSession(context: NakshaContext, options: PgOptions): NakshaSession {
-        return NakshaSession(this, context, defaultOptions.copy(readOnly = false, useMaster = true))
-    }
-
-    override fun newConnection(context: NakshaContext, options: PgOptions): PsqlConnection {
-        // TODO: We need to initialize the connection for the given context!
-        return cluster.newConnection(options)
-    }
+    private var _quotedSchema: String? = null
+    val quotedSchema: String
+        get() {
+            var s = _quotedSchema
+            if (s == null) {
+                s = quote_ident(defaultOptions.schema)
+                _quotedSchema = s
+            }
+            return s
+        }
 
     private var pgInfo: PgInfo? = null
 
@@ -385,40 +425,5 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
         val query = "INSERT INTO es_modules (name, paths, autoload, source) VALUES (\$1, \$2, \$3, $dollar4) " +
                 "ON CONFLICT (name) DO UPDATE SET paths=\$2, autoload=\$3, source=$dollar4"
         conn.execute(query, arrayOf(name, paths, autoload, code)).close()
-    }
-
-
-    private fun createInternalsIfNotExists() {
-        val verifyCreation: (Response) -> Unit = {
-            assert(it is SuccessResponse) { (it as ErrorResponse).reason.message }
-        }
-        val nakshaSession = newWriteSession(NakshaContext.currentContext())
-
-        val scTransaction = NakshaCollectionProxy(
-            id = SC_TRANSACTIONS,
-            partitions = PARTITION_COUNT_NONE,
-            storageClass = SC_TRANSACTIONS,
-            autoPurge = true,
-            disableHistory = true
-        )
-        nakshaSession.write(WriteRequest(arrayOf(WriteFeature(NKC_TABLE, feature = scTransaction)))).let(verifyCreation)
-
-        val scDictionaries = NakshaCollectionProxy(
-            id = SC_DICTIONARIES,
-            partitions = PARTITION_COUNT_NONE,
-            storageClass = SC_DICTIONARIES,
-            autoPurge = false,
-            disableHistory = false
-        )
-        nakshaSession.write(WriteRequest(arrayOf(WriteFeature(NKC_TABLE, feature = scDictionaries)))).let(verifyCreation)
-
-        val scIndices = NakshaCollectionProxy(
-            id = SC_INDICES,
-            partitions = PARTITION_COUNT_NONE,
-            storageClass = SC_INDICES,
-            autoPurge = false,
-            disableHistory = false
-        )
-        nakshaSession.write(WriteRequest(arrayOf(WriteFeature(NKC_TABLE, feature = scIndices)))).let(verifyCreation)
     }
 }

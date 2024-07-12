@@ -11,7 +11,7 @@ import kotlin.js.JsExport
  * @property collectionId The collection-id, if bound to a specific collection (empty when bound to the global dictionary collection).
  */
 @JsExport
-class NakshaDictManager(val session: NakshaSession, val collectionId: String = "") : IDictManager {
+class NakshaDictManager(val session: PgSession, val collectionId: String = "") : IDictManager {
 
     // TODO: If this is not the global dictionary manager (collectionId==""), then query the global manager for ids prefixed with a colon!!
 
