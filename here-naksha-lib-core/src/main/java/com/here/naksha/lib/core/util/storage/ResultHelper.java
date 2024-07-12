@@ -41,8 +41,8 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(SuccessResponse result, Class<R> featureType)
-      throws NoSuchElementException {
+  public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(
+      SuccessResponse result, Class<R> featureType) throws NoSuchElementException {
     return readFeaturesFromResult(result, featureType, 0, Long.MAX_VALUE);
   }
 
@@ -58,23 +58,23 @@ public class ResultHelper {
    * @return list of features extracted from ReadResult
    */
   public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(
-          SuccessResponse result, Class<R> featureType, long offset, long limit) {
+      SuccessResponse result, Class<R> featureType, long offset, long limit) {
     final List<R> features = new ArrayList<>();
-      final Iterator<ResultRow> iterator = result.getRows().iterator();
-      int pos = 0;
-      int cnt = 0;
-      while (iterator.hasNext() && cnt < limit) {
-        if (pos++ < offset) {
-          continue; // skip initial records till we reach to desired offset
-        }
-        try {
-          features.add(featureType.cast(iterator.next().getFeature()));
-          cnt++;
-        } catch (ClassCastException | NullPointerException e) {
-          throw new RuntimeException(e);
-        }
+    final Iterator<ResultRow> iterator = result.getRows().iterator();
+    int pos = 0;
+    int cnt = 0;
+    while (iterator.hasNext() && cnt < limit) {
+      if (pos++ < offset) {
+        continue; // skip initial records till we reach to desired offset
       }
-      return features;
+      try {
+        features.add(featureType.cast(iterator.next().getFeature()));
+        cnt++;
+      } catch (ClassCastException | NullPointerException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return features;
   }
 
   /**
@@ -85,7 +85,8 @@ public class ResultHelper {
    * @param type   the type of feature
    * @return the feature of type T if found, else null
    */
-  public static <T> @Nullable T readFeatureFromResult(final @NotNull SuccessResponse result, final @NotNull Class<T> type) {
+  public static <T> @Nullable T readFeatureFromResult(
+      final @NotNull SuccessResponse result, final @NotNull Class<T> type) {
     final List<ResultRow> rows = result.getRows();
     if (rows.isEmpty()) {
       return null;
@@ -98,11 +99,11 @@ public class ResultHelper {
       return emptyList();
     }
     final Iterator<ResultRow> iterator = result.getRows().iterator();
-      final List<String> ids = new ArrayList<>();
-      while (iterator.hasNext()) {
-        ids.add(iterator.next().getFeature().getId());
-      }
-      return ids;
+    final List<String> ids = new ArrayList<>();
+    while (iterator.hasNext()) {
+      ids.add(iterator.next().getFeature().getId());
+    }
+    return ids;
   }
 
   /**
@@ -118,29 +119,28 @@ public class ResultHelper {
   public static <R extends NakshaFeatureProxy> Map<ExecutedOp, List<R>> readFeaturesGroupedByOp(
       SuccessResponse result, Class<R> featureType, long limit) {
     final Iterator<ResultRow> iterator = result.getRows().iterator();
-      if (!iterator.hasNext()) {
-        throw new NoSuchElementException("Empty SuccessResponse");
+    if (!iterator.hasNext()) {
+      throw new NoSuchElementException("Empty SuccessResponse");
+    }
+    final List<R> insertedFeatures = new ArrayList<>();
+    final List<R> updatedFeatures = new ArrayList<>();
+    final List<R> deletedFeatures = new ArrayList<>();
+    int cnt = 0;
+    while (iterator.hasNext() && cnt++ < limit) {
+      ResultRow row = iterator.next();
+      if (row.getOp().equals(ExecutedOp.CREATED)) {
+        insertedFeatures.add(featureType.cast(row.getFeature()));
+      } else if (row.getOp().equals(ExecutedOp.UPDATED)) {
+        updatedFeatures.add(featureType.cast(row.getFeature()));
+      } else if (row.getOp().equals(ExecutedOp.DELETED)) {
+        deletedFeatures.add(featureType.cast(row.getFeature()));
       }
-      final List<R> insertedFeatures = new ArrayList<>();
-      final List<R> updatedFeatures = new ArrayList<>();
-      final List<R> deletedFeatures = new ArrayList<>();
-      int cnt = 0;
-      while (iterator.hasNext() && cnt++ < limit) {
-        ResultRow row = iterator.next();
-        if (row.getOp().equals(ExecutedOp.CREATED)) {
-          insertedFeatures.add(featureType.cast(row.getFeature()));
-        } else if (row.getOp().equals(ExecutedOp.UPDATED)) {
-          updatedFeatures.add(featureType.cast(row.getFeature()));
-        } else if (row.getOp().equals(ExecutedOp.DELETED)) {
-          deletedFeatures.add(featureType.cast(row.getFeature()));
-        }
-      }
-      final Map<ExecutedOp, List<R>> features = new HashMap<>();
-      features.put(ExecutedOp.CREATED, insertedFeatures);
-      features.put(ExecutedOp.UPDATED, updatedFeatures);
-      features.put(ExecutedOp.DELETED, deletedFeatures);
-      return features;
-
+    }
+    final Map<ExecutedOp, List<R>> features = new HashMap<>();
+    features.put(ExecutedOp.CREATED, insertedFeatures);
+    features.put(ExecutedOp.UPDATED, updatedFeatures);
+    features.put(ExecutedOp.DELETED, deletedFeatures);
+    return features;
   }
 
   /**

@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.here.naksha.lib.core.models.auth.ActionMatrix;
 import com.here.naksha.lib.core.models.auth.ServiceMatrix;
 import io.vertx.core.json.jackson.DatabindCodec;
+import naksha.auth.ServiceUserRights;
+import naksha.auth.UserRightsMatrix;
 import org.jetbrains.annotations.Nullable;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -42,7 +44,7 @@ public class JWTPayload {
 
   public int iat;
   public int exp;
-  public ServiceMatrix urm;
+  public UserRightsMatrix urm;
 
   @JsonIgnore
   private XyzHubActionMatrix __nakshaMatrix; // TODO NakshaActionMatrix
@@ -60,7 +62,7 @@ public class JWTPayload {
     if (urm == null) {
       return null;
     }
-    final ActionMatrix hereActionMatrix = urm.get(URMServiceId.NAKSHA);
+    final ServiceUserRights hereActionMatrix = urm.get(URMServiceId.NAKSHA);
     if (hereActionMatrix == null) {
       return null;
     }

@@ -20,7 +20,6 @@ package com.here.naksha.lib.core.storage;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

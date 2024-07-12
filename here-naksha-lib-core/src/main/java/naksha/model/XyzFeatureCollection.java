@@ -169,7 +169,8 @@ public class XyzFeatureCollection extends Response {
   }
 
   @SuppressWarnings("unused")
-  public @NotNull XyzFeatureCollection withFeatures(final @NotNull List<? extends @NotNull NakshaFeatureProxy> features) {
+  public @NotNull XyzFeatureCollection withFeatures(
+      final @NotNull List<? extends @NotNull NakshaFeatureProxy> features) {
     setFeatures(features);
     return this;
   }

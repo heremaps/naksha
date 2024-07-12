@@ -31,10 +31,12 @@ import java.util.Arrays;
 import java.util.List;
 import naksha.geo.MultiPointCoordinates;
 import naksha.geo.PointCoordinates;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
 import naksha.model.OpType;
 import naksha.model.POp;
-import naksha.model.XyzFeature;
+import naksha.model.request.WriteFeature;
+import naksha.model.request.WriteRequest;
 import naksha.model.request.condition.PRef;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -85,7 +87,7 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends XyzFeature> @NotNull WriteXyzFeatures createFeatureRequest(
+  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteFeature createFeatureRequest(
       final @NotNull String collectionName, final @NotNull FEATURE feature, final boolean silentIfExists) {
     if (silentIfExists) {
       return createFeaturesRequest(collectionName, List.of(feature), IfExists.RETAIN, IfConflict.RETAIN);
@@ -104,7 +106,7 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends XyzFeature> @NotNull WriteXyzFeatures createFeatureRequest(
+  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteFeature createFeatureRequest(
       final @NotNull String collectionName, final @NotNull FEATURE feature) {
     return createFeaturesRequest(collectionName, List.of(feature), IfExists.FAIL, IfConflict.FAIL);
   }
@@ -236,7 +238,7 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends XyzFeature> @NotNull WriteXyzFeatures createFeatureRequest(
+  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteRequest createFeatureRequest(
       final @NotNull String collectionName,
       final @NotNull FEATURE feature,
       final @NotNull IfExists ifExistsAction,
@@ -254,20 +256,20 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static @NotNull WriteXyzFeatures createFeaturesRequest(
+  public static @NotNull WriteRequest createFeaturesRequest(
       final @NotNull String collectionName,
-      final @NotNull List<? extends XyzFeature> featureList,
+      final @NotNull List<? extends NakshaFeatureProxy> featureList,
       final @NotNull IfExists ifExistsAction,
       final @NotNull IfConflict ifConflictAction) {
-    final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
-    for (final XyzFeature feature : featureList) {
+    final WriteFeature request = new WriteFeature(collectionName);
+    for (final NakshaFeatureProxy feature : featureList) {
       assert feature != null;
       request.add(EWriteOp.CREATE, feature);
     }
     return request;
   }
 
-  public static @NotNull WriteXyzCollections createWriteCollectionsRequest(final @NotNull XyzCollection collection) {
+  public static @NotNull WriteFeature createWriteCollectionsRequest(final @NotNull XyzCollection collection) {
     return createWriteCollectionsRequest(List.of(collection));
   }
 

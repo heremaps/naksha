@@ -18,8 +18,6 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.model.ReadRequest;
-
 public class ReadTransactionsForSequence extends ReadRequest {
 
   /**
