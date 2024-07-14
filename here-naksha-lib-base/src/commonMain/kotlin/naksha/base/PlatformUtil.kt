@@ -1,8 +1,9 @@
 package naksha.base
 
-import naksha.base.Platform.random
+import naksha.base.Platform.PlatformCompanion.random
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -11,28 +12,32 @@ import kotlin.jvm.JvmStatic
 @Suppress("OPT_IN_USAGE", "unused")
 @JsExport
 class PlatformUtil {
-    companion object {
+    companion object PlatformUtilCompanion {
         /**
          * The maximal 32-bit floating point number that can be encoded without losing precision.
          */
         @JsStatic
+        @JvmField
         val FLOAT_MAX: Double = Platform.toDoubleRawBits(Int64(0x47efffffe0000000L))
 
         /**
          * The minimal 32-bit floating point number that can be encoded without losing precision.
          */
         @JsStatic
+        @JvmField
         val FLOAT_MIN: Double = Platform.toDoubleRawBits(Int64(0x36a0000000000000L))
 
         /**
          * The default size of a view. This is used at various placed.
          */
         @JsStatic
+        @JvmField
         var defaultDataViewSize = 128
 
         /**
          * An array with the Web-Safe Base-64 characters.
          */
+        @JvmStatic
         private val randomCharacters = CharArray(64) {
             when (it) {
                 in 0..9 -> ('0'.code + it).toChar()

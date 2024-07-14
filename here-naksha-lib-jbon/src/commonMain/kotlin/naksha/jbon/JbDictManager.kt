@@ -8,15 +8,15 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class JbDictManager : IDictManager {
-    private val globalDictionaries = HashMap<String, JbDict>()
+    private val globalDictionaries = HashMap<String, JbDictDecoder>()
 
-    override fun putDictionary(dict: JbDict) {
+    override fun putDictionary(dict: JbDictDecoder) {
         val id = dict.id()
         check(id != null)
         globalDictionaries[id] = dict
     }
 
-    override fun deleteDictionary(dict: JbDict) : Boolean {
+    override fun deleteDictionary(dict: JbDictDecoder) : Boolean {
         val id = dict.id()
         if (id != null && globalDictionaries[id] === dict) {
             globalDictionaries.remove(id)
@@ -25,7 +25,7 @@ class JbDictManager : IDictManager {
         return false
     }
 
-    override fun getDictionary(id: String): JbDict? {
+    override fun getDictionary(id: String): JbDictDecoder? {
         return globalDictionaries[id]
     }
 }

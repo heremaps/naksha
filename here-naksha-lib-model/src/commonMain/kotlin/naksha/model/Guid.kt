@@ -1,17 +1,17 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
 import naksha.base.Int64
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
-
 
 /**
  * The Global Unique Identifier uniquely identifies a feature, world wide. When toString is invoked, it is serialized into a URN. It can be restored from a URN. The format is:
  *
- * urn:here:naksha:guid:{storage-id}:{collection-id}:{feature-id}:{year}:{month}:{day}:{seq}:{uid}
+ * `urn:here:naksha:guid:{storage-id}:{collection-id}:{feature-id}:{year}:{month}:{day}:{seq}:{uid}`
  */
-@OptIn(ExperimentalJsExport::class)
 @JsExport
 class Guid(
     val storageId: String,
@@ -26,11 +26,12 @@ class Guid(
      * @return the GUID in URN form.
      */
     override fun toString(): String {
-        if (!this::_string.isInitialized) _string = "$storageId:$collectionId:$featureId:$luid"
+        if (!this::_string.isInitialized) _string = "urn:here:naksha:guid:${storageId}:${collectionId}:${featureId}:$luid"
         return _string
     }
 
     companion object {
+        @JsStatic
         @JvmStatic
         fun fromString(s: String): Guid {
             val values = s.split(':')

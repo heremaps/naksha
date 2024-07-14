@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.fn.Fx2
-import naksha.base.fn.Fx3
 import naksha.model.IStorage
 import naksha.model.IWriteSession
 import naksha.model.NakshaContext

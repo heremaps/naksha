@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.base
 
@@ -31,8 +32,7 @@ class Timestamp(
     val second: Int,
     val millis: Int
 ) {
-    @OptIn(ExperimentalJsStatic::class)
-    companion object {
+    companion object TimestampCompanion {
         /**
          * Returns the current timestamp.
          * @return The current timestamp.

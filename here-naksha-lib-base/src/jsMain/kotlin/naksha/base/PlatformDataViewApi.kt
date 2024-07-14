@@ -1,10 +1,11 @@
+@file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
+
 package naksha.base
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
+@JsExport
 actual class PlatformDataViewApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
-    @OptIn(ExperimentalJsStatic::class)
-    actual companion object {
+    actual companion object PlatformDataViewApiCompanion {
         @JsStatic
         actual fun dataview_get_byte_array(view: PlatformDataView): ByteArray = js("new Int8Array(view.buffer)").unsafeCast<ByteArray>()
 

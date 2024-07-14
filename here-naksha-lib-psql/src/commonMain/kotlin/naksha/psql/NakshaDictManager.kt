@@ -1,7 +1,7 @@
 package naksha.psql
 
 import naksha.jbon.IDictManager
-import naksha.jbon.JbDict
+import naksha.jbon.JbDictDecoder
 import kotlin.js.JsExport
 
 /**
@@ -15,15 +15,15 @@ class NakshaDictManager(val session: PgSession, val collectionId: String = "") :
 
     // TODO: If this is not the global dictionary manager (collectionId==""), then query the global manager for ids prefixed with a colon!!
 
-    override fun putDictionary(dict: JbDict) {
+    override fun putDictionary(dict: JbDictDecoder) {
         TODO("Not yet implemented")
     }
 
-    override fun deleteDictionary(dict: JbDict): Boolean {
+    override fun deleteDictionary(dict: JbDictDecoder): Boolean {
         TODO("Not yet implemented")
     }
 
-    override fun getDictionary(id: String): JbDict? {
+    override fun getDictionary(id: String): JbDictDecoder? {
         // TODO("Not yet implemented")
         return null
     }

@@ -1,6 +1,6 @@
 package naksha.psql.write
 
-import naksha.base.Platform.currentMillis
+import naksha.base.Platform.PlatformCompanion.currentMillis
 import naksha.model.NakshaCollectionProxy
 import naksha.model.TransactionCollectionInfoProxy
 import naksha.model.request.FeatureOp

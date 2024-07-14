@@ -3,10 +3,10 @@ package naksha.psql
 import naksha.jbon.*
 import kotlinx.datetime.*
 import naksha.base.*
-import naksha.base.Platform.logger
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.IDictManager
-import naksha.jbon.JbMap
-import naksha.jbon.JbMapFeature
+import naksha.jbon.JbMapDecoder
+import naksha.jbon.JbMapFeatureDecoder
 import naksha.jbon.XyzVersion
 import naksha.model.*
 import naksha.model.request.*
@@ -346,8 +346,8 @@ FROM ns, txn_seq;
         return _txts!!
     }
 
-    private lateinit var featureReader: JbMapFeature
-    private lateinit var propertiesReader: JbMap
+    private lateinit var featureReader: JbMapFeatureDecoder
+    private lateinit var propertiesReader: JbMapDecoder
 
     /**
      * Extract the id from the given feature.
@@ -357,7 +357,7 @@ FROM ns, txn_seq;
      * @throws IllegalArgumentException If the no such collection exists.
      */
     fun getFeatureId(feature: ByteArray, collectionId: String? = null): String? {
-        if (!this::featureReader.isInitialized) featureReader = JbMapFeature(globalDictManager)
+        if (!this::featureReader.isInitialized) featureReader = JbMapFeatureDecoder(globalDictManager)
         val reader = featureReader
         reader.dictManager = getDictManager(collectionId)
         reader.mapBytes(feature)
@@ -373,7 +373,7 @@ FROM ns, txn_seq;
      * @throws IllegalArgumentException If no such collection exists.
      */
     fun getFeatureType(feature: ByteArray, collectionId: String? = null): String {
-        if (!this::featureReader.isInitialized) featureReader = JbMapFeature(globalDictManager)
+        if (!this::featureReader.isInitialized) featureReader = JbMapFeatureDecoder(globalDictManager)
         val reader = featureReader
         reader.dictManager = getDictManager(collectionId)
         reader.mapBytes(feature)
@@ -381,7 +381,7 @@ FROM ns, txn_seq;
         if (root.selectKey("properties")) {
             val value = root.value()
             if (value.isMap()) {
-                if (!this::propertiesReader.isInitialized) propertiesReader = JbMap()
+                if (!this::propertiesReader.isInitialized) propertiesReader = JbMapDecoder()
                 val properties = propertiesReader
                 properties.mapReader(value)
                 if (properties.selectKey("featureType")) {

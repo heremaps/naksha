@@ -14,7 +14,7 @@ import kotlin.jvm.JvmStatic
 @Deprecated("Please use new class from lib-model", level = DeprecationLevel.WARNING)
 class NakshaUuid(val storageId: String, val collectionId: String, val year: Int, val month: Int, val day: Int, val seq: Int64, val uid: Int) {
     private lateinit var string : String
-    companion object {
+    companion object NakshaUuidCompanion {
         @JvmStatic
         fun fromString(s:String) : NakshaUuid {
             val values = s.split(':')

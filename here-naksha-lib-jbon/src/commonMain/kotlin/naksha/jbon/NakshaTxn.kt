@@ -16,7 +16,7 @@ import kotlin.js.JsExport
 @JsExport
 @Deprecated("Please use new class from lib-model", level = DeprecationLevel.WARNING)
 class NakshaTxn(val value: Int64) : Comparable<NakshaTxn> {
-    companion object {
+    companion object NakshaTxnCompanion {
         /**
          * The minimum value of the sequence, so just zero.
          */

@@ -3,6 +3,7 @@
 package naksha.jbon
 
 import naksha.base.*
+import naksha.base.Binary.BinaryCompanion.EMPTY_IMMUTABLE
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
@@ -18,7 +19,7 @@ import kotlin.jvm.JvmStatic
 open class JbDecoder {
 
     @OptIn(ExperimentalJsStatic::class)
-    companion object {
+    companion object JbDecoderCompanion {
         /**
          * Returns the human-readable name for the given unit-type.
          * @param unitType The unit-type as returned by [unitType].
@@ -89,7 +90,8 @@ open class JbDecoder {
          * @param end The end-offset.
          * @return The read code point shift left by 3, the lower 3 bit store the amount of byte that have been read or -1, if eof or invalid encoding.
          */
-        internal fun readCodePoint(view: BinaryView, offset: Int, end: Int): Int {
+        @JvmStatic
+        private fun readCodePoint(view: BinaryView, offset: Int, end: Int): Int {
             if (offset >= end) return -1
             var unicode = view.getInt8(offset).toInt() and 0xff
             // One byte encoding.
@@ -116,13 +118,14 @@ open class JbDecoder {
          * @param globalDict The global dictionary to use to decode string-references.
          * @param localDict The local dictionary to use to decode string-references.
          */
+        @JvmStatic
         internal fun readSubstring(
             view: BinaryView,
             offset: Int,
             end: Int,
             sb: StringBuilder,
-            globalDict: JbDict? = null,
-            localDict: JbDict? = null
+            globalDict: JbDictDecoder? = null,
+            localDict: JbDictDecoder? = null
         ) {
             var i = offset
             while (i < end) {
@@ -186,13 +189,14 @@ open class JbDecoder {
 
         /**
          * Convert the given JBON map into a platform native map.
-         * @param jbMap The JBON map.
+         * @param jbMapDecoder The JBON map.
          * @return The platform native map.
          */
-        internal fun readMap(jbMap: JbMap): ObjectProxy {
+        @JvmStatic
+        internal fun readMap(jbMapDecoder: JbMapDecoder): ObjectProxy {
             val imap = ObjectProxy()
-            while (jbMap.next()) {
-                imap[jbMap.key()] = jbMap.value().decodeValue()
+            while (jbMapDecoder.next()) {
+                imap[jbMapDecoder.key()] = jbMapDecoder.value().decodeValue()
             }
             return imap
         }
@@ -202,7 +206,8 @@ open class JbDecoder {
          * @param jbArray The JBON array.
          * @return The platform native array.
          */
-        internal fun readArray(jbArray: JbArray): Array<Any?> {
+        @JvmStatic
+        internal fun readArray(jbArray: JbArrayDecoder): Array<Any?> {
             val arr = Array<Any?>(jbArray.length()) {}
             var i = 0
             while (jbArray.next() && jbArray.ok()) {
@@ -210,29 +215,6 @@ open class JbDecoder {
                 i += 1
             }
             return arr
-        }
-
-        // TODO: KtCompiler
-        @Deprecated("Compiler bug, it does not export the variables from Jbon", level = DeprecationLevel.WARNING)
-        private val EMPTY_BYTE_ARRAY = ByteArray(0)
-        @Deprecated("Compiler bug, it does not export the variables from Jbon", level = DeprecationLevel.WARNING)
-        private val EMPTY_PLATFORM_VIEW = Platform.newDataView(EMPTY_BYTE_ARRAY)
-        @Deprecated("Compiler bug, it does not export the variables from Jbon", level = DeprecationLevel.WARNING)
-        private var EMPTY_IMMUTABLE = object : Binary() {
-            override var byteArray = JbDecoder.EMPTY_BYTE_ARRAY
-                set(value) = throw UnsupportedOperationException()
-            override var view = JbDecoder.EMPTY_PLATFORM_VIEW
-                set(value) = throw UnsupportedOperationException()
-            override var readOnly = false
-                set(value) {
-                    require(!value)
-                    field = value
-                }
-            override var resize = false
-                set(value) {
-                    require(!value)
-                    field = value
-                }
         }
     }
 
@@ -249,12 +231,12 @@ open class JbDecoder {
     /**
      * The local dictionary to be used when decoding text or references.
      */
-    var localDict: JbDict? = null
+    var localDict: JbDictDecoder? = null
 
     /**
      * The global dictionary to be used when decoding text or references.
      */
-    var globalDict: JbDict? = null
+    var globalDict: JbDictDecoder? = null
 
     /**
      * The current offset in the binary, can't become bigger than [end].
@@ -308,7 +290,7 @@ open class JbDecoder {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    open fun mapBinary(binary: BinaryView, pos: Int = binary.pos, end: Int = binary.end, localDict: JbDict? = null, globalDict: JbDict? = null): JbDecoder {
+    open fun mapBinary(binary: BinaryView, pos: Int = binary.pos, end: Int = binary.end, localDict: JbDictDecoder? = null, globalDict: JbDictDecoder? = null): JbDecoder {
         check(pos <= end)
         clear()
         this.binary = binary
@@ -341,7 +323,7 @@ open class JbDecoder {
      * @param localDict The local dictionary to map, if any.
      * @param globalDict The global dictionary to use, if any.
      */
-    open fun mapBytes(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size, localDict: JbDict? = null, globalDict: JbDict? = null) {
+    open fun mapBytes(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size, localDict: JbDictDecoder? = null, globalDict: JbDictDecoder? = null) {
         clear()
         this.binary = Binary(bytes, offset, length)
         this.localDict = localDict
@@ -462,7 +444,7 @@ open class JbDecoder {
         if (pos != _headerSizeOffset) {
             val leadIn = leadIn()
             _headerSizeOffset = pos
-            _headerSize = Companion.unitHeaderSize(leadIn)
+            _headerSize = unitHeaderSize(leadIn)
         }
         return _headerSize
     }
@@ -878,8 +860,8 @@ open class JbDecoder {
     fun isXyz(): Boolean = unitType() == TYPE_XYZ
 
     /**
-     * Read the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [JbMap], [JbArray] or [Array].
-     * @return the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [JbMap], [JbArray] or [Array].
+     * Read the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [JbMapDecoder], [JbArrayDecoder] or [Array].
+     * @return the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [JbMapDecoder], [JbArrayDecoder] or [Array].
      * @throws IllegalStateException If the reader position or the unit-type is invalid.
      */
     fun decodeValue(): Any? {
@@ -898,9 +880,9 @@ open class JbDecoder {
         } else if (isTimestamp()) {
             decodeTimestamp()
         } else if (isMap()) {
-            readMap(JbMap().mapReader(this))
+            readMap(JbMapDecoder().mapReader(this))
         } else if (isArray()) {
-            readArray(JbArray().mapReader(this))
+            readArray(JbArrayDecoder().mapReader(this))
         } else {
             throw IllegalStateException("Not implemented jbon value type")
         }

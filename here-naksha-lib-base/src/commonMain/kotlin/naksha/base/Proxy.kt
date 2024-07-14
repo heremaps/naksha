@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.isNil
+import naksha.base.Platform.PlatformCompanion.isNil
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
@@ -13,10 +13,9 @@ import kotlin.reflect.KClass
 /**
  * The base class for proxy types bound to [PlatformObject], [PlatformList], [PlatformMap], or [PlatformDataViewApi].
  */
-@Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 abstract class Proxy : PlatformObject {
-    companion object {
+    companion object ProxyCompanion {
         @Suppress("UNCHECKED_CAST")
         private fun <T : Any> proxyOf(data: PlatformObject, klass: KClass<out T>): T {
             if (klass.isInstance(data)) return data as T
@@ -36,7 +35,7 @@ abstract class Proxy : PlatformObject {
          * @param init the initializer, when the raw value can't be converted, preferred above [alternative] if given.
          * @return the given raw as given type, the result of [init] or the given [alternative] (in that order).
          */
-        @Suppress("UNCHECKED_CAST")
+        @Suppress("UNCHECKED_CAST", "NON_EXPORTABLE_TYPE")
         @JvmStatic
         @JsStatic
         fun <T : Any> box(raw: Any?, klass: KClass<out T>, alternative: T? = null, init: Fn0<out T?>? = null): T? {
@@ -65,7 +64,7 @@ abstract class Proxy : PlatformObject {
          * @param init the initializer, when the raw value can't be converted, preferred above [alternative] if given.
          * @return the given raw as given type, the result of [init] or the given [alternative] (in that order).
          */
-        @Suppress("UNCHECKED_CAST")
+        @Suppress("UNCHECKED_CAST", "NON_EXPORTABLE_TYPE")
         @JvmStatic
         @JsStatic
         fun <T : Any, K : Any> boxPair(
@@ -171,6 +170,7 @@ abstract class Proxy : PlatformObject {
      * @param klass The proxy class.
      * @return The proxy instance.
      */
+    @Suppress("NON_EXPORTABLE_TYPE")
     fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(platformObject(), klass)
 
     override fun equals(other: Any?): Boolean {

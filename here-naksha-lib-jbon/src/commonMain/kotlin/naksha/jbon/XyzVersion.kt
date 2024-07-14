@@ -7,7 +7,7 @@ import kotlin.js.JsExport
 
 @JsExport
 class XyzVersion(val major: Int, val minor: Int, val revision: Int) : Comparable<XyzVersion> {
-    companion object {
+    companion object XyzVersionCompanion {
         fun fromString(s: String): XyzVersion {
             val majorEnd: Int = s.indexOf('.')
             // "5" -> 5,0,0

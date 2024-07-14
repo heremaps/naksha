@@ -15,8 +15,8 @@ import naksha.geo.XyzPoint;
 import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import naksha.jbon.JbDictManager;
-import naksha.jbon.JbFeature;
-import naksha.jbon.JbMap;
+import naksha.jbon.JbFeatureDecoder;
+import naksha.jbon.JbMapDecoder;
 import naksha.jbon.XyzEncoder;
 import naksha.jbon.XyzOp;
 import naksha.jbon.XyzTags;
@@ -110,8 +110,8 @@ public class XyzFeatureCodecTest extends SessionTest {
     Object[] tags = jbTags.tagsArray();
     assertArrayEquals(requestedTags.toArray(), tags);
 
-    JbFeature jbFeature = new JbFeature(dictManager).mapBytes(codec.getFeatureBytes(), 0, codec.getFeatureBytes().length);
-    Map<String, Object> featureSentToDb = (Map<String, Object>) new JbMap().mapReader(jbFeature.getReader()).toIMap();
+    JbFeatureDecoder jbFeatureDecoder = new JbFeatureDecoder(dictManager).mapBytes(codec.getFeatureBytes(), 0, codec.getFeatureBytes().length);
+    Map<String, Object> featureSentToDb = (Map<String, Object>) new JbMapDecoder().mapReader(jbFeatureDecoder.getReader()).toIMap();
 
     // empty geometry
     assertNull(featureSentToDb.get("geometry"));

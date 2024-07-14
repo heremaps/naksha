@@ -4,6 +4,7 @@ import naksha.base.JsEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
@@ -17,13 +18,15 @@ class GeoType : JsEnum() {
 
     override fun initClass() {}
 
-    companion object {
+    companion object GeoTypeCompanion {
         /**
          * Returns the given value as [GeoType].
          * @param value the value.
          * @return the [GeoType] representing this value.
          */
-        fun of(value: String): GeoType = JsEnum.get(value, GeoType::class)
+        @JvmStatic
+        @JsStatic
+        fun of(value: String): GeoType = get(value, GeoType::class)
 
         @JvmField
         @JsStatic

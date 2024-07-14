@@ -9,7 +9,7 @@ import kotlin.js.JsExport
  */
 @Suppress("DuplicatedCode", "OPT_IN_USAGE")
 @JsExport
-class JbMap : JbEntryArray<JbMap>() {
+class JbMapDecoder : JbEntryArray<JbMapDecoder>() {
 
     override fun parseHeader() {
         check(unitType == TYPE_MAP) { "Mapped structure is no map, but ${JbDecoder.unitTypeName(unitType)}" }

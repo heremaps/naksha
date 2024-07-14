@@ -28,7 +28,7 @@ import java.util.List;
 import naksha.geo.XyzGeometry;
 import naksha.jbon.IMap;
 import naksha.jbon.JbEncoder;
-import naksha.jbon.JbDict;
+import naksha.jbon.JbDictDecoder;
 import naksha.jbon.JbDictManager;
 import naksha.jbon.JvmEnv;
 import naksha.jbon.JvmMap;
@@ -84,7 +84,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
 
     // TODO global dict
     // TODO what about features that need more than 64KB of buffer? newDataView should handle it?
-    JbDict globalDict = null;
+    JbDictDecoder globalDict = null;
     decodeXyzOp(globalDict);
     decodeTags(xyz.getTags(), globalDict);
 
@@ -102,7 +102,7 @@ public class XyzCodec<FEATURE extends XyzFeature, SELF extends XyzCodec<FEATURE,
     return self();
   }
 
-  private void decodeTags(@Nullable List<@NotNull String> tags, @Nullable JbDict globalDict) {
+  private void decodeTags(@Nullable List<@NotNull String> tags, @Nullable JbDictDecoder globalDict) {
     XyzEncoder xyzBuilder = new XyzEncoder(newDataView(512), globalDict);
     tagsBytes = null;
     if (tags != null && !tags.isEmpty()) {

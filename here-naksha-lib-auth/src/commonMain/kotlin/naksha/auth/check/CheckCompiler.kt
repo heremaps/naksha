@@ -3,7 +3,7 @@ package naksha.auth.check
 import naksha.auth.UserRights
 import naksha.base.ListProxy
 import naksha.base.PlatformList
-import naksha.base.PlatformListApi.Companion.array_entries
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_entries
 
 object CheckCompiler {
 

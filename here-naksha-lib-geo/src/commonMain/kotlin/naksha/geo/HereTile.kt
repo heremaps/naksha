@@ -43,7 +43,7 @@ data class HereTile(val intKey: Int) {
     @JvmOverloads
     constructor(latitude: Double, longitude: Double, level: Int = 15) : this(convertLatLngToIntKey(latitude, longitude, level))
 
-    companion object {
+    companion object HereTileCompanion {
         private fun assertIntKey(intKey: Int) {
             if (intKey < 1 || intKey > 1610612735) throw IllegalArgumentException("not a valid HERE Tile intKey: $intKey")
 

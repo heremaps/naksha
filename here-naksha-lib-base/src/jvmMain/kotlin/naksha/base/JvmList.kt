@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.unsafe
+import naksha.base.Platform.PlatformCompanion.unsafe
 import java.util.*
 import kotlin.math.max
 import kotlin.math.round
@@ -14,7 +14,7 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         // even for the price of total inefficiency, when not done! We rather waste huge amount of CPU cycles,
         // then give developers access to class internals, was a foolish world we live in!
         @Suppress("DEPRECATION")
-        internal val arrayList_elementDataOFFSET = unsafe.objectFieldOffset(ArrayList::class.java.getDeclaredField("elementData"))
+        private val arrayList_elementDataOFFSET = unsafe.objectFieldOffset(ArrayList::class.java.getDeclaredField("elementData"))
 
         @Suppress("DEPRECATION")
         internal val arrayList_sizeOFFSET = unsafe.objectFieldOffset(ArrayList::class.java.getDeclaredField("size"))

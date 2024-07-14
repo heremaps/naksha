@@ -10,10 +10,10 @@ import kotlin.jvm.JvmStatic
  * Abstract base class for all XYZ special types.
  */
 @JsExport
-abstract class XyzStruct<SELF : XyzStruct<SELF>> : JbStruct<SELF>() {
+abstract class XyzStruct<SELF : XyzStruct<SELF>> : JbStructDecoder<SELF>() {
 
     @Suppress("OPT_IN_USAGE")
-    companion object {
+    companion object XyzStructCompanion {
         /**
          * Query a human-readable name of a variant for debugging purpose.
          * @param variant The variant.

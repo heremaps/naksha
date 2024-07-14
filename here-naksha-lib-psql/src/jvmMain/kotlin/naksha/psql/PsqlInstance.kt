@@ -1,7 +1,7 @@
 package naksha.psql
 
 import naksha.base.Fnv1a32
-import naksha.base.Platform.logger
+import naksha.base.Platform.PlatformCompanion.logger
 import org.postgresql.PGProperty.*
 import org.postgresql.util.HostSpec
 import java.lang.ref.WeakReference

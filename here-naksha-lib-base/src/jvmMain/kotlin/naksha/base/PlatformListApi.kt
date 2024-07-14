@@ -5,7 +5,7 @@ import kotlin.math.max
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
-    actual companion object {
+    actual companion object PlatformListApiCompanion {
         @JvmStatic
         actual fun array_get_length(array: PlatformList?): Int {
             return (array as JvmList?)?.size ?: 0

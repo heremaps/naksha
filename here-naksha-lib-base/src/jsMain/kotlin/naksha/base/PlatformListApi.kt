@@ -1,10 +1,11 @@
+@file:Suppress("OPT_IN_USAGE", "EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
+
 package naksha.base
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
+@JsExport
 actual class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
-    @Suppress("OPT_IN_USAGE")
-    actual companion object {
+    actual companion object PlatformListApiCompanion {
         @JsStatic
         actual fun array_get_length(array: PlatformList?): Int = array.asDynamic().length.unsafeCast<Int>()
 

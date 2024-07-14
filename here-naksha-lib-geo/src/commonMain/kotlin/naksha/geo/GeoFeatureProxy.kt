@@ -14,7 +14,7 @@ import kotlin.js.JsExport
 @JsExport
 open class GeoFeatureProxy : ObjectProxy() {
 
-    companion object {
+    companion object GeoFeatureProxyCompanion {
         private val ID = NotNullProperty<Any, GeoFeatureProxy, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
         private val TYPE = NotNullProperty<Any, GeoFeatureProxy, String>(String::class) { self, _ -> self.typeDefaultValue() }
         private val BBOX = NullableProperty<Any, GeoFeatureProxy, BoundingBoxProxy>(BoundingBoxProxy::class)

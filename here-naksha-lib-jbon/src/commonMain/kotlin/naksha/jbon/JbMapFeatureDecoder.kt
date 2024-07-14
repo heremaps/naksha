@@ -9,10 +9,10 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class JbMapFeature(dictManager: IDictManager) : JbFeature(dictManager) {
-    private lateinit var _map: JbMap
+open class JbMapFeatureDecoder(dictManager: IDictManager? = null) : JbFeatureDecoder(dictManager) {
+    private lateinit var _map: JbMapDecoder
 
-    override fun clear(): JbMapFeature {
+    override fun clear(): JbMapFeatureDecoder {
         super.clear()
         if (this::_map.isInitialized) _map.clear()
         return this
@@ -21,7 +21,7 @@ open class JbMapFeature(dictManager: IDictManager) : JbFeature(dictManager) {
     override fun parseHeader() {
         super.parseHeader()
         check(reader.isMap()) {"Failed to parse feature payload, expected map, but found ${JbDecoder.unitTypeName(reader.unitType())}"}
-        if (!this::_map.isInitialized) _map = JbMap()
+        if (!this::_map.isInitialized) _map = JbMapDecoder()
         _map.mapReader(reader)
     }
 
@@ -29,5 +29,5 @@ open class JbMapFeature(dictManager: IDictManager) : JbFeature(dictManager) {
      * Returns the reader for the embedded map.
      * @return The map reader of root.
      */
-    open fun root() : JbMap = _map
+    open fun root() : JbMapDecoder = _map
 }

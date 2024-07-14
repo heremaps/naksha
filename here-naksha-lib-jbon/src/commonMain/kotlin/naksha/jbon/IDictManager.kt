@@ -16,19 +16,19 @@ interface IDictManager {
      * @param dict The global dictionary to store.
      * @throws IllegalStateException If a dictionary with the same identifier exists already.
      */
-    fun putDictionary(dict: JbDict)
+    fun putDictionary(dict: JbDictDecoder)
 
     /**
      * Deleted the given dictionary from the manager.
      * @param dict The dictionary to delete.
      * @return _true_ if the dictionary was deleted; _false_ if this dictionary is not stored in the manager.
      */
-    fun deleteDictionary(dict: JbDict) : Boolean
+    fun deleteDictionary(dict: JbDictDecoder) : Boolean
 
     /**
      * Retrieve the dictionary with the given identifier.
      * @param id The dictionary identifier to lookup.
      * @return The global dictionary with the given identifier; _null_ when no such dictionary exists.
      */
-    fun getDictionary(id: String): JbDict?
+    fun getDictionary(id: String): JbDictDecoder?
 }
