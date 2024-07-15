@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference
 @Suppress("MemberVisibilityCanBePrivate")
 class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cluster, defaultOptions.get()) {
 
-    private data class DockerContainerInfo(
+    internal data class DockerContainerInfo(
         val container: GenericContainer<*>,
         val psqlInstance: PsqlInstance,
         val shutdownThread: Thread
@@ -51,7 +51,7 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
         @JvmField
         val defaultOptions = AtomicReference(DEFAULT_OPTIONS)
 
-        private val dockerContainerInfo = AtomicReference<DockerContainerInfo?>()
+        internal val dockerContainerInfo = AtomicReference<DockerContainerInfo?>()
 
         private fun architecture(): String {
             val os = System.getProperty("os.name")

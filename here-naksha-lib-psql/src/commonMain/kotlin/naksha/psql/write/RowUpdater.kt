@@ -1,12 +1,12 @@
 package naksha.psql.write
 
 import naksha.base.Fnv1a32
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.model.*
 import naksha.psql.PgPlan
 import naksha.psql.PgSession
 import naksha.psql.PgStatic.TRANSACTIONS_COL
+import naksha.psql.PsqlRow
 
 internal class RowUpdater(val session: PgSession) {
     private lateinit var gridPlan: PgPlan
@@ -17,15 +17,14 @@ internal class RowUpdater(val session: PgSession) {
      * @param NEW The row in which to update the XYZ namespace columns.
      * @return The new XYZ namespace for this feature.
      */
-    internal fun xyzInsert(collectionId: String, NEW: Row) {
-        TODO("We need to adjust this, because Row is immutable now!")
+    internal fun xyzInsert(collectionId: String, NEW: PsqlRow) {
         val txn = session.txn()
         val txnTs = session.txnTs()
 
-        var geoGrid: Int? = NEW.meta?.geoGrid
+        var geoGrid: Int? = NEW.geoGrid
 
         // FIXME: default flags should be taken from collectionConfig
-        val flags = NEW.meta?.flags ?: Flags()
+        val flags = NEW.flags ?: Flags()
 
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
@@ -39,77 +38,64 @@ internal class RowUpdater(val session: PgSession) {
             session.nextUid()
         }
 
-//        val newMeta = Metadata(
-//            id = NEW.id,
-//            txn = txn.value,
-//            txnNext = null,
-//            ptxn = null,
-//            puid = 0,
-//            geoGrid = geoGrid,
-//            version = null, // saving space null means 1
-//            uid = uid,
-//            createdAt = null, // saving space - it is same as update_at at creation,
-//            updatedAt = txnTs,
-//            author = session.context.author,
-//            authorTs = null, // saving space - only apps are allowed to create features
-//            appId = session.context.appId,
-//            flags = flags,
-//            fnva1 = rowHash(NEW),
-//            origin = NEW.meta?.origin, //TODO FIXME
-//            type = NEW.meta?.type //TODO FIXME
-//        )
+        NEW.txn = txn.value
+        NEW.txnNext = null
+        NEW.ptxn = null
+        NEW.puid = 0
+        NEW.geoGrid = geoGrid
+        NEW.version = null // saving space null means 1
+        NEW.uid = uid
+        NEW.createdAt = null // saving space - it is same as update_at at creation,
+        NEW.updatedAt = txnTs
+        NEW.author = session.options.author
+        NEW.authorTs = null // saving space - only apps are allowed to create features
+        NEW.appId = session.options.appId
+        NEW.flags = flags
+        NEW.fnva1 = rowHash(NEW)
     }
 
     /**
      *  Prepares XyzNamespace columns for head table.
      */
-    internal fun xyzUpdateHead(collectionId: String, NEW: Row, OLD: Row) {
-        TODO("We need to adjust this, because Row is immutable now!")
+    internal fun xyzUpdateHead(collectionId: String, NEW: PsqlRow, OLD: PsqlRow) {
         xyzInsert(collectionId, NEW)
-        val oldMeta = OLD.meta
-        require(oldMeta != null)
-        val newMeta = NEW.meta
         val updatedAt = Platform.currentMillis()
-        //val createdAt = oldMeta.createdAt ?:
-        val author: String?
-        val authorTs: Int64?
         if (session.options.author == null) {
-            author = oldMeta?.author
-            authorTs = oldMeta?.authorTs
+            NEW.author = OLD.author
+            NEW.authorTs = OLD.authorTs
         } else {
-            author = session.options.author
-            authorTs = newMeta!!.updatedAt
+            NEW.author = session.options.author
+            NEW.authorTs = NEW.updatedAt
         }
-        val version: Int = (oldMeta?.version ?: 0) + 1
-        val ptxn = oldMeta?.txn
-        val puid = oldMeta?.uid
-//        if (collectionId == SC_TRANSACTIONS) {
-//            newMeta.updatedAt =
-//        }
+        NEW.version = (OLD.version ?: 0) + 1
+        NEW.ptxn = OLD.txn
+        NEW.puid = OLD.uid
+        if (collectionId == TRANSACTIONS_COL) {
+            NEW.updatedAt = updatedAt
+        }
     }
 
     /**
      * Prepares row before putting into $del table.
      */
-    internal fun xyzDel(OLD: Metadata) {
-        TODO("We need to adjust this, because Row is immutable now!")
-//        val txn = session.txn()
-//        val txnTs = session.txnTs()
-//        OLD.txn = txn.value
-//        OLD.txnNext = txn.value
-//        OLD.action = ACTION_DELETE.toShort()
-//        OLD.author = session.context.author ?: session.context.appId
-//        if (session.context.author != null) {
-//            OLD.authorTs = txnTs
-//        }
-//        if (OLD.createdAt != null) {
-//            OLD.createdAt = OLD.updatedAt
-//        }
-//        OLD.updatedAt = txnTs
-//        OLD.appId = session.context.appId
-//        OLD.uid = session.nextUid()
-//        val currentVersion: Int = OLD.version ?: 1
-//        OLD.version = currentVersion + 1
+    internal fun xyzDel(OLD: PsqlRow) {
+        val txn = session.txn()
+        val txnTs = session.txnTs()
+        OLD.txn = txn.value
+        OLD.txnNext = txn.value
+        OLD.flags = Flags(OLD.flags!!).action(ActionEnum.DELETED)
+        OLD.author = session.options.author ?: session.options.appId
+        if (session.options.author != null) {
+            OLD.authorTs = txnTs
+        }
+        if (OLD.createdAt != null) {
+            OLD.createdAt = OLD.updatedAt
+        }
+        OLD.updatedAt = txnTs
+        OLD.appId = session.options.appId
+        OLD.uid = session.nextUid()
+        val currentVersion: Int = OLD.version ?: 1
+        OLD.version = currentVersion + 1
     }
 
     /**
@@ -143,7 +129,7 @@ internal class RowUpdater(val session: PgSession) {
      * @param row
      * @return hash
      */
-    internal fun rowHash(row: Row): Int {
+    internal fun rowHash(row: PsqlRow): Int {
         var totalHash = Fnv1a32.hashByteArray(row.feature)
         totalHash = Fnv1a32.hashByteArray(row.tags, totalHash)
         totalHash = Fnv1a32.hashByteArray(row.geo, totalHash)
