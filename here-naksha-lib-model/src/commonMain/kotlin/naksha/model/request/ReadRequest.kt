@@ -1,51 +1,27 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model.request
 
-import naksha.model.IReadRowFilter
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
-@OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class ReadRequest(
+abstract class ReadRequest<SELF:Request<SELF>>: Request<SELF>() {
+
     /**
      * Limit of single response.
+     *
      * The result might have `handle` to fetch more rows.
      */
-    val limit: Int = DEFAULT_LIMIT,
-    /**
-     * @see Request.noFeature
-     * default: false
-     */
-    noFeature: Boolean = false,
-    /**
-     * @see Request.noGeometry
-     * default: false
-     */
-    noGeometry: Boolean = false,
-    /**
-     * @see Request.noGeoRef
-     * default: false
-     */
-    noGeoRef: Boolean = false,
-    /**
-     * @see Request.noMeta
-     * default: false
-     */
-    noMeta: Boolean = false,
-    /**
-     * @see Request.noTags
-     * default: false
-     */
-    noTags: Boolean = false,
-    /**
-     * @see Request.resultFilter
-     * default: empty
-     */
-    resultFilter: Array<IReadRowFilter> = emptyArray()
+    @JvmField
+    var limit: Int = DEFAULT_LIMIT
 
-) : Request(noFeature, noGeometry, noGeoRef, noMeta, noTags, resultFilter) {
+    fun withLimit(limit: Int): ReadRequest<SELF> {
+        this.limit = limit
+        return this
+    }
 
-    companion object {
-        var DEFAULT_LIMIT = 100_000
+    companion object ReadRequestCompanion {
+        const val DEFAULT_LIMIT = 100_000
     }
 }

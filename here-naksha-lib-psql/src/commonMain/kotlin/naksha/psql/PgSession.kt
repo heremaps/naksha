@@ -452,10 +452,7 @@ FROM ns, txn_seq;
 
         fun write() {
             transactionWriter?.writeFeatures(
-                WriteRequest(
-                    arrayOf(WriteFeature(TRANSACTIONS_COL, transaction)),
-                    noResults = true
-                )
+                WriteRequest().add(WriteFeature(TRANSACTIONS_COL, transaction)).withNoResults()
             )
         }
     }
@@ -506,7 +503,7 @@ FROM ns, txn_seq;
         TODO("Not yet implemented")
     }
 
-    override fun execute(request: Request): Response {
+    override fun execute(request: Request<*>): Response {
         when (request) {
             is ReadRequest -> {
                 val conn = usePgConnection()
@@ -525,7 +522,7 @@ FROM ns, txn_seq;
         }
     }
 
-    override fun executeParallel(request: Request): Response {
+    override fun executeParallel(request: Request<*>): Response {
         TODO("Not yet implemented")
     }
 

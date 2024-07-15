@@ -1,3 +1,5 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
 import naksha.base.Int64
@@ -15,7 +17,6 @@ import kotlin.js.JsExport
  *
  * The storage may or may not support dictionaries, but in any case it needs to return a dictionary manager (even, if this is only an immutable one with no content).
  */
-@OptIn(ExperimentalJsExport::class)
 @JsExport
 interface IStorage : AutoCloseable {
 

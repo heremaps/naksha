@@ -11,7 +11,4 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class Notification(
-    val storageId: String
-): Request() {
-}
+abstract class Notification<SELF : Notification<SELF>>(var storageId: String): Request<SELF>()

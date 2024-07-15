@@ -2,58 +2,35 @@
 
 package naksha.model.request
 
-import naksha.model.IReadRowFilter
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
  * Read collections request. Designed to return information from `naksha~collections`.
  */
 @JsExport
-class ReadCollections(
+class ReadCollections : ReadRequest<ReadCollections>() {
     /**
      * Ids of collections to search.
      */
-    val ids: Array<String> = emptyArray(),
+    @JvmField
+    var ids: MutableList<String> = mutableListOf()
+
+    fun addId(id: String): ReadCollections {
+        this.ids.add(id)
+        return this
+    }
+
     /**
      * true - includes deleted features in search.
      * Default: false
      */
-    val queryDeleted: Boolean = false,
-    /**
-     * @see ReadRequest.limit
-     * default: DEFAULT_LIMIT
-     */
-    limit: Int = DEFAULT_LIMIT,
-    /**
-     * @see Request.noFeature
-     * default: false
-     */
-    noFeature: Boolean = false,
-    /**
-     * @see Request.noGeometry
-     * default: false
-     */
-    noGeometry: Boolean = false,
-    /**
-     * @see Request.noGeoRef
-     * default: false
-     */
-    noGeoRef: Boolean = false,
-    /**
-     * @see Request.noMeta
-     * default: false
-     */
-    noMeta: Boolean = false,
-    /**
-     * @see Request.noTags
-     * default: false
-     */
-    noTags: Boolean = false,
-    /**
-     * @see Request.resultFilter
-     * default: empty
-     */
-    resultFilter: Array<IReadRowFilter> = emptyArray()
-) : ReadRequest(limit, noFeature, noGeometry, noGeoRef, noMeta, noTags, resultFilter) {
+    @JvmField
+    var queryDeleted: Boolean = false
+
+    fun withQueryDeleted(): ReadCollections {
+        this.queryDeleted = true
+        return this
+    }
 }

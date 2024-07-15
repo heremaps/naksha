@@ -9,13 +9,9 @@ import kotlin.jvm.JvmStatic
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class Response(
-    val type: String
-) {
+abstract class Response {
+    /**
+     * The response size, will be zero for empty result-sets and for [ErrorResponse].
+     */
     abstract fun size(): Int
-
-    companion object {
-        const val ERROR_TYPE = "ERROR"
-        const val SUCCESS_TYPE = "SUCCESS"
-    }
 }

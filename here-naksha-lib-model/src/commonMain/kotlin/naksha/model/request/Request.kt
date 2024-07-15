@@ -1,35 +1,72 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model.request
 
-import naksha.model.IReadRowFilter
-import kotlin.js.ExperimentalJsExport
+import naksha.base.fn.Fn1
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
  * Base request class.
  */
-@OptIn(ExperimentalJsExport::class)
 @JsExport
-abstract class Request(
+abstract class Request<SELF : Request<SELF>> {
+
     /**
      * true - no feature body will be returned in the response, nor as [ByteArray], nor as feature object.
      */
-    val noFeature: Boolean = false,
+    @JvmField
+    var noFeature: Boolean = false
+
+    fun withNoFeature(): Request<SELF> {
+        this.noFeature = true
+        return this
+    }
+
     /**
      *  true - no geometry will be returned in the response, nor as [ByteArray], nor in `feature.geo attribute`.
      */
-    val noGeometry: Boolean = false,
+    @JvmField
+    var noGeometry: Boolean = false
+
+    fun withNoGeometry(): Request<SELF> {
+        this.noGeometry = true
+        return this
+    }
+
     /**
      *  true - no geometry reference point will be returned in the response.
      */
-    val noGeoRef: Boolean = false,
+    @JvmField
+    var noGeoRef: Boolean = false
+
+    fun withNoGeoRef(): Request<SELF> {
+        this.noGeoRef = true
+        return this
+    }
+
     /**
      * true - no metadata will be returned in the response, nor as [ByteArray], nor in `feature.properties.xyz` attribute.
      */
-    val noMeta: Boolean = false,
+    @JvmField
+    var noMeta: Boolean = false
+
+    fun withNoMeta(): Request<SELF> {
+        this.noMeta = true
+        return this
+    }
+
     /**
      * true - no tags will be returned in the response, nor as [ByteArray], nor in `feature.properties.xyz.tags` attribute.
      */
-    val noTags: Boolean = false,
+    @JvmField
+    var noTags: Boolean = false
+
+    fun withNoTags(): Request<SELF> {
+        this.noTags = true
+        return this
+    }
+
     /**
      * The resultFilter is a list of lambdas, that are invoked by the storage for every row that should be added into the results of the
      * response. The method can inspect the row and should return either the unmodified row, or a modified version to be added to the
@@ -51,5 +88,26 @@ abstract class Request(
      * Beware: If the filters ([noFeature], [noGeometry], [noGeoRef], [noTags] or [noMeta]) are set, these values are not even read from
      * the database and therefore the result-filters will not find these values either!
      */
-    val resultFilter: Array<IReadRowFilter> = emptyArray()
-)
+    @JvmField
+    var resultFilter: MutableList<Fn1<ResultRow, ResultRow>> = mutableListOf()
+
+    fun addResultFilter(filter: Fn1<ResultRow, ResultRow>): Request<SELF> {
+        this.resultFilter.add(filter)
+        return this
+    }
+
+    /**
+     * Copy all properties of this request into the given target and return the target.
+     * @param copy the target to receive the copy.
+     * @return the given copy target.
+     */
+    open fun copyTo(copy: SELF): SELF {
+        copy.noFeature = this.noFeature
+        copy.noGeometry = this.noGeometry
+        copy.noGeoRef = this.noGeoRef
+        copy.noMeta = this.noMeta
+        copy.noTags = this.noTags
+        copy.resultFilter = this.resultFilter.toMutableList()
+        return copy
+    }
+}

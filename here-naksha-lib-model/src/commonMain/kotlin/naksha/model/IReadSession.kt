@@ -1,3 +1,5 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
 import naksha.model.response.Response
@@ -7,17 +9,15 @@ import kotlin.js.JsExport
 /**
  * A read-only session.
  */
-@Suppress("OPT_IN_USAGE")
 @JsExport
 interface IReadSession: ISession {
 
     /**
-     * Execute the given [Request]. The read-only session will only be able to execute
-     * [ReadRequest]'s.
+     * Execute the given [Request]. The read-only session will only be able to execute [ReadRequest]'s.
      * @param request the request to execute.
      * @return the response.
      */
-    fun execute(request: Request): Response
+    fun execute(request: Request<*>): Response
 
     /**
      * Execute the given [Request] in parallel, if possible. For [WriteRequest] this method is performing a form of auto-commit. This
@@ -28,7 +28,7 @@ interface IReadSession: ISession {
      * successfully, committing may fail partially, for example when only one connection aborts or the server crashes in the middle of
      * the operation, while having committed already some chunks, with others not yet done.
      */
-    fun executeParallel(request: Request): Response
+    fun executeParallel(request: Request<*>): Response
 
     /**
      * Helper method to quickly read a single feature from the storage.

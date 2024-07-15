@@ -7,6 +7,7 @@ import naksha.base.PlatformUtil
 import naksha.base.fn.Fx2
 import naksha.jbon.*
 import naksha.model.*
+import naksha.model.NakshaErrorCode.StorageErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.Row
 import naksha.psql.PgUtil.PgUtilCompanion.ID
 import naksha.psql.PgUtil.PgUtilCompanion.OPTIONS
@@ -134,7 +135,7 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 }
                 val storageId: String = if (existingStorageId != null) {
                     if (initId != null && initId != existingStorageId) {
-                        throw StorageException(err=StorageError.STORAGE_ID_MISMATCH, msg="Expect $initId, but found $existingStorageId")
+                        throw StorageException(NakshaError(STORAGE_ID_MISMATCH, "Expect $initId, but found $existingStorageId"))
                     }
                     existingStorageId
                 } else initId ?: PlatformUtil.randomString()
