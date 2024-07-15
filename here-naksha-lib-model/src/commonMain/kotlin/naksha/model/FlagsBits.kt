@@ -1,3 +1,5 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
 import kotlin.js.JsExport
@@ -17,11 +19,9 @@ import kotlin.js.JsStatic
  * - ---
  * - Reserved - bits: 16-31
 */
-@Suppress("OPT_IN_USAGE")
 @JsExport
 open class FlagsBits {
-    @Suppress("OPT_IN_USAGE")
-    companion object {
+    companion object FlagsBitsCompanion {
         // --------------------------------------< Geometry >-------------------------------------
 
         /**

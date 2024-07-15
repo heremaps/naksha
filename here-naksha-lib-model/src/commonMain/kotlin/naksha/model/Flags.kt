@@ -2,17 +2,17 @@
 
 package naksha.model
 
-import naksha.model.FlagsBits.Companion.ACTION_CLEAR
-import naksha.model.FlagsBits.Companion.ACTION_MASK
-import naksha.model.FlagsBits.Companion.FEATURE_CLEAR
-import naksha.model.FlagsBits.Companion.FEATURE_GZIP_BIT
-import naksha.model.FlagsBits.Companion.FEATURE_MASK
-import naksha.model.FlagsBits.Companion.GEO_CLEAR
-import naksha.model.FlagsBits.Companion.GEO_GZIP_BIT
-import naksha.model.FlagsBits.Companion.GEO_MASK
-import naksha.model.FlagsBits.Companion.TAGS_CLEAR
-import naksha.model.FlagsBits.Companion.TAGS_GZIP_BIT
-import naksha.model.FlagsBits.Companion.TAGS_MASK
+import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_CLEAR
+import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_MASK
+import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_CLEAR
+import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_GZIP_BIT
+import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_MASK
+import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_CLEAR
+import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_GZIP_BIT
+import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_MASK
+import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_CLEAR
+import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_GZIP_BIT
+import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
 
 /**
  * Type alias for the flags encoding in the storage, it stores how the binaries are encoded:

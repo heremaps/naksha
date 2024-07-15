@@ -8,11 +8,11 @@ import naksha.base.fn.Fx2
 import naksha.jbon.*
 import naksha.model.*
 import naksha.model.Row
-import naksha.psql.PgUtil.ID
-import naksha.psql.PgUtil.OPTIONS
-import naksha.psql.PgUtil.VERSION
+import naksha.psql.PgUtil.PgUtilCompanion.ID
+import naksha.psql.PgUtil.PgUtilCompanion.OPTIONS
+import naksha.psql.PgUtil.PgUtilCompanion.VERSION
 import naksha.psql.PgStatic.quote_ident
-import naksha.psql.PgUtil.OVERRIDE
+import naksha.psql.PgUtil.PgUtilCompanion.OVERRIDE
 import java.util.concurrent.atomic.AtomicReference
 
 /**

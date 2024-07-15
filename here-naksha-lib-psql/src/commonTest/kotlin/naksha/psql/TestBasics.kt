@@ -1,7 +1,7 @@
 package naksha.psql
 
 import naksha.model.NakshaContext
-import naksha.psql.PgUtil.quoteIdent
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 
 /**
  * Abstract class for all tests using connection to db.
