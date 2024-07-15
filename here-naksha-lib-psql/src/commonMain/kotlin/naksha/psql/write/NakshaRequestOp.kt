@@ -6,16 +6,16 @@ import naksha.model.request.*
 import naksha.model.request.Write.Companion.XYZ_OP_CREATE
 import naksha.model.request.Write.Companion.XYZ_OP_DELETE
 import naksha.model.request.Write.Companion.XYZ_OP_PURGE
-import naksha.model.Row
 import naksha.model.Txn
 import naksha.psql.ERR_UNIQUE_VIOLATION
 import naksha.psql.NakshaException
 import naksha.psql.PgSession
 import naksha.psql.PgStatic
+import naksha.psql.*
 
 internal class NakshaRequestOp(
     val reqWrite: Write,
-    val dbRow: Row?,
+    val dbRow: PsqlRow?,
     val atomicUUID: String?,
     val collectionId: String,
     val collectionPartitionCount: Int
@@ -93,10 +93,10 @@ internal class NakshaRequestOp(
         }
 
 
-        private fun prepareRow(session: PgSession, nakWriteOp: Write): Row? {
+        private fun prepareRow(session: PgSession, nakWriteOp: Write): PsqlRow? {
             return when (nakWriteOp) {
-                is FeatureOp -> session.storage.featureToRow(nakWriteOp.feature.platformObject())
-                is RowOp -> nakWriteOp.row
+                is FeatureOp -> PsqlRow.fromRow(session.storage.featureToRow(nakWriteOp.feature.platformObject()))
+                is RowOp -> PsqlRow.fromRow(nakWriteOp.row)
                 else -> null
             }
         }

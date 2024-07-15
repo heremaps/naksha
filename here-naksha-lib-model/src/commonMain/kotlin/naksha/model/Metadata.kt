@@ -27,4 +27,7 @@ data class Metadata(
     val author: String?,
     val type: String?,
     val id: String
-)
+) {
+
+    fun getLuid() = Luid(Txn(txn), uid)
+}
