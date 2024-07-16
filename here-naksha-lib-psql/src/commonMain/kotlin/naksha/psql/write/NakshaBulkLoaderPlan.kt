@@ -8,7 +8,6 @@ import naksha.model.XYZ_EXEC_DELETED
 import naksha.model.XYZ_EXEC_PURGED
 import naksha.model.XYZ_EXEC_RETAINED
 import naksha.model.request.ResultRow
-import naksha.model.Metadata
 import naksha.model.Row
 import naksha.model.response.ExecutedOp
 import naksha.psql.*
@@ -60,6 +59,10 @@ internal class NakshaBulkLoaderPlan(
     internal val deleteHeadBulkParams = mutableListOf<Array<Any?>>()
     internal val copyHeadToHstBulkParams = mutableListOf<Array<Any?>>()
 
+    /**
+     * Returns [PgPlan] for inserts to head table.
+     * Every execution of [insertHeadPlan] creates new plan.
+     */
     private fun insertHeadPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """INSERT INTO $partitionHeadQuoted (
@@ -77,6 +80,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] for updates of head table.
+     * Every execution of [updateHeadPlan] creates new plan.
+     */
     private fun updateHeadPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """
@@ -87,6 +94,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] for deletes of head table.
+     * Every execution of [deleteHeadPlan] creates new plan.
+     */
     private fun deleteHeadPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """
@@ -97,6 +108,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] for inserts to del table.
+     * Every execution of [insertDelPlan] creates new plan.
+     */
     private fun insertDelPlan(): PgPlan {
         // ptxn + puid = txn + uid (as we generate new state in _del)
         return session.usePgConnection().prepare(
@@ -111,6 +126,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] to copy from del to hst table.
+     * Every execution of [insertDelToHstPlan] creates new plan.
+     */
     private fun insertDelToHstPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """
@@ -124,6 +143,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] to copy from head to hst table.
+     * Every execution of [copyHeadToHstPlan] creates new plan.
+     */
     private fun copyHeadToHstPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """
@@ -289,8 +312,14 @@ internal class NakshaBulkLoaderPlan(
         }
     }
 
-    private fun checkStateForAtomicOp(reqUuid: String?, currentHead: Row?) {
-        if (reqUuid != null) {
+    /**
+     * Verifies if current request row operation has to be atomic and if it is valid against row in db.
+     *
+     * @param reqGuid - guid given in request, might be null
+     * @param currentHead - current row in DB head table
+     */
+    private fun checkStateForAtomicOp(reqGuid: String?, currentHead: Row?) {
+        if (reqGuid != null) {
             check(currentHead != null)
             val headUuid =
                 Guid(
@@ -299,11 +328,11 @@ internal class NakshaBulkLoaderPlan(
                     currentHead.id,
                     Luid(Txn(currentHead.meta!!.txn), currentHead.meta!!.uid)
                 ).toString()
-            if (reqUuid != headUuid) {
+            if (reqGuid != headUuid) {
                 throw NakshaException.forId(
                     ERR_CHECK_VIOLATION,
-                    "Atomic operation for $reqUuid is impossible, expected state: $reqUuid, actual: $headUuid",
-                    reqUuid
+                    "Atomic operation for $reqGuid is impossible, expected state: $reqGuid, actual: $headUuid",
+                    reqGuid
                 )
             }
         }
