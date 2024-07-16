@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.models;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.AbstractEventTask;
@@ -30,7 +29,6 @@ import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * A feature that holds the configuration for an {@link EventPipeline}. Logically this is a feature able to process events. Normally these
@@ -53,24 +51,6 @@ public abstract class EventFeature extends NakshaFeatureProxy {
   public EventFeature(@NotNull String id, @NotNull List<@NotNull String> connectorIds) {
     super(id);
     this.connectorIds = connectorIds;
-  }
-
-  /**
-   * Create a new empty pipeline.
-   *
-   * @param id           The identifier of this component.
-   * @param connectorIds The list of connector identifier that form the event-pipeline.
-   * @param packages     The packages this feature is part of.
-   */
-  @JsonCreator
-  @AvailableSince(NakshaVersion.v2_0_0)
-  public EventFeature(
-      @JsonProperty(ID) @NotNull String id,
-      @JsonProperty(CONNECTOR_IDS) @NotNull List<@NotNull String> connectorIds,
-      @JsonProperty(PACKAGES) @Nullable List<@NotNull String> packages) {
-    super(id);
-    setConnectorIds(connectorIds);
-    setPackages(packages);
   }
 
   @AvailableSince(NakshaVersion.v2_0_6)

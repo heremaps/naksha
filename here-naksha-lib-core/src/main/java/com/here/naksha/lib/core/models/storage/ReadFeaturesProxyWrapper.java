@@ -18,13 +18,12 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.ReadRequest;
-
 import java.util.HashMap;
 import java.util.Map;
 
-public class ReadFeaturesProxyWrapper extends ReadRequest {
+import naksha.model.request.ReadFeatures;
+
+public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
   private ReadRequestType readRequestType;
 

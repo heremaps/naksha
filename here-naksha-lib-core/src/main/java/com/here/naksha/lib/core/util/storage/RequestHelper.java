@@ -24,7 +24,6 @@ import static naksha.model.request.condition.PRef.id;
 import static naksha.model.request.condition.PRef.pRefPathMap;
 
 import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -110,7 +109,6 @@ public class RequestHelper {
       final @NotNull String collectionName, final @NotNull FEATURE feature) {
     return createFeaturesRequest(collectionName, List.of(feature), IfExists.FAIL, IfConflict.FAIL);
   }
-
   /**
    * Helper method to create WriteFeatures request for updating given feature.
    *
@@ -119,7 +117,7 @@ public class RequestHelper {
    * @param <FEATURE>      any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static <FEATURE extends XyzFeature> @NotNull WriteXyzFeatures updateFeatureRequest(
+  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteXyzFeatures updateFeatureRequest(
       final @NotNull String collectionName, final @NotNull FEATURE feature) {
     final WriteXyzFeatures request = new WriteXyzFeatures(collectionName);
     request.update(feature);

@@ -586,10 +586,10 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       @Nullable HttpResponseType responseType,
       @NotNull Response response) {
     try {
-      final String etag = response.getEtag();
-      if (etag != null) {
-        routingContext.response().putHeader(ETAG, etag);
-      }
+//      final String etag = response.getEtag();
+//      if (etag != null) {
+//        routingContext.response().putHeader(ETAG, etag);
+//      }
       if (response instanceof ErrorResponse er) {
         sendRawResponse(
             routingContext,

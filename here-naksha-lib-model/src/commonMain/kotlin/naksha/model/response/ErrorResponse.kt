@@ -11,4 +11,6 @@ import kotlin.jvm.JvmField
  * @property error the error code as returned by the storage.
  */
 @JsExport
-open class ErrorResponse(@JvmField val error: NakshaError) : Response()
+open class ErrorResponse(@JvmField val error: NakshaError) : Response() {
+    override fun size(): Int = 0
+}

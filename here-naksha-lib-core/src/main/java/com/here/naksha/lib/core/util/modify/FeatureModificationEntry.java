@@ -255,8 +255,8 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
     if (base == null
         || base == head
         || Objects.equals(
-            base.getProperties().getXyzNamespace().getUuid(),
-            input.getProperties().getXyzNamespace().getUuid())) {
+            base.getProperties().getXyz().getUuid(),
+            input.getProperties().getXyz().getUuid())) {
       return input;
     }
 
@@ -266,8 +266,8 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
       // Eventually this means, that we can just treat the input as a direct modification of the
       // head.
       input.getProperties()
-          .getXyzNamespace()
-          .setUuid(head.getProperties().getXyzNamespace().getUuid());
+          .getXyz()
+          .setUuid(head.getProperties().getXyz().getUuid());
       return input;
     }
 
