@@ -18,17 +18,15 @@
  */
 package com.here.naksha.lib.core;
 
-import static naksha.model.response.NakshaError.EXCEPTION;
-import static naksha.model.response.NakshaError.NOT_IMPLEMENTED;
-
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+
+import naksha.model.NakshaError;
 import naksha.model.request.Request;
 import naksha.model.response.ErrorResponse;
-import naksha.model.response.NakshaError;
 import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -33,8 +33,10 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
+
+import naksha.model.NakshaError;
+import naksha.model.NakshaErrorCode;
 import naksha.model.response.ErrorResponse;
-import naksha.model.response.NakshaError;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -134,13 +136,13 @@ public interface JsonSerializable {
       return null;
     }
 
-    final String errorMessage = errorResponse.getErrorMessage();
+    final String errorMessage = errorResponse.error.message;
     if (StringUtils.isEmpty(errorMessage)) {
       return errorResponse;
     }
 
     boolean timeout = errorMessage.contains("timed out");
-    return new ErrorResponse(new NakshaError(NakshaError.STORAGE_NOT_INITIALIZED, errorMessage));
+    return new ErrorResponse(new NakshaError(NakshaErrorCode.STORAGE_NOT_INITIALIZED, errorMessage, null, null));
   }
 
   /**

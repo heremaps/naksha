@@ -265,9 +265,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
       // This is totally unexpected, base and head are logically the same, but have different uuids.
       // Eventually this means, that we can just treat the input as a direct modification of the
       // head.
-      input.getProperties()
-          .getXyz()
-          .setUuid(head.getProperties().getXyz().getUuid());
+      input.getProperties().getXyz().setUuid(head.getProperties().getXyz().getUuid());
       return input;
     }
 
