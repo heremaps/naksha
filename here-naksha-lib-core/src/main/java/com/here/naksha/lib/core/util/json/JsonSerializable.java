@@ -33,7 +33,6 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
-
 import naksha.model.NakshaError;
 import naksha.model.NakshaErrorCode;
 import naksha.model.response.ErrorResponse;

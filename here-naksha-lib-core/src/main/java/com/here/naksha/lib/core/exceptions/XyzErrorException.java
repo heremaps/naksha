@@ -18,20 +18,22 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import naksha.model.response.NakshaError;
+import naksha.model.NakshaError;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static naksha.model.NakshaErrorCode.EXCEPTION;
 
 /** An exception, which will cause the connector to respond with an ErrorResponse object. */
 public class XyzErrorException extends RuntimeException {
 
   public XyzErrorException(@NotNull Throwable reason) {
     super(reason.getMessage(), reason);
-    this.nakshaError = new NakshaError(NakshaError.EXCEPTION, reason.getMessage());
+    this.nakshaError = new NakshaError(EXCEPTION, reason.getMessage(),null,null);
   }
 
   public XyzErrorException(@NotNull NakshaError nakshaError) {
-    this(nakshaError, nakshaError.getMessage(), null);
+    this(nakshaError, nakshaError.message, null);
   }
 
   public XyzErrorException(@NotNull NakshaError nakshaError, @NotNull Throwable reason) {

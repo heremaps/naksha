@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
-
 import naksha.model.NakshaError;
 import naksha.model.request.Request;
 import naksha.model.response.ErrorResponse;
