@@ -111,5 +111,105 @@ internal class DbRowMapper {
             }
             return retList
         }
+
+        /**
+         * Converts [Row] to [PgRow]
+         *
+         * @param row
+         * @return [PgRow]
+         */
+        @JsStatic
+        @JvmStatic
+        fun rowToPgRow(row: Row): PgRow {
+            val pgRow = PgRow()
+            if (row.meta != null) {
+                val meta = row.meta!!
+                pgRow.created_at = meta.createdAt
+                pgRow.updated_at = meta.updatedAt
+                pgRow.author_ts = meta.authorTs
+                pgRow.txn_next = meta.txnNext
+                pgRow.txn = meta.txn
+                pgRow.ptxn = meta.ptxn
+                pgRow.uid = meta.uid
+                pgRow.puid = meta.puid
+                pgRow.fnva1 = meta.fnva1
+                pgRow.version = meta.version
+                pgRow.geo_grid = meta.geoGrid
+                pgRow.flags = meta.flags
+                pgRow.origin = meta.origin
+                pgRow.app_id = meta.appId
+                pgRow.author = meta.author
+                pgRow.type = meta.type
+            }
+            pgRow.id = row.id
+            pgRow.feature = row.feature
+            pgRow.tags = row.tags
+            pgRow.geo = row.geo
+            pgRow.geo_ref = row.geoRef
+            return pgRow
+        }
+
+        /**
+         * Converts [PgRow] into [Metadata].
+         * Reveals optimized values into real.
+         *
+         * @param pgRow
+         * @return [Metadata]
+          */
+        @JsStatic
+        @JvmStatic
+        fun pgRowToMetadata(pgRow: PgRow): Metadata {
+            return with(pgRow) {
+                val updatedAtFinal = updated_at ?: created_at!!
+                Metadata(
+                    updatedAt = updatedAtFinal,
+                    createdAt = created_at ?: updated_at!!,
+                    authorTs = author_ts ?: updatedAtFinal,
+                    txnNext = txn_next,
+                    txn = txn!!,
+                    ptxn = ptxn,
+                    uid = uid ?: 0,
+                    puid = puid ?: 0,
+                    fnva1 = fnva1!!,
+                    version = version ?: 1,
+                    geoGrid = geo_grid!!,
+                    flags = flags ?: Flags(), // FIXME with default flags
+                    origin = origin,
+                    appId = app_id!!,
+                    author = author ?: app_id,
+                    type = type,
+                    id = id!!,
+                )
+            }
+        }
+
+        /**
+         * Converts [PgRow] to [Row].
+         * Reveals optimized values into real.
+         *
+         * @param pgRow
+         * @param storage
+         * @param collection
+         */
+        @JsStatic
+        @JvmStatic
+        fun pgRowToRow(pgRow: PgRow, storage: IStorage, collection: String): Row {
+            val meta = pgRowToMetadata(pgRow)
+            val txn = Txn(meta.txn)
+            val luid = Luid(txn, meta.uid)
+            val guid = Guid(storage.id(), collection, meta.id, luid)
+            return Row(
+                storage = storage,
+                meta = meta,
+                guid = guid,
+                id = meta.id,
+                type = meta.type,
+                flags = meta.flags,
+                feature = pgRow.feature,
+                geoRef = pgRow.geo_ref,
+                geo = pgRow.geo,
+                tags = pgRow.tags
+            )
+        }
     }
 }

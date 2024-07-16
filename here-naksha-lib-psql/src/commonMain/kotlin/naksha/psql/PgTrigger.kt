@@ -38,6 +38,6 @@ class PgTrigger(
     val TG_RELID: Int,
     val TG_TABLE_NAME: String,
     val TG_TABLE_SCHEMA: String,
-    val NEW: PsqlRow?,
-    val OLD: PsqlRow?
+    val NEW: PgRow?,
+    val OLD: PgRow?
 )
