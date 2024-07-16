@@ -8,7 +8,6 @@ import naksha.model.XYZ_EXEC_DELETED
 import naksha.model.XYZ_EXEC_PURGED
 import naksha.model.XYZ_EXEC_RETAINED
 import naksha.model.request.ResultRow
-import naksha.model.Metadata
 import naksha.model.Row
 import naksha.model.response.ExecutedOp
 import naksha.psql.*
@@ -53,13 +52,17 @@ internal class NakshaBulkLoaderPlan(
     internal val featuresToPurgeFromDel = mutableListOf<String>()
     internal val result = mutableListOf<ResultRow>()
 
-    internal val insertToHeadBulkParams = mutableListOf<Array<Param>>()
-    internal val copyHeadToDelBulkParams = mutableListOf<Array<Param>>()
-    internal val insertDelToHstBulkParams = mutableListOf<Array<Param>>()
-    internal val updateHeadBulkParams = mutableListOf<Array<Param>>()
-    internal val deleteHeadBulkParams = mutableListOf<Array<Param>>()
-    internal val copyHeadToHstBulkParams = mutableListOf<Array<Param>>()
+    internal val insertToHeadBulkParams = mutableListOf<Array<Any?>>()
+    internal val copyHeadToDelBulkParams = mutableListOf<Array<Any?>>()
+    internal val insertDelToHstBulkParams = mutableListOf<Array<Any?>>()
+    internal val updateHeadBulkParams = mutableListOf<Array<Any?>>()
+    internal val deleteHeadBulkParams = mutableListOf<Array<Any?>>()
+    internal val copyHeadToHstBulkParams = mutableListOf<Array<Any?>>()
 
+    /**
+     * Returns [PgPlan] for inserts to head table.
+     * Every execution of [insertHeadPlan] creates new plan.
+     */
     private fun insertHeadPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """INSERT INTO $partitionHeadQuoted (
@@ -77,6 +80,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] for updates of head table.
+     * Every execution of [updateHeadPlan] creates new plan.
+     */
     private fun updateHeadPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """
@@ -87,6 +94,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] for deletes of head table.
+     * Every execution of [deleteHeadPlan] creates new plan.
+     */
     private fun deleteHeadPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """
@@ -97,6 +108,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] for inserts to del table.
+     * Every execution of [insertDelPlan] creates new plan.
+     */
     private fun insertDelPlan(): PgPlan {
         // ptxn + puid = txn + uid (as we generate new state in _del)
         return session.usePgConnection().prepare(
@@ -111,6 +126,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] to copy from del to hst table.
+     * Every execution of [insertDelToHstPlan] creates new plan.
+     */
     private fun insertDelToHstPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """
@@ -124,6 +143,10 @@ internal class NakshaBulkLoaderPlan(
         )
     }
 
+    /**
+     * Returns [PgPlan] to copy from head to hst table.
+     * Every execution of [copyHeadToHstPlan] creates new plan.
+     */
     private fun copyHeadToHstPlan(): PgPlan {
         return session.usePgConnection().prepare(
             """
@@ -151,7 +174,7 @@ internal class NakshaBulkLoaderPlan(
 
         addToRemoveFromDel(op.id)
         addCopyHeadToHstParams(op.id, isHistoryDisabled)
-        session.rowUpdater.xyzUpdateHead(op.collectionId, dbRow, headBeforeUpdate)
+        session.rowUpdater.xyzUpdateHead(op.collectionId, dbRow, DbRowMapper.rowToPgRow(headBeforeUpdate))
         addUpdateHeadParams(op.dbRow)
         if (!minResult) {
             addResult(naksha.model.XYZ_EXEC_UPDATED, dbRow)
@@ -213,104 +236,55 @@ internal class NakshaBulkLoaderPlan(
             checkStateForAtomicOp(op.atomicUUID, headBeforeDelete)
             addCopyHeadToHstParams(op.id, isHistoryDisabled)
 
-            val newMeta = op.dbRow!!.meta!!.copy(
-                version = headBeforeDelete.meta!!.version,
-                authorTs = headBeforeDelete.meta!!.authorTs,
-                updatedAt = headBeforeDelete.meta!!.updatedAt,
-                createdAt = headBeforeDelete.meta!!.createdAt
-            )
-            session.rowUpdater.xyzDel(newMeta)
+            val delRow = op.dbRow!!
+            delRow.version = headBeforeDelete.meta!!.version
+            delRow.author_ts = headBeforeDelete.meta!!.authorTs
+            delRow.updated_at = headBeforeDelete.meta!!.updatedAt
+            delRow.created_at = headBeforeDelete.meta!!.createdAt
+            session.rowUpdater.xyzDel(delRow)
             if (!autoPurge) // do not push to del
-                addDelParams(copyHeadToDelBulkParams, newMeta)
+                addDelParams(copyHeadToDelBulkParams, delRow)
             addDeleteHeadParams(op.id)
             if (isHistoryDisabled == false) // even if it's autoPurge we still need a deleted copy in $hst if it's enabled.
-                addDelParams(insertDelToHstBulkParams, newMeta)
+                addDelParams(insertDelToHstBulkParams, delRow)
         }
     }
 
-    private fun addInsertParams(row: Row) {
-        val meta = row.meta!!
+    private fun addInsertParams(row: PgRow) {
         insertToHeadBulkParams.add(
             arrayOf(
-                Param(1, SQL_INT64, meta.createdAt),
-                Param(2, SQL_INT64, meta.updatedAt),
-                Param(3, SQL_INT64, meta.txn),
-                Param(4, SQL_INT32, meta.uid),
-                Param(5, SQL_INT32, meta.geoGrid),
-                Param(6, SQL_INT32, meta.flags),
-                Param(7, SQL_STRING, meta.appId),
-                Param(8, SQL_STRING, meta.author),
-                Param(9, SQL_STRING, row.type),
-                Param(10, SQL_STRING, row.id),
-                Param(11, SQL_BYTE_ARRAY, row.feature),
-                Param(12, SQL_BYTE_ARRAY, row.tags),
-                Param(13, SQL_BYTE_ARRAY, row.geo),
-                Param(14, SQL_BYTE_ARRAY, row.geoRef),
+                row.created_at, row.updated_at, row.txn, row.uid, row.geo_grid, row.flags, row.app_id, row.author,
+                row.type, row.id, row.feature, row.tags, row.geo, row.geo_ref
             )
         )
     }
 
-    private fun addDelParams(params: MutableList<Array<Param>>, newMeta: Metadata) {
+    private fun addDelParams(params: MutableList<Array<Any?>>, pgRow: PgRow) {
         params.add(
             arrayOf(
-                Param(1, SQL_INT64, newMeta.txnNext),
-                Param(2, SQL_INT64, newMeta.txn),
-                Param(3, SQL_INT32, newMeta.uid),
-                Param(4, SQL_INT32, newMeta.version),
-                Param(5, SQL_INT64, newMeta.createdAt),
-                Param(6, SQL_INT64, newMeta.updatedAt),
-                Param(7, SQL_INT64, newMeta.authorTs),
-                Param(8, SQL_STRING, newMeta.author),
-                Param(9, SQL_STRING, newMeta.appId),
-                Param(10, SQL_STRING, newMeta.id)
+                pgRow.txn_next, pgRow.txn, pgRow.uid, pgRow.version, pgRow.created_at, pgRow.updated_at,
+                pgRow.author_ts, pgRow.author, pgRow.app_id, pgRow.id
             )
         )
     }
 
-    private fun addUpdateHeadParams(row: Row) {
-        val meta = row.meta!!
+    private fun addUpdateHeadParams(row: PgRow) {
         updateHeadBulkParams.add(
             arrayOf(
-                Param(1, SQL_INT64, meta.txnNext),
-                Param(2, SQL_INT64, meta.txn),
-                Param(3, SQL_INT32, meta.uid),
-                Param(4, SQL_INT64, meta.ptxn),
-                Param(5, SQL_INT32, meta.puid),
-                Param(6, SQL_INT32, meta.flags),
-                Param(7, SQL_INT32, meta.version),
-                Param(8, SQL_INT64, meta.createdAt),
-                Param(9, SQL_INT64, meta.updatedAt),
-                Param(10, SQL_INT64, meta.authorTs),
-                Param(11, SQL_STRING, meta.author),
-                Param(12, SQL_STRING, meta.appId),
-                Param(13, SQL_INT32, meta.geoGrid),
-                Param(14, SQL_STRING, row.id),
-                Param(15, SQL_BYTE_ARRAY, row.tags),
-                Param(16, SQL_BYTE_ARRAY, row.geo),
-                Param(17, SQL_BYTE_ARRAY, row.feature),
-                Param(18, SQL_BYTE_ARRAY, row.geoRef),
-                Param(19, SQL_STRING, row.type),
-                Param(20, SQL_STRING, row.id)
+                row.txn_next, row.txn, row.uid, row.ptxn, row.puid, row.flags, row.version, row.created_at,
+                row.updated_at, row.author_ts, row.author, row.app_id, row.geo_grid, row.id, row.tags, row.geo,
+                row.feature, row.geo_ref, row.type, row.id
             )
         )
     }
 
     private fun addDeleteHeadParams(id: String) {
-        deleteHeadBulkParams.add(
-            arrayOf(
-                Param(1, SQL_STRING, id)
-            )
-        )
+        deleteHeadBulkParams.add(arrayOf(id))
     }
 
     private fun addCopyHeadToHstParams(id: String, isHstDisabled: Boolean?) {
         if (isHstDisabled == false) {
-            copyHeadToHstBulkParams.add(
-                arrayOf(
-                    Param(1, SQL_INT64, session.txn().value),
-                    Param(2, SQL_STRING, id),
-                )
-            )
+            copyHeadToHstBulkParams.add(arrayOf(session.txn().value, id))
         }
     }
 
@@ -323,10 +297,12 @@ internal class NakshaBulkLoaderPlan(
         }
     }
 
-    internal fun executeBatch(stmt: KFunction0<PgPlan>, bulkParams: List<Array<Param>>) {
+    internal fun executeBatch(stmt: KFunction0<PgPlan>, bulkParams: List<Array<Any?>>) {
         if (bulkParams.isNotEmpty()) {
             val statement = stmt()
-            statement.addBatch(bulkParams.toTypedArray())
+            for (bulk in bulkParams) {
+                statement.addBatch(bulk)
+            }
             val result = statement.executeBatch()
             if (result.isNotEmpty() && result[0] == -3) {
                 // java.sql.Statement.EXECUTE_FAILED
@@ -335,22 +311,40 @@ internal class NakshaBulkLoaderPlan(
         }
     }
 
-    private fun checkStateForAtomicOp(reqUuid: String?, currentHead: Row?) {
-        if (reqUuid != null) {
+    /**
+     * Verifies if current request row operation has to be atomic and if it is valid against row in db.
+     *
+     * @param reqGuid - guid given in request, might be null
+     * @param currentHead - current row in DB head table
+     */
+    private fun checkStateForAtomicOp(reqGuid: String?, currentHead: Row?) {
+        if (reqGuid != null) {
             check(currentHead != null)
             val headUuid =
-                Guid(session.storage.id(), collectionId, currentHead.id, Luid(Txn(currentHead.meta!!.txn), currentHead.meta!!.uid)).toString()
-            if (reqUuid != headUuid) {
+                Guid(
+                    session.storage.id(),
+                    collectionId,
+                    currentHead.id,
+                    Luid(Txn(currentHead.meta!!.txn), currentHead.meta!!.uid)
+                ).toString()
+            if (reqGuid != headUuid) {
                 throw NakshaException.forId(
                     ERR_CHECK_VIOLATION,
-                    "Atomic operation for $reqUuid is impossible, expected state: $reqUuid, actual: $headUuid",
-                    reqUuid
+                    "Atomic operation for $reqGuid is impossible, expected state: $reqGuid, actual: $headUuid",
+                    reqGuid
                 )
             }
         }
     }
 
-    private fun addResult(op: String, row: Row? = null) {
+    private fun addResult(op: String, pgRow: PgRow? = null) {
+        val row = pgRow?.let { DbRowMapper.pgRowToRow(it, session.storage, collectionId) }
+        val opEnum = JsEnum.get(op, ExecutedOp::class)
+        val resultRow = ResultRow(row = row, op = opEnum)
+        result.add(resultRow)
+    }
+
+    private fun addResult(op: String, row: Row) {
         val resultRow = ResultRow(row = row, op = JsEnum.get(op, ExecutedOp::class))
         result.add(resultRow)
     }

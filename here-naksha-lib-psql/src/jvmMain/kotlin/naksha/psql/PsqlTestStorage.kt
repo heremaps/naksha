@@ -4,6 +4,7 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.psql.PgUtil.PgUtilCompanion.TEST_URL
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
+import org.testcontainers.containers.wait.strategy.Wait
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -14,7 +15,7 @@ import java.util.concurrent.atomic.AtomicReference
 @Suppress("MemberVisibilityCanBePrivate")
 class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cluster, defaultOptions.get()) {
 
-    private data class DockerContainerInfo(
+    internal data class DockerContainerInfo(
         val container: GenericContainer<*>,
         val psqlInstance: PsqlInstance,
         val shutdownThread: Thread
@@ -51,7 +52,7 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
         @JvmField
         val defaultOptions = AtomicReference(DEFAULT_OPTIONS)
 
-        private val dockerContainerInfo = AtomicReference<DockerContainerInfo?>()
+        internal val dockerContainerInfo = AtomicReference<DockerContainerInfo?>()
 
         private fun architecture(): String {
             val os = System.getProperty("os.name")
@@ -111,12 +112,11 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
                         container.addEnv("PGPASSWORD", password)
                         container.setWaitStrategy(
                             LogMessageWaitStrategy()
-                                .withRegEx("Start postgres.*")
+                                .withRegEx(".*Future log output will appear in directory.*")
                                 .withTimes(2)
                                 .withStartupTimeout(Duration.of(60, ChronoUnit.SECONDS))
                         )
                         container.start()
-                        Thread.sleep(1000) // give it 1s more before connect
 
                         val port = container.getMappedPort(5432)
                         logger.info("Docker container listening on port {}", port)
