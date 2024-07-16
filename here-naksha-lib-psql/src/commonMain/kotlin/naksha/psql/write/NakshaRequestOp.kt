@@ -15,7 +15,7 @@ import naksha.psql.*
 
 internal class NakshaRequestOp(
     val reqWrite: Write,
-    val dbRow: PsqlRow?,
+    val dbRow: PgRow?,
     val atomicUUID: String?,
     val collectionId: String,
     val collectionPartitionCount: Int
@@ -93,10 +93,10 @@ internal class NakshaRequestOp(
         }
 
 
-        private fun prepareRow(session: PgSession, nakWriteOp: Write): PsqlRow? {
+        private fun prepareRow(session: PgSession, nakWriteOp: Write): PgRow? {
             return when (nakWriteOp) {
-                is FeatureOp -> PsqlRow.fromRow(session.storage.featureToRow(nakWriteOp.feature.platformObject()))
-                is RowOp -> PsqlRow.fromRow(nakWriteOp.row)
+                is FeatureOp -> DbRowMapper.rowToPgRow(session.storage.featureToRow(nakWriteOp.feature.platformObject()))
+                is RowOp -> DbRowMapper.rowToPgRow(nakWriteOp.row)
                 else -> null
             }
         }

@@ -4,9 +4,9 @@ import naksha.base.Fnv1a32
 import naksha.base.Platform
 import naksha.model.*
 import naksha.psql.PgPlan
+import naksha.psql.PgRow
 import naksha.psql.PgSession
 import naksha.psql.PgStatic.TRANSACTIONS_COL
-import naksha.psql.PsqlRow
 
 internal class RowUpdater(val session: PgSession) {
     private lateinit var gridPlan: PgPlan
@@ -17,18 +17,18 @@ internal class RowUpdater(val session: PgSession) {
      * @param NEW The row in which to update the XYZ namespace columns.
      * @return The new XYZ namespace for this feature.
      */
-    internal fun xyzInsert(collectionId: String, NEW: PsqlRow) {
+    internal fun xyzInsert(collectionId: String, NEW: PgRow) {
         val txn = session.txn()
         val txnTs = session.txnTs()
 
-        var geoGrid: Int? = NEW.geoGrid
+        var geoGrid: Int? = NEW.geo_grid
 
         // FIXME: default flags should be taken from collectionConfig
         val flags = NEW.flags ?: Flags()
 
         if (geoGrid == null) {
             // Only calculate geo-grid, if not given by the client.
-            val id: String = NEW.id
+            val id: String = NEW.id!!
             geoGrid = grid(id, flags, NEW.geo)
         }
 
@@ -39,17 +39,17 @@ internal class RowUpdater(val session: PgSession) {
         }
 
         NEW.txn = txn.value
-        NEW.txnNext = null
+        NEW.txn_next = null
         NEW.ptxn = null
         NEW.puid = 0
-        NEW.geoGrid = geoGrid
+        NEW.geo_grid = geoGrid
         NEW.version = null // saving space null means 1
         NEW.uid = uid
-        NEW.createdAt = null // saving space - it is same as update_at at creation,
-        NEW.updatedAt = txnTs
+        NEW.created_at = null // saving space - it is same as update_at at creation,
+        NEW.updated_at = txnTs
         NEW.author = session.options.author
-        NEW.authorTs = null // saving space - only apps are allowed to create features
-        NEW.appId = session.options.appId
+        NEW.author_ts = null // saving space - only apps are allowed to create features
+        NEW.app_id = session.options.appId
         NEW.flags = flags
         NEW.fnva1 = rowHash(NEW)
     }
@@ -57,42 +57,42 @@ internal class RowUpdater(val session: PgSession) {
     /**
      *  Prepares XyzNamespace columns for head table.
      */
-    internal fun xyzUpdateHead(collectionId: String, NEW: PsqlRow, OLD: PsqlRow) {
+    internal fun xyzUpdateHead(collectionId: String, NEW: PgRow, OLD: PgRow) {
         xyzInsert(collectionId, NEW)
         val updatedAt = Platform.currentMillis()
         if (session.options.author == null) {
             NEW.author = OLD.author
-            NEW.authorTs = OLD.authorTs
+            NEW.author_ts = OLD.author_ts
         } else {
             NEW.author = session.options.author
-            NEW.authorTs = NEW.updatedAt
+            NEW.author_ts = NEW.updated_at
         }
         NEW.version = (OLD.version ?: 0) + 1
         NEW.ptxn = OLD.txn
         NEW.puid = OLD.uid
         if (collectionId == TRANSACTIONS_COL) {
-            NEW.updatedAt = updatedAt
+            NEW.updated_at = updatedAt
         }
     }
 
     /**
      * Prepares row before putting into $del table.
      */
-    internal fun xyzDel(OLD: PsqlRow) {
+    internal fun xyzDel(OLD: PgRow) {
         val txn = session.txn()
         val txnTs = session.txnTs()
         OLD.txn = txn.value
-        OLD.txnNext = txn.value
+        OLD.txn_next = txn.value
         OLD.flags = Flags(OLD.flags!!).action(ActionEnum.DELETED)
         OLD.author = session.options.author ?: session.options.appId
         if (session.options.author != null) {
-            OLD.authorTs = txnTs
+            OLD.author_ts = txnTs
         }
-        if (OLD.createdAt != null) {
-            OLD.createdAt = OLD.updatedAt
+        if (OLD.created_at != null) {
+            OLD.created_at = OLD.updated_at
         }
-        OLD.updatedAt = txnTs
-        OLD.appId = session.options.appId
+        OLD.updated_at = txnTs
+        OLD.app_id = session.options.appId
         OLD.uid = session.nextUid()
         val currentVersion: Int = OLD.version ?: 1
         OLD.version = currentVersion + 1
@@ -129,11 +129,11 @@ internal class RowUpdater(val session: PgSession) {
      * @param row
      * @return hash
      */
-    internal fun rowHash(row: PsqlRow): Int {
+    internal fun rowHash(row: PgRow): Int {
         var totalHash = Fnv1a32.hashByteArray(row.feature)
         totalHash = Fnv1a32.hashByteArray(row.tags, totalHash)
         totalHash = Fnv1a32.hashByteArray(row.geo, totalHash)
-        totalHash = Fnv1a32.hashByteArray(row.geoRef, totalHash)
+        totalHash = Fnv1a32.hashByteArray(row.geo_ref, totalHash)
         return totalHash
     }
 }

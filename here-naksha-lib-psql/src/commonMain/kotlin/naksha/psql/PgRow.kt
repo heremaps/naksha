@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.*
+import naksha.model.Row
 import kotlin.js.JsExport
 
 /**
@@ -16,18 +17,18 @@ class PgRow : ObjectProxy() {
         private val BYTE_ARRAY = NullableProperty<Any, PgRow, ByteArray>(ByteArray::class)
     }
 
-    val created_at by INT64
-    val updated_at by INT64
-    val author_ts by INT64
-    val txn_next by INT64
-    val txn by INT64
-    val ptxn by INT64
-    val uid by INT
-    val puid by INT
-    val fnva1 by INT
-    val version by INT
-    val geo_grid by INT
-    val flags by INT
+    var created_at by INT64
+    var updated_at by INT64
+    var author_ts by INT64
+    var txn_next by INT64
+    var txn by INT64
+    var ptxn by INT64
+    var uid by INT
+    var puid by INT
+    var fnva1 by INT
+    var version by INT
+    var geo_grid by INT
+    var flags by INT
     var origin by STRING
     var app_id by STRING
     var author by STRING

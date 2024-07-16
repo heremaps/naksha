@@ -174,7 +174,7 @@ internal class NakshaBulkLoaderPlan(
 
         addToRemoveFromDel(op.id)
         addCopyHeadToHstParams(op.id, isHistoryDisabled)
-        session.rowUpdater.xyzUpdateHead(op.collectionId, dbRow, PsqlRow.fromRow(headBeforeUpdate))
+        session.rowUpdater.xyzUpdateHead(op.collectionId, dbRow, DbRowMapper.rowToPgRow(headBeforeUpdate))
         addUpdateHeadParams(op.dbRow)
         if (!minResult) {
             addResult(naksha.model.XYZ_EXEC_UPDATED, dbRow)
@@ -236,12 +236,11 @@ internal class NakshaBulkLoaderPlan(
             checkStateForAtomicOp(op.atomicUUID, headBeforeDelete)
             addCopyHeadToHstParams(op.id, isHistoryDisabled)
 
-            val delRow = op.dbRow!!.copy(
-                version = headBeforeDelete.meta!!.version,
-                authorTs = headBeforeDelete.meta!!.authorTs,
-                updatedAt = headBeforeDelete.meta!!.updatedAt,
-                createdAt = headBeforeDelete.meta!!.createdAt
-            )
+            val delRow = op.dbRow!!
+            delRow.version = headBeforeDelete.meta!!.version
+            delRow.author_ts = headBeforeDelete.meta!!.authorTs
+            delRow.updated_at = headBeforeDelete.meta!!.updatedAt
+            delRow.created_at = headBeforeDelete.meta!!.createdAt
             session.rowUpdater.xyzDel(delRow)
             if (!autoPurge) // do not push to del
                 addDelParams(copyHeadToDelBulkParams, delRow)
@@ -251,30 +250,30 @@ internal class NakshaBulkLoaderPlan(
         }
     }
 
-    private fun addInsertParams(row: PsqlRow) {
+    private fun addInsertParams(row: PgRow) {
         insertToHeadBulkParams.add(
             arrayOf(
-                row.createdAt, row.updatedAt, row.txn, row.uid, row.geoGrid, row.flags, row.appId, row.author,
-                row.type, row.id, row.feature, row.tags, row.geo, row.geoRef
+                row.created_at, row.updated_at, row.txn, row.uid, row.geo_grid, row.flags, row.app_id, row.author,
+                row.type, row.id, row.feature, row.tags, row.geo, row.geo_ref
             )
         )
     }
 
-    private fun addDelParams(params: MutableList<Array<Any?>>, psqlRow: PsqlRow) {
+    private fun addDelParams(params: MutableList<Array<Any?>>, pgRow: PgRow) {
         params.add(
             arrayOf(
-                psqlRow.txnNext, psqlRow.txn, psqlRow.uid, psqlRow.version, psqlRow.createdAt, psqlRow.updatedAt,
-                psqlRow.authorTs, psqlRow.author, psqlRow.appId, psqlRow.id
+                pgRow.txn_next, pgRow.txn, pgRow.uid, pgRow.version, pgRow.created_at, pgRow.updated_at,
+                pgRow.author_ts, pgRow.author, pgRow.app_id, pgRow.id
             )
         )
     }
 
-    private fun addUpdateHeadParams(row: PsqlRow) {
+    private fun addUpdateHeadParams(row: PgRow) {
         updateHeadBulkParams.add(
             arrayOf(
-                row.txnNext, row.txn, row.uid, row.ptxn, row.puid, row.flags, row.version, row.createdAt,
-                row.updatedAt, row.authorTs, row.author, row.appId, row.geoGrid, row.id, row.tags, row.geo,
-                row.feature, row.geoRef, row.type, row.id
+                row.txn_next, row.txn, row.uid, row.ptxn, row.puid, row.flags, row.version, row.created_at,
+                row.updated_at, row.author_ts, row.author, row.app_id, row.geo_grid, row.id, row.tags, row.geo,
+                row.feature, row.geo_ref, row.type, row.id
             )
         )
     }
@@ -338,8 +337,8 @@ internal class NakshaBulkLoaderPlan(
         }
     }
 
-    private fun addResult(op: String, psqlRow: PsqlRow? = null) {
-        val row = psqlRow?.toRow(session.storage, collectionId)
+    private fun addResult(op: String, pgRow: PgRow? = null) {
+        val row = pgRow?.let { DbRowMapper.pgRowToRow(it, session.storage, collectionId) }
         val opEnum = JsEnum.get(op, ExecutedOp::class)
         val resultRow = ResultRow(row = row, op = opEnum)
         result.add(resultRow)
