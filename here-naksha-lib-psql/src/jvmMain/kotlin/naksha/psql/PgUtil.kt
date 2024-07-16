@@ -4,7 +4,8 @@ import java.security.MessageDigest
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PgUtil {
-    actual companion object {
+    actual companion object PgUtilCompanion {
+
         /**
          * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
          * the existing installed version of Naksha code is up-to-date.
@@ -73,9 +74,8 @@ actual class PgUtil {
         @JvmStatic
         actual fun quoteIdent(vararg parts: String): String = PgStatic.quote_ident(*parts)
 
-        private val md5Digest = ThreadLocal.withInitial {
-            MessageDigest.getInstance("MD5")
-        }
+        @JvmStatic
+        private val md5Digest = ThreadLocal.withInitial { MessageDigest.getInstance("MD5") }
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the

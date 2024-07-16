@@ -152,14 +152,14 @@ class JbCoreTest {
         val builder = JbEncoder(256)
         val reader = JbDecoder().mapBinary(builder, 0, 256)
         // the values -16 to 15 should be encoded in one byte
-        builder.encodeInt(-16);
+        builder.encodeInt32(-16);
         assertTrue(reader.isInt())
         assertEquals(-16, reader.decodeInt32(0))
         assertEquals(1, reader.unitSize())
         assertEquals(1, builder.clear())
         reader.reset()
 
-        builder.encodeInt(15);
+        builder.encodeInt32(15);
         assertTrue(reader.isInt())
         assertEquals(15, reader.decodeInt32(0))
         assertEquals(1, reader.unitSize())
@@ -167,7 +167,7 @@ class JbCoreTest {
         reader.reset()
 
         // the values below -16 and above 15 should be encoded in two byte
-        builder.encodeInt(-17);
+        builder.encodeInt32(-17);
         assertEquals(-17, reader.binary.getInt8(1))
         assertTrue(reader.isInt())
         assertEquals(-17, reader.decodeInt32(0))
@@ -175,7 +175,7 @@ class JbCoreTest {
         assertEquals(2, builder.clear())
         reader.reset()
 
-        builder.encodeInt(16);
+        builder.encodeInt32(16);
         assertEquals(16, reader.binary.getInt8(1))
         assertTrue(reader.isInt())
         assertEquals(16, reader.decodeInt32(0))
@@ -184,7 +184,7 @@ class JbCoreTest {
         reader.reset()
 
         // a value less than -128 must be stored in three byte
-        builder.encodeInt(-129)
+        builder.encodeInt32(-129)
         assertEquals(-129, reader.binary.getInt16(1))
         assertTrue(reader.isInt())
         assertEquals(-129, reader.decodeInt32(0))
@@ -193,7 +193,7 @@ class JbCoreTest {
         reader.reset()
 
         // a value bigger than 127 must be stored in three byte
-        builder.encodeInt(128)
+        builder.encodeInt32(128)
         assertEquals(128, reader.binary.getInt16(1))
         assertTrue(reader.isInt())
         assertEquals(128, reader.decodeInt32(0))
@@ -202,7 +202,7 @@ class JbCoreTest {
         reader.reset()
 
         // a value less than -32768 must be stored in five byte
-        builder.encodeInt(-32769)
+        builder.encodeInt32(-32769)
         assertEquals(-32769, reader.binary.getInt32(1))
         assertTrue(reader.isInt())
         assertEquals(-32769, reader.decodeInt32(0))
@@ -211,7 +211,7 @@ class JbCoreTest {
         reader.reset()
 
         // a value bigger than 32767 must be stored in three byte
-        builder.encodeInt(32768)
+        builder.encodeInt32(32768)
         assertEquals(32768, reader.binary.getInt32(1))
         assertTrue(reader.isInt())
         assertEquals(32768, reader.decodeInt32(0))
@@ -254,7 +254,7 @@ class JbCoreTest {
         val builder = JbEncoder(1024)
         val reader = JbDecoder().mapBinary(builder, 0, 1024)
         for (i in -16..15) {
-            builder.encodeFloat(i.toFloat())
+            builder.encodeFloat32(i.toFloat())
             assertEquals(i, ((reader.binary.getInt8(0).toInt() shl 27) shr 27))
             assertEquals(TYPE_FLOAT, reader.unitType())
             assertTrue(reader.isFloat32())
@@ -267,7 +267,7 @@ class JbCoreTest {
             reader.reset()
         }
         // all other values are encoded in 5 byte
-        builder.encodeFloat(1.25f)
+        builder.encodeFloat32(1.25f)
         assertEquals(ENC_MIXED_SCALAR_FLOAT32, reader.binary.getInt8(0).toInt() and 0xff)
         assertEquals(1.25f, reader.binary.getFloat32(1))
         assertTrue(reader.isFloat32())
@@ -286,7 +286,7 @@ class JbCoreTest {
         val builder = JbEncoder(1024)
         val reader = JbDecoder().mapBinary(builder, 0, 1024)
         for (i in -16..15) {
-            builder.encodeDouble(i.toDouble())
+            builder.encodeFloat64(i.toDouble())
             assertEquals(i, ((reader.binary.getInt8(0).toInt() shl 27) shr 27))
             assertTrue(reader.isFloat32())
             assertTrue(reader.isFloat64())
@@ -298,7 +298,7 @@ class JbCoreTest {
             reader.reset()
         }
         // all other values are encoded in 5 byte
-        builder.encodeDouble(1.25)
+        builder.encodeFloat64(1.25)
         assertEquals(ENC_MIXED_SCALAR_FLOAT64, reader.binary.getInt8(0).toInt() and 0xff)
         assertEquals(1.25, reader.binary.getFloat64(1))
         assertFalse(reader.isFloat32())
@@ -316,9 +316,9 @@ class JbCoreTest {
         val builder = JbEncoder(1024)
         val reader = JbDecoder().mapBinary(builder, 0, 1024)
 
-        val firstPos = builder.encodeInt(100_000)
+        val firstPos = builder.encodeInt32(100_000)
         assertEquals(0, firstPos)
-        val secondPos = builder.encodeInt(1)
+        val secondPos = builder.encodeInt32(1)
         assertEquals(5, secondPos)
         assertEquals(6, builder.end)
 
@@ -486,7 +486,7 @@ class JbCoreTest {
         assertFalse(dictReader.nextUnit())
 
         // Test the dictionary class.
-        val dict = JbDict().mapBinary(dictView, 0)
+        val dict = JbDictDecoder().mapBinary(dictView, 0)
         assertEquals(-1, dict.length())
         dict.loadAll()
         assertEquals(2, dict.length())
@@ -526,7 +526,7 @@ class JbCoreTest {
         val builder = JbEncoder()
         builder.encodeText("Hello World Hello Test")
         val featureBytes = builder.buildFeature(null, 0)
-        val feature = JbFeature(dictManager)
+        val feature = JbFeatureDecoder(dictManager)
         feature.mapBytes(featureBytes)
         val binary = feature.reader.binary
         // We expect the following layout:
@@ -678,7 +678,7 @@ class JbCoreTest {
         assertEquals("bar", reader.decodeString())
 
         // Test the array class, should basically allow the same.
-        val array = JbArray().mapBinary(builder, 0)
+        val array = JbArrayDecoder().mapBinary(builder, 0)
         assertEquals(2, array.length())
         // We should be able to read "foo"
         array.seek(0)
@@ -725,7 +725,7 @@ class JbCoreTest {
 
         val mapStartPos = builder.startMap()
         builder.writeKey("foo")
-        builder.encodeInt(1)
+        builder.encodeInt32(1)
         builder.writeKey("bar")
         builder.encodeBool(true)
         builder.endMap(mapStartPos)
@@ -764,11 +764,11 @@ class JbCoreTest {
         // = 21 byte total, 15-byte header (includes local dict), 6-byte content
         val mapData = builder.buildFeature(null)
         assertEquals(22, mapData.size)
-        val feature = JbFeature(dictManager)
+        val feature = JbFeatureDecoder(dictManager)
         feature.mapBytes(mapData)
         assertEquals(null, feature.id())
         assertTrue(feature.reader.isMap())
-        val map = JbMap()
+        val map = JbMapDecoder()
         map.mapReader(feature.reader)
 
         assertTrue(map.first())
@@ -842,7 +842,7 @@ class JbCoreTest {
         val featureJson = """{"id":"bar"}"""
         val featureMap = Platform.fromJSON(featureJson) as PlatformMap
         val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(ObjectProxy::class))
-        val feature = JbFeature(dictManager)
+        val feature = JbFeatureDecoder(dictManager)
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())
     }

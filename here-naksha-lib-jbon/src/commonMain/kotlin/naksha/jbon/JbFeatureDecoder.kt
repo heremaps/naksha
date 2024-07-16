@@ -5,17 +5,17 @@ import kotlin.js.JsExport
 /**
  * A mapper that allows reading a JBON feature. After mapping, the [reader] can be used to access the content of the
  * feature. Beware that the content of an JBON feature can be anything, but most often will be a map. To read this
- * kind of features, simply use the [JbMapFeature] class.
+ * kind of features, simply use the [JbMapFeatureDecoder] class.
  * @constructor Create a new feature reader.
- * @property dictManager The dictionary manager to use to decode the feature.
+ * @property dictManager the dictionary manager to use to decode the feature.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class JbFeature(var dictManager: IDictManager) : JbStruct<JbFeature>() {
+open class JbFeatureDecoder(var dictManager: IDictManager? = null) : JbStructDecoder<JbFeatureDecoder>() {
     private var id: String? = null
     private var featureType: Int = -1
 
-    override fun clear(): JbFeature {
+    override fun clear(): JbFeatureDecoder {
         super.clear()
         id = null
         featureType = -1
@@ -27,7 +27,7 @@ open class JbFeature(var dictManager: IDictManager) : JbStruct<JbFeature>() {
         // The id of global dictionary (optional).
         if (reader.isString()) {
             val dictId = reader.decodeString()
-            reader.globalDict = dictManager.getDictionary(dictId)
+            reader.globalDict = dictManager?.getDictionary(dictId)
             check(reader.globalDict != null) { "Unable to load necessary dictionary '$dictId'" }
         } else {
             check(reader.isNull()) { "Expected dictionary ID to be either a string or null, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
@@ -42,7 +42,7 @@ open class JbFeature(var dictManager: IDictManager) : JbStruct<JbFeature>() {
         check(reader.nextUnit()) { "Failed to seek forward to local dictionary field" }
         // The embedded local dictionary.
         check(reader.isDictionary()) { "Expect local dictionary, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
-        reader.localDict = JbDict().mapReader(reader)
+        reader.localDict = JbDictDecoder().mapReader(reader)
         check(reader.nextUnit()) { "Failed to seek forward to the feature payload" }
         featureType = reader.unitType()
     }

@@ -15,6 +15,5 @@ open class SubscriptionNotification(
     storageId: String,
     val subscriptionId: String,
     val subscriptionState: SubscriptionStateProxy,
-    val transactions: ListProxy<NakshaTransactionProxy>
-    ): Notification(storageId){
-}
+    var transactions: ListProxy<NakshaTransactionProxy>
+): Notification<SubscriptionNotification>(storageId)

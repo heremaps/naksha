@@ -4,7 +4,7 @@ package naksha.base
 
 expect class PlatformMapApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
-    companion object {
+    companion object PlatformMapApiCompanion {
         fun map_clear(map: PlatformMap?)
         fun map_size(map: PlatformMap?): Int
         fun map_get(map: PlatformMap?, key: Any?): Any?

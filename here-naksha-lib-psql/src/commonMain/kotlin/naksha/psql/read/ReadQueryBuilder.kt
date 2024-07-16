@@ -22,7 +22,7 @@ internal class ReadQueryBuilder(val conn: PgConnection) {
      * @param req - read request
      * @return <SQL query string, list of params for query>
      */
-    fun build(req: ReadRequest): Pair<String, MutableList<Any?>> {
+    fun build(req: ReadRequest<*>): Pair<String, MutableList<Any?>> {
         return when (req) {
             is ReadCollections -> buildReadFeatures(req.toReadFeatures())
             is ReadFeatures -> buildReadFeatures(req)
@@ -63,7 +63,7 @@ internal class ReadQueryBuilder(val conn: PgConnection) {
      * @param req
      * @return comma delimited column names
      */
-    private fun resolveColumns(req: ReadRequest): String {
+    private fun resolveColumns(req: ReadRequest<*>): String {
         var columns = "$COL_ID, $COL_TYPE, $COL_GEO_REF, $COL_FLAGS"
         if (!req.noMeta) {
             columns += ", $COL_TXN_NEXT, $COL_TXN, $COL_UID, $COL_PTXN, $COL_PUID, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR_TS, $COL_AUTHOR, $COL_APP_ID, $COL_GEO_GRID"
@@ -213,19 +213,20 @@ internal class ReadQueryBuilder(val conn: PgConnection) {
 
     private fun ReadCollections.toReadFeatures(): ReadFeatures {
         val op = if (this.ids.isNotEmpty()) {
-            POp.isIn(PRef.ID, this.ids)
+            POp.isIn(PRef.ID, this.ids.toTypedArray())
         } else null
-        return ReadFeatures(
-            collectionIds = arrayOf(NKC_TABLE),
-            op = op,
-            resultFilter = resultFilter,
-            queryDeleted = queryDeleted,
-            limit = this.limit,
-            noFeature = noFeature,
-            noMeta = noMeta,
-            noTags = noTags,
-            noGeometry = noGeometry
-        )
+
+        val req = ReadFeatures()
+            .addCollectionId(NKC_TABLE)
+            .withOp(op)
+        req.resultFilter = resultFilter
+        req.queryDeleted = queryDeleted
+        req.limit = limit
+        req.noFeature = noFeature
+        req.noMeta = noMeta
+        req.noTags = noTags
+        req.noGeometry = noGeometry
+        return req
     }
 
     private fun MutableList<*>.nextPlaceHolder() = "${"$"}${this.size + 1}"

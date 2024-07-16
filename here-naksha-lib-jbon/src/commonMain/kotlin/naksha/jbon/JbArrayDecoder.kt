@@ -8,7 +8,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class JbArray : JbEntryArray<JbArray>() {
+class JbArrayDecoder : JbEntryArray<JbArrayDecoder>() {
 
     override fun parseHeader() {
         check(unitType == TYPE_ARRAY) { "Mapped structure is no array, but ${JbDecoder.unitTypeName(unitType)}" }

@@ -1,105 +1,140 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model.request
 
-import naksha.model.IReadRowFilter
 import naksha.model.request.condition.Op
 import naksha.model.request.condition.POp
 import naksha.model.request.condition.PRef
 import naksha.model.request.condition.SOp
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 
-@OptIn(ExperimentalJsExport::class)
 @JsExport
-class ReadFeatures(
+class ReadFeatures : ReadRequest<ReadFeatures>() {
+
     /**
      * true - includes deleted features in search.
      * Default: false
      */
-    val queryDeleted: Boolean = false,
+    @JvmField
+    var queryDeleted: Boolean = false
+
+    fun withQueryDeleted(): ReadFeatures {
+        queryDeleted = true
+        return this
+    }
+
     /**
      * true - includes historical versions of the feature.
      * Default: false
      */
-    val queryHistory: Boolean = false,
+    @JvmField
+    var queryHistory: Boolean = false
+
+    fun withQueryHistory(): ReadFeatures {
+        queryHistory = true
+        return this
+    }
+
     /**
      * Defines how many versions of the feature might be returned.
      */
-    val limitVersions: Int = 1,
+    @JvmField
+    var limitVersions: Int = 1
+
+    fun withLimitVersions(limitVersions: Int): ReadFeatures {
+        this.limitVersions = limitVersions
+        return this
+    }
+
     /**
      * true - result will have a handle that allows fetching more data (beyond the limit).
      */
-    val returnHandle: Boolean = false,
-    val orderBy: String? = null,
+    @JvmField
+    var returnHandle: Boolean = false
+
+    fun withReturnHandle(): ReadFeatures {
+        returnHandle = true
+        return this
+    }
+
+    @JvmField
+    var orderBy: String? = null
+
+    fun withOrderBy(orderBy: String): ReadFeatures {
+        this.orderBy = orderBy
+        return this
+    }
+
     /**
      * Collections to query.
      */
-    val collectionIds: Array<String>,
+    @JvmField
+    var collectionIds: MutableList<String> = mutableListOf()
+
+    fun addCollectionId(id: String): ReadFeatures {
+        collectionIds.add(id)
+        return this
+    }
+
     /**
      * op - gives ability to set conditions in `WHERE`.
      */
-    val op: Op? = null,
+    @JvmField
+    var op: Op? = null
+
+    fun withOp(op: Op?): ReadFeatures {
+        this.op = op
+        return this
+    }
+
     /**
      * Additional conditions for geometry.
      */
-    val spatialOp: SOp? = null,
-    /**
-     * @see ReadRequest.limit
-     * default: DEFAULT_LIMIT
-     */
-    limit: Int = DEFAULT_LIMIT,
-    /**
-     * @see Request.noFeature
-     * default: false
-     */
-    noFeature: Boolean = false,
-    /**
-     * @see Request.noGeometry
-     * default: false
-     */
-    noGeometry: Boolean = false,
-    /**
-     * @see Request.noGeoRef
-     * default: false
-     */
-    noGeoRef: Boolean = false,
-    /**
-     * @see Request.noMeta
-     * default: false
-     */
-    noMeta: Boolean = false,
-    /**
-     * @see Request.noTags
-     * default: false
-     */
-    noTags: Boolean = false,
-    /**
-     * @see Request.resultFilter
-     * default: empty
-     */
-    resultFilter: Array<IReadRowFilter> = emptyArray()
+    @JvmField
+    var spatialOp: SOp? = null
 
-) : ReadRequest(limit, noFeature, noGeometry, noGeoRef, noMeta, noTags, resultFilter) {
+    fun withSpatialOp(spatialOp: SOp): ReadFeatures {
+        this.spatialOp = spatialOp
+        return this
+    }
 
-    companion object {
-        fun readSingleHead(collectionId: String) = ReadFeatures(collectionIds = arrayOf(collectionId))
-
+    companion object ReadFeaturesCompanion {
+        /**
+         * Read the HEAD state using the given operation.
+         * @param collectionId the collection to query.
+         * @param op the operation to perform.
+         */
+        @JvmStatic
+        @JsStatic
         fun readHeadBy(collectionId: String, op: Op) =
-            ReadFeatures(collectionIds = arrayOf(collectionId), op = op)
+            ReadFeatures().addCollectionId(collectionId).withOp(op)
 
-        fun readIdsBy(collectionId: String, op: Op) = ReadFeatures(
-            collectionIds = arrayOf(collectionId),
-            op = op,
-            noFeature = true,
-            noGeometry = true,
-            noMeta = true,
-            noTags = true
-        )
+        /**
+         * Returns a query that reads only the IDs, describes by the given operation.
+         * @param collectionId the collection to read.
+         * @param op the operation to perform.
+         */
+        @JvmStatic
+        @JsStatic
+        fun readIdsBy(collectionId: String, op: Op) = ReadFeatures()
+            .addCollectionId(collectionId)
+            .withOp(op)
+            .withNoFeature()
+            .withNoGeometry()
+            .withNoMeta()
+            .withNoTags()
 
-        fun readFeaturesByIdRequest(collectionId: String, featureId: String, limitVersions: Int = 1, queryDeleted: Boolean = false) = ReadFeatures(
-            collectionIds = arrayOf(collectionId),
-            op = POp.eq(PRef.ID, featureId),
-            limitVersions = limitVersions,
-            queryDeleted = queryDeleted
-        )
+        /**
+         * Returns a query that reads a single feature.
+         * @param collectionId the collection to query.
+         * @param featureId the feature-id to query.
+         */
+        @JvmStatic
+        @JsStatic
+        fun readFeatureById(collectionId: String, featureId: String) =
+            ReadFeatures().addCollectionId(collectionId).withOp(POp.eq(PRef.ID, featureId))
     }
 }

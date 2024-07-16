@@ -1,9 +1,9 @@
 package naksha.jbon;
 
 import naksha.base.*
-import naksha.base.PlatformDataViewApi.Companion.dataview_get_size
-import naksha.base.PlatformUtil.Companion.defaultDataViewSize
+import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_size
 import kotlin.js.*
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 import kotlin.math.floor
 
@@ -11,9 +11,9 @@ import kotlin.math.floor
  * Creates a new JBON builder using the given view and global dictionary.
  * @property global The global dictionary to use when encoding; if any.
  */
-@Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
+@Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
 @JsExport
-open class JbEncoder(var global: JbDict? = null) : Binary() {
+open class JbEncoder(var global: JbDictDecoder? = null) : Binary() {
 
     /**
      * Create a new resizable editor with a new byte-array of the given size backing it.
@@ -22,7 +22,7 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forSize")
-    constructor(size: Int, global: JbDict? = null) : this(global) {
+    constructor(size: Int, global: JbDictDecoder? = null) : this(global) {
         view = Platform.newDataView(ByteArray(size))
         this.readOnly = false
         this.resize = true
@@ -37,7 +37,7 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forBinary")
-    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: JbDict? = null) : this(global) {
+    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: JbDictDecoder? = null) : this(global) {
         this.view = binaryView.view
         this.pos = pos
         this.end = end
@@ -54,7 +54,7 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forDataView")
-    constructor(view: PlatformDataView, pos: Int = 0, end: Int = dataview_get_size(view), global: JbDict? = null) : this(global) {
+    constructor(view: PlatformDataView, pos: Int = 0, end: Int = dataview_get_size(view), global: JbDictDecoder? = null) : this(global) {
         this.view = view
         this.pos = pos
         this.end = end
@@ -71,7 +71,7 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forUint8Array")
-    constructor(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset, global: JbDict? = null) : this(global) {
+    constructor(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset, global: JbDictDecoder? = null) : this(global) {
         view = Platform.newDataView(byteArray, offset, length)
         this.pos = 0
         this.end = dataview_get_size(view)
@@ -79,8 +79,7 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
         this.resize = true
     }
 
-    @OptIn(ExperimentalJsStatic::class)
-    companion object {
+    companion object JbEncoderCompanion {
         /**
          * An array that stores _true_ for every character that should belong to a **word**, when auto-splitting
          * strings for the local dictionary. Ones a character being _false_ is found, the string is split at that
@@ -93,23 +92,13 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
          * The reason is that we often find strings that have numbers in them, but except for the numbers nothing
          * else changes, for example `urn:here::here:Topology:123245678`.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val wordUnicode = BooleanArray(128) {
             (it >= 'a'.code && it <= 'z'.code)
                     || (it >= 'A'.code && it <= 'Z'.code)
                     || it == ':'.code
         }
-
-        /**
-         * Create a new builder with a buffer of the given size.
-         * @param size The buffer size to use; if _null_ a default is selected.
-         * @param global The global dictionary to use for the builder; if any.
-         * @return The builder.
-         */
-        @JvmStatic
-        @Deprecated("There is now a explict real static constructor, use it", ReplaceWith("JbBuilder(size, global)"))
-        fun create(size: Int? = null, global: JbDict? = null): JbEncoder = JbEncoder(size ?: defaultDataViewSize, global)
 
         /**
          * Returns the maximal encoding size of a string.
@@ -277,7 +266,7 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
      * @param value The integer to write.
      * @return The offset of the value written.
      */
-    fun encodeInt(value: Int): Int {
+    fun encodeInt32(value: Int): Int {
         val offset = end;
         when (value) {
             in -16..15 -> {
@@ -309,7 +298,7 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
      */
     fun encodeInt64(value: Int64): Int {
         if (value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) {
-            return encodeInt(value.toInt())
+            return encodeInt32(value.toInt())
         }
         val offset = end;
         writeInt8(ENC_MIXED_SCALAR_INT64.toByte())
@@ -337,7 +326,7 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
      * @param value The value to write.
      * @return The offset of the value written.
      */
-    fun encodeFloat(value: Float): Int {
+    fun encodeFloat32(value: Float): Int {
         val pos = end
         if (value >= -16.0 && value <= 15.0 && value == floor(value)) {
             val i = value.toInt() and 0x1f
@@ -354,7 +343,7 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
      * @param value The value to write.
      * @return The offset of the value written.
      */
-    fun encodeDouble(value: Double): Int {
+    fun encodeFloat64(value: Double): Int {
         val pos = end
         if (value >= -16.0 && value <= 15.0 && value == floor(value)) {
             val i = value.toInt() and 0x1f
@@ -927,13 +916,13 @@ open class JbEncoder(var global: JbDict? = null) : Binary() {
             is Char -> encodeString(value.toString())
             is String -> encodeString(value)
             is Boolean -> encodeBool(value)
-            is Byte -> encodeInt(value.toInt())
-            is Short -> encodeInt(value.toInt())
-            is Int -> encodeInt(value)
+            is Byte -> encodeInt32(value.toInt())
+            is Short -> encodeInt32(value.toInt())
+            is Int -> encodeInt32(value)
             is Long -> encodeInt64(value.toInt64())
             is Int64 -> encodeInt64(value)
-            is Float -> encodeFloat(value)
-            is Double -> if (Platform.canBeFloat32(value)) encodeFloat(value.toFloat()) else encodeDouble(value)
+            is Float -> encodeFloat32(value)
+            is Double -> if (Platform.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
             is MapProxy<*, *> -> encodeMap(value as MapProxy<String, *>)
             is ListProxy<*> -> encodeList(value)
             is Array<*> -> encodeArray(value as Array<Any?>)

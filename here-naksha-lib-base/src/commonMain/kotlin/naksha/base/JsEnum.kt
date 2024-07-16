@@ -79,7 +79,7 @@ abstract class JsEnum : CharSequence {
     var isDefined: Boolean = false
         private set
 
-    companion object {
+    companion object JsEnumCompanion {
         private fun alignValue(value: Any?): Any? {
             if (value == null) return null
             // Note: Byte, Short, Integer will be converted to Long
@@ -105,20 +105,24 @@ abstract class JsEnum : CharSequence {
          * A mapping between the class and the namespace. The namespace is the "root" class, so the class that directly
          * extends [JsEnum].
          */
+        @JvmStatic
         private val klassToNamespace = CMap<KClass<out JsEnum>, KClass<out JsEnum>>()
 
         /**
          * All registered enumeration values of a namespace. The first level is the namespace (the Kotlin class
          * that directly extend [JsEnum]), the second level maps values to registered instances.
          */
+        @JvmStatic
         private val registryMain = CMap<KClass<*>, CMap<Any, JsEnum>>()
 
         /**
          * All registered enumeration aliases. The first level is the namespace (the Kotlin class that directly extend [JsEnum]), the
          * second level maps values to registered instances.
          */
+        @JvmStatic
         private val registryAlias = CMap<KClass<*>, CMap<Any, JsEnum>>()
 
+        @JvmStatic
         private fun mainMap(ns: KClass<out JsEnum>): CMap<Any, JsEnum> {
             var mainMap = registryMain[ns]
             if (mainMap == null) {
@@ -129,6 +133,7 @@ abstract class JsEnum : CharSequence {
             return mainMap
         }
 
+        @JvmStatic
         private fun aliasMap(ns: KClass<out JsEnum>): CMap<Any, JsEnum> {
             var aliasMap = registryAlias[ns]
             if (aliasMap == null) {
@@ -168,6 +173,8 @@ abstract class JsEnum : CharSequence {
          * @return the defined instance.
          * @throws IllegalStateException if another class is already registered for the value (there is a conflict).
          */
+        @JvmStatic
+        @JsStatic
         fun <ENUM : JsEnum> def(enumKlass: KClass<ENUM>, value: Any?, init: Fx1<ENUM>? = null): ENUM {
             require(value === null || value is String || value is Number || value is Int64) {
                 "Invalid enumeration value, require null, String or Number"
@@ -195,6 +202,7 @@ abstract class JsEnum : CharSequence {
         fun <ENUM : JsEnum> get(value: Any?, enumKlass: KClass<out ENUM>): ENUM = __get(value, enumKlass, true)
 
         @Suppress("UNCHECKED_CAST")
+        @JvmStatic
         private fun <ENUM : JsEnum> __get(value: Any?, enumKlass: KClass<out ENUM>, doInit: Boolean): ENUM {
             var ns = klassToNamespace[enumKlass]
             if (ns == null) {

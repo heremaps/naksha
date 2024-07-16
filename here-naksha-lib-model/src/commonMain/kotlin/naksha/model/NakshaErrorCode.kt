@@ -12,19 +12,19 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class StorageError : JsEnum() {
+open class NakshaErrorCode : JsEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = StorageError::class
+    override fun namespace(): KClass<out JsEnum> = NakshaErrorCode::class
 
     override fun initClass() {}
 
-    companion object {
+    companion object StorageErrorCompanion {
         /**
          * Returned when an already initialized storage is initialized, providing a wrong identifier.
          */
         @JsStatic
         @JvmField
-        val STORAGE_ID_MISMATCH = def(StorageError::class, 0x0001) {
+        val STORAGE_ID_MISMATCH = def(NakshaErrorCode::class, "storageIdMismatch") {
             self -> self.defaultMessage = "Storage identifier does not match the provided expected one"
         }
     }
@@ -32,11 +32,11 @@ open class StorageError : JsEnum() {
     /**
      * The error-code of this error.
      */
-    val code: Int = if (value is Int) value as Int else toString().hashCode()
+    val code: String = toString()
 
     /**
      * The default message to use, if no explicit message provided, when throwing an [StorageException].
      */
-    var defaultMessage: String? = null
+    var defaultMessage: String = toString()
         protected set
 }

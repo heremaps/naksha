@@ -1,16 +1,14 @@
 package naksha.jbon
 
-import naksha.base.Binary
-import naksha.base.BinaryView
 import kotlin.js.JsExport
 
 /**
- * A dictionary reader.
+ * A dictionary decoder.
  * @constructor Create a new dictionary reader.
  */
 @Suppress("DuplicatedCode", "OPT_IN_USAGE")
 @JsExport
-class JbDict : JbStruct<JbDict>() {
+class JbDictDecoder : JbStructDecoder<JbDictDecoder>() {
     /**
      * Cached ID of the dictionary, if any.
      */
@@ -42,7 +40,7 @@ class JbDict : JbStruct<JbDict>() {
         reader.nextUnit()
     }
 
-    override fun clear(): JbDict {
+    override fun clear(): JbDictDecoder {
         super.clear()
         id = null
         length = -1
@@ -55,7 +53,7 @@ class JbDict : JbStruct<JbDict>() {
         return this
     }
 
-    override fun reset(): JbDict {
+    override fun reset(): JbDictDecoder {
         super.reset()
         length = -1
         if (content.size > 0) {
@@ -97,7 +95,7 @@ class JbDict : JbStruct<JbDict>() {
      * @return this.
      * @throws IllegalStateException If the view is invalid.
      */
-    fun loadAll(): JbDict {
+    fun loadAll(): JbDictDecoder {
         ensure(Int.MAX_VALUE)
         return this
     }

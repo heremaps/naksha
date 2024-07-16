@@ -3,8 +3,7 @@ package naksha.psql
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
 @JsExport
 actual class PgUtil {
-    @Suppress("OPT_IN_USAGE")
-    actual companion object {
+    actual companion object PgUtilCompanion {
         private fun plv8Forbidden(opName: String) {
             if (isPlv8()) throw UnsupportedOperationException("${opName}: Not supported in PLV8 storage")
         }
@@ -132,6 +131,7 @@ actual class PgUtil {
          * @param cluster the PostgresQL server cluster to use.
          * @param options the default options when opening new connections.
          */
+        @JsStatic
         actual fun newStorage(cluster: PgCluster, options: PgOptions): PgStorage {
             plv8Forbidden("PgUtil.newStorage")
             TODO("Not yet implemented")

@@ -2,11 +2,9 @@
 
 package naksha.base
 
-import naksha.base.PlatformListApi.Companion.toString
-
 expect class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
-    companion object {
+    companion object PlatformListApiCompanion {
         fun array_get_length(array: PlatformList?): Int
         fun array_set_length(array: PlatformList?, length: Int)
         fun array_clear(array: PlatformList?)

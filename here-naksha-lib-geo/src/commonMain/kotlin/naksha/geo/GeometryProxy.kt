@@ -1,11 +1,11 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.geo
 
 import naksha.base.*
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
-@OptIn(ExperimentalJsExport::class)
 @JsExport
 open class GeometryProxy() : ObjectProxy() {
 
@@ -14,7 +14,7 @@ open class GeometryProxy() : ObjectProxy() {
         setCoordinates(coordinates)
     }
 
-    companion object {
+    companion object GeometryProxyCompanion {
         private val TYPE = NullableProperty<Any, GeometryProxy, String>(String::class)
     }
 

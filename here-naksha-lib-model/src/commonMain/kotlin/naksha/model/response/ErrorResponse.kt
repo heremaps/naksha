@@ -1,20 +1,14 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model.response
 
-import kotlin.js.ExperimentalJsExport
+import naksha.model.NakshaError
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
  * Error response, means at least one operation failed. Transaction should be rolled back.
+ * @property error the error code as returned by the storage.
  */
-@OptIn(ExperimentalJsExport::class)
 @JsExport
-open class ErrorResponse(
-    val reason: NakshaError
-) : Response(ERROR_TYPE) {
-    fun getErrorMessage(): String = reason.message
-//    fun withError(error: XyzError?): ErrorResponse {
-//        setError(error)
-//        return this
-//    }
-}
+open class ErrorResponse(@JvmField val error: NakshaError) : Response()

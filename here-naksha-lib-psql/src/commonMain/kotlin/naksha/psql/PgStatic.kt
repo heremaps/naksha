@@ -72,7 +72,8 @@ object PgStatic {
      * Config for naksha_collection
      */
     @JvmStatic
-    internal val nakshaCollectionConfig by lazy { NakshaCollectionProxy(
+    internal val nakshaCollectionConfig by lazy {
+        NakshaCollectionProxy(
             storageClass = null,
             partitions = PARTITION_COUNT_NONE,
             autoPurge = false,
@@ -85,8 +86,10 @@ object PgStatic {
      * Array to create a pseudo GeoHash, which is BASE-32 encoded.
      */
     @JvmStatic
-    internal val BASE32 = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
-        'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z')
+    internal val BASE32 = arrayOf(
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
+        'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+    )
 
     /**
      * Used to debug.
@@ -215,7 +218,15 @@ object PgStatic {
     @JvmStatic
     fun createBaseInternalsIfNotExists(sql: PgConnection, schema: String, schemaOid: Int) {
         if (!tableExists(sql, COLLECTIONS_COL, schemaOid)) {
-            collectionCreate(sql, COLLECTIONS_COL, schema, schemaOid, COLLECTIONS_COL, DEFAULT_GEO_INDEX, partitionCount = PARTITION_COUNT_NONE)
+            collectionCreate(
+                sql,
+                COLLECTIONS_COL,
+                schema,
+                schemaOid,
+                COLLECTIONS_COL,
+                DEFAULT_GEO_INDEX,
+                partitionCount = PARTITION_COUNT_NONE
+            )
         }
         sql.execute("CREATE SEQUENCE IF NOT EXISTS naksha_txn_seq AS int8; COMMIT;")
     }
@@ -301,7 +312,13 @@ SET (toast_tuple_target=8160"""
      * @param nakshaCollection The table information.
      */
     @JvmStatic
-    private fun collectionAddIndices(sql: PgConnection, tableName: String, geoIndex: String, history: Boolean, nakshaCollection: PgTableInfo) {
+    private fun collectionAddIndices(
+        sql: PgConnection,
+        tableName: String,
+        geoIndex: String,
+        history: Boolean,
+        nakshaCollection: PgTableInfo
+    ) {
         val fillFactor = if (history) "100" else "70"
         // https://www.postgresql.org/docs/current/gin-tips.html
         val unique = if (history) "" else "UNIQUE "
@@ -363,7 +380,15 @@ WITH (fillfactor=$fillFactor) ${nakshaCollection.TABLESPACE};"""
      * @param partitionCount Number of partitions, possible values: 0 (no partitioning), 2, 4, 8, 16, 32, 64, 128, 256)
      */
     @JvmStatic
-    fun collectionCreate(sql: PgConnection, storageClass: String?, schema: String, schemaOid: Int, id: String, geoIndex: String, partitionCount: Int) {
+    fun collectionCreate(
+        sql: PgConnection,
+        storageClass: String?,
+        schema: String,
+        schemaOid: Int,
+        id: String,
+        geoIndex: String,
+        partitionCount: Int
+    ) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
         val nakshaCollection = PgTableInfo(sql, storageClass, partitionCount)
@@ -469,13 +494,15 @@ WITH (fillfactor=$fillFactor) ${nakshaCollection.TABLESPACE};"""
     @JvmStatic
     private fun collectionAttachTriggers(sql: PgConnection, id: String, schema: String, schemaOid: Int) {
         var triggerName = id + "_before"
-        var rows =sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid))
+        var rows = sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid))
         if (rows.isRow()) {
             val schemaQuoted = PgUtil.quoteIdent(schema)
             val tableNameQuoted = PgUtil.quoteIdent(id)
             val triggerNameQuoted = PgUtil.quoteIdent(triggerName)
-            sql.execute("""CREATE TRIGGER $triggerNameQuoted BEFORE INSERT OR UPDATE ON ${schemaQuoted}.${tableNameQuoted}
-FOR EACH ROW EXECUTE FUNCTION naksha_trigger_before();""")
+            sql.execute(
+                """CREATE TRIGGER $triggerNameQuoted BEFORE INSERT OR UPDATE ON ${schemaQuoted}.${tableNameQuoted}
+FOR EACH ROW EXECUTE FUNCTION naksha_trigger_before();"""
+            )
         }
 
         triggerName = id + "_after"
@@ -484,8 +511,10 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_before();""")
             val schemaQuoted = PgUtil.quoteIdent(schema)
             val tableNameQuoted = PgUtil.quoteIdent(id)
             val triggerNameQuoted = PgUtil.quoteIdent(triggerName)
-            sql.execute("""CREATE TRIGGER $triggerNameQuoted AFTER INSERT OR UPDATE OR DELETE ON ${schemaQuoted}.${tableNameQuoted}
-FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();""")
+            sql.execute(
+                """CREATE TRIGGER $triggerNameQuoted AFTER INSERT OR UPDATE OR DELETE ON ${schemaQuoted}.${tableNameQuoted}
+FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
+            )
         }
     }
 
@@ -501,10 +530,12 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();""")
         val delName = PgUtil.quoteIdent("$id\$del")
         val metaName = PgUtil.quoteIdent("$id\$meta")
         val hstName = PgUtil.quoteIdent("$id\$hst")
-        pgConnection.execute("""DROP TABLE IF EXISTS $headName CASCADE;
+        pgConnection.execute(
+            """DROP TABLE IF EXISTS $headName CASCADE;
 DROP TABLE IF EXISTS $delName CASCADE;
 DROP TABLE IF EXISTS $metaName CASCADE;
-DROP TABLE IF EXISTS $hstName CASCADE;""")
+DROP TABLE IF EXISTS $hstName CASCADE;"""
+        )
     }
 
     /**
@@ -516,7 +547,13 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param nakshaCollection The table info to know storage class and alike.
      */
     @JvmStatic
-    private fun createHstPartition(pgConnection: PgConnection, collectionId: String, year: Int, geoIndex: String, nakshaCollection: PgTableInfo):
+    private fun createHstPartition(
+        pgConnection: PgConnection,
+        collectionId: String,
+        year: Int,
+        geoIndex: String,
+        nakshaCollection: PgTableInfo
+    ):
             String {
         val parentName = "${collectionId}\$hst"
         val parentNameQuoted = PgUtil.quoteIdent(parentName)
@@ -552,14 +589,17 @@ DROP TABLE IF EXISTS $hstName CASCADE;""")
      * @param nakshaCollection Information about the table.
      * @param history If this is a history partition; otherwise it is
      */
-    private fun createPartitionById(pgConnection: PgConnection, parentName: String, geoIndex: String, part: Int, nakshaCollection:
-    PgTableInfo, history: Boolean) {
+    private fun createPartitionById(
+        pgConnection: PgConnection, parentName: String, geoIndex: String, part: Int, nakshaCollection:
+        PgTableInfo, history: Boolean
+    ) {
         require(part in 0..<nakshaCollection.partitionCount) { "Invalid partition number $part" }
         val partString = PARTITION_ID[part]
         val partitionName = if (parentName.contains('$')) "${parentName}_p$partString" else "${parentName}\$p$partString"
         val partitionNameQuoted = PgUtil.quoteIdent(partitionName)
         val parentTableNameQuoted = PgUtil.quoteIdent(parentName)
-        val query = nakshaCollection.CREATE_TABLE + "IF NOT EXISTS $partitionNameQuoted PARTITION OF $parentTableNameQuoted FOR VALUES FROM ($part) TO (${part + 1}) ${nakshaCollection.STORAGE_PARAMS} ${nakshaCollection.TABLESPACE};"
+        val query =
+            nakshaCollection.CREATE_TABLE + "IF NOT EXISTS $partitionNameQuoted PARTITION OF $parentTableNameQuoted FOR VALUES FROM ($part) TO (${part + 1}) ${nakshaCollection.STORAGE_PARAMS} ${nakshaCollection.TABLESPACE};"
         pgConnection.execute(query)
         //collectionOptimizeTable(sql, partitionName, history)
         collectionAddIndices(pgConnection, partitionName, geoIndex, history, nakshaCollection)

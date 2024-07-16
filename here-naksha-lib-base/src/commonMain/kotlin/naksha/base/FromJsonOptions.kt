@@ -14,7 +14,7 @@ import kotlin.jvm.JvmStatic
 @JsExport
 data class FromJsonOptions(val parseDataUrl: Boolean = false) {
     @OptIn(ExperimentalJsStatic::class)
-    companion object {
+    companion object FromJsonOptionsCompanion {
         /**
          * The default JSON parsing options being used, when none are given explicitly.
          */

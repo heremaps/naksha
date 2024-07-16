@@ -8,7 +8,7 @@ import kotlin.js.JsExport
  */
 @Suppress("UNCHECKED_CAST", "OPT_IN_USAGE")
 @JsExport
-abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStruct<SELF>() {
+abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructDecoder<SELF>() {
     /**
      * The current index in the entry list.
      */

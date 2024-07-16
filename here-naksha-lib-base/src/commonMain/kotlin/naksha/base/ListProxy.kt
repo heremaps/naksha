@@ -2,17 +2,17 @@
 
 package naksha.base
 
-import naksha.base.PlatformListApi.Companion.array_delete
-import naksha.base.PlatformListApi.Companion.array_entries
-import naksha.base.PlatformListApi.Companion.array_get
-import naksha.base.PlatformListApi.Companion.array_get_length
-import naksha.base.PlatformListApi.Companion.array_index_of
-import naksha.base.PlatformListApi.Companion.array_last_index_of
-import naksha.base.PlatformListApi.Companion.array_push
-import naksha.base.PlatformListApi.Companion.array_retain_all
-import naksha.base.PlatformListApi.Companion.array_set
-import naksha.base.PlatformListApi.Companion.array_set_length
-import naksha.base.PlatformListApi.Companion.array_splice
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_delete
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_entries
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_index_of
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_last_index_of
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_push
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_retain_all
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_length
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_splice
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.math.max

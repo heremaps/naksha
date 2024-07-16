@@ -1,18 +1,19 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.base.Platform.logger
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformMap
 import naksha.base.PlatformUtil
 import naksha.base.fn.Fx2
 import naksha.jbon.*
 import naksha.model.*
+import naksha.model.NakshaErrorCode.StorageErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.Row
-import naksha.psql.PgUtil.Companion.ID
-import naksha.psql.PgUtil.Companion.OPTIONS
-import naksha.psql.PgUtil.Companion.VERSION
+import naksha.psql.PgUtil.PgUtilCompanion.ID
+import naksha.psql.PgUtil.PgUtilCompanion.OPTIONS
+import naksha.psql.PgUtil.PgUtilCompanion.VERSION
 import naksha.psql.PgStatic.quote_ident
-import naksha.psql.PgUtil.Companion.OVERRIDE
+import naksha.psql.PgUtil.PgUtilCompanion.OVERRIDE
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -134,7 +135,7 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 }
                 val storageId: String = if (existingStorageId != null) {
                     if (initId != null && initId != existingStorageId) {
-                        throw StorageException(err=StorageError.STORAGE_ID_MISMATCH, msg="Expect $initId, but found $existingStorageId")
+                        throw StorageException(NakshaError(STORAGE_ID_MISMATCH, "Expect $initId, but found $existingStorageId"))
                     }
                     existingStorageId
                 } else initId ?: PlatformUtil.randomString()
@@ -192,35 +193,35 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                     autoload = true
                 )
                 installModuleFromResource(
-                    conn, "base",
+                    conn, "naksha_base",
                     "/naksha_base.mjs",
                     paths = arrayOf("./naksha_base.mjs"),
                     beautify = false,
                     autoload = true
                 )
                 installModuleFromResource(
-                    conn, "jbon",
+                    conn, "naksha_jbon",
                     "/naksha_jbon.mjs",
                     paths = arrayOf("./naksha_jbon.mjs"),
                     beautify = false,
                     autoload = true
                 )
                 installModuleFromResource(
-                    conn, "geo",
+                    conn, "naksha_geo",
                     "/naksha_geo.mjs",
                     paths = arrayOf("./naksha_geo.mjs"),
                     beautify = false,
                     autoload = true
                 )
                 installModuleFromResource(
-                    conn, "model",
+                    conn, "naksha_model",
                     "/naksha_model.mjs",
                     paths = arrayOf("./naksha_model.mjs"),
                     beautify = false,
                     autoload = true
                 )
                 installModuleFromResource(
-                    conn, "psql",
+                    conn, "naksha_psql",
                     "/naksha_psql.mjs",
                     paths = arrayOf("./naksha_psql.mjs"),
                     beautify = false,
@@ -270,8 +271,8 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
     override fun rowToFeature(row: Row): NakshaFeatureProxy {
         return if (row.feature != null) {
             // TODO: FIXME, we need the XYZ namespace
-            val featureReader = JbMapFeature(JbDictManager()).mapBytes(row.feature!!).reader
-            val feature = JbMap().mapReader(featureReader).toIMap().proxy(NakshaFeatureProxy::class)
+            val featureReader = JbMapFeatureDecoder(JbDictManager()).mapBytes(row.feature!!).reader
+            val feature = JbMapDecoder().mapReader(featureReader).toIMap().proxy(NakshaFeatureProxy::class)
             feature
         } else {
             TODO("We will always have at least the id, which is formally enough to generate an empty feature!")

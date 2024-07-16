@@ -34,10 +34,10 @@ import com.here.naksha.lib.nak.HereTile;
 import java.util.Map;
 import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
-import naksha.jbon.JbDict;
+import naksha.jbon.JbDictDecoder;
 import naksha.jbon.JbDictManager;
-import naksha.jbon.JbFeature;
-import naksha.jbon.JbMap;
+import naksha.jbon.JbFeatureDecoder;
+import naksha.jbon.JbMapDecoder;
 import naksha.jbon.JvmEnv;
 import naksha.jbon.XyzEncoder;
 import org.jetbrains.annotations.NotNull;
@@ -568,7 +568,7 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
     return super.setFeature(feature);
   }
 
-  public void decodeXyzOp(@Nullable JbDict globalDict) {
+  public void decodeXyzOp(@Nullable JbDictDecoder globalDict) {
     XyzEncoder xyzBuilder = new XyzEncoder(newDataView(1024), globalDict);
     xyzOp = xyzBuilder.buildXyzOp(mapOperationToPerform(op), id, uuid, calculateGrid());
   }
@@ -589,10 +589,10 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
         ? GZip.INSTANCE.gunzip(featureBytes)
         : featureBytes;
 
-    JbFeature jbFeature = new JbFeature(new JbDictManager())
+    JbFeatureDecoder jbFeatureDecoder = new JbFeatureDecoder(new JbDictManager())
         .mapBytes(uncompressedFeatureBytes, 0, uncompressedFeatureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>)
-        new JbMap().mapReader(jbFeature.getReader()).toIMap();
+        new JbMapDecoder().mapReader(jbFeatureDecoder.getReader()).toIMap();
     return JvmEnv.get().convert(featureAsMap, featureClass);
   }
 

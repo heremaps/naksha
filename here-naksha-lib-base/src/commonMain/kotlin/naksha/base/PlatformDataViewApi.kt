@@ -4,7 +4,7 @@ package naksha.base
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class PlatformDataViewApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
-    companion object {
+    companion object PlatformDataViewApiCompanion {
         fun dataview_get_byte_array(view: PlatformDataView): ByteArray
         // TODO: Rename to dataview_get_byte_offset
         fun dataview_get_start(view: PlatformDataView): Int

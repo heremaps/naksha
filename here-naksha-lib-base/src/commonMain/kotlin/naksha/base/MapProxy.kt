@@ -2,16 +2,16 @@
 
 package naksha.base
 
-import naksha.base.PlatformListApi.Companion.array_get
-import naksha.base.PlatformListApi.Companion.array_get_length
-import naksha.base.PlatformMapApi.Companion.map_clear
-import naksha.base.PlatformMapApi.Companion.map_contains_key
-import naksha.base.PlatformMapApi.Companion.map_contains_value
-import naksha.base.PlatformMapApi.Companion.map_get
-import naksha.base.PlatformMapApi.Companion.map_iterator
-import naksha.base.PlatformMapApi.Companion.map_remove
-import naksha.base.PlatformMapApi.Companion.map_set
-import naksha.base.PlatformMapApi.Companion.map_size
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_clear
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_value
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_remove
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_size
 import naksha.base.fn.Fn2
 import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport

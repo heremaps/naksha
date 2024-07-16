@@ -15,7 +15,7 @@ import kotlin.js.JsExport
  */
 @Suppress("UNCHECKED_CAST", "MemberVisibilityCanBePrivate")
 @JsExport
-abstract class JbStruct<SELF : JbStruct<SELF>> {
+abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
 
     /**
      * The reader used to read from the structure.
@@ -75,7 +75,7 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    protected open fun map(binary: BinaryView, leadInOffset: Int, localDict: JbDict?, globalDict: JbDict?): SELF {
+    protected open fun map(binary: BinaryView, leadInOffset: Int, localDict: JbDictDecoder?, globalDict: JbDictDecoder?): SELF {
         clear()
         reader.mapBinary(binary, leadInOffset, binary.end, localDict, globalDict)
         check(reader.isStruct()) { "Mapping failed, the view does not contain a structure at the given offset" }
@@ -95,7 +95,7 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * Returns the local dictionary or throws an [IllegalStateException].
      * @return The local dictionary.
      */
-    fun localDict(): JbDict {
+    fun localDict(): JbDictDecoder {
         val localDict = reader.localDict
         check(localDict != null)
         return localDict
@@ -133,7 +133,7 @@ abstract class JbStruct<SELF : JbStruct<SELF>> {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    fun mapBinary(binary: BinaryView, offset: Int = 0, localDict: JbDict? = null, globalDict: JbDict? = null): SELF {
+    fun mapBinary(binary: BinaryView, offset: Int = 0, localDict: JbDictDecoder? = null, globalDict: JbDictDecoder? = null): SELF {
         map(binary, offset, localDict, globalDict)
         return this as SELF
     }

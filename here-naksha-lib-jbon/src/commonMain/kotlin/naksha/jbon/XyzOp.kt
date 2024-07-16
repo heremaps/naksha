@@ -17,7 +17,7 @@ class XyzOp : XyzStruct<XyzOp>() {
     private var uuid: String? = null
     private var grid: Int? = null
 
-    companion object {
+    companion object XyzOpCompanion {
         @JvmStatic
         fun getOpName(op:Int) = if (op >= 0 && op <= XYZ_OP_NAME.size) XYZ_OP_NAME[op] else "undefined"
 

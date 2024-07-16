@@ -1,10 +1,10 @@
 package naksha.base
 
-import naksha.base.PlatformMapApi.Companion.map_contains_key
-import naksha.base.PlatformMapApi.Companion.map_get
-import naksha.base.PlatformMapApi.Companion.map_set
-import naksha.base.Proxy.Companion.box
-import naksha.base.Proxy.Companion.unbox
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
+import naksha.base.Proxy.ProxyCompanion.box
+import naksha.base.Proxy.ProxyCompanion.unbox
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty

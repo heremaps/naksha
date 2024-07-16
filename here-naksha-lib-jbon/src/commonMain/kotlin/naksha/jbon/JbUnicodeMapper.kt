@@ -9,7 +9,8 @@ import kotlin.js.JsExport
  * An intermediate helper to support parsing of unicode encoding in the internal format.
  */
 @JsExport
-abstract class JbUnicodeMapper<SELF : JbUnicodeMapper<SELF>> : JbStruct<SELF>() {
+@Deprecated("The class is not used, and will be removed soon", level = DeprecationLevel.WARNING)
+abstract class JbUnicodeMapper<SELF : JbUnicodeMapper<SELF>> : JbStructDecoder<SELF>() {
     /**
      * Read the code-point at the current offset.
      * @param moveForward If true, the offset will be adjusted after reading the code point; false otherwise.

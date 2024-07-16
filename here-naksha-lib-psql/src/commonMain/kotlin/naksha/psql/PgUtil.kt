@@ -7,7 +7,8 @@ import naksha.model.NakshaContext
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class PgUtil {
-    companion object {
+    companion object PgUtilCompanion {
+
         /**
          * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
          * the existing installed version of Naksha code is up-to-date.

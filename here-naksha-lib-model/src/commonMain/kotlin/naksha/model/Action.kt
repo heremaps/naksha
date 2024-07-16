@@ -7,24 +7,26 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-object Action : FlagsBits() {
-    /**
-     * Create action.
-     */
-    const val CREATED = 0 shl ACTION_SHIFT
+class Action : FlagsBits() {
+    companion object ActionCompanion {
+        /**
+         * Create action.
+         */
+        const val CREATED = 0 shl ACTION_SHIFT
 
-    /**
-     * Update action.
-     */
-    const val UPDATED = 1 shl ACTION_SHIFT
+        /**
+         * Update action.
+         */
+        const val UPDATED = 1 shl ACTION_SHIFT
 
-    /**
-     * Delete action.
-     */
-    const val DELETED = 2 shl ACTION_SHIFT
+        /**
+         * Delete action.
+         */
+        const val DELETED = 2 shl ACTION_SHIFT
 
-    /**
-     * Unknown action.
-     */
-    const val UNKNOWN = 3 shl ACTION_SHIFT
+        /**
+         * Unknown action.
+         */
+        const val UNKNOWN = 3 shl ACTION_SHIFT
+    }
 }

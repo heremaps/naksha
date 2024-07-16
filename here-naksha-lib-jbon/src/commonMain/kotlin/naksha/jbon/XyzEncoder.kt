@@ -14,7 +14,7 @@ import kotlin.js.JsExport
  * @constructor Creates a new empty, mutable, and resizable binary editor.
  */
 @JsExport
-class XyzEncoder(binaryView: BinaryView = Binary(), global: JbDict? = null) : JbEncoder(binaryView = binaryView, global = global) {
+class XyzEncoder(binaryView: BinaryView = Binary(), global: JbDictDecoder? = null) : JbEncoder(binaryView = binaryView, global = global) {
 
     /**
      * Starts tag building.
@@ -60,11 +60,11 @@ class XyzEncoder(binaryView: BinaryView = Binary(), global: JbDict? = null) : Jb
 
             is Double -> {
                 if (Platform.canBeInt32(value)) {
-                    encodeInt(value.toInt())
+                    encodeInt32(value.toInt())
                 } else if (Platform.canBeFloat32(value)) {
-                    encodeFloat(value.toFloat())
+                    encodeFloat32(value.toFloat())
                 } else {
-                    encodeDouble(value)
+                    encodeFloat64(value)
                 }
             }
 
@@ -116,10 +116,10 @@ class XyzEncoder(binaryView: BinaryView = Binary(), global: JbDict? = null) : Jb
      */
     fun buildXyzOp(op: Int, id: String? = null, uuid: String? = null, grid: Int? = null): ByteArray {
         end = 10
-        encodeInt(op)
+        encodeInt32(op)
         if (id == null) encodeNull() else encodeString(id)
         if (uuid == null) encodeNull() else encodeString(uuid)
-        if (grid == null) encodeNull() else encodeInt(grid)
+        if (grid == null) encodeNull() else encodeInt32(grid)
         return finish(ENC_STRUCT_VARIANT_XYZ, XYZ_OPS_VARIANT)
     }
 
@@ -144,14 +144,14 @@ class XyzEncoder(binaryView: BinaryView = Binary(), global: JbDict? = null) : Jb
         encodeTimestamp(createdAt)
         if (createdAt == updatedAt) encodeNull() else encodeTimestamp(updatedAt)
         writeInt64(txn)
-        encodeInt(action.toInt())
-        encodeInt(version)
+        encodeInt32(action.toInt())
+        encodeInt32(version)
         if (authorTs == updatedAt) encodeNull() else encodeTimestamp(authorTs)
         if (puuid == null) encodeNull() else encodeString(puuid)
         encodeString(uuid)
         encodeString(appId)
         encodeString(author)
-        encodeInt(grid)
+        encodeInt32(grid)
         return finish(ENC_STRUCT_VARIANT_XYZ, XYZ_NS_VARIANT)
     }
 
