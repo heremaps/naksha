@@ -12,7 +12,7 @@ import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 @JsExport
-class ReadFeatures : ReadRequest<ReadFeatures>() {
+open class ReadFeatures : ReadRequest<ReadFeatures>() {
 
     /**
      * true - includes deleted features in search.
