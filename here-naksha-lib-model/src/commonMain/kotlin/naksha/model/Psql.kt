@@ -1,7 +1,6 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package naksha.model
 
+const val DEFAULT_REALM = "public"
 
 const val ACTION_CREATE = 0
 const val ACTION_UPDATE = 1

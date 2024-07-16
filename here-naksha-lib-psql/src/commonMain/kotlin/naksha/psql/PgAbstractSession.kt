@@ -12,7 +12,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-abstract class AbstractSession<T>(val storage: PgStorage, options: PgOptions) : IWriteSession, IReadSession, ISession, PgTx {
+abstract class PgAbstractSession<T>(val storage: PgStorage, options: PgOptions) : IWriteSession, IReadSession, ISession, PgTx {
 
     /**
      * The options when opening new connections. The options are mostly immutable, except for the timeout values, for which there are
@@ -39,6 +39,13 @@ abstract class AbstractSession<T>(val storage: PgStorage, options: PgOptions) : 
         get() = options.lockTimeout
         set(value) {
             options = options.copy(lockTimeout = value)
+            // TODO: if pgConnection is not null, update
+        }
+
+    override var realm: String
+        get() = options.schema
+        set(value) {
+            options = options.copy(schema = storage.realmToSchema(value))
             // TODO: if pgConnection is not null, update
         }
 

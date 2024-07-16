@@ -1,93 +1,144 @@
+@file:Suppress("MemberVisibilityCanBePrivate", "unused")
+
 package naksha.psql
 
 import kotlin.js.JsExport
 
 /**
- * Configuration of a table.
- * @property conn The SQL API of the session.
- * @property storageClass The storage class to create.
- * @property partitionCount ?
+ * Information about a single database table.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PgTableInfo(val conn: PgConnection, val storageClass: String?, val partitionCount: Int) { // TODO: Rename sql to conn
-    /**
-     * The CREATE TABLE statement.
-     */
-    val CREATE_TABLE: String
+data class PgTableInfo(
+    val collectionId: String,
+    val schema: String,
+    val schemaOid: Int,
+    val table: String,
+    val tableOid: Int,
+    val kind: PgKind
+) {
+    private var quotedSchema: String? = null
 
     /**
-     * The table body being the columns definitions.
+     * The schema identifier, optionally quoted in double quotes.
      */
-    val CREATE_TABLE_BODY: String
-
-    /**
-     * The storage parameters for the table creations (WITH).
-     */
-    val STORAGE_PARAMS: String
-
-    /**
-     * Either empty String "", or tablespace query part "TABLESPACE tablespace_name" (always last value).
-     */
-    val TABLESPACE: String
-
-    init {
-        when (storageClass) {
-            PgStatic.SC_BRITTLE -> {
-                CREATE_TABLE = "CREATE UNLOGGED TABLE "
-                TABLESPACE = if (conn.info().brittleTableSpace != null) " TABLESPACE ${conn.info().brittleTableSpace}" else ""
+    val schemaNameQuoted: String
+        get() {
+            var s = quotedSchema
+            if (s == null) {
+                s = PgUtil.quoteIdent(schema)
+                quotedSchema = s
             }
-
-            PgStatic.SC_TEMPORARY -> {
-                CREATE_TABLE = "CREATE UNLOGGED TABLE "
-                TABLESPACE = if (conn.info().tempTableSpace != null) " TABLESPACE ${conn.info().tempTableSpace}" else ""
-            }
-
-            else -> {
-                CREATE_TABLE = "CREATE TABLE "
-                TABLESPACE = ""
-            }
+            return s
         }
 
-        val featureCompression = if (conn.info().gzipExtension) "EXTERNAL" else DEFAULT_FEATURE_STORAGE
+    private var quotedTable: String? = null
 
-        val builder = StringBuilder()
-        builder.append(" (")
-        builder.append("""
-            created_at int8,
-            updated_at int8 NOT NULL,""")
-        builder.append("""
-                author_ts   int8,
-                txn_next    int8,
-                txn         int8 NOT NULL,
-                ptxn        int8,
-                uid         int4,
-                puid        int4,
-                fnva1       int4,
-                version     int4,
-                geo_grid    int4,
-                flags       int4,
-                app_id      text STORAGE PLAIN NOT NULL,
-                author      text STORAGE PLAIN,
-                type        text STORAGE PLAIN,
-                id          text STORAGE PLAIN NOT NULL,
-                feature     bytea STORAGE $featureCompression,
-                tags        bytea STORAGE EXTERNAL,
-                geo         bytea STORAGE EXTERNAL,
-                geo_ref     bytea STORAGE EXTERNAL
-            ) """)
-        CREATE_TABLE_BODY = builder.toString()
+    /**
+     * The table identifier, optionally quoted in double quotes.
+     */
+    val tableNameQuoted: String
+        get() {
+            var s = quotedTable
+            if (s == null) {
+                s = PgUtil.quoteIdent(table)
+                quotedTable = s
+            }
+            return s
+        }
 
-        builder.setLength(0)
-        builder.append(" WITH (")
-                .append("fillfactor=100")
-                .append(",toast_tuple_target=").append(conn.info().maxTupleSize)
-                .append(",parallel_workers=").append(partitionCount)
-                .append(") ")
-        STORAGE_PARAMS = builder.toString()
+    /**
+     * Tests if this is any HEAD table.
+     * @return _true_ if this is any HEAD table.
+     */
+    fun isHead(): Boolean = isHeadRoot() || isHeadPartition()
+
+    /**
+     * Tests if this is the root HEAD table.
+     * @return _true_ if this is the root HEAD table.
+     */
+    fun isHeadRoot(): Boolean = table.indexOf('$') < 0
+
+    /**
+     * Tests if this is a partition of the HEAD table.
+     * @return _true_ if this is a partition of the HEAD table.
+     */
+    fun isHeadPartition(): Boolean = table.indexOf("\$p") > 0
+
+    /**
+     * Tests if this is any DELETED table.
+     * @return _true_ if this is any DELETED table.
+     */
+    fun isDeleted(): Boolean = isDeletedRoot() || isDeletedPartition()
+
+    /**
+     * Tests if this is the root DELETED table.
+     * @return _true_ if this is the root DELETED table.
+     */
+    fun isDeletedRoot(): Boolean = table.endsWith("\$del")
+
+    /**
+     * Tests if this is a partition of the DELETED table.
+     * @return _true_ if this is a partition of the DELETED table.
+     */
+    fun isDeletedPartition(): Boolean = table.indexOf("\$del_p") > 0
+
+    /**
+     * Tests if this is the META table.
+     * @return _true_ if this is the META table.
+     */
+    fun isMeta(): Boolean = table.endsWith("\$meta")
+
+    /**
+     * Tests if this is any HISTORY table.
+     * @return _true_ if this is any HISTORY table.
+     */
+    fun isHistory(): Boolean = table.indexOf("\$hst") > 0
+
+    /**
+     * Tests if this is the root HISTORY table.
+     * @return _true_ if this is the root HISTORY table.
+     */
+    fun isHistoryRoot(): Boolean = table.endsWith("\$hst")
+
+    /**
+     * Tests if this is a monthly partition of HISTORY.
+     * @return _true_ if this is a monthly partition of HISTORY.
+     */
+    fun isHistoryMonthly(): Boolean {
+        val hstStart = table.indexOf("\$hst_")
+        if (hstStart < 0) return false
+        // should be: tableName$hst_yyyy_mm
+        return table.indexOf("\$_p", hstStart) < 0
     }
 
-    companion object {
-        const val DEFAULT_FEATURE_STORAGE = "MAIN COMPRESSION lz4"
+    /**
+     * Tests if this is a sub-partition of a monthly HISTORY partition.
+     * @return _true_ if this is a sub-partition of a monthly HISTORY partition.
+     */
+    fun isHistoryPartition(): Boolean {
+        val hstStart = table.indexOf("\$hst_")
+        if (hstStart < 0) return false
+        // should be: tableName$hst_yyyy_mm_p000
+        return table.lastIndexOf("\$_p") > hstStart
+    }
+
+    /**
+     * An indicator if this is an internal Naksha collection. Very special rules apply to these tables.
+     */
+    val internal: Boolean
+        get() = collectionId.startsWith("naksha~")
+
+    private var indices: List<PgIndex>? = null
+
+    /**
+     * Returns the indices of this table.
+     * @param conn the connection that can be used to query the database.
+     * @param noCache if _true_, then the cache is bypassed and the data is always queried live from the database.
+     * @return the indices, only from cache if [noCache] is _false_.
+     */
+    fun getIndices(conn: PgConnection, noCache: Boolean = false): List<PgIndex> {
+        if (!noCache && indices != null) indices
+        TODO("Implement me!")
     }
 }

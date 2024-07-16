@@ -50,13 +50,11 @@ interface CMap<K : Any, V : Any> : MutableMap<K, V> {
      * Removes the entry for a key only if currently mapped to a given value.
      * This is equivalent to:
      * ```
-     * if (map.containsKey(key) &&
-     *     Objects.equals(map.get(key), value)) {
+     * if (map.containsKey(key) && map.get(key)===value) {
      *   map.remove(key);
      *   return true;
-     * } else {
-     *   return false;
      * }
+     * return false;
      * ```
      * except that the action is performed atomically.
      *

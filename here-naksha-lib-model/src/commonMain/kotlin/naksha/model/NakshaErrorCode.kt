@@ -28,12 +28,12 @@ open class NakshaErrorCode : JsEnum() {
             self -> self.defaultMessage = "Storage identifier does not match the provided expected one"
         }
         /**
-         * The storage is not initialized.
+         * Returned when trying to create a collection that exists already.
          */
         @JsStatic
         @JvmField
-        val STORAGE_NOT_INITIALIZED = def(NakshaErrorCode::class, "StorageNotInitialized") {
-                self -> self.defaultMessage = "The storage has not been initialized yet"
+        val COLLECTION_EXISTS = def(NakshaErrorCode::class, "collectionExists") {
+                self -> self.defaultMessage = "The collection with the given identifier exists already"
         }
         /**
          * The collection accessed does not exist.

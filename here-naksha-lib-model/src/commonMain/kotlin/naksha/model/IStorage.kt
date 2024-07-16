@@ -8,12 +8,10 @@ import naksha.jbon.IDictManager
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
-// FIXME TODO move it to proper library
-
 /**
- * Any entity implementing the IStorage interface represents some data-sink and comes with an implementation that grants access to the data.
- * The storage normally is a singleton that opens many sessions, each representing an individual connection to the storage.
- * The default context is taken from the thread that opens the context, via NakshaContext->currentContext().
+ * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions.
+ *
+ * Storages operate on realms, each realm is fully isolated from another one. Some implementations only support one realm.
  *
  * The storage may or may not support dictionaries, but in any case it needs to return a dictionary manager (even, if this is only an immutable one with no content).
  */
@@ -27,14 +25,26 @@ interface IStorage : AutoCloseable {
     fun id(): String
 
     /**
-     * Initializes the storage. First tries to read the storage identifier from the storage. If , create the transaction table, install
-     * needed scripts and extensions. If the storage is
-     * already initialized; does nothing.
+     * Initializes the storage for the default realm (`public`). The function will try to read the storage identifier from the storage. If necessary, creating the transaction table, installs needed scripts, and extensions. If the storage is already initialized, and a storage identifier is provided in the params, then the method ensures that the actual storage-id matches the requested one. This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
      * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
      * @throws StorageException if the initialization failed.
      * @since 2.0.8
      */
     fun initStorage(params: Map<String, *>? = null)
+
+    /**
+     * Initializes the given realm in the storage. When `public` (default) is given, the method will do nothing, because this realm is already initialized by [initStorage]. If the given realm is already initialized, the method just does nothing. This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
+     * @param realm the realm to initialize.
+     * @since 3.0.0
+     * @throws StorageException if the initialization failed (e.g. the storage does not support multi-realms).
+     * @throws IllegalStateException if [initStorage] has not been called before.
+     */
+    fun initRealm(realm: String)
+
+    /**
+     * Deletes the given realm with all data in it. This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
+     */
+    fun dropRealm(realm: String)
 
     /**
      * Convert the given [Row] into a [NakshaFeatureProxy].

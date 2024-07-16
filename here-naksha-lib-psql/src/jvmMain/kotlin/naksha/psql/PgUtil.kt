@@ -65,14 +65,42 @@ actual class PgUtil {
          * @return The quoted literal.
          */
         @JvmStatic
-        actual fun quoteLiteral(vararg parts: String): String = PgStatic.quote_literal(*parts)
+        actual fun quoteLiteral(vararg parts: String): String {
+            val sb = StringBuilder()
+            sb.append("E'")
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        '\'' -> sb.append('\'').append('\'')
+                        '\\' -> sb.append('\\').append('\\')
+                        else -> sb.append(c)
+                    }
+                }
+            }
+            sb.append('\'')
+            return sb.toString()
+        }
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
          * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
          */
         @JvmStatic
-        actual fun quoteIdent(vararg parts: String): String = PgStatic.quote_ident(*parts)
+        actual fun quoteIdent(vararg parts: String): String {
+            val sb = StringBuilder()
+            sb.append('"')
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        '"' -> sb.append('"').append('"')
+                        '\\' -> sb.append('\\').append('\\')
+                        else -> sb.append(c)
+                    }
+                }
+            }
+            sb.append('"')
+            return sb.toString()
+        }
 
         @JvmStatic
         private val md5Digest = ThreadLocal.withInitial { MessageDigest.getInstance("MD5") }

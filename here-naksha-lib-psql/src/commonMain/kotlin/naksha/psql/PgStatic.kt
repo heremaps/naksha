@@ -5,10 +5,7 @@ package naksha.psql
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import naksha.base.Fnv1a32
-import naksha.base.Fnv1a64
-import naksha.base.Int64
-import naksha.base.Platform
+import naksha.base.*
 import naksha.model.NakshaCollectionProxy
 import naksha.model.NakshaCollectionProxy.Companion.DEFAULT_GEO_INDEX
 import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
@@ -317,7 +314,7 @@ SET (toast_tuple_target=8160"""
         tableName: String,
         geoIndex: String,
         history: Boolean,
-        nakshaCollection: PgTableInfo
+        nakshaCollection: PgTableStmt
     ) {
         val fillFactor = if (history) "100" else "70"
         // https://www.postgresql.org/docs/current/gin-tips.html
@@ -371,7 +368,7 @@ WITH (fillfactor=$fillFactor) ${nakshaCollection.TABLESPACE};"""
 
     /**
      * Low level function to create a (optionally partitioned) collection table set.
-     * @param sql The SQL API.
+     * @param conn The SQL API.
      * @param storageClass The type of storage to be used for the table.
      * @param schema The schema name.
      * @param schemaOid The object-id of the schema to look into.
@@ -381,7 +378,7 @@ WITH (fillfactor=$fillFactor) ${nakshaCollection.TABLESPACE};"""
      */
     @JvmStatic
     fun collectionCreate(
-        sql: PgConnection,
+        conn: PgConnection,
         storageClass: String?,
         schema: String,
         schemaOid: Int,
@@ -391,19 +388,21 @@ WITH (fillfactor=$fillFactor) ${nakshaCollection.TABLESPACE};"""
     ) {
         // We store geometry as TWKB, see:
         // http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html
-        val nakshaCollection = PgTableInfo(sql, storageClass, partitionCount)
+        //val nakshaCollection = PgTableStmt(conn.schemaInfo(), JsEnum.get(storageClass, PgStorageClass::class), partitionCount, false)
+        val nakshaCollection: PgTableStmt? = null
+        if (nakshaCollection == null) TODO("Implement me!")
 
         // HEAD
         var query: String = nakshaCollection.CREATE_TABLE
         val headNameQuoted = PgUtil.quoteIdent(id)
         query += headNameQuoted
-        query += nakshaCollection.CREATE_TABLE_BODY
+        query += nakshaCollection.TABLE_BODY
         if (!partitionCount.isPartitioningEnabled()) {
-            query += nakshaCollection.STORAGE_PARAMS
+            query += nakshaCollection.WITH
             query += nakshaCollection.TABLESPACE
-            sql.execute(query)
+            conn.execute(query)
             //collectionOptimizeTable(sql, id, false)
-            collectionAddIndices(sql, id, geoIndex, false, nakshaCollection)
+            collectionAddIndices(conn, id, geoIndex, false, nakshaCollection)
         } else {
             if (id == TRANSACTIONS_COL) {
                 query += " PARTITION BY RANGE (txn) "
@@ -412,12 +411,12 @@ WITH (fillfactor=$fillFactor) ${nakshaCollection.TABLESPACE};"""
             }
             // Partitioned tables must not have storage params
             query += nakshaCollection.TABLESPACE
-            sql.execute(query)
+            conn.execute(query)
             for (part in 0..<partitionCount) {
-                createPartitionById(sql, id, geoIndex, part, nakshaCollection, false)
+                createPartitionById(conn, id, geoIndex, part, nakshaCollection, false)
             }
         }
-        if (!DEBUG || id.startsWith("naksha")) collectionAttachTriggers(sql, id, schema, schemaOid)
+        if (!DEBUG || id.startsWith("naksha")) collectionAttachTriggers(conn, id, schema, schemaOid)
 
 //        // Create sequence.
 //        val sequenceName = id + "_uid_seq";
@@ -432,19 +431,19 @@ WITH (fillfactor=$fillFactor) ${nakshaCollection.TABLESPACE};"""
             val delNameQuoted = PgUtil.quoteIdent(delName)
             query = nakshaCollection.CREATE_TABLE
             query += delNameQuoted
-            query += nakshaCollection.CREATE_TABLE_BODY
+            query += nakshaCollection.TABLE_BODY
             if (!partitionCount.isPartitioningEnabled()) {
-                query += nakshaCollection.STORAGE_PARAMS
+                query += nakshaCollection.WITH
                 query += nakshaCollection.TABLESPACE
-                sql.execute(query)
+                conn.execute(query)
                 //collectionOptimizeTable(sql, delName, false)
-                collectionAddIndices(sql, delName, geoIndex, false, nakshaCollection)
+                collectionAddIndices(conn, delName, geoIndex, false, nakshaCollection)
             } else {
                 query += " PARTITION BY RANGE (naksha_partition_number(id, $partitionCount)) "
                 query += nakshaCollection.TABLESPACE
-                sql.execute(query)
+                conn.execute(query)
                 for (part in 0..<partitionCount) {
-                    createPartitionById(sql, delName, geoIndex, part, nakshaCollection, false)
+                    createPartitionById(conn, delName, geoIndex, part, nakshaCollection, false)
                 }
             }
 
@@ -453,25 +452,25 @@ WITH (fillfactor=$fillFactor) ${nakshaCollection.TABLESPACE};"""
             val metaNameQuoted = PgUtil.quoteIdent(metaName)
             query = nakshaCollection.CREATE_TABLE
             query += metaNameQuoted
-            query += nakshaCollection.CREATE_TABLE_BODY
-            query += nakshaCollection.STORAGE_PARAMS
+            query += nakshaCollection.TABLE_BODY
+            query += nakshaCollection.WITH
             query += nakshaCollection.TABLESPACE
-            sql.execute(query)
+            conn.execute(query)
             //collectionOptimizeTable(sql, metaName, false)
-            collectionAddIndices(sql, metaName, geoIndex, false, nakshaCollection)
+            collectionAddIndices(conn, metaName, geoIndex, false, nakshaCollection)
 
             // HISTORY.
             val hstName = "$id\$hst"
             val hstNameQuoted = PgUtil.quoteIdent(hstName)
             query = nakshaCollection.CREATE_TABLE
             query += hstNameQuoted
-            query += nakshaCollection.CREATE_TABLE_BODY
+            query += nakshaCollection.TABLE_BODY
             query += " PARTITION BY RANGE (txn_next) "
             query += nakshaCollection.TABLESPACE
-            sql.execute(query)
+            conn.execute(query)
             val year = yearOf(Platform.currentMillis())
-            createHstPartition(sql, id, year, geoIndex, nakshaCollection)
-            createHstPartition(sql, id, year + 1, geoIndex, nakshaCollection)
+            createHstPartition(conn, id, year, geoIndex, nakshaCollection)
+            createHstPartition(conn, id, year + 1, geoIndex, nakshaCollection)
         }
     }
 
@@ -552,7 +551,7 @@ DROP TABLE IF EXISTS $hstName CASCADE;"""
         collectionId: String,
         year: Int,
         geoIndex: String,
-        nakshaCollection: PgTableInfo
+        nakshaCollection: PgTableStmt
     ):
             String {
         val parentName = "${collectionId}\$hst"
@@ -563,15 +562,15 @@ DROP TABLE IF EXISTS $hstName CASCADE;"""
         val end = Txn.of(year, 12, 31, Txn.SEQ_MAX).value
         var query = nakshaCollection.CREATE_TABLE
         query += "IF NOT EXISTS $hstPartNameQuoted PARTITION OF $parentNameQuoted FOR VALUES FROM ($start) TO ($end) "
-        if (nakshaCollection.partitionCount.isPartitioningEnabled()) {
-            query += "PARTITION BY RANGE (naksha_partition_number(id, ${nakshaCollection.partitionCount}))"
+        if (nakshaCollection.partitions.isPartitioningEnabled()) {
+            query += "PARTITION BY RANGE (naksha_partition_number(id, ${nakshaCollection.partitions}))"
             query += nakshaCollection.TABLESPACE
             pgConnection.execute(query)
-            for (subPartition in 0..<nakshaCollection.partitionCount) {
+            for (subPartition in 0..<nakshaCollection.partitions) {
                 createPartitionById(pgConnection, hstPartName, geoIndex, subPartition, nakshaCollection, true)
             }
         } else {
-            query += nakshaCollection.STORAGE_PARAMS
+            query += nakshaCollection.WITH
             query += nakshaCollection.TABLESPACE
             pgConnection.execute(query)
             //collectionOptimizeTable(sql, hstPartName, true)
@@ -591,15 +590,15 @@ DROP TABLE IF EXISTS $hstName CASCADE;"""
      */
     private fun createPartitionById(
         pgConnection: PgConnection, parentName: String, geoIndex: String, part: Int, nakshaCollection:
-        PgTableInfo, history: Boolean
+        PgTableStmt, history: Boolean
     ) {
-        require(part in 0..<nakshaCollection.partitionCount) { "Invalid partition number $part" }
+        require(part in 0..<nakshaCollection.partitions) { "Invalid partition number $part" }
         val partString = PARTITION_ID[part]
         val partitionName = if (parentName.contains('$')) "${parentName}_p$partString" else "${parentName}\$p$partString"
         val partitionNameQuoted = PgUtil.quoteIdent(partitionName)
         val parentTableNameQuoted = PgUtil.quoteIdent(parentName)
         val query =
-            nakshaCollection.CREATE_TABLE + "IF NOT EXISTS $partitionNameQuoted PARTITION OF $parentTableNameQuoted FOR VALUES FROM ($part) TO (${part + 1}) ${nakshaCollection.STORAGE_PARAMS} ${nakshaCollection.TABLESPACE};"
+            nakshaCollection.CREATE_TABLE + "IF NOT EXISTS $partitionNameQuoted PARTITION OF $parentTableNameQuoted FOR VALUES FROM ($part) TO (${part + 1}) ${nakshaCollection.WITH} ${nakshaCollection.TABLESPACE};"
         pgConnection.execute(query)
         //collectionOptimizeTable(sql, partitionName, history)
         collectionAddIndices(pgConnection, partitionName, geoIndex, history, nakshaCollection)

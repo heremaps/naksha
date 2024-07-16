@@ -29,6 +29,11 @@ interface ISession : AutoCloseable {
     var lockTimeout: Int
 
     /**
+     * The realm to operate on.
+     */
+    var realm: String
+
+    /**
      * Tests if the session is closed.
      * @return _true_ if the session is closed.
      */

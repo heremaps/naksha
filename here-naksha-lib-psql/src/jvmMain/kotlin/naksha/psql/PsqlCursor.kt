@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.base.JvmInt64
 import naksha.base.ObjectProxy
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.longToInt64
 import java.sql.ResultSet
 import kotlin.reflect.KClass
 
@@ -152,13 +153,13 @@ class PsqlCursor private constructor(private var rs: ResultSet?, private val clo
 
         "smallint", "int2" -> rs.getShort(index).toInt()
         "integer", "int4", "xid4", "oid" -> rs.getInt(index)
-        "bigint", "int8", "xid8" -> JvmInt64(rs.getLong(index))
+        "bigint", "int8", "xid8" -> longToInt64(rs.getLong(index))
         "real" -> rs.getFloat(index).toDouble()
         "double precision" -> rs.getDouble(index)
         "numeric" -> rs.getBigDecimal(index)
         "boolean" -> rs.getBoolean(index)
-        "timestamp" -> JvmInt64(rs.getTimestamp(index).toInstant().toEpochMilli())
-        "date" -> JvmInt64(rs.getDate(index).toInstant().toEpochMilli())
+        "timestamp" -> longToInt64(rs.getTimestamp(index).toInstant().toEpochMilli())
+        "date" -> longToInt64(rs.getDate(index).toInstant().toEpochMilli())
         "bytea" -> rs.getBytes(index)
         "jsonb" -> Platform.fromJSON(rs.getString(index))
         "array" -> rs.getArray(index)

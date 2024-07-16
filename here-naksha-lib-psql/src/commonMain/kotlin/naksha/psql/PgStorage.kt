@@ -1,10 +1,7 @@
 package naksha.psql
 
 import naksha.base.fn.Fx2
-import naksha.model.IStorage
-import naksha.model.IWriteSession
-import naksha.model.NakshaContext
-import naksha.model.StorageException
+import naksha.model.*
 import kotlin.js.JsExport
 
 /**
@@ -18,7 +15,6 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE")
 @JsExport
 interface PgStorage : IStorage {
-
     /**
      * The PostgresQL cluster to which this storage is connected. Will be _null_, if being executed within
      * [PLV8 extension](https://plv8.github.io/).
@@ -26,9 +22,75 @@ interface PgStorage : IStorage {
     val cluster: PgCluster?
 
     /**
-     * The default options as provided in the constructor.
+     * The default options as provided in the constructor. The `schema` of the `defaultOptions` is the root schema, which will mapped to the `public` realm. This schema is guaranteed to be there, when [initStorage] has been invoked, it is the main source of the storage-id, and it can be accessed via [defaultSchema].
      */
     val defaultOptions: PgOptions
+
+    /**
+     * The page-size of the database (`current_setting('block_size')`).
+     */
+    val pageSize: Int
+
+    /**
+     * The maximum size of a tuple (row).
+     */
+    val maxTupleSize: Int
+
+    /**
+     * The tablespace to use for storage-class "brittle"; if any.
+     */
+    val brittleTableSpace: String?
+
+    /**
+     * The tablespace to use for temporary tables and their indices; if any.
+     */
+    val tempTableSpace: String?
+
+    /**
+     * If the [pgsql-gzip][https://github.com/pramsey/pgsql-gzip] extension is installed, therefore PostgresQL supported `gzip`/`gunzip`
+     * as standalone SQL function by the database. Note, that if this is not the case, we're installing code that is implemented in
+     * JavaScript.
+     */
+    val gzipExtension: Boolean
+
+    /**
+     * The PostgresQL database version.
+     */
+    val postgresVersion: NakshaVersion
+
+    /**
+     * Translate the given realm into a schema name.
+     *
+     * Internally, PostgresQL does not know anything about realms, it only works with schemata. Therefore, there are translation method to map schemata to realms and vice versa. Normally the schema has the same name as the realm, but not for the default realm (`public`), which is always mapped to the default schema.
+     */
+    fun realmToSchema(realm: String): String = if ("public" == realm) defaultOptions.schema else realm
+
+    /**
+     * Translate the given schema into a realm name.
+     *
+     * Internally, PostgresQL does not know anything about realms, it only works with schemata. Therefore, there are translation method to map schemata to realms and vice versa. Normally the schema has the same name as the realm, but not for the default realm (`public`), which is always mapped to the default schema.
+     */
+    fun schemaToRealm(schemaName: String): String = if (defaultOptions.schema == schemaName) "public" else schemaName
+
+    /**
+     * Returns the default (root) schema.
+     * @return the default (root) schema.
+     */
+    fun defaultSchema(): PgSchema
+
+    /**
+     * Tests if this storage contains the given schema.
+     * @param schemaName the name of the schema to test.
+     * @return _true_ if such a schema exists; _false_ otherwise.
+     */
+    operator fun contains(schemaName: String): Boolean
+
+    /**
+     * Returns the schema wrapper.
+     * @param schemaName the name of the schema.
+     * @return the schema wrapper.
+     */
+    operator fun get(schemaName: String): PgSchema
 
     /**
      * Initializes the storage, create the transaction table, install needed scripts and extensions. If the storage is
@@ -75,10 +137,4 @@ interface PgStorage : IStorage {
      * @throws IllegalStateException if all connections are in use.
      */
     fun newConnection(options: PgOptions = defaultOptions, init: Fx2<PgConnection, String>? = null): PgConnection
-
-    /**
-     * Returns the database information.
-     * @return the database information, cached when [conn] is _null_.
-     */
-    fun getPgDbInfo(): PgInfo
 }

@@ -157,23 +157,23 @@ WITH (fillfactor=$fillFactor) ${nakshaCollection.TABLESPACE};"""
 
  */
 
-    protected var existsFn: Fn2<Boolean, PgConnection, PgTable>? = null
+    protected var existsFn: Fn2<Boolean, PgConnection, PgTableInfo>? = null
 
-    fun exists(conn: PgConnection, table: PgTable): Boolean {
+    fun exists(conn: PgConnection, table: PgTableInfo): Boolean {
         val existsFn = this.existsFn
         check(existsFn != null) { "This index does not support `exists` operation" }
         return existsFn.call(conn, table)
     }
 
-    protected var createFn: Fx3<PgConnection, PgTable, Boolean>? = null
-    fun create(conn: PgConnection, table: PgTable, isVolatile: Boolean) {
+    protected var createFn: Fx3<PgConnection, PgTableInfo, Boolean>? = null
+    fun create(conn: PgConnection, table: PgTableInfo, isVolatile: Boolean) {
         val createFn = this.createFn
         check(createFn != null) { "This index does not support `create` operation" }
         return createFn.call(conn, table, isVolatile)
     }
 
-    protected var dropFn: Fx2<PgConnection, PgTable>? = null
-    fun drop(conn: PgConnection, table: PgTable) {
+    protected var dropFn: Fx2<PgConnection, PgTableInfo>? = null
+    fun drop(conn: PgConnection, table: PgTableInfo) {
         val dropFn = this.dropFn
         check(dropFn != null) { "This index does not support `drop` operation" }
         return dropFn.call(conn, table)

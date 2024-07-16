@@ -2,7 +2,11 @@
 
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.isNil
+import naksha.base.Platform.PlatformCompanion.newDataView
+import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
@@ -180,5 +184,14 @@ abstract class Proxy : PlatformObject {
         if (other is Proxy) return platformObject() == other.platformObject()
         Platform.logger.info("Proxy::equals -> false")
         return false
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <SELF: Proxy> cloneDeep(): SELF {
+        val po = platformObject()
+        if (po is PlatformMap) return (fromJSON(toJSON(po)) as PlatformMap).proxy(this::class) as SELF
+        if (po is PlatformList) return (fromJSON(toJSON(po)) as PlatformList).proxy(this::class) as SELF
+        if (po is PlatformDataView) return newDataView(dataview_get_byte_array(po).copyOf()).proxy(this::class) as SELF
+        throw IllegalStateException("The platform object is in an unknown, possible invalid state")
     }
 }

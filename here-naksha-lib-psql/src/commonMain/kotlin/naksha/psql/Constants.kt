@@ -6,6 +6,9 @@ import naksha.psql.PgType.Companion.INT64
 import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.STRING
 
+internal const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
+internal const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048
+
 internal const val NKC_TABLE = "naksha~collections"
 internal const val NKC_TABLE_ESC = "\"naksha~collections\""
 internal const val NKC_PARTITION_COUNT = "partitionCount"

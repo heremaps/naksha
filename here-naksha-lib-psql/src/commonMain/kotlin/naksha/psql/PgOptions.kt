@@ -3,10 +3,10 @@ package naksha.psql
 import kotlin.js.JsExport
 
 /**
- * Options when acquiring a PostgresQL database connection.
+ * Options when acquiring PostgresQL database connections.
  * @property appName the application name to be registered against the PostgresQL database, appears in the
  * [pg_stat_activity](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW) table as `name`.
- * @property schema the schema to select as default schema.
+ * @property schema the schema to use.
  * @property appId the application identifier of the change, stored in the [naksha.model.Metadata.appId].
  * @property author the author of the change, stored in the [naksha.model.Metadata.author]. Special rules apply for author handling.
  * @property readOnly if the connection should be read-only.
