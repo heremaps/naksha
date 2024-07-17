@@ -2,6 +2,7 @@ package naksha.model
 
 import naksha.base.JsEnum
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
 
@@ -22,30 +23,35 @@ class ReviewStateEnum : JsEnum() {
          * This is the initial state for any un-moderated feature. The default for all new features.
          */
         @JvmField
+        @JsStatic
         val UNPUBLISHED = defIgnoreCase(ReviewStateEnum::class, "UNPUBLISHED")
 
         /**
          * Set by the auto-endorser, if the feature is ready to be sent into the bucket-processor.
          */
         @JvmField
+        @JsStatic
         val AUTO_ENDORSED = defIgnoreCase(ReviewStateEnum::class, "AUTO_ENDORSED")
 
         /**
          * Set by the auto-endorser, if the change should be reverted.
          */
         @JvmField
+        @JsStatic
         val AUTO_ROLLBACK = defIgnoreCase(ReviewStateEnum::class, "AUTO_ROLLBACK") { self -> self.isFinalState = true }
 
         /**
          * Set by the auto-endorser, if the feature must be reviewed by a moderator.
          */
         @JvmField
+        @JsStatic
         val AUTO_REVIEW_DEFERRED = defIgnoreCase(ReviewStateEnum::class, "AUTO_REVIEW_DEFERRED")
 
         /**
          * Set by the change-set-publisher, if the feature was integrated into consistent-store.
          */
         @JvmField
+        @JsStatic
         val AUTO_INTEGRATED =
             defIgnoreCase(ReviewStateEnum::class, "AUTO_INTEGRATED") { self -> self.isFinalState = true }
 
@@ -53,24 +59,28 @@ class ReviewStateEnum : JsEnum() {
          * Set by the change-set-publisher, if the feature integration failed and more moderation is needed.
          */
         @JvmField
+        @JsStatic
         val FAILED = defIgnoreCase(ReviewStateEnum::class, "FAILED")
 
         /**
          * Set by a moderator, when the feature is ready to be send to the bucket-processor.
          */
         @JvmField
+        @JsStatic
         val ENDORSED = defIgnoreCase(ReviewStateEnum::class, "ENDORSED")
 
         /**
          * Set by a moderator, when the feature need more moderation.
          */
         @JvmField
+        @JsStatic
         val UNDECIDED = defIgnoreCase(ReviewStateEnum::class, "UNDECIDED")
 
         /**
          * Set by a moderator, when the feature is rejected, the change should be reverted.
          */
         @JvmField
+        @JsStatic
         val ROLLBACK = defIgnoreCase(ReviewStateEnum::class, "ROLLBACK") { self -> self.isFinalState = true }
 
         /**
@@ -78,22 +88,10 @@ class ReviewStateEnum : JsEnum() {
          * [.AUTO_INTEGRATED].
          */
         @JvmField
+        @JsStatic
         val INTEGRATED = defIgnoreCase(ReviewStateEnum::class, "INTEGRATED")
 
-        fun of(value: String): ReviewStateEnum =
-            when (value) {
-                UNPUBLISHED.value -> UNPUBLISHED
-                AUTO_ENDORSED.value -> AUTO_ENDORSED
-                AUTO_ROLLBACK.value -> AUTO_ROLLBACK
-                AUTO_REVIEW_DEFERRED.value -> AUTO_REVIEW_DEFERRED
-                AUTO_INTEGRATED.value -> AUTO_INTEGRATED
-                FAILED.value -> FAILED
-                ENDORSED.value -> ENDORSED
-                ROLLBACK.value -> ROLLBACK
-                INTEGRATED.value -> INTEGRATED
-                UNDECIDED.value -> UNDECIDED
-                else -> throw IllegalArgumentException(value)
-            }
+        fun of(value: String): ReviewStateEnum = get(value, ReviewStateEnum::class)
     }
 
     /**
