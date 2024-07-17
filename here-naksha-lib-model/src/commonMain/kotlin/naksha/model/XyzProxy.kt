@@ -203,9 +203,11 @@ class XyzProxy : ObjectProxy() {
     var references: XyzReferencesProxy? by REFERENCES
 
     fun useDeltaNamespace(): NakshaDeltaProxy {
+        var deltaProxy = this.deltaProxy
         if (deltaProxy == null) {
             deltaProxy = NakshaDeltaProxy()
+            this.deltaProxy = deltaProxy
         }
-        return deltaProxy!!
+        return deltaProxy
     }
 }

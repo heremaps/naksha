@@ -2,6 +2,7 @@ package naksha.model
 
 import naksha.base.JsEnum
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
@@ -23,18 +24,21 @@ class ChangeStateEnum : JsEnum() {
          * The feature was created (did not exist in base layer).
          */
         @JvmField
+        @JsStatic
         val CREATED = defIgnoreCase(ChangeStateEnum::class, "CREATED")
 
         /**
          * The feature was updated (did exist in base layer).
          */
         @JvmField
+        @JsStatic
         val UPDATED = defIgnoreCase(ChangeStateEnum::class, "UPDATED")
 
         /**
          * The feature was removed from the map.
          */
         @JvmField
+        @JsStatic
         val REMOVED = defIgnoreCase(ChangeStateEnum::class, "REMOVED")
 
         /**
@@ -42,15 +46,9 @@ class ChangeStateEnum : JsEnum() {
          * {@code CREATED} state.
          */
         @JvmField
+        @JsStatic
         val SPLIT = defIgnoreCase(ChangeStateEnum::class, "SPLIT")
 
-        fun of(value: String): ChangeStateEnum =
-            when (value) {
-                CREATED.value -> CREATED
-                UPDATED.value -> UPDATED
-                REMOVED.value -> REMOVED
-                SPLIT.value -> SPLIT
-                else -> throw IllegalArgumentException(value)
-            }
+        fun of(value: String): ChangeStateEnum = get(value, ChangeStateEnum::class)
     }
 }
