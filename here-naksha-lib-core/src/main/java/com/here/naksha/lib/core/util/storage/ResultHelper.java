@@ -60,7 +60,7 @@ public class ResultHelper {
   public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(
       SuccessResponse result, Class<R> featureType, long offset, long limit) {
     final List<R> features = new ArrayList<>();
-    final Iterator<ResultRow> iterator = result.getRows().iterator();
+    final Iterator<ResultRow> iterator = result.rows.iterator();
     int pos = 0;
     int cnt = 0;
     while (iterator.hasNext() && cnt < limit) {
@@ -87,7 +87,7 @@ public class ResultHelper {
    */
   public static <T> @Nullable T readFeatureFromResult(
       final @NotNull SuccessResponse result, final @NotNull Class<T> type) {
-    final List<ResultRow> rows = result.getRows();
+    final List<ResultRow> rows = result.rows;
     if (rows.isEmpty()) {
       return null;
     }
@@ -95,10 +95,10 @@ public class ResultHelper {
   }
 
   public static List<String> readIdsFromResult(final @NotNull SuccessResponse result) {
-    if (result.getRows().isEmpty()) {
+    if (result.rows.isEmpty()) {
       return emptyList();
     }
-    final Iterator<ResultRow> iterator = result.getRows().iterator();
+    final Iterator<ResultRow> iterator = result.rows.iterator();
     final List<String> ids = new ArrayList<>();
     while (iterator.hasNext()) {
       ids.add(iterator.next().getFeature().getId());
@@ -118,7 +118,7 @@ public class ResultHelper {
    */
   public static <R extends NakshaFeatureProxy> Map<ExecutedOp, List<R>> readFeaturesGroupedByOp(
       SuccessResponse result, Class<R> featureType, long limit) {
-    final Iterator<ResultRow> iterator = result.getRows().iterator();
+    final Iterator<ResultRow> iterator = result.rows.iterator();
     if (!iterator.hasNext()) {
       throw new NoSuchElementException("Empty SuccessResponse");
     }

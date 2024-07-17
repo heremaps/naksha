@@ -63,17 +63,19 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
     return this;
   }
 
-  @Override
   public ReadFeaturesProxyWrapper shallowClone() {
     ReadFeaturesProxyWrapper clone = new ReadFeaturesProxyWrapper();
     // ReadFeatures fields
-    clone.setPropertyOp(this.getPropertyOp());
-    clone.setCollections(this.getCollections());
-    clone.setSpatialOp(this.getSpatialOp());
+    clone.op = this.op;
+    clone.readRequestType = this.readRequestType;
+    clone.queryParameters = this.queryParameters;
+    clone.limitVersions = this.limitVersions;
+    clone.orderBy = this.orderBy;
+    clone.collectionIds = this.collectionIds;
+    clone.spatialOp = this.spatialOp;
     clone.limit = this.limit;
-    clone.returnDeleted = this.returnDeleted;
-    clone.withReturnAllVersions(isReturnAllVersions());
-    clone.fetchSize = this.fetchSize;
+    clone.queryDeleted = this.queryDeleted;
+    clone.queryHistory = this.queryHistory;
 
     // ReadFeaturesProxyWrapper fields
     clone.withReadRequestType(this.getReadRequestType());
