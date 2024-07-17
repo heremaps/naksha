@@ -10,7 +10,7 @@ import kotlin.jvm.JvmField
  * Success response, means all operations succeeded, and it's safe to commit transaction.
  */
 @JsExport
-class SuccessResponse(
+open class SuccessResponse(
     /**
      * A handler (available if requested) to fetch more (next) rows from DB.
      */
