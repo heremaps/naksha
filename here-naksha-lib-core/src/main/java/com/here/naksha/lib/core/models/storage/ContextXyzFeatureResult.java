@@ -18,15 +18,15 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
-import org.jetbrains.annotations.ApiStatus;
+import java.util.List;
+import naksha.model.NakshaFeatureProxy;
+import naksha.model.request.ResultRow;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ContextXyzFeatureResult extends ContextResult<XyzFeature, XyzFeature, XyzFeature, XyzFeatureCodec> {
+public class ContextXyzFeatureResult extends ContextResult<NakshaFeatureProxy, NakshaFeatureProxy, NakshaFeatureProxy> {
 
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public ContextXyzFeatureResult(final @Nullable ForwardCursor<XyzFeature, XyzFeatureCodec> cursor) {
-    super(cursor);
+  public ContextXyzFeatureResult(@Nullable String handle, @NotNull List<ResultRow> rows) {
+    super(handle, rows);
   }
 }

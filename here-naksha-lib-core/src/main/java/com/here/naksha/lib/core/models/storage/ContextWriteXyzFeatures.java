@@ -18,30 +18,19 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import static com.here.naksha.lib.core.models.storage.XyzCodecFactory.getFactory;
-
-import java.util.List;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Helper to simplify creation of ContextWriteFeatures request, using standard {@link XyzFeature}
+ * Helper to simplify creation of ContextWriteFeatures request, using standard {@link NakshaFeatureProxy}
  * type for features, context and violations.
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-public class ContextWriteXyzFeatures
-    extends ContextWriteFeatures<XyzFeature, XyzFeature, XyzFeature, XyzFeatureCodec, ContextWriteXyzFeatures> {
+public class ContextWriteXyzFeatures extends ContextWriteFeatures {
 
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public ContextWriteXyzFeatures(@NotNull String collectionId) {
-    super(getFactory(XyzFeatureCodecFactory.class), collectionId);
-  }
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public ContextWriteXyzFeatures(
-      @NotNull String collectionId, final @NotNull List<@NotNull XyzFeatureCodec> features) {
-    super(getFactory(XyzFeatureCodecFactory.class), collectionId, features);
+  public ContextWriteXyzFeatures(@NotNull String collectionId, @NotNull NakshaFeatureProxy feature, boolean atomic) {
+    super(collectionId, feature, atomic);
   }
 }

@@ -26,8 +26,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ContextResult<FEATURE, CTX_TYPE, V_TYPE>
-    extends SuccessResponse {
+public class ContextResult<FEATURE, CTX_TYPE, V_TYPE> extends SuccessResponse {
 
   /**
    * The list of features to be returned as context
