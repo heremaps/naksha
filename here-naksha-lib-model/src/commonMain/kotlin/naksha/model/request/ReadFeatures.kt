@@ -90,17 +90,6 @@ open class ReadFeatures : ReadRequest<ReadFeatures>() {
         return this
     }
 
-    /**
-     * Additional conditions for geometry.
-     */
-    @JvmField
-    var spatialOp: SOp? = null
-
-    fun withSpatialOp(spatialOp: SOp): ReadFeatures {
-        this.spatialOp = spatialOp
-        return this
-    }
-
     companion object ReadFeaturesCompanion {
         /**
          * Read the HEAD state using the given operation.

@@ -3,9 +3,9 @@ package naksha.model.request.condition
 /**
  * Logical operation between elements 1..n
  */
-import naksha.model.request.condition.LOpType.Companion.AND
-import naksha.model.request.condition.LOpType.Companion.NOT
-import naksha.model.request.condition.LOpType.Companion.OR
+import naksha.model.request.condition.LOpType.LOpTypeCompanion.AND
+import naksha.model.request.condition.LOpType.LOpTypeCompanion.NOT
+import naksha.model.request.condition.LOpType.LOpTypeCompanion.OR
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
