@@ -23,10 +23,10 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
+import naksha.model.ReviewStateEnum;
 import naksha.model.XyzFeature;
 import naksha.geo.XyzProperties;
 import naksha.geo.XyzReference;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EReviewState;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
@@ -104,7 +104,7 @@ public class EndorsementHandler extends AbstractEventHandler {
 
   protected void updateFeatureDeltaStateIfMatchesViolations(
       final @NotNull XyzFeature feature, final @Nullable List<XyzFeature> violations) {
-    HandlerUtil.setDeltaReviewState(feature, EReviewState.UNPUBLISHED);
+    HandlerUtil.setDeltaReviewState(feature, ReviewStateEnum.UNPUBLISHED);
     if (violations == null) {
       return;
     }
@@ -115,7 +115,7 @@ public class EndorsementHandler extends AbstractEventHandler {
       }
       for (final XyzReference reference : references) {
         if (feature.getId().equals(reference.getId())) {
-          HandlerUtil.setDeltaReviewState(feature, EReviewState.AUTO_REVIEW_DEFERRED);
+          HandlerUtil.setDeltaReviewState(feature, ReviewStateEnum.AUTO_REVIEW_DEFERRED);
           return;
         }
       }

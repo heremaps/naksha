@@ -21,8 +21,13 @@ package com.here.naksha.lib.core.models.geojson.implementation.namespaces;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.util.json.JsonObject;
+import naksha.model.ChangeStateEnum;
+import naksha.model.ReviewStateEnum;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static naksha.model.ChangeStateEnum.ChangeStateEnumCompanion;
+import static naksha.model.ReviewStateEnum.ReviewStateEnumCompanion;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public class HereDeltaNs extends JsonObject {
@@ -31,8 +36,8 @@ public class HereDeltaNs extends JsonObject {
    * Create a new default delta namespace for new features.
    */
   public HereDeltaNs() {
-    this.changeState = EChangeState.CREATED;
-    this.reviewState = EReviewState.UNPUBLISHED;
+    this.changeState = ChangeStateEnum.CREATED;
+    this.reviewState = ReviewStateEnum.UNPUBLISHED;
   }
 
   /**
@@ -43,13 +48,13 @@ public class HereDeltaNs extends JsonObject {
    */
   @JsonCreator
   public HereDeltaNs(
-      @JsonProperty("changeState") @Nullable EChangeState changeState,
-      @JsonProperty("reviewState") @Nullable EReviewState reviewState) {
+      @JsonProperty("changeState") @Nullable ChangeStateEnum changeState,
+      @JsonProperty("reviewState") @Nullable ReviewStateEnum reviewState) {
     if (changeState == null) {
-      changeState = EChangeState.CREATED;
+      changeState = ChangeStateEnum.CREATED;
     }
     if (reviewState == null) {
-      reviewState = EReviewState.UNPUBLISHED;
+      reviewState = ReviewStateEnum.UNPUBLISHED;
     }
     this.changeState = changeState;
     this.reviewState = reviewState;
@@ -143,20 +148,20 @@ public class HereDeltaNs extends JsonObject {
    * The change-state of the feature.
    */
   @JsonProperty
-  private @NotNull EChangeState changeState;
+  private @NotNull ChangeStateEnum changeState;
 
   /**
    * The change-state of the feature.
    */
-  public @NotNull EChangeState getChangeState() {
+  public @NotNull ChangeStateEnum getChangeState() {
     return changeState;
   }
 
   /**
    * The change-state of the feature.
    */
-  public @NotNull EChangeState setChangeState(@NotNull EChangeState changeState) {
-    final EChangeState old = this.changeState;
+  public @NotNull ChangeStateEnum setChangeState(@NotNull ChangeStateEnum changeState) {
+    final ChangeStateEnum old = this.changeState;
     this.changeState = changeState;
     return old;
   }
@@ -164,7 +169,7 @@ public class HereDeltaNs extends JsonObject {
   /**
    * The change-state of the feature.
    */
-  public @NotNull HereDeltaNs withChangeState(@NotNull EChangeState changeState) {
+  public @NotNull HereDeltaNs withChangeState(@NotNull ChangeStateEnum changeState) {
     setChangeState(changeState);
     return this;
   }
@@ -173,20 +178,20 @@ public class HereDeltaNs extends JsonObject {
    * The review-state of the feature.
    */
   @JsonProperty
-  private @NotNull EReviewState reviewState;
+  private @NotNull ReviewStateEnum reviewState;
 
   /**
    * The review-state of the feature.
    */
-  public @NotNull EReviewState getReviewState() {
+  public @NotNull ReviewStateEnum getReviewState() {
     return reviewState;
   }
 
   /**
    * The review-state of the feature.
    */
-  public @NotNull EReviewState setReviewState(@NotNull EReviewState reviewState) {
-    final EReviewState old = this.reviewState;
+  public @NotNull ReviewStateEnum setReviewState(@NotNull ReviewStateEnum reviewState) {
+    final ReviewStateEnum old = this.reviewState;
     this.reviewState = reviewState;
     return old;
   }
@@ -194,7 +199,7 @@ public class HereDeltaNs extends JsonObject {
   /**
    * The review-state of the feature.
    */
-  public @NotNull HereDeltaNs withReviewState(@NotNull EReviewState reviewState) {
+  public @NotNull HereDeltaNs withReviewState(@NotNull ReviewStateEnum reviewState) {
     setReviewState(reviewState);
     return this;
   }
