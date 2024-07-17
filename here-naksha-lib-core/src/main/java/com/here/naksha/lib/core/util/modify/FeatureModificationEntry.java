@@ -243,7 +243,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
     if (diff == null) {
       return null;
     }
-    final FEATURE result = JsonSerializable.deepClone(head);
+    final FEATURE result = head.deepClone();
     Patcher.patch(result, diff);
     return result;
   }

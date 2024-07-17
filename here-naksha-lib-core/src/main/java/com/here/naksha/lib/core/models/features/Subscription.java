@@ -62,30 +62,11 @@ public final class Subscription extends EventFeature {
       @JsonProperty(ID) @NotNull String id,
       @JsonProperty(CONNECTOR_IDS) @NotNull List<@NotNull String> eventHandlers,
       @JsonProperty(STORAGE_ID) @NotNull String storageId) {
-    super(id, eventHandlers, null);
+    super(id, eventHandlers);
     this.storageId = storageId;
   }
 
-  /**
-   * Create a new subscription.
-   *
-   * @param id the identifier.
-   * @param eventHandlers the list of event handler identifiers to form the event-pipeline.
-   * @param storageId the identifier of the storage to observe.
-   * @param packages the packages this feature is part of.
-   */
-  @JsonCreator
-  @AvailableSince(NakshaVersion.v2_0_0)
-  public Subscription(
-      @JsonProperty(ID) @NotNull String id,
-      @JsonProperty(CONNECTOR_IDS) @NotNull List<@NotNull String> eventHandlers,
-      @JsonProperty(STORAGE_ID) @NotNull String storageId,
-      @Nullable List<@NotNull String> packages) {
-    super(id, eventHandlers, packages);
-    this.storageId = storageId;
-  }
-
-  /** The {@link Storage#id identifier of the storage} to observe. */
+  /** The {@link Storage identifier of the storage} to observe. */
   @AvailableSince(NakshaVersion.v2_0_0)
   @JsonProperty(STORAGE_ID)
   public @NotNull String storageId;

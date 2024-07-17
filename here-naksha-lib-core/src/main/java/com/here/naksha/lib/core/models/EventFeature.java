@@ -32,9 +32,9 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * A feature that holds the configuration for an {@link EventPipeline}. Logically this is a feature able to process events. Normally these
- * features are used in combination with {@link INaksha} interface, so creating an event task via {@link INaksha#executeTask(Class)},
- * adding the event {@link AbstractEventTask#setEvent(Event)}, adding this feature to the {@link AbstractEventTask#pipeline pipeline} of the
- * task via {@link EventPipeline#addEventHandler(EventFeature)}.
+ * features are used in combination with {@link INaksha} interface, so creating an event task via {@link INaksha},
+ * adding the event {@link AbstractEventTask#setEvent(Event)}, adding this feature to the {@link AbstractEventTask pipeline} of the
+ * task via {@link EventPipeline}.
  */
 @SuppressWarnings("unused")
 @AvailableSince(NakshaVersion.v2_0_0)
