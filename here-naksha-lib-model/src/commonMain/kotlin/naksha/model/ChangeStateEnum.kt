@@ -44,5 +44,13 @@ class ChangeStateEnum : JsEnum() {
         @JvmField
         val SPLIT = defIgnoreCase(ChangeStateEnum::class, "SPLIT")
 
+        fun of(value: String): ChangeStateEnum =
+            when (value) {
+                CREATED.value -> CREATED
+                UPDATED.value -> UPDATED
+                REMOVED.value -> REMOVED
+                SPLIT.value -> SPLIT
+                else -> throw IllegalArgumentException(value)
+            }
     }
 }
