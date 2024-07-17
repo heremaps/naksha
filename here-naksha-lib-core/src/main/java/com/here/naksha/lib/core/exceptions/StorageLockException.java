@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
+import naksha.model.NakshaError;
 import naksha.model.NakshaVersion;
-import naksha.model.response.NakshaError;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

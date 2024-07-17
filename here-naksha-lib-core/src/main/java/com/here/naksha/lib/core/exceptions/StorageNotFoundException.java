@@ -18,9 +18,9 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import org.jetbrains.annotations.NotNull;
-
 import static naksha.model.NakshaErrorCode.NOT_FOUND;
+
+import org.jetbrains.annotations.NotNull;
 
 public class StorageNotFoundException extends StorageException {
 
