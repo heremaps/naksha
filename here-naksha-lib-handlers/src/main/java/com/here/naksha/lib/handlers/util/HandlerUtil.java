@@ -20,10 +20,10 @@ package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
+import naksha.model.ChangeStateEnum;
+import naksha.model.ReviewStateEnum;
 import naksha.model.XyzFeature;
 import naksha.geo.XyzProperties;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EChangeState;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EReviewState;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.storage.*;
@@ -178,11 +178,11 @@ public final class HandlerUtil {
     return checkInstanceOf(input, returnType, XyzError.NOT_IMPLEMENTED, errDescPrefix);
   }
 
-  public static void setDeltaReviewState(final @NotNull XyzFeature feature, final @NotNull EReviewState reviewState) {
+  public static void setDeltaReviewState(final @NotNull XyzFeature feature, final @NotNull ReviewStateEnum reviewState) {
     final XyzProperties properties = feature.getProperties();
     final XyzNamespace xyzNs = properties.getXyzNamespace();
     final HereDeltaNs deltaNs = properties.useDeltaNamespace();
-    deltaNs.setChangeState(EChangeState.UPDATED);
+    deltaNs.setChangeState(ChangeStateEnum.UPDATED);
     deltaNs.setReviewState(reviewState);
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);

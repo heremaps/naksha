@@ -28,6 +28,8 @@ class XyzProxy : ObjectProxy() {
         }
         private val INT64_NULL = NullableProperty<Any, XyzProxy, Int64>(Int64::class)
         private val TAGS = NotNullProperty<Any, XyzProxy, TagsProxy>(TagsProxy::class)
+        private val DELTA_PROXY = NullableProperty<Any, XyzProxy, NakshaDeltaProxy>(NakshaDeltaProxy::class)
+        private val REFERENCES = NullableProperty<Any, XyzProxy, XyzReferencesProxy>(XyzReferencesProxy::class)
     }
 
     /**
@@ -192,4 +194,20 @@ class XyzProxy : ObjectProxy() {
      * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
     var geoGrid: Int by INT
+
+    var deltaProxy: NakshaDeltaProxy? by DELTA_PROXY
+
+    /**
+     * References to MOM objects.
+     */
+    var references: XyzReferencesProxy? by REFERENCES
+
+    fun useDeltaNamespace(): NakshaDeltaProxy {
+        var deltaProxy = this.deltaProxy
+        if (deltaProxy == null) {
+            deltaProxy = NakshaDeltaProxy()
+            this.deltaProxy = deltaProxy
+        }
+        return deltaProxy
+    }
 }
