@@ -34,9 +34,8 @@ class ReviewStateEnum : JsEnum() {
          * Set by the auto-endorser, if the change should be reverted.
          */
         @JvmField
-        val AUTO_ROLLBACK = defIgnoreCase(ReviewStateEnum::class, "AUTO_ROLLBACK") {
-            isFinalState = true
-        }
+        val AUTO_ROLLBACK = defIgnoreCase(ReviewStateEnum::class, "AUTO_ROLLBACK") { self -> self.isFinalState = true }
+
         /**
          * Set by the auto-endorser, if the feature must be reviewed by a moderator.
          */
@@ -47,9 +46,8 @@ class ReviewStateEnum : JsEnum() {
          * Set by the change-set-publisher, if the feature was integrated into consistent-store.
          */
         @JvmField
-        val AUTO_INTEGRATED = defIgnoreCase(ReviewStateEnum::class, "AUTO_INTEGRATED") {
-            isFinalState = true
-        }
+        val AUTO_INTEGRATED =
+            defIgnoreCase(ReviewStateEnum::class, "AUTO_INTEGRATED") { self -> self.isFinalState = true }
 
         /**
          * Set by the change-set-publisher, if the feature integration failed and more moderation is needed.
@@ -73,9 +71,7 @@ class ReviewStateEnum : JsEnum() {
          * Set by a moderator, when the feature is rejected, the change should be reverted.
          */
         @JvmField
-        val ROLLBACK = defIgnoreCase(ReviewStateEnum::class, "ROLLBACK") {
-            isFinalState = true
-        }
+        val ROLLBACK = defIgnoreCase(ReviewStateEnum::class, "ROLLBACK") { self -> self.isFinalState = true }
 
         /**
          * Set by a moderator, when the feature was manually coded into RMOB. In-between state, that eventually will be changed into
@@ -84,11 +80,25 @@ class ReviewStateEnum : JsEnum() {
         @JvmField
         val INTEGRATED = defIgnoreCase(ReviewStateEnum::class, "INTEGRATED")
 
-        /**
-         * If this is a final state.
-         */
-        var isFinalState = false
-            private set
-
+        fun of(value: String): ReviewStateEnum =
+            when (value) {
+                UNPUBLISHED.value -> UNPUBLISHED
+                AUTO_ENDORSED.value -> AUTO_ENDORSED
+                AUTO_ROLLBACK.value -> AUTO_ROLLBACK
+                AUTO_REVIEW_DEFERRED.value -> AUTO_REVIEW_DEFERRED
+                AUTO_INTEGRATED.value -> AUTO_INTEGRATED
+                FAILED.value -> FAILED
+                ENDORSED.value -> ENDORSED
+                ROLLBACK.value -> ROLLBACK
+                INTEGRATED.value -> INTEGRATED
+                UNDECIDED.value -> UNDECIDED
+                else -> throw IllegalArgumentException(value)
+            }
     }
+
+    /**
+     * If this is a final state.
+     */
+    var isFinalState: Boolean = false
+        private set
 }
