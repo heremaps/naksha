@@ -4,8 +4,6 @@ import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.ObjectProxy
 import naksha.base.Platform
-import naksha.model.XyzProxy.Companion.DELTA_PROXY
-import naksha.model.XyzProxy.Companion.REFERENCES
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -19,8 +17,8 @@ open class NakshaPropertiesProxy : ObjectProxy() {
         val XYZ_KEY = Platform.intern("@ns:com:here:xyz")
 
         private val XYZ = NotNullProperty<Any, NakshaPropertiesProxy, XyzProxy>(XyzProxy::class, name = XYZ_KEY) { _, _ -> XyzProxy() }
-        private val DELTA_PROXY = NullableProperty<Any, XyzProxy, NakshaDeltaProxy>(NakshaDeltaProxy::class)
-        private val REFERENCES = NullableProperty<Any, XyzProxy, XyzReferencesProxy>(XyzReferencesProxy::class)
+        private val DELTA_PROXY = NullableProperty<Any, NakshaPropertiesProxy, NakshaDeltaProxy>(NakshaDeltaProxy::class)
+        private val REFERENCES = NullableProperty<Any, NakshaPropertiesProxy, XyzReferencesProxy>(XyzReferencesProxy::class)
     }
 
     /**
