@@ -269,8 +269,8 @@ public class RequestHelper {
     return createWriteCollectionsRequest(List.of(collection));
   }
 
-  public static @NotNull WriteXyzCollections createWriteCollectionsRequest(
-      final @NotNull List<@NotNull XyzCollection> collections) {
+  public static @NotNull WriteRequest createWriteCollectionsRequest(
+      final @NotNull List<@NotNull NakshaCollectionProxy> collections) {
     final WriteXyzCollections writeXyzCollections = new WriteXyzCollections();
     for (final XyzCollection collection : collections) {
       writeXyzCollections.add(EWriteOp.CREATE, collection);

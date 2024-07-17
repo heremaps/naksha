@@ -22,7 +22,7 @@ import java.util.List;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
-import naksha.model.request.WriteFeature;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
  * Implementing class will define actual data type of context and violations.
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-public abstract class ContextWriteFeatures extends WriteFeature {
+public abstract class ContextWriteFeatures extends WriteRequest {
 
   /**
    * The list of features passed as context, as part of Write request
@@ -45,10 +45,6 @@ public abstract class ContextWriteFeatures extends WriteFeature {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   private @Nullable List<@NotNull NakshaFeatureProxy> violations;
-
-  public ContextWriteFeatures(@NotNull String collectionId, @NotNull NakshaFeatureProxy feature, boolean atomic) {
-    super(collectionId, feature, atomic);
-  }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaContext> getContext() {
