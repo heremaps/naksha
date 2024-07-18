@@ -1,5 +1,6 @@
 package naksha.model.request
 
+import naksha.model.NakshaCollectionProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -9,5 +10,5 @@ import kotlin.js.JsExport
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 class InsertCollection(
-    collectionId: String,
-) : CollectionOp(XYZ_OP_CREATE, collectionId)
+    collection: NakshaCollectionProxy,
+) : CollectionOp(XYZ_OP_CREATE, collection)
