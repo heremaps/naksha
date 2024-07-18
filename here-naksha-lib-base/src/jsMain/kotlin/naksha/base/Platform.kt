@@ -715,6 +715,12 @@ actual class Platform {
         @JsStatic
         actual fun stackTrace(t: Throwable): String = t.stackTraceToString()
 
+        @JsStatic
+        actual fun normalize(value: String, form: NormalizerForm): String {
+            val formString = form.name
+            return js("value.normalize(formString)").unsafeCast<String>()
+        }
+
         init {
             initialize()
         }

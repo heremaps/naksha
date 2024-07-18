@@ -57,4 +57,16 @@ class PlatformTest {
         val jsonString = "{\"name\":\"Mustermann\",\"age\":69,\"boolean\":true,\"array\":[\"a\",\"b\",\"c\"],\"map\":{\"foo\":\"bar\"}}"
         assertEquals(jsonString, json)
     }
+
+    @Test
+    fun testNormalization() {
+        // given
+        val str = "Åh no ﬁ"
+
+        // expect
+        assertEquals("\u0041\u030Ah no \uFB01", Platform.normalize(str, NormalizerForm.NFD))
+        assertEquals("\u00C5h no \uFB01", Platform.normalize(str, NormalizerForm.NFC))
+        assertEquals("\u00C5h no \u0066\u0069", Platform.normalize(str, NormalizerForm.NFKC))
+        assertEquals("\u0041\u030Ah no \u0066\u0069", Platform.normalize(str, NormalizerForm.NFKD))
+    }
 }
