@@ -1,5 +1,6 @@
 package naksha.model.request
 
+import naksha.model.NakshaCollectionProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -15,10 +16,10 @@ abstract class CollectionOp(
     op: Int,
 
     /**
-     * @see Write.collectionId
+     * In memory implementation of the collection
      */
-    collectionId: String,
-) : Write(op = op, collectionId = collectionId) {
+    collection: NakshaCollectionProxy,
+) : Write(op = op, collectionId = collection.id) {
 
     override fun getId(): String = collectionId
 }
