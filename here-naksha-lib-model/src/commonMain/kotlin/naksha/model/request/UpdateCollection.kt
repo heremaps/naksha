@@ -19,5 +19,5 @@ class UpdateCollection(
      *
      * Default: false
      */
-    val atomic: Boolean = false,
-) : CollectionOp(XYZ_OP_UPDATE, collection)
+    atomic: Boolean = false,
+) : UpdateFeature("naksha~collections", collection, atomic)
