@@ -22,5 +22,4 @@ class WriteRow(
      * Default: false
      */
     val atomic: Boolean = false,
-    val guid: Guid? = null
 ) : RowOp(XYZ_OP_UPSERT, collectionId, row)

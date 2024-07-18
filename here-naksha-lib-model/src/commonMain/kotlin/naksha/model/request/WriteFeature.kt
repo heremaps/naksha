@@ -22,5 +22,4 @@ open class WriteFeature(
      * Default: false
      */
     val atomic: Boolean = false,
-    val guid: Guid? = null
 ) : FeatureOp(XYZ_OP_UPSERT, collectionId, feature)

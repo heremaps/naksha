@@ -22,5 +22,4 @@ class UpdateRow(
      * Default: false
      */
     val atomic: Boolean = false,
-    val guid: Guid? = null
 ) : RowOp(XYZ_OP_UPDATE, collectionId, row)
