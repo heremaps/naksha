@@ -256,8 +256,7 @@ class XyzProxy : ObjectProxy() {
      */
     fun removeTag(tag: String, normalize: Boolean): Boolean {
         val thisTags: TagsProxy = tags ?: return false
-        val tagToRemove = if (normalize) normalizeTag(tag) else tag
-        return thisTags.remove(tagToRemove)
+        return thisTags.removeTag(tag, normalize)
     }
 
     /**
@@ -268,18 +267,7 @@ class XyzProxy : ObjectProxy() {
      * @return this.
      */
     fun removeTags(tags: List<String>?, normalize: Boolean): XyzProxy {
-        val thisTags = this.tags
-        if (thisTags.isNullOrEmpty() || tags.isNullOrEmpty()) {
-            return this
-        }
-        if (normalize) {
-            for (tag in tags) {
-                val normalizedTag = normalizeTag(tag)
-                thisTags.remove(normalizedTag)
-            }
-        } else {
-            thisTags.removeAll(tags)
-        }
+        this.tags?.removeTags(tags, normalize)
         return this
     }
 
@@ -290,12 +278,7 @@ class XyzProxy : ObjectProxy() {
      * @return this.
      */
     fun removeTagsWithPrefix(prefix: String?): XyzProxy {
-        val thisTags = this.tags
-        if (thisTags.isNullOrEmpty() || prefix == null) {
-            return this
-        }
-
-        thisTags.removeAll { tag -> tag?.startsWith(prefix) ?: false }
+        this.tags?.removeTagsWithPrefix(prefix)
         return this
     }
 
@@ -306,11 +289,63 @@ class XyzProxy : ObjectProxy() {
      * @return this.
      */
     fun removeTagsWithPrefixes(prefixes: List<String?>?): XyzProxy {
-        if (prefixes != null) {
-            for (prefix in prefixes) {
-                if (prefix != null) removeTagsWithPrefix(prefix)
+        this.tags?.removeTagsWithPrefixes(prefixes)
+        return this
+    }
+
+    /**
+     * Set the tags to the given array.
+     *
+     * @param tags      The tags to set.
+     * @param normalize `true` if the given tags should be normalized; `false`, if they are already normalized.
+     */
+    fun setTags(tags: TagsProxy?, normalize: Boolean): XyzProxy {
+        if (normalize) {
+            if (tags != null ) {
+                for ((i, tag) in tags.withIndex()) {
+                    if (tag != null)
+                        tags[i] = normalizeTag(tag)
+                }
             }
         }
+        this.tags = tags
+        return this
+    }
+
+    /**
+     * Returns 'true' if the tag added, 'false' if it was already present.
+     *
+     * @param tag       The tag to add.
+     * @param normalize `true` if the tag should be normalized; `false` otherwise.
+     * @return true if the tag added; false otherwise.
+     */
+    fun addTag(tag: String, normalize: Boolean): Boolean {
+        val thisTags = this.tags?: TagsProxy().also { this.tags = it }
+        return thisTags.addTag(tag, normalize)
+    }
+
+    /**
+     * Add the given tags.
+     *
+     * @param tags      The tags to add.
+     * @param normalize `true` if the given tags should be normalized; `false`, if they are already normalized.
+     * @return this.
+     */
+    fun addTags(tags: List<String>?, normalize: Boolean): XyzProxy {
+        val thisTags = this.tags?: TagsProxy().also { this.tags = it }
+        thisTags.addTags(tags, normalize)
+        return this
+    }
+
+    /**
+     * Add and normalize all given tags.
+     *
+     * @param tags The tags to normalize and add.
+     * @return this.
+     */
+    fun addAndNormalizeTags(vararg tags: String): XyzProxy {
+        val thisTags = this.tags?: TagsProxy().also { this.tags = it }
+        thisTags.addAndNormalizeTags(*tags)
         return this
     }
 }
