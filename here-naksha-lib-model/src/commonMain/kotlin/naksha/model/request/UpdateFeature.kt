@@ -22,5 +22,4 @@ class UpdateFeature(
      * Default: false
      */
     val atomic: Boolean = false,
-    val guid: Guid? = null
 ) : FeatureOp(XYZ_OP_UPDATE, collectionId, feature)

@@ -20,5 +20,4 @@ class UpdateCollection(
      * Default: false
      */
     val atomic: Boolean = false,
-    val guid: Guid? = null
 ) : CollectionOp(XYZ_OP_UPDATE, collection)
