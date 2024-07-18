@@ -332,9 +332,9 @@ public class RequestHelper {
     if (opList == null) return;
     // Add combined operations to request
     if (opType == LOpType.AND) {
-      request.withOp(Op.and(opList.toArray(POp[]::new)));
+      request.withOp(LOp.and(opList.toArray(Op[]::new)));
     } else {
-      request.withOp(POp.or(opList.toArray(POp[]::new)));
+      request.withOp(LOp.or(opList.toArray(Op[]::new)));
     }
   }
 }

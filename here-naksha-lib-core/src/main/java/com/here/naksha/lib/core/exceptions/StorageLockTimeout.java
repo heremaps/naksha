@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import naksha.model.NakshaError;
 import naksha.model.NakshaErrorCode;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
