@@ -69,7 +69,7 @@ public class RequestHelper {
       final @NotNull String collectionName, final @NotNull List<@NotNull String> featureIds) {
     final POp[] ops = featureIds.stream().map(id -> eq(id(), id)).toArray(POp[]::new);
     return (ReadFeaturesProxyWrapper)
-        new ReadFeaturesProxyWrapper().addCollectionId(collectionName).withOp(new LOp(OR,ops));
+        new ReadFeaturesProxyWrapper().addCollectionId(collectionName).withOp(new LOp(OR, ops));
   }
 
   /**
@@ -118,7 +118,7 @@ public class RequestHelper {
   public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteRequest updateFeatureRequest(
       final @NotNull String collectionName, final @NotNull FEATURE feature) {
     final WriteRequest request = new WriteRequest();
-    request.ops.add(new UpdateFeature(collectionName,feature,false));
+    request.ops.add(new UpdateFeature(collectionName, feature, false));
     return request;
   }
 
@@ -134,7 +134,7 @@ public class RequestHelper {
       final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
     for (FEATURE feature : features) {
-      request.add(new UpdateFeature(collectionName,feature,false));
+      request.add(new UpdateFeature(collectionName, feature, false));
     }
     return request;
   }
@@ -151,7 +151,7 @@ public class RequestHelper {
       final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
     for (FEATURE feature : features) {
-      request.add(new WriteFeature(collectionName,feature,false));
+      request.add(new WriteFeature(collectionName, feature, false));
     }
     return request;
   }
@@ -167,7 +167,7 @@ public class RequestHelper {
       final @NotNull String collectionName, final @NotNull List<String> ids) {
     final WriteRequest request = new WriteRequest();
     for (String id : ids) {
-      request.add(new DeleteFeature(collectionName,id,null));
+      request.add(new DeleteFeature(collectionName, id, null));
     }
     return request;
   }
@@ -182,7 +182,7 @@ public class RequestHelper {
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
       final @NotNull String collectionName, final @NotNull String id) {
     final WriteRequest request = new WriteRequest();
-    return request.add(new DeleteFeature(collectionName,id,null));
+    return request.add(new DeleteFeature(collectionName, id, null));
   }
 
   /**
@@ -260,7 +260,7 @@ public class RequestHelper {
     final WriteRequest request = new WriteRequest();
     for (final NakshaFeatureProxy feature : featureList) {
       assert feature != null;
-      request.add(new InsertFeature(collectionName,feature));
+      request.add(new InsertFeature(collectionName, feature));
     }
     return request;
   }
@@ -315,26 +315,26 @@ public class RequestHelper {
   }
 
   public static void combineOperationsForRequestAs(
-      final @NotNull ReadFeatures request, final OpType opType, @Nullable POp... operations) {
+      final @NotNull ReadFeatures request, final OpType opType, @Nullable Op... operations) {
     if (operations == null) return;
-    List<POp> opList = null;
-    for (final POp crtOp : operations) {
+    List<Op> opList = null;
+    for (final Op crtOp : operations) {
       if (crtOp == null) continue;
-      if (request.getPropertyOp() == null) {
-        request.setPropertyOp(crtOp); // set operation directly if this was the only one operation
+      if (request.op == null) {
+        request.withOp(crtOp); // set operation directly if this was the only one operation
         continue;
       } else if (opList == null) {
         opList = new ArrayList<>(); // we have more than one operation
-        opList.add(request.getPropertyOp()); // save previously added operation
+        opList.add(request.op); // save previously added operation
       }
       opList.add(crtOp); // keep appending every operation that is to be added to the request
     }
     if (opList == null) return;
     // Add combined operations to request
-    if (opType == OpType.AND) {
-      request.setPropertyOp(POp.and(opList.toArray(POp[]::new)));
+    if (opType == LOpType.AND) {
+      request.withOp(Op.and(opList.toArray(POp[]::new)));
     } else {
-      request.setPropertyOp(POp.or(opList.toArray(POp[]::new)));
+      request.withOp(POp.or(opList.toArray(POp[]::new)));
     }
   }
 }
