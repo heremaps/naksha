@@ -1,6 +1,5 @@
 package naksha.model.request
 
-import naksha.model.Guid
 import naksha.model.NakshaCollectionProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -19,5 +18,5 @@ open class WriteCollection(
      *
      * Default: false
      */
-    val atomic: Boolean = false,
-) : CollectionOp(XYZ_OP_UPSERT, collection)
+    atomic: Boolean = false,
+) : WriteFeature("naksha~collections", collection, atomic)

@@ -11,7 +11,7 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-class UpdateFeature(
+open class UpdateFeature(
     collectionId: String,
     feature: NakshaFeatureProxy,
     /**
