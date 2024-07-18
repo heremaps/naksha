@@ -15,6 +15,7 @@ import com.fasterxml.jackson.module.kotlin.kotlinModule
 import net.jpountz.lz4.LZ4Factory
 import org.slf4j.LoggerFactory
 import sun.misc.Unsafe
+import java.text.Normalizer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
@@ -663,6 +664,9 @@ actual class Platform {
         }
 
         actual fun stackTrace(t: Throwable): String = t.stackTraceToString()
+
+        @JvmStatic
+        actual fun normalize(value: String, form: NormalizerForm): String = Normalizer.normalize(value, Normalizer.Form.valueOf(form.name))
 
         init {
             initialize()

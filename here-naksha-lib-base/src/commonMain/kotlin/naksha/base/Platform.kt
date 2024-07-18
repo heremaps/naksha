@@ -501,5 +501,14 @@ expect class Platform {
          * @return the stack-trace as string.
          */
         fun stackTrace(t: Throwable): String
+
+        /**
+         * Normalize the string using selected [form](https://www.unicode.org/reports/tr15/#Norm_Forms)
+         *
+         * @param value - string value to normalize
+         * @param form - [NormalizerForm] to use
+         * @return new normalized string
+         */
+        fun normalize(value: String, form: NormalizerForm): String
     }
 }
