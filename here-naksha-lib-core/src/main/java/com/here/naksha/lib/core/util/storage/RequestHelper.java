@@ -273,7 +273,7 @@ public class RequestHelper {
       final @NotNull List<@NotNull NakshaCollectionProxy> collections) {
     final WriteRequest writeXyzCollections = new WriteRequest();
     for (final NakshaCollectionProxy collection : collections) {
-      writeXyzCollections.add(new InsertCollection());
+      writeXyzCollections.add(new InsertCollection(collection));
     }
     return writeXyzCollections;
   }
