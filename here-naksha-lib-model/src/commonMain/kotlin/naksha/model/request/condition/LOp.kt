@@ -8,6 +8,8 @@ import naksha.model.request.condition.LOpType.LOpTypeCompanion.NOT
 import naksha.model.request.condition.LOpType.LOpTypeCompanion.OR
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
@@ -39,14 +41,15 @@ class LOp: Op {
     }
     
     companion object {
+        @JvmStatic
         fun and(vararg children: Op): LOp {
             return LOp(AND, *children)
         }
-
+        @JvmStatic
         fun or(vararg children: Op): LOp {
             return LOp(OR, *children)
         }
-
+        @JvmStatic
         fun not(op: Op): LOp {
             return LOp(NOT, op)
         }
