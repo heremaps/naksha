@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import com.here.naksha.lib.core.models.XyzError;
+import naksha.model.NakshaErrorCode;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 
@@ -32,6 +32,6 @@ public class StorageNotInitialized extends StorageException {
    * Exception when the storage is not initialized.
    */
   public StorageNotInitialized() {
-    super(XyzError.STORAGE_NOT_INITIALIZED);
+    super(NakshaErrorCode.STORAGE_NOT_INITIALIZED, "Storage not initialized");
   }
 }

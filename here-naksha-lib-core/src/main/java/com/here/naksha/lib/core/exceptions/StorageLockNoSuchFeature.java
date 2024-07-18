@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import com.here.naksha.lib.core.models.XyzError;
+import naksha.model.NakshaErrorCode;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +37,7 @@ public class StorageLockNoSuchFeature extends StorageLockException {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   public StorageLockNoSuchFeature(@NotNull String collectionId, @NotNull String featureId) {
-    super(XyzError.NOT_FOUND);
+    super(NakshaErrorCode.NOT_FOUND,"Feature does not exist for locking");
     this.collectionId = collectionId;
     this.featureId = featureId;
   }
