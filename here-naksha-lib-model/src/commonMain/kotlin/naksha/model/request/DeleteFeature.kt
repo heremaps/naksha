@@ -1,5 +1,6 @@
 package naksha.model.request
 
+import naksha.model.Guid
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -15,5 +16,5 @@ open class DeleteFeature(
          * ID of the feature to delete.
          */
         id: String,
-        uuid: String? = null
-) : RemoveOp(XYZ_OP_DELETE, collectionId, id, uuid)
+        guid: Guid?
+) : RemoveOp(XYZ_OP_DELETE, collectionId, id, guid)

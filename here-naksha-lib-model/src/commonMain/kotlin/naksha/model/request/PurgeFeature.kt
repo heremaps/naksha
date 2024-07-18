@@ -1,5 +1,6 @@
 package naksha.model.request
 
+import naksha.model.Guid
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -11,5 +12,5 @@ import kotlin.js.JsExport
 class PurgeFeature(
         collectionId: String,
         id: String,
-        uuid: String?
-) : RemoveOp(XYZ_OP_PURGE, collectionId, id, uuid)
+        guid: Guid?
+) : RemoveOp(XYZ_OP_PURGE, collectionId, id, guid)
