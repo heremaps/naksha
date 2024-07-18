@@ -1,5 +1,6 @@
 package naksha.model.request
 
+import naksha.model.Guid
 import naksha.model.NakshaFeatureProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -21,4 +22,5 @@ class WriteFeature(
      * Default: false
      */
     val atomic: Boolean = false,
+    val guid: Guid? = null
 ) : FeatureOp(XYZ_OP_UPSERT, collectionId, feature)

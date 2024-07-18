@@ -1,5 +1,6 @@
 package naksha.model.request
 
+import naksha.model.Guid
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -9,7 +10,7 @@ abstract class RemoveOp(
         op: Int,
         collectionId: String,
         private val id: String,
-        val uuid: String?
+        val guid: Guid? = null
 ): Write(op, collectionId) {
     override fun getId(): String = id
 }

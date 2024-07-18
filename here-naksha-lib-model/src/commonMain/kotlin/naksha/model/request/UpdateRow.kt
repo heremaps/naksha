@@ -1,5 +1,6 @@
 package naksha.model.request
 
+import naksha.model.Guid
 import naksha.model.Row
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -21,4 +22,5 @@ class UpdateRow(
      * Default: false
      */
     val atomic: Boolean = false,
+    val guid: Guid? = null
 ) : RowOp(XYZ_OP_UPDATE, collectionId, row)
