@@ -47,7 +47,6 @@ import com.here.naksha.lib.core.models.payload.events.info.GetStorageStatisticsE
 import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
 import com.here.naksha.lib.core.models.payload.events.space.ModifySpaceEvent;
 import com.here.naksha.lib.core.util.NanoTime;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.view.ViewMember;
 import java.util.HashMap;
 import java.util.Map;
@@ -268,7 +267,7 @@ public class Event extends Payload {
   public void setSpace(@NotNull Space space) {
     this.spaceId = space.getId();
     this.collection = space.getCollectionId();
-    this.params = JsonSerializable.deepClone(space.getProperties());
+    this.params = space.getProperties().cloneDeep();
     this.space = space;
   }
 

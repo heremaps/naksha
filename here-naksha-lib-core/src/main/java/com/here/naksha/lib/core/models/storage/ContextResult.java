@@ -41,7 +41,7 @@ public class ContextResult<FEATURE, CTX_TYPE, V_TYPE> extends SuccessResponse {
   private @Nullable List<@NotNull V_TYPE> violations;
 
   public ContextResult(@Nullable String handle, @NotNull List<ResultRow> rows) {
-    super(handle, rows);
+    super(rows, handle);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)

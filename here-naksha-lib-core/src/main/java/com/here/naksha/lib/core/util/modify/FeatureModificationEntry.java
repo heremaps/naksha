@@ -24,7 +24,6 @@ import static naksha.diff.Patcher.calculateDifferenceOfPartialUpdate;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.storage.IfExists;
 import com.here.naksha.lib.core.models.storage.IfNotExists;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.util.HashMap;
 import java.util.Objects;
 import naksha.diff.ConflictResolution;
@@ -243,7 +242,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
     if (diff == null) {
       return null;
     }
-    final FEATURE result = head.deepClone();
+    final FEATURE result = head.cloneDeep();
     Patcher.patch(result, diff);
     return result;
   }
@@ -277,7 +276,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
       return null;
     }
     final Difference mergedDiff = Patcher.mergeDifferences(baseToHeadDiff, baseToInputDiff, cr);
-    final FEATURE result = JsonSerializable.deepClone(base);
+    final FEATURE result = base.cloneDeep();
     Patcher.patch(result, mergedDiff);
     return result;
   }

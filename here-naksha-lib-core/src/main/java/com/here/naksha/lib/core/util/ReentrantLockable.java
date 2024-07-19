@@ -43,9 +43,9 @@ import org.jetbrains.annotations.NotNull;
  * <p>This implementation is optimal when the lock only held for a short time exclusively within
  * Java threads. Do <b>NOT</b> use this lock, when an IO operation should be synchronized, for this
  * it is highly recommended using a lock provided by the operating system, so use the language
- * syntax “synchronized”. The native “synchronized” is translated into a <a
+ * syntax "synchronized". The native "synchronized" is translated into a <a
  * href="https://en.wikipedia.org/wiki/List_of_Java_bytecode_instructions">byte code instruction</a>
- * (“monitorenter” and “monitorexit”), which allows the JVM to allocate an OS mutex, that can
+ * ("monitorenter" and "monitorexit"), which allows the JVM to allocate an OS mutex, that can
  * prevent all kind of issues, for example a <a
  * href="https://en.wikipedia.org/wiki/Priority_inversion">priority inversion</a>.
  *

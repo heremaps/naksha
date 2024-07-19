@@ -32,12 +32,12 @@ import org.jetbrains.annotations.Nullable;
 public interface ILike {
 
   /**
-   * Compare object “a” logically with an object “b”, adding special handling if any of them
+   * Compare object "a" logically with an object "b", adding special handling if any of them
    * implements the {@link ILike} or both implement the {@link CharSequence} interface.
    *
-   * @param a the object to compare with “b”.
-   * @param b the object to compare with “a”.
-   * @return true if “a” and “b” are like equal; false otherwise.
+   * @param a the object to compare with "b".
+   * @param b the object to compare with "a".
+   * @return true if "a" and "b" are like equal; false otherwise.
    */
   static boolean equals(@Nullable Object a, @Nullable Object b) {
     if (a == b) {
@@ -65,9 +65,9 @@ public interface ILike {
    * the node somehow thinks it is equals to the given string, maybe when a text node compares the
    * stored text against the given string.
    *
-   * <p><b>In a nutshell</b>: Two objects “a” and “b” are like equal, if either {@code a.isLike(b)}
+   * <p><b>In a nutshell</b>: Two objects "a" and "b" are like equal, if either {@code a.isLike(b)}
    * <b>or</b> {@code b.isLike(a)} or {@code a == b} <b>or</b> {@code Objects.equals(a, b)}
-   * <b>or</b> “a” and “b” are both {@link CharSequence character sequences} and {@code
+   * <b>or</b> "a" and "b" are both {@link CharSequence character sequences} and {@code
    * StringCache.equals(a, b)} returns {@code true}, which simply treats the same character sequence
    * as equal, even when they are totally different classes.
    *

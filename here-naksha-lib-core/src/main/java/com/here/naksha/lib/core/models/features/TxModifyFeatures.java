@@ -35,7 +35,7 @@ import org.jetbrains.annotations.NotNull;
 public class TxModifyFeatures extends TxSignal {
 
   /**
-   * Create a new transaction signal. For this event the “id” must be the same as the “collection”.
+   * Create a new transaction signal. For this event the "id" must be the same as the "collection".
    *
    * @param id         the local identifier of the event.
    * @param storageId  the storage identifier.

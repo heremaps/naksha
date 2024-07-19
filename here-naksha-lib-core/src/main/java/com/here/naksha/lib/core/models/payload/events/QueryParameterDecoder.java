@@ -252,12 +252,12 @@ public class QueryParameterDecoder {
   /** How many minus characters are in the string builder. */
   protected int minus;
 
-  /** How many “e” or “E” characters are in the string builder. */
+  /** How many "e" or "E" characters are in the string builder. */
   protected int e;
 
   /**
-   * If other characters are in the string builder, so not number, dot, minus or “e”. Note that when
-   * the first other character is found, counting numbers, dots, minus and “e” stops.
+   * If other characters are in the string builder, so not number, dot, minus or "e". Note that when
+   * the first other character is found, counting numbers, dots, minus and "e" stops.
    */
   protected boolean others;
 
@@ -268,7 +268,7 @@ public class QueryParameterDecoder {
   protected @Nullable QueryDelimiter delimiter;
 
   /**
-   * The “extended” unicode code point that was read as delimiter. Will be zero, if the end of the
+   * The "extended" unicode code point that was read as delimiter. Will be zero, if the end of the
    * {@link #in input-stream} is reached.
    */
   protected int delimiter_ext_unicode;
@@ -367,22 +367,22 @@ public class QueryParameterDecoder {
   }
 
   /**
-   * Create an “extended” unicode code point.
+   * Create an "extended" unicode code point.
    *
    * @param unicode The unicode code point to be encoded.
    * @param size The amount of origin characters (from the input-stream) used to decode this code
    *     point.
    * @param wasUrlEncoded If the code point was URL encoded.
-   * @return The “extended” unicode code point.
+   * @return The "extended" unicode code point.
    */
   protected static int ext_make(int unicode, int size, boolean wasUrlEncoded) {
     return (unicode & 0x00ff_ffff) | ((size & 0x7f) << 24) | (wasUrlEncoded ? 0x8000_0000 : 0);
   }
 
   /**
-   * Extracts the unicode code point from an “extended” unicode code point.
+   * Extracts the unicode code point from an "extended" unicode code point.
    *
-   * @param ext_unicode The “extended” unicode code point.
+   * @param ext_unicode The "extended" unicode code point.
    * @return The unicode code point.
    */
   protected static int ext_get_unicode(int ext_unicode) {
@@ -390,9 +390,9 @@ public class QueryParameterDecoder {
   }
 
   /**
-   * Extracts if the code point was URL encoded in the origin from an “extended” unicode code point.
+   * Extracts if the code point was URL encoded in the origin from an "extended" unicode code point.
    *
-   * @param ext_unicode The “extended” unicode code point.
+   * @param ext_unicode The "extended" unicode code point.
    * @return {@code true} if the code point was originally URL encoded; {@code false} otherwise.
    */
   protected static boolean ext_was_url_encoded(int ext_unicode) {
@@ -400,11 +400,11 @@ public class QueryParameterDecoder {
   }
 
   /**
-   * Extracts the amount of characters processed to decode the code point from an “extended” unicode
+   * Extracts the amount of characters processed to decode the code point from an "extended" unicode
    * code point. A value between 1 and 12 is to be expected (12 for the worst case UTF-8 URL encoded
    * variant).
    *
-   * @param ext_unicode The “extended” unicode code point.
+   * @param ext_unicode The "extended" unicode code point.
    * @return the amount of characters processed to decode the code point.
    */
   protected static int ext_get_size(int ext_unicode) {
@@ -416,7 +416,7 @@ public class QueryParameterDecoder {
    * it points to the next character after the one just read. Performs URL and UTF-8 decoding and
    * adds a flag to signal if a character was URL encoded.
    *
-   * @return an “extended” unicode code point.
+   * @return an "extended" unicode code point.
    * @throws ParameterError if decoding failed.
    */
   protected final int read() throws ParameterError {

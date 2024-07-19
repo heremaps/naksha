@@ -76,17 +76,17 @@ public final class StringHelper {
 
   /**
    * Compare the two character sequences using the UTF-16 characters. The returned value signals if
-   * “a” is less than (&lt; 0), equal (0) to or more than (&gt; 0) “b”. This will compare the two
+   * "a" is less than (&lt; 0), equal (0) to or more than (&gt; 0) "b". This will compare the two
    * character sequences and stop at the first character where the sequences differ. When hitting a
-   * difference, the difference between the character value read from “a” to the character read from
-   * “b” is returned (a-b). When both character sequences are equal, but not of equal length, the
+   * difference, the difference between the character value read from "a" to the character read from
+   * "b" is returned (a-b). When both character sequences are equal, but not of equal length, the
    * difference in length is returned (a.length() - b.length()). Character sequences being {@code
    * null} are treated like empty strings.
    *
    * @param a the first character sequence to compare.
    * @param b the second character sequence to compare.
-   * @return less than 0 when “a” is less than “b”; 0 when both are equal; greater than 0 when “a”
-   *     is greater than “b”.
+   * @return less than 0 when "a" is less than "b"; 0 when both are equal; greater than 0 when "a"
+   *     is greater than "b".
    * @since 2.0.0
    */
   @AvailableSince("2.0.0")

@@ -20,13 +20,11 @@ package com.here.naksha.test.common.assertions;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.here.naksha.lib.core.models.storage.*;
 import java.util.List;
 import java.util.function.Consumer;
-import naksha.model.OpType;
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.PRef;
+import naksha.model.request.condition.OpType;
+import naksha.model.request.condition.POp;
+import naksha.model.request.condition.POpType;
 
 public class POpAssertion {
 
