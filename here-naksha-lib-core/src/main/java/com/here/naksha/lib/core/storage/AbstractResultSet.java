@@ -27,8 +27,10 @@ import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.view.ViewDeserialize.Storage;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.util.NoSuchElementException;
+
+import naksha.geo.GeometryProxy;
 import naksha.geo.XyzGeometry;
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -47,7 +49,7 @@ import org.locationtech.jts.io.WKBWriter;
  */
 @Deprecated
 @AvailableSince(v2_0_5)
-public abstract class AbstractResultSet<FEATURE extends XyzFeature> implements IResultSet<FEATURE> {
+public abstract class AbstractResultSet<FEATURE extends NakshaFeatureProxy> implements IResultSet<FEATURE> {
 
   /**
    * Create a new result-set for the given feature-type.
@@ -105,7 +107,7 @@ public abstract class AbstractResultSet<FEATURE extends XyzFeature> implements I
   @SuppressWarnings("JavadocDeclaration")
   @AvailableSince(v2_0_5)
   protected @NotNull String jsonOf(@NotNull FEATURE feature) {
-    final XyzGeometry xyzGeometry = feature.getGeometry();
+    final GeometryProxy xyzGeometry = feature.getGeometry();
     feature.setGeometry(null);
     try {
       return json.writer(ViewSerialize.Storage.class)
@@ -127,7 +129,7 @@ public abstract class AbstractResultSet<FEATURE extends XyzFeature> implements I
    */
   @AvailableSince(v2_0_5)
   protected @Nullable String geometryOf(@NotNull FEATURE feature) {
-    final XyzGeometry xyzGeometry = feature.getGeometry();
+    final GeometryProxy xyzGeometry = feature.getGeometry();
     if (xyzGeometry == null) {
       return null;
     }
