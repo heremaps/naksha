@@ -29,6 +29,7 @@ import com.here.naksha.lib.core.view.ViewSerialize;
 import java.util.NoSuchElementException;
 
 import naksha.geo.GeometryProxy;
+import naksha.geo.ProxyGeoUtil;
 import naksha.geo.XyzGeometry;
 import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -136,6 +137,7 @@ public abstract class AbstractResultSet<FEATURE extends NakshaFeatureProxy> impl
     feature.setGeometry(null);
     try {
       final Geometry jtsGeometry = xyzGeometry.getJTSGeometry();
+      ProxyGeoUtil.INSTANCE.
       assure3d(jtsGeometry.getCoordinates());
       final byte[] geometryBytes = json.twkbWriter.write(jtsGeometry);
       return WKBWriter.toHex(geometryBytes);
