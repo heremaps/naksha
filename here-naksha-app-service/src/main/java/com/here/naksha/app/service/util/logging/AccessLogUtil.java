@@ -223,7 +223,7 @@ public class AccessLogUtil {
     final AccessLog.ResponseInfo res = accessLog.respInfo;
     final StreamInfo si = accessLog.streamInfo;
     logger.info(
-        "[REST API stats => eventType,spaceId,storageId,method,uri,status,timeTakenMs,resSize,timeWithoutStorageMs] - RESTAPIStats {} {} {} {} {} {} {} {}",
+        "[REST API stats => spaceId,storageId,method,uri,status,timeTakenMs,resSize,timeWithoutStorageMs] - RESTAPIStats {} {} {} {} {} {} {} {}",
         (si == null || si.getSpaceId() == null || si.getSpaceId().isEmpty()) ? "-" : si.getSpaceId(),
         (si == null || si.getStorageId() == null || si.getStorageId().isEmpty()) ? "-" : si.getStorageId(),
         req.method,
