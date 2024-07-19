@@ -21,7 +21,6 @@ package com.here.naksha.lib.core.models.geojson;
 import com.here.naksha.lib.core.models.geojson.declaration.ILonLat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import naksha.geo.BoundingBoxProxy;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -489,7 +488,8 @@ public class WebMercatorTile {
       bbox = new BoundingBoxProxy(minLon, minLat, maxLon, maxLat);
     }
     if (clone) {
-      return new BoundingBoxProxy(bbox.getMinLongitude(), bbox.getMinLatitude(), bbox.getMaxLongitude(), bbox.getMaxLatitude());
+      return new BoundingBoxProxy(
+          bbox.getMinLongitude(), bbox.getMinLatitude(), bbox.getMaxLongitude(), bbox.getMaxLatitude());
     }
     return bbox;
   }
@@ -500,7 +500,8 @@ public class WebMercatorTile {
     }
 
     final BoundingBoxProxy bbox = getBBox(false);
-    final Envelope envelope = new Envelope(bbox.getMinLongitude(), bbox.getMaxLongitude(), bbox.getMinLatitude(), bbox.getMaxLatitude());
+    final Envelope envelope = new Envelope(
+        bbox.getMinLongitude(), bbox.getMaxLongitude(), bbox.getMinLatitude(), bbox.getMaxLatitude());
     polygon = PreparedGeometryFactory.prepare(factory.toGeometry(envelope));
     return polygon;
   }
@@ -549,14 +550,15 @@ public class WebMercatorTile {
     }
 
     final BoundingBoxProxy bbox = getExtendedBBox(buffer);
-    final Envelope envelope = new Envelope(bbox.getMinLongitude(), bbox.getMaxLongitude(), bbox.getMinLatitude(), bbox.getMaxLatitude());
+    final Envelope envelope = new Envelope(
+        bbox.getMinLongitude(), bbox.getMaxLongitude(), bbox.getMinLatitude(), bbox.getMaxLatitude());
 
     ePolygonBuffer = buffer;
     ePolygon = PreparedGeometryFactory.prepare(factory.toGeometry(envelope));
     return ePolygon;
   }
 
-  private static final GeometryFactory factory = new GeometryFactory(new PrecisionModel(),4326);
+  private static final GeometryFactory factory = new GeometryFactory(new PrecisionModel(), 4326);
 
   /**
    * Returns the quadKey representation of this tile address.
