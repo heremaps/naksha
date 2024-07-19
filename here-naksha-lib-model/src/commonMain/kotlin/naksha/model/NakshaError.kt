@@ -17,16 +17,19 @@ open class NakshaError(
      */
     @JvmField
     val code: NakshaErrorCode,
+
     /**
      * Human-readable message.
      */
     @JvmField
     val message: String = code.defaultMessage,
+
     /**
      * ID of object related to error.
      */
     @JvmField
     val id: String? = null,
+
     /**
      * Original exception; if any.
      */
@@ -44,4 +47,5 @@ open class NakshaError(
     constructor(code: String, message: String? = null, id: String? = null, exception: Exception? = null)
         : this(get(code, NakshaErrorCode::class), message ?: get(code, NakshaErrorCode::class).defaultMessage, id, exception)
 
+    override fun toString(): String = message
 }

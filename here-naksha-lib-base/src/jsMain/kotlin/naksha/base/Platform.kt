@@ -170,7 +170,13 @@ actual class Platform {
         }
 
         @JsStatic
-        actual fun <K : Any, V : Any> newCMap(): CMap<K, V> = JsCMap<K, V>()
+        actual fun <K : Any, V : Any> newAtomicMap(): AtomicMap<K, V> = JsAtomicMap()
+
+        @JsStatic
+        actual fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R> = JsAtomicRef(startValue)
+
+        @JsStatic
+        actual fun newAtomicInt(startValue: Int): AtomicInt = JsAtomicInt(startValue)
 
         @JsStatic
         actual fun newList(vararg entries: Any?): PlatformList {

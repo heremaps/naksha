@@ -148,7 +148,7 @@ class NakshaContext private constructor() {
      * Arbitrary attachments.
      */
     @JvmField
-    val attachments: CMap<Any, Any> = Platform.newCMap()
+    val attachments: AtomicMap<Any, Any> = Platform.newAtomicMap()
 
     /**
      * Returns the attachment of the given type.

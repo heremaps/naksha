@@ -200,7 +200,21 @@ expect class Platform {
          * Create a new concurrent map.
          * @return The concurrent map.
          */
-        fun <K : Any, V : Any> newCMap(): CMap<K, V>
+        fun <K : Any, V : Any> newAtomicMap(): AtomicMap<K, V>
+
+        /**
+         * Create a new atomic reference.
+         * @param startValue the initial value.
+         * @return the atomic reference.
+         */
+        fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R>
+
+        /**
+         * Create a new atomic integer.
+         * @param startValue the initial value.
+         * @return the atomic integer.
+         */
+        fun newAtomicInt(startValue: Int): AtomicInt
 
         /**
          * Creates a new byte-array of the given size.

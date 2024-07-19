@@ -1,6 +1,6 @@
 package naksha.base
 
-class JsCMap<K: Any, V:Any> : HashMap<K,V>(), CMap<K, V> {
+class JsAtomicMap<K: Any, V:Any> : HashMap<K,V>(), AtomicMap<K, V> {
     override fun putIfAbsent(key: K, value: V): V? {
         if (!this.containsKey(key)) {
             this[key] = value

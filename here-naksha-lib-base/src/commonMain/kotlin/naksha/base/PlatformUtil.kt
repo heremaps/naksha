@@ -14,6 +14,36 @@ import kotlin.jvm.JvmStatic
 class PlatformUtil {
     companion object PlatformUtilCompanion {
         /**
+         * A switch to toggle debug logs (disabled by default).
+         *
+         * Sometimes exceptions are caught internally in `lib-psql`, sometimes even suppressed, this normally no problem, but when debugging this can become a problem, therefore this switch enables to print suppressed stack traces as INFO logs and other debug information. It may as well send
+         */
+        @JsStatic
+        @JvmField
+        var ENABLE_DEBUG: Boolean = false
+
+        /**
+         * A switch to toggle info logs (disabled by default).
+         */
+        @JsStatic
+        @JvmField
+        var ENABLE_INFO: Boolean = false
+
+        /**
+         * A switch to toggle warning logs (enabled by default).
+         */
+        @JsStatic
+        @JvmField
+        var ENABLE_WARN: Boolean = true
+
+        /**
+         * A switch to toggle error logs (enabled by default).
+         */
+        @JsStatic
+        @JvmField
+        var ENABLE_ERROR: Boolean = true
+
+        /**
          * The maximal 32-bit floating point number that can be encoded without losing precision.
          */
         @JsStatic

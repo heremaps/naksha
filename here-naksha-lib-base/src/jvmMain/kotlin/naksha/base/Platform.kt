@@ -224,7 +224,13 @@ actual class Platform {
         actual fun newMap(vararg entries: Any?): PlatformMap = JvmMap(*entries)
 
         @JvmStatic
-        actual fun <K : Any, V : Any> newCMap(): CMap<K, V> = JvmCMap()
+        actual fun <K : Any, V : Any> newAtomicMap(): AtomicMap<K, V> = JvmAtomicMap()
+
+        @JvmStatic
+        actual fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R> = JvmAtomicRef(startValue)
+
+        @JvmStatic
+        actual fun newAtomicInt(startValue: Int): AtomicInt = JvmAtomicInt(startValue)
 
         @JvmStatic
         actual fun newList(vararg entries: Any?): PlatformList = JvmList(*entries)

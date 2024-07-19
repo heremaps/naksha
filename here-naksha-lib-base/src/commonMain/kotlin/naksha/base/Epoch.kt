@@ -4,6 +4,7 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
  * A helper to split epoch millis into its parts.
@@ -17,42 +18,42 @@ open class Epoch(val millis: Int64 = Platform.currentMillis()) {
     /**
      * The year.
      */
-    val year: Int
-        get() = dateTime.year
+    @JvmField
+    val year: Int = dateTime.year
 
     /**
      * The month (1 to 12).
      */
-    val month: Int
-        get() = dateTime.monthNumber
+    @JvmField
+    val month: Int = dateTime.monthNumber
 
     /**
      * The day of the month (1 to 31).
      */
-    val day: Int
-        get() = dateTime.dayOfMonth
+    @JvmField
+    val day: Int = dateTime.dayOfMonth
 
     /**
      * The hour (0 to 23) of the day.
      */
-    val hour: Int
-        get() = dateTime.hour
+    @JvmField
+    val hour: Int = dateTime.hour
 
     /**
      * The minute (0 to 59) of the day.
      */
-    val minute: Int
-        get() = dateTime.minute
+    @JvmField
+    val minute: Int = dateTime.minute
 
     /**
      * The second (0 to 60) of the day.
      */
-    val second: Int
-        get() = dateTime.second
+    @JvmField
+    val second: Int = dateTime.second
 
     /**
      * The milliseconds of the second.
      */
-    val millisOfSecond: Int
-        get() = dateTime.nanosecond / 1000
+    @JvmField
+    val millisOfSecond: Int = dateTime.nanosecond / 1000
 }

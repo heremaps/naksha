@@ -2,6 +2,7 @@ package naksha.model
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
  * The Local Unique Identifier, being a 96-bit value, persisting out of the transaction number and a 32-bit integer that uniquely
@@ -10,7 +11,7 @@ import kotlin.js.JsExport
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-data class Luid (val txn: Txn, val uid: Int) {
+data class Luid (@JvmField val txn: Txn, @JvmField val uid: Int) {
     private lateinit var _string: String
 
     /**

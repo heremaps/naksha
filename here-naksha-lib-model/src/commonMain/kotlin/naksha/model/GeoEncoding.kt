@@ -9,13 +9,16 @@ import kotlin.js.JsExport
 @JsExport
 object GeoEncoding : FlagsBits() {
     /**
-     * Geometry encoded in [TWKB](https://github.com/TWKB/Specification/blob/master/twkb.md) with precision 7.
+     * Geometry encoded in [TWKB](https://github.com/TWKB/Specification/blob/master/twkb.md) with precision 7 (so it fits into 32-bit integer encoding).
+     *
+     * See as well [Dan Bastons Post about optimizing PostgresQL geometries](http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html)
      */
     const val TWKB = 0 shl GEO_SHIFT
 
     /**
-     * Geometry encoded in [TWKB](https://github.com/TWKB/Specification/blob/master/twkb.md) with precision 7, compressed using
-     * [GZIP](https://en.wikipedia.org/wiki/Gzip).
+     * Geometry encoded in [TWKB](https://github.com/TWKB/Specification/blob/master/twkb.md) with precision 7  (so it fits into 32-bit integer encoding), compressed using [GZIP](https://en.wikipedia.org/wiki/Gzip).
+     *
+     * See as well [Dan Bastons Post about optimizing PostgresQL geometries](http://www.danbaston.com/posts/2018/02/15/optimizing-postgis-geometries.html)
      */
     const val TWKB_GZIP = 1 shl GEO_SHIFT
 
