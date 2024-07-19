@@ -25,9 +25,7 @@ import naksha.psql.PgConnection
 import naksha.psql.PgUtil
 
 
-class SqlGeometryTransformationResolver(
-    val sql: PgConnection
-) {
+class SqlGeometryTransformationResolver {
     fun wrapWithTransformation(
         transformation: GeometryTransformation?, variablePlaceholder: String
     ): StringBuilder {
