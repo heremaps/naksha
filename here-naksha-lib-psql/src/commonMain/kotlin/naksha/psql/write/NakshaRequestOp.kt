@@ -108,8 +108,8 @@ internal class NakshaRequestOp(
                     Guid(storageId, writeOp.collectionId, writeOp.getId(), luid).toString()
                 } else null
 
-                is DeleteFeature -> writeOp.uuid
-                is PurgeFeature -> writeOp.uuid
+                is DeleteFeature -> writeOp.guid.toString()
+                is PurgeFeature -> writeOp.guid.toString()
                 else -> null
             }
         }
