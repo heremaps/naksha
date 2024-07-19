@@ -3,6 +3,8 @@ package naksha.geo
 import naksha.base.ListProxy
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.math.abs
+import kotlin.math.min
 
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate", "unused")
 @JsExport
@@ -132,4 +134,27 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
     }
     fun withNorthEastAltitude(altitude: Double): BoundingBoxProxy = withMaxAltitude(altitude)
 
+    /**
+     * Returns the longitude distance in degree.
+     *
+     * @param shortestDistance If true, then the shortest distance is returned, that means when
+     *     crossing the date border is shorter than the other way around, this is returned. When
+     *     false, then the date border is never crossed, what will result in bigger bounding boxes.
+     * @return the longitude distance in degree.
+     */
+    fun widthInDegree(shortestDistance: Boolean): Double {
+        if (shortestDistance) {
+            // Note: Because the earth is a sphere there are two directions into which we can move, for
+            // example:
+            // min: -170° max: +170°
+            // The distance here can be either 340° (heading west) or only 20° (heading east and crossing
+            // the date border).
+            val direct: Double = abs(getMaxLongitude() - getMinLongitude()) // +170 - -170 = +340
+            val crossDateBorder = 360 - direct // 360 - 340 = 20
+            // In the above example crossing the date border is the shorted distance and therefore we take
+            // it as requested.
+            return min(direct, crossDateBorder)
+        }
+        return (getMaxLongitude() + 180.0) - (getMinLongitude() + 180.0)
+    }
 }
