@@ -23,13 +23,13 @@ import static naksha.model.request.condition.POp.eq;
 import static naksha.model.request.condition.PRef.id;
 import static naksha.model.request.condition.PRef.pRefPathMap;
 
-import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.storage.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import naksha.geo.MultiPointCoordinates;
-import naksha.geo.PointCoordinates;
+import naksha.geo.MultiPointCoord;
+import naksha.geo.PointCoord;
+import naksha.geo.ProxyGeoUtil;
 import naksha.model.NakshaCollectionProxy;
 import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
@@ -290,10 +290,10 @@ public class RequestHelper {
    */
   public static @NotNull Geometry createBBoxEnvelope(
       final double west, final double south, final double east, final double north) {
-    MultiPointCoordinates multiPoint = new MultiPointCoordinates();
-    multiPoint.add(new PointCoordinates(west, south));
-    multiPoint.add(new PointCoordinates(east, north));
-    return JTSHelper.toMultiPoint(multiPoint).getEnvelope();
+    MultiPointCoord multiPoint = new MultiPointCoord();
+    multiPoint.add(new PointCoord(west, south));
+    multiPoint.add(new PointCoord(east, north));
+    return ProxyGeoUtil.toJtsMultiPoint(multiPoint);
   }
 
   /**

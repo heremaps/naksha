@@ -21,16 +21,16 @@ package com.here.naksha.lib.core.models.geojson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import naksha.geo.BBox;
+import naksha.geo.BoundingBoxProxy;
 import org.junit.jupiter.api.Test;
 
 public class HQuadTest {
 
-  BBox bbox = new BBox()
-      .withEast(13.38134765625)
-      .withNorth(52.53662109375)
-      .withWest(13.359375)
-      .withSouth(52.5146484375);
+  BoundingBoxProxy bbox = new BoundingBoxProxy()
+      .withEastLongitude(13.38134765625)
+      .withNorthLatitude(52.53662109375)
+      .withWestLongitude(13.359375)
+      .withSouthLatitude(52.5146484375);
   String base4QK = "12201203120220";
   String base10QK = "377894440";
 
@@ -86,21 +86,21 @@ public class HQuadTest {
   public void testGeometryFromHereTileIdBase10QK() {
     final String tileId = "23618381";
     HQuad hQuad = new HQuad(tileId, false);
-    BBox bbox = hQuad.getBoundingBox();
-    assertEquals(bbox.getWest(), 13.623046875, "West coordinate doesn't match");
-    assertEquals(bbox.getSouth(), 52.20703125, "South coordinate doesn't match");
-    assertEquals(bbox.getEast(), 13.7109375, "East coordinate doesn't match");
-    assertEquals(bbox.getNorth(), 52.294921875, "North coordinate doesn't match");
+    BoundingBoxProxy bbox = hQuad.getBoundingBox();
+    assertEquals(bbox.getWestLongitude(), 13.623046875, "West coordinate doesn't match");
+    assertEquals(bbox.getSouthLatitude(), 52.20703125, "South coordinate doesn't match");
+    assertEquals(bbox.getEastLongitude(), 13.7109375, "East coordinate doesn't match");
+    assertEquals(bbox.getNorthLatitude(), 52.294921875, "North coordinate doesn't match");
   }
 
   @Test
   public void testGeometryFromHereTileIdBase4QK() {
     final String tileId = "122012031031";
     HQuad hQuad = new HQuad(tileId, true);
-    BBox bbox = hQuad.getBoundingBox();
-    assertEquals(bbox.getWest(), 13.623046875, "West coordinate doesn't match");
-    assertEquals(bbox.getSouth(), 52.20703125, "South coordinate doesn't match");
-    assertEquals(bbox.getEast(), 13.7109375, "East coordinate doesn't match");
-    assertEquals(bbox.getNorth(), 52.294921875, "North coordinate doesn't match");
+    BoundingBoxProxy bbox = hQuad.getBoundingBox();
+    assertEquals(bbox.getWestLongitude(), 13.623046875, "West coordinate doesn't match");
+    assertEquals(bbox.getSouthLatitude(), 52.20703125, "South coordinate doesn't match");
+    assertEquals(bbox.getEastLongitude(), 13.7109375, "East coordinate doesn't match");
+    assertEquals(bbox.getNorthLatitude(), 52.294921875, "North coordinate doesn't match");
   }
 }
