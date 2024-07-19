@@ -15,6 +15,7 @@ object ProxyGeoUtil {
      * @param jtsGeometry
      * @return [GeometryProxy]
      */
+    @JvmStatic
     fun toProxyGeometry(jtsGeometry: Geometry): GeometryProxy {
         return when (jtsGeometry) {
             is Point -> toPoint(jtsGeometry)
