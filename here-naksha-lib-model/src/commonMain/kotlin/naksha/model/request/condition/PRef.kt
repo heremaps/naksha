@@ -9,7 +9,7 @@ import kotlin.jvm.JvmStatic
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-sealed class PRef {
+sealed class PRef(val isJsonField: Boolean = false) {
     data object ID : PRef()
     data object APP_ID : PRef()
     data object AUTHOR : PRef()
@@ -18,8 +18,8 @@ sealed class PRef {
     data object GRID : PRef()
     data object TXN : PRef()
     data object TXN_NEXT : PRef()
-    data object TAGS : PRef()
-    class NON_INDEXED_PREF(vararg val path: String) : PRef()
+    data object TAGS : PRef(isJsonField = true)
+    class NON_INDEXED_PREF(vararg val path: String) : PRef(isJsonField = true)
 
     companion object {
 

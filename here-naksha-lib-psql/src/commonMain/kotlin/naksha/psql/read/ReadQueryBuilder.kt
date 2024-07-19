@@ -4,6 +4,7 @@ import naksha.model.Guid
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadRequest
+import naksha.model.request.Request
 import naksha.model.request.condition.*
 import naksha.model.request.condition.SOpType.INTERSECTS
 import naksha.psql.*
@@ -12,9 +13,9 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-internal class ReadQueryBuilder(val conn: PgConnection) {
+internal class ReadQueryBuilder {
 
-    private val geometryTransformer = SqlGeometryTransformationResolver(conn)
+    private val geometryTransformer = SqlGeometryTransformationResolver()
 
     /**
      * Builds SQL request based on given ReadRequest.
@@ -22,7 +23,7 @@ internal class ReadQueryBuilder(val conn: PgConnection) {
      * @param req - read request
      * @return <SQL query string, list of params for query>
      */
-    fun build(req: ReadRequest<*>): Pair<String, MutableList<Any?>> {
+    fun build(req: Request<*>): Pair<String, MutableList<Any?>> {
         return when (req) {
             is ReadCollections -> buildReadFeatures(req.toReadFeatures())
             is ReadFeatures -> buildReadFeatures(req)
@@ -138,13 +139,16 @@ internal class ReadQueryBuilder(val conn: PgConnection) {
             PRef.GRID -> COL_GEO_GRID
             PRef.TXN -> COL_TXN
             PRef.TXN_NEXT -> COL_TXN_NEXT
-            PRef.TAGS -> COL_TAGS
+            PRef.TAGS -> "tags_to_jsonb($COL_TAGS)"
             PRef.UUID -> return customUuidOp(whereSql, paramsList, pop)
             is PRef.NON_INDEXED_PREF -> (pop.propertyRef as PRef.NON_INDEXED_PREF).path.joinToString { "->" }
         }
 
         whereSql.append(col)
-        whereSql.append(pop.op.operation)
+        if (pop.propertyRef.isJsonField)
+            whereSql.append(pop.op.jsonOperation)
+        else
+            whereSql.append(pop.op.operation)
         if (pop.value != null) {
             whereSql.append(paramsList.nextPlaceHolder())
             paramsList.add(pop.value)

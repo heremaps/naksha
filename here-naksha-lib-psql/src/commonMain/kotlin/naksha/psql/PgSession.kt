@@ -507,7 +507,7 @@ FROM ns, txn_seq;
         when (request) {
             is ReadRequest -> {
                 val conn = usePgConnection()
-                val (sql, params) = ReadQueryBuilder(conn).build(request)
+                val (sql, params) = ReadQueryBuilder().build(request)
                 val pgResult = conn.execute(sql, params.toTypedArray())
                 TODO("Fix me!")
                 //val rows = DbRowMapper.toReadRows(pgResult, storage)

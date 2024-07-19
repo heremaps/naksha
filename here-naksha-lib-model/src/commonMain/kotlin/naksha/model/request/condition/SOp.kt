@@ -26,7 +26,7 @@ class SOp(
          * @return The operation describing this.
          */
         fun intersects(geometry: GeometryProxy): SOp {
-            return return SOp(
+            return SOp(
                 SOpType.INTERSECTS,
                 geometry,
                 null

@@ -5,9 +5,9 @@ import kotlin.js.JsExport
 
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-sealed class POpType(val operation: String) : OpType {
+sealed class POpType(val operation: String, val jsonOperation: String = operation) : OpType {
 
-    data object EXISTS : POpType(" exists ")
+    data object EXISTS : POpType(" exists ", " ? ")
     data object STARTS_WITH : POpType(" like ")
     data object EQ : POpType("=")
     data object GT : POpType(">")
@@ -16,6 +16,6 @@ sealed class POpType(val operation: String) : OpType {
     data object LTE : POpType("<=")
     data object NULL : POpType(" is null ")
     data object NOT_NULL : POpType(" is not null")
-    data object IN : POpType(" in ")
-    data object CONTAINS : POpType("@>")
+    data object IN : POpType(" in ", " ?| ")
+    data object CONTAINS : POpType("@>", " ? ")
 }

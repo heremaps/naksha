@@ -13,6 +13,7 @@ object ProxyGeoUtil {
      * @param coords [PointCoord] to convert
      * @return [Coordinate]
      */
+    @JvmStatic
     fun toJtsCoordinate(coords: PointCoord): Coordinate =
         if(coords.hasAltitude())
             Coordinate(coords.getLongitude(), coords.getLatitude())
@@ -27,6 +28,7 @@ object ProxyGeoUtil {
      * @throws [IllegalArgumentException] when proxy type is not supported
      * @throws [RuntimeException] when proxy has null coordinates
      */
+    @JvmStatic
     fun toJtsGeometry(geometry: GeometryProxy): Geometry {
         return when (geometry.type) {
             GeoType.Point.toString() -> toJtsPoint(geometry.asPoint())
@@ -46,6 +48,7 @@ object ProxyGeoUtil {
      * @return [Point]
      * @throws [RuntimeException] when proxy has null coordinates
      */
+    @JvmStatic
     fun toJtsPoint(geometry: PointGeometry): Point = toJtsPoint(geometry.getCoordinates())
 
     /**
@@ -54,6 +57,7 @@ object ProxyGeoUtil {
      * @param coords [PointCoord] to convert
      * @return [Point]
      */
+    @JvmStatic
     fun toJtsPoint(coords: PointCoord): Point = factory.createPoint(toJtsCoordinate(coords))
 
     /**
@@ -63,6 +67,7 @@ object ProxyGeoUtil {
      * @return [MultiPoint]
      * @throws [RuntimeException] when proxy has null coordinates
      */
+    @JvmStatic
     fun toJtsMultiPoint(geometry: MultiPointGeometry): MultiPoint = toJtsMultiPoint(geometry.getCoordinates())
 
     /**
@@ -72,6 +77,7 @@ object ProxyGeoUtil {
      * @return [MultiPoint]
      * @throws [RuntimeException] when proxy has null coordinates
      */
+    @JvmStatic
     fun toJtsMultiPoint(coords: MultiPointCoord): MultiPoint {
         val points = coords.map { toJtsPoint(it!!) }.toTypedArray()
         return factory.createMultiPoint(points)
@@ -83,6 +89,7 @@ object ProxyGeoUtil {
      * @param geometry [LineStringGeometry] to convert
      * @return [LineString]
      */
+    @JvmStatic
     fun toJtsLineString(geometry: LineStringGeometry): LineString = toJtsLineString(geometry.getCoordinates())
 
     /**
@@ -92,6 +99,7 @@ object ProxyGeoUtil {
      * @return [LineString]
      * @throws [RuntimeException] when proxy has null coordinates
      */
+    @JvmStatic
     fun toJtsLineString(coords: LineStringCoord): LineString {
         val points = coords.map { toJtsCoordinate(it!!) }.toTypedArray()
         return factory.createLineString(points)
@@ -104,6 +112,7 @@ object ProxyGeoUtil {
      * @return [Polygon]
      * @throws [RuntimeException] when proxy has null coordinates
      */
+    @JvmStatic
     fun toJtsPolygon(geometry: PolygonGeometry): Polygon = toJtsPolygon(geometry.getCoordinates())
 
     /**
@@ -112,6 +121,7 @@ object ProxyGeoUtil {
      * @param coords [PolygonCoord] to convert
      * @return [Polygon]
      */
+    @JvmStatic
     fun toJtsPolygon(coords: PolygonCoord): Polygon {
         if (coords.size == 0) {
             return factory.createPolygon()
@@ -139,6 +149,7 @@ object ProxyGeoUtil {
      * @return [MultiLineString]
      * @throws [RuntimeException] when proxy has null coordinates
      */
+    @JvmStatic
     fun toJtsMultiLineString(geometry: MultiLineStringGeometry): MultiLineString = toJtsMultiLineString(geometry.getCoordinates())
 
     /**
@@ -147,6 +158,7 @@ object ProxyGeoUtil {
      * @param coords [MultiLineStringCoord] to convert
      * @return [MultiLineString]
      */
+    @JvmStatic
     fun toJtsMultiLineString(coords: MultiLineStringCoord): MultiLineString {
         if (coords.size == 0) {
             return factory.createMultiLineString()
@@ -163,6 +175,7 @@ object ProxyGeoUtil {
      * @return [MultiPolygon]
      * @throws [RuntimeException] when proxy has null coordinates
      */
+    @JvmStatic
     fun toJtsMultiPolygon(geometry: MultiPolygonGeometry): MultiPolygon = toJtsMultiPolygon(geometry.getCoordinates())
 
     /**
@@ -171,6 +184,7 @@ object ProxyGeoUtil {
      * @param coords [MultiPolygonCoord] to convert
      * @return [MultiPolygon]
      */
+    @JvmStatic
     fun toJtsMultiPolygon(coords: MultiPolygonCoord): MultiPolygon {
         if (coords.size == 0) {
             return factory.createMultiPolygon()
@@ -186,6 +200,7 @@ object ProxyGeoUtil {
      * @param coords [LineStringCoord] to convert
      * @return [LinearRing]
      */
+    @JvmStatic
     fun toJtsLinearRing(coords: LineStringCoord): LinearRing {
         if (coords.isEmpty()) {
             return factory.createLinearRing()
