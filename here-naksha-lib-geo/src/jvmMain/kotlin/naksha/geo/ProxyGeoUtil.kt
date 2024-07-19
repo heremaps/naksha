@@ -1,11 +1,178 @@
 package naksha.geo
 
 import org.locationtech.jts.geom.*
+import org.locationtech.jts.io.WKTWriter.toLineString
+import org.locationtech.jts.triangulate.quadedge.QuadEdgeTriangle.toPolygon
 
 @Suppress("MemberVisibilityCanBePrivate")
 object ProxyGeoUtil {
 
     private val factory: GeometryFactory = GeometryFactory(PrecisionModel(), 4326)
+
+    /**
+     * Converts JTS [Geometry] into [GeometryProxy]
+     *
+     * @param jtsGeometry
+     * @return [GeometryProxy]
+     */
+    fun toProxyGeometry(jtsGeometry: Geometry): GeometryProxy {
+        return when (jtsGeometry) {
+            is Point -> toPoint(jtsGeometry)
+            is MultiPoint -> toMultiPoint(jtsGeometry)
+            is LineString -> toLineString(jtsGeometry)
+            is Polygon -> toPolygon(jtsGeometry)
+            is MultiPolygon -> toMultiPolygon(jtsGeometry)
+            is MultiLineString -> toMultiLineString(jtsGeometry)
+            else -> throw IllegalArgumentException("Unsupported geometry ${jtsGeometry.geometryType}")
+        }
+    }
+
+    /**
+     * Converts JTS [Coordinate] into [PointCoord]
+     *
+     * @param coords - JTS [Coordinate]
+     * @return [PointCoord]
+     */
+    @JvmStatic
+    fun toPointCoord(coords: Coordinate): PointCoord {
+        return if (!coords.m.isNaN()) {
+            PointCoord(coords.x, coords.y, coords.z, coords.m)
+        } else if (!coords.z.isNaN()) {
+            PointCoord(coords.x, coords.y, coords.z)
+        } else {
+            PointCoord(coords.x, coords.y)
+        }
+    }
+
+    /**
+     * Converts JTS [Point] into [PointGeometry]
+     *
+     * @param jtsPoint - JTS [Point]
+     * @return [PointGeometry]
+     */
+    @JvmStatic
+    fun toPoint(jtsPoint: Point): PointGeometry {
+        return PointGeometry().withCoordinates(toPointCoord(jtsPoint.coordinate))
+    }
+
+    /**
+     * Converts JTS [MultiPoint] into [MultiPointGeometry]
+     *
+     * @param jtsMultiPoint - JTS [MultiPoint]
+     * @return [MultiPointGeometry]
+     */
+    @JvmStatic
+    fun toMultiPoint(jtsMultiPoint: MultiPoint): MultiPointGeometry {
+        return MultiPointGeometry().withCoordinates(toMultiPointCoord(jtsMultiPoint.coordinates))
+    }
+
+    /**
+     * Converts JTS [Array<Coordinate>] into [MultiPointCoord]
+     *
+     * @param jtsCoords - JTS [Array<Coordinate>]
+     * @return [MultiPointCoord]
+     */
+    @JvmStatic
+    fun toMultiPointCoord(jtsCoords: Array<Coordinate>): MultiPointCoord {
+        return MultiPointCoord(*jtsCoords.map(::toPointCoord).toTypedArray())
+    }
+
+    /**
+     * Converts JTS [LineString] into [LineStringGeometry]
+     *
+     * @param jtsLineString - JTS [LineString]
+     * @return [LineStringGeometry]
+     */
+    @JvmStatic
+    fun toLineString(jtsLineString: LineString): LineStringGeometry {
+        return LineStringGeometry().withCoordinates(toLineStringCoord(jtsLineString.coordinates))
+    }
+
+    /**
+     * Converts JTS [Array<Coordinate>] into [LineStringCoord]
+     *
+     * @param jtsCoords - JTS [Array<Coordinate>]
+     * @return [LineStringCoord]
+     */
+    @JvmStatic
+    fun toLineStringCoord(jtsCoords: Array<Coordinate>): LineStringCoord {
+        return LineStringCoord(*jtsCoords.map(::toPointCoord).toTypedArray())
+    }
+
+    /**
+     * Converts JTS [Array<LinearRing>] into [LineStringCoord]
+     *
+     * @param linearRings - JTS [Array<LinearRing>]
+     * @return [LineStringCoord]
+     */
+    @JvmStatic
+    fun toLinearRingCoord(linearRings: Array<LinearRing>): Array<LineStringCoord> {
+        return linearRings.map { toLineStringCoord(it.coordinates) }.toTypedArray()
+    }
+
+    /**
+     * Converts JTS [Polygon] into [PolygonGeometry]
+     *
+     * @param jtsPolygon - JTS [Polygon]
+     * @return [PolygonGeometry]
+     */
+    @JvmStatic
+    fun toPolygon(jtsPolygon: Polygon): PolygonGeometry {
+        val polygonRings = mutableListOf(jtsPolygon.exteriorRing)
+        for (i in 0..<jtsPolygon.numInteriorRing) {
+            polygonRings.add(jtsPolygon.getInteriorRingN(i))
+        }
+        return PolygonGeometry().withCoordinates(toPolygonCoord(polygonRings.toTypedArray()))
+    }
+
+    /**
+     * Converts JTS [Array<LinearRing>] into [PolygonCoord]
+     *
+     * @param jtsCoords - JTS [Array<Coordinate>]
+     * @return [PolygonCoord]
+     */
+    @JvmStatic
+    fun toPolygonCoord(jtsCoords: Array<LinearRing>): PolygonCoord {
+        return PolygonCoord(*toLinearRingCoord(jtsCoords))
+    }
+
+    /**
+     * Converts JTS [MultiLineString] into [MultiLineStringGeometry]
+     *
+     * @param jtsMultiLineString - JTS [MultiLineString]
+     * @return [MultiLineStringGeometry]
+     */
+    @JvmStatic
+    fun toMultiLineString(jtsMultiLineString: MultiLineString): MultiLineStringGeometry {
+        val lineStrings = Array(jtsMultiLineString.numGeometries) {
+            toLineStringCoord(jtsMultiLineString.getGeometryN(it).coordinates)
+        }
+        return MultiLineStringGeometry().withCoordinates(toMultiLineStringCoord(lineStrings))
+    }
+
+    @JvmStatic
+    fun toMultiLineStringCoord(jtsCoords: Array<LineStringCoord>): MultiLineStringCoord {
+        return MultiLineStringCoord(*jtsCoords)
+    }
+
+    /**
+     * Converts JTS [MultiPolygon] into [MultiPolygonGeometry]
+     *
+     * @param jtsMultiPolygon - JTS [MultiPolygon]
+     * @return [MultiPolygonGeometry]
+     */
+    @JvmStatic
+    fun toMultiPolygon(jtsMultiPolygon: MultiPolygon): MultiPolygonGeometry {
+        val polygons = Array(jtsMultiPolygon.numGeometries) {
+            toPolygon(jtsMultiPolygon.getGeometryN(it) as Polygon)
+        }
+        return MultiPolygonGeometry().withCoordinates(toMultiPolygonCoord(polygons))
+    }
+
+    @JvmStatic
+    fun toMultiPolygonCoord(polygons: Array<PolygonGeometry>): MultiPolygonCoord {
+        return MultiPolygonCoord(*polygons.map { it.getCoordinates() }.toTypedArray())
+    }
 
     /**
      * Converts [PointCoord] to JTS [Coordinate] with or without altitude.
@@ -15,7 +182,7 @@ object ProxyGeoUtil {
      */
     @JvmStatic
     fun toJtsCoordinate(coords: PointCoord): Coordinate =
-        if(coords.hasAltitude())
+        if (coords.hasAltitude())
             Coordinate(coords.getLongitude(), coords.getLatitude())
         else
             Coordinate(coords.getLongitude(), coords.getLatitude(), coords.getAltitude())
@@ -150,7 +317,8 @@ object ProxyGeoUtil {
      * @throws [RuntimeException] when proxy has null coordinates
      */
     @JvmStatic
-    fun toJtsMultiLineString(geometry: MultiLineStringGeometry): MultiLineString = toJtsMultiLineString(geometry.getCoordinates())
+    fun toJtsMultiLineString(geometry: MultiLineStringGeometry): MultiLineString =
+        toJtsMultiLineString(geometry.getCoordinates())
 
     /**
      * Converts [MultiLineStringCoord] to JTS [MultiLineString]
