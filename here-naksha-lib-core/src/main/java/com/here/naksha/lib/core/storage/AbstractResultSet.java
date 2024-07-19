@@ -87,7 +87,7 @@ public abstract class AbstractResultSet<FEATURE extends NakshaFeatureProxy> impl
       }
       if (geo != null) {
         final Geometry geometry = json.twkbReader.read(WKBReader.hexToBytes(geo));
-        f.setGeometry(JTSHelper.fromGeometry(geometry));
+        f.setGeometry(ProxyGeoUtil.toProxyGeometry(geometry));
       }
       return f;
     } catch (ParseException | JsonProcessingException e) {
