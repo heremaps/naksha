@@ -30,5 +30,6 @@ abstract class Write(
         const val XYZ_OP_UPSERT = 2 // aka PUT
         const val XYZ_OP_DELETE = 3
         const val XYZ_OP_PURGE = 4
+        const val ADMIN_COLLECTION_ID = "naksha~collections"
     }
 }

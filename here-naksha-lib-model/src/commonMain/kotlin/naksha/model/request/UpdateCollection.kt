@@ -20,4 +20,4 @@ class UpdateCollection(
      * Default: false
      */
     atomic: Boolean = false,
-) : UpdateFeature("naksha~collections", collection, atomic)
+) : UpdateFeature(ADMIN_COLLECTION_ID, collection, atomic)
