@@ -57,7 +57,7 @@ public class StreamInfo {
     return this.storageId;
   }
 
-  public Duration getTimeInStorage() {
+  public @NotNull Duration getTimeInStorage() {
     return timeInStorage;
   }
 
@@ -84,7 +84,7 @@ public class StreamInfo {
 
   public @NotNull String toColonSeparatedString() {
     return "spaceId=" + ((spaceId == null || spaceId.isEmpty()) ? "-" : spaceId) + ";storageId="
-           + ((storageId == null || storageId.isEmpty()) ? "-" : storageId)
-           + "timeInStorage=" + timeInStorage.toMillis() + "ms";
+        + ((storageId == null || storageId.isEmpty()) ? "-" : storageId)
+        + "timeInStorage=" + timeInStorage.toMillis() + "ms";
   }
 }
