@@ -37,9 +37,7 @@ public class HistoryStatisticsResponse extends Response {
   private StatisticsResponse.Value<Integer> minVersion;
   private StatisticsResponse.Value<Integer> maxVersion;
 
-  public HistoryStatisticsResponse() {
-    super(HISTORY_STATS_TYPE);
-  }
+  public HistoryStatisticsResponse() {}
 
   /**
    * Returns the amount of features stored in the space.
@@ -158,5 +156,10 @@ public class HistoryStatisticsResponse extends Response {
   public HistoryStatisticsResponse withMaxVersion(StatisticsResponse.Value<Integer> maxVersion) {
     setMaxVersion(maxVersion);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

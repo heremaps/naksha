@@ -38,9 +38,7 @@ public class ChangesetCollection extends Response {
 
   private String nextPageToken;
 
-  public ChangesetCollection() {
-    super(CHANGE_SET_COLLECTION_TYPE);
-  }
+  public ChangesetCollection() {}
 
   @SuppressWarnings("unused")
   public String getNextPageToken() {
@@ -94,5 +92,10 @@ public class ChangesetCollection extends Response {
   public ChangesetCollection withVersions(final Map<Integer, Changeset> versions) {
     setVersions(versions);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

@@ -21,16 +21,10 @@ package com.here.naksha.lib.core.models.storage;
 import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Helper to simplify creation of ContextWriteFeatures request, using standard {@link NakshaFeatureProxy}
  * type for features, context and violations.
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-public class ContextWriteXyzFeatures extends ContextWriteFeatures {
-
-  public ContextWriteXyzFeatures(@NotNull String collectionId, @NotNull NakshaFeatureProxy feature, boolean atomic) {
-    super(collectionId, feature, atomic);
-  }
-}
+public class ContextWriteXyzFeatures extends ContextWriteFeatures {}

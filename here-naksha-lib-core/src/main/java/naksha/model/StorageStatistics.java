@@ -27,10 +27,6 @@ public class StorageStatistics extends Response {
   private Map<String, SpaceByteSizes> byteSizes;
   private long createdAt;
 
-  public StorageStatistics() {
-    super(STORAGE_STATS_TYPE);
-  }
-
   /**
    * @return A map of which the keys are the space IDs and the values are the according byte size
    *     information of the according space.
@@ -59,6 +55,11 @@ public class StorageStatistics extends Response {
   public StorageStatistics withCreatedAt(long createdAt) {
     setCreatedAt(createdAt);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 
   public static class SpaceByteSizes {

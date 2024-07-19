@@ -119,7 +119,7 @@ public class FeatureModificationList<
         event.getIdsMap()
             .put(
                 entry.input.getId(),
-                entry.input.getProperties().getXyzNamespace().getUuid());
+                entry.input.getProperties().getXyz().getUuid());
       }
     }
     return event.getIdsMap().size() > 0 ? event : null;

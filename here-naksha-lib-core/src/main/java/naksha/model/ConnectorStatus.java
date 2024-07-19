@@ -43,9 +43,7 @@ public class ConnectorStatus extends Response {
 
   private Map<String, MaintenanceStatus> maintenanceStatus;
 
-  public ConnectorStatus() {
-    super(CONNECTOR_STATUS_TYPE);
-  }
+  public ConnectorStatus() {}
 
   public void setInitialized(boolean initialized) {
     this.initialized = initialized;
@@ -97,6 +95,11 @@ public class ConnectorStatus extends Response {
   public ConnectorStatus withMaintenanceStatus(Map<String, MaintenanceStatus> maintenanceStatus) {
     setMaintenanceStatus(maintenanceStatus);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 
   public static class MaintenanceStatus {

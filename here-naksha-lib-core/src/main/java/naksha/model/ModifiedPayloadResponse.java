@@ -26,7 +26,7 @@ public abstract class ModifiedPayloadResponse extends Response {
   private String eventType;
 
   public ModifiedPayloadResponse(@NotNull String type) {
-    super(type);
+    eventType = type;
   }
 
   @SuppressWarnings("unused")

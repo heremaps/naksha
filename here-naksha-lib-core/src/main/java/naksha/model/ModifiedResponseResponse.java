@@ -21,6 +21,7 @@ package naksha.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.Payload;
+import org.jetbrains.annotations.NotNull;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "ModifiedResponseResponse")
@@ -28,8 +29,8 @@ public class ModifiedResponseResponse extends ModifiedPayloadResponse {
 
   private Payload response;
 
-  public ModifiedResponseResponse() {
-    super(MODIFIED_RESPONSE_TYPE);
+  public ModifiedResponseResponse(@NotNull String type) {
+    super(type);
   }
 
   public Payload getResponse() {
@@ -44,5 +45,10 @@ public class ModifiedResponseResponse extends ModifiedPayloadResponse {
   public ModifiedResponseResponse withResponse(Payload response) {
     setResponse(response);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

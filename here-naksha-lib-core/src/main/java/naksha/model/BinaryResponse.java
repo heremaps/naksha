@@ -42,7 +42,6 @@ public class BinaryResponse extends Response {
 
   @JsonCreator
   public BinaryResponse(@JsonProperty byte @NotNull [] bytes, @JsonProperty @NotNull String mimeType) {
-    super(BINARY_TYPE);
     this.bytes = bytes;
     this.mimeType = mimeType;
     setCalculatedEtag("\"" + Hasher.getHash(bytes) + "\"");
@@ -129,5 +128,10 @@ public class BinaryResponse extends Response {
   @SuppressWarnings("WeakerAccess")
   public void setEtag(String etag) {
     this.calculatedEtag = etag;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

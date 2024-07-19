@@ -47,9 +47,7 @@ public class SpaceStatus extends Response {
 
   private IDXManual idxManual;
 
-  public SpaceStatus() {
-    super(SPACE_STATUS_TYPE);
-  }
+  public SpaceStatus() {}
 
   public long getRunts() {
     return runts;
@@ -121,6 +119,11 @@ public class SpaceStatus extends Response {
 
   public void setPropStats(List<PropStat> propStats) {
     this.propStats = propStats;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 
   public static class IDXAvailable {

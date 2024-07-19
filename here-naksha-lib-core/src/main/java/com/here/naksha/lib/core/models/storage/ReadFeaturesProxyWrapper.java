@@ -72,7 +72,6 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
     clone.limitVersions = this.limitVersions;
     clone.orderBy = this.orderBy;
     clone.collectionIds = this.collectionIds;
-    clone.spatialOp = this.spatialOp;
     clone.limit = this.limit;
     clone.queryDeleted = this.queryDeleted;
     clone.queryHistory = this.queryHistory;

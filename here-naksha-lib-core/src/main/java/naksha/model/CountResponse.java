@@ -31,9 +31,7 @@ public class CountResponse extends Response {
   private Long count;
   private Boolean estimated;
 
-  public CountResponse() {
-    super(COUNT_TYPE);
-  }
+  public CountResponse() {}
 
   /**
    * Returns the proprietary count property that is used by Space count requests to return the
@@ -88,5 +86,10 @@ public class CountResponse extends Response {
   public CountResponse withEstimated(Boolean estimated) {
     setEstimated(estimated);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return count.intValue();
   }
 }

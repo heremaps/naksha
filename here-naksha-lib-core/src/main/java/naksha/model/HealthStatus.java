@@ -35,7 +35,6 @@ public class HealthStatus extends Response {
   private String status;
 
   public HealthStatus() {
-    super(HEALTH_STATUS_TYPE);
     this.status = "OK";
   }
 
@@ -52,5 +51,10 @@ public class HealthStatus extends Response {
   public HealthStatus withStatus(String status) {
     setStatus(status);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

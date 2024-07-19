@@ -38,8 +38,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @SuppressWarnings("unused")
 @Deprecated
-public abstract class AbstractEventTask<EVENT extends Event>
-    extends AbstractTask<Response, AbstractEventTask<EVENT>> {
+public abstract class AbstractEventTask<EVENT extends Event> extends AbstractTask<Response, AbstractEventTask<EVENT>> {
 
   /**
    * Creates a new even-task.
