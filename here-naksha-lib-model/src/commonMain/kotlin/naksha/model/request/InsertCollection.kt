@@ -11,4 +11,4 @@ import kotlin.js.JsExport
 @JsExport
 class InsertCollection(
     collection: NakshaCollectionProxy,
-) : InsertFeature("naksha~collections", collection)
+) : InsertFeature(ADMIN_COLLECTION_ID, collection)

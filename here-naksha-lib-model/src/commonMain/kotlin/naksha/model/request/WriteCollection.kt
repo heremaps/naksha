@@ -19,4 +19,4 @@ open class WriteCollection(
      * Default: false
      */
     atomic: Boolean = false,
-) : WriteFeature("naksha~collections", collection, atomic)
+) : WriteFeature(ADMIN_COLLECTION_ID, collection, atomic)
