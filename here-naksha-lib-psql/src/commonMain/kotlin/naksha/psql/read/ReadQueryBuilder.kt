@@ -177,6 +177,7 @@ internal class ReadQueryBuilder {
                 paramsList.add(sop.geometry)
             }
         }
+        TODO("Fix me, we changed to flags!")
     }
 
     /**
