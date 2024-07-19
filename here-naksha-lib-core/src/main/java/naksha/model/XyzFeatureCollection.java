@@ -34,7 +34,7 @@ import com.here.naksha.lib.core.LazyParsableFeatureList.RawDeserializer;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
 import java.util.ArrayList;
 import java.util.List;
-import naksha.geo.BBox;
+import naksha.geo.BoundingBoxProxy;
 import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -50,7 +50,7 @@ public class XyzFeatureCollection extends Response {
 
   @JsonProperty
   @JsonInclude(Include.NON_NULL)
-  private BBox bbox;
+  private BoundingBoxProxy bbox;
 
   @JsonProperty
   @JsonInclude(Include.NON_NULL)
@@ -98,7 +98,6 @@ public class XyzFeatureCollection extends Response {
   private Integer version;
 
   public XyzFeatureCollection() {
-    super(XYZ_COLLECTION_TYPE);
     features = new LazyParsableFeatureList();
   }
 
@@ -115,23 +114,23 @@ public class XyzFeatureCollection extends Response {
 
     for (final NakshaFeatureProxy feature : getFeatures()) {
       if (recalculateChildrenBoxes || feature.getBbox() == null) {
-        feature.calculateAndSetBbox(recalculateChildrenBoxes);
+        feature.updateBoundingBox();
       }
 
-      BBox bbox = feature.getBbox();
+      BoundingBoxProxy bbox = feature.getBbox();
 
       if (bbox != null) {
-        if (bbox.minLon() < minLon) {
-          minLon = bbox.minLon();
+        if (bbox.getMinLongitude() < minLon) {
+          minLon = bbox.getMinLongitude();
         }
-        if (bbox.minLat() < minLat) {
-          minLat = bbox.minLat();
+        if (bbox.getMinLatitude() < minLat) {
+          minLat = bbox.getMinLatitude();
         }
-        if (bbox.maxLon() > maxLon) {
-          maxLon = bbox.maxLon();
+        if (bbox.getMaxLongitude() > maxLon) {
+          maxLon = bbox.getMaxLongitude();
         }
-        if (bbox.maxLat() > maxLat) {
-          maxLat = bbox.maxLat();
+        if (bbox.getMaxLatitude() > maxLat) {
+          maxLat = bbox.getMaxLatitude();
         }
       }
     }
@@ -140,22 +139,22 @@ public class XyzFeatureCollection extends Response {
         && minLat != Double.POSITIVE_INFINITY
         && maxLon != Double.NEGATIVE_INFINITY
         && maxLat != Double.NEGATIVE_INFINITY) {
-      setBbox(new BBox(minLon, minLat, maxLon, maxLat));
+      setBbox(new BoundingBoxProxy(minLon, minLat, maxLon, maxLat));
     } else {
       setBbox(null);
     }
   }
 
-  public BBox getBbox() {
+  public BoundingBoxProxy getBbox() {
     return bbox;
   }
 
-  public void setBbox(BBox bbox) {
+  public void setBbox(BoundingBoxProxy bbox) {
     this.bbox = bbox;
   }
 
   @SuppressWarnings("unused")
-  public XyzFeatureCollection withBbox(final BBox bbox) {
+  public XyzFeatureCollection withBbox(final BoundingBoxProxy bbox) {
     setBbox(bbox);
     return this;
   }
@@ -493,6 +492,11 @@ public class XyzFeatureCollection extends Response {
   public @NotNull XyzFeatureCollection withViolations(final @Nullable List<NakshaFeatureProxy> violations) {
     setViolations(violations);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return Math.toIntExact(count);
   }
 
   public static class ModificationFailure {

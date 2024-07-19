@@ -25,7 +25,6 @@ import com.here.naksha.lib.core.models.payload.Payload;
 import com.here.naksha.lib.core.models.payload.events.clustering.Clustering;
 import com.here.naksha.lib.core.models.payload.events.tweaks.Tweaks;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import naksha.geo.XyzGeometry;
 import naksha.model.NakshaFeatureProxy;
 
 /**
@@ -34,7 +33,6 @@ import naksha.model.NakshaFeatureProxy;
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = Payload.class),
-  @JsonSubTypes.Type(value = XyzGeometry.class),
   @JsonSubTypes.Type(value = Clustering.class),
   @JsonSubTypes.Type(value = Tweaks.class),
   @JsonSubTypes.Type(value = NakshaFeatureProxy.class),

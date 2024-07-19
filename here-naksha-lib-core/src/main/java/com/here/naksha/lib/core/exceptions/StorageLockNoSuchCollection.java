@@ -18,11 +18,11 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
+import static naksha.model.NakshaErrorCode.COLLECTION_NOT_FOUND;
+
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
-
-import static naksha.model.NakshaErrorCode.COLLECTION_NOT_FOUND;
 
 /**
  * An exception thrown if locking a specific feature in a not existing collection failed, basically, because the collection does not exist.

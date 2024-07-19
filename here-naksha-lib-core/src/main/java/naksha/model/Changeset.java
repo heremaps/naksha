@@ -38,9 +38,7 @@ public class Changeset extends Response {
   @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
   private XyzFeatureCollection deleted;
 
-  public Changeset() {
-    super(CHANGE_SET_TYPE);
-  }
+  public Changeset() {}
 
   public XyzFeatureCollection getInserted() {
     return inserted;
@@ -79,5 +77,10 @@ public class Changeset extends Response {
   public Changeset withDeleted(final XyzFeatureCollection deleted) {
     setDeleted(deleted);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

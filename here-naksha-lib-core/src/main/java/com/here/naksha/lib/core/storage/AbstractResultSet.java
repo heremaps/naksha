@@ -22,15 +22,12 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.model.NakshaVersion.v2_0_5;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.view.ViewDeserialize.Storage;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.util.NoSuchElementException;
-
 import naksha.geo.GeometryProxy;
 import naksha.geo.ProxyGeoUtil;
-import naksha.geo.XyzGeometry;
 import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -90,7 +87,7 @@ public abstract class AbstractResultSet<FEATURE extends NakshaFeatureProxy> impl
       }
       if (geo != null) {
         final Geometry geometry = json.twkbReader.read(WKBReader.hexToBytes(geo));
-        f.setGeometry(JTSHelper.fromGeometry(geometry));
+        f.setGeometry(ProxyGeoUtil.t);
       }
       return f;
     } catch (ParseException | JsonProcessingException e) {
@@ -136,8 +133,8 @@ public abstract class AbstractResultSet<FEATURE extends NakshaFeatureProxy> impl
     }
     feature.setGeometry(null);
     try {
-      final Geometry jtsGeometry = xyzGeometry.getJTSGeometry();
-      ProxyGeoUtil.INSTANCE.
+      final Geometry jtsGeometry = ProxyGeoUtil.toJtsGeometry(xyzGeometry);
+      ProxyGeoUtil.toJtsGeometry(xyzGeometry);
       assure3d(jtsGeometry.getCoordinates());
       final byte[] geometryBytes = json.twkbWriter.write(jtsGeometry);
       return WKBWriter.toHex(geometryBytes);

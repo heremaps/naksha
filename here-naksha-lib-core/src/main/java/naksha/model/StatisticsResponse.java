@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.events.info.GetStatisticsEvent;
 import java.util.List;
-import naksha.geo.BBox;
+import naksha.geo.BoundingBoxProxy;
 import naksha.model.response.Response;
 
 /** The response that is sent for a {@link GetStatisticsEvent}. */
@@ -38,14 +38,12 @@ public class StatisticsResponse extends Response {
   private Value<Long> byteSize;
 
   private Value<Long> dataSize;
-  private Value<BBox> bbox;
+  private Value<BoundingBoxProxy> bbox;
   private PropertiesStatistics properties;
   private Value<List<PropertyStatistics>> tags;
   private Value<List<String>> geometryTypes;
 
-  public StatisticsResponse() {
-    super(STATISTICS_TYPE);
-  }
+  public StatisticsResponse() {}
 
   /**
    * Returns the amount of features stored in the space.
@@ -149,7 +147,7 @@ public class StatisticsResponse extends Response {
    * @return the most outer bounding box around all features being within the space; null if no
    *     feature is in the space.
    */
-  public Value<BBox> getBbox() {
+  public Value<BoundingBoxProxy> getBbox() {
     return this.bbox;
   }
 
@@ -158,7 +156,7 @@ public class StatisticsResponse extends Response {
    *
    * @param bbox the bbox value to be set
    */
-  public void setBbox(Value<BBox> bbox) {
+  public void setBbox(Value<BoundingBoxProxy> bbox) {
     this.bbox = bbox;
   }
 
@@ -168,7 +166,7 @@ public class StatisticsResponse extends Response {
    * @return this.
    */
   @SuppressWarnings({"unused"})
-  public StatisticsResponse withBBox(Value<BBox> bbox) {
+  public StatisticsResponse withBBox(Value<BoundingBoxProxy> bbox) {
     setBbox(bbox);
     return this;
   }
@@ -215,6 +213,11 @@ public class StatisticsResponse extends Response {
   public StatisticsResponse withGeometryTypes(Value<List<String>> geometryTypes) {
     setGeometryTypes(geometryTypes);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 
   public static class Value<T> {
