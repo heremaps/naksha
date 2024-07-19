@@ -32,4 +32,137 @@ class XyzProxyTest {
         // then
         assertEquals(listOf("a", "b", "#C"), tags.toList())
     }
+
+    @Test
+    fun testAddTag() {
+        // given
+        val xyz = XyzProxy()
+
+        /// when
+        xyz.addTag("A", false)
+        xyz.addTag("B", true)
+
+        // then
+        assertEquals(listOf("A", "b"), xyz.tags?.toList())
+    }
+
+    @Test
+    fun testAddTags() {
+        // given
+        val xyz = XyzProxy()
+
+        /// when
+        xyz.addTags(listOf("A", "B"), false)
+
+        // then
+        assertEquals(listOf("A", "B"), xyz.tags?.toList())
+    }
+
+    @Test
+    fun testAddAndNormalizeTags() {
+        // given
+        val xyz = XyzProxy()
+
+        /// when
+        xyz.addAndNormalizeTags("A", "B")
+
+        // then
+        assertEquals(listOf("a", "b"), xyz.tags?.toList())
+    }
+
+    @Test
+    fun testRemoveTag() {
+        // given
+        val xyz = XyzProxy()
+        xyz.addTags(listOf("A", "B"), true)
+
+        /// when
+        xyz.removeTag("A", false)
+
+        // then
+        // not removed as it was not normalized
+        assertEquals(listOf("a", "b"), xyz.tags?.toList())
+
+        // when
+        xyz.removeTag("A", true)
+
+        // then
+        assertEquals(listOf("b"), xyz.tags?.toList())
+    }
+
+    @Test
+    fun testRemoveTags() {
+        // given
+        val xyz = XyzProxy()
+        xyz.addTags(listOf("A", "B"), true)
+
+        /// when
+        xyz.removeTags(listOf("A", "B"), false)
+
+        // then
+        // not removed as it was not normalized
+        assertEquals(listOf("a", "b"), xyz.tags?.toList())
+
+        // when
+        xyz.removeTags(listOf("A", "B"), true)
+
+        // then
+        assertEquals(emptyList(), xyz.tags?.toList())
+    }
+
+    @Test
+    fun testRemoveTagsWithPrefix() {
+        // given
+        val xyz = XyzProxy()
+        xyz.addTags(listOf("Alicja", "Baba", "Alan"), false)
+
+        // when
+        xyz.removeTagsWithPrefix("Al")
+
+        // then
+        assertEquals(listOf("Baba"), xyz.tags?.toList())
+    }
+
+    @Test
+    fun testRemoveTagsWithPrefixNormalized() {
+        // given
+        val xyz = XyzProxy()
+        xyz.addTags(listOf("Alicja", "Baba", "Alan"), true)
+
+        // when
+        xyz.removeTagsWithPrefix("Al")
+
+        // then
+        // not removed because prefix is not normalized.
+        assertEquals(listOf("alicja", "baba", "alan"), xyz.tags?.toList())
+    }
+
+    @Test
+    fun testRemoveTagsWithPrefixes() {
+        // given
+        val xyz = XyzProxy()
+        xyz.addTags(listOf("Alicja", "Baba", "Alan"), false)
+
+        // when
+        xyz.removeTagsWithPrefixes(listOf("Al", "B"))
+
+        // then
+        assertEquals(emptyList(), xyz.tags?.toList())
+    }
+
+    @Test
+    fun testSetTags() {
+        // given
+        val xyz = XyzProxy()
+
+        // when
+        xyz.setTags(TagsProxy("Alicja", "Baba", "Alan"), false)
+
+        // then
+        assertEquals(listOf("Alicja", "Baba", "Alan"), xyz.tags?.toList())
+
+        // when
+        xyz.setTags(TagsProxy("Cecil"), true)
+        assertEquals(listOf("cecil"), xyz.tags?.toList())
+    }
 }
