@@ -8,6 +8,7 @@ import naksha.model.request.Request
 import naksha.model.request.condition.*
 import naksha.model.request.condition.SOpType.INTERSECTS
 import naksha.psql.*
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -206,11 +207,11 @@ internal class ReadQueryBuilder {
     private fun ReadFeatures.getQuotedTablesToQuery(): List<String> {
         val tables = mutableListOf<String>()
         for (collection in collectionIds) {
-            tables.add(PgUtil.quoteIdent(collection))
+            tables.add(quoteIdent(collection))
             if (queryDeleted)
-                tables.add(PgUtil.quoteIdent("$collection\$del"))
+                tables.add(quoteIdent("$collection\$del"))
             if (queryHistory)
-                tables.add(PgUtil.quoteIdent("$collection\$hst"))
+                tables.add(quoteIdent("$collection\$hst"))
         }
         return tables
     }

@@ -2,11 +2,14 @@
 
 package naksha.psql
 
-import naksha.base.CMap
+import naksha.base.AtomicMap
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.WeakRef
 import naksha.base.fn.Fn0
+import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
+import naksha.model.NakshaErrorCode.StorageErrorCompanion.UNAUTHORIZED
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 
 /**
@@ -46,12 +49,12 @@ abstract class PgSchema(val storage: PgStorage, val name: String) {
     /**
      * The quoted schema, for example `"foo"`, if no quoting is necessary, the string may be unquoted.
      */
-    open val schemaQuoted = PgUtil.quoteIdent(name)
+    open val nameQuoted = PgUtil.quoteIdent(name)
 
     /**
      * A concurrent hash map with all managed collections of this schema.
      */
-    internal val collections: CMap<String, WeakRef<out PgCollection>> = Platform.newCMap()
+    internal val collections: AtomicMap<String, WeakRef<out PgCollection>> = Platform.newAtomicMap()
 
     /**
      * Returns the dictionaries' collection.
@@ -111,22 +114,33 @@ abstract class PgSchema(val storage: PgStorage, val name: String) {
         }
     }
 
+    private fun connOf(connection: PgConnection?): PgConnection {
+        return connection ?: storage.newConnection(storage.defaultOptions.copy(schema = name)) { _, _ -> }
+    }
+
+    private fun closeOf(conn: PgConnection, connection: PgConnection?, commitBeforeClose: Boolean) {
+        if (conn !== connection) {
+            if (commitBeforeClose) conn.commit()
+            conn.close()
+        }
+    }
+
     /**
      * Refresh the schema information cache. This is automatically called when any value is queries for the first time.
-     * @param conn the connection to use to query information from the database; if _null_, a new connection is used temporary.
+     * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
      * @return this.
      */
-    open fun refresh(conn: PgConnection? = null): PgSchema {
+    open fun refresh(connection: PgConnection? = null): PgSchema {
         if (_updateAt == null || Platform.currentMillis() < _updateAt) {
             val sql = "SELECT oid FROM pg_namespace WHERE nspname = $1"
-            val c = conn ?: storage.newConnection(storage.defaultOptions.copy(schema = name)) { _, _ -> }
+            val conn = connOf(connection)
             try {
-                val cursor = c.execute(sql, arrayOf(name)).fetch()
+                val cursor = conn.execute(sql, arrayOf(name)).fetch()
                 cursor.use {
                     _oid = cursor["schema_oid"]
                 }
             } finally {
-                if (c !== conn) c.close()
+                closeOf(conn, connection, false)
             }
             // We update every 15 seconds.
             _updateAt = Platform.currentMillis() + 15_000
@@ -134,14 +148,36 @@ abstract class PgSchema(val storage: PgStorage, val name: String) {
         return this
     }
 
+    /**
+     * Tests if the schema exists.
+     * @return _true_ if the schema exists.
+     */
     open fun exists(): Boolean {
         if (_updateAt == null) refresh()
         return _oid != null
     }
 
-    abstract fun init()
+    /**
+     * Initialize the schema, creating all necessary database tables, installing modules, ....
+     *
+     * The method does auto-commit, if no [connection] was given; otherwise committing must be done explicitly.
+     * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
+     */
+    abstract fun init(connection: PgConnection? = null)
 
-    open fun drop() {
-        TODO("Not implemented yet")
+    /**
+     * Drop the schema.
+     *
+     * The method does auto-commit, if no [connection] was given; otherwise committing must be done explicitly.
+     * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
+     */
+    open fun drop(connection: PgConnection? = null) {
+        check(currentContext().su) { throwStorageException(UNAUTHORIZED, "Only superusers may drop schemata") }
+        val conn = connOf(connection)
+        try {
+            conn.execute("DROP SCHEMA ${quoteIdent(name)}").close()
+        } finally {
+            closeOf(conn, connection, true)
+        }
     }
 }

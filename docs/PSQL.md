@@ -211,7 +211,7 @@ The indices are all created only directly on the partitions. To keep the documen
 * `CREATE INDEX ... USING gin (xyz.tags array_ops, xyz.txn, xyz.txn_next)`
   * Used to search for tags, optionally in a specific version.
 
-### History Queries
+## History Queries
 The Naksha design allows history queries to directly find the correct features using index-only scans in a couple of tables. This design requires that the `txn_next` value it set for all history records. For example, looking for a specific feature in a specific version means to search for `jsondata->>'id'` match where the `txn` is the closest to the one requested. Assume the following states of the feature "foo":
 
 **Note**: We partition the history based upon `txn_next`, not upon `txn`!

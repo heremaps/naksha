@@ -5,13 +5,12 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx2
 import naksha.jbon.*
 import naksha.model.*
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.Row
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgUtil.PgUtilCompanion.ID
 import naksha.psql.PgUtil.PgUtilCompanion.OPTIONS
-import naksha.psql.PgUtil.PgUtilCompanion.VERSION
-import naksha.psql.PgStatic.quote_ident
 import naksha.psql.PgUtil.PgUtilCompanion.OVERRIDE
+import naksha.psql.PgPlatform.PgPlatformCompanion.VERSION
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -165,7 +164,9 @@ SELECT
                     val end = v.indexOf(' ', start + 1)
                     _postgresVersion = NakshaVersion.of(v.substring(start + 1, end))
                 }
-                id.set(defaultSchema().initInternally(initId, conn, version, override))
+                val schema = defaultSchema()
+                val storage_id = schema.init_internal(initId, conn, version, override)
+                id.set(storage_id)
             }
         }
     }
@@ -218,7 +219,7 @@ SELECT
      */
     override fun newConnection(options: PgOptions, init: Fx2<PgConnection, String>?): PgConnection {
         val conn = cluster.newConnection(options)
-        val quotedSchema = if (options.schema == defaultOptions.schema) this.quotedSchema else quote_ident(options.schema)
+        val quotedSchema = if (options.schema == defaultOptions.schema) this.quotedSchema else quoteIdent(options.schema)
         // TODO: Do we need more initialization work here?
         val query = "SET SESSION search_path TO $quotedSchema, public, topology;\n"
         if (init != null) init.call(conn, query) else conn.execute(query).close()
@@ -231,7 +232,7 @@ SELECT
         get() {
             var s = _quotedSchema
             if (s == null) {
-                s = quote_ident(defaultOptions.schema)
+                s = quoteIdent(defaultOptions.schema)
                 _quotedSchema = s
             }
             return s
@@ -248,7 +249,7 @@ SELECT
     /**
      * All cached schemata.
      */
-    private val schemata: CMap<String, WeakRef<PsqlSchema>> = Platform.newCMap()
+    private val schemata: AtomicMap<String, WeakRef<PsqlSchema>> = Platform.newAtomicMap()
 
     override fun initRealm(realm: String) {
         this[realmToSchema(realm)].init()
@@ -284,4 +285,8 @@ SELECT
             // Conflict, another thread was faster, retry.
         }
     }
+
+    // TODO: We need a background job that listens to notification (see PG notify).
+    //       This job should update the schema, table, and all other caches instantly!
+    //       This means as well, we need to implement notifications, whenever something changes that relates to cache!
 }

@@ -5,7 +5,7 @@ package naksha.psql
 import kotlin.js.JsExport
 
 /**
- * All internal collections extend this class.
+ * All internal collections implement this interface.
  */
 @JsExport
-abstract class PgInternalCollection internal constructor(schema: PgSchema, id: String) : PgCollection(schema, id)
+interface PgInternalCollection

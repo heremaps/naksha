@@ -9,7 +9,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PgRow : ObjectProxy() {
+class PgRow : ObjectProxy() { // TODO: Replace with Row and Metadata from naksha.models!
     companion object {
         private val INT64 = NullableProperty<Any, PgRow, Int64>(Int64::class)
         private val INT = NullableProperty<Any, PgRow, Int>(Int::class)

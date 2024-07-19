@@ -10,8 +10,7 @@ import naksha.jbon.XyzVersion
 import naksha.model.*
 import naksha.model.request.*
 import naksha.model.response.*
-import naksha.psql.PgStatic.TRANSACTIONS_COL
-import naksha.psql.PgStatic.nakshaCollectionConfig
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.read.ReadQueryBuilder
 import naksha.psql.write.RowUpdater
 import naksha.psql.write.SingleCollectionWriter
@@ -27,7 +26,7 @@ import naksha.psql.write.WriteRequestExecutor
 // @JsExport // <-- when uncommenting this, we get a compiler error!
 class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>(storage, options) {
 
-    // TODO: Add a NakshaRow, which should hold the reference to a Row of the collection, plus
+    // TODO: Add a NakshaRow, which should hold the reference to a PgRow of the collection, plus
     //       the JbCollection, which is a JBON reader of the collection JBON. We need this, because
     //       for caching we want the data to be immutable, otherwise we can't cache it internally.
     //       We can return the cached row then to the client, when he asks for the collection.
@@ -36,11 +35,17 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
     //       cached at the NakshaCollectionRow, so that the values can be added into the collection feature,
     //       when the client decodes it. This need to be done on-the-fly while decoding the row into a feature!
     // TODO: We allow schema changes at runtime, but we need to cache separate transaction numbers for each schema!
+    // TODO: Merge PgSession with PgAbstractSession
+    // TODO: We need to start a transaction (being a PgTx), this class should only split incoming requests
+    //       into instructions like `(insert|update|delete|purge)Row`, `bulk(Insert|Update|Delete|Purge)Row`,
+    //       and finally commit/rollback the transaction.
+    // TODO: When a transaction crosses the realm (schema) boundary, this should not be a problem.
+    // TODO: When opening a session, it need to clear already, if parallel is enabled or not (false by default)
 
     /**
      * The cached quoted schema name (double quotes).
      */
-    internal val schemaIdent = PgUtil.quoteIdent(options.schema)
+    internal val schemaIdent = quoteIdent(options.schema)
 
     internal val rowUpdater = RowUpdater(this)
 
@@ -74,12 +79,6 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
      */
     var errMsg: String? = null
 
-    // TODO: Remove this, creating a new session should be free of cost, we can do this lazy!
-    init {
-        collectionConfiguration = mutableMapOf()
-        collectionConfiguration[NKC_TABLE] = nakshaCollectionConfig
-    }
-
     fun reset() {
         clear()
     }
@@ -91,7 +90,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
         errNo = null
         errMsg = null
         collectionConfiguration = mutableMapOf()
-        collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
+        //collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
         transaction = null
     }
 
@@ -120,7 +119,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
     internal fun saveInHst(collectionId: String, OLD: Row) {
         if (isHistoryEnabled(collectionId)) {
             // TODO move it outside and run it once
-            val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$hst")
+            val collectionIdQuoted = quoteIdent("${collectionId}\$hst")
             val session = usePgConnection()
             val hstInsertPlan = session.prepare("INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($COL_ALL_DOLLAR)", COL_ALL_TYPES)
             hstInsertPlan.use {
@@ -159,7 +158,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
      * Uses the current session, does not commit or rollback the current session.
      */
     internal fun deleteFromDel(collectionId: String, id: String) {
-        val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$del")
+        val collectionIdQuoted = quoteIdent("${collectionId}\$del")
         usePgConnection().execute("""DELETE FROM $collectionIdQuoted WHERE id = $1""", arrayOf(id))
     }
 
@@ -172,7 +171,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
         val collectionConfig = getCollectionConfig(collectionId)
         val autoPurge: Boolean? = collectionConfig.autoPurge
         if (autoPurge != true) {
-            val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$del")
+            val collectionIdQuoted = quoteIdent("${collectionId}\$del")
             val oldMeta = OLD.meta!!
             val conn = usePgConnection()
             conn.execute(
@@ -268,7 +267,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
      * Uses the current session, does not commit or rollback the current session.
      * @return The current transaction number.
      */
-    override fun txn(): Txn {
+    fun txn(): Txn {
         if (_txn == null) {
             val conn = usePgConnection()
             conn.execute(
@@ -289,7 +288,7 @@ FROM ns, txn_seq;
                 val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
                 val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
                 if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
-                    conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgStatic.TXN_LOCK_ID)).close()
+                    conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                     try {
                         conn.execute("SELECT nextval($1) as v", arrayOf(txnSeqOid)).fetch().use {
                             txn = Txn(it["v"])
@@ -302,20 +301,12 @@ FROM ns, txn_seq;
                             conn.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1)).close()
                         }
                     } finally {
-                        conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgStatic.TXN_LOCK_ID)).close()
+                        conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                     }
                 }
             }
         }
         return _txn!!
-    }
-
-    override fun uid(): Int {
-        TODO("Not yet implemented")
-    }
-
-    override fun newGuid(): Luid {
-        TODO("Not yet implemented")
     }
 
     /**
@@ -464,11 +455,10 @@ FROM ns, txn_seq;
             transactionAction.write()
             writeFeaturesResult
         } catch (e: NakshaException) {
-            if (PgStatic.PRINT_STACK_TRACES) logger.info(e.stackTraceToString())
+            logger.debug("Supress exception: {}", e)
             ErrorResponse(NakshaError(e.errNo, e.errMsg))
         } catch (e: Throwable) {
-            if (PgStatic.PRINT_STACK_TRACES)
-                logger.info(e.cause?.message!!)
+            logger.debug("Suppress exception: {}", e.cause ?: e)
             ErrorResponse(NakshaError(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}"))
         }
     }

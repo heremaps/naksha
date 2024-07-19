@@ -7,7 +7,7 @@ import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
 
 /**
- * Constants for the PostgresQL data types.
+ * Constants for the PostgresQL data types, when stringified, returns the PostgresQL name, e.g. "bigint" or "text".
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
@@ -20,52 +20,52 @@ class PgType : JsEnum() {
 
         @JvmField
         @JsStatic
-        val BOOLEAN = defIgnoreCase(PgType::class, "boolean").alias(PgType::class, "bool")
+        val BOOLEAN = defIgnoreCase(PgType::class, "boolean").alias<PgType>("bool")
 
         @JvmField
         @JsStatic
-        val BOOLEAN_ARRAY = defIgnoreCase(PgType::class, "boolean[]").alias(PgType::class, "bool[]")
+        val BOOLEAN_ARRAY = defIgnoreCase(PgType::class, "boolean[]").alias<PgType>("bool[]")
 
         @JvmField
         @JsStatic
-        val SHORT = defIgnoreCase(PgType::class, "smallint").alias(PgType::class, "int2")
+        val SHORT = defIgnoreCase(PgType::class, "smallint").alias<PgType>("int2")
 
         @JvmField
         @JsStatic
-        val SHORT_ARRAY = defIgnoreCase(PgType::class, "smallint[]").alias(PgType::class, "int2[]")
+        val SHORT_ARRAY = defIgnoreCase(PgType::class, "smallint[]").alias<PgType>("int2[]")
 
         @JvmField
         @JsStatic
-        val INT = defIgnoreCase(PgType::class, "integer").alias(PgType::class, "int4").alias(PgType::class, "int")
+        val INT = defIgnoreCase(PgType::class, "integer").alias<PgType>("int4").alias<PgType>("int")
 
         @JvmField
         @JsStatic
         val INT_ARRAY = defIgnoreCase(PgType::class, "integer[]")
-            .alias(PgType::class, "int4[]").alias(PgType::class, "int[]")
+            .alias<PgType>("int4[]").alias<PgType>("int[]")
 
         @JvmField
         @JsStatic
-        val INT64 = defIgnoreCase(PgType::class, "bigint").alias(PgType::class, "int8")
+        val INT64 = defIgnoreCase(PgType::class, "bigint").alias<PgType>("int8")
 
         @JvmField
         @JsStatic
-        val INT64_ARRAY = defIgnoreCase(PgType::class, "bigint[]").alias(PgType::class, "int8[]")
+        val INT64_ARRAY = defIgnoreCase(PgType::class, "bigint[]").alias<PgType>("int8[]")
 
         @JvmField
         @JsStatic
-        val FLOAT = defIgnoreCase(PgType::class, "real").alias(PgType::class, "float4")
+        val FLOAT = defIgnoreCase(PgType::class, "real").alias<PgType>("float4")
 
         @JvmField
         @JsStatic
-        val FLOAT_ARRAY = defIgnoreCase(PgType::class, "real[]").alias(PgType::class, "float4[]")
+        val FLOAT_ARRAY = defIgnoreCase(PgType::class, "real[]").alias<PgType>("float4[]")
 
         @JvmField
         @JsStatic
-        val DOUBLE = defIgnoreCase(PgType::class, "double precision").alias(PgType::class, "float8")
+        val DOUBLE = defIgnoreCase(PgType::class, "double precision").alias<PgType>("float8")
 
         @JvmField
         @JsStatic
-        val DOUBLE_ARRAY = defIgnoreCase(PgType::class, "double precision[]").alias(PgType::class, "float8[]")
+        val DOUBLE_ARRAY = defIgnoreCase(PgType::class, "double precision[]").alias<PgType>("float8[]")
 
         @JvmField
         @JsStatic

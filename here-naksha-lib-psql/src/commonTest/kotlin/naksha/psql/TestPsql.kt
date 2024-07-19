@@ -5,12 +5,10 @@ import kotlin.test.Test
 /**
  * Test the basics of the database, which is creation of schema,
  */
-class TestPsql : TestBasics() {
+class TestPsql {
+    private val env = TestEnv(dropSchema = true, initStorage = true)
 
     @Test
-    fun test_feature_insertion() {
-        drop_schema()
-        init_storage()
-        pgConnection.commit()
+    fun test_basics() {
     }
 }

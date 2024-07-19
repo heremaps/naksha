@@ -2,42 +2,15 @@ package naksha.psql
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
 @JsExport
-actual class PgUtil {
-    actual companion object PgUtilCompanion {
+actual class PgPlatform {
+    actual companion object PgPlatformCompanion {
         private fun plv8Forbidden(opName: String) {
             if (isPlv8()) throw UnsupportedOperationException("${opName}: Not supported in PLV8 storage")
         }
 
-        /**
-         * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
-         * the existing installed version of Naksha code is up-to-date.
-         */
-        @JsStatic
-        actual val OVERRIDE: String = "override"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `options` can be a [PgOptions] object to be used for the initialization
-         * connection (specific changed defaults to timeouts and locks).
-         */
-        @JsStatic
-        actual val OPTIONS: String = "options"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `context` can be a [naksha.model.NakshaContext] to be used while doing the
-         * initialization; only if [superuser][naksha.model.NakshaContext.su] is _true_, then a not uninitialized storage is installed.
-         * This requires as well superuser rights in the PostgresQL database.
-         */
-        @JsStatic
-        actual val CONTEXT: String = "context"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `id` used if the storage is uninitialized, initialize it with the given
-         * storage identifier. If the storage is already initialized, reads the existing identifier and compares it with the given one.
-         * If they do not match, throws an [IllegalStateException]. If not given a random new identifier is generated, when no identifier
-         * yet exists. It is strongly recommended to provide the identifier.
-         */
-        @JsStatic
-        actual val ID: String = "id"
+        private fun browserForbidden(opName: String) {
+            if (!isPlv8()) throw UnsupportedOperationException("${opName}: Not supported in the browser")
+        }
 
         /**
          * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
@@ -45,26 +18,25 @@ actual class PgUtil {
          * @param parts the literal parts to merge and quote.
          * @return The quoted literal.
          */
-        @JsStatic
-        actual fun quoteLiteral(vararg parts: String): String {
-            if (isPlv8()) return js("parts?plv8.quote_literal(parts.join('')):''").unsafeCast<String>()
-            return PgStatic.quote_literal(*parts)
-        }
+        internal actual fun quote_literal(vararg parts: String): String?
+            = if (isPlv8()) js("""
+parts && parts.length>0 ? (parts.length===1 ? plv8.quote_literal(parts[0]) : plv8.quote_literal(parts.join(''))) : ''
+""").unsafeCast<String>() else null
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
          * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
          */
-        @JsStatic
-        actual fun quoteIdent(vararg parts: String): String {
-            if (isPlv8()) return js("parts?plv8.quote_ident(parts.join('')):''").unsafeCast<String>()
-            return PgStatic.quote_ident(*parts)
-        }
+        internal actual fun quote_ident(vararg parts: String): String?
+                = if (isPlv8()) js("""
+parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.quote_literal(parts.join(''))) : ''
+""").unsafeCast<String>() else null
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
          * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions and the rest
          * addresses the partition, for example for 4 partitions we get `partitionNumber(id) % 4`, what will be a value between 0 and 3.
+         *
          * In PVL8 this is implemented using the native code as `get_byte(digest(id,'md5'),0)`, which is as well what the partitioning
          * statement will do.
          * @param featureId the feature id.
@@ -191,6 +163,16 @@ actual class PgUtil {
             plv8Forbidden("PgUtil.getTestStorage")
             // TODO: Can we fix this for JavaScript/TypeScript?
             throw UnsupportedOperationException("Testing not supported in PLV8")
+        }
+
+        /**
+         * Create a new test-storage to execute tests.
+         * @return the test-storage.
+         * @throws UnsupportedOperationException if this platform does not support running tests.
+         */
+        @JsStatic
+        actual fun newTestStorage(): PgStorage {
+            TODO("Not yet implemented")
         }
     }
 }

@@ -97,13 +97,13 @@ interface PgStorage : IStorage {
      * already initialized; does nothing.
      *
      * Well known parameters for this storage:
-     * - [PgUtil.ID]: if the storage is uninitialized, initialize it with the given storage identifier. If the storage is already
+     * - [PgPlatform.ID]: if the storage is uninitialized, initialize it with the given storage identifier. If the storage is already
      * initialized, reads the existing identifier and compares it with the given one. If they do not match, throws an
      * [IllegalStateException]. If not given a random new identifier is generated, when no identifier yet exists. It is strongly
      * recommended to provide the identifier.
-     * - [PgUtil.CONTEXT]: can be a [NakshaContext] to be used while doing the initialization; only if [superuser][NakshaContext.su] is _true_,
+     * - [PgPlatform.CONTEXT]: can be a [NakshaContext] to be used while doing the initialization; only if [superuser][NakshaContext.su] is _true_,
      * then a not uninitialized storage is installed. This requires as well superuser rights in the PostgresQL database.
-     * - [PgUtil.OPTIONS]: can be a [PgOptions] object to be used for the initialization connection (specific changed defaults to
+     * - [PgPlatform.OPTIONS]: can be a [PgOptions] object to be used for the initialization connection (specific changed defaults to
      * timeouts and locks).
      *
      * @param params optional special parameters that are storage dependent to influence how a storage is initialized.

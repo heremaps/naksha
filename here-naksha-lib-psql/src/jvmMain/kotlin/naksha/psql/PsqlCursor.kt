@@ -1,29 +1,48 @@
 package naksha.psql
 
-import naksha.base.JvmInt64
 import naksha.base.ObjectProxy
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.longToInt64
 import java.sql.ResultSet
+import java.sql.Statement
 import kotlin.reflect.KClass
 
 /**
  * Internal helper class to handle results as if they were returned by PLV8 engine.
- * @property rs the result-set to handle, if any.
+ * @property stmt the statement to which this cursor is bound.
  * @property closeStmt if the statement should be closed, when the cursor is closed.
- * @property affectedRows if no result-set, the number of affected rows.
  */
-class PsqlCursor private constructor(private var rs: ResultSet?, private val closeStmt: Boolean, private var affectedRows: Int) : PgCursor {
-    constructor(rs: ResultSet, closeStmt: Boolean) : this(rs, closeStmt,-1)
-    constructor(affectedRows: Int) : this(null, false, affectedRows)
-
-    private val columnCount: Int
-    private val columnIndices: MutableMap<String, Int>?
-    private val columnNames: Array<String>?
-    private val columnTypes: Array<String>?
+class PsqlCursor internal constructor(private val stmt: Statement, private val closeStmt: Boolean) : PgCursor {
+    private var row = 0
+    private var affectedRows = 0
+    private var resultSets: Array<ResultSet>
+    private var columnCount = 0
+    private var columnIndices: MutableMap<String, Int>? = null
+    private var columnNames: Array<String>? = null
+    private var columnTypes: Array<String>? = null
     private var isRow = false
+    private var rsNext = 0
+    private var rs: ResultSet? = null
 
     init {
+        // Fetch all result sets, accumulate the affected rows.
+        var resultSets = emptyArray<ResultSet>()
+        val stmt = this.stmt
+        do {
+            val uc = stmt.updateCount
+            if (uc > 0) affectedRows += uc
+            val rs = stmt.resultSet
+            if (rs != null) {
+                val copy = resultSets.copyOf(resultSets.size + 1)
+                copy[resultSets.size] = rs
+                @Suppress("UNCHECKED_CAST")
+                resultSets = copy as Array<ResultSet>
+            }
+        } while (stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT))
+        this.resultSets = resultSets
+    }
+
+    private fun updateColumns() {
         val rs = this.rs
         if (rs != null) {
             val columnCount = rs.metaData.columnCount
@@ -101,9 +120,18 @@ class PsqlCursor private constructor(private var rs: ResultSet?, private val clo
      * Move the cursor to the next row.
      * @return _true_ if the cursor is positioned at a row; _false_ is the cursor is behind the last row.
      */
-    override fun next(): Boolean {
-        isRow = rs?.next() ?: false
-        return isRow
+    override tailrec fun next(): Boolean {
+        if (rs?.next() == true) {
+            isRow = true
+            return true
+        }
+        if (rsNext >= resultSets.size) {
+            isRow = false
+            return false
+        }
+        rs = resultSets[rsNext++]
+        updateColumns()
+        return next()
     }
 
     /**
@@ -212,11 +240,13 @@ class PsqlCursor private constructor(private var rs: ResultSet?, private val clo
     }
 
     override fun close() {
-        val rs = this.rs
-        this.rs = null
-        if (closeStmt)
-            rs?.statement?.close()
-        else
-            rs?.close()
+        try {
+            if (closeStmt) stmt.close()
+            else for (rs in resultSets) rs.close()
+        } catch (_: Throwable) {}
+        resultSets = emptyArray()
+        rs = null
+        updateColumns()
+        isRow = false
     }
 }

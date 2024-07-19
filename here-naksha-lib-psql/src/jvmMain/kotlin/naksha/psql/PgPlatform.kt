@@ -3,54 +3,20 @@ package naksha.psql
 import java.security.MessageDigest
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-actual class PgUtil {
-    actual companion object PgUtilCompanion {
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
-         * the existing installed version of Naksha code is up-to-date.
-         */
-        @JvmField
-        actual val OVERRIDE: String = "override"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `options` can be a [PgOptions] object to be used for the initialization
-         * connection (specific changed defaults to timeouts and locks).
-         */
-        @JvmField
-        actual val OPTIONS: String = "options"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `context` can be a [naksha.model.NakshaContext] to be used while doing the
-         * initialization; only if [superuser][naksha.model.NakshaContext.su] is _true_, then a not uninitialized storage is installed.
-         * This requires as well superuser rights in the PostgresQL database.
-         */
-        @JvmField
-        actual val CONTEXT: String = "context"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `id` used if the storage is uninitialized, initialize it with the given
-         * storage identifier. If the storage is already initialized, reads the existing identifier and compares it with the given one.
-         * If they do not match, throws an [IllegalStateException]. If not given a random new identifier is generated, when no identifier
-         * yet exists. It is strongly recommended to provide the identifier.
-         */
-        @JvmField
-        actual val ID: String = "id"
-
+actual class PgPlatform {
+    actual companion object PgPlatformCompanion {
         /**
          * Special parameter only for JVM storage to install the needed database SQL code in this version. The value is expected to be a
          * [naksha.model.NakshaVersion].
          */
-        @JvmField
-        val VERSION: String = "version"
+        const val VERSION: String = "version"
 
         /**
          * A parameter that can be given to [getTestStorage] to not start a docker container, but to connect the test storage against an
          * existing database with this URL. This parameter is as well auto-detect from the environment variable named
          * `NAKSHA_TEST_PSQL_DB_URL`.
          */
-        @JvmField
-        var TEST_URL = "test_url"
+        const val TEST_URL = "test_url"
 
         /**
          * A parameter that can be given to [getTestStorage] to not start a docker container, but to connect against the given instance.
@@ -58,49 +24,11 @@ actual class PgUtil {
         @JvmField
         var TEST_INSTANCE = "test_instance"
 
-        /**
-         * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
-         * (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
-         * @param parts The literal parts to merge and quote.
-         * @return The quoted literal.
-         */
         @JvmStatic
-        actual fun quoteLiteral(vararg parts: String): String {
-            val sb = StringBuilder()
-            sb.append("E'")
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '\'' -> sb.append('\'').append('\'')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('\'')
-            return sb.toString()
-        }
+        internal actual fun quote_literal(vararg parts: String): String? = null
 
-        /**
-         * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
-         * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
-         */
         @JvmStatic
-        actual fun quoteIdent(vararg parts: String): String {
-            val sb = StringBuilder()
-            sb.append('"')
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '"' -> sb.append('"').append('"')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('"')
-            return sb.toString()
-        }
+        internal actual fun quote_ident(vararg parts: String): String? = null
 
         @JvmStatic
         private val md5Digest = ThreadLocal.withInitial { MessageDigest.getInstance("MD5") }
@@ -215,11 +143,10 @@ actual class PgUtil {
         actual fun getTestStorage(): PgStorage = PsqlTestStorage.getTestOrInitStorage()
 
         /**
-         * Returns the existing test-storage to execute tests. If no test storage exists yet, creates a new test storage. This is an
-         * alias for [getTestStorage], but cast to correct type.
+         * Create a new test-storage to execute tests.
          * @return the test-storage.
          */
         @JvmStatic
-        fun psqlTestStorage(): PsqlTestStorage = getTestStorage() as PsqlTestStorage
+        actual fun newTestStorage(): PgStorage = PsqlTestStorage.newTestStorage()
     }
 }

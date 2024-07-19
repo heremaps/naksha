@@ -1,32 +1,68 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
-import naksha.model.NakshaContext
+import naksha.base.Fnv1a32
+import naksha.base.Fnv1a64
+import naksha.base.Int64
+import naksha.model.NakshaError
+import naksha.model.NakshaErrorCode.StorageErrorCompanion.ILLEGAL_ID
+import naksha.model.StorageException
+import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 
 /**
- * PostgresQL utility and factory functions. They are implemented differently on every platform.
+ * Utility functions, redirecting some calls to platform specific functions provided by [PgPlatform].
  */
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-expect class PgUtil {
+@JsExport
+class PgUtil private constructor() {
     companion object PgUtilCompanion {
+        /**
+         * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256"), usage like:
+         *
+         * `partitionName[partitionNumber(conn, "id", 16)]`
+         *
+         * @see partitionPosix
+         */
+        @JsStatic
+        @JvmField
+        val POSIX = Array(256) { if (it < 10) "00$it" else if (it < 100) "0$it" else "$it" }
+
+        /**
+         * Array to create a pseudo GeoHash, which is BASE-32 encoded.
+         */
+        @JvmField
+        internal val BASE32 = arrayOf(
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g',
+            'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+        )
+
+        /**
+         * The lock-id for the transaction number sequence.
+         */
+        @JvmField
+        internal val TXN_LOCK_ID = lockId("naksha_txn_seq")
 
         /**
          * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
          * the existing installed version of Naksha code is up-to-date.
          */
-        val OVERRIDE: String
+        const val OVERRIDE = "override"
 
         /**
          * Given as parameter for [PgStorage.initStorage], `options` can be a [PgOptions] object to be used for the initialization
          * connection (specific changed defaults to timeouts and locks).
          */
-        val OPTIONS: String
+        const val OPTIONS = "options"
 
         /**
-         * Given as parameter for [PgStorage.initStorage], `context` can be a [NakshaContext] to be used while doing the initialization;
-         * only if [superuser][NakshaContext.su] is _true_, then a not uninitialized storage is installed. This requires as well
-         * superuser rights in the PostgresQL database.
+         * Given as parameter for [PgStorage.initStorage], `context` can be a [naksha.model.NakshaContext] to be used while doing the
+         * initialization; only if [superuser][naksha.model.NakshaContext.su] is _true_, then a not uninitialized storage is installed.
+         * This requires as well superuser rights in the PostgresQL database.
          */
-        val CONTEXT: String
+        const val CONTEXT = "context"
 
         /**
          * Given as parameter for [PgStorage.initStorage], `id` used if the storage is uninitialized, initialize it with the given
@@ -34,110 +70,176 @@ expect class PgUtil {
          * If they do not match, throws an [IllegalStateException]. If not given a random new identifier is generated, when no identifier
          * yet exists. It is strongly recommended to provide the identifier.
          */
-        val ID: String
+        const val ID = "id"
 
         /**
          * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
          * (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
-         * @param parts The literal parts to merge and quote.
+         * @param parts the literal parts to merge and quote.
          * @return The quoted literal.
          */
-        fun quoteLiteral(vararg parts: String): String
+        @JsStatic
+        @JvmStatic
+        fun quoteLiteral(vararg parts: String): String {
+            val literal = PgPlatform.quote_literal(*parts)
+            if (literal != null) return literal
+
+            val sb = StringBuilder()
+            sb.append("E'")
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        '\'' -> sb.append('\'').append('\'')
+                        '\\' -> sb.append('\\').append('\\')
+                        else -> sb.append(c)
+                    }
+                }
+            }
+            sb.append('\'')
+            return sb.toString()
+        }
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
          * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
+         * @param parts the identifier parts to merge and quote.
+         * @return the quoted identifier.
          */
-        fun quoteIdent(vararg parts: String): String
+        @JsStatic
+        @JvmStatic
+        fun quoteIdent(vararg parts: String): String {
+            val ident = PgPlatform.quote_ident(*parts)
+            if (ident != null) return ident
+
+            val sb = StringBuilder()
+            sb.append('"')
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        '"' -> sb.append('"').append('"')
+                        '\\' -> sb.append('\\').append('\\')
+                        else -> sb.append(c)
+                    }
+                }
+            }
+            sb.append('"')
+            return sb.toString()
+        }
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
-         * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions and the rest
-         * addresses the partition, for example for 4 partitions we get `partitionNumber(id) % 4`, what will be a value between 0 and 3.
-         * In PVL8 this is implemented using the native code as `get_byte(digest(id,'md5'),0)`, which is as well what the partitioning
-         * statement will do.
+         * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions, and the rest
+         * addresses the partition, for example for 4 partitions do `partitionNumber(id) % 4`, what will be a value between 0 and 3.
+         *
          * @param featureId the feature id.
          * @return the partition number of the feature, a value between 0 and 255.
          */
-        fun partitionNumber(featureId: String): Int
+        @JsStatic
+        @JvmStatic
+        fun partitionNumber(featureId: String): Int = PgPlatform.partitionNumber(featureId)
 
         /**
-         * Returns the instance.
-         * @param host the PostgresQL server host.
-         * @param port the PostgresQL server port.
-         * @param database the database to connect to.
-         * @param user the user to authenticate with.
-         * @param password the password to authenticate with.
-         * @param readOnly if all connections to the host must read-only (the host is a read-replica).
-         * @return the instance that represents this host.
-         * @throws UnsupportedOperationException if executed in `PLV8` extension.
+         * Returns the posix of the partition based upon the given partition number, so maps 0 to "000", 1 to "001", ..., and 255 to "255".
+         * @param number the partition number.
+         * @return the partition posix.
          */
-        fun getInstance(
-            host: String,
-            port: Int = 5432,
-            database: String,
-            user: String,
-            password: String,
-            readOnly: Boolean = false
-        ): PgInstance
+        @JsStatic
+        @JvmStatic
+        fun partitionPosix(number: Int): String = POSIX[number and 255]
 
         /**
-         * Returns the instance for the given JDBC URL. Not supported by all environments, for example `PLV8` does not support this.
-         * @param url the JDBC URL, for example `jdbc:postgresql://foo.com/bar_db?user=postgres&password=password`
-         * @throws UnsupportedOperationException if executed in `PLV8` environment.
+         * Calculate a pseudo geo-reference-id from the given feature id.
+         * @param id the feature id.
+         * @return the pseudo geo-reference-id.
          */
-        fun getInstance(url: String): PgInstance
+        @JsStatic
+        @JvmStatic
+        fun gridFromId(id: String): String {
+            val BASE32 = PgUtil.BASE32
+            val sb = StringBuilder()
+            var hash = Fnv1a32.string(Fnv1a32.start(), id)
+            var i = 0
+            sb.append(BASE32[id[0].code and 31])
+            while (i++ < 6) {
+                val b32 = hash and 31
+                sb.append(BASE32[b32])
+                hash = hash ushr 5
+            }
+            hash = Fnv1a32.stringReverse(Fnv1a32.start(), id)
+            i = 0
+            sb.append(BASE32[id[0].code and 31])
+            while (i++ < 6) {
+                val b32 = hash and 31
+                sb.append(BASE32[b32])
+                hash = hash ushr 5
+            }
+            return sb.toString()
+        }
 
         /**
-         * Creates a new cluster configuration. Clusters are not supported by all environments, for example `PLV8` does not support them.
-         * @param master the master PostgresQL server.
-         * @param replicas the read-replicas; if any.
-         * @throws UnsupportedOperationException if executed in `PLV8` environment.
+         * Returns the lock-id for the given name.
+         * @param name the name to query the lock-id for.
+         * @return the 64-bit FNV1a hash.
          */
-        fun newCluster(master: PgInstance, vararg replicas: PgInstance): PgCluster
+        @JsStatic
+        @JvmStatic
+        fun lockId(name: String): Int64 = Fnv1a64.string(Fnv1a64.start(), name)
 
         /**
-         * Creates a new PostgresQL storage engine. The [PgStorage] is implemented very differently on every platform.
-         * @param cluster the PostgresQL server cluster to use.
-         * @param options the default options when opening new connections.
+         * Tests if the given **id** is a valid collection identifier, so matches:
+         *
+         * `[a-z][a-z0-9_:-]{31}`
+         *
+         * **Beware**: Collections must not contain upper-case letters, because PostgresQL does not make a difference between upper- and lower-cased letters in table names, so "aaa", "Aaa", "AAa", and "AAA" are the same table!
+         * @param id The collection identifier.
+         * @return _true_ if the collection identifier is valid; _false_ otherwise.
          */
-        fun newStorage(cluster: PgCluster, options: PgOptions): PgStorage
+        @JsStatic
+        @JvmStatic
+        fun isValidCollectionId(id: String?): Boolean {
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) return false
+            var i = 0
+            var c = id[i++]
+            // First character must be a-z
+            if (c.code < 'a'.code || c.code > 'z'.code) return false
+            while (i < id.length) {
+                c = id[i++]
+                when (c.code) {
+                    in 'a'.code..'z'.code -> continue
+                    in '0'.code..'9'.code -> continue
+                    '_'.code, ':'.code, '-'.code -> continue
+                    else -> return false
+                }
+            }
+            return true
+        }
 
         /**
-         * Tests if this code is executed within a PostgresQL database using [PLV8 extension](https://plv8.github.io/).
-         * @return _true_ if this code is executed within PostgresQL database using [PLV8 extension](https://plv8.github.io/).
+         * Tests if the given **id** is a valid collection identifier, otherwise throws an [naksha.model.StorageException]
+         * @param id The collection identifier.
+         * @throws StorageException if the given identifier is invalid.
          */
-        fun isPlv8(): Boolean
-
-        /**
-         * Returns the [PLV8 storage singleton](https://plv8.github.io/).
-         * @return the [PLV8 storage singleton](https://plv8.github.io/).
-         * @throws UnsupportedOperationException if called, when [isPlv8] returns _false_.
-         */
-        fun getPlv8(): PgStorage
-
-        /**
-         * Initializes a test-storage to execute tests. If the storage is already initialized, does nothing. Do guarantee that a new
-         * storage is initialized, do:
-         * ```kotlin
-         * if (!PgUtil.initTestStorage(options, params)) {
-         *   PgUtil.getTestStorage().close()
-         *   check(PgUtil.initTestStorage(options, params))
-         * }
-         * // The test storage will be freshly initialized!
-         * ```
-         * @param defaultOptions the default options for new connections.
-         * @param params optional parameters to be forwarded to the test engine.
-         * @return _true_ if a new test-storage was created; _false_ if there is already an existing storage.
-         * @throws UnsupportedOperationException if this platform does not support running tests.
-         */
-        fun initTestStorage(defaultOptions: PgOptions, params: Map<String, *>? = null): Boolean
-
-        /**
-         * Returns the existing test-storage to execute tests. If no test storage exists yet, creates a new test storage.
-         * @return the test-storage.
-         * @throws UnsupportedOperationException if this platform does not support running tests.
-         */
-        fun getTestStorage(): PgStorage
+        @JsStatic
+        @JvmStatic
+        fun ensureValidCollectionId(id: String?) {
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) {
+                throw StorageException(NakshaError(ILLEGAL_ID, id = id))
+            }
+            var i = 0
+            var c = id[i++]
+            // First character must be a-z
+            if (c.code < 'a'.code || c.code > 'z'.code) {
+                throw StorageException(NakshaError(ILLEGAL_ID, id = id))
+            }
+            while (i < id.length) {
+                c = id[i++]
+                when (c.code) {
+                    in 'a'.code..'z'.code -> continue
+                    in '0'.code..'9'.code -> continue
+                    '_'.code, ':'.code, '-'.code -> continue
+                    else -> throw StorageException(NakshaError(ILLEGAL_ID, id = id))
+                }
+            }
+        }
     }
 }

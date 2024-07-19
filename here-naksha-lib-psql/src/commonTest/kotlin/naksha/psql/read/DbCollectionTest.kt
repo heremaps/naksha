@@ -11,27 +11,23 @@ import naksha.model.response.ExecutedOp.Companion.CREATED
 import naksha.model.response.Response
 import naksha.model.response.SuccessResponse
 import naksha.psql.NKC_TABLE
-import naksha.psql.PgStatic
-import naksha.psql.TestBasics
+import naksha.psql.PgUtil
+import naksha.psql.TestEnv
 import kotlin.test.*
 
-class DbCollectionTest : TestBasics() {
+class DbCollectionTest {
+    private val env = TestEnv(dropSchema = true, initStorage = true)
 
     protected val collectionId = "plv8feature"
 
-    init {
-        init_storage()
-    }
-
     @Test
-    fun t010_createCollection() {
-        val nakCollection =
-            NakshaCollectionProxy(collectionId, partitionCount(), autoPurge = false, disableHistory = false)
+    fun `create collection`() {
+        val nakCollection = NakshaCollectionProxy(collectionId, partitionCount(), autoPurge = false, disableHistory = false)
         val collectionWriteReq = WriteRequest()
         collectionWriteReq.add(WriteFeature(NKC_TABLE, nakCollection))
         try {
-            val response: Response = pgSession.write(collectionWriteReq)
-            assertIs<SuccessResponse>(response)
+            val response: Response = env.pgSession.write(collectionWriteReq)
+            assertIs<SuccessResponse>(response, response.toString())
             val successResponse: SuccessResponse = response
             val responseRow: ResultRow = successResponse.rows[0]
             val row: Row = responseRow.row!!
@@ -46,33 +42,33 @@ class DbCollectionTest : TestBasics() {
             assertNotNull(collection.properties)
             assertSame(ACTION_CREATE, Flags(row.meta!!.flags).action())
         } finally {
-            pgSession.commit()
+            env.pgSession.commit()
         }
     }
 
     @Test
-    fun t011_createExistingCollection() {
+    fun `create existing collection`() {
         val collectionId = "collection2"
         val nakCollection =
             NakshaCollectionProxy(collectionId, partitionCount(), autoPurge = false, disableHistory = false)
         val collectionWriteReq = WriteRequest()
         collectionWriteReq.add(InsertFeature(NKC_TABLE, nakCollection))
         try {
-            pgSession.write(collectionWriteReq)
-            val response = pgSession.write(collectionWriteReq)
+            env.pgSession.write(collectionWriteReq)
+            val response = env.pgSession.write(collectionWriteReq)
             assertIs<ErrorResponse>(response)
             val errorResponse: ErrorResponse = response
             assertEquals("NX000", errorResponse.error.code.value)
         } finally {
-            pgSession.commit()
+            env.pgSession.commit()
         }
 
         assertTrue(isLockReleased(collectionId))
     }
 
     private fun isLockReleased(collectionId: String): Boolean {
-        val lock = PgStatic.lockId(collectionId).toLong()
-        pgSession.usePgConnection().execute(
+        val lock = PgUtil.lockId(collectionId).toLong()
+        env.pgSession.usePgConnection().execute(
             "select count(*) as count from pg_locks where locktype = 'advisory' and ((classid::bigint << 32) | objid::bigint) = $lock;"
         ).fetch()
             .use {

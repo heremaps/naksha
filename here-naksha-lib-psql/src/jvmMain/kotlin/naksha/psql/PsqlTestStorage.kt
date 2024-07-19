@@ -1,10 +1,9 @@
 package naksha.psql
 
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.psql.PgUtil.PgUtilCompanion.TEST_URL
+import naksha.psql.PgPlatform.PgPlatformCompanion.TEST_URL
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
-import org.testcontainers.containers.wait.strategy.Wait
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -13,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference
  * A special storage that optionally starts an own docker container.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cluster, defaultOptions.get()) {
+class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cluster, optionsRef.get()) {
 
     internal data class DockerContainerInfo(
         val container: GenericContainer<*>,
@@ -22,35 +21,22 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
     )
 
     companion object {
-        @JvmField
-        val DEFAULT_APP_NAME = "naksha.psql.testApp"
-
-        @JvmField
-        val DEFAULT_APP_ID = "naksha.psql.testAppId"
-
-        @JvmField
-        val DEFAULT_APP_AUTHOR = "naksha.psql.testAuthor"
+        const val DEFAULT_APP_NAME = "naksha.psql.testApp"
+        const val DEFAULT_APP_ID = "naksha.psql.testAppId"
+        const val DEFAULT_APP_AUTHOR = "naksha.psql.testAuthor"
+        const val DEFAULT_SCHEMA = "naksha_psql_test"
 
         @JvmField
         internal val storage = AtomicReference<PsqlTestStorage?>()
 
         @JvmField
-        internal val DEFAULT_SCHEMA = "naksha_psql_test"
-
-        @JvmField
         internal val DEFAULT_OPTIONS = PgOptions(DEFAULT_APP_NAME, DEFAULT_SCHEMA, DEFAULT_APP_ID, DEFAULT_APP_AUTHOR)
 
         /**
-         * The default schema used when creating a new test-storage.
+         * The default [PgOptions], used when creating a new test-storage.
          */
         @JvmField
-        val defaultSchema = AtomicReference(DEFAULT_SCHEMA)
-
-        /**
-         * The default [PgOptions] used when creating a new test-storage.
-         */
-        @JvmField
-        val defaultOptions = AtomicReference(DEFAULT_OPTIONS)
+        val optionsRef = AtomicReference(DEFAULT_OPTIONS)
 
         internal val dockerContainerInfo = AtomicReference<DockerContainerInfo?>()
 
@@ -69,13 +55,16 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
         }
 
         @JvmStatic
+        internal fun newTestStorage(options: PgOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
+            storage.set(null)
+            return getTestOrInitStorage(options, params)
+        }
+
+        @JvmStatic
         internal fun getTestOrInitStorage(options: PgOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
             var testStorage: PsqlTestStorage? = storage.get()
             while (testStorage == null) {
-                defaultOptions.set(options)
-
-                // Reset other defaults.
-                defaultSchema.set(DEFAULT_SCHEMA)
+                optionsRef.set(options)
 
                 // Process parameters and environment variables to modify other defaults.
                 var url: String? = null
@@ -95,8 +84,12 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
                         val raw = urlParams["schema"]
                         require(raw != null && raw.size == 1) { "URL parameter 'schema' is invalid" }
                         val schema = raw[0]
-                        if (schema.isNotEmpty()) defaultSchema.set(schema)
+                        if (schema.isNotEmpty()) optionsRef.set(optionsRef.get().copy(schema = schema))
                     }
+                    val app_id: String? = urlParams["appId"]?.get(0) ?: urlParams["app_id"]?.get(0)
+                    if (app_id != null) optionsRef.set(optionsRef.get().copy(appId = app_id))
+                    val author: String? = urlParams["author"]?.get(0)
+                    if (author != null) optionsRef.set(optionsRef.get().copy(author = author))
                     psqlInstance = PsqlInstance.get(url)
                 }
                 if (psqlInstance == null) {

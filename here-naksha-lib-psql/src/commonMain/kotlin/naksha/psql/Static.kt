@@ -1,13 +1,37 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package naksha.psql
 
+import naksha.model.NakshaErrorCode
+import naksha.model.StorageException
 import naksha.psql.PgType.Companion.BYTE_ARRAY
 import naksha.psql.PgType.Companion.INT
 import naksha.psql.PgType.Companion.INT64
 import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.STRING
 
+/**
+ * The index of the main table in [PgCollection] or the main connection in [PgTx].
+ */
+const val MAIN = -1
+
+/**
+ * Throw a storage exception.
+ */
+internal inline fun throwStorageException(
+    code: NakshaErrorCode,
+    message: String = code.defaultMessage,
+    id: String? = null,
+    cause: Throwable? = null
+): Nothing {
+    throw StorageException(code, message, id, cause)
+}
+
+internal const val NAKSHA_TXN_SEQ = "naksha_txn_seq"
 internal const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
 internal const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048
+
+internal const val TRANSACTIONS_COL = "naksha~transactions"
 
 internal const val NKC_TABLE = "naksha~collections"
 internal const val NKC_TABLE_ESC = "\"naksha~collections\""

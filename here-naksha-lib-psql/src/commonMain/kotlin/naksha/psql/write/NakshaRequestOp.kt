@@ -10,8 +10,9 @@ import naksha.model.Txn
 import naksha.psql.ERR_UNIQUE_VIOLATION
 import naksha.psql.NakshaException
 import naksha.psql.PgSession
-import naksha.psql.PgStatic
 import naksha.psql.*
+import naksha.psql.PgUtil.PgUtilCompanion.partitionNumber
+import naksha.psql.PgUtil.PgUtilCompanion.partitionPosix
 
 internal class NakshaRequestOp(
     val reqWrite: Write,
@@ -21,10 +22,10 @@ internal class NakshaRequestOp(
     val collectionPartitionCount: Int
 ) {
     val id: String = reqWrite.getId()
-    val partition: Int = PgStatic.partitionNumber(id, collectionPartitionCount)
+    val partition: Int = partitionNumber(id) % collectionPartitionCount
 
     // Used for sorting
-    val key = "${PgStatic.PARTITION_ID[partition]}_${id}"
+    val key = "${partitionPosix(partition)}_${id}"
 
     companion object {
         private const val UNDETERMINED_PARTITION = -2

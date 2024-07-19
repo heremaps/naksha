@@ -12,7 +12,7 @@ import kotlin.jvm.JvmStatic
  * The internal dictionaries table.
  */
 @JsExport
-class NakshaDictionaries internal constructor(schema: PgSchema) : PgInternalCollection(schema, ID), IDictManager {
+class NakshaDictionaries internal constructor(schema: PgSchema) : PgCollection(schema, ID), PgInternalCollection, IDictManager {
     companion object NakshaDictionariesCompanion {
         const val ID = "naksha~dictionaries"
     }

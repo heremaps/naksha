@@ -98,7 +98,7 @@ interface PgConnection : AutoCloseable {
     fun isClosed(): Boolean
 
     /**
-     * Rollback the underlying database connection and return it to the connection pool. Any further invocation of any method of this
+     * Rollback the underlying database connection, and return it to the connection pool. Any further invocation of any method of this
      * object will raise a [IllegalStateException] from here on.
      */
     override fun close()

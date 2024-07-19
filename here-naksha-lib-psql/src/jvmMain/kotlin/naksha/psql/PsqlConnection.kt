@@ -24,13 +24,6 @@ class PsqlConnection internal constructor(
 
     companion object PsqlConnectionCompanion {
         private val md5 = ThreadLocal.withInitial { MessageDigest.getInstance("MD5") }
-        /**
-         * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256"), usage like:
-         *
-         * `partitionName[partitionNumber(conn, "id", 16)]`
-         */
-        @JvmField
-        val partitionName = Array(256) { if (it < 10) "00$it" else if (it < 100) "0$it" else "$it" }
     }
 
     override var options: PgOptions = options
@@ -78,20 +71,7 @@ class PsqlConnection internal constructor(
             stmt.execute()
             stmt
         }
-
-        var rs: ResultSet? = stmt.resultSet
-        // refer to getMoreResults() documentation to see how to detect end of result sets.
-        // iterate to last result set.
-        while (!(!stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT) && (stmt.updateCount == -1))) {
-            rs = stmt.resultSet
-        }
-        return if (rs != null) {
-            PsqlCursor(rs, true)
-        } else {
-            val cursor = PsqlCursor(stmt.updateCount)
-            stmt.close()
-            cursor
-        }
+        return PsqlCursor(stmt, true)
     }
 
     /**
@@ -183,4 +163,5 @@ class PsqlConnection internal constructor(
         }
     }
 
+    override fun toString(): String = "${instance}#$id"
 }

@@ -12,7 +12,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-abstract class PgAbstractSession<T>(val storage: PgStorage, options: PgOptions) : IWriteSession, IReadSession, ISession, PgTx {
+abstract class PgAbstractSession<T>(val storage: PgStorage, options: PgOptions) : IWriteSession, IReadSession, ISession {
 
     /**
      * The options when opening new connections. The options are mostly immutable, except for the timeout values, for which there are

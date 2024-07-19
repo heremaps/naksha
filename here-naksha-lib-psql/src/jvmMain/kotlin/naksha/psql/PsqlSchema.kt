@@ -15,8 +15,9 @@ import naksha.model.StorageException
  */
 @Suppress("MemberVisibilityCanBePrivate")
 class PsqlSchema internal constructor(storage: PgStorage, name: String) : PgSchema(storage, name) {
-    override fun init() {
-        initInternally(storage.id())
+    override fun init(connection: PgConnection?) {
+        PgUtil.ensureValidCollectionId(name)
+        init_internal(storage.id(), connection)
     }
 
     /**
@@ -28,20 +29,19 @@ class PsqlSchema internal constructor(storage: PgStorage, name: String) : PgSche
      * @return the storage-id given or the generated storage-id.
      * @throws StorageException if any error occurred, for example if the schema is already initialized for a different storage-id.
      */
-    internal fun initInternally(
+    internal fun init_internal(
         storageId: String?,
         connection: PgConnection? = null,
         version: NakshaVersion = NakshaVersion.latest,
-        override: Boolean = false
+        override: Boolean = false,
+        autoCommit: Boolean = connection == null
     ): String {
-        logger.info("Query database for identifier and version from {}", connection)
+        logger.info("Query database for identifier and version from {}, schema='{}'", connection, name)
         val conn = connection ?: storage.newConnection(storage.defaultOptions.copy(schema = name, useMaster = true, readOnly = false))
         try {
             conn.execute(
-                """
-CREATE SCHEMA IF NOT EXISTS $schemaQuoted;
-SET SESSION search_path TO $schemaQuoted, public, topology;
-"""
+                """CREATE SCHEMA IF NOT EXISTS $nameQuoted;
+SET SESSION search_path TO $nameQuoted, public, topology;"""
             ).close()
             var cursor = conn.execute(
                 """
@@ -82,21 +82,28 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 existingStorageId
             } else storageId ?: PlatformUtil.randomString()
 
-            if (override) {
-                logger.info("Force storage installation via override parameter, ignore current state ...")
-            } else if (existingVersion == null) {
-                logger.info("Storage is in broken state, it has an identifier, but no version, updating it ...")
+            if (existingStorageId == null && existingVersion == null) {
+                logger.info("Schema '{}' does not exist, installing new fresh Naksha ...", name)
+            } else if (override) {
+                logger.info("Force storage installation into schema '{}' via override parameter, ignore current state ...", name)
+            } else if ((existingStorageId != null) xor (existingVersion != null)) {
+                logger.info(
+                    "Schema '{}' is in a broken state (id: {}, version: {}), updating it ...",
+                    name, existingStorageId, if (existingVersion != null) NakshaVersion(existingVersion) else null
+                )
             } else if (existingVersion == Int64(0)) {
-                logger.info("Storage is installed with debug code (version=0), updating it ...")
+                logger.info("Schema '{}' is installed with debug code (version=0), updating it ...")
             } else if (existingVersion == version.toInt64()) {
-                logger.info("Storage is up to date, id: $storage_id, version: $existingVersion, do nothing")
+                logger.info("Schema '{}' is up to date (id: '{}', version: {}), do nothing", name, storage_id, existingVersion)
                 return storage_id
+            } else {
+                logger.info("Schema '{}' is installed with older ({}), updating it to {} ...", name, existingVersion, version)
             }
 
-            logger.info("Install/update module system of storage '$storage_id' to version $version")
+            logger.info("Install/update module system of storage '{}', schema '{}' to version {}", storage_id, name, version)
             val commonJs = getResourceAsText("/common.js")
             check(commonJs != null) { "Failed to load common.js from resources" }
-            executeSqlFromResource(conn, "/common.sql", replacements = mapOf("common.js" to commonJs, "schema" to schemaQuoted))
+            executeSqlFromResource(conn, "/common.sql", replacements = mapOf("common.js" to commonJs, "schema" to nameQuoted))
 
             // Install default modules and SQL functions.
             installModuleFromResource(conn, "beautify", "/beautify.min.js", autoload = true)
@@ -168,15 +175,31 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 beautify = false,
                 autoload = true
             )
+            logger.info("Installation done, create transaction sequence ...")
+            conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64}").close()
+            logger.info("Create internal collections: transactions, collections, and dictionaries")
+            transactions().create_internal(conn, 0, PgStorageClass.Consistent,
+                storeHistory = false,
+                storedDeleted = false,
+                storeMeta = false
+            )
+            collections().create_internal(conn, 0, PgStorageClass.Consistent,
+                storeHistory = true,
+                storedDeleted = true,
+                storeMeta = true
+            )
+            dictionaries().create_internal(conn, 0, PgStorageClass.Consistent,
+                storeHistory = true,
+                storedDeleted = true,
+                storeMeta = true
+            )
             conn.commit()
-
-            // Note: We know, that we do not need the replacements and code is faster without them!
-//            val replacements = mapOf(VERSION to version.toInt64().toString(), "schema" to options.schema, "storage_id" to initId)
-//            executeSqlFromResource(conn, "/naksha.sql", replacements as Map<String, String>)
-//            PgStatic.createBaseInternalsIfNotExists(conn, options.schema, schemaOid)
-//            conn.commit()
             return storage_id
         } finally {
+            if (autoCommit) {
+                logger.info("Commit")
+                conn.commit()
+            }
             if (connection == null) conn.close()
         }
     }
