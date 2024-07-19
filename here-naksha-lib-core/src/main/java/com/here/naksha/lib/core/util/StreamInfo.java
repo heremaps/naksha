@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.util;
 
-import java.time.Duration;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,7 +26,9 @@ public class StreamInfo {
   private String spaceId;
   private String storageId;
 
-  private Duration timeInStorage = Duration.ZERO;
+  private Long timeInStorageMs = 0L;
+
+  private Long timeWithoutStorageMs = null;
 
   public void setSpaceId(final String spaceId) {
     this.spaceId = spaceId;
@@ -57,12 +58,20 @@ public class StreamInfo {
     return this.storageId;
   }
 
-  public @NotNull Duration getTimeInStorage() {
-    return timeInStorage;
+  public long getTimeInStorageMs() {
+    return timeInStorageMs;
   }
 
-  public void increaseTimeInStorage(Duration diff) {
-    timeInStorage = timeInStorage.plus(diff);
+  public void increaseTimeInStorage(long diffMs) {
+    timeInStorageMs += diffMs;
+  }
+
+  public void calculateTimeWithoutStorage(long totalMs) {
+    this.timeWithoutStorageMs = totalMs - timeInStorageMs;
+  }
+
+  public Long getTimeWithoutStorageMs() {
+    return timeWithoutStorageMs;
   }
 
   @Override
@@ -85,6 +94,6 @@ public class StreamInfo {
   public @NotNull String toColonSeparatedString() {
     return "spaceId=" + ((spaceId == null || spaceId.isEmpty()) ? "-" : spaceId) + ";storageId="
         + ((storageId == null || storageId.isEmpty()) ? "-" : storageId)
-        + "timeInStorage=" + timeInStorage.toMillis() + "ms";
+        + "timeInStorage=" + timeInStorageMs + "ms";
   }
 }

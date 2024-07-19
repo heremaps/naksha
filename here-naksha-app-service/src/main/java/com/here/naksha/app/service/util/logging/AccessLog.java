@@ -45,6 +45,7 @@ public class AccessLog extends AccessLogExtended implements JsonSerializable {
 
   public void end() {
     super.end();
+    streamInfo.calculateTimeWithoutStorage(ms);
   }
 
   @JsonInclude(Include.ALWAYS)

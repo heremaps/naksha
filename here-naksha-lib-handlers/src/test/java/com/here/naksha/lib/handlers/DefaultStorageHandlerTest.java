@@ -249,10 +249,9 @@ class DefaultStorageHandlerTest {
     // Then: elapsed time in Space storage checks out
     StreamInfo streamInfo = ctx.getStreamInfo();
     Assertions.assertNotNull(streamInfo);
-    long timeInStorageMs = streamInfo.getTimeInStorage().toMillis();
     long expectedTimeInStorageMs = undefinedTableErrorDelay + writeCollectionDelay + writeFeaturesDelay;
     long marginMs = 30;
-    assertEquals(expectedTimeInStorageMs, timeInStorageMs, marginMs);
+    assertEquals(expectedTimeInStorageMs, streamInfo.getTimeInStorageMs(), marginMs);
   }
 
   private static Stream<Named<CollectionPriorityTestCase>> collectionPriorityTestCases() {

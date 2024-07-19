@@ -223,7 +223,7 @@ public class AccessLogUtil {
     final AccessLog.ResponseInfo res = accessLog.respInfo;
     final StreamInfo si = accessLog.streamInfo;
     logger.info(
-        "[REST API stats => eventType,spaceId,storageId,method,uri,status,timeTakenMs,resSize,storageTimeMs] - RESTAPIStats {} {} {} {} {} {} {}",
+        "[REST API stats => eventType,spaceId,storageId,method,uri,status,timeTakenMs,resSize,timeWithoutStorageMs] - RESTAPIStats {} {} {} {} {} {} {} {}",
         (si == null || si.getSpaceId() == null || si.getSpaceId().isEmpty()) ? "-" : si.getSpaceId(),
         (si == null || si.getStorageId() == null || si.getStorageId().isEmpty()) ? "-" : si.getStorageId(),
         req.method,
@@ -231,7 +231,6 @@ public class AccessLogUtil {
         res.statusCode,
         accessLog.ms,
         res.size,
-        si == null ? "-" : si.getTimeInStorage().toMillis()
-    );
+        (si == null || si.getTimeWithoutStorageMs() == null) ? "-" : si.getTimeWithoutStorageMs());
   }
 }

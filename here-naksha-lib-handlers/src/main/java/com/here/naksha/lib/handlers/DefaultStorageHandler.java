@@ -27,6 +27,7 @@ import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttemp
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
 import static com.here.naksha.lib.psql.EPsqlState.COLLECTION_DOES_NOT_EXIST;
 import static com.here.naksha.lib.psql.EPsqlState.UNDEFINED_TABLE;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -56,7 +57,6 @@ import com.here.naksha.lib.core.util.StreamInfo;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
 import java.sql.SQLException;
-import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -128,7 +128,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
     StreamInfo streamInfo = ctx.getStreamInfo();
     if (streamInfo != null) {
-      streamInfo.increaseTimeInStorage(Duration.ofNanos(storageTimer.getNanoTime()));
+      streamInfo.increaseTimeInStorage(NANOSECONDS.toMillis(storageTimer.getNanoTime()));
     }
   }
 
