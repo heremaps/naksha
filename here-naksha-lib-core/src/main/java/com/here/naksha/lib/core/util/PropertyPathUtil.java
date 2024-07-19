@@ -74,17 +74,17 @@ public class PropertyPathUtil {
   @ApiStatus.AvailableSince(v2_0_12)
   public static @NotNull Map<String, Object> extractPropertyMapFromFeature(
       final @NotNull NakshaFeatureProxy feature, final @Nullable Set<@Nullable String> paths) {
-    return extractPropertyMapFromMap(feature.asMap(), paths);
+    return extractPropertyMapFromMap(feature, paths);
   }
 
   /**
-   * This function is same as {@link #extractPropertyMapFromFeature(XyzFeature, Set)}
+   * This function is same as {@link #extractPropertyMapFromFeature(NakshaFeatureProxy, Set)}
    * except that it works on provided input Map.
    *
    * @param srcMap input Map of nested key-value pairs from where the properties are to be extracted
    * @param paths list of JSON paths to properties that are to be extracted from srcMap
    * @return Map of merged nested key-value pairs extracted from srcMap
-   * @see #extractPropertyMapFromFeature(XyzFeature, Set)
+   * @see #extractPropertyMapFromFeature(NakshaFeatureProxy, Set)
    */
   @ApiStatus.AvailableSince(v2_0_12)
   public static @NotNull Map<String, Object> extractPropertyMapFromMap(

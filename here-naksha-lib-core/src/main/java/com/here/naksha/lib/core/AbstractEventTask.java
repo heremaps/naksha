@@ -24,6 +24,8 @@ import com.here.naksha.lib.core.models.payload.events.feature.ModifyFeaturesEven
 import java.util.ArrayList;
 import java.util.List;
 import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaErrorCode;
 import naksha.model.XyzResponseType;
 import naksha.model.response.ErrorResponse;
 import naksha.model.response.Response;
@@ -60,7 +62,8 @@ public abstract class AbstractEventTask<EVENT extends Event> extends AbstractTas
   @Override
   @Deprecated
   protected @NotNull Response errorResponse(@NotNull Throwable throwable) {
-    return new ErrorResponse(throwable, context().getStreamId());
+    return new ErrorResponse(new NakshaError(
+        NakshaErrorCode.EXCEPTION, "Unknown error", context().getStreamId(), throwable));
   }
 
   /**
