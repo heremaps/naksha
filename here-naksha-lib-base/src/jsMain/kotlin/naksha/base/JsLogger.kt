@@ -26,7 +26,9 @@ internal class JsLogger : PlatformLogger {
             val m = msg_arr[i].replace("%", "%%").unsafeCast<String>()
             if (m.startsWith("{}")) {
                 v = args[ai++]
-                if (v !== null && v !== undefined && (jsTypeOf(v.valueOf()) == "object")) {
+                if (v is Throwable) {
+                    r += v.stackTrace.joinToString("\n")
+                } else if (v !== null && v !== undefined && (jsTypeOf(v.valueOf()) == "object")) {
                     r += toJSON(v) + m.substring(2)
                 } else {
                     r += v + m.substring(2)
@@ -40,7 +42,9 @@ internal class JsLogger : PlatformLogger {
     }
 
     override fun debug(msg: String, vararg args: Any?) {
-        // TODO: Report compiler bug, and add FAQ to describe coding hints for JavaScript
+        if (!PlatformUtil.ENABLE_DEBUG) return
+        // TODO: KotlinCompilerBug:
+        //       Report compiler bug, and add FAQ to describe coding hints for JavaScript
         //       this compiles into `toString_1(this, msg, args.slice())`, but if called
         //       from JavaScript, and it implements an @JsExport, the user will call without
         //       arguments, which means that args is undefined, so the compiler need to
@@ -52,36 +56,43 @@ internal class JsLogger : PlatformLogger {
     }
 
     override fun atDebug(msgFn: () -> String?) {
+        if (!PlatformUtil.ENABLE_DEBUG) return
         val m = msgFn.invoke()
         if (plv8 != null) plv8.log(_DEBUG, m) else console.log(m)
     }
 
     override fun info(msg: String, vararg args: Any?) {
+        if (!PlatformUtil.ENABLE_INFO) return
         val m = if (args == null || args.size == 0) msg else toString(msg, *args)
         if (plv8 != null) plv8.log(_INFO, m) else console.info(m)
     }
 
     override fun atInfo(msgFn: () -> String?) {
+        if (!PlatformUtil.ENABLE_INFO) return
         val m = msgFn.invoke()
         if (plv8 != null) plv8.log(_INFO, m) else console.info(m)
     }
 
     override fun warn(msg: String, vararg args: Any?) {
+        if (!PlatformUtil.ENABLE_WARN) return
         val m = if (args == null || args.size == 0) msg else toString(msg, *args)
         if (plv8 != null) plv8.log(_WARN, m) else console.info(m)
     }
 
     override fun atWarn(msgFn: () -> String?) {
+        if (!PlatformUtil.ENABLE_WARN) return
         val m = msgFn.invoke()
         if (plv8 != null) plv8.log(_WARN, m) else console.info(m)
     }
 
     override fun error(msg: String, vararg args: Any?) {
+        if (!PlatformUtil.ENABLE_ERROR) return
         val m = if (args == null || args.size == 0) msg else toString(msg, *args)
         if (plv8 != null) plv8.log(_ERROR, m) else console.info(m)
     }
 
     override fun atError(msgFn: () -> String?) {
+        if (!PlatformUtil.ENABLE_ERROR) return
         val m = msgFn.invoke()
         if (plv8 != null) plv8.log(_ERROR, m) else console.info(m)
     }

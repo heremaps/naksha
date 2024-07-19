@@ -2,6 +2,8 @@
 
 package naksha.base
 
+import naksha.base.JsEnum.JsEnumCompanion.get
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx1
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -106,42 +108,74 @@ abstract class JsEnum : CharSequence {
          * extends [JsEnum].
          */
         @JvmStatic
-        private val klassToNamespace = CMap<KClass<out JsEnum>, KClass<out JsEnum>>()
+        private val klassToNamespace = AtomicMap<KClass<out JsEnum>, KClass<out JsEnum>>()
 
         /**
-         * All registered enumeration values of a namespace. The first level is the namespace (the Kotlin class
-         * that directly extend [JsEnum]), the second level maps values to registered instances.
+         * All defined enumeration values of a namespace. The first level is the namespace (the Kotlin class that directly extend [JsEnum]), the second level maps values to defined enumeration instances.
          */
         @JvmStatic
-        private val registryMain = CMap<KClass<*>, CMap<Any, JsEnum>>()
+        private val definedMap = AtomicMap<KClass<*>, AtomicMap<Any, JsEnum>>()
 
         /**
-         * All registered enumeration aliases. The first level is the namespace (the Kotlin class that directly extend [JsEnum]), the
-         * second level maps values to registered instances.
+         * All defined enumeration aliases. The first level is the namespace (the Kotlin class that directly extend [JsEnum]), the second level maps alias values to defined enumeration instances.
          */
         @JvmStatic
-        private val registryAlias = CMap<KClass<*>, CMap<Any, JsEnum>>()
+        private val definedAliasesMap = AtomicMap<KClass<*>, AtomicMap<Any, JsEnum>>()
 
+        /**
+         * All temporary registered enumeration values and alias values of a namespace. The first level is the namespace (the Kotlin class that directly extend [JsEnum]), the second level maps main values to temporary registered instances.
+         */
         @JvmStatic
-        private fun mainMap(ns: KClass<out JsEnum>): CMap<Any, JsEnum> {
-            var mainMap = registryMain[ns]
-            if (mainMap == null) {
-                mainMap = CMap()
-                val existing = registryMain.putIfAbsent(ns, mainMap)
-                if (existing != null) mainMap = existing
+        private val temporaryMap = AtomicMap<KClass<*>, AtomicMap<Any, WeakRef<JsEnum>>>()
+
+        /**
+         * Returns the defined map, so the assignment between the value and the defined enumeration instance.
+         * @param ns the namespace to check.
+         * @return the defined map.
+         */
+        @JvmStatic
+        private fun defMap(ns: KClass<out JsEnum>): AtomicMap<Any, JsEnum> {
+            var defMap = definedMap[ns]
+            if (defMap == null) {
+                defMap = AtomicMap()
+                val existing = definedMap.putIfAbsent(ns, defMap)
+                if (existing != null) defMap = existing
             }
-            return mainMap
+            return defMap
         }
 
+        /**
+         * Returns the defined aliases map, so the assignment between the alias value and the defined enumeration instance.
+         * @param ns the namespace to check.
+         * @return the defined aliases map.
+         */
         @JvmStatic
-        private fun aliasMap(ns: KClass<out JsEnum>): CMap<Any, JsEnum> {
-            var aliasMap = registryAlias[ns]
+        private fun aliasMap(ns: KClass<out JsEnum>): AtomicMap<Any, JsEnum> {
+            var aliasMap = definedAliasesMap[ns]
             if (aliasMap == null) {
-                aliasMap = CMap()
-                val existing = registryAlias.putIfAbsent(ns, aliasMap)
+                aliasMap = AtomicMap()
+                val existing = definedAliasesMap.putIfAbsent(ns, aliasMap)
                 if (existing != null) aliasMap = existing
             }
             return aliasMap
+        }
+
+        /**
+         * Returns the temporary map, so the assignment between the value (or alias value), and the temporary enumeration instance.
+         * @param ns the namespace to check.
+         * @param create if a new namespace should be created.
+         * @return the temporary map.
+         */
+        @JvmStatic
+        private fun tempMap(ns: KClass<out JsEnum>, create: Boolean): AtomicMap<Any, WeakRef<JsEnum>>? {
+            var tempMap = temporaryMap[ns]
+            if (tempMap == null) {
+                if (!create) return null
+                tempMap = AtomicMap()
+                val existing = temporaryMap.putIfAbsent(ns, tempMap)
+                if (existing != null) tempMap = existing
+            }
+            return tempMap
         }
 
         /**
@@ -180,19 +214,12 @@ abstract class JsEnum : CharSequence {
                 "Invalid enumeration value, require null, String or Number"
             }
             val e = __get(value, enumKlass, false)
-            e.isDefined = true
-            val mainMap = mainMap(e.namespace())
-            check(mainMap.putIfAbsent(e.value ?: NULL, e) == null) {
-                "Conflict, there is already an enumeration value for ${e.value} registered: ${mainMap[e.value]!!::class.simpleName}"
-            }
-            e.init()
             init?.call(e)
             return e
         }
 
         /**
-         * Returns the enumeration instance for the given value and namespace. If the value is pre-defined, the
-         * singleton is returned, otherwise a new instance is created.
+         * Returns the enumeration instance for the given value and namespace. If the value is pre-defined, the singleton is returned, otherwise a new instance is created.
          * @param value The value for which to return the enumeration.
          * @param enumKlass The enumeration klass to query.
          * @return The enumeration for the given value.
@@ -201,39 +228,128 @@ abstract class JsEnum : CharSequence {
         @JsStatic
         fun <ENUM : JsEnum> get(value: Any?, enumKlass: KClass<out ENUM>): ENUM = __get(value, enumKlass, true)
 
+        /**
+         * Returns the defined enumeration instance for the given value and namespace.
+         * @param value the value for which to return the enumeration.
+         * @param enumKlass the enumeration klass to query.
+         * @return the defined enumeration for the given value or _null_, if the value does not exist in a defined form.
+         */
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        private fun <ENUM : JsEnum> __get(value: Any?, enumKlass: KClass<out ENUM>, doInit: Boolean): ENUM {
-            var ns = klassToNamespace[enumKlass]
-            if (ns == null) {
-                // The class is not yet initialized, allocate an instance.
-                // Allocating an instance, should cause the companion object to be initialized.
-                val instance = Platform.allocateInstance(enumKlass)
-                ns = instance.namespace()
-                val existing = klassToNamespace.putIfAbsent(enumKlass, ns)
-                check(existing === null || existing === ns) {
-                    "There is already another class (${existing!!.simpleName}) registered for namespace ${ns.simpleName}"
-                }
-                instance.register(ns)
-                instance.initClass()
-            }
-            val mainMap = mainMap(ns)
-            val key = alignValue(value) ?: NULL
-            var e = mainMap[key] as ENUM?
+        fun <ENUM : JsEnum> getDefined(value: Any?, enumKlass: KClass<out ENUM>): ENUM? {
+            val alignedValue = alignValue(value)
+            val key = alignedValue ?: NULL
+            val ns = klassToNamespace[enumKlass] ?: return null
+            val mainMap = defMap(ns)
+            var e = mainMap[key]
             if (e == null) {
                 val aliasMap = aliasMap(ns)
-                e = aliasMap[key] as ENUM?
+                e = aliasMap[key]
                 if (e == null && key is String) {
-                    e = aliasMap[key.lowercase()] as ENUM?
+                    e = aliasMap[key.lowercase()]
                 }
             }
-            if (e == null) {
-                // The value is not pre-defined, create it on-the-fly.
-                e = Platform.allocateInstance(enumKlass)
-                e.value = alignValue(value)
-                if (doInit) e.init()
+            if (enumKlass.isInstance(e)) return e as ENUM?
+            return null
+        }
+
+        /**
+         * Internally called by [def] and [get] to return enumeration values.
+         *
+         * If [temporary] is set to _true_, then, if no such enumeration value does yet exist, create it as temporary. If [temporary] is _false_ and the value exists as temporary, then move it into the defined section, and return it.
+         * @param value the value to query.
+         * @param enumKlass the enumeration class to query.
+         * @param temporary if the value is temporary only.
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        private fun <ENUM : JsEnum> __get(value: Any?, enumKlass: KClass<out ENUM>, temporary: Boolean): ENUM {
+            // Optimistic locking, when something goes wrong, because another thread acts at the same time, we simply
+            // restart the whole operation from start.
+            val alignedValue = alignValue(value)
+            val key = alignedValue ?: NULL
+            while (true) {
+                var ns = klassToNamespace[enumKlass]
+                if (ns == null) {
+                    // The class is not yet initialized, allocate an instance.
+                    // Allocating an instance, should cause the companion object to be initialized.
+                    val instance = Platform.allocateInstance(enumKlass)
+                    ns = instance.namespace()
+                    val existing = klassToNamespace.putIfAbsent(enumKlass, ns)
+                    check(existing === null || existing === ns) {
+                        "There is already another class (${existing!!.simpleName}) registered for namespace ${ns.simpleName}"
+                    }
+                    instance.register(ns)
+                    instance.initClass()
+                }
+                val mainMap = defMap(ns)
+                var e = mainMap[key]
+                if (e == null) {
+                    val aliasMap = aliasMap(ns)
+                    e = aliasMap[key]
+                    if (e == null && key is String) {
+                        e = aliasMap[key.lowercase()]
+                    }
+                }
+                if (e == null) {
+                    val tempMap = tempMap(ns, false)
+                    if (tempMap != null) {
+                        val ref = tempMap[key]
+                        if (ref != null) {
+                            e = ref.deref()
+                            if (e == null) {
+                                // Just cleanup, this means, there is simply no such enumeration value.
+                                if (!tempMap.remove(ns, ref)) continue
+                            } else {
+                                check(enumKlass.isInstance(e)) {
+                                    // TODO: KotlinCompilerBug: We know at this point, that "e" is not null!
+                                    //       Why are we asked to use !! ?
+                                    "Conflict in enumeration value '$alignedValue', there is an existing enumeration class (${e!!::class.simpleName}, but class ${enumKlass.simpleName} was requested"
+                                }
+                                if (temporary) return e as ENUM // Great, we wanted a temporary one.
+
+                                // We should define the enumeration value, which currently is temporary.
+                                // Add into permanent map, then remove from temporary map.
+                                val defMap = defMap(ns)
+                                val existingDefined = defMap.putIfAbsent(key, e)
+                                if (!tempMap.remove(ns, ref)) {
+                                    logger.warn(
+                                        "Failed to remove namespace ${ns.simpleName} from temporary map, after already adding it into defined map, this must not happen!"
+                                    )
+                                }
+                                if (existingDefined == null) return e as ENUM
+                                check(enumKlass.isInstance(existingDefined)) {
+                                    "Conflict in enumeration value '$alignedValue', there is an existing enumeration class (${existingDefined::class.simpleName}, but class ${enumKlass.simpleName} was requested"
+                                }
+                                return existingDefined as ENUM
+                            }
+                        }
+                    }
+                }
+                // No existing value yet.
+                if (e == null) {
+                    // The value is not pre-defined, create it on-the-fly.
+                    e = Platform.allocateInstance(enumKlass)
+                    e.value = alignedValue
+                    if (temporary) {
+                        val tempMap = tempMap(ns, true)!!
+                        // If the key is already assigned, another thread was faster, repeat all of this!
+                        if (tempMap.putIfAbsent(key, WeakRef(e)) != null) continue
+                        e.init()
+                    } else {
+                        e.isDefined = true
+                        val defMap = defMap(ns)
+                        // If the key is already assigned, another thread was faster, repeat all of this!
+                        if (defMap.putIfAbsent(key, e) == null) continue
+                        e.init()
+                    }
+                } else {
+                    check(enumKlass.isInstance(e)) {
+                        "Conflict in enumeration value '$value', there is an existing enumeration class (${e::class.simpleName}, but class ${enumKlass.simpleName} was requested"
+                    }
+                }
+                return e as ENUM
             }
-            return e
         }
     }
 
@@ -297,33 +413,89 @@ abstract class JsEnum : CharSequence {
     protected open fun createString(): String = value?.toString() ?: "null"
 
     /**
-     * Runs a lambda against this enumeration instance. In Kotlin it is better to simply use `.apply {}`.
+     * Runs a lambda against this enumeration instance, to be used like:
+     * ```
+     * class Foo : JsEnum() {
+     *   companion object FooComp {
+     *     @JsStatic
+     *     @JvmStatic
+     *     val DEMO = def(Foo::class, "demo").with<Foo>() { self ->
+     *       self.property = "value"
+     *     }
+     *   }
+     *   ...
+     * }
+     * ```
+     * In most cases it is better to use the lambda of [def] or [defIgnoreCase], which has exactly the same effect:
+     * ```
+     * class Foo : JsEnum() {
+     *   companion object FooComp {
+     *     @JsStatic
+     *     @JvmStatic
+     *     val DEMO = def(Foo::class, "demo") { self ->
+     *       self.property = "value"
+     *     }
+     *   }
+     *   ...
+     * }
+     * ```
      *
-     * @param selfKlass reference to the class of this enumeration-type.
      * @param lambda the lambda to call with the first parameter being this.
      * @return this.
      */
     @Suppress("UNCHECKED_CAST")
-    fun <SELF : JsEnum> with(selfKlass: KClass<SELF>, lambda: Fx1<SELF>): SELF {
+    fun <SELF : JsEnum> with(lambda: Fx1<SELF>): SELF {
         lambda.call(this as SELF)
         return this
     }
 
     /**
-     * Can be used with defined values to add aliases.
+     * Can be used with defined values to add aliases, to be used like:
+     * ```
+     * class Foo : JsEnum() {
+     *   companion object FooComp {
+     *     @JsStatic
+     *     @JvmStatic
+     *     val DEMO = def(Foo::class, "demo").alias<Foo>("DMO")
+     *   }
+     *   ...
+     * }
+     * ```
      *
-     * @param selfClass Reference to the class of this enumeration-type.
      * @param value     The additional value to register.
      * @param <SELF>    The type of this.
      * @return this.
      */
-    protected fun <SELF : JsEnum> alias(selfClass: KClass<SELF>, value: Any): SELF {
-        val aliasMap = aliasMap(namespace())
-        check(aliasMap.putIfAbsent(value, this) == null) {
-            "Conflict, there is already an enumeration value for '$value' registered: ${aliasMap[value]!!::class.simpleName}"
+    @Suppress("UNCHECKED_CAST")
+    protected fun <SELF : JsEnum> alias(value: Any): SELF {
+        // Optimistic locking
+        while (true) {
+            val ns = namespace()
+            val key = alignValue(value) ?: NULL
+            if (isDefined) {
+                val aliasMap = aliasMap(ns)
+                val existing = aliasMap.putIfAbsent(key, this)
+                check(existing == null && existing !== this) {
+                    // TODO: KotlinCompilerBug - It should know that existing is not null here!
+                    "Conflict, there is already an enumeration value for '$value' registered: ${existing!!::class.simpleName}"
+                }
+            } else {
+                val tempMap = tempMap(ns, true)!!
+                val ref = tempMap.putIfAbsent(key, WeakRef(this))
+                if (ref != null) {
+                    val existing = ref.deref()
+                    if (existing == null) {
+                        tempMap.remove(key, ref)
+                        continue
+                    }
+                    check(existing !== this) {
+                        // TODO: KotlinCompilerBug - It should know that existing is not null here!
+                        "Conflict, there is already an enumeration value for '$value' registered: ${existing::class.simpleName}"
+                    }
+                }
+            }
+            return this as SELF
         }
-        @Suppress("UNCHECKED_CAST")
-        return this as SELF
     }
 
     final override fun toString(): String {
@@ -353,6 +525,7 @@ abstract class JsEnum : CharSequence {
         if (other is JsEnum) return other.value == value
         return value == other
     }
+
     final override fun equals(other: Any?): Boolean = this === other || (other is JsEnum && other.value == value)
     final override fun hashCode(): Int = toString().hashCode()
 

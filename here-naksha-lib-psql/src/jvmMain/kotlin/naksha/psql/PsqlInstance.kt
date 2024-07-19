@@ -34,7 +34,7 @@ class PsqlInstance : PgInstance {
             var existing = instancePool[url]
             if (existing != null) return existing
             val i = PsqlInstance(url)
-            existing = instancePool.putIfAbsent(url, i)
+            existing = instancePool.putIfAbsent(i.url, i)
             return existing ?: i
         }
     }

@@ -1,15 +1,15 @@
+@file:Suppress("MemberVisibilityCanBePrivate", "OPT_IN_USAGE", "NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
+
 package naksha.model
 
 import naksha.auth.UserRightsMatrix
-import naksha.base.Int64
-import naksha.base.PlatformThreadLocal
-import naksha.base.Platform
-import naksha.base.PlatformUtil
+import naksha.base.*
 import naksha.base.fn.Fn0
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
+import kotlin.reflect.KClass
 
 /**
  * The Naksha Context, a thread-local that stores credentials and other thread local information. The main purpose is to ensure that all
@@ -17,13 +17,12 @@ import kotlin.jvm.JvmStatic
  * and then attached to the current thread.
  * @since 2.0.5
  */
-@OptIn(ExperimentalJsExport::class)
 @JsExport
-open class NakshaContext protected constructor() {
+class NakshaContext private constructor() {
     /**
      * The internal field of the **appId** getter and setters.
      */
-    protected var _appId: String? = null
+    private var _appId: String? = null
 
     /**
      * The application identifier of the client that acts. It is used at many places, for authorization, ownership of features and logging.
@@ -47,21 +46,23 @@ open class NakshaContext protected constructor() {
     /**
      * The internal field of the **streamId** setter and getter.
      */
-    protected var _streamId: String? = null
+    private var _streamId: String? = null
 
     /**
      * The stream-identifier being used in logging to group log entries that belong to the same request.
      */
-    open var streamId: String
+    var streamId: String
         get() {
-            var s =_streamId
+            var s = _streamId
             if (s == null) {
                 s = PlatformUtil.randomString()
                 _streamId = s
             }
             return s
         }
-        set(value) { _streamId = value }
+        set(value) {
+            _streamId = value
+        }
 
     /**
      * Changes the stream-id and returns the [NakshaContext].
@@ -76,14 +77,14 @@ open class NakshaContext protected constructor() {
     /**
      * The internal field of the **author** getter and setter.
      */
-    protected var _author: String? = null
+    private var _author: String? = null
 
     /**
      * The author. The author represents the human user that acts, if any. It is used at many places, for authorization, ownership of
      * features and logging.
      * @since 2.0.7
      */
-    open var author: String?
+    var author: String?
         get() = _author
         set(value) {
             _author = value
@@ -96,6 +97,19 @@ open class NakshaContext protected constructor() {
      */
     fun withAuthor(author: String?): NakshaContext {
         this.author = author
+        return this
+    }
+
+    /**
+     * The local realm.
+     *
+     * The default realm is initially read from the JWT claim `rlm`, but can be overridden by the client using the HTTP header `X-Realm`. If neither is available, the default is `public`, which will cause the PSQL storage engine to use the default schema configured. Other realms are simply stored in own dedicated schemas (this only applies for the default PSQL storage implementation).
+     * @since 3.0.0
+     */
+    var realm: String = "public"
+
+    fun withRealm(realm: String): NakshaContext {
+        this.realm = realm
         return this
     }
 
@@ -131,9 +145,92 @@ open class NakshaContext protected constructor() {
     }
 
     /**
+     * Arbitrary attachments.
+     */
+    @JvmField
+    val attachments: AtomicMap<Any, Any> = Platform.newAtomicMap()
+
+    /**
+     * Returns the attachment of the given type.
+     * @param attachmentType the type ([KClass]) of the attachment to get.
+     * @return the attachment or _null_, if no such attachment is available.
+     */
+    operator fun <T : Any> get(attachmentType: KClass<T>): T? {
+        val value = attachments[attachmentType]
+        return if (attachmentType.isInstance(value)) value as T else null
+    }
+
+    /**
+     * Tests if an attachment with the given key exists, normally the type ([KClass]) of the attachment is used.
+     * @param attachmentType the key to test.
+     * @return _true_ if such a key exists; _false_ otherwise.
+     */
+    operator fun contains(attachmentType: KClass<*>): Boolean = attachments.containsKey(attachmentType)
+
+    /**
+     * Sets the key to the given value.
+     * @param key the key to set.
+     * @param value the value to set.
+     */
+    operator fun <T: Any> set(key: KClass<T>, value: T) {
+        attachments[key] = value
+    }
+
+    /**
+     * Adds the given attachment, if there is an attachment of the same type already, overrides it. The key will be the type of the attachment.
+     * @param attachment the attachment to add.
+     * @return this.
+     */
+    fun add(attachment: Any): NakshaContext {
+        val key = attachment::class
+        attachments[key] = attachment
+        return this
+    }
+
+    /**
+     * Adds the given attachment, if there is an attachment of the same type already, overrides it. The key will be the type of the attachment.
+     * @param attachment the attachment to add.
+     * @return the previously set value.
+     */
+    fun put(attachment: Any): Any? {
+        val key = attachment::class
+        return attachments.put(attachment::class, attachment)
+    }
+
+    /**
+     * Adds the give attachment, if no such attachment is already contained.
+     * @param attachment the attachment to add.
+     * @return _true_ if added; _false_ otherwise.
+     */
+    fun putIfAbsent(attachment: Any): Boolean {
+        return attachments.putIfAbsent(attachment::class, attachment) == null
+    }
+
+    /**
+     * Tries to replace an existing value with a new one, using an atomic operation.
+     * @param existing the existing value.
+     * @param value the new value.
+     * @return _true_ if the replacement was successful; _false_ otherwise.
+     */
+    fun <T: Any> replace(existing: T, value: T): Boolean {
+        return attachments.replace(existing::class, existing, value)
+    }
+
+    /**
+     * Removes the attachment assigned to the given key.
+     * @param attachmentType the key to remove.
+     * @return the currently assigned value.
+     */
+    fun <T: Any> remove(attachmentType: KClass<T>): T? {
+        val raw = attachments.remove(attachmentType)
+        return if (attachmentType.isInstance(raw)) raw as T else null
+    }
+
+    /**
      * The epoch micro-second when the context was created. Is used in logging to log relative timestamps and can be used elsewhere for
      * relative timestamps (time since start of a request).
      */
+    @JvmField
     val startMicros: Int64 = Platform.currentMicros()
 
     /**
@@ -148,7 +245,7 @@ open class NakshaContext protected constructor() {
     var streamInfo: StreamInfo? = null
 
     @Suppress("OPT_IN_USAGE")
-    companion object {
+    companion object NakshaContextCompanion {
         /**
          * The thread local that stores the [NakshaContext].
          */
@@ -158,14 +255,14 @@ open class NakshaContext protected constructor() {
         /**
          * Can be overridden by application code to modify the context creation.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         var constructorRef: Fn0<NakshaContext> = Fn0(::NakshaContext)
 
         /**
          * Can be overridden by application code to modify the thread local context gathering.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         var currentRef: Fn0<NakshaContext> = Fn0(threadLocal::get)
 

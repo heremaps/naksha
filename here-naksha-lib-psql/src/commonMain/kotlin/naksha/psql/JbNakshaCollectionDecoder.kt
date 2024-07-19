@@ -69,5 +69,5 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbMapFeatureDecoder
     fun autoPurge(): Boolean = _autoPurge
     fun maxAge(): Int64 = _maxAge ?: Platform.INT64_MAX_VALUE
     fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollectionProxy.BEFORE_ESTIMATION
-    fun storageClass(): String = _storageClass ?: PgStatic.SC_DEFAULT
+    fun storageClass(): String = _storageClass ?: PgStorageClass.Consistent.toString()
 }

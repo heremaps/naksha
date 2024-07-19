@@ -1,11 +1,12 @@
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.longToInt64
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.locks.ReentrantLock
 
 class JvmLock : ReentrantLock(), PlatformLock {
     companion object {
-        private val MIN_WAIT = JvmInt64(1)
+        private val MIN_WAIT = longToInt64(1)
     }
 
     override fun acquire(): PlatformLock {

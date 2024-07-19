@@ -15,8 +15,8 @@ import kotlin.js.JsExport
  *
  * Memory consistency effects: As with other concurrent
  * collections, actions in a thread prior to placing an object into a
- * [CMap] as a key or value **happen-before** actions subsequent to the
- * access or removal of that object from the [CMap] in another thread.
+ * [AtomicMap] as a key or value **happen-before** actions subsequent to the
+ * access or removal of that object from the [AtomicMap] in another thread.
  *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
@@ -24,7 +24,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-interface CMap<K : Any, V : Any> : MutableMap<K, V> {
+interface AtomicMap<K : Any, V : Any> : MutableMap<K, V> {
 
     /**
      * If the specified key is not already associated with a value, associates it with the given value.
@@ -50,13 +50,11 @@ interface CMap<K : Any, V : Any> : MutableMap<K, V> {
      * Removes the entry for a key only if currently mapped to a given value.
      * This is equivalent to:
      * ```
-     * if (map.containsKey(key) &&
-     *     Objects.equals(map.get(key), value)) {
+     * if (map.containsKey(key) && map.get(key)===value) {
      *   map.remove(key);
      *   return true;
-     * } else {
-     *   return false;
      * }
+     * return false;
      * ```
      * except that the action is performed atomically.
      *

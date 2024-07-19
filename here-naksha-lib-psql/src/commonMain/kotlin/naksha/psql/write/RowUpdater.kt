@@ -6,7 +6,7 @@ import naksha.model.*
 import naksha.psql.PgPlan
 import naksha.psql.PgRow
 import naksha.psql.PgSession
-import naksha.psql.PgStatic.TRANSACTIONS_COL
+import naksha.psql.TRANSACTIONS_COL
 
 internal class RowUpdater(val session: PgSession) {
     private lateinit var gridPlan: PgPlan

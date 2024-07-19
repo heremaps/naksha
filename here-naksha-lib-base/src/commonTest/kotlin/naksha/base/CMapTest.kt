@@ -7,7 +7,7 @@ class CMapTest {
     fun basics() {
         val key = "Test"
         val value = 5
-        val map = CMap<String, Any>()
+        val map = AtomicMap<String, Any>()
         assertEquals(0, map.size)
         assertNull(map.putIfAbsent(key, value))
         assertEquals(1, map.size)

@@ -2,10 +2,15 @@
 
 package naksha.psql
 
+import kotlin.DeprecationLevel.WARNING
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
+@Deprecated(
+    "Too many exceptions",
+    replaceWith = ReplaceWith("naksha.model.StorageException"),
+    level = WARNING)
 @JsExport
 class NakshaException private constructor(
         val errNo: String,

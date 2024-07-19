@@ -18,9 +18,8 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
     override fun execute(args: Array<Any?>?): PgCursor {
         check(!closed)
         if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
-        val hasResultSet = stmt.execute()
-        if (hasResultSet) return PsqlCursor(stmt.resultSet, false)
-        return PsqlCursor(stmt.updateCount)
+        stmt.execute()
+        return PsqlCursor(stmt, false)
     }
 
     /**

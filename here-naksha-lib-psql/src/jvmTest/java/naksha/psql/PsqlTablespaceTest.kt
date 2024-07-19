@@ -8,19 +8,17 @@ import naksha.model.NakshaCollectionProxy.Companion.DEFAULT_GEO_INDEX
 import naksha.model.request.WriteFeature
 import naksha.model.request.WriteRequest
 import naksha.model.response.SuccessResponse
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.GenericContainer
-import java.lang.Thread.sleep
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-class PsqlTablespaceTest : TestBasics() {
+class PsqlTablespaceTest {
+    private val env = TestEnv(dropSchema = true, initStorage = true)
     private var dockerContainerInfo: GenericContainer<*>? = null
 
     init {
-        init_storage()
         dockerContainerInfo = PsqlTestStorage.dockerContainerInfo.get()?.container
     }
 
@@ -42,10 +40,10 @@ class PsqlTablespaceTest : TestBasics() {
             NakshaCollectionProxy(collectionId, partitionCount(), DEFAULT_GEO_INDEX, "brittle", false, false)
         val collectionWriteReq = WriteRequest()
         collectionWriteReq.add(WriteFeature(NKC_TABLE, nakCollection))
-        val response = pgSession.write(collectionWriteReq)
+        val response = env.pgSession.write(collectionWriteReq)
         assertIs<SuccessResponse>(response)
 
-        pgSession.commit()
+        env.pgSession.commit()
 
         // then
         val expectedTablespace = TEMPORARY_TABLESPACE
@@ -65,10 +63,8 @@ class PsqlTablespaceTest : TestBasics() {
         }
     }
 
-
-
     private fun getTablespace(table: String): String {
-        pgSession.usePgConnection().prepare("select tablespace from pg_tables where tablename = $1", arrayOf(PgType.STRING.toString()))
+        env.pgSession.usePgConnection().prepare("select tablespace from pg_tables where tablename = $1", arrayOf(PgType.STRING.toString()))
             .execute(arrayOf(table)).fetch()
             .use {
                 assertTrue(it.isRow(),"no table found: $table")

@@ -4,15 +4,13 @@ import naksha.jbon.*
 import kotlinx.datetime.*
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.jbon.IDictManager
 import naksha.jbon.JbMapDecoder
 import naksha.jbon.JbMapFeatureDecoder
 import naksha.jbon.XyzVersion
 import naksha.model.*
 import naksha.model.request.*
 import naksha.model.response.*
-import naksha.psql.PgStatic.TRANSACTIONS_COL
-import naksha.psql.PgStatic.nakshaCollectionConfig
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.read.ReadQueryBuilder
 import naksha.psql.write.RowUpdater
 import naksha.psql.write.SingleCollectionWriter
@@ -26,44 +24,30 @@ import naksha.psql.write.WriteRequestExecutor
  * @param options the default options to use, when opening new database connections.
  */
 // @JsExport // <-- when uncommenting this, we get a compiler error!
-class PgSession(storage: PgStorage, options: PgOptions) : AbstractSession<Any>(storage, options), PgTx {
+class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>(storage, options) {
 
-    // TODO: Add a NakshaCollectionRow, which should hold the reference to a Row of the collection, plus
-    //       the JbNakshaCollection, which is a JBON reader of the collection JBON. We need this, because
+    // TODO: Add a NakshaRow, which should hold the reference to a PgRow of the collection, plus
+    //       the JbCollection, which is a JBON reader of the collection JBON. We need this, because
     //       for caching we want the data to be immutable, otherwise we can't cache it internally.
     //       We can return the cached row then to the client, when he asks for the collection.
     // Note: We should remove the 'estimatedFeatureCount' and the 'estimatedDeletedCount' from the JBON.
     //       These values are always calculated on-the-fly, and should not be persisted, but the can be
     //       cached at the NakshaCollectionRow, so that the values can be added into the collection feature,
     //       when the client decodes it. This need to be done on-the-fly while decoding the row into a feature!
+    // TODO: We allow schema changes at runtime, but we need to cache separate transaction numbers for each schema!
+    // TODO: Merge PgSession with PgAbstractSession
+    // TODO: We need to start a transaction (being a PgTx), this class should only split incoming requests
+    //       into instructions like `(insert|update|delete|purge)Row`, `bulk(Insert|Update|Delete|Purge)Row`,
+    //       and finally commit/rollback the transaction.
+    // TODO: When a transaction crosses the realm (schema) boundary, this should not be a problem.
+    // TODO: When opening a session, it need to clear already, if parallel is enabled or not (false by default)
 
     /**
      * The cached quoted schema name (double quotes).
      */
-    internal val schemaIdent = PgUtil.quoteIdent(options.schema)
-
-    /**
-     * The dictionary manager bound to the global dictionary.
-     */
-    internal val globalDictManager = NakshaDictManager(this)
-
-    /**
-     * The dictionary managers for collections with the key being the identifier of the collection and the value being the manager.
-     */
-    internal val collectionDictManagers = HashMap<String, NakshaDictManager>()
+    internal val schemaIdent = quoteIdent(options.schema)
 
     internal val rowUpdater = RowUpdater(this)
-
-    /**
-     * Returns the dictionary manager for the given collection.
-     * @param collectionId The identifier of the collection for which to return the dictionary manager.
-     * @return The dictionary manager.
-     * @throws IllegalArgumentException If no such collection exists.
-     */
-    fun getDictManager(collectionId: String? = null): IDictManager {
-        // TODO: Implement collection specific managers
-        return globalDictManager
-    }
 
     /**
      * The current transaction number.
@@ -95,12 +79,6 @@ class PgSession(storage: PgStorage, options: PgOptions) : AbstractSession<Any>(s
      */
     var errMsg: String? = null
 
-    // TODO: Remove this, creating a new session should be free of cost, we can do this lazy!
-    init {
-            collectionConfiguration = mutableMapOf()
-            collectionConfiguration[NKC_TABLE] = nakshaCollectionConfig
-    }
-
     fun reset() {
         clear()
     }
@@ -112,7 +90,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : AbstractSession<Any>(s
         errNo = null
         errMsg = null
         collectionConfiguration = mutableMapOf()
-        collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
+        //collectionConfiguration.put(NKC_TABLE, nakshaCollectionConfig)
         transaction = null
     }
 
@@ -121,10 +99,11 @@ class PgSession(storage: PgStorage, options: PgOptions) : AbstractSession<Any>(s
      * happen for example, when the client drops and re-creates the schema this session is bound to.
      * @param oid The new schema oid.
      */
-    internal fun verifyCache(oid: Int) {
-        if (usePgConnection().info().schemaOid != oid) {
-            clear()
-        }
+    private fun verifyCache(oid: Int) {
+        TODO("Implement me!")
+//        if (usePgConnection().schemaInfo().schemaOid != oid) {
+//            clear()
+//        }
     }
 
     /**
@@ -140,7 +119,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : AbstractSession<Any>(s
     internal fun saveInHst(collectionId: String, OLD: Row) {
         if (isHistoryEnabled(collectionId)) {
             // TODO move it outside and run it once
-            val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$hst")
+            val collectionIdQuoted = quoteIdent("${collectionId}\$hst")
             val session = usePgConnection()
             val hstInsertPlan = session.prepare("INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($COL_ALL_DOLLAR)", COL_ALL_TYPES)
             hstInsertPlan.use {
@@ -179,7 +158,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : AbstractSession<Any>(s
      * Uses the current session, does not commit or rollback the current session.
      */
     internal fun deleteFromDel(collectionId: String, id: String) {
-        val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$del")
+        val collectionIdQuoted = quoteIdent("${collectionId}\$del")
         usePgConnection().execute("""DELETE FROM $collectionIdQuoted WHERE id = $1""", arrayOf(id))
     }
 
@@ -192,10 +171,11 @@ class PgSession(storage: PgStorage, options: PgOptions) : AbstractSession<Any>(s
         val collectionConfig = getCollectionConfig(collectionId)
         val autoPurge: Boolean? = collectionConfig.autoPurge
         if (autoPurge != true) {
-            val collectionIdQuoted = PgUtil.quoteIdent("${collectionId}\$del")
+            val collectionIdQuoted = quoteIdent("${collectionId}\$del")
             val oldMeta = OLD.meta!!
             val conn = usePgConnection()
-            conn.execute("INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($COL_ALL_DOLLAR)",
+            conn.execute(
+                "INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($COL_ALL_DOLLAR)",
                 arrayOf(
                     oldMeta.txnNext,
                     oldMeta.txn,
@@ -287,7 +267,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : AbstractSession<Any>(s
      * Uses the current session, does not commit or rollback the current session.
      * @return The current transaction number.
      */
-    override fun txn(): Txn {
+    fun txn(): Txn {
         if (_txn == null) {
             val conn = usePgConnection()
             conn.execute(
@@ -308,7 +288,7 @@ FROM ns, txn_seq;
                 val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
                 val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
                 if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
-                    conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgStatic.TXN_LOCK_ID)).close()
+                    conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                     try {
                         conn.execute("SELECT nextval($1) as v", arrayOf(txnSeqOid)).fetch().use {
                             txn = Txn(it["v"])
@@ -321,20 +301,12 @@ FROM ns, txn_seq;
                             conn.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1)).close()
                         }
                     } finally {
-                        conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgStatic.TXN_LOCK_ID)).close()
+                        conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                     }
                 }
             }
         }
         return _txn!!
-    }
-
-    override fun uid(): Int {
-        TODO("Not yet implemented")
-    }
-
-    override fun newGuid(): Luid {
-        TODO("Not yet implemented")
     }
 
     /**
@@ -346,8 +318,28 @@ FROM ns, txn_seq;
         return _txts!!
     }
 
-    private lateinit var featureReader: JbMapFeatureDecoder
-    private lateinit var propertiesReader: JbMapDecoder
+    private var _featureReader: JbMapFeatureDecoder? = null
+    private fun featureReader(): JbMapFeatureDecoder {
+        var reader = _featureReader
+        if (reader == null) {
+            reader = JbMapFeatureDecoder()
+            _featureReader = reader
+        }
+        reader.dictManager = storage[options.schema].dictionaries()
+        return reader
+    }
+
+    private var _propertiesReader: JbMapDecoder? = null
+    private fun propertiesReader(): JbMapDecoder {
+        var mapDecoder = _propertiesReader
+        if (mapDecoder == null) {
+            mapDecoder = JbMapDecoder()
+            _propertiesReader = mapDecoder
+        }
+        mapDecoder.reader.localDict = featureReader().reader.localDict
+        mapDecoder.reader.globalDict = featureReader().reader.globalDict
+        return mapDecoder
+    }
 
     /**
      * Extract the id from the given feature.
@@ -356,13 +348,7 @@ FROM ns, txn_seq;
      * @return The id or _null_, if the feature does not have a dedicated id.
      * @throws IllegalArgumentException If the no such collection exists.
      */
-    fun getFeatureId(feature: ByteArray, collectionId: String? = null): String? {
-        if (!this::featureReader.isInitialized) featureReader = JbMapFeatureDecoder(globalDictManager)
-        val reader = featureReader
-        reader.dictManager = getDictManager(collectionId)
-        reader.mapBytes(feature)
-        return reader.id()
-    }
+    fun getFeatureId(feature: ByteArray, collectionId: String? = null): String? = featureReader().mapBytes(feature).id()
 
     /**
      * Extract the type of the feature by checking _properties.featureType_, _momType_ and _type_ properties in
@@ -373,16 +359,15 @@ FROM ns, txn_seq;
      * @throws IllegalArgumentException If no such collection exists.
      */
     fun getFeatureType(feature: ByteArray, collectionId: String? = null): String {
-        if (!this::featureReader.isInitialized) featureReader = JbMapFeatureDecoder(globalDictManager)
-        val reader = featureReader
-        reader.dictManager = getDictManager(collectionId)
+        val reader = featureReader()
+        reader.mapBytes(feature)
+        reader.dictManager = storage[options.schema].dictionaries()
         reader.mapBytes(feature)
         val root = reader.root()
         if (root.selectKey("properties")) {
             val value = root.value()
             if (value.isMap()) {
-                if (!this::propertiesReader.isInitialized) propertiesReader = JbMapDecoder()
-                val properties = propertiesReader
+                val properties = propertiesReader()
                 properties.mapReader(value)
                 if (properties.selectKey("featureType")) {
                     val v = properties.value()
@@ -470,11 +455,10 @@ FROM ns, txn_seq;
             transactionAction.write()
             writeFeaturesResult
         } catch (e: NakshaException) {
-            if (PgStatic.PRINT_STACK_TRACES) logger.info(e.stackTraceToString())
+            logger.debug("Supress exception: {}", e)
             ErrorResponse(NakshaError(e.errNo, e.errMsg))
         } catch (e: Throwable) {
-            if (PgStatic.PRINT_STACK_TRACES)
-                logger.info(e.cause?.message!!)
+            logger.debug("Suppress exception: {}", e.cause ?: e)
             ErrorResponse(NakshaError(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}"))
         }
     }

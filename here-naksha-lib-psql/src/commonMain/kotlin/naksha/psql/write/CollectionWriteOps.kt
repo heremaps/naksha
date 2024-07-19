@@ -21,6 +21,7 @@ import naksha.psql.COL_TYPE
 import naksha.psql.COL_UID
 import naksha.psql.COL_UPDATE_AT
 import naksha.psql.COL_VERSION
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 
 internal data class CollectionWriteOps(
     val headCollectionId: String,
@@ -53,7 +54,7 @@ internal data class CollectionWriteOps(
         wait: Boolean
     ): Map<String, Row> = if (idsSmallFetch.isNotEmpty()) {
         val waitOp = if (wait) "" else "NOWAIT"
-        val collectionIdQuoted = PgUtil.quoteIdent(collectionId)
+        val collectionIdQuoted = quoteIdent(collectionId)
         val conn = session.usePgConnection()
         val basicQuery =
             "SELECT $COL_ID,$COL_TXN,$COL_UID,$COL_VERSION,$COL_CREATED_AT,$COL_UPDATE_AT,$COL_AUTHOR,$COL_AUTHOR_TS,$COL_GEO_GRID,$COL_FLAGS,$COL_APP_ID FROM $collectionIdQuoted WHERE id = ANY($1) FOR UPDATE $waitOp"

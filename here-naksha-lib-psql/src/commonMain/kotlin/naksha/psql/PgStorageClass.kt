@@ -26,7 +26,7 @@ class PgStorageClass : JsEnum() {
         @JvmField
         val Consistent = defIgnoreCase(PgStorageClass::class, "consistent") { self ->
             self.persistence = "p"
-        }.alias(PgStorageClass::class, "p")
+        }.alias<PgStorageClass>("p")
 
         /**
          * The storage class for collections that need to be fast, but where data loss is acceptable in case that the database crashes.
@@ -37,7 +37,7 @@ class PgStorageClass : JsEnum() {
         @JvmField
         val Brittle = defIgnoreCase(PgStorageClass::class, "brittle") { self ->
             self.persistence = "u"
-        }.alias(PgStorageClass::class, "u")
+        }.alias<PgStorageClass>("u")
 
         /**
          * The storage class for collections that should be ultra-fast, and only live for the current session. When the connection is
@@ -48,7 +48,14 @@ class PgStorageClass : JsEnum() {
         @JvmField
         val Temporary = defIgnoreCase(PgStorageClass::class, "temporary") { self ->
             self.persistence = "t"
-        }.alias(PgStorageClass::class, "t")
+        }.alias<PgStorageClass>("t")
+
+        /**
+         * When the storage class is unknown.
+         */
+        @JsStatic
+        @JvmField
+        val Unknown = defIgnoreCase(PgStorageClass::class, "unknown")
     }
 
     /**

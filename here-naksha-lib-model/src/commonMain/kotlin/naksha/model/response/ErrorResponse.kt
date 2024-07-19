@@ -13,4 +13,6 @@ import kotlin.jvm.JvmField
 @JsExport
 open class ErrorResponse(@JvmField val error: NakshaError) : Response() {
     override fun size(): Int = 0
+
+    override fun toString(): String = error.toString()
 }

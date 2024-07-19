@@ -1,6 +1,7 @@
 package naksha.psql.write
 
 import naksha.base.Platform.PlatformCompanion.currentMillis
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.NakshaCollectionProxy
 import naksha.model.TransactionCollectionInfoProxy
 import naksha.model.request.FeatureOp
@@ -13,10 +14,10 @@ import naksha.model.request.WriteRequest
 import naksha.model.Row
 import naksha.model.response.SuccessResponse
 import naksha.psql.PgSession
+import naksha.psql.PgPlatform
 import naksha.psql.PgUtil
-import naksha.psql.PgStatic
+import naksha.psql.PgUtil.PgUtilCompanion.partitionPosix
 import naksha.psql.write.NakshaRequestOp.Companion.mapToOperations
-import naksha.psql.PgStatic.DEBUG
 
 class SingleCollectionWriter(
     val collectionId: String,
@@ -81,9 +82,14 @@ class SingleCollectionWriter(
         val END_EXECUTION = currentMillis()
 
         val END = currentMillis()
-        if (DEBUG) {
-            println("[${writeRequest.ops.size} feature]: ${END - START}ms, loading: ${END_LOADING - START}ms, execution: ${END_EXECUTION - START_EXECUTION}ms, mapping: ${END_MAPPING!! - START_MAPPING!!}ms, preparing: ${END_PREPARE!! - START_PREPARE!!}ms")
-        }
+        logger.info("[{} feature]: {}ms, loading: {}ms, execution: {}ms, mapping: {}ms, preparing: {}ms",
+            writeRequest.ops.size,
+            END - START,
+            END_LOADING - START,
+            END_EXECUTION - START_EXECUTION,
+            END_MAPPING!! - START_MAPPING!!,
+            END_PREPARE!! - START_PREPARE!!
+        )
         return SuccessResponse(rows = plan.result)
     }
 
@@ -108,15 +114,16 @@ class SingleCollectionWriter(
                         is FeatureOp ->op.reqWrite.feature.proxy(NakshaCollectionProxy::class)
                         else -> throw RuntimeException("add support for WriteRow collection")
                     }
-                    PgStatic.collectionCreate(
-                        session.usePgConnection(),
-                        newCollection.storageClass,
-                        session.options.schema,
-                        schemaOid,
-                        op.id,
-                        newCollection.geoIndex,
-                        newCollection.partitions
-                    )
+// TODO: Fix me!!!
+//                    PgStatic.collectionCreate(
+//                        session.usePgConnection(),
+//                        newCollection.storageClass,
+//                        session.options.schema,
+//                        schemaOid,
+//                        op.id,
+//                        newCollection.geoIndex,
+//                        newCollection.partitions
+//                    )
                     plan.addCreate(op)
                 }
 
@@ -125,13 +132,15 @@ class SingleCollectionWriter(
                 }
 
                 XYZ_OP_DELETE -> {
-                    PgStatic.collectionDrop(session.usePgConnection(), op.id)
+                    // TODO: Fix me!!!
+                    //PgStatic.collectionDrop(session.usePgConnection(), op.id)
                     plan.addDelete(op, existingFeature)
                 }
 
                 XYZ_OP_PURGE -> {
                     if (existingFeature != null) {
-                        PgStatic.collectionDrop(session.usePgConnection(), op.id)
+                        // TODO: Fix me!!!
+                        //PgStatic.collectionDrop(session.usePgConnection(), op.id)
                     }
                     plan.addPurge(op, existingFeature, existingInDelFeatures[op.id])
                 }
@@ -146,16 +155,16 @@ class SingleCollectionWriter(
     private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?, autoPurge: Boolean): NakshaBulkLoaderPlan {
         val isCollectionPartitioned: Boolean = collectionConfig.hasPartitions()
         return if (isCollectionPartitioned && partition != null) {
-            if (DEBUG) println("Insert into a single partition #$partition (isCollectionPartitioned: ${isCollectionPartitioned})")
+            logger.info("Insert into a single partition #{} (isCollectionPartitioned: {})", partition, isCollectionPartitioned)
             NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(true, partition), session, isHistoryDisabled, autoPurge, minResult)
         } else {
-            if (DEBUG) println("Insert into a multiple partitions, therefore via HEAD (isCollectionPartitioned: ${isCollectionPartitioned})")
+            logger.info("Insert into a multiple partitions, therefore via HEAD (isCollectionPartitioned: {})", isCollectionPartitioned)
             NakshaBulkLoaderPlan(collectionId, getPartitionHeadQuoted(false, -1), session, isHistoryDisabled, autoPurge, minResult)
         }
     }
 
     private fun getPartitionHeadQuoted(isCollectionPartitioned: Boolean?, partitionKey: Int) =
-        if (isCollectionPartitioned == true) PgUtil.quoteIdent("${headCollectionId}\$p${PgStatic.PARTITION_ID[partitionKey]}") else
+        if (isCollectionPartitioned == true) PgUtil.quoteIdent("${headCollectionId}\$p${partitionPosix(partitionKey)}") else
             PgUtil.quoteIdent(collectionId)
 
     private fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: Row?, collectionConfig: NakshaCollectionProxy): Int {

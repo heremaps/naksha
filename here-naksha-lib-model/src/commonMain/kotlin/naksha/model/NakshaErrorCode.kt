@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class NakshaErrorCode : JsEnum() {
+open class NakshaErrorCode protected constructor() : JsEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun namespace(): KClass<out JsEnum> = NakshaErrorCode::class
 
@@ -27,14 +27,27 @@ open class NakshaErrorCode : JsEnum() {
         val STORAGE_ID_MISMATCH = def(NakshaErrorCode::class, "storageIdMismatch") {
             self -> self.defaultMessage = "Storage identifier does not match the provided expected one"
         }
+
         /**
-         * The storage is not initialized.
+         * A provided identifier is not allowed.
+         *
+         * <p>This will lead to an HTTP 400 Bad Request response.
          */
         @JsStatic
         @JvmField
-        val STORAGE_NOT_INITIALIZED = def(NakshaErrorCode::class, "StorageNotInitialized") {
-                self -> self.defaultMessage = "The storage has not been initialized yet"
+        val ILLEGAL_ID = def(NakshaErrorCode::class, "IllegalId") {
+            self -> self.defaultMessage = "The given identifier does not match '[a-z][a-z0-9_:-]{31}'"
         }
+
+        /**
+         * Returned when trying to create a collection that exists already.
+         */
+        @JsStatic
+        @JvmField
+        val COLLECTION_EXISTS = def(NakshaErrorCode::class, "collectionExists") {
+                self -> self.defaultMessage = "The collection with the given identifier exists already"
+        }
+
         /**
          * The collection accessed does not exist.
          */
@@ -43,6 +56,16 @@ open class NakshaErrorCode : JsEnum() {
         val COLLECTION_NOT_FOUND = def(NakshaErrorCode::class, "CollectionNotFound") {
             self -> self.defaultMessage = "No collection found"
         }
+
+        /**
+         * A specific partition was not found.
+         */
+        @JsStatic
+        @JvmField
+        val PARTITION_NOT_FOUND = def(NakshaErrorCode::class, "PartitionNotFound") {
+                self -> self.defaultMessage = "Partition not found"
+        }
+
         /**
          * An unexpected error (not further specified) happened while processing the request.
          *
@@ -53,6 +76,7 @@ open class NakshaErrorCode : JsEnum() {
         val EXCEPTION = def(NakshaErrorCode::class, "Exception") {
             self -> self.defaultMessage = "Unexpected exception occurred"
         }
+
         /**
          * An event that was sent to the connector failed, because the connector cannot process it.
          *
@@ -61,6 +85,7 @@ open class NakshaErrorCode : JsEnum() {
         @JsStatic
         @JvmField
         val NOT_IMPLEMENTED = def(NakshaErrorCode::class, "NotImplemented")
+
         /**
          * A conflict occurred when updating a feature.
          *
@@ -69,6 +94,7 @@ open class NakshaErrorCode : JsEnum() {
         @JsStatic
         @JvmField
         val CONFLICT = def(NakshaErrorCode::class, "Conflict")
+
         /**
          * Indicates an authorization error.
          *
@@ -77,6 +103,7 @@ open class NakshaErrorCode : JsEnum() {
         @JsStatic
         @JvmField
         val UNAUTHORIZED = def(NakshaErrorCode::class, "Unauthorized")
+
         /**
          * Indicates an authorization error.
          *
@@ -85,6 +112,7 @@ open class NakshaErrorCode : JsEnum() {
         @JsStatic
         @JvmField
         val FORBIDDEN = def(NakshaErrorCode::class, "Forbidden")
+
         /**
          * The connector cannot handle the request due to a processing limitation in an upstream service or a database.
          *
@@ -93,14 +121,16 @@ open class NakshaErrorCode : JsEnum() {
         @JsStatic
         @JvmField
         val TOO_MANY_REQUESTS = def(NakshaErrorCode::class, "TooManyRequests")
+
         /**
          * A provided argument is invalid or missing.
          *
-         * <p>This will lead to a HTTP 400 Bad Request response.
+         * <p>This will lead to an HTTP 400 Bad Request response.
          */
         @JsStatic
         @JvmField
         val ILLEGAL_ARGUMENT = def(NakshaErrorCode::class, "IllegalArgument")
+
         /**
          * Any service or remote function required to process the request was not reachable.
          *
@@ -109,6 +139,7 @@ open class NakshaErrorCode : JsEnum() {
         @JsStatic
         @JvmField
         val BAD_GATEWAY = def(NakshaErrorCode::class, "BadGateway")
+
         /**
          * The request was aborted due to a timeout.
          *
@@ -117,6 +148,7 @@ open class NakshaErrorCode : JsEnum() {
         @JsStatic
         @JvmField
         val TIMEOUT = def(NakshaErrorCode::class, "Timeout")
+
         /**
          * The request was aborted due to PayloadTooLarge.
          *
@@ -125,6 +157,7 @@ open class NakshaErrorCode : JsEnum() {
         @JsStatic
         @JvmField
         val PAYLOAD_TOO_LARGE = def(NakshaErrorCode::class, "PayloadTooLarge")
+
         /**
          * The requested feature was not available.
          *

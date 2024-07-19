@@ -82,9 +82,9 @@ data class Txn(val value: Int64) : Comparable<Txn> {
 
     /**
      * Translate the transaction number into a table postfix (currently only the year as "yyyy").
-     * @return The table postfix.
+     * @return the table postfix.
      */
-    fun historyPostfix(): String {
+    fun tablePostfix(): String {
         if (!this::_tablePostfix.isInitialized) _tablePostfix = "${year()}"
         return _tablePostfix
     }

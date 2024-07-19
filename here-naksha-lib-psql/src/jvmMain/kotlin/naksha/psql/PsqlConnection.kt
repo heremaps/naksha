@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.GZip
 import java.lang.ref.WeakReference
+import java.security.MessageDigest
 import java.sql.ResultSet
 import java.sql.Statement
 
@@ -21,16 +22,16 @@ class PsqlConnection internal constructor(
     options: PgOptions
 ) : PgConnection, AutoCloseable {
 
+    companion object PsqlConnectionCompanion {
+        private val md5 = ThreadLocal.withInitial { MessageDigest.getInstance("MD5") }
+    }
+
     override var options: PgOptions = options
         set(value) {
-            // TODO: Update when statement-timeout, lock-timeout or others are updated!
-            field = value
+            //field = value
+            //schemaInfo = null
+            TODO("Update when statement-timeout, lock-timeout or others are updated!")
         }
-
-    init {
-        // TODO: Set the statement- and lock-timeout. Do other initialization work!
-        jdbc.autoCommit = false
-    }
 
     /**
      * The weak-reference to this session.
@@ -49,20 +50,6 @@ class PsqlConnection internal constructor(
             check(c != null) { "Connection is closed" }
             return c
         }
-
-    private var dbInfo: PgInfo? = null
-
-    /**
-     * Returns general information about the database to which this API grants access.
-     */
-    override fun info(): PgInfo {
-        var dbInfo = this.dbInfo
-        if (dbInfo == null) {
-            dbInfo = PgInfo(this, options.schema)
-            this.dbInfo = dbInfo
-        }
-        return dbInfo
-    }
 
     /**
      * Execute an SQL query with the given arguments. The placeholder should be **$1** to **$n**.
@@ -84,20 +71,7 @@ class PsqlConnection internal constructor(
             stmt.execute()
             stmt
         }
-
-        var rs: ResultSet? = stmt.resultSet
-        // refer to getMoreResults() documentation to see how to detect end of result sets.
-        // iterate to last result set.
-        while (!(!stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT) && (stmt.updateCount == -1))) {
-            rs = stmt.resultSet
-        }
-        return if (rs != null) {
-            PsqlCursor(rs, true)
-        } else {
-            val cursor = PsqlCursor(stmt.updateCount)
-            stmt.close()
-            cursor
-        }
+        return PsqlCursor(stmt, true)
     }
 
     /**
@@ -107,6 +81,17 @@ class PsqlConnection internal constructor(
      * @return The prepared plan.
      */
     override fun prepare(sql: String, typeNames: Array<String>?): PgPlan = PsqlPlan(PsqlQuery(sql), jdbc)
+
+    override fun md5(bytes: ByteArray): ByteArray {
+        val md5 = md5.get()
+        md5.reset()
+        md5.update(bytes)
+        return md5.digest()
+    }
+
+    override fun md5(text: String): ByteArray {
+        return md5(text.toByteArray(Charsets.UTF_8))
+    }
 
     /**
      * Use this database connection to compress bytes using `gzip`. This requires a database connection for some implementations, for
@@ -126,6 +111,20 @@ class PsqlConnection internal constructor(
      * @throws UnsupportedOperationException if the platform does not support this operation.
      */
     override fun gunzip(compressed: ByteArray): ByteArray = GZip.gunzip(compressed)
+
+    /**
+     * Returns the partition number for the given amount of partitions.
+     * @param conn the connection to use for hashing.
+     * @param id the feature-id for which to return the partition-id.
+     * @param partitions the number of partitions (1 to 256).
+     * @return The partition number as value between 0 and part (exclusive).
+     */
+    override fun partitionNumber(conn: PgConnection, id: String, partitions: Int): Int {
+        require(partitions in 1..256) { "Invalid number of partitions, expect a value between 1 and 256, found: $partitions" }
+        // SQL: get_byte(digest(id,'md5'),0);
+        val hash = conn.md5(id)
+        return (hash[0].toInt() and 0xff) % partitions
+    }
 
     /**
      * Commit all changes done in the current transaction.
@@ -163,4 +162,6 @@ class PsqlConnection internal constructor(
             instance.connectionPool[id]?.session?.compareAndSet(weakRef, null)
         }
     }
+
+    override fun toString(): String = "${instance}#$id"
 }

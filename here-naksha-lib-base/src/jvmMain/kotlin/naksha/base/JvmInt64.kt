@@ -1,32 +1,33 @@
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.longToInt64
+
 /**
- * The JVM Int64 implementation. If an instance is needed use [Platform.longToInt64], otherwise create an instance and let the compiler
- * eliminate it.
+ * The JVM Int64 implementation. If an instance is needed use [Platform.longToInt64].
  */
-class JvmInt64(private val value: Long) : Number(), Int64 {
+class JvmInt64 internal constructor(internal val value: Long) : Number(), Int64 {
     @Suppress("NOTHING_TO_INLINE")
     private inline fun l(lo: Any?): Long = if (lo is Number) lo.toLong() else throw IllegalArgumentException("Number expected")
     @Suppress("NOTHING_TO_INLINE")
     private inline fun l(i: Int): Long = i.toLong()
 
     override fun unaryPlus(): Int64 = this
-    override fun unaryMinus(): Int64 = JvmInt64(-value)
-    override fun inc(): Int64 = JvmInt64(value + 1)
-    override fun dec(): Int64 = JvmInt64(value - 1)
-    override fun plus(other: Any): Int64 = JvmInt64(value + l(other))
-    override fun minus(other: Any): Int64 = JvmInt64(value - l(other))
-    override fun times(other: Any): Int64 = JvmInt64(value * l(other))
-    override fun div(other: Any): Int64 = JvmInt64(value / l(other))
-    override fun rem(other: Any): Int64 = JvmInt64(value % l(other))
+    override fun unaryMinus(): Int64 = longToInt64(-value)
+    override fun inc(): Int64 = longToInt64(value + 1)
+    override fun dec(): Int64 = longToInt64(value - 1)
+    override fun plus(other: Any): Int64 = longToInt64(value + l(other))
+    override fun minus(other: Any): Int64 = longToInt64(value - l(other))
+    override fun times(other: Any): Int64 = longToInt64(value * l(other))
+    override fun div(other: Any): Int64 = longToInt64(value / l(other))
+    override fun rem(other: Any): Int64 = longToInt64(value % l(other))
     override fun compareTo(other: Any?): Int = value.compareTo(l(other))
-    override fun shr(bits: Int): Int64 = JvmInt64(value shr bits)
-    override fun ushr(bits: Int): Int64 = JvmInt64(value ushr bits)
-    override fun shl(bits: Int): Int64 = JvmInt64(value shl bits)
-    override fun and(other: Int64): Int64 = JvmInt64(value and l(other))
-    override fun or(other: Int64): Int64 = JvmInt64(value or l(other))
-    override fun xor(other: Int64): Int64 = JvmInt64(value xor l(other))
-    override fun inv(): Int64 = JvmInt64(value.inv())
+    override fun shr(bits: Int): Int64 = longToInt64(value shr bits)
+    override fun ushr(bits: Int): Int64 = longToInt64(value ushr bits)
+    override fun shl(bits: Int): Int64 = longToInt64(value shl bits)
+    override fun and(other: Int64): Int64 = longToInt64(value and l(other))
+    override fun or(other: Int64): Int64 = longToInt64(value or l(other))
+    override fun xor(other: Int64): Int64 = longToInt64(value xor l(other))
+    override fun inv(): Int64 = longToInt64(value.inv())
     override fun toByte(): Byte = value.toByte()
     override fun toShort(): Short = value.toShort()
     override fun toInt(): Int = value.toInt()

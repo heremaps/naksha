@@ -18,7 +18,7 @@ import kotlin.js.JsExport
 abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
 
     /**
-     * The reader used to read from the structure.
+     * The decoder used to read from the structure.
      */
     val reader = JbDecoder()
 

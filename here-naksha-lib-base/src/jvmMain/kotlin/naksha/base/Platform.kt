@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import net.jpountz.lz4.LZ4Factory
-import org.slf4j.LoggerFactory
 import sun.misc.Unsafe
 import java.text.Normalizer
 import java.util.concurrent.ConcurrentHashMap
@@ -101,6 +100,12 @@ actual class Platform {
          */
         @JvmField
         internal val int64Cache = Array(2048) { JvmInt64(((it shl 21) shr 21).toLong()) }
+
+        /**
+         * A simple hash cache, must have a size of 2^n.
+         */
+        @JvmStatic
+        private val int64ValueCache = arrayOfNulls<JvmInt64>(1 shl 8) // 256 * 8 = 1kb
 
         /**
          * The cache for all declared symbols.
@@ -219,7 +224,13 @@ actual class Platform {
         actual fun newMap(vararg entries: Any?): PlatformMap = JvmMap(*entries)
 
         @JvmStatic
-        actual fun <K : Any, V : Any> newCMap(): CMap<K, V> = JvmCMap()
+        actual fun <K : Any, V : Any> newAtomicMap(): AtomicMap<K, V> = JvmAtomicMap()
+
+        @JvmStatic
+        actual fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R> = JvmAtomicRef(startValue)
+
+        @JvmStatic
+        actual fun newAtomicInt(startValue: Int): AtomicInt = JvmAtomicInt(startValue)
 
         @JvmStatic
         actual fun newList(vararg entries: Any?): PlatformList = JvmList(*entries)
@@ -290,7 +301,15 @@ actual class Platform {
             if (value >= -1024 && value < 1024) return int64Cache[(value.toInt() shl 21) ushr 21]
             if (value == INT64_MAX_VALUE.toLong()) return INT64_MAX_VALUE
             if (value == INT64_MIN_VALUE.toLong()) return INT64_MIN_VALUE
-            return JvmInt64(value)
+            // This is a very simple hash-based cache, it is helpful for example for currentMillis.
+            val cache = this.int64ValueCache
+            val cacheMask = cache.size - 1
+            val i = (value.toInt() xor (value ushr 32).toInt()) and cacheMask
+            var instance = cache[i]
+            if (instance != null && instance.value == value) return instance
+            instance = JvmInt64(value)
+            cache[i] = instance
+            return instance
         }
 
         @JvmStatic
@@ -511,20 +530,20 @@ actual class Platform {
          * @return The current epoch milliseconds.
          */
         @JvmStatic
-        actual fun currentMillis(): Int64 = JvmInt64(System.currentTimeMillis())
+        actual fun currentMillis(): Int64 = longToInt64(System.currentTimeMillis())
 
         /**
          * Returns the current epoch microseconds.
          * @return current epoch microseconds.
          */
         @JvmStatic
-        actual fun currentMicros(): Int64 = JvmInt64(epochMicros + ((System.nanoTime() - startNanos) / 1000))
+        actual fun currentMicros(): Int64 = longToInt64(epochMicros + ((System.nanoTime() - startNanos) / 1000))
 
         /**
          * Returns the current epoch nanoseconds.
          * @return current epoch nanoseconds.
          */
-        actual fun currentNanos(): Int64 = JvmInt64(epochNanos + (System.nanoTime() - startNanos))
+        actual fun currentNanos(): Int64 = longToInt64(epochNanos + (System.nanoTime() - startNanos))
 
         /**
          * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).

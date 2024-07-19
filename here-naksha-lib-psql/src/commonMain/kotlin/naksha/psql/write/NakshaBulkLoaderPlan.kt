@@ -32,6 +32,7 @@ import naksha.psql.COL_TYPE
 import naksha.psql.COL_UID
 import naksha.psql.COL_UPDATE_AT
 import naksha.psql.COL_VERSION
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.reflect.KFunction0
 
 internal class NakshaBulkLoaderPlan(
@@ -45,8 +46,8 @@ internal class NakshaBulkLoaderPlan(
 
     private val headCollectionId = session.getBaseCollectionId(collectionId)
     private val delCollectionId = "${headCollectionId}\$del"
-    private val delCollectionIdQuoted = PgUtil.quoteIdent(delCollectionId)
-    private val hstCollectionIdQuoted = PgUtil.quoteIdent("${headCollectionId}\$hst")
+    private val delCollectionIdQuoted = quoteIdent(delCollectionId)
+    private val hstCollectionIdQuoted = quoteIdent("${headCollectionId}\$hst")
 
     internal val featureIdsToDeleteFromDel = mutableListOf<String>()
     internal val featuresToPurgeFromDel = mutableListOf<String>()
