@@ -1,7 +1,5 @@
 package naksha.psql
 
-import naksha.model.NakshaErrorCode
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.EXCEPTION
 import naksha.model.NakshaErrorCode.StorageErrorCompanion.PARTITION_NOT_FOUND
 import naksha.psql.PgUtil.PgUtilCompanion.partitionNumber
 import kotlin.js.JsExport
@@ -63,5 +61,23 @@ open class PgHead protected constructor(
     override fun create(conn: PgConnection) {
         super.create(conn)
         for (partition in partitions) partition.create(conn)
+    }
+
+    override fun addIndex(conn: PgConnection, index: PgIndex) {
+        if (this.partitionByColumn != null) {
+            for (partition in partitions) partition.addIndex(conn, index)
+        } else {
+            super.addIndex(conn, index)
+        }
+        if (index !in indices) indices += index
+    }
+
+    override fun dropIndex(conn: PgConnection, index: PgIndex) {
+        if (this.partitionByColumn != null) {
+            for (partition in partitions) partition.dropIndex(conn, index)
+        } else {
+            super.dropIndex(conn, index)
+        }
+        if (index in indices) indices -= index
     }
 }

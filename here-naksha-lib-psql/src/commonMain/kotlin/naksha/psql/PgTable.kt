@@ -244,7 +244,7 @@ open class PgTable(
     /**
      * All existing and declared indices.
      */
-    var indices: List<PgIndex>? = null
+    var indices: List<PgIndex> = emptyList()
         internal set
 
     /**
@@ -264,12 +264,28 @@ open class PgTable(
      */
     internal open fun create(conn: PgConnection) = conn.execute(CREATE_SQL).close()
 
-    fun addIndex(index: PgIndex) {
-        // TODO: "Implement me!"
+    /**
+     * Adds the given index to the table and all partitions.
+     * @param conn the connection to use to execute the creation.
+     * @param index the index to add.
+     */
+    open fun addIndex(conn: PgConnection, index: PgIndex) {
+        if (!indices.contains(index)) {
+            index.create(conn, this)
+            indices = indices + index
+        }
     }
 
-    fun dropIndex(index: PgIndex) {
-        // TODO: "Implement me!"
+    /**
+     * Removes the given index from the table and all partitions.
+     * @param conn the connection to use to execute the removal.
+     * @param index the index to remove.
+     */
+    open fun dropIndex(conn: PgConnection, index: PgIndex) {
+        if (indices.contains(index)) {
+            index.drop(conn, this)
+            indices = indices - index
+        }
     }
 }
 

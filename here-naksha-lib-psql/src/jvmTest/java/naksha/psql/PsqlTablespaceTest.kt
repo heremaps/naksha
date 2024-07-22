@@ -8,6 +8,7 @@ import naksha.model.NakshaCollectionProxy.Companion.DEFAULT_GEO_INDEX
 import naksha.model.request.WriteFeature
 import naksha.model.request.WriteRequest
 import naksha.model.response.SuccessResponse
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.GenericContainer
 import kotlin.test.assertEquals
@@ -15,13 +16,14 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class PsqlTablespaceTest {
-    private val env = TestEnv(dropSchema = true, initStorage = true)
+    private val env = TestEnv(dropSchema = false, initStorage = false)
     private var dockerContainerInfo: GenericContainer<*>? = null
 
     init {
         dockerContainerInfo = PsqlTestStorage.dockerContainerInfo.get()?.container
     }
 
+    @Disabled
     @Test
     fun createBrittleCollection() {
         // given

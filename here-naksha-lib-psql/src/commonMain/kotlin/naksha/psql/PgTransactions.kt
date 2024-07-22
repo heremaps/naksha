@@ -32,4 +32,21 @@ class PgTransactions(c: PgCollection) : PgHead(c, c.id, PgStorageClass.Consisten
         super.create(conn)
         for (entry in years) entry.value.create(conn)
     }
+
+    fun addYear(conn: PgConnection, year: Int) {
+        if (year !in years) {
+            val yearTable = PgTransactionsYear(this, year)
+            yearTable.create(conn)
+            years[year] = yearTable
+            for (index in indices) yearTable.addIndex(conn, index)
+        }
+    }
+
+    override fun addIndex(conn: PgConnection, index: PgIndex) {
+        for (entry in years) entry.value.addIndex(conn, index)
+    }
+
+    override fun dropIndex(conn: PgConnection, index: PgIndex) {
+        for (entry in years) entry.value.dropIndex(conn, index)
+    }
 }

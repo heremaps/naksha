@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Epoch
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
@@ -145,6 +146,7 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
      * @param storedDeleted if deleted features should be stored, creating the corresponding deletion partitions.
      * @param storeMeta if the meta-table should be created, which stores internal meta-data. Without this table, no statistics can be
      * acquired and collected.
+     * @param indices the indices to add to all tables (the unique indices are always added by default).
      * @return either the existing collection or the created one.
      */
     open fun create(
@@ -153,7 +155,8 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
         storageClass: PgStorageClass = PgStorageClass.Consistent,
         storeHistory: Boolean = true,
         storedDeleted: Boolean = true,
-        storeMeta: Boolean = true
+        storeMeta: Boolean = true,
+        indices: List<PgIndex> = emptyList()
     ): PgCollection {
         check(!PgTable.isInternal(id)) {
             throwStorageException(ILLEGAL_ARGUMENT, message = "It is not allowed to modify internal tables", id = id)
@@ -162,7 +165,7 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
         check(partitions in 1..256) {
             throwStorageException(ILLEGAL_ARGUMENT, "Invalid amount of partitions requested, must be 0 to 256, was: $partitions")
         }
-        return create_internal(connection, partitions, storageClass, storeHistory, storedDeleted, storeMeta)
+        return create_internal(connection, partitions, storageClass, storeHistory, storedDeleted, storeMeta, indices)
     }
 
     internal fun create_internal(
@@ -171,26 +174,61 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
         storageClass: PgStorageClass,
         storeHistory: Boolean,
         storedDeleted: Boolean,
-        storeMeta: Boolean
-    ) : PgCollection {
+        storeMeta: Boolean,
+        indices: List<PgIndex>
+    ): PgCollection {
         val s = schema.storage
         val conn = connection ?: s.newConnection(s.defaultOptions.copy(schema = schema.name, useMaster = true, readOnly = false))
         try {
-            val head = if (this.id == NakshaTransactions.ID) PgTransactions(this) else PgHead(this, storageClass, 32)
-            val deleted = if (head !is PgTransactions && storedDeleted) PgDeleted(head) else null
-            val history = if (head !is PgTransactions && storeHistory) PgHistory(head) else null
-            val meta = if (head !is PgTransactions && storeMeta) PgMeta(head) else null
+            val NOW = Epoch()
+            if (this.id == NakshaTransactions.ID) {
+                val txn = PgTransactions(this)
+                txn.create(conn)
+                txn.addYear(conn, NOW.year)
+                txn.addYear(conn, NOW.year + 1)
+
+                txn.addIndex(conn, PgIndex.txn_unique)
+                txn.addIndex(conn, PgIndex.tags_id_txn_uid)
+                this._head = txn
+                this.deleted = null
+                this.history = null
+                this.meta = null
+                return this
+            }
+            val head = PgHead(this, storageClass, partitions)
+            val deleted = if (storedDeleted) PgDeleted(head) else null
+            val history = if (storeHistory) PgHistory(head) else null
+            val meta = if (storeMeta) PgMeta(head) else null
 
             head.create(conn)
-            deleted?.create(conn)
-            history?.create(conn)
-            meta?.create(conn)
+            head.addIndex(conn, PgIndex.id_unique)
+            for (index in indices) head.addIndex(conn, index)
+
+            if (deleted != null) {
+                deleted.create(conn)
+                head.addIndex(conn, PgIndex.id_unique)
+                for (index in indices) head.addIndex(conn, index)
+            }
+            if (history != null) {
+                history.create(conn)
+                history.addYear(conn, NOW.year)
+                history.addYear(conn, NOW.year + 1)
+                history.addIndex(conn, PgIndex.id_txn_uid_unique)
+                for (index in indices) {
+                    // We do not need this index, because it would only duplicate the stronger unique one!
+                    if (index != PgIndex.id_txn_uid) history.addIndex(conn, index)
+                }
+            }
+            if (meta != null) {
+                meta.create(conn)
+                meta.addIndex(conn, PgIndex.id_unique)
+                for (index in indices) meta.addIndex(conn, index)
+            }
 
             this._head = head
             this.deleted = deleted
             this.history = history
             this.meta = meta
-            // TODO: Create all indices
         } finally {
             if (connection == null) {
                 conn.commit()
@@ -258,11 +296,11 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
     internal fun drop_internal(conn: PgConnection) {
         var SQL = "DROP TABLE IF EXISTS ${head.quotedName} CASCADE;"
         val history = this.history
-        if (history != null) SQL+= "DROP TABLE IF EXISTS ${history.quotedName} CASCADE;"
+        if (history != null) SQL += "DROP TABLE IF EXISTS ${history.quotedName} CASCADE;"
         val deleted = this.deleted
-        if (deleted != null) SQL+= "DROP TABLE IF EXISTS ${deleted.quotedName} CASCADE;"
+        if (deleted != null) SQL += "DROP TABLE IF EXISTS ${deleted.quotedName} CASCADE;"
         val meta = this.meta
-        if (meta != null) SQL+= "DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;"
+        if (meta != null) SQL += "DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;"
         logger.info("Drop collection {}: {}", id, SQL)
         conn.execute(SQL).close()
     }

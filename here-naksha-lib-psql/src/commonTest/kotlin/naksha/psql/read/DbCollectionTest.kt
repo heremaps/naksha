@@ -16,7 +16,7 @@ import naksha.psql.TestEnv
 import kotlin.test.*
 
 class DbCollectionTest {
-    private val env = TestEnv(dropSchema = true, initStorage = true)
+    private val env = TestEnv(dropSchema = false, initStorage = false)
 
     protected val collectionId = "plv8feature"
 

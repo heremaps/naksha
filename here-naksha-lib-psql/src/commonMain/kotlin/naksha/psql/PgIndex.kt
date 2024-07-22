@@ -2,7 +2,6 @@ package naksha.psql
 
 import naksha.base.JsEnum
 import naksha.base.fn.Fx2
-import naksha.base.fn.Fx3
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
 import naksha.psql.PgColumn.PgColumnCompanion.txn as c_txn
@@ -49,22 +48,52 @@ import kotlin.reflect.KClass
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate")
 @JsExport
 open class PgIndex : JsEnum() {
-    protected fun sql(using: String, table: PgTable, unique: Boolean, vola: Boolean): String = """
+    protected fun sql(using: String, table: PgTable, unique: Boolean, addFillFactor: Boolean): String = """
 CREATE ${if (unique) "UNIQUE " else ""}INDEX IF NOT EXISTS ${quoteIdent(id(table))} ON ${table.quotedName}
 USING $using
-WITH (fillfactor=${if (vola) "65" else "100"}) ${table.TABLESPACE};"""
+${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)" else ""} ${table.TABLESPACE};"""
 
     companion object PgIndexCompanion {
         /**
-         * A unique index above the [PgColumn.id] column.
+         * A unique index above the [PgColumn.id] column, only used in [HEAD][PgHead] tables.
          */
-        val id = def(PgIndex::class, "id") { self ->
+        val id_unique = def(PgIndex::class, "id_unique") { self ->
             self.columns = listOf(c_id)
-            self.createFn = Fx3 { conn, table, vola ->
+            self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
                         """btree ($c_id text_pattern_ops DESC)""",
-                        table, true, vola
+                        table, unique = true, addFillFactor = true
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * A unique index above the [PgColumn.txn] column, only used in the [TRANSACTIONS][PgTransactions] table.
+         */
+        val txn_unique = def(PgIndex::class, "txn_unique") { self ->
+            self.columns = listOf(c_txn)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """btree ($c_txn DESC)""",
+                        table, unique = true, addFillFactor = true
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * Unique index above the [PgColumn.id], [PgColumn.txn] and [PgColumn.uid] columns. This is only applied in history.
+         */
+        val id_txn_uid_unique = def(PgIndex::class, "id_txn_uid_unique") { self ->
+            self.columns = listOf(c_id, c_txn, c_uid)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
+                        table, unique = true, addFillFactor = true
                     )
                 ).close()
             }
@@ -75,11 +104,11 @@ WITH (fillfactor=${if (vola) "65" else "100"}) ${table.TABLESPACE};"""
          */
         val id_txn_uid = def(PgIndex::class, "id_txn_uid") { self ->
             self.columns = listOf(c_id, c_txn, c_uid)
-            self.createFn = Fx3 { conn, table, vola ->
+            self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
                         """btree ($c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
-                        table, false, vola
+                        table, unique = false, addFillFactor = true
                     )
                 ).close()
             }
@@ -90,11 +119,11 @@ WITH (fillfactor=${if (vola) "65" else "100"}) ${table.TABLESPACE};"""
          */
         val gist_geo_id_txn_uid = def(PgIndex::class, "gist_geo_id_txn_uid") { self ->
             self.columns = listOf(c_geo, c_id, c_txn, c_uid)
-            self.createFn = Fx3 { conn, table, vola ->
+            self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
                         """gist (naksha_geometry($c_flags,$c_geo), $c_id, $c_txn, $c_uid)""",
-                        table, false, vola
+                        table, unique = false, addFillFactor = true
                     )
                 ).close()
             }
@@ -105,11 +134,11 @@ WITH (fillfactor=${if (vola) "65" else "100"}) ${table.TABLESPACE};"""
          */
         val spgist_geo_id_txn_uid = def(PgIndex::class, "spgist_geo_id_txn_uid") { self ->
             self.columns = listOf(PgColumn.geo, PgColumn.id, PgColumn.txn, PgColumn.uid)
-            self.createFn = Fx3 { conn, table, vola ->
+            self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
                         """sp-gist (naksha_geometry($c_flags,$c_geo), $c_id, $c_txn, $c_uid)""",
-                        table, false, vola
+                        table, unique = false, addFillFactor = true
                     )
                 ).close()
             }
@@ -120,11 +149,11 @@ WITH (fillfactor=${if (vola) "65" else "100"}) ${table.TABLESPACE};"""
          */
         val tags_id_txn_uid = def(PgIndex::class, "tags_id_txn_uid") { self ->
             self.columns = listOf(c_tags, c_id, c_txn, c_uid)
-            self.createFn = Fx3 { conn, table, vola ->
+            self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
                         """gin (naksha_tags($c_flags,$c_tags), $c_id, $c_txn, $c_uid)""",
-                        table, false, vola
+                        table, unique = false, addFillFactor = false
                     )
                 ).close()
             }
@@ -135,11 +164,11 @@ WITH (fillfactor=${if (vola) "65" else "100"}) ${table.TABLESPACE};"""
          */
         val geo_grid_id_txn_uid = def(PgIndex::class, "geo_grid_id_txn_uid") { self ->
             self.columns = listOf(c_geo_grid, c_id, c_txn, c_uid)
-            self.createFn = Fx3 { conn, table, vola ->
+            self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
                         """btree ($c_geo_grid DESC, $c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
-                        table, false, vola
+                        table, unique = false, addFillFactor = true
                     )
                 ).close()
             }
@@ -150,11 +179,11 @@ WITH (fillfactor=${if (vola) "65" else "100"}) ${table.TABLESPACE};"""
          */
         val app_id_updatedAt_id_txn_uid = def(PgIndex::class, "app_id_updatedAt_id_txn_uid") { self ->
             self.columns = listOf(c_app_id, c_updated_at, c_id, c_txn, c_uid)
-            self.createFn = Fx3 { conn, table, vola ->
+            self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
                         """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
-                        table, false, vola
+                        table, unique = false, addFillFactor = true
                     )
                 ).close()
             }
@@ -165,11 +194,11 @@ WITH (fillfactor=${if (vola) "65" else "100"}) ${table.TABLESPACE};"""
          */
         val author_ts_id_txn_uid = def(PgIndex::class, "author_ts_id_txn_uid") { self ->
             self.columns = listOf(c_author, c_author_ts, c_id, c_txn, c_uid)
-            self.createFn = Fx3 { conn, table, vola ->
+            self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
                         """btree ($c_author text_pattern_ops DESC, $c_author_ts DESC, $c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
-                        table, false, vola
+                        table, unique = false, addFillFactor = true
                     )
                 ).close()
             }
@@ -202,11 +231,11 @@ WITH (fillfactor=${if (vola) "65" else "100"}) ${table.TABLESPACE};"""
     var columns: List<PgColumn> = emptyList()
         private set
 
-    protected var createFn: Fx3<PgConnection, PgTable, Boolean>? = null
-    internal fun create(conn: PgConnection, table: PgTable, vola: Boolean) {
+    protected var createFn: Fx2<PgConnection, PgTable>? = null
+    internal fun create(conn: PgConnection, table: PgTable) {
         val createFn = this.createFn
         check(createFn != null) { "This index does not support `create` operation" }
-        return createFn.call(conn, table, vola)
+        return createFn.call(conn, table)
     }
 
     protected var dropFn: Fx2<PgConnection, PgTable>? = null

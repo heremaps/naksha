@@ -42,4 +42,20 @@ class PgHistoryYear(val history: PgHistory, year: Int) : PgTable(
         super.create(conn)
         for (partition in partitions) partition.create(conn)
     }
+
+    override fun addIndex(conn: PgConnection, index: PgIndex) {
+        if (this.partitionByColumn != null) {
+            for (partition in partitions) partition.addIndex(conn, index)
+        } else {
+            super.addIndex(conn, index)
+        }
+    }
+
+    override fun dropIndex(conn: PgConnection, index: PgIndex) {
+        if (this.partitionByColumn != null) {
+            for (partition in partitions) partition.dropIndex(conn, index)
+        } else {
+            super.dropIndex(conn, index)
+        }
+    }
 }
