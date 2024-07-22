@@ -1,7 +1,7 @@
 package com.here.naksha.lib.core.util;
 
 import com.here.naksha.lib.core.common.TestUtil;
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -128,7 +128,7 @@ class PropertyPathUtilTest {
     ) throws JSONException {
         // Given: Input Feature content
         final String featureJson = TestUtil.loadFileOrFail(TEST_DATA_FOLDER, inputFilePath); // "JsonTest/Input.json");
-        final XyzFeature feature = TestUtil.parseJson(featureJson, XyzFeature.class);
+        final NakshaFeatureProxy feature = TestUtil.parseJson(featureJson, NakshaFeatureProxy.class);
 
         // Given: Expected Feature content
         final String expectedJsonData = TestUtil.loadFileOrFail(TEST_DATA_FOLDER, expectedFilePath); // "JsonTest/Expected.json");

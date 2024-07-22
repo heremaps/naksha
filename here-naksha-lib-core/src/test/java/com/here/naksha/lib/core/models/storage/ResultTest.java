@@ -23,8 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.lib.core.SessionTest;
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import naksha.model.XyzFeature;
 import org.junit.jupiter.api.Test;
 
 public class ResultTest extends SessionTest {

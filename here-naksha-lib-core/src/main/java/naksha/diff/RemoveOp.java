@@ -21,7 +21,7 @@ package naksha.diff;
 /** A remove. */
 public class RemoveOp extends PrimitiveDiff {
 
-  RemoveOp(final Object value) {
+  public RemoveOp(final Object value) {
     super(value, null);
   }
 }

@@ -20,7 +20,6 @@ package com.here.naksha.lib.core.util.diff;
 
 import naksha.diff.*;
 import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.JsonObject;
@@ -30,6 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -52,18 +52,18 @@ class PatcherTest {
 
   @Test
   void basic() {
-    final XyzFeature f1 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), XyzFeature.class);
+    final NakshaFeatureProxy f1 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), NakshaFeatureProxy.class);
     assertNotNull(f1);
 
-    final XyzFeature f2 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), XyzFeature.class);
+    final NakshaFeatureProxy f2 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), NakshaFeatureProxy.class);
     assertNotNull(f2);
 
     final Difference diff = Patcher.getDifference(f1, f2);
     assertNotNull(diff);
 
-    final XyzFeature f1_patched_to_f2 = Patcher.patch(f1, diff);
+    final NakshaFeatureProxy f1_patched_to_f2 = Patcher.patch(f1, diff);
     assertNotNull(f1_patched_to_f2);
 
     final Difference newDiff = Patcher.getDifference(f1_patched_to_f2, f2);
@@ -86,32 +86,32 @@ class PatcherTest {
     // Assert outermost layer
     final MapDiff mapDiff34 = (MapDiff) diff34;
     // TODO if possible to serialize Difference, simply compare the serialized Difference object with test file content
-    assertTrue(mapDiff34.get("isAdded") instanceof InsertOp);
-    assertTrue(mapDiff34.get("willBeUpdated") instanceof UpdateOp);
-    assertTrue(mapDiff34.get("firstToBeDeleted") instanceof RemoveOp);
-    assertTrue(mapDiff34.get("map") instanceof MapDiff);
-    assertTrue(mapDiff34.get("array") instanceof ListDiff);
-    assertTrue(mapDiff34.get("speedLimit") instanceof RemoveOp);
+      assertInstanceOf(InsertOp.class, mapDiff34.get("isAdded"));
+      assertInstanceOf(UpdateOp.class, mapDiff34.get("willBeUpdated"));
+      assertInstanceOf(RemoveOp.class, mapDiff34.get("firstToBeDeleted"));
+      assertInstanceOf(MapDiff.class, mapDiff34.get("map"));
+      assertInstanceOf(ListDiff.class, mapDiff34.get("array"));
+      assertInstanceOf(RemoveOp.class, mapDiff34.get("speedLimit"));
 
     // Assert nested layer
     final MapDiff nestedMapDiff34 = (MapDiff) mapDiff34.get("map");
     // "mapID" is retained, does not appear in nestedMapDiff34
-    assertTrue(nestedMapDiff34.get("isAdded") instanceof InsertOp);
-    assertTrue(nestedMapDiff34.get("willBeUpdated") instanceof UpdateOp);
-    assertTrue(nestedMapDiff34.get("willBeDeleted") instanceof RemoveOp);
+      assertInstanceOf(InsertOp.class, nestedMapDiff34.get("isAdded"));
+      assertInstanceOf(UpdateOp.class, nestedMapDiff34.get("willBeUpdated"));
+      assertInstanceOf(RemoveOp.class, nestedMapDiff34.get("willBeDeleted"));
 
     // Assert nested array
     final ListDiff nestedArrayDiff34 = (ListDiff) mapDiff34.get("array");
-    assertTrue(nestedArrayDiff34.get(1) instanceof UpdateOp);
-    assertTrue(nestedArrayDiff34.get(2) instanceof MapDiff);
+      assertInstanceOf(UpdateOp.class, nestedArrayDiff34.get(1));
+      assertInstanceOf(MapDiff.class, nestedArrayDiff34.get(2));
     // "retainedElement" is retained, does not appear in nestedMapDiff34
     // InsertOp case for array (ListDiff) is addressed in the test testCompareSameArrayDifferentOrder()
-    assertTrue(nestedArrayDiff34.get(3) instanceof RemoveOp);
+      assertInstanceOf(RemoveOp.class, nestedArrayDiff34.get(3));
 
     // Some extra nested JSON object in array assertions
-    assertTrue(((MapDiff) nestedArrayDiff34.get(2)).get("isAddedProperty") instanceof InsertOp);
-    assertTrue(((MapDiff) nestedArrayDiff34.get(2)).get("nestedShouldBeUpdated") instanceof UpdateOp);
-    assertTrue(((MapDiff) nestedArrayDiff34.get(2)).get("willBeDeletedProperty") instanceof RemoveOp);
+      assertInstanceOf(InsertOp.class, ((MapDiff) nestedArrayDiff34.get(2)).get("isAddedProperty"));
+      assertInstanceOf(UpdateOp.class, ((MapDiff) nestedArrayDiff34.get(2)).get("nestedShouldBeUpdated"));
+      assertInstanceOf(RemoveOp.class, ((MapDiff) nestedArrayDiff34.get(2)).get("willBeDeletedProperty"));
 
     // Modify the whole difference to get rid of all RemoveOp
     Difference newDiff34 = removeAllRemoveOp(mapDiff34);
@@ -190,12 +190,12 @@ class PatcherTest {
 
   @Test
   void testIgnoreAll() {
-    final XyzFeature f1 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), XyzFeature.class);
+    final NakshaFeatureProxy f1 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), NakshaFeatureProxy.class);
     assertNotNull(f1);
 
-    final XyzFeature f2 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), XyzFeature.class);
+    final NakshaFeatureProxy f2 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), NakshaFeatureProxy.class);
     assertNotNull(f2);
 
     final Difference diff = Patcher.getDifference(f1, f2, PatcherTest::ignoreAll);
@@ -219,12 +219,12 @@ class PatcherTest {
 
   @Test
   void testXyzNamespace() {
-    final XyzFeature f1 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), XyzFeature.class);
+    final NakshaFeatureProxy f1 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), NakshaFeatureProxy.class);
     assertNotNull(f1);
 
-    final XyzFeature f2 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), XyzFeature.class);
+    final NakshaFeatureProxy f2 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), NakshaFeatureProxy.class);
     assertNotNull(f2);
 
     final Difference rawDiff = Patcher.getDifference(f1, f2, PatcherTest::ignoreXyzProps);

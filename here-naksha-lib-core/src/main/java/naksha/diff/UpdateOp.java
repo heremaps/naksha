@@ -21,7 +21,7 @@ package naksha.diff;
 /** An update. */
 public class UpdateOp extends PrimitiveDiff {
 
-  UpdateOp(Object oldValue, Object newValue) {
+  public UpdateOp(Object oldValue, Object newValue) {
     super(oldValue, newValue);
   }
 }
