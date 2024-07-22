@@ -19,7 +19,7 @@
 -- PARALLEL RESTRICTED indicates that the function can be executed in parallel mode, but
 --   the execution is restricted to parallel group leader.
 -- PARALLEL SAFE indicates that the function is safe to run in parallel mode without restriction.
-SET SESSION search_path TO "${schema}", topology, hint_plan, public;
+SET SESSION search_path TO ${schemaIdent}, topology, hint_plan, public;
 
 -- Returns the packed Naksha extension version: 16 bit major, 16 bit minor, 16 bit revision, 8 bit pre-release tag, 8 bit pre-release version.
 CREATE OR REPLACE FUNCTION naksha_version() RETURNS int8
@@ -36,7 +36,7 @@ LANGUAGE 'plpgsql'
 IMMUTABLE
 PARALLEL SAFE
 AS $$ BEGIN
-  RETURN '${storage_id}';
+  RETURN ${storageIdLiteral};
 END $$;
 
 -- Returns the schema of this storage, this is created when the Naksha extension is installed and never changes.
@@ -45,7 +45,7 @@ LANGUAGE 'plpgsql'
 IMMUTABLE
 PARALLEL SAFE
 AS $$ BEGIN
-  RETURN '${schema}';
+  RETURN ${schemaLiteral};
 END $$;
 
 CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, app_id text, author text)
@@ -497,6 +497,16 @@ AS $$
   let xyzTags = new jb.XyzTags();
   xyzTags.mapBytes(tags);
   return xyzTags.tagsMap();
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_tags(flags int, tags bytea) RETURNS jsonb
+LANGUAGE 'plv8'
+IMMUTABLE
+PARALLEL SAFE
+SET search_path FROM CURRENT
+AS $$
+  // TODO: Implement me!
+  return {};
 $$;
 
 CREATE OR REPLACE FUNCTION jsonb_to_tags(tags_json jsonb) RETURNS bytea

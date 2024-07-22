@@ -6,6 +6,14 @@ import naksha.model.NakshaError
 import naksha.model.NakshaErrorCode.StorageErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.NakshaVersion
 import naksha.model.StorageException
+import naksha.psql.PgIndex.PgIndexCompanion.app_id_updatedAt_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.author_ts_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.geo_grid_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.gist_geo_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.tags_id_txn_uid
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 
 /**
  * Information about the database and connection, that need only to be queried ones per session.
@@ -175,23 +183,43 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 beautify = false,
                 autoload = true
             )
+            logger.info("Installation of modules done, install naksha.sql ...")
+            executeSqlFromResource(conn, "/naksha.sql", replacements = mapOf(
+                "schemaIdent" to quoteIdent(name),
+                "schemaLiteral" to quoteLiteral(name),
+                "version" to (version.toLong()).toString(),
+                "storageIdLiteral" to quoteLiteral(storage_id),
+            ))
+
             logger.info("Installation done, create transaction sequence ...")
             conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64}").close()
             logger.info("Create internal collections: transactions, collections, and dictionaries")
-            transactions().create_internal(conn, 0, PgStorageClass.Consistent,
+            transactions().create_internal(
+                conn, 0, PgStorageClass.Consistent,
                 storeHistory = false,
                 storedDeleted = false,
-                storeMeta = false
+                storeMeta = false,
+                indices = emptyList()
             )
-            collections().create_internal(conn, 0, PgStorageClass.Consistent,
+            collections().create_internal(
+                conn, 0, PgStorageClass.Consistent,
                 storeHistory = true,
                 storedDeleted = true,
-                storeMeta = true
+                storeMeta = true,
+                indices = listOf(
+                    id_txn_uid,
+                    tags_id_txn_uid
+                )
             )
-            dictionaries().create_internal(conn, 0, PgStorageClass.Consistent,
+            dictionaries().create_internal(
+                conn, 0, PgStorageClass.Consistent,
                 storeHistory = true,
                 storedDeleted = true,
-                storeMeta = true
+                storeMeta = true,
+                indices = listOf(
+                    id_txn_uid,
+                    tags_id_txn_uid
+                )
             )
             conn.commit()
             return storage_id
