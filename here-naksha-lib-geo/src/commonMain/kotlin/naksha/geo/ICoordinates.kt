@@ -7,4 +7,6 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-interface ICoordinates
+interface ICoordinates {
+    fun calculateBBox(): BoundingBoxProxy
+}
