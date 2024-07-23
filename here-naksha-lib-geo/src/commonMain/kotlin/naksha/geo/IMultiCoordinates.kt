@@ -1,6 +1,6 @@
 package naksha.geo
 
-interface IMultiCoordinates<E: ICoordinates>: MutableList<E?>, ICoordinates {
+interface IMultiCoordinates<E: ICoordinates>: List<E?>, ICoordinates {
     override fun calculateBBox(): BoundingBoxProxy {
         var west = 0.0
         var south = 0.0
