@@ -14,6 +14,7 @@ interface IMultiCoordinates<E: ICoordinates>: List<E?>, ICoordinates {
             south = bBox.getSouthLatitude()
             east = bBox.getEastLongitude()
             north = bBox.getNorthLatitude()
+            break
         }
         while (iterator.hasNext()) {
             val next = iterator.next() ?: continue
