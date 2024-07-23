@@ -21,11 +21,12 @@ package com.here.naksha.lib.core.models.geojson.coordinates.test;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzGeometry;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+
+import naksha.geo.GeometryProxy;
+import naksha.geo.ProxyGeoUtil;
+import naksha.model.NakshaFeatureProxy;
 import org.junit.jupiter.api.Test;
 
 public class JTSConverterTest {
@@ -36,11 +37,11 @@ public class JTSConverterTest {
         .getResource("/com/here/xyz/test/geometries.json")
         .toURI()));
     String featureText = new String(bytes);
-    XyzFeature feature = new ObjectMapper().readValue(featureText, XyzFeature.class);
+    NakshaFeatureProxy feature = new ObjectMapper().readValue(featureText, NakshaFeatureProxy.class);
 
-    XyzGeometry sourceGeometry = feature.getGeometry();
-    org.locationtech.jts.geom.Geometry jtsGeometry = JTSHelper.toGeometry(sourceGeometry);
-    XyzGeometry targetGeometry = JTSHelper.fromGeometry(jtsGeometry);
+    GeometryProxy sourceGeometry = feature.getGeometry();
+    org.locationtech.jts.geom.Geometry jtsGeometry = ProxyGeoUtil.toJtsGeometry(sourceGeometry);
+    GeometryProxy targetGeometry = ProxyGeoUtil.toProxyGeometry(jtsGeometry);
 
     assertNotNull(targetGeometry);
   }

@@ -25,13 +25,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import naksha.model.ErrorResponse;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.view.ViewDeserialize.All;
 import java.io.IOException;
+
+import naksha.model.NakshaError;
+import naksha.model.NakshaErrorCode;
+import naksha.model.NakshaFeatureProxy;
+import naksha.model.response.ErrorResponse;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("unused")
@@ -41,7 +43,7 @@ public class JsonMappingTest {
   public void testDeserializeFeature() throws Exception {
     final String json =
         "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}, \"otherProperty\": \"123\"}";
-    final XyzFeature obj = new ObjectMapper().readValue(json, XyzFeature.class);
+    final NakshaFeatureProxy obj = new ObjectMapper().readValue(json, NakshaFeatureProxy.class);
     assertNotNull(obj);
 
     assertEquals(5, (int) obj.getProperties().get("x"));
@@ -52,13 +54,13 @@ public class JsonMappingTest {
   public void testSerializeFeature() throws Exception {
     try (final Json json = Json.get()) {
       final String raw = "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}}";
-      final XyzFeature obj = json.reader(All.class).readValue(raw, XyzFeature.class);
+      final NakshaFeatureProxy obj = json.reader(All.class).readValue(raw, NakshaFeatureProxy.class);
       assertNotNull(obj);
 
       obj.getProperties().put("y", 7);
       //noinspection DataFlowIssue
-      obj.getProperties().setXyzNamespace(null);
-      String result = obj.serialize();
+      obj.getProperties().setXyz(null);
+      String result = obj.toString();
 
       final String expected = "{\"type\":\"Feature\",\"id\":\"xyz123\",\"properties\":{\"x\":5,\"y\":7}}";
       assertTrue(jsonCompare(expected, result));
@@ -79,21 +81,21 @@ public class JsonMappingTest {
         "{\"type\":\"ErrorResponse\",\"error\":\"NotImplemented\",\"errorMessage\":\"Hello World!\"}";
     final ErrorResponse obj = new ObjectMapper().readValue(json, ErrorResponse.class);
     assertNotNull(obj);
-    assertSame(XyzError.NOT_IMPLEMENTED, obj.getError());
-    assertEquals("Hello World!", obj.getErrorMessage());
+    assertSame(NakshaErrorCode.NOT_IMPLEMENTED, obj.error.code);
+    assertEquals("Hello World!", obj.error.message);
   }
 
   @Test
   public void testNativeAWSLambdaErrorMessage() throws Exception {
     final String json =
         "{\"errorMessage\":\"2018-09-15T07:12:25.013Z a368c0ea-b8b6-11e8-b894-eb5a7755e998 Task timed out after 25.01 seconds\"}";
-    ErrorResponse obj = new ErrorResponse();
+    ErrorResponse obj = new ErrorResponse(new NakshaError(NakshaErrorCode.EXCEPTION,"",null,null));
     obj = new ObjectMapper().readerForUpdating(obj).readValue(json);
     assertNotNull(obj);
     obj = JsonSerializable.fixAWSLambdaResponse(obj);
-    assertSame(XyzError.TIMEOUT, obj.getError());
+    assertSame(NakshaErrorCode.TIMEOUT, obj.error.code);
     assertEquals(
         "2018-09-15T07:12:25.013Z a368c0ea-b8b6-11e8-b894-eb5a7755e998 Task timed out after 25.01 seconds",
-        obj.getErrorMessage());
+        obj.error.message);
   }
 }
