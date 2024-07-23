@@ -8,7 +8,7 @@ import kotlin.js.JsName
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PointGeometry() : GeometryProxy(), ICoordinates {
+class PointGeometry() : GeometryProxy() {
 
     @JsName("of")
     constructor(coordinates: PointCoord) : this() {
