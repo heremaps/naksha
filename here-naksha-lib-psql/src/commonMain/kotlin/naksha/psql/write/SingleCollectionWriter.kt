@@ -15,6 +15,7 @@ import naksha.model.Row
 import naksha.model.response.SuccessResponse
 import naksha.psql.PgSession
 import naksha.psql.PgPlatform
+import naksha.psql.PgResultSet
 import naksha.psql.PgUtil
 import naksha.psql.PgUtil.PgUtilCompanion.partitionPosix
 import naksha.psql.write.NakshaRequestOp.Companion.mapToOperations
@@ -90,7 +91,7 @@ class SingleCollectionWriter(
             END_MAPPING!! - START_MAPPING!!,
             END_PREPARE!! - START_PREPARE!!
         )
-        return SuccessResponse(rows = plan.result)
+        return SuccessResponse(PgResultSet(session.storage, writeRequest.rowOptions, plan.result))
     }
 
     fun writeCollections(writeRequest: WriteRequest): SuccessResponse {
@@ -149,7 +150,7 @@ class SingleCollectionWriter(
             }
         }
         plan.executeAll()
-        return SuccessResponse(rows = plan.result)
+        return SuccessResponse(PgResultSet(session.storage, writeRequest.rowOptions, plan.result))
     }
 
     private fun nakshaBulkLoaderPlan(partition: Int?, minResult: Boolean, isHistoryDisabled: Boolean?, autoPurge: Boolean): NakshaBulkLoaderPlan {

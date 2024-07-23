@@ -25,8 +25,8 @@ package naksha.psql
 //import naksha.model.request.condition.PRef.NON_INDEXED_PREF
 //import naksha.model.request.condition.SOp
 //import naksha.model.request.condition.SOp.Companion.intersectsWithTransformation
-//import naksha.model.request.condition.geometry.BufferTransformation.Companion.bufferInMeters
-//import naksha.model.request.condition.geometry.BufferTransformation.Companion.bufferInRadius
+//import naksha.model.request.condition.BufferTransformation.Companion.bufferInMeters
+//import naksha.model.request.condition.BufferTransformation.Companion.bufferInRadius
 //import naksha.model.response.ErrorResponse
 //import naksha.model.response.Response
 //import naksha.model.response.SuccessResponse

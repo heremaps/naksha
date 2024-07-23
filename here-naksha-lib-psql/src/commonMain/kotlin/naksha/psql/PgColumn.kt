@@ -244,7 +244,7 @@ class PgColumn : JsEnum() {
         val geo = def(PgColumn::class, "geo") { self ->
             self._i = 18
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE EXTERNAL"
+            self._extra = "STORAGE MAIN"
         }
 
         @JvmField
@@ -252,7 +252,7 @@ class PgColumn : JsEnum() {
         val feature = def(PgColumn::class, "feature") { self ->
             self._i = 19
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE EXTERNAL"
+            self._extra = "STORAGE MAIN"
         }
 
         /**

@@ -18,46 +18,42 @@
  */
 package naksha.psql.read
 
-import naksha.model.request.condition.geometry.BufferTransformation
-import naksha.model.request.condition.geometry.GeographyTransformation
-import naksha.model.request.condition.geometry.GeometryTransformation
-import naksha.psql.PgConnection
-import naksha.psql.PgPlatform
-import naksha.psql.PgUtil
+import naksha.model.request.condition.SpTransformation
 
 
 class SqlGeometryTransformationResolver {
     fun wrapWithTransformation(
-        transformation: GeometryTransformation?, variablePlaceholder: String
+        transformation: SpTransformation?, variablePlaceholder: String
     ): StringBuilder {
         var variableSql = StringBuilder(variablePlaceholder)
         if (transformation == null) {
             return variableSql
         }
-        if (transformation.hasChildTransformation()) {
+        if (transformation.childTransformation != null) {
             variableSql = wrapWithTransformation(transformation.childTransformation, variablePlaceholder)
         }
         val sqlCond = StringBuilder()
-        when (transformation) {
-            is BufferTransformation -> {
-                val bufferT: BufferTransformation = transformation
-                sqlCond.append(" ST_Buffer(")
-                    .append(variableSql)
-                    .append(",")
-                    .append(bufferT.distance)
-                    .append(",")
-                    .append(PgUtil.quoteLiteral(bufferT.getProperties()))
-                    .append(") ")
-            }
-
-            is GeographyTransformation -> {
-                sqlCond.append(variableSql).append("::geography ")
-            }
-
-            else -> {
-                TODO("add missing transformation")
-            }
-        }
+        // TODO: Fix me !!!
+//        when (transformation) {
+//            is SpBuffer -> {
+//                val bufferT: SpBuffer = transformation
+//                sqlCond.append(" ST_Buffer(")
+//                    .append(variableSql)
+//                    .append(",")
+//                    .append(bufferT.distance)
+//                    .append(",")
+//                    .append(PgUtil.quoteLiteral(bufferT.getProperties()))
+//                    .append(") ")
+//            }
+//
+//            is GeographyTransformation -> {
+//                sqlCond.append(variableSql).append("::geography ")
+//            }
+//
+//            else -> {
+//                TODO("add missing transformation")
+//            }
+//        }
         return sqlCond
     }
 }

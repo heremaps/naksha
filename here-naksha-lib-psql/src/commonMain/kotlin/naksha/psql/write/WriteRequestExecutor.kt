@@ -4,6 +4,7 @@ import naksha.model.request.ResultRow
 import naksha.model.request.WriteRequest
 import naksha.model.response.SuccessResponse
 import naksha.psql.NKC_TABLE
+import naksha.psql.PgResultSet
 import naksha.psql.PgSession
 
 class WriteRequestExecutor(
@@ -28,7 +29,7 @@ class WriteRequestExecutor(
             val writeOps = collectionOperationsMap[NKC_TABLE]
             if (writeOps != null) nkcRequest.ops.addAll(writeOps)
             val result = SingleCollectionWriter(NKC_TABLE, session, modifyCounters).writeCollections(nkcRequest)
-            responseRows.addAll(result.rows)
+            responseRows.addAll(result.resultSet.rows())
             collectionOperationsMap.remove(NKC_TABLE)
         }
 
@@ -39,8 +40,8 @@ class WriteRequestExecutor(
             val writeOps = collectionOperationsMap[NKC_TABLE]
             if (writeOps != null) partialRequest.ops.addAll(writeOps)
             val result = SingleCollectionWriter(collection, session, modifyCounters).writeFeatures(partialRequest)
-            responseRows.addAll(result.rows)
+            responseRows.addAll(result.resultSet.rows())
         }
-        return SuccessResponse(rows = responseRows)
+        return SuccessResponse(PgResultSet(session.storage, writeRequest.rowOptions, responseRows))
     }
 }

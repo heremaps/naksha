@@ -257,7 +257,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_geometry(flags int4, geo_bytes bytea) RETURNS geometry
+CREATE OR REPLACE FUNCTION naksha_geometry(flags int, geo_bytes bytea) RETURNS geometry
 LANGUAGE 'plpgsql'
 IMMUTABLE
 PARALLEL SAFE

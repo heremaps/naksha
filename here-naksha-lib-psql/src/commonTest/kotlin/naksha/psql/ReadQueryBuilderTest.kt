@@ -3,18 +3,15 @@ package naksha.psql
 import naksha.geo.GeometryProxy
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
-import naksha.model.request.ReadFeatures.ReadFeaturesCompanion.readIdsBy
-import naksha.model.request.condition.LOp.Companion.and
-import naksha.model.request.condition.LOp.Companion.or
-import naksha.model.request.condition.POp
-import naksha.model.request.condition.POp.POpCompanion.contains
-import naksha.model.request.condition.POp.POpCompanion.eq
-import naksha.model.request.condition.POp.POpCompanion.isNotNull
-import naksha.model.request.condition.POp.POpCompanion.lt
-import naksha.model.request.condition.PRef.*
-import naksha.model.request.condition.SOp.SOpCompanion.intersects
-import naksha.model.request.condition.SOp.SOpCompanion.intersectsWithTransformation
-import naksha.model.request.condition.geometry.BufferTransformation
+import naksha.model.request.ReadFeatures.ReadFeaturesCompanion.readIdsOnly
+import naksha.model.request.RowOptions
+import naksha.model.request.condition.*
+import naksha.model.request.condition.Property.PropRefCompanion.id
+import naksha.model.request.condition.Property.PropRefCompanion.uid
+import naksha.model.request.condition.Property.PropRefCompanion.uuid
+import naksha.model.request.condition.QueryNumber.QNumericOpCompanion.LT
+import naksha.model.request.condition.QueryOp.QOpCompanion.IS_NOT_NULL
+import naksha.model.request.condition.QueryString.QStringOpCompanion.EQUALS
 import naksha.psql.read.ReadQueryBuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -47,7 +44,7 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadNoMeta() {
         // given
-        val req = ReadFeatures().addCollectionId("foo").withNoMeta()
+        val req = ReadFeatures().addCollectionId("foo").withRowOptions(RowOptions(meta = false))
 
         // when
         val (sql, params) = builder.build(req)
@@ -63,7 +60,7 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadNoMetaNoTags() {
         // given
-        val req = ReadFeatures().addCollectionId("foo").withNoMeta().withNoTags()
+        val req = ReadFeatures().addCollectionId("foo").withRowOptions(RowOptions(tags = false))
 
         // when
         val (sql, params) = builder.build(req)
@@ -79,7 +76,7 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadNoMetaNoTagsNoFeature() {
         // given
-        val req = ReadFeatures().addCollectionId("foo").withNoMeta().withNoTags().withNoFeature()
+        val req = ReadFeatures().addCollectionId("foo").withRowOptions(RowOptions(meta = false, tags = false, feature = false))
 
         // when
         val (sql, params) = builder.build(req)
@@ -96,7 +93,9 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadNoMetaNoTagsNoFeatureNoGeometry() {
         // given
-        val req = ReadFeatures().addCollectionId("foo").withNoMeta().withNoTags().withNoFeature().withNoGeometry()
+        val req = ReadFeatures()
+            .addCollectionId("foo")
+            .withRowOptions(RowOptions(meta = false, tags = false, geometry = false))
 
         // when
         val (sql, params) = builder.build(req)
@@ -112,9 +111,10 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadMultipleCollections() {
         // given
-        val req =
-            ReadFeatures().addCollectionId("foo1").addCollectionId("foo2").withNoMeta().withNoTags().withNoFeature()
-                .withNoGeometry()
+        val req = ReadFeatures()
+            .addCollectionId("foo1")
+            .addCollectionId("foo2")
+            .withRowOptions(RowOptions(meta = false, tags = false, feature = false, geometry = false))
 
         // when
         val (sql, params) = builder.build(req)
@@ -135,7 +135,7 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadById() {
         // given
-        val req = readIdsBy("foo", eq(ID, "f1"))
+        val req = readIdsOnly("foo").addId("f1")
 
         // when
         val (sql, params) = builder.build(req)
@@ -152,7 +152,7 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadWithOr() {
         // given
-        val req = readIdsBy("foo", or(eq(ID, "f1"), eq(ID, "f2")))
+        val req = readIdsOnly("foo").addIds("f1", "f2")
 
         // when
         val (sql, params) = builder.build(req)
@@ -169,7 +169,8 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadWithAnd() {
         // given
-        val req = readIdsBy("foo", or(eq(ID, "f1"), and(eq(ID, "f2"), lt(UID, 1111))))
+        val req = readIdsOnly("foo")
+            .withQueryProperties(LOr(Query(id(), EQUALS, "f1"), LAnd(Query(id(), EQUALS, "f2"), Query(uid(), LT, "f1"))))
 
         // when
         val (sql, params) = builder.build(req)
@@ -186,8 +187,10 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadWithHistory() {
         // given
-        val req = ReadFeatures().addCollectionId("foo").withQueryHistory().withNoMeta().withNoTags().withNoFeature()
-            .withNoGeometry()
+        val req = ReadFeatures()
+            .addCollectionId("foo")
+            .withQueryHistory()
+            .withRowOptions(RowOptions(tags = false, feature = false, geometry = false))
 
         // when
         val (sql, params) = builder.build(req)
@@ -205,9 +208,12 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadWithHistoryAndDel() {
         // given
-        val req =
-            ReadFeatures().addCollectionId("foo").withQueryHistory().withQueryDeleted().withOp(eq(ID, "X")).withNoMeta()
-                .withNoTags().withNoFeature().withNoGeometry()
+        val req = ReadFeatures()
+            .addCollectionId("foo")
+            .withQueryHistory()
+            .withQueryDeleted()
+            .withQueryProperties(Query(id(), EQUALS, "X"))
+            .withRowOptions(RowOptions(meta = false, tags = false, feature = false, geometry = false))
 
         // when
         val (sql, params) = builder.build(req)
@@ -228,7 +234,7 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadByIdIsNotNull() {
         // given
-        val req = readIdsBy("foo", isNotNull(ID))
+        val req = readIdsOnly("foo").withQueryProperties(Query(id(), IS_NOT_NULL))
 
         // when
         val (sql, params) = builder.build(req)
@@ -244,7 +250,8 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadBySpatial() {
         // given
-        val req = readIdsBy("foo", intersects(GeometryProxy()))
+        val req = readIdsOnly("foo")
+            .withQuerySpatial(SpIntersects(GeometryProxy()))
 
         // when
         val (sql, params) = builder.build(req)
@@ -260,8 +267,9 @@ class ReadQueryBuilderTest {
     @Test
     fun testReadBySpatialWithBuffer() {
         // given
-        val geometryTransformation = BufferTransformation.bufferInMeters(22.2)
-        val req = readIdsBy("foo", intersectsWithTransformation(GeometryProxy(), geometryTransformation))
+        val geometryTransformation = SpBuffer(22.2, geography = true)
+        val req = readIdsOnly("foo")
+            .withQuerySpatial(SpIntersects(GeometryProxy(), geometryTransformation))
 
         // when
         val (sql, params) = builder.build(req)
@@ -297,10 +305,7 @@ class ReadQueryBuilderTest {
             .addId("foo")
             .addId("bar")
             .addId("baz")
-            .withNoGeometry()
-            .withNoTags()
-            .withNoMeta()
-            .withNoFeature()
+            .withRowOptions(RowOptions(meta = false, tags = false, feature = false, geometry = false))
 
         // when
         val (sql, params) = builder.build(req)
@@ -320,10 +325,7 @@ class ReadQueryBuilderTest {
         val req = ReadCollections()
             .addId("foo")
             .withQueryDeleted()
-            .withNoGeometry()
-            .withNoTags()
-            .withNoMeta()
-            .withNoFeature()
+            .withRowOptions(RowOptions(meta = false, tags = false, feature = false, geometry = false))
 
         // when
         val (sql, params) = builder.build(req)
@@ -345,7 +347,8 @@ class ReadQueryBuilderTest {
         // given
         val uuid = "test_storage:building_delta:feature1:2024:01:23:1:0"
 
-        val req = readIdsBy("foo", eq(UUID, uuid))
+        val req = readIdsOnly("foo")
+            .withQueryProperties(Query(uuid(), EQUALS, uuid))
 
         // when
         val (sql, params) = builder.build(req)
@@ -361,7 +364,9 @@ class ReadQueryBuilderTest {
     @Test
     fun testTagsQuery() {
         // given
-        val req = readIdsBy("foo", contains(TAGS, "tag1"))
+
+        val req = readIdsOnly("foo")
+            .withQueryTags(TagExists("tag1"))
 
         // when
         val (sql, params) = builder.build(req)

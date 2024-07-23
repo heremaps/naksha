@@ -1,19 +1,10 @@
 package naksha.psql.read
 
-import naksha.model.Guid
-import naksha.model.request.ReadCollections
-import naksha.model.request.ReadFeatures
-import naksha.model.request.ReadRequest
-import naksha.model.request.Request
+import naksha.model.request.*
 import naksha.model.request.condition.*
-import naksha.model.request.condition.SOpType.INTERSECTS
 import naksha.psql.*
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
-import kotlin.js.ExperimentalJsExport
-import kotlin.js.JsExport
 
-@OptIn(ExperimentalJsExport::class)
-@JsExport
 internal class ReadQueryBuilder {
 
     private val geometryTransformer = SqlGeometryTransformationResolver()
@@ -67,16 +58,16 @@ internal class ReadQueryBuilder {
      */
     private fun resolveColumns(req: ReadRequest<*>): String {
         var columns = "$COL_ID, $COL_TYPE, $COL_GEO_REF, $COL_FLAGS"
-        if (!req.noMeta) {
+        if (req.rowOptions.meta) {
             columns += ", $COL_TXN_NEXT, $COL_TXN, $COL_UID, $COL_PTXN, $COL_PUID, $COL_VERSION, $COL_CREATED_AT, $COL_UPDATE_AT, $COL_AUTHOR_TS, $COL_AUTHOR, $COL_APP_ID, $COL_GEO_GRID"
         }
-        if (!req.noTags) {
+        if (req.rowOptions.tags) {
             columns += ", $COL_TAGS"
         }
-        if (!req.noGeometry) {
+        if (req.rowOptions.geometry) {
             columns += ", $COL_GEOMETRY"
         }
-        if (!req.noFeature) {
+        if (req.rowOptions.feature) {
             columns += ", $COL_FEATURE"
         }
         return columns
@@ -84,7 +75,8 @@ internal class ReadQueryBuilder {
 
     private fun resolveFeaturesWhere(req: ReadFeatures, allQueriesParams: MutableList<Any?>): String {
         val whereSql = StringBuilder()
-        resolveOps(whereSql, allQueriesParams, req.op)
+        // TODO: Fix me !!!
+        //resolveOps(whereSql, allQueriesParams, req.op)
 
         return whereSql.toString()
     }
@@ -95,14 +87,15 @@ internal class ReadQueryBuilder {
      * @param whereSql - sql to add new conditions to
      * @param paramsList - list of params to add conditions values to
      */
-    private fun resolveOps(whereSql: StringBuilder, paramsList: MutableList<Any?>, op: Op?) {
+    private fun resolveOps(whereSql: StringBuilder, paramsList: MutableList<Any?>, op: QueryOp?) {
         if (op == null) return
 
-        when (op) {
-            is LOp -> addLOp(whereSql, paramsList, op)
-            is POp -> addPOp(whereSql, paramsList, op)
-            is SOp -> addSop(whereSql, paramsList, op)
-        }
+        // TODO: Fix me !!!
+//        when (op) {
+//            is LOp -> addLOp(whereSql, paramsList, op)
+//            is PropertyQuery -> addPOp(whereSql, paramsList, op)
+//            is SpatialOuery -> addSop(whereSql, paramsList, op)
+//        }
     }
 
     /**
@@ -112,16 +105,16 @@ internal class ReadQueryBuilder {
      * @param whereSql - StringBuilder to add conditions
      * @param paramsList - list of params - will be modified whenever condition is compared to value provided by request.
      */
-    private fun addLOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, lop: LOp) {
-        whereSql.append("(")
-        for (el in lop.children.withIndex()) {
-            resolveOps(whereSql, paramsList, el.value)
-            if (el.index < lop.children.size - 1) {
-                whereSql.append(" ${lop.op.operator} ")
-            }
-        }
-        whereSql.append(")")
-    }
+//    private fun addLOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, lop: LOp) {
+//        whereSql.append("(")
+//        for (el in lop.children.withIndex()) {
+//            resolveOps(whereSql, paramsList, el.value)
+//            if (el.index < lop.children.size - 1) {
+//                whereSql.append(" ${lop.op.operator} ")
+//            }
+//        }
+//        whereSql.append(")")
+//    }
 
     /**
      * Adds basic conditions like =, <, >, ≤, ≥, etc. to where statement.
@@ -130,34 +123,31 @@ internal class ReadQueryBuilder {
      * @param whereSql - StringBuilder to add conditions
      * @param paramsList - list of params - will be modified whenever condition is compared to value provided by request.
      */
-    private fun addPOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: POp) {
+    private fun addPOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: Query) {
+        // TODO: Fix me !!!
         // real column names
-        val col = when (pop.propertyRef) {
-            PRef.ID -> COL_ID
-            PRef.APP_ID -> COL_APP_ID
-            PRef.AUTHOR -> COL_AUTHOR
-            PRef.UID -> COL_UID
-            PRef.GRID -> COL_GEO_GRID
-            PRef.TXN -> COL_TXN
-            PRef.TXN_NEXT -> COL_TXN_NEXT
-            PRef.TAGS -> "tags_to_jsonb($COL_TAGS)"
-            PRef.UUID -> return customUuidOp(whereSql, paramsList, pop)
-            is PRef.NON_INDEXED_PREF -> (pop.propertyRef as PRef.NON_INDEXED_PREF).path.joinToString { "->" }
-        }
-
-        whereSql.append(col)
-        if (pop.propertyRef.isJsonField)
-            whereSql.append(pop.op.jsonOperation)
-        else
-            whereSql.append(pop.op.operation)
-
-        if (pop.value != null) {
-            when (pop.op) {
-                POpType.ANY -> whereSql.append("ANY(${paramsList.nextPlaceHolder()})")
-                else -> whereSql.append(paramsList.nextPlaceHolder())
-            }
-            paramsList.add(pop.value)
-        }
+//        val col = when (pop.property) {
+//            PRef.ID -> COL_ID
+//            PRef.APP_ID -> COL_APP_ID
+//            PRef.AUTHOR -> COL_AUTHOR
+//            PRef.UID -> COL_UID
+//            PRef.GRID -> COL_GEO_GRID
+//            PRef.TXN -> COL_TXN
+//            PRef.TXN_NEXT -> COL_TXN_NEXT
+//            PRef.TAGS -> "tags_to_jsonb($COL_TAGS)"
+//            PRef.UUID -> return customUuidOp(whereSql, paramsList, pop)
+//            is PRef.NON_INDEXED_PREF -> (pop.property as PRef.NON_INDEXED_PREF).path.joinToString { "->" }
+//        }
+//
+//        whereSql.append(col)
+//        if (pop.property.isJsonField)
+//            whereSql.append(pop.op.jsonOperation)
+//        else
+//            whereSql.append(pop.op.operation)
+//        if (pop.value != null) {
+//            whereSql.append(paramsList.nextPlaceHolder())
+//            paramsList.add(pop.value)
+//        }
     }
 
     /**
@@ -167,21 +157,22 @@ internal class ReadQueryBuilder {
      * @param paramsList - list of params - will be modified whenever condition is compared to value provided by request.
      * @param sop - requested spatial operations.
      */
-    private fun addSop(whereSql: StringBuilder, paramsList: MutableList<Any?>, sop: SOp) {
-        val valuePlaceholder = paramsList.nextPlaceHolder()
-        val GEO_TWKB = 0
-        when (sop.op) {
-            INTERSECTS -> {
-                val wrapperForReqValuePlaceholder = geometryTransformer.wrapWithTransformation(
-                    sop.geometryTransformation,
-                    "ST_Force3D(naksha_geometry_in_type($GEO_TWKB::int2,$valuePlaceholder))"
-                )
-                whereSql.append("ST_Intersects(naksha_geometry(flags,geo), $wrapperForReqValuePlaceholder)")
-
-                // TODO FIXME, sop.geometry should be transformed to byteArray once we have Platform <-> twkb converter
-                paramsList.add(sop.geometry)
-            }
-        }
+    private fun addSop(whereSql: StringBuilder, paramsList: MutableList<Any?>, sop: SpatialOuery) {
+        // TODO: Fix me !!!
+//        val valuePlaceholder = paramsList.nextPlaceHolder()
+//        val GEO_TWKB = 0
+//        when (sop.op) {
+//            INTERSECTS -> {
+//                val wrapperForReqValuePlaceholder = geometryTransformer.wrapWithTransformation(
+//                    sop.transformation,
+//                    "ST_Force3D(naksha_geometry_in_type($GEO_TWKB::int2,$valuePlaceholder))"
+//                )
+//                whereSql.append("ST_Intersects(naksha_geometry(flags,geo), $wrapperForReqValuePlaceholder)")
+//
+//                // TODO FIXME, sop.geometry should be transformed to byteArray once we have Platform <-> twkb converter
+//                paramsList.add(sop.geometry)
+//            }
+//        }
         TODO("Fix me, we changed to flags!")
     }
 
@@ -190,16 +181,17 @@ internal class ReadQueryBuilder {
      * To query UUID we have to query particular columns.
      * Only `=` operation is allowed.
      */
-    private fun customUuidOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: POp) {
-        check(pop.value != null)
-        check(pop.op == POpType.EQ)
-
-        val guid = Guid.fromString(pop.value as String)
-        val uuidOp = LOp.and(
-            POp.eq(PRef.TXN, guid.luid.txn.value),
-            POp.eq(PRef.UID, guid.luid.uid)
-        )
-        resolveOps(whereSql, paramsList, uuidOp)
+    private fun customUuidOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: Query) {
+        // TODO: Fix me !!!
+//        check(pop.value != null)
+//        check(pop.op == POpType.EQ)
+//
+//        val guid = Guid.fromString(pop.value as String)
+//        val uuidOp = LOp.and(
+//            PropertyQuery.eq(PRef.TXN, guid.luid.txn.value),
+//            PropertyQuery.eq(PRef.UID, guid.luid.uid)
+//        )
+//        resolveOps(whereSql, paramsList, uuidOp)
     }
 
     /**
@@ -221,20 +213,12 @@ internal class ReadQueryBuilder {
     }
 
     private fun ReadCollections.toReadFeatures(): ReadFeatures {
-        val op = if (this.ids.isNotEmpty()) {
-            POp.isIn(PRef.ID, this.ids.toTypedArray())
-        } else null
-
-        val req = ReadFeatures()
-            .addCollectionId(NKC_TABLE)
-            .withOp(op)
+        val req = ReadFeatures().addCollectionId(NKC_TABLE)
+        if (this.ids.isEmpty()) for (id in this.ids) req.addId(id)
         req.resultFilter = resultFilter
         req.queryDeleted = queryDeleted
         req.limit = limit
-        req.noFeature = noFeature
-        req.noMeta = noMeta
-        req.noTags = noTags
-        req.noGeometry = noGeometry
+        req.rowOptions = rowOptions
         return req
     }
 
