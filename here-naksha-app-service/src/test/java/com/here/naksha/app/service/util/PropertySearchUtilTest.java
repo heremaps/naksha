@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
-import static com.here.naksha.test.common.assertions.POpAssertion.assertThatOperation;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;

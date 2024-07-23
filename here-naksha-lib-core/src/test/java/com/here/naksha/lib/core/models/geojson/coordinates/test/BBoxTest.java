@@ -21,9 +21,9 @@ package com.here.naksha.lib.core.models.geojson.coordinates.test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import naksha.geo.BBox;
-import naksha.geo.XyzMultiPolygon;
-import naksha.geo.XyzPoint;
+import naksha.geo.BoundingBoxProxy;
+import naksha.geo.MultiPolygonGeometry;
+import naksha.geo.PointGeometry;
 import org.junit.jupiter.api.Test;
 
 public class BBoxTest {
@@ -31,25 +31,25 @@ public class BBoxTest {
   @Test
   public void pointCoordinates() throws Exception {
     String pointGJ = "{\"type\":\"Point\",\"coordinates\":[1,1]}";
-    XyzPoint point = new ObjectMapper().readValue(pointGJ, XyzPoint.class);
-    BBox bbox = point.calculateBBox();
+    PointGeometry point = new ObjectMapper().readValue(pointGJ, PointGeometry.class);
+    BoundingBoxProxy bbox = point.calculateBBox();
 
-    assertEquals(1d, bbox.minLon(), 0.0);
-    assertEquals(1d, bbox.maxLon(), 0.0);
-    assertEquals(1d, bbox.minLat(), 0.0);
-    assertEquals(1d, bbox.maxLat(), 0.0);
+    assertEquals(1d, bbox.getMinLongitude(), 0.0);
+    assertEquals(1d, bbox.getMaxLongitude(), 0.0);
+    assertEquals(1d, bbox.getMinLatitude(), 0.0);
+    assertEquals(1d, bbox.getMaxLatitude(), 0.0);
   }
 
   @Test
   public void multipolygonCoordinates() throws Exception {
     String multipolygonGJ =
         "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[101.2,1.2],[101.8,1.2],[101.8,1.8],[101.2,1.8],[101.2,1.2]],[[101.2,1.2],[101.3,1.2],[101.3,1.3],[101.2,1.3],[101.2,1.2]],[[101.6,1.4],[101.7,1.4],[101.7,1.5],[101.6,1.5],[101.6,1.4]],[[101.5,1.6],[101.6,1.6],[101.6,1.7],[101.5,1.7],[101.5,1.6]]],[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]],[[100.35,0.35],[100.65,0.35],[100.65,0.65],[100.35,0.65],[100.35,0.35]]]]}";
-    XyzMultiPolygon multipolygon = new ObjectMapper().readValue(multipolygonGJ, XyzMultiPolygon.class);
-    BBox bbox = multipolygon.calculateBBox();
+    MultiPolygonGeometry multipolygon = new ObjectMapper().readValue(multipolygonGJ, MultiPolygonGeometry.class);
+    BoundingBoxProxy bbox = multipolygon.calculateBBox();
 
-    assertEquals(100.0, bbox.minLon(), 0.0);
-    assertEquals(101.8, bbox.maxLon(), 0.0);
-    assertEquals(0.0, bbox.minLat(), 0.0);
-    assertEquals(1.8, bbox.maxLat(), 0.0);
+    assertEquals(100.0, bbox.getMinLongitude(), 0.0);
+    assertEquals(101.8, bbox.getMaxLongitude(), 0.0);
+    assertEquals(0.0, bbox.getMinLatitude(), 0.0);
+    assertEquals(1.8, bbox.getMaxLatitude(), 0.0);
   }
 }
