@@ -5,7 +5,7 @@ package naksha.model.request.condition
 import kotlin.js.JsExport
 
 /**
- * Logical operation.
+ * An interface to queries.
  */
 @JsExport
-abstract class LOp<T, SELF: LOp<T, SELF>> : IQuery<T>
+interface IQuery<T>

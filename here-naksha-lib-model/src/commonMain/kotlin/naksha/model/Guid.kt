@@ -5,6 +5,7 @@ package naksha.model
 import naksha.base.Int64
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -14,9 +15,13 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 class Guid(
+    @JvmField
     val storageId: String,
+    @JvmField
     val collectionId: String,
+    @JvmField
     val featureId: String,
+    @JvmField
     val luid: Luid
 ) {
     private lateinit var _string: String

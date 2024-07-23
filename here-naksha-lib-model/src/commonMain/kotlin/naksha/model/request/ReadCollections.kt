@@ -12,11 +12,16 @@ import kotlin.jvm.JvmField
 @JsExport
 class ReadCollections : ReadRequest<ReadCollections>() {
     /**
-     * Ids of collections to search.
+     * Ids of collections to read.
      */
     @JvmField
     var ids: MutableList<String> = mutableListOf()
 
+    /**
+     * Add the collection ID.
+     * @param id the collection-id to add.
+     * @return this.
+     */
     fun addId(id: String): ReadCollections {
         this.ids.add(id)
         return this
@@ -29,6 +34,10 @@ class ReadCollections : ReadRequest<ReadCollections>() {
     @JvmField
     var queryDeleted: Boolean = false
 
+    /**
+     * Include deleted features.
+     * @return this.
+     */
     fun withQueryDeleted(): ReadCollections {
         this.queryDeleted = true
         return this

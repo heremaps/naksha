@@ -25,5 +25,6 @@ class ExecutedOp : JsEnum() {
         val DELETED = defIgnoreCase(ExecutedOp::class, "DELETED")
         @JvmField
         val PURGED = defIgnoreCase(ExecutedOp::class, "PURGED")
+        val RETAINED = defIgnoreCase(ExecutedOp::class, "RETAINED")
     }
 }

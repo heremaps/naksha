@@ -5,7 +5,10 @@ package naksha.model.request.condition
 import kotlin.js.JsExport
 
 /**
- * Logical operation.
+ * Spatial query.
+ *
+ * @see SpIntersects
+ * @see SpRefInHereTile
  */
 @JsExport
-abstract class LOp<T, SELF: LOp<T, SELF>> : IQuery<T>
+interface SpatialOuery : IQuery<SpatialOuery>
