@@ -48,6 +48,8 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         if (this.isEmpty()) setToPoint(longitude,latitude)
         else {
             // includes antimeridian case
+            // TODO still 2 cases where both longitudes are both positive (or both negative)
+            // TODO and the bbox still spans across the antimeridian
             if ((longitude < getMinLongitude()) && isSameSign(longitude,getMinLongitude())) withMinLongitude(longitude)
             else if ((longitude > getMaxLongitude()) && isSameSign(longitude,getMaxLongitude())) withMaxLongitude(longitude)
             if (latitude < getMinLatitude()) withMinLatitude(latitude)
