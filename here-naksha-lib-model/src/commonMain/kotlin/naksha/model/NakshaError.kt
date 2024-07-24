@@ -132,6 +132,14 @@ data class NakshaError(
         const val ILLEGAL_ARGUMENT = "IllegalArgument"
 
         /**
+         * Something is expected in a specific state, but was found differently.
+         *
+         * This will lead to an HTTP 500 Internal Server Error response.
+         * @since 3.0.0
+         */
+        const val ILLEGAL_STATE = "IllegalState"
+
+        /**
          * Any service or remote function required to process the request was not reachable.
          *
          * This will result in a 502 Bad Gateway response.

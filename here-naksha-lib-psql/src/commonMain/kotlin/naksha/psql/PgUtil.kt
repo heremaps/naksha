@@ -5,9 +5,6 @@ package naksha.psql
 import naksha.base.Fnv1a32
 import naksha.base.Fnv1a64
 import naksha.base.Int64
-import naksha.model.NakshaError
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.ILLEGAL_ID
-import naksha.model.StorageException
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -184,62 +181,5 @@ class PgUtil private constructor() {
         @JsStatic
         @JvmStatic
         fun lockId(name: String): Int64 = Fnv1a64.string(Fnv1a64.start(), name)
-
-        /**
-         * Tests if the given **id** is a valid collection identifier, so matches:
-         *
-         * `[a-z][a-z0-9_:-]{31}`
-         *
-         * **Beware**: Collections must not contain upper-case letters, because PostgresQL does not make a difference between upper- and lower-cased letters in table names, so "aaa", "Aaa", "AAa", and "AAA" are the same table!
-         * @param id The collection identifier.
-         * @return _true_ if the collection identifier is valid; _false_ otherwise.
-         */
-        @JsStatic
-        @JvmStatic
-        fun isValidCollectionId(id: String?): Boolean {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) return false
-            var i = 0
-            var c = id[i++]
-            // First character must be a-z
-            if (c.code < 'a'.code || c.code > 'z'.code) return false
-            while (i < id.length) {
-                c = id[i++]
-                when (c.code) {
-                    in 'a'.code..'z'.code -> continue
-                    in '0'.code..'9'.code -> continue
-                    '_'.code, ':'.code, '-'.code -> continue
-                    else -> return false
-                }
-            }
-            return true
-        }
-
-        /**
-         * Tests if the given **id** is a valid collection identifier, otherwise throws an [naksha.model.StorageException]
-         * @param id The collection identifier.
-         * @throws StorageException if the given identifier is invalid.
-         */
-        @JsStatic
-        @JvmStatic
-        fun ensureValidCollectionId(id: String?) {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) {
-                throw StorageException(NakshaError(ILLEGAL_ID, id = id))
-            }
-            var i = 0
-            var c = id[i++]
-            // First character must be a-z
-            if (c.code < 'a'.code || c.code > 'z'.code) {
-                throw StorageException(NakshaError(ILLEGAL_ID, id = id))
-            }
-            while (i < id.length) {
-                c = id[i++]
-                when (c.code) {
-                    in 'a'.code..'z'.code -> continue
-                    in '0'.code..'9'.code -> continue
-                    '_'.code, ':'.code, '-'.code -> continue
-                    else -> throw StorageException(NakshaError(ILLEGAL_ID, id = id))
-                }
-            }
-        }
     }
 }

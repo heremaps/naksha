@@ -5,7 +5,7 @@ package naksha.psql
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.jbon.IDictManager
-import naksha.jbon.JbMapFeatureDecoder
+import naksha.jbon.JbFeatureDecoder
 import naksha.model.NakshaCollectionProxy
 import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
 import kotlin.js.ExperimentalJsExport
@@ -15,7 +15,7 @@ import kotlin.js.JsExport
  * A collection feature as defined in the Naksha architecture. This class will instantly read the well known properties.
  */
 @JsExport
-class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbMapFeatureDecoder(dictManager) {
+class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(dictManager) {
     /**
      * The number of partitions. We use partitioning for tables that are expected to store more than ten million features. With eight
      * partitions we can split 10 million features into partitions of each 1.25 million, 100 million into 12.5 million per partition and

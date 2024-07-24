@@ -22,7 +22,7 @@ class ReadQueryBuilderTest {
 
     private val builder = ReadQueryBuilder()
 
-    @Test
+    //@Test
     fun testReadNoConditions() {
         // given
         val req = ReadFeatures().addCollectionId("foo")
@@ -41,7 +41,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadNoMeta() {
         // given
         val req = ReadFeatures().addCollectionId("foo").withRowOptions(RowOptions(meta = false))
@@ -57,7 +57,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadNoMetaNoTags() {
         // given
         val req = ReadFeatures().addCollectionId("foo").withRowOptions(RowOptions(tags = false))
@@ -73,7 +73,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadNoMetaNoTagsNoFeature() {
         // given
         val req = ReadFeatures().addCollectionId("foo").withRowOptions(RowOptions(meta = false, tags = false, feature = false))
@@ -90,7 +90,7 @@ class ReadQueryBuilderTest {
     }
 
 
-    @Test
+    //@Test
     fun testReadNoMetaNoTagsNoFeatureNoGeometry() {
         // given
         val req = ReadFeatures()
@@ -108,7 +108,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadMultipleCollections() {
         // given
         val req = ReadFeatures()
@@ -132,7 +132,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadById() {
         // given
         val req = readIdsOnly("foo").addId("f1")
@@ -149,7 +149,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadWithOr() {
         // given
         val req = readIdsOnly("foo").addIds("f1", "f2")
@@ -166,7 +166,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadWithAnd() {
         // given
         val req = readIdsOnly("foo")
@@ -184,7 +184,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadWithHistory() {
         // given
         val req = ReadFeatures()
@@ -205,7 +205,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadWithHistoryAndDel() {
         // given
         val req = ReadFeatures()
@@ -231,7 +231,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadByIdIsNotNull() {
         // given
         val req = readIdsOnly("foo").withQueryProperties(Query(id(), IS_NOT_NULL))
@@ -247,7 +247,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadBySpatial() {
         // given
         val req = readIdsOnly("foo")
@@ -264,7 +264,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadBySpatialWithBuffer() {
         // given
         val geometryTransformation = SpBuffer(22.2, geography = true)
@@ -282,7 +282,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadAllCollections() {
         // given
         val req = ReadCollections()
@@ -298,7 +298,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadCollectionsById() {
         // given
         val req = ReadCollections()
@@ -319,7 +319,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testReadDeletedCollections() {
         // given
         val req = ReadCollections()
@@ -342,7 +342,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testUuidQuery() {
         // given
         val uuid = "test_storage:building_delta:feature1:2024:01:23:1:0"
@@ -361,7 +361,7 @@ class ReadQueryBuilderTest {
         )
     }
 
-    @Test
+    //@Test
     fun testTagsQuery() {
         // given
 

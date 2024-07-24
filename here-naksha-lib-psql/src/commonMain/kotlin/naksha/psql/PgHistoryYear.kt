@@ -2,8 +2,8 @@
 
 package naksha.psql
 
-import naksha.model.NakshaErrorCode
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.PARTITION_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
+import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -16,8 +16,14 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class PgHistoryYear(val history: PgHistory, year: Int) : PgTable(
-    history.collection, "${history.name}_$year", history.storageClass, false,
-    partitionOfTable = history, partitionOfValue = year, partitionByColumn = PgColumn.txn_next, partitionCount = history.head.partitionCount
+    history.collection,
+    "${history.name}${PG_YEAR}$year",
+    history.storageClass,
+    false,
+    partitionOfTable = history,
+    partitionOfValue = year,
+    partitionByColumn = history.head.partitionByColumn,
+    partitionCount = history.head.partitionCount
 ) {
     /**
      * The performance partitions.
@@ -34,7 +40,7 @@ class PgHistoryYear(val history: PgHistory, year: Int) : PgTable(
         val partitions = this.partitions
         if (partitions.size == 0) return null
         val i = PgUtil.partitionNumber(featureId) % partitions.size
-        check(i >= partitions.size) { throwStorageException(PARTITION_NOT_FOUND, "Partition $i not found in table $name", id=name) }
+        check(i >= partitions.size) { throw NakshaException(PARTITION_NOT_FOUND, "Partition $i not found in table $name", id=name) }
         return partitions[i]
     }
 
@@ -43,12 +49,31 @@ class PgHistoryYear(val history: PgHistory, year: Int) : PgTable(
         for (partition in partitions) partition.create(conn)
     }
 
-    override fun addIndex(conn: PgConnection, index: PgIndex) {
+    override fun createIndex(conn: PgConnection, index: PgIndex) {
         if (this.partitionByColumn != null) {
-            for (partition in partitions) partition.addIndex(conn, index)
+            for (partition in partitions) partition.createIndex(conn, index)
         } else {
-            super.addIndex(conn, index)
+            super.createIndex(conn, index)
         }
+        if (index !in indices) indices += index
+    }
+
+    override fun addIndex(index: PgIndex) {
+        if (this.partitionByColumn != null) {
+            for (partition in partitions) partition.addIndex(index)
+        } else {
+            super.addIndex(index)
+        }
+        if (index !in indices) indices += index
+    }
+
+    override fun removeIndex(index: PgIndex) {
+        if (this.partitionByColumn != null) {
+            for (partition in partitions) partition.removeIndex(index)
+        } else {
+            super.removeIndex(index)
+        }
+        if (index in indices) indices -= index
     }
 
     override fun dropIndex(conn: PgConnection, index: PgIndex) {
@@ -57,5 +82,6 @@ class PgHistoryYear(val history: PgHistory, year: Int) : PgTable(
         } else {
             super.dropIndex(conn, index)
         }
+        if (index in indices) indices -= index
     }
 }

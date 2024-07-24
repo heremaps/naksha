@@ -5,14 +5,12 @@ package naksha.psql
 import naksha.jbon.IDictManager
 import naksha.jbon.JbDictDecoder
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 /**
  * The internal dictionaries table.
  */
 @JsExport
-class NakshaDictionaries internal constructor(schema: PgSchema) : PgCollection(schema, ID), PgInternalCollection, IDictManager {
+class PgNakshaDictionaries internal constructor(schema: PgSchema) : PgCollection(schema, ID), PgInternalCollection, IDictManager {
     companion object NakshaDictionariesCompanion {
         const val ID = "naksha~dictionaries"
     }

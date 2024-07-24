@@ -3,8 +3,6 @@ package naksha.psql
 import naksha.base.GZip
 import java.lang.ref.WeakReference
 import java.security.MessageDigest
-import java.sql.ResultSet
-import java.sql.Statement
 
 /**
  * A thin wrapper around a JDBC PostgresQL connection, which implements the [PgConnection] interface.
@@ -57,7 +55,7 @@ class PsqlConnection internal constructor(
      * @param args The arguments to be set at $n position, where $1 is the first array element.
      * @return the cursor.
      */
-    override fun execute(sql: String, args: Array<Any?>?): PsqlCursor {
+    override fun execute(sql: String, args: Array<Any?>?): PgCursor {
         val conn = jdbc
         val stmt = if (args.isNullOrEmpty()) {
             // no args execute

@@ -12,7 +12,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class PgHistory(val head: PgHead) : PgTable(
-    head.collection, "${head.name}\$hst", head.storageClass, false,
+    head.collection, "${head.collection.id}${PG_HST}", head.storageClass, false,
     partitionByColumn = PgColumn.txn_next
 ) {
     /**
@@ -32,17 +32,25 @@ class PgHistory(val head: PgHead) : PgTable(
         for (entry in years) entry.value.create(conn)
     }
 
-    fun addYear(conn: PgConnection, year: Int) {
+    fun createYear(conn: PgConnection, year: Int) {
         if (year !in years) {
             val yearTable = PgHistoryYear(this, year)
             yearTable.create(conn)
             years[year] = yearTable
-            for (index in indices) yearTable.addIndex(conn, index)
+            for (index in indices) yearTable.createIndex(conn, index)
         }
     }
 
-    override fun addIndex(conn: PgConnection, index: PgIndex) {
-        for (entry in years) entry.value.addIndex(conn, index)
+    override fun addIndex(index: PgIndex) {
+        for (entry in years) entry.value.addIndex(index)
+    }
+
+    override fun removeIndex(index: PgIndex) {
+        for (entry in years) entry.value.removeIndex(index)
+    }
+
+    override fun createIndex(conn: PgConnection, index: PgIndex) {
+        for (entry in years) entry.value.createIndex(conn, index)
     }
 
     override fun dropIndex(conn: PgConnection, index: PgIndex) {

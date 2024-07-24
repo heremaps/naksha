@@ -34,7 +34,7 @@ class PgColumn : JsEnum() {
      * The name of the column.
      */
     val name: String
-        get() = super.str
+        get() = super.text
 
     private var _type: PgType? = null
 
@@ -228,7 +228,7 @@ class PgColumn : JsEnum() {
         val tags = def(PgColumn::class, "tags") { self ->
             self._i = 16
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE PLAIN"
+            self._extra = "STORAGE MAIN"
         }
 
         @JvmField
@@ -236,7 +236,7 @@ class PgColumn : JsEnum() {
         val geo_ref = def(PgColumn::class, "geo_ref") { self ->
             self._i = 17
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE PLAIN"
+            self._extra = "STORAGE MAIN"
         }
 
         @JvmField
@@ -283,7 +283,7 @@ class PgColumn : JsEnum() {
             // This is only self-check code.
             var i = 0
             for (col in columns) {
-                check(col.i == i++) { "Invalid table state, column '${col.name}' should be at index ${col.i}, but found at $i" }
+                check(col.i == i++) { "Invalid columns, column '${col.name}' should be at index ${col.i}, but found at $i" }
             }
         }
     }

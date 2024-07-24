@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
  * @property stmt the statement to which this cursor is bound.
  * @property closeStmt if the statement should be closed, when the cursor is closed.
  */
-class PsqlCursor internal constructor(private val stmt: Statement, private val closeStmt: Boolean) : PgCursor {
+class PsqlCursor internal constructor(private val stmt: Statement, private val closeStmt: Boolean) : PgCursor, AutoCloseable {
     private var row = 0
     private var affectedRows = 0
     private var resultSets: Array<ResultSet>

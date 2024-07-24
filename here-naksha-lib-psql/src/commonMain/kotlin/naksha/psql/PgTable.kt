@@ -41,13 +41,13 @@ open class PgTable(
         fun isAnyHead(name: String): Boolean = isHead(name) || isHeadPartition(name)
 
         /**
-         * Tests if this is the root HEAD table.
-         * @param name the table name.
-         * @return _true_ if this is the root HEAD table.
+         * Tests if this is the root HEAD table or partition.
+         * @param name the relation name.
+         * @return _true_ if this is the root HEAD table or partition.
          */
         @JvmStatic
         @JsStatic
-        fun isHead(name: String): Boolean = name.indexOf('$') < 0
+        fun isHead(name: String): Boolean = name.indexOf(PG_S) < 0 // does not contain a separator
 
         /**
          * Tests if this is a partition of the HEAD table.
@@ -56,7 +56,7 @@ open class PgTable(
          */
         @JvmStatic
         @JsStatic
-        fun isHeadPartition(name: String): Boolean = name.indexOf("\$p") > 0 // {name}$p000
+        fun isHeadPartition(name: String): Boolean = name.indexOf(PG_PART) > 0 // {name}$a???
 
         /**
          * Tests if this is any DELETED table.
@@ -74,7 +74,7 @@ open class PgTable(
          */
         @JvmStatic
         @JsStatic
-        fun isDeleted(name: String): Boolean = name.endsWith("\$del") // {name}$del
+        fun isDeleted(name: String): Boolean = name.endsWith(PG_DEL) // {name}$del
 
         /**
          * Tests if this is a partition of the DELETED table.
@@ -83,7 +83,7 @@ open class PgTable(
          */
         @JvmStatic
         @JsStatic
-        fun isDeletedPartition(name: String): Boolean = name.indexOf("\$del_p") > 0 // {name}$del_p000
+        fun isDeletedPartition(name: String): Boolean = name.indexOf("${PG_DEL}${PG_PART}") > 0 // {name}$del$a???
 
         /**
          * Tests if this is the META table.
@@ -92,7 +92,7 @@ open class PgTable(
          */
         @JvmStatic
         @JsStatic
-        fun isMeta(name: String): Boolean = name.endsWith("\$meta") // {name}$meta
+        fun isMeta(name: String): Boolean = name.endsWith(PG_META) // {name}$meta
 
         /**
          * Tests if this is any HISTORY table.
@@ -101,7 +101,7 @@ open class PgTable(
          */
         @JvmStatic
         @JsStatic
-        fun isAnyHistory(name: String): Boolean = name.indexOf("\$hst") > 0 // {name}$hst...
+        fun isAnyHistory(name: String): Boolean = name.indexOf(PG_HST) > 0 // {name}$hst...
 
         /**
          * Tests if this is the root HISTORY table.
@@ -110,17 +110,17 @@ open class PgTable(
          */
         @JvmStatic
         @JsStatic
-        fun isHistory(name: String): Boolean = name.endsWith("\$hst") // {name}$hst
+        fun isHistory(name: String): Boolean = name.endsWith("${PG_S}${PG_HST}") // {name}$hst
 
         /**
-         * Tests if this is a monthly partition of HISTORY.
+         * Tests if this is a monthly partition of HISTORY, but not a partition.
          * @param name the table name.
          * @return _true_ if this is a monthly partition of HISTORY.
          */
         @JvmStatic
         @JsStatic
-        fun isHistoryYear(name: String): Boolean = // {name}$hst_yyyy
-            name.lastIndexOf("\$hst_") == (name.length - "\$hst_yyyy".length)
+        fun isHistoryYear(name: String): Boolean = // {name}$hst$y????
+            name.lastIndexOf(PG_YEAR) == (name.length - "${PG_YEAR}????".length) // end with $y????
 
         /**
          * Tests if this is a sub-partition of a monthly HISTORY partition.
@@ -129,8 +129,9 @@ open class PgTable(
          */
         @JvmStatic
         @JsStatic
-        fun isHistoryPartition(name: String): Boolean = // {name}$hst_yyyy_p000
-            name.indexOf("\$hst_") >= 0 && name.lastIndexOf("_p") == (name.length - "_p000".length)
+        fun isHistoryPartition(name: String): Boolean = // {name}$hst$y????$a???
+            name.indexOf("${PG_HST}${PG_YEAR}") >= 0
+                    && name.lastIndexOf(PG_PART) == (name.length - "${PG_PART}???".length) // ends with $a???
 
         /**
          * An indicator if this is an internal Naksha collection. Very special rules apply to these tables.
@@ -139,7 +140,7 @@ open class PgTable(
          */
         @JvmStatic
         @JsStatic
-        fun isInternal(name: String): Boolean = name.startsWith("naksha~")
+        fun isInternal(name: String): Boolean = name.startsWith(PG_INTERNAL_PREFIX)
     }
 
     /**
@@ -265,14 +266,34 @@ open class PgTable(
     internal open fun create(conn: PgConnection) = conn.execute(CREATE_SQL).close()
 
     /**
-     * Adds the given index to the table and all partitions.
+     * Creates the given index to the table and all partitions.
      * @param conn the connection to use to execute the creation.
      * @param index the index to add.
      */
-    open fun addIndex(conn: PgConnection, index: PgIndex) {
+    open fun createIndex(conn: PgConnection, index: PgIndex) {
         if (!indices.contains(index)) {
             index.create(conn, this)
             indices = indices + index
+        }
+    }
+
+    /**
+     * Add the given index into the administrative structure, does not perform any actual database change.
+     * @param index the index to add.
+     */
+    open fun addIndex(index: PgIndex) {
+        if (!indices.contains(index)) {
+            indices = indices + index
+        }
+    }
+
+    /**
+     * Removes the given from the administrative structure, does not perform any actual database change.
+     * @param index the index to add.
+     */
+    open fun removeIndex(index: PgIndex) {
+        if (indices.contains(index)) {
+            indices = indices - index
         }
     }
 

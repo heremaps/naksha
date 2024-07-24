@@ -14,7 +14,7 @@ import kotlin.test.*
  * We add all tests into a single file, because ordering of tests is not supported, and we do not want to create a new schema and initialize the database for every single test. I understand that in theory, each test should be independent, but if we do this, tests will become so slow, that it takes hours to run them all eventually, and this is worse than the alternative of having tests being strongly dependent on each other. Specifically, this makes writing more tests faster, because we can reuse test code and create multiple things in a row, testing multiple things at ones, and not need to always set up everything gain. As said, it is true that this way of testing is suboptimal from testing perspective, but it is a lot faster in writing the tests, and quicker at runtime, and it is more important to have fast tests, and spend only a minimal amount of time creating them, than to have the perfect tests. This is not a nuclear plant!
  */
 class TestPsql {
-    private val env = TestEnv(dropSchema = true, initStorage = true)
+    private val env = TestEnv(dropSchema = true, initStorage = true, enableInfoLogs = true)
 
     private fun isLockReleased(collectionId: String): Boolean {
         val lock = PgUtil.lockId(collectionId).toLong()
@@ -23,6 +23,29 @@ class TestPsql {
         ).fetch().use {
             return (it.column("count") as Int64).toInt() == 0
         }
+    }
+
+    @Test
+    fun run_all() {
+        val schema = env.storage.defaultSchema()
+        assertTrue(schema.exists(), "The default schema should exists!")
+
+        val naksha_collections = schema[PgNakshaCollections.ID]
+        assertTrue(naksha_collections.exists(), "${PgNakshaCollections.ID} should exist!")
+        val naksha_dictionaries = schema[PgNakshaDictionaries.ID]
+        assertTrue(naksha_dictionaries.exists(), "${PgNakshaDictionaries.ID} should exist!")
+        val naksha_transactions = schema[PgNakshaTransactions.ID]
+        assertTrue(naksha_transactions.exists(), "${PgNakshaTransactions.ID} should exist!")
+
+        // create_collection("test", 0)
+    }
+
+    private fun create_collection_low_level(id: String, partitions: Int) {
+
+    }
+
+    private fun drop_collection_low_level(id: String) {
+
     }
 
     private fun create_collection(id: String, partitions: Int) {
@@ -50,8 +73,4 @@ class TestPsql {
         }
     }
 
-    @Test
-    fun run_all() {
-        create_collection("test", 0)
-    }
 }

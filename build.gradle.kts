@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter
 
 repositories {
     // provides dev versions!
-    maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap")
+    //maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap")
     maven("https://plugins.gradle.org/m2/")
 }
 
@@ -26,10 +26,10 @@ plugins {
     id("jacoco-report-aggregation")
     // For latest dev version:
     // https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap/org/jetbrains/kotlin/kotlin-compiler/maven-metadata.xml
-    id("org.jetbrains.kotlin.multiplatform").version("2.1.0-dev-1329").apply(false)
-    kotlin("plugin.js-plain-objects").version("2.1.0-dev-1329")
-    //id("org.jetbrains.kotlin.multiplatform").version("2.0.20-Beta1").apply(false)
-    //kotlin("plugin.js-plain-objects").version("2.0.20-Beta1")
+    //id("org.jetbrains.kotlin.multiplatform").version("2.1.0-dev-1329").apply(false)
+    //kotlin("plugin.js-plain-objects").version("2.1.0-dev-1329")
+    id("org.jetbrains.kotlin.multiplatform").version("2.0.20-Beta2").apply(false)
+    kotlin("plugin.js-plain-objects").version("2.0.20-Beta2")
 }
 
 group = "com.here.naksha"

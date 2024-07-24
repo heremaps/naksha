@@ -15,6 +15,9 @@ import naksha.psql.PgColumn.PgColumnCompanion.geo as c_geo
 import naksha.psql.PgColumn.PgColumnCompanion.geo_grid as c_geo_grid
 import naksha.psql.PgColumn.PgColumnCompanion.tags as c_tags
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
@@ -54,9 +57,18 @@ USING $using
 ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)" else ""} ${table.TABLESPACE};"""
 
     companion object PgIndexCompanion {
+        // Warning:
+        // The index prefix can be (in worst case): {collection-name}$hst$y????$p???$i_
+        // Identifiers in Postgres are limited to 63 byte (and otherwise will be truncated).
+        // We limit customer to 32 byte, therefore we have 31 significant byte left.
+        // Due to the prefix, indices have only 13 significant characters left ($hst$y????$p???$i_ = 18 chars, we reserved 31 chars)
+        // In a nutshell: Keep the significant part of the index identifier shorter/equal to 14 characters!
+
         /**
          * A unique index above the [PgColumn.id] column, only used in [HEAD][PgHead] tables.
          */
+        @JvmField
+        @JsStatic
         val id_unique = def(PgIndex::class, "id_unique") { self ->
             self.columns = listOf(c_id)
             self.createFn = Fx2 { conn, table ->
@@ -72,6 +84,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * A unique index above the [PgColumn.txn] column, only used in the [TRANSACTIONS][PgTransactions] table.
          */
+        @JvmField
+        @JsStatic
         val txn_unique = def(PgIndex::class, "txn_unique") { self ->
             self.columns = listOf(c_txn)
             self.createFn = Fx2 { conn, table ->
@@ -87,6 +101,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * Unique index above the [PgColumn.id], [PgColumn.txn] and [PgColumn.uid] columns. This is only applied in history.
          */
+        @JvmField
+        @JsStatic
         val id_txn_uid_unique = def(PgIndex::class, "id_txn_uid_unique") { self ->
             self.columns = listOf(c_id, c_txn, c_uid)
             self.createFn = Fx2 { conn, table ->
@@ -102,6 +118,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * Index above the [PgColumn.id], [PgColumn.txn] and [PgColumn.uid] columns. To query this index above transaction numbers only, use `WHERE id like '%' AND txn ...`. If ordering is required, order via `ORDER BY id DESC, txn DESC, uid ASC`.
          */
+        @JvmField
+        @JsStatic
         val id_txn_uid = def(PgIndex::class, "id_txn_uid") { self ->
             self.columns = listOf(c_id, c_txn, c_uid)
             self.createFn = Fx2 { conn, table ->
@@ -117,6 +135,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * [GIST](https://www.postgresql.org/docs/current/gist.html) index above [PgColumn.geo], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid], for every collection that is **not** point-only.
          */
+        @JvmField
+        @JsStatic
         val gist_geo_id_txn_uid = def(PgIndex::class, "gist_geo_id_txn_uid") { self ->
             self.columns = listOf(c_geo, c_id, c_txn, c_uid)
             self.createFn = Fx2 { conn, table ->
@@ -132,6 +152,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * [SP-GIST](https://www.postgresql.org/docs/current/spgist.html) index above [PgColumn.geo], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid], better for point-only collections. For more details, please read in [gist_geo_id_txn_uid].
          */
+        @JvmField
+        @JsStatic
         val spgist_geo_id_txn_uid = def(PgIndex::class, "spgist_geo_id_txn_uid") { self ->
             self.columns = listOf(PgColumn.geo, PgColumn.id, PgColumn.txn, PgColumn.uid)
             self.createFn = Fx2 { conn, table ->
@@ -147,6 +169,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * Create a [GIN](https://www.postgresql.org/docs/current/gin.html) index above [PgColumn.tags], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid].
          */
+        @JvmField
+        @JsStatic
         val tags_id_txn_uid = def(PgIndex::class, "tags_id_txn_uid") { self ->
             self.columns = listOf(c_tags, c_id, c_txn, c_uid)
             self.createFn = Fx2 { conn, table ->
@@ -162,6 +186,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * Index above [PgColumn.geo_grid], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid].
          */
+        @JvmField
+        @JsStatic
         val geo_grid_id_txn_uid = def(PgIndex::class, "geo_grid_id_txn_uid") { self ->
             self.columns = listOf(c_geo_grid, c_id, c_txn, c_uid)
             self.createFn = Fx2 { conn, table ->
@@ -177,6 +203,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * Index above [PgColumn.app_id], [PgColumn.updated_at], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid].
          */
+        @JvmField
+        @JsStatic
         val app_id_updatedAt_id_txn_uid = def(PgIndex::class, "app_id_updatedAt_id_txn_uid") { self ->
             self.columns = listOf(c_app_id, c_updated_at, c_id, c_txn, c_uid)
             self.createFn = Fx2 { conn, table ->
@@ -192,6 +220,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * Index above the [PgColumn.author], [PgColumn.author_ts], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid].
          */
+        @JvmField
+        @JsStatic
         val author_ts_id_txn_uid = def(PgIndex::class, "author_ts_id_txn_uid") { self ->
             self.columns = listOf(c_author, c_author_ts, c_id, c_txn, c_uid)
             self.createFn = Fx2 { conn, table ->
@@ -205,16 +235,46 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         }
 
         /**
-         * Find the index by name, if such an index exists.
-         * @param name as returned by the database from `pg_class` table as `relname` (with `relkind` being `i`).
+         * Truncates the identifier to the minimal size that is guaranteed.
+         * @param id the index identifier.
+         * @return the identifier truncated to the minimal guaranteed length.
+         */
+        @JvmStatic
+        @JsStatic
+        fun truncate(id: String): String = if (id.length > 13) id.substring(0, 13) else id
+
+        /**
+         * Find the index by name.
+         * @param name the relation name (`relname`), as returned by the database from the `pg_class` table (with `relkind` being `i`).
          * @return the index, if it exists.
          */
+        @JvmStatic
+        @JsStatic
         fun of(name: String): PgIndex? {
             val existing = getDefined(name, PgIndex::class)
             if (existing != null) return existing
-            val start = name.lastIndexOf("\$i")
+            val start = name.lastIndexOf(PG_IDX)
             if (start < 0) return null
-            return getDefined(name.substring(start + "\$i".length), PgIndex::class)
+            // This is a hack for PostgresQL, which will truncate identifiers to 63 byte.
+            // Therefore, we know that name is limited to 63 characters, which may have truncated the index identifier.
+            // So we extract what is left from the index identifier and the compare it against all enumeration values.
+            // Note: It could only have truncated the last byte or many more, dependent on how long the collection id is!
+            val pg_truncated_id = name.substring(start + PG_IDX.length)
+            for (e in iterate(PgIndex::class)) if (e.text.startsWith(pg_truncated_id)) return e
+            return null
+        }
+
+        init {
+            // Sanity check.
+            val map = HashMap<String, PgIndex>()
+            for (e in iterate(PgIndex::class)) {
+                val pg_truncated_id = truncate(e.text)
+                if (pg_truncated_id in map) {
+                    val c = map[pg_truncated_id]!!
+                    throw Error("Conflict, the index ${e.text} has the same short name as ${c.text}: $pg_truncated_id")
+                }
+                map[pg_truncated_id] = e
+            }
         }
     }
 
@@ -223,7 +283,10 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
      * @param table the table for which to generate the unique index name.
      * @return the unique identifier of this index in the given table.
      */
-    fun id(table: PgTable): String = "${table.name}\$i_${str}"
+    fun id(table: PgTable): String {
+        val id = "${table.name}${PG_IDX}${text}"
+        return if (id.length > 63) id.substring(0, 63) else id
+    }
 
     /**
      * The columns (in order) which are part of the index. This is more informational purpose, because the index can be much more complicated, for example it could be a partial index.

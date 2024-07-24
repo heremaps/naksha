@@ -42,10 +42,10 @@ abstract class PgAbstractSession<T>(val storage: PgStorage, options: PgOptions) 
             // TODO: if pgConnection is not null, update
         }
 
-    override var realm: String
+    override var map: String
         get() = options.schema
         set(value) {
-            options = options.copy(schema = storage.realmToSchema(value))
+            options = options.copy(schema = if (value.isEmpty()) storage.defaultOptions.schema else value)
             // TODO: if pgConnection is not null, update
         }
 

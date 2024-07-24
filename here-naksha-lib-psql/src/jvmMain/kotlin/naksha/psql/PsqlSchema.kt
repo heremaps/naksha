@@ -2,14 +2,10 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.model.NakshaError
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.STORAGE_ID_MISMATCH
+import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.NakshaVersion
-import naksha.model.StorageException
-import naksha.psql.PgIndex.PgIndexCompanion.app_id_updatedAt_id_txn_uid
-import naksha.psql.PgIndex.PgIndexCompanion.author_ts_id_txn_uid
-import naksha.psql.PgIndex.PgIndexCompanion.geo_grid_id_txn_uid
-import naksha.psql.PgIndex.PgIndexCompanion.gist_geo_id_txn_uid
+import naksha.model.NakshaException
+import naksha.model.NakshaUtil
 import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
 import naksha.psql.PgIndex.PgIndexCompanion.tags_id_txn_uid
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -24,7 +20,7 @@ import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 @Suppress("MemberVisibilityCanBePrivate")
 class PsqlSchema internal constructor(storage: PgStorage, name: String) : PgSchema(storage, name) {
     override fun init(connection: PgConnection?) {
-        PgUtil.ensureValidCollectionId(name)
+        NakshaUtil.verifyId(name)
         init_internal(storage.id(), connection)
     }
 
@@ -35,7 +31,6 @@ class PsqlSchema internal constructor(storage: PgStorage, name: String) : PgSche
      * @param version the version of the PLV8 code and PSQL library, if the existing installed version is smaller, it will be updated.
      * @param override if _true_, forcefully override currently installed stored functions and PLV8 modules, even if version matches.
      * @return the storage-id given or the generated storage-id.
-     * @throws StorageException if any error occurred, for example if the schema is already initialized for a different storage-id.
      */
     internal fun init_internal(
         storageId: String?,
@@ -85,7 +80,7 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
             }
             val storage_id: String = if (existingStorageId != null) {
                 if (storageId != null && storageId != existingStorageId) {
-                    throw StorageException(NakshaError(STORAGE_ID_MISMATCH, "Expect $storageId, but found $existingStorageId"))
+                    throw NakshaException(STORAGE_ID_MISMATCH, "Expect $storageId, but found $existingStorageId")
                 }
                 existingStorageId
             } else storageId ?: PlatformUtil.randomString()
@@ -198,7 +193,7 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 conn, 0, PgStorageClass.Consistent,
                 storeHistory = false,
                 storedDeleted = false,
-                storeMeta = false,
+                storeMeta = true,
                 indices = emptyList()
             )
             collections().create_internal(
@@ -221,6 +216,7 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                     tags_id_txn_uid
                 )
             )
+            logger.info("Done creating transactions, collections, and dictionaries")
             conn.commit()
             return storage_id
         } finally {

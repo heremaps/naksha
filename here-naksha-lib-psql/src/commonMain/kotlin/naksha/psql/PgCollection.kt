@@ -1,12 +1,20 @@
 package naksha.psql
 
+import kotlinx.datetime.Clock
 import naksha.base.Epoch
 import naksha.base.Int64
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.currentMillis
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.StorageException
+import naksha.base.PlatformUtil
+import naksha.base.PlatformUtil.PlatformUtilCompanion.HOUR
+import naksha.base.PlatformUtil.PlatformUtilCompanion.SECOND
+import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaException
+import naksha.model.NakshaUtil
+import naksha.psql.PgStorageClass.Companion.Consistent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 
@@ -30,9 +38,9 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
     protected val lock = Platform.newLock()
 
     /**
-     * The epoch milliseconds when to automatically refresh the cache. If _null_, it needs to be refreshed instantly.
+     * The epoch milliseconds when to automatically refresh the cache. If _null_, it needs to be refreshed instantly. Normally, we only refresh ones a day and rather rely upon PostgresQL notifications to do forced updates.
      */
-    protected var updateAt: Int64? = null
+    private var _updateAt: Int64? = null
 
     /**
      * Caches the information if the collection exists.
@@ -78,25 +86,21 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
      * **Notes**:
      * - The `TRANSACTION` table is not designed for ultra-high throughput, but rather as a storage that allows easy and fast garbage collection and to query ordered by transaction numbers or _sequence numbers_.
      * - Internal tables do not allow to add or remove indices, while ordinary consumer tables do allow this.
-     *
-     * @throws StorageException if the collection does not exist.
      */
     val head: PgHead
         get() {
-            check(exists()) { throwStorageException(COLLECTION_NOT_FOUND, id = id) }
-            return _head ?: throwStorageException(COLLECTION_NOT_FOUND, id = id)
+            check(exists()) { throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id) }
+            return _head ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id)
         }
 
     /**
      * The history can be disabled fully or temporary. When disabled fully, no history tables are created, in that case this property will be _null_.
      *
      * If the history tables were created, they are always partitioned by the year of `txn_next`. Each yearly table is partitioned again the same way that [HEAD][head] is partitioned, not doing this would create a bottleneck when modifying features in parallel, because then the parallel connections would have a congestion in the history. The history therefore managed the same way as [HEAD][head], so using the [PgPlatform.partitionNumber] above the `feature.id`.
-     *
-     * @throws StorageException if the collection does not exist.
      */
     var history: PgHistory? = null
         get() {
-            check(exists()) { throwStorageException(COLLECTION_NOT_FOUND, id = id) }
+            check(exists()) { throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id) }
             return field
         }
         private set
@@ -105,24 +109,20 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
      * The deletion table can be disabled fully or temporary. When disabled fully, no deletion tables are created, in that case this property will be _null_.
      *
      * If the deletion tables are created, deleted features (not being purged) will be copied into this shadow deletion table. The deletion table is partitioned again the same way that [HEAD][head] is partitioned, not doing this would create a bottleneck when modifying features in parallel, because then the parallel connections would have a congestion in the deletion table. The deletion therefore managed the same way as [HEAD][head], so using the [PgPlatform.partitionNumber] above the `feature.id`.
-     *
-     * @throws StorageException if the collection does not exist.
      */
     var deleted: PgDeleted? = null
         get() {
-            check(exists()) { throwStorageException(COLLECTION_NOT_FOUND, id = id) }
+            check(exists()) { throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id) }
             return field
         }
         private set
 
     /**
      * An optional metadata table, never partitioned. This table is used to as internal storage for metadata, like statistics, calculated by background jobs and other information like this. It can be used as well by applications, and is accessible from outside, but does not have any history or track changes.
-     *
-     * @throws StorageException if the collection does not exist.
      */
     var meta: PgTable? = null
         get() {
-            check(exists()) { throwStorageException(COLLECTION_NOT_FOUND, id = id) }
+            check(exists()) { throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id) }
             return field
         }
         private set
@@ -152,18 +152,18 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
     open fun create(
         connection: PgConnection? = null,
         partitions: Int = 1,
-        storageClass: PgStorageClass = PgStorageClass.Consistent,
+        storageClass: PgStorageClass = Consistent,
         storeHistory: Boolean = true,
         storedDeleted: Boolean = true,
         storeMeta: Boolean = true,
         indices: List<PgIndex> = emptyList()
     ): PgCollection {
         check(!PgTable.isInternal(id)) {
-            throwStorageException(ILLEGAL_ARGUMENT, message = "It is not allowed to modify internal tables", id = id)
+            throw NakshaException(ILLEGAL_ARGUMENT, "It is not allowed to modify internal tables", id = id)
         }
-        PgUtil.ensureValidCollectionId(id)
+        NakshaUtil.verifyId(id)
         check(partitions in 1..256) {
-            throwStorageException(ILLEGAL_ARGUMENT, "Invalid amount of partitions requested, must be 0 to 256, was: $partitions")
+            throw NakshaException(ILLEGAL_ARGUMENT, "Invalid amount of partitions requested, must be 0 to 256, was: $partitions")
         }
         return create_internal(connection, partitions, storageClass, storeHistory, storedDeleted, storeMeta, indices)
     }
@@ -181,54 +181,57 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
         val conn = connection ?: s.newConnection(s.defaultOptions.copy(schema = schema.name, useMaster = true, readOnly = false))
         try {
             val NOW = Epoch()
-            if (this.id == NakshaTransactions.ID) {
+            if (this.id == PgNakshaTransactions.ID) {
                 val txn = PgTransactions(this)
                 txn.create(conn)
-                txn.addYear(conn, NOW.year)
-                txn.addYear(conn, NOW.year + 1)
+                txn.createYear(conn, NOW.year)
+                txn.createYear(conn, NOW.year + 1)
 
-                txn.addIndex(conn, PgIndex.txn_unique)
-                txn.addIndex(conn, PgIndex.tags_id_txn_uid)
-                this._head = txn
-                this.deleted = null
-                this.history = null
-                this.meta = null
+                txn.createIndex(conn, PgIndex.txn_unique)
+                for (index in indices) txn.createIndex(conn, index)
+
+                // We can have a meta table for transactions, but no history or deleted!
+                val meta: PgMeta?
+                if (storeMeta) {
+                    meta = PgMeta(txn)
+                    meta.create(conn)
+                    meta.createIndex(conn, PgIndex.id_unique)
+                    for (index in indices) meta.createIndex(conn, index)
+                } else {
+                    meta = null
+                }
+                update(txn, null, null, meta)
                 return this
             }
             val head = PgHead(this, storageClass, partitions)
-            val deleted = if (storedDeleted) PgDeleted(head) else null
-            val history = if (storeHistory) PgHistory(head) else null
-            val meta = if (storeMeta) PgMeta(head) else null
-
             head.create(conn)
-            head.addIndex(conn, PgIndex.id_unique)
-            for (index in indices) head.addIndex(conn, index)
+            head.createIndex(conn, PgIndex.id_unique)
+            for (index in indices) head.createIndex(conn, index)
 
+            val deleted = if (storedDeleted) PgDeleted(head) else null
             if (deleted != null) {
                 deleted.create(conn)
-                head.addIndex(conn, PgIndex.id_unique)
-                for (index in indices) head.addIndex(conn, index)
+                deleted.createIndex(conn, PgIndex.id_unique)
+                for (index in indices) deleted.createIndex(conn, index)
             }
+            val history = if (storeHistory) PgHistory(head) else null
             if (history != null) {
                 history.create(conn)
-                history.addYear(conn, NOW.year)
-                history.addYear(conn, NOW.year + 1)
-                history.addIndex(conn, PgIndex.id_txn_uid_unique)
+                history.createYear(conn, NOW.year)
+                history.createYear(conn, NOW.year + 1)
+                history.createIndex(conn, PgIndex.id_txn_uid_unique)
                 for (index in indices) {
                     // We do not need this index, because it would only duplicate the stronger unique one!
-                    if (index != PgIndex.id_txn_uid) history.addIndex(conn, index)
+                    if (index != PgIndex.id_txn_uid) history.createIndex(conn, index)
                 }
             }
+            val meta = if (storeMeta) PgMeta(head) else null
             if (meta != null) {
                 meta.create(conn)
-                meta.addIndex(conn, PgIndex.id_unique)
-                for (index in indices) meta.addIndex(conn, index)
+                meta.createIndex(conn, PgIndex.id_unique)
+                for (index in indices) meta.createIndex(conn, index)
             }
-
-            this._head = head
-            this.deleted = deleted
-            this.history = history
-            this.meta = meta
+            update(head, deleted, history, meta)
         } finally {
             if (connection == null) {
                 conn.commit()
@@ -236,6 +239,20 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
             }
         }
         return this
+    }
+
+    private fun update(head: PgHead?, deleted: PgDeleted?, history: PgHistory?, meta: PgMeta?) {
+        this._head = head
+        this.deleted = deleted
+        this.history = history
+        this.meta = meta
+        if (head != null) {
+            this._exists = true
+            this._updateAt = if (PgTable.isInternal(head.name)) Platform.INT64_MAX_VALUE else currentMillis() + HOUR
+        } else {
+            this._exists = false
+            this._updateAt = currentMillis() + SECOND * 20
+        }
     }
 
     /**
@@ -280,7 +297,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
         val conn = connection ?: s.newConnection(s.defaultOptions.copy(schema = schema.name, useMaster = true, readOnly = false))
         try {
             check(!PgTable.isInternal(id)) {
-                throwStorageException(ILLEGAL_ARGUMENT, message = "It is not allowed to modify internal tables", id = id)
+                throw NakshaException(ILLEGAL_ARGUMENT, "It is not allowed to modify internal tables", id = id)
             }
             if (exists(conn)) {
                 drop_internal(conn)
@@ -306,51 +323,166 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
     }
 
     /**
-     * Refresh the cached information of this collection. It is highly recommended to call this function.
+     * Refresh the cached information of this collection.
      * @param connection the connection to query the database; if _null_, a new data connection is acquired, used, and released.
-     * @param noCache normally calls to refresh are ignored, when the cache has been updated in the last few seconds to avoid over usage of the database in case of bad programming, setting this parameter to _true_ forces an update, even when the last update was just done a few milliseconds before; use this parameter with great care!
+     * @param noCache normally calls to refresh are ignored, when the cache has been updated already, because, except for deletion or creation, collections are not mutable and therefore can be cached basically forever. However, to avoid a cache stale, setting this parameter to _true_ forces an update.
      *
-     * @throws StorageException if any error happened.
+     * @throws NakshaException if any error happened.
      */
     open fun refresh(connection: PgConnection? = null, noCache: Boolean = false): PgCollection {
-        if (noCache || updateAt == null || Platform.currentMillis() >= updateAt) {
+        if (noCache || _updateAt == null || currentMillis() >= _updateAt) {
             lock.acquire().use {
-                // Another thread was faster and updated the values.
-                // At this point, we ignore noCache, because actually the value was updated instantly before,
-                // there is really no need to update again!
-                if (updateAt != null || Platform.currentMillis() < updateAt) return this
-                TODO("Implement me")
-                val quotedSchema = "'foo'"
-                val quotedId = "'naksha~collections'"
-                val quotedLike = "'naksha~collections$%'"
-                val SQL = """
-with i as (select oid, nspname from pg_namespace where nspname=$quotedSchema)
-select c.oid as table_oid, c.relname as table_name, i.oid as schema_oid, i.nspname as schema, c.relkind, c.relpersistence sc
-from pg_class c, i
-where (c.relkind='r' or c.relkind='p') and c.relnamespace = i.oid
-and (c.relname=$quotedId or c.relname like $quotedLike)
-order by table_name;
-"""
+                // If another thread was faster and updated the values, we ignore noCache
+                // This is done. because actually the value was updated instantly before, there is no need to update again!
+                val updateAt = _updateAt
+                if (updateAt != null && currentMillis() < updateAt) return this
+                val s = schema.storage
+                val conn = connection ?: s.newConnection(s.defaultOptions.copy(schema = schema.name, useMaster = true, readOnly = false))
+                var done: Boolean = false
+                var head: PgHead? = null
+                var deleted: PgDeleted? = null
+                var history: PgHistory? = null
+                var meta: PgMeta? = null
+                try {
+                    val cursor = PgRelation.select(conn, schema.name, id)
+                    cursor.use {
+                        //
+                        // NOTE: We ignore all unknown relations, that allows users to add some own indices and relations!
+                        //
+                        var headRelation: PgRelation? = null
+                        val headIndices: MutableList<PgIndex> = mutableListOf()
+                        val headPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
+                        val headYears: MutableMap<Int, PgRelation> = mutableMapOf()
+                        var deletedRelation: PgRelation? = null
+                        val deletedIndices: MutableList<PgIndex> = mutableListOf()
+                        val deletedPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
+                        var historyRelation: PgRelation? = null
+                        val historyIndices: MutableList<PgIndex> = mutableListOf()
+                        val historyYears: MutableMap<Int, PgRelation> = mutableMapOf()
+                        val historyPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
+                        var metaRelation: PgRelation? = null
+                        val metaIndices: MutableList<PgIndex> = mutableListOf()
+                        while (cursor.next()) {
+                            val rel = PgRelation(cursor)
+                            if (id == PgNakshaTransactions.ID) {
+                                // We know that the transaction table does only have a HEAD.
+                                // We further know, that head is split yearly!
+                                if (rel.isAnyHeadRelation()) {
+                                    if (rel.isHeadRootRelation()) {
+                                        headRelation = rel
+                                    } else if (rel.isTxnYearRelation()) {
+                                        val year = rel.year()
+                                        if (year > 0) headYears[year] = rel
+                                    } else if (rel.isIndex()) {
+                                        val index = PgIndex.of(rel.name)
+                                        if (index != null && index !in headIndices) headIndices.add(index)
+                                    }
+                                }
+                            } else {
+                                if (rel.isAnyHeadRelation()) {
+                                    if (rel.isHeadRootRelation()) {
+                                        headRelation = rel
+                                    } else if (rel.isTable()) {
+                                        val i = rel.partitionNumber()
+                                        if (i >= 0) headPartitions[i] = rel
+                                    } else if (rel.isIndex()) {
+                                        val index = PgIndex.of(rel.name)
+                                        if (index != null && index !in headIndices) headIndices.add(index)
+                                    }
+                                }
+                                if (rel.isAnyDeleteRelation()) {
+                                    if (rel.isDeleteRootRelation()) {
+                                        deletedRelation = rel
+                                    } else if (rel.isTable()) {
+                                        val i = rel.partitionNumber()
+                                        if (i >= 0) deletedPartitions[i] = rel
+                                    } else if (rel.isIndex()) {
+                                        val index = PgIndex.of(rel.name)
+                                        if (index != null && index !in deletedIndices) deletedIndices.add(index)
+                                    }
+                                }
+                                if (rel.isAnyHistoryRelation()) {
+                                    if (rel.isHistoryRootRelation()) {
+                                        historyRelation = rel
+                                    } else if (rel.isHistoryYearRelation()) {
+                                        val year = rel.year()
+                                        if (year > 0) historyYears[year] = rel
+                                    } else if (rel.isHistoryPartition()) {
+                                        val i = rel.partitionNumber()
+                                        if (i >= 0) historyPartitions[i] = rel
+                                    } else if (rel.isIndex()) {
+                                        val index = PgIndex.of(rel.name)
+                                        if (index != null && index !in historyIndices) historyIndices.add(index)
+                                    }
+                                }
+                            }
+                            if (rel.isAnyMetaRelation()) {
+                                if (rel.isMetaRootRelation()) {
+                                    metaRelation = rel
+                                } else if (rel.isIndex()) {
+                                    val index = PgIndex.of(rel.name)
+                                    if (index != null && index !in metaIndices) metaIndices.add(index)
+                                }
+                            }
+                        }
+
+                        if (headRelation != null) {
+                            if (headRelation.isPartition()) {
+                                val parts = headPartitions.size
+                                if (parts == 0 && headYears.isNotEmpty()) {
+                                    val txn = PgTransactions(this)
+                                    for (entry in historyYears) txn.years[entry.key] = PgTransactionsYear(txn, entry.key)
+                                    head = txn
+                                } else {
+                                    if (parts < 2 || parts > 256) {
+                                        throw NakshaException(
+                                            ILLEGAL_STATE,
+                                            "Invalid amount of HEAD partitions found, must be 2..256, but is ${headPartitions.size}"
+                                        )
+                                    }
+                                    head = PgHead(this, headRelation.storageClass, parts)
+                                }
+                            } else {
+                                head = PgHead(this, headRelation.storageClass, 0)
+                            }
+                            // TODO: KotlinCompilerBug - No, "head" can't be null!
+                            for (index in headIndices) head!!.addIndex(index)
+                        }
+                        if (historyRelation != null) {
+                            if (head == null) throw NakshaException(ILLEGAL_STATE, "Missing HEAD table for collection '$id'")
+                            // TODO: KotlinCompilerBug - No, "head" and "history", both can't be null!
+                            history = PgHistory(head!!)
+                            for (entry in historyYears) history!!.years[entry.key] = PgHistoryYear(history!!, entry.key)
+                        }
+                        if (deletedRelation != null) {
+                            if (head == null) throw NakshaException(ILLEGAL_STATE, "Missing HEAD table for collection '$id'")
+                            // TODO: KotlinCompilerBug - No, "head" and "deleted", both can't be null!
+                            deleted = PgDeleted(head!!)
+                            for (index in deletedIndices) deleted!!.addIndex(index)
+                        }
+                        if (metaRelation != null) {
+                            if (head == null) throw NakshaException(ILLEGAL_STATE, "Missing HEAD table for collection '$id'")
+                            // TODO: KotlinCompilerBug - No, "head" and "meta", both can't be null!
+                            meta = PgMeta(head!!)
+                            for (index in metaIndices) meta!!.addIndex(index)
+                        }
+                    }
+                    done = true
+                } finally {
+                    if (done) update(head, deleted, history, meta) else update(null, null, null, null)
+                    if (connection == null) {
+                        conn.commit()
+                        conn.close()
+                    }
+                }
             }
         }
         return this
     }
 
-    private var _indices: List<PgCollectionIndex>? = null
-
-    /**
-     * Returns a list of all collection indices.
-     * @throws StorageException if the collection does not exist.
-     */
-    val indices: List<PgCollectionIndex>
-        get() {
-            check(exists()) { throwStorageException(COLLECTION_NOT_FOUND, id = id) }
-            return _indices ?: throwStorageException(COLLECTION_NOT_FOUND, id = id)
-        }
-
     /**
      * Add the index (does not fail, when the index exists already).
-     * @throws StorageException if the collection does not exist.
+     * @throws NakshaException if the collection does not exist.
      */
     fun addIndex(
         conn: PgConnection,
@@ -365,7 +497,7 @@ order by table_name;
 
     /**
      * Drop the index (does not fail, when the index does not exist).
-     * @throws StorageException if the collection does not exist.
+     * @throws NakshaException if the collection does not exist.
      */
     fun dropIndex(
         conn: PgConnection,

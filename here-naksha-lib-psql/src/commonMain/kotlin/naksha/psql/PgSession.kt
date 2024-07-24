@@ -5,7 +5,7 @@ import kotlinx.datetime.*
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbMapDecoder
-import naksha.jbon.JbMapFeatureDecoder
+import naksha.jbon.JbFeatureDecoder
 import naksha.jbon.XyzVersion
 import naksha.model.*
 import naksha.model.request.*
@@ -318,11 +318,11 @@ FROM ns, txn_seq;
         return _txts!!
     }
 
-    private var _featureReader: JbMapFeatureDecoder? = null
-    private fun featureReader(): JbMapFeatureDecoder {
+    private var _featureReader: JbFeatureDecoder? = null
+    private fun featureReader(): JbFeatureDecoder {
         var reader = _featureReader
         if (reader == null) {
-            reader = JbMapFeatureDecoder()
+            reader = JbFeatureDecoder()
             _featureReader = reader
         }
         reader.dictManager = storage[options.schema].dictionaries()
@@ -481,10 +481,6 @@ FROM ns, txn_seq;
     }
 
     override fun txOnRollback(session: PgConnection) {
-    }
-
-    override fun writeFeature(feature: NakshaFeatureProxy): Response {
-        TODO("Not yet implemented")
     }
 
     override fun execute(request: Request<*>): Response {

@@ -2,7 +2,8 @@
 
 package naksha.psql
 
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.COLLECTION_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
+import naksha.model.NakshaException
 import kotlin.js.JsExport
 
 /**
@@ -10,7 +11,7 @@ import kotlin.js.JsExport
  *
  */
 @JsExport
-class NakshaTransactions internal constructor(schema: PgSchema) : PgCollection(schema, ID), PgInternalCollection {
+class PgNakshaTransactions internal constructor(schema: PgSchema) : PgCollection(schema, ID), PgInternalCollection {
     companion object NakshaTransactionsCompanion {
         const val ID = "naksha~transactions"
     }
@@ -20,7 +21,7 @@ class NakshaTransactions internal constructor(schema: PgSchema) : PgCollection(s
      */
     var transactions: PgTransactions? = null
         get() {
-            check(exists()) { throwStorageException(COLLECTION_NOT_FOUND, id = id) }
+            check(exists()) { throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id) }
             return field
         }
         private set

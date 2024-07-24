@@ -20,4 +20,3 @@ interface PlatformDataView : PlatformObject {
      */
     fun <T : Proxy> proxy(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
 }
-

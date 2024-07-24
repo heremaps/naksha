@@ -22,7 +22,7 @@ interface PgStorage : IStorage {
     val cluster: PgCluster?
 
     /**
-     * The default options as provided in the constructor. The `schema` of the `defaultOptions` is the root schema, which will mapped to the `public` realm. This schema is guaranteed to be there, when [initStorage] has been invoked, it is the main source of the storage-id, and it can be accessed via [defaultSchema].
+     * The default options as provided in the constructor. The `schema` of the `defaultOptions` is the root schema, which will mapped to the [default map][NakshaContext.DEFAULT_MAP]. This schema is guaranteed to be there, when [initStorage] has been invoked, it is the main source of the storage-id, and it can be accessed via [defaultSchema].
      */
     val defaultOptions: PgOptions
 
@@ -59,20 +59,6 @@ interface PgStorage : IStorage {
     val postgresVersion: NakshaVersion
 
     /**
-     * Translate the given realm into a schema name.
-     *
-     * Internally, PostgresQL does not know anything about realms, it only works with schemata. Therefore, there are translation method to map schemata to realms and vice versa. Normally the schema has the same name as the realm, but not for the default realm (`public`), which is always mapped to the default schema.
-     */
-    fun realmToSchema(realm: String): String = if ("public" == realm) defaultOptions.schema else realm
-
-    /**
-     * Translate the given schema into a realm name.
-     *
-     * Internally, PostgresQL does not know anything about realms, it only works with schemata. Therefore, there are translation method to map schemata to realms and vice versa. Normally the schema has the same name as the realm, but not for the default realm (`public`), which is always mapped to the default schema.
-     */
-    fun schemaToRealm(schemaName: String): String = if (defaultOptions.schema == schemaName) "public" else schemaName
-
-    /**
      * Returns the default (root) schema.
      * @return the default (root) schema.
      */
@@ -107,16 +93,32 @@ interface PgStorage : IStorage {
      * timeouts and locks).
      *
      * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
-     * @throws StorageException if the initialization failed.
+     * @throws NakshaException if the initialization failed.
      * @since 2.0.30
      */
     override fun initStorage(params: Map<String, *>?)
 
-    override fun newWriteSession(context: NakshaContext): IWriteSession =
-        newSession(defaultOptions.copy(readOnly = false, useMaster = true, appId=context.appId, author = context.author))
+    override fun newWriteSession(context: NakshaContext, options: NakshaSessionOptions?): IWriteSession =
+        newSession(
+            defaultOptions.copy(
+                readOnly = false,
+                useMaster = true,
+                parallel = options?.parallel ?: false,
+                appId = context.appId,
+                author = context.author
+            )
+        )
 
-    override fun newReadSession(context: NakshaContext, useMaster: Boolean): IWriteSession =
-        newSession(defaultOptions.copy(readOnly = true, useMaster = useMaster, appId=context.appId, author = context.author))
+    override fun newReadSession(context: NakshaContext, options: NakshaSessionOptions?): IWriteSession =
+        newSession(
+            defaultOptions.copy(
+                readOnly = true,
+                useMaster = options?.useMaster ?: false,
+                parallel = options?.parallel ?: false,
+                appId = context.appId,
+                author = context.author
+            )
+        )
 
     /**
      * Returns a new PostgresQL session.

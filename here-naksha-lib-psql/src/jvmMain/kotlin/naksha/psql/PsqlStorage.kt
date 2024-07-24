@@ -174,7 +174,7 @@ SELECT
     override fun rowToFeature(row: Row): NakshaFeatureProxy {
         return if (row.feature != null) {
             // TODO: FIXME, we need the XYZ namespace
-            val featureReader = JbMapFeatureDecoder(JbDictManager()).mapBytes(row.feature!!).reader
+            val featureReader = JbFeatureDecoder(JbDictManager()).mapBytes(row.feature!!).reader
             val feature = JbMapDecoder().mapReader(featureReader).toIMap().proxy(NakshaFeatureProxy::class)
             feature
         } else {
@@ -251,13 +251,14 @@ SELECT
      */
     private val schemata: AtomicMap<String, WeakRef<PsqlSchema>> = Platform.newAtomicMap()
 
-    override fun initRealm(realm: String) {
-        this[realmToSchema(realm)].init()
+    override fun initMap(map: String) {
+        val schema = if (map.isEmpty()) defaultOptions.schema else map
+        this[schema].init()
     }
 
-    override fun dropRealm(realm: String) {
-        val schemaName = realmToSchema(realm)
-        if (schemaName in this) this[schemaName].drop()
+    override fun dropMap(map: String) {
+        val schema = if (map.isEmpty()) defaultOptions.schema else map
+        if (schema in this) this[schema].drop()
     }
 
     override fun defaultSchema(): PsqlSchema = this[defaultOptions.schema]

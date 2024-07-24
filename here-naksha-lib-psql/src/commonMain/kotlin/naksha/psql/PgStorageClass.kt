@@ -4,6 +4,7 @@ import naksha.base.JsEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
@@ -56,6 +57,19 @@ class PgStorageClass : JsEnum() {
         @JsStatic
         @JvmField
         val Unknown = defIgnoreCase(PgStorageClass::class, "unknown")
+
+        /**
+         * Detect storage class from `relpersistence` from `pg_class`.
+         * @param relpersistence the value as read from `pg_class`.
+         * @return detected storage class.
+         */
+        @JsStatic
+        @JvmStatic
+        fun of(relpersistence: String): PgStorageClass = when (relpersistence) {
+            "u" -> Brittle
+            "t" -> Temporary
+            else -> Consistent
+        }
     }
 
     /**

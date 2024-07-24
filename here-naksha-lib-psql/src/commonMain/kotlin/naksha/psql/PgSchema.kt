@@ -8,7 +8,8 @@ import naksha.base.Platform
 import naksha.base.WeakRef
 import naksha.base.fn.Fn0
 import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.UNAUTHORIZED
+import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
+import naksha.model.NakshaException
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 
@@ -60,19 +61,19 @@ abstract class PgSchema(val storage: PgStorage, val name: String) {
      * Returns the dictionaries' collection.
      * @return the dictionaries' collection.
      */
-    open fun dictionaries(): NakshaDictionaries = getCollection(NakshaDictionaries.ID) { NakshaDictionaries(this) }
+    open fun dictionaries(): PgNakshaDictionaries = getCollection(PgNakshaDictionaries.ID) { PgNakshaDictionaries(this) }
 
     /**
      * Returns the transactions' collection.
      * @return the transactions' collection.
      */
-    open fun transactions(): NakshaTransactions = getCollection(NakshaTransactions.ID) { NakshaTransactions(this) }
+    open fun transactions(): PgNakshaTransactions = getCollection(PgNakshaTransactions.ID) { PgNakshaTransactions(this) }
 
     /**
      * Returns the collections' collection.
      * @return the collections' collection.
      */
-    open fun collections(): NakshaCollections = getCollection(NakshaCollections.ID) { NakshaCollections(this) }
+    open fun collections(): PgNakshaCollections = getCollection(PgNakshaCollections.ID) { PgNakshaCollections(this) }
 
     /**
      * Returns a shared cached [PgCollection] wrapper. This method is internally called, when a storage or realm are initialized to create all internal collections.
@@ -81,9 +82,9 @@ abstract class PgSchema(val storage: PgStorage, val name: String) {
      */
     open operator fun get(id: String): PgCollection = getCollection(id) {
         when(id) {
-            NakshaDictionaries.ID -> NakshaDictionaries(this)
-            NakshaCollections.ID -> NakshaCollections(this)
-            NakshaTransactions.ID -> NakshaTransactions(this)
+            PgNakshaDictionaries.ID -> PgNakshaDictionaries(this)
+            PgNakshaCollections.ID -> PgNakshaCollections(this)
+            PgNakshaTransactions.ID -> PgNakshaTransactions(this)
             else -> PgCollection(this, id)
         }
     }
@@ -132,12 +133,11 @@ abstract class PgSchema(val storage: PgStorage, val name: String) {
      */
     open fun refresh(connection: PgConnection? = null): PgSchema {
         if (_updateAt == null || Platform.currentMillis() < _updateAt) {
-            val sql = "SELECT oid FROM pg_namespace WHERE nspname = $1"
             val conn = connOf(connection)
             try {
-                val cursor = conn.execute(sql, arrayOf(name)).fetch()
+                val cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(name)).fetch()
                 cursor.use {
-                    _oid = cursor["schema_oid"]
+                    _oid = cursor["oid"]
                 }
             } finally {
                 closeOf(conn, connection, false)
@@ -172,7 +172,7 @@ abstract class PgSchema(val storage: PgStorage, val name: String) {
      * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
      */
     open fun drop(connection: PgConnection? = null) {
-        check(currentContext().su) { throwStorageException(UNAUTHORIZED, "Only superusers may drop schemata") }
+        check(currentContext().su) { throw NakshaException(UNAUTHORIZED, "Only superusers may drop schemata") }
         val conn = connOf(connection)
         try {
             conn.execute("DROP SCHEMA ${quoteIdent(name)}").close()

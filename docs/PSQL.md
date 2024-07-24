@@ -124,7 +124,7 @@ The transaction-number is a 64-bit integers, split into four parts:
 
 The local **sequence-number** is stored in a sequence named `naksha_txn_seq`. Every day starts with the sequence-number reset to zero. The final 64-bit value is combined as:
 
-- 23-bit **year**, biased 0 and 8388607 {_shift-by 41_}.
+- 23-bit **year**, between 0 and 8388607 {_shift-by 41_}.
 - 4-bit **month**, between 1 (January) and 12 (December) {_shift-by 37_}.
 - 5-bit **day**, between 1 and 31 {_shift-by 32_}.
 - 32-bit **seq**uence number.

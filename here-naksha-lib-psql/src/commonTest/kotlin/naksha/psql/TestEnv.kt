@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.PlatformUtil
 import naksha.model.NakshaContext
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 
@@ -7,7 +8,10 @@ import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
  * Abstract class for all tests using connection to db.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-class TestEnv(dropSchema: Boolean, initStorage: Boolean) {
+class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs:Boolean = false) {
+    init {
+        PlatformUtil.ENABLE_INFO = enableInfoLogs
+    }
 
     companion object TestBasicsCompanion {
         const val STORAGE_ID = "naksha_psql_test"

@@ -1,6 +1,7 @@
 package naksha.psql
 
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
  * Index information for a collection.
@@ -8,10 +9,10 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE")
 @JsExport
 data class PgCollectionIndex(
-    val collection: PgCollection,
-    val index: PgIndex,
-    val onHead: Boolean = true,
-    val onDelete: Boolean = true,
-    val onHistory: Boolean = true,
-    val onMeta: Boolean = true
+    @JvmField val collection: PgCollection,
+    @JvmField val index: PgIndex,
+    @JvmField val onHead: Boolean = true,
+    @JvmField val onDelete: Boolean = true,
+    @JvmField val onHistory: Boolean = true,
+    @JvmField val onMeta: Boolean = true
 )
