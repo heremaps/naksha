@@ -20,14 +20,6 @@ class PointCoord() : ListProxy<Double>(Double::class), ICoordinates {
 
     private fun has(value: Double?): Boolean = value != null && !value.isNaN()
 
-    override fun calculateBBox(): BoundingBoxProxy =
-        BoundingBoxProxy(
-            getLongitude(),
-            getLatitude(),
-            getLongitude(),
-            getLatitude())
-
-
     fun getLongitude(): Double = get(0) ?: 0.0
     fun setLongitude(longitude: Double): Double = set(0, longitude) ?: 0.0
     fun hasLongitude(): Boolean = has(get(0))
