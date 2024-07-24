@@ -20,14 +20,15 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         addAll(arrayOf(west, south, southWestAlt, east, north, northEastAlt))
     }
 
-    @JsName("of3D")
+    @JsName("fromCoord")
     constructor(coord: ICoordinates) : this() {
         when (coord) {
             is PointCoord -> setToPoint(coord.getLongitude(),coord.getLatitude())
-            is MultiPointCoord -> {
-
-                addMultiPoint(coord)
-            }
+            is MultiPointCoord -> addMultiPoint(coord)
+            is LineStringCoord -> addLineString(coord)
+            is MultiLineStringCoord -> addMultiLineString(coord)
+            is MultiPolygonCoord -> addMultiPolygon(coord)
+            is PolygonCoord -> addPolygon(coord)
         }
     }
 
