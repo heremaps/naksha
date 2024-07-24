@@ -6,7 +6,7 @@ import kotlin.js.JsName
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class MultiPointCoord() : ListProxy<PointCoord>(PointCoord::class), IMultiCoordinates<PointCoord> {
+class MultiPointCoord() : ListProxy<PointCoord>(PointCoord::class), ICoordinates {
 
     @JsName("of")
     constructor(vararg points: PointCoord) : this() {

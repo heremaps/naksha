@@ -20,7 +20,77 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         addAll(arrayOf(west, south, southWestAlt, east, north, northEastAlt))
     }
 
+    @JsName("of3D")
+    constructor(coord: ICoordinates) : this() {
+        when (coord) {
+            is PointCoord -> setToPoint(coord.getLongitude(),coord.getLatitude())
+            is MultiPointCoord -> {
+
+                addMultiPoint(coord)
+            }
+        }
+    }
+
     private fun has(value: Double?): Boolean = value != null && !value.isNaN()
+
+    fun setToPoint(longitude: Double, latitude: Double): BoundingBoxProxy {
+        withMinLatitude(latitude)
+        withMaxLatitude(latitude)
+        withMinLongitude(longitude)
+        withMaxLongitude(longitude)
+        return this
+    }
+
+    fun addPoint(pointCoord: PointCoord): BoundingBoxProxy {
+        if (this.isEmpty()) setToPoint(pointCoord.getLongitude(),pointCoord.getLatitude())
+        else {
+            if (pointCoord.getLongitude()<getMinLongitude()) withMinLongitude(pointCoord.getLongitude())
+            else if (pointCoord.getLongitude()>getMaxLongitude()) withMaxLongitude(pointCoord.getLongitude())
+            if (pointCoord.getLatitude()<getMinLatitude()) withMinLatitude(pointCoord.getLatitude())
+            else if (pointCoord.getLatitude()>getMaxLatitude()) withMaxLatitude(pointCoord.getLatitude())
+        }
+        return this
+    }
+
+    fun addMultiPoint(multiPoint: MultiPointCoord): BoundingBoxProxy {
+        for (point in multiPoint) {
+            if (point==null) continue
+            addPoint(point)
+        }
+        return this
+    }
+
+    fun addLineString(lineString: LineStringCoord): BoundingBoxProxy {
+        for (point in lineString) {
+            if (point==null) continue
+            addPoint(point)
+        }
+        return this
+    }
+
+    fun addMultiLineString(multiLineString: MultiLineStringCoord): BoundingBoxProxy {
+        for (lineString in multiLineString) {
+            if (lineString==null) continue
+            addLineString(lineString)
+        }
+        return this
+    }
+
+    fun addPolygon(polygon: PolygonCoord): BoundingBoxProxy {
+        for (lineString in polygon) {
+            if (lineString==null) continue
+            addLineString(lineString)
+        }
+        return this
+    }
+
+    fun addMultiPolygon(multiPolygon: MultiPolygonCoord): BoundingBoxProxy {
+        for (polygon in multiPolygon) {
+            if (polygon==null) continue
+            addPolygon(polygon)
+        }
+        return this
+    }
 
     fun minLonIndex(): Int = 0
     fun minLatIndex(): Int = 1

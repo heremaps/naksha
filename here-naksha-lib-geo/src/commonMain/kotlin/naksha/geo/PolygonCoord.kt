@@ -6,7 +6,7 @@ import kotlin.js.JsName
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PolygonCoord(): ListProxy<LineStringCoord>(LineStringCoord::class), IMultiCoordinates<LineStringCoord> {
+class PolygonCoord(): ListProxy<LineStringCoord>(LineStringCoord::class), ICoordinates {
 
     @JsName("of")
     constructor(vararg lineStrings: LineStringCoord) : this() {
