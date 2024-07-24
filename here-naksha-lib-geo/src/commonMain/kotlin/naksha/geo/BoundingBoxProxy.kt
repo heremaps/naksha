@@ -34,23 +34,30 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
 
     private fun has(value: Double?): Boolean = value != null && !value.isNaN()
 
-    fun setToPoint(longitude: Double, latitude: Double): BoundingBoxProxy {
-        withMinLatitude(latitude)
-        withMaxLatitude(latitude)
-        withMinLongitude(longitude)
-        withMaxLongitude(longitude)
+    fun setToPoint(longitude: Double, latitude: Double, margin: Double = 0.0): BoundingBoxProxy {
+        withMinLatitude(latitude-margin)
+        withMaxLatitude(latitude+margin)
+        withMinLongitude(longitude-margin)
+        withMaxLongitude(longitude+margin)
         return this
     }
 
     fun addPoint(pointCoord: PointCoord): BoundingBoxProxy {
-        if (this.isEmpty()) setToPoint(pointCoord.getLongitude(),pointCoord.getLatitude())
+        val longitude = pointCoord.getLongitude()
+        val latitude = pointCoord.getLatitude()
+        if (this.isEmpty()) setToPoint(longitude,latitude)
         else {
-            if (pointCoord.getLongitude()<getMinLongitude()) withMinLongitude(pointCoord.getLongitude())
-            else if (pointCoord.getLongitude()>getMaxLongitude()) withMaxLongitude(pointCoord.getLongitude())
-            if (pointCoord.getLatitude()<getMinLatitude()) withMinLatitude(pointCoord.getLatitude())
-            else if (pointCoord.getLatitude()>getMaxLatitude()) withMaxLatitude(pointCoord.getLatitude())
+            // includes antimeridian case
+            if ((longitude < getMinLongitude()) && isSameSign(longitude,getMinLongitude())) withMinLongitude(longitude)
+            else if ((longitude > getMaxLongitude()) && isSameSign(longitude,getMaxLongitude())) withMaxLongitude(longitude)
+            if (latitude < getMinLatitude()) withMinLatitude(latitude)
+            else if (latitude > getMaxLatitude()) withMaxLatitude(latitude)
         }
         return this
+    }
+
+    private fun isSameSign(a: Double, b: Double): Boolean {
+        return (a>=0 && b>=0) || (a<=0 && b<=0)
     }
 
     fun addMultiPoint(multiPoint: MultiPointCoord): BoundingBoxProxy {
