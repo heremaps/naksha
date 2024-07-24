@@ -14,9 +14,9 @@ class NakshaDeltaProxy : ObjectProxy() {
     companion object NakshaDeltaProxyCompanion {
         private val STRING_NULL = NullableProperty<Any, NakshaDeltaProxy, String>(String::class)
         private val CHANGE_STATE =
-            NotNullProperty<Any, NakshaDeltaProxy, String>(String::class) { _, _ -> ChangeStateEnum.CREATED.str }
+            NotNullProperty<Any, NakshaDeltaProxy, String>(String::class) { _, _ -> ChangeStateEnum.CREATED.text }
         private val REVIEW_STATE =
-            NotNullProperty<Any, NakshaDeltaProxy, String>(String::class) { _, _ -> ReviewStateEnum.UNPUBLISHED.str }
+            NotNullProperty<Any, NakshaDeltaProxy, String>(String::class) { _, _ -> ReviewStateEnum.UNPUBLISHED.text }
         private val INT64 = NotNullProperty<Any, NakshaDeltaProxy, Int64>(Int64::class) { _, _ -> Int64(0) }
     }
 
@@ -65,12 +65,12 @@ class NakshaDeltaProxy : ObjectProxy() {
     fun getChangeStateEnum(): ChangeStateEnum = ChangeStateEnum.of(changeState)
 
     fun setChangeStateEnum(enumValue: ChangeStateEnum) {
-        changeState = enumValue.str
+        changeState = enumValue.text
     }
 
     fun getReviewStateEnum(): ReviewStateEnum = ReviewStateEnum.of(reviewState)
 
     fun setReviewStateEnum(enumValue: ReviewStateEnum) {
-        reviewState = enumValue.str
+        reviewState = enumValue.text
     }
 }

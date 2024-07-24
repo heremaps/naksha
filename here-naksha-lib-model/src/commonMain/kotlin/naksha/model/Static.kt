@@ -1,7 +1,5 @@
 package naksha.model
 
-const val DEFAULT_REALM = "public"
-
 const val ACTION_CREATE = 0
 const val ACTION_UPDATE = 1
 const val ACTION_DELETE = 2

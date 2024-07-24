@@ -101,15 +101,22 @@ open class NakshaContext protected constructor() {
     }
 
     /**
-     * The local realm.
+     * The map to use.
      *
-     * The default realm is initially read from the JWT claim `rlm`, but can be overridden by the client using the HTTP header `X-Realm`. If neither is available, the default is `public`, which will cause the PSQL storage engine to use the default schema configured. Other realms are simply stored in own dedicated schemas (this only applies for the default PSQL storage implementation).
+     * The map is read from the JWT `map` claim, but can be overridden by the client using the HTTP header `X-Map` or by using specially crafted requests which explicitly specify the map. If neither is available, the default is [DEFAULT_MAP].
+     *
+     * Note: In `lib-psql` the default map is mapped to the default schema configured within the storage driver. Other maps are simply stored in their own dedicated schemas with the same name (this only applies for the default PostgresQL storage implementation).
      * @since 3.0.0
      */
-    var realm: String = "public"
+    var map: String = DEFAULT_MAP
 
-    fun withRealm(realm: String): NakshaContext {
-        this.realm = realm
+    /**
+     * Change the current map.
+     * @param map the map to select.
+     * @return this.
+     */
+    fun withMap(map: String): NakshaContext {
+        this.map = map
         return this
     }
 
@@ -246,6 +253,11 @@ open class NakshaContext protected constructor() {
 
     @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
+        /**
+         * The default map, being an empty string.
+         */
+        const val DEFAULT_MAP = ""
+
         /**
          * The thread local that stores the [NakshaContext].
          */

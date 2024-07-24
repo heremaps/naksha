@@ -12,7 +12,7 @@ import kotlin.js.JsExport
 @JsExport
 class XyzProxy : ObjectProxy() {
     companion object {
-        private val ACTION = NotNullProperty<Any, XyzProxy, String>(String::class) { _, _ -> ActionEnum.CREATED.str }
+        private val ACTION = NotNullProperty<Any, XyzProxy, String>(String::class) { _, _ -> ActionEnum.CREATED.text }
         private val STRING = NotNullProperty<Any, XyzProxy, String>(String::class) { _, name ->
             throw IllegalStateException("The field $name must have a value")
         }
