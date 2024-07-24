@@ -50,6 +50,7 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
             // includes antimeridian case
             // TODO still 2 cases where both longitudes are both positive (or both negative)
             // TODO and the bbox still spans across the antimeridian
+            // TODO then the bbox should expand the side closest to the added point
             if ((longitude < getMinLongitude()) && isSameSign(longitude,getMinLongitude())) withMinLongitude(longitude)
             else if ((longitude > getMaxLongitude()) && isSameSign(longitude,getMaxLongitude())) withMaxLongitude(longitude)
             if (latitude < getMinLatitude()) withMinLatitude(latitude)
