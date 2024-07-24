@@ -58,6 +58,34 @@ class PlatformUtil {
         val FLOAT_MIN: Double = Platform.toDoubleRawBits(Int64(0x36a0000000000000L))
 
         /**
+         * A second in milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val SECOND = Int64(1000)
+
+        /**
+         * A minute in milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val MINUTE = Int64(60 * 1000)
+
+        /**
+         * An hour in milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val HOUR = Int64(60 * 60 * 1000)
+
+        /**
+         * A day in milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val DAY = Int64(24 * 60 * 60 * 1000)
+
+        /**
          * The default size of a view. This is used at various placed.
          */
         @JsStatic
