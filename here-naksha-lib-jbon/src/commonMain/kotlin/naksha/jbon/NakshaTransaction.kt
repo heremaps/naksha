@@ -11,7 +11,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 @Deprecated("Please use new class from lib-model", level = DeprecationLevel.WARNING)
-class NakshaTransaction(dictManager: IDictManager) : JbFeatureDecoder(dictManager) {
+class NakshaTransaction(dictManager: IDictManager) : JbRecordDecoder(dictManager) {
     var modifiedFeatureCount: Int = 0
     var collectionCounters: ObjectProxy = ObjectProxy() // TODO: If we stick with this class, make the map a Map<String, Int>!
     var seqNumber: Int? = null

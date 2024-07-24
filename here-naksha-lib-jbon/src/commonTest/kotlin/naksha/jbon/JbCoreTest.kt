@@ -526,7 +526,7 @@ class JbCoreTest {
         val builder = JbEncoder()
         builder.encodeText("Hello World Hello Test")
         val featureBytes = builder.buildFeature(null, 0)
-        val feature = JbFeatureDecoder(dictManager)
+        val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(featureBytes)
         val binary = feature.reader.binary
         // We expect the following layout:
@@ -764,7 +764,7 @@ class JbCoreTest {
         // = 21 byte total, 15-byte header (includes local dict), 6-byte content
         val mapData = builder.buildFeature(null)
         assertEquals(22, mapData.size)
-        val feature = JbFeatureDecoder(dictManager)
+        val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(mapData)
         assertEquals(null, feature.id())
         assertTrue(feature.reader.isMap())
@@ -842,7 +842,7 @@ class JbCoreTest {
         val featureJson = """{"id":"bar"}"""
         val featureMap = Platform.fromJSON(featureJson) as PlatformMap
         val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(ObjectProxy::class))
-        val feature = JbFeatureDecoder(dictManager)
+        val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())
     }
