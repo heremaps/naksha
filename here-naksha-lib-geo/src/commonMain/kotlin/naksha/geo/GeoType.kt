@@ -51,5 +51,9 @@ class GeoType : JsEnum() {
         @JvmField
         @JsStatic
         val MultiPolygon = def(GeoType::class, "MultiPolygon")
+
+        @JvmField
+        @JsStatic
+        val GeometryCollection = def(GeoType::class, "GeometryCollection")
     }
 }

@@ -1,8 +1,6 @@
 package naksha.geo
 
 import org.locationtech.jts.geom.*
-import org.locationtech.jts.io.WKTWriter.toLineString
-import org.locationtech.jts.triangulate.quadedge.QuadEdgeTriangle.toPolygon
 
 @Suppress("MemberVisibilityCanBePrivate")
 object ProxyGeoUtil {
@@ -24,8 +22,24 @@ object ProxyGeoUtil {
             is Polygon -> toPolygon(jtsGeometry)
             is MultiPolygon -> toMultiPolygon(jtsGeometry)
             is MultiLineString -> toMultiLineString(jtsGeometry)
+            is GeometryCollection -> toGeometryCollection(jtsGeometry)
             else -> throw IllegalArgumentException("Unsupported geometry ${jtsGeometry.geometryType}")
         }
+    }
+
+    /**
+     * Converts JTS [GeometryCollection] into [GeometryCollectionProxy]
+     *
+     * @param jtsGeometry - JTS [GeometryCollection]
+     * @return [GeometryCollectionProxy]
+     */
+    fun toGeometryCollection(jtsGeometry: GeometryCollection): GeometryCollectionProxy {
+        val geometries = GeometriesProxy()
+        for (i in 0..<jtsGeometry.numGeometries) {
+            val proxyGeometry = toProxyGeometry(jtsGeometry.getGeometryN(i))
+            geometries.add(proxyGeometry)
+        }
+        return GeometryCollectionProxy(geometries)
     }
 
     /**
@@ -205,9 +219,22 @@ object ProxyGeoUtil {
             GeoType.MultiLineString.toString() -> toJtsMultiLineString(geometry.asMultiLineString())
             GeoType.Polygon.toString() -> toJtsPolygon(geometry.asPolygon())
             GeoType.MultiPolygon.toString() -> toJtsMultiPolygon(geometry.asMultiPolygon())
+            GeoType.GeometryCollection.toString() -> toJtsGeometryCollection(geometry.asGeometryCollection())
             else -> throw IllegalArgumentException("Unknown proxy type ${geometry::class.simpleName}")
         }
     }
+
+    /**
+     * Converts [GeometryCollectionProxy] to JTS [GeometryCollection]
+     *
+     * @param geometryCollection [GeometryCollectionProxy] to convert
+     * @return [GeometryCollection]
+     */
+    private fun toJtsGeometryCollection(geometryCollection: GeometryCollectionProxy): GeometryCollection =
+        geometryCollection.geometries
+            ?.map { toJtsGeometry(it!!) }
+            ?.let { GeometryCollection(it.toTypedArray(), factory) }
+            ?: GeometryCollection(emptyArray(), factory)
 
     /**
      * Converts [PointGeometry] to JTS [Point]

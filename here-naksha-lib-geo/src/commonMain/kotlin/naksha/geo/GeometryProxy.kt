@@ -67,4 +67,5 @@ open class GeometryProxy() : ObjectProxy() {
     fun asMultiLineString(): MultiLineStringGeometry = proxy(MultiLineStringGeometry::class)
     fun asPolygon(): PolygonGeometry = proxy(PolygonGeometry::class)
     fun asMultiPolygon(): MultiPolygonGeometry = proxy(MultiPolygonGeometry::class)
+    fun asGeometryCollection(): GeometryCollectionProxy = proxy(GeometryCollectionProxy::class)
 }
