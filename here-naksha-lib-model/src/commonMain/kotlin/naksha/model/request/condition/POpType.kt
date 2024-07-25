@@ -14,6 +14,7 @@ sealed class POpType(val operation: String, val jsonOperation: String = operatio
     data object GTE : POpType(">=")
     data object LT : POpType("<")
     data object LTE : POpType("<=")
+    data object ANY : POpType("=")
     data object NULL : POpType(" is null ")
     data object NOT_NULL : POpType(" is not null")
     data object IN : POpType(" in ", " ?| ")

@@ -77,6 +77,27 @@ class POp internal constructor(val op: POpType, val propertyRef: PRef, val value
 
         @JsStatic
         @JvmStatic
+        @JsName("anyInt")
+        fun any(propertyRef: PRef, value: Array<Int>): Op {
+            return POp(ANY, propertyRef, value)
+        }
+
+        @JsStatic
+        @JvmStatic
+        @JsName("anyString")
+        fun any(propertyRef: PRef, value: Array<String>): Op {
+            return POp(ANY, propertyRef, value)
+        }
+
+        @JsStatic
+        @JvmStatic
+        @JsName("anyInt64")
+        fun any(propertyRef: PRef, value: Array<Int64>): Op {
+            return POp(ANY, propertyRef, value)
+        }
+
+        @JsStatic
+        @JvmStatic
         @JsName("gtInt64")
         fun gt(propertyRef: PRef, value: Int64): Op {
             return POp(GT, propertyRef, value)

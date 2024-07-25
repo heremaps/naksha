@@ -6,13 +6,14 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadFeatures.ReadFeaturesCompanion.readIdsBy
 import naksha.model.request.condition.LOp.Companion.and
 import naksha.model.request.condition.LOp.Companion.or
+import naksha.model.request.condition.POp
 import naksha.model.request.condition.POp.POpCompanion.contains
 import naksha.model.request.condition.POp.POpCompanion.eq
 import naksha.model.request.condition.POp.POpCompanion.isNotNull
 import naksha.model.request.condition.POp.POpCompanion.lt
 import naksha.model.request.condition.PRef.*
-import naksha.model.request.condition.SOp.Companion.intersects
-import naksha.model.request.condition.SOp.Companion.intersectsWithTransformation
+import naksha.model.request.condition.SOp.SOpCompanion.intersects
+import naksha.model.request.condition.SOp.SOpCompanion.intersectsWithTransformation
 import naksha.model.request.condition.geometry.BufferTransformation
 import naksha.psql.read.ReadQueryBuilder
 import kotlin.test.Test
@@ -360,7 +361,6 @@ class ReadQueryBuilderTest {
     @Test
     fun testTagsQuery() {
         // given
-
         val req = readIdsBy("foo", contains(TAGS, "tag1"))
 
         // when
@@ -372,6 +372,25 @@ class ReadQueryBuilderTest {
             """(SELECT id, type, geo_ref, flags FROM "foo" WHERE tags_to_jsonb(tags) ? $1)""",
             removeLimitWrapper(sql)
         )
+    }
+
+    @Test
+    fun testAnyQuery() {
+        // given
+        val txns = arrayOf("11", "22")
+        val req = readIdsBy("foo", POp.POpCompanion.any(TXN, txns))
+
+        // when
+        val (sql, params) = builder.build(req)
+
+        // then
+        assertEquals(1, params.size)
+        assertEquals(txns, params[0] as Array<String>)
+        assertEquals(
+            """(SELECT id, type, geo_ref, flags FROM "foo" WHERE txn=ANY($1))""",
+            removeLimitWrapper(sql)
+        )
+
     }
 
     private fun removeLimitWrapper(sql: String) =

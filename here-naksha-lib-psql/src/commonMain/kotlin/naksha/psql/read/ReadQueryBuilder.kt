@@ -150,8 +150,12 @@ internal class ReadQueryBuilder {
             whereSql.append(pop.op.jsonOperation)
         else
             whereSql.append(pop.op.operation)
+
         if (pop.value != null) {
-            whereSql.append(paramsList.nextPlaceHolder())
+            when (pop.op) {
+                POpType.ANY -> whereSql.append("ANY(${paramsList.nextPlaceHolder()})")
+                else -> whereSql.append(paramsList.nextPlaceHolder())
+            }
             paramsList.add(pop.value)
         }
     }
