@@ -25,7 +25,7 @@ import static com.here.naksha.lib.core.models.geojson.WebMercatorTile.xy;
 import static com.here.naksha.lib.core.models.geojson.WebMercatorTile.y;
 import static org.junit.jupiter.api.Assertions.*;
 
-import naksha.geo.BBox;
+import naksha.geo.BoundingBoxProxy;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.junit.jupiter.api.Test;
@@ -187,15 +187,15 @@ public class WebMercatorTileTest {
     final WebMercatorTile webMercatorTile = WebMercatorTile.forQuadkey(tileId);
 
     // When: Extended BBox is created with marging o
-    final BBox bbox = webMercatorTile.getBBox(false);
-    final BBox reusedBBox = webMercatorTile.getExtendedBBox(0);
+    final BoundingBoxProxy bbox = webMercatorTile.getBBox(false);
+    final BoundingBoxProxy reusedBBox = webMercatorTile.getExtendedBBox(0);
     // Then: Validate same original BBox is returned (from internal cache)
     assertSame(bbox, reusedBBox, "Expected reuse of previously created BBox");
 
     // When: BBox is created multiple times with the same margin value
     final int margin = 20;
-    final BBox extendedBBox = webMercatorTile.getExtendedBBox(margin);
-    final BBox reusedExtendedBBox = webMercatorTile.getExtendedBBox(20);
+    final BoundingBoxProxy extendedBBox = webMercatorTile.getExtendedBBox(margin);
+    final BoundingBoxProxy reusedExtendedBBox = webMercatorTile.getExtendedBBox(20);
     // Then: Validate same extended BBox is returned (from internal cache)
     assertSame(extendedBBox, reusedExtendedBBox, "Expected reuse of previously created extended BBox");
   }
