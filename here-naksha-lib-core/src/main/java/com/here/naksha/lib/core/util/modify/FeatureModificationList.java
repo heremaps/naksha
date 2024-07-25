@@ -29,12 +29,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /** A list of features that should be modified. */
-public class FeatureModificationList<FEATURE extends XyzFeature, ENTRY extends FeatureModificationEntry<FEATURE>>
+public class FeatureModificationList<
+        FEATURE extends NakshaFeatureProxy, ENTRY extends FeatureModificationEntry<FEATURE>>
     implements Iterable<ENTRY> {
 
   /**
@@ -118,7 +119,7 @@ public class FeatureModificationList<FEATURE extends XyzFeature, ENTRY extends F
         event.getIdsMap()
             .put(
                 entry.input.getId(),
-                entry.input.getProperties().getXyzNamespace().getUuid());
+                entry.input.getProperties().getXyz().getUuid());
       }
     }
     return event.getIdsMap().size() > 0 ? event : null;

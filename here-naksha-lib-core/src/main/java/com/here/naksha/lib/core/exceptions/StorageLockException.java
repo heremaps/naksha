@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import com.here.naksha.lib.core.models.XyzError;
+import naksha.model.NakshaErrorCode;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -28,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
 public class StorageLockException extends StorageException {
 
   @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageLockException(@NotNull XyzError reason) {
-    super(reason);
+  public StorageLockException(@NotNull NakshaErrorCode code, @NotNull String message) {
+    super(code, message);
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)

@@ -23,23 +23,24 @@ import com.here.naksha.lib.core.models.payload.events.feature.LoadFeaturesEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.ModifyFeaturesEvent;
 import java.util.ArrayList;
 import java.util.List;
-import naksha.model.ErrorResponse;
 import naksha.model.NakshaContext;
-import naksha.model.XyzResponse;
+import naksha.model.NakshaError;
+import naksha.model.NakshaErrorCode;
 import naksha.model.XyzResponseType;
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A task processing an {@link Event} and producing an {@link XyzResponse}. The task may send multiple events through the attached
+ * A task processing an {@link Event} and producing a {@link Response}. The task may send multiple events through the attached
  * event-pipeline and modify the pipeline while processing the events. For example to modify features at least a {@link LoadFeaturesEvent}
  * is needed to fetch the current state of the features and then (optionally) performing a merge, and executing eventually the
  * {@link ModifyFeaturesEvent}. Other combinations are possible.
  */
 @SuppressWarnings("unused")
 @Deprecated
-public abstract class AbstractEventTask<EVENT extends Event>
-    extends AbstractTask<XyzResponse, AbstractEventTask<EVENT>> {
+public abstract class AbstractEventTask<EVENT extends Event> extends AbstractTask<Response, AbstractEventTask<EVENT>> {
 
   /**
    * Creates a new even-task.
@@ -60,8 +61,9 @@ public abstract class AbstractEventTask<EVENT extends Event>
    */
   @Override
   @Deprecated
-  protected @NotNull XyzResponse errorResponse(@NotNull Throwable throwable) {
-    return new ErrorResponse(throwable, context().getStreamId());
+  protected @NotNull Response errorResponse(@NotNull Throwable throwable) {
+    return new ErrorResponse(new NakshaError(
+        NakshaErrorCode.EXCEPTION, "Unknown error", context().getStreamId(), throwable));
   }
 
   /**

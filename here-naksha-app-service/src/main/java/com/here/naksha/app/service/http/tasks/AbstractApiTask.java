@@ -32,25 +32,27 @@ import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
+import naksha.model.*;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.XyzError;
 import naksha.model.XyzFeature;
-import naksha.model.XyzFeatureCollection;
 import naksha.geo.XyzGeometry;
 import naksha.model.ReadFeatures;
 import naksha.model.WriteFeatures;
 import naksha.model.XyzResponse;
 import com.here.naksha.lib.core.models.storage.*;
-import naksha.model.IReadSession;
-import naksha.model.IWriteSession;
 import com.here.naksha.lib.core.util.PropertyPathUtil;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
 import java.util.*;
+
+import naksha.model.ErrorResult;
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.NakshaError;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
@@ -61,8 +63,8 @@ import org.slf4j.LoggerFactory;
 /**
  * An abstract class that can be used for all Http API specific custom Task implementations.
  */
-public abstract class AbstractApiTask<T extends XyzResponse>
-    extends AbstractTask<XyzResponse, AbstractApiTask<XyzResponse>> {
+public abstract class AbstractApiTask<T extends Response>
+    extends AbstractTask<Response, AbstractApiTask<Response>> {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractApiTask.class);
   protected final @NotNull RoutingContext routingContext;
@@ -84,17 +86,17 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     this.routingContext = routingContext;
   }
 
-  protected @NotNull XyzResponse errorResponse(@NotNull Throwable throwable) {
+  protected @NotNull Response errorResponse(@NotNull Throwable throwable) {
     logger.warn("The task failed with an exception. ", throwable);
     return verticle.sendErrorResponse(
-        routingContext, XyzError.EXCEPTION, "Task failed processing! " + throwable.getMessage());
+        routingContext, NakshaError.EXCEPTION, "Task failed processing! " + throwable.getMessage());
   }
 
-  public @NotNull XyzResponse executeUnsupported() {
-    return verticle.sendErrorResponse(routingContext, XyzError.NOT_IMPLEMENTED, "Unsupported operation!");
+  public @NotNull Response executeUnsupported() {
+    return verticle.sendErrorResponse(routingContext, NakshaError.NOT_IMPLEMENTED, "Unsupported operation!");
   }
 
-  protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzFeatureResponse(
+  protected <R extends NakshaFeatureProxy> @NotNull Response transformReadResultToXyzFeatureResponse(
       final @NotNull Result rdResult, final @NotNull Class<R> type) {
     return transformResultToXyzFeatureResponse(rdResult, type, NOT_FOUND_ON_NO_ELEMENTS, null);
   }

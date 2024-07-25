@@ -21,6 +21,8 @@ package naksha.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.Response;
 
 /**
  * The response being sent in response to an {@link HealthCheckEvent} when the service is healthy.
@@ -28,12 +30,11 @@ import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "HealthStatus")
-public class HealthStatus extends XyzResponse {
+public class HealthStatus extends Response {
 
   private String status;
 
   public HealthStatus() {
-    super();
     this.status = "OK";
   }
 
@@ -50,5 +51,10 @@ public class HealthStatus extends XyzResponse {
   public HealthStatus withStatus(String status) {
     setStatus(status);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

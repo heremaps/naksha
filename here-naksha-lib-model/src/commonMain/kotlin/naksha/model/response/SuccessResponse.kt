@@ -12,6 +12,6 @@ import kotlin.jvm.JvmField
  * @property handle a handle (available only if requested) to fetch more (next) rows from DB.
  */
 @JsExport
-class SuccessResponse(@JvmField var rows: MutableList<ResultRow>, @JvmField var handle: String? = null) : Response() {
+open class SuccessResponse(@JvmField var rows: MutableList<ResultRow>, @JvmField var handle: String? = null) : Response() {
     override fun size(): Int = rows.size
 }

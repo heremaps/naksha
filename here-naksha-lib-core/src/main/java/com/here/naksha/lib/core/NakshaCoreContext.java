@@ -49,7 +49,9 @@ public class NakshaCoreContext extends NakshaContext {
     init();
   }
 
-  protected NakshaCoreContext() {}
+  protected NakshaCoreContext() {
+    super();
+  }
 
   /**
    * Returns the current core-context. The method will return the same as {@link NakshaContext#currentContext()}.

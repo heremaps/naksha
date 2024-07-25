@@ -6,7 +6,7 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 @JsExport
-class WriteRequest : Request<WriteRequest>() {
+open class WriteRequest : Request<WriteRequest>() {
     /**
      * Write operations to perform.
      * It might have, operations of different types (Insert/Update/etc.) and to different collections (tables).

@@ -23,11 +23,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.Map;
+import naksha.model.response.Response;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "ChangesetCollection")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class ChangesetCollection extends XyzResponse {
+public class ChangesetCollection extends Response {
   private int startVersion;
   private int endVersion;
 
@@ -36,6 +37,8 @@ public class ChangesetCollection extends XyzResponse {
   private Map<Integer, Changeset> versions;
 
   private String nextPageToken;
+
+  public ChangesetCollection() {}
 
   @SuppressWarnings("unused")
   public String getNextPageToken() {
@@ -89,5 +92,10 @@ public class ChangesetCollection extends XyzResponse {
   public ChangesetCollection withVersions(final Map<Integer, Changeset> versions) {
     setVersions(versions);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

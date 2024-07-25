@@ -20,15 +20,18 @@ package naksha.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import naksha.model.response.Response;
 
 /** The response providing the count of features in a space. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "CountResponse")
 @Deprecated
-public class CountResponse extends XyzResponse {
+public class CountResponse extends Response {
 
   private Long count;
   private Boolean estimated;
+
+  public CountResponse() {}
 
   /**
    * Returns the proprietary count property that is used by Space count requests to return the
@@ -83,5 +86,10 @@ public class CountResponse extends XyzResponse {
   public CountResponse withEstimated(Boolean estimated) {
     setEstimated(estimated);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return count.intValue();
   }
 }

@@ -21,12 +21,13 @@ package com.here.naksha.lib.core.models.naksha;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class EventTarget<SELF extends EventTarget<SELF>> extends NakshaFeature {
+public abstract class EventTarget<SELF extends EventTarget<SELF>> extends NakshaFeatureProxy {
 
   public static final String EVENT_HANDLER_IDS = "eventHandlerIds";
 

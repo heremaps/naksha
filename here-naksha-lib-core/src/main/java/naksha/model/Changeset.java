@@ -22,11 +22,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import naksha.model.response.Response;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "Changeset")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class Changeset extends XyzResponse {
+public class Changeset extends Response {
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
   private XyzFeatureCollection inserted;
@@ -36,6 +37,8 @@ public class Changeset extends XyzResponse {
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
   private XyzFeatureCollection deleted;
+
+  public Changeset() {}
 
   public XyzFeatureCollection getInserted() {
     return inserted;
@@ -74,5 +77,10 @@ public class Changeset extends XyzResponse {
   public Changeset withDeleted(final XyzFeatureCollection deleted) {
     setDeleted(deleted);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

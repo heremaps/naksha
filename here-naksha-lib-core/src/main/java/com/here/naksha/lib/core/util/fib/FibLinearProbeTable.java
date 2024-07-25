@@ -33,7 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * This is the “last” resort to resolve hash collisions. We do use a lock on this table for modifications.
+ * This is the "last" resort to resolve hash collisions. We do use a lock on this table for modifications.
  *
  * @param <KEY>   the key-type.
  * @param <ENTRY> the entry-type.

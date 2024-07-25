@@ -20,8 +20,9 @@ package naksha.model;
 
 import java.util.Map;
 import naksha.model.StatisticsResponse.Value;
+import naksha.model.response.Response;
 
-public class StorageStatistics extends XyzResponse {
+public class StorageStatistics extends Response {
 
   private Map<String, SpaceByteSizes> byteSizes;
   private long createdAt;
@@ -54,6 +55,11 @@ public class StorageStatistics extends XyzResponse {
   public StorageStatistics withCreatedAt(long createdAt) {
     setCreatedAt(createdAt);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 
   public static class SpaceByteSizes {

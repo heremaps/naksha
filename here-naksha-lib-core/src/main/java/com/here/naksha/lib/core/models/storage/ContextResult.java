@@ -20,12 +20,13 @@ package com.here.naksha.lib.core.models.storage;
 
 import java.util.List;
 import naksha.model.NakshaVersion;
+import naksha.model.request.ResultRow;
+import naksha.model.response.SuccessResponse;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ContextResult<FEATURE, CTX_TYPE, V_TYPE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-    extends SuccessResult {
+public class ContextResult<FEATURE, CTX_TYPE, V_TYPE> extends SuccessResponse {
 
   /**
    * The list of features to be returned as context
@@ -39,9 +40,8 @@ public class ContextResult<FEATURE, CTX_TYPE, V_TYPE, CODEC extends FeatureCodec
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   private @Nullable List<@NotNull V_TYPE> violations;
 
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public ContextResult(final @Nullable ForwardCursor<FEATURE, CODEC> cursor) {
-    this.cursor = cursor;
+  public ContextResult(@Nullable String handle, @NotNull List<ResultRow> rows) {
+    super(rows, handle);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)

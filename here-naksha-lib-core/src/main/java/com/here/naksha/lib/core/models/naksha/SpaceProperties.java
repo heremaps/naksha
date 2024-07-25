@@ -21,6 +21,7 @@ package com.here.naksha.lib.core.models.naksha;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import naksha.geo.XyzProperties;
+import naksha.model.NakshaCollectionProxy;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
@@ -39,7 +40,7 @@ public class SpaceProperties extends XyzProperties {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @JsonProperty(XYZ_COLLECTION)
-  private @Nullable XyzCollection xyzCollection;
+  private @Nullable NakshaCollectionProxy xyzCollection;
 
   /**
    * Create new Space properties with collection details
@@ -48,15 +49,15 @@ public class SpaceProperties extends XyzProperties {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @JsonCreator
-  public SpaceProperties(final @JsonProperty(XYZ_COLLECTION) @Nullable XyzCollection xyzCollection) {
+  public SpaceProperties(final @JsonProperty(XYZ_COLLECTION) @Nullable NakshaCollectionProxy xyzCollection) {
     this.xyzCollection = xyzCollection;
   }
 
-  public @Nullable XyzCollection getXyzCollection() {
+  public @Nullable NakshaCollectionProxy getXyzCollection() {
     return xyzCollection;
   }
 
-  public void setXyzCollection(final @JsonProperty(XYZ_COLLECTION) @Nullable XyzCollection xyzCollection) {
+  public void setXyzCollection(final @JsonProperty(XYZ_COLLECTION) @Nullable NakshaCollectionProxy xyzCollection) {
     this.xyzCollection = xyzCollection;
   }
 }

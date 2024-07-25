@@ -22,7 +22,6 @@ import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_ID;
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_INFO;
 import static com.here.naksha.app.service.http.auth.actions.JwtUtil.*;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.cause;
-import static com.here.naksha.lib.core.models.XyzError.ILLEGAL_ARGUMENT;
 import static com.here.naksha.lib.core.util.MIMEType.APPLICATION_JSON;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_MODIFIED;
@@ -40,6 +39,7 @@ import static io.vertx.core.http.HttpMethod.OPTIONS;
 import static io.vertx.core.http.HttpMethod.PATCH;
 import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
+import static naksha.model.response.NakshaError.ILLEGAL_ARGUMENT;
 
 import com.here.naksha.app.service.AbstractNakshaHubVerticle;
 import com.here.naksha.app.service.NakshaApp;
@@ -50,19 +50,11 @@ import com.here.naksha.app.service.util.logging.AccessLog;
 import com.here.naksha.app.service.util.logging.AccessLogUtil;
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
+import naksha.model.*;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import naksha.model.XyzFeatureCollection;
-import naksha.model.XyzResponse;
-import naksha.model.BinaryResponse;
-import naksha.model.ErrorResponse;
-import naksha.model.NotModifiedResponse;
 import com.here.naksha.lib.core.storage.ModifyFeaturesResp;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.MIMEType;
-import naksha.model.StreamInfo;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
@@ -85,6 +77,10 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.regex.Pattern;
+
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.NakshaError;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -319,7 +315,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
           .log();
       sendErrorResponse(
           routingContext,
-          new XyzErrorException(XyzError.TOO_MANY_REQUESTS, "Failed to load resource, no more worker"));
+          new XyzErrorException(new NakshaError(NakshaError.TOO_MANY_REQUESTS, "Failed to load resource, no more worker")));
     }
   }
 
@@ -428,13 +424,11 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
    *
    * @param routingContext The routing context for which to send the response.
    * @param xyzError       The XyzError indicating the cause of error
-   * @param message        the brief message of the error
    * @return xyzResponse object representing error
    */
-  public @NotNull XyzResponse sendErrorResponse(
+  public @NotNull Response sendErrorResponse(
       final @NotNull RoutingContext routingContext,
-      final @NotNull XyzError xyzError,
-      final @NotNull String message) {
+      final @NotNull NakshaError xyzError) {
     final ErrorResponse response = new ErrorResponse(xyzError, message, AccessLogUtil.getStreamId(routingContext));
     sendRawResponse(
         routingContext,
@@ -461,7 +455,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
             .addArgument(e.getMessage())
             .setCause(e)
             .log();
-        response = new ErrorResponse(XyzError.EXCEPTION, e.getMessage(), streamId);
+        response = new ErrorResponse(NakshaError.EXCEPTION, e.getMessage(), streamId);
       } else if (throwable instanceof BodyProcessorException e) {
         response = new ErrorResponse(ILLEGAL_ARGUMENT, e.getMessage(), streamId);
         String bodyPart = null;
@@ -526,28 +520,28 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
     }
   }
 
-  private @NotNull HttpResponseStatus mapErrorToHttpStatus(final @NotNull XyzError xyzError) {
-    if (xyzError.equals(XyzError.EXCEPTION)) {
+  private @NotNull HttpResponseStatus mapErrorToHttpStatus(final @NotNull NakshaError xyzError) {
+    if (xyzError.getError().equals(NakshaError.EXCEPTION)) {
       return HttpResponseStatus.INTERNAL_SERVER_ERROR;
-    } else if (xyzError.equals(XyzError.NOT_IMPLEMENTED)) {
+    } else if (xyzError.getError().equals(NakshaError.NOT_IMPLEMENTED)) {
       return HttpResponseStatus.NOT_IMPLEMENTED;
-    } else if (xyzError.equals(ILLEGAL_ARGUMENT)) {
+    } else if (xyzError.getError().equals(ILLEGAL_ARGUMENT)) {
       return HttpResponseStatus.BAD_REQUEST;
-    } else if (xyzError.equals(XyzError.PAYLOAD_TOO_LARGE)) {
+    } else if (xyzError.getError().equals(NakshaError.PAYLOAD_TOO_LARGE)) {
       return HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE;
-    } else if (xyzError.equals(XyzError.BAD_GATEWAY)) {
+    } else if (xyzError.getError().equals(NakshaError.BAD_GATEWAY)) {
       return HttpResponseStatus.BAD_GATEWAY;
-    } else if (xyzError.equals(XyzError.CONFLICT)) {
+    } else if (xyzError.getError().equals(NakshaError.CONFLICT)) {
       return HttpResponseStatus.CONFLICT;
-    } else if (xyzError.equals(XyzError.UNAUTHORIZED)) {
+    } else if (xyzError.getError().equals(NakshaError.UNAUTHORIZED)) {
       return HttpResponseStatus.UNAUTHORIZED;
-    } else if (xyzError.equals(XyzError.FORBIDDEN)) {
+    } else if (xyzError.getError().equals(NakshaError.FORBIDDEN)) {
       return HttpResponseStatus.FORBIDDEN;
-    } else if (xyzError.equals(XyzError.TOO_MANY_REQUESTS)) {
+    } else if (xyzError.getError().equals(NakshaError.TOO_MANY_REQUESTS)) {
       return HttpResponseStatus.TOO_MANY_REQUESTS;
-    } else if (xyzError.equals(XyzError.TIMEOUT)) {
+    } else if (xyzError.getError().equals(NakshaError.TIMEOUT)) {
       return HttpResponseStatus.GATEWAY_TIMEOUT;
-    } else if (xyzError.equals(XyzError.NOT_FOUND)) {
+    } else if (xyzError.getError().equals(NakshaError.NOT_FOUND)) {
       return NOT_FOUND;
     }
     throw new IllegalArgumentException();
@@ -587,15 +581,15 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
    * @param response       The response to send.
    * @return XyzResponse object representing actual response content
    */
-  public XyzResponse sendXyzResponse(
+  public Response sendXyzResponse(
       @NotNull RoutingContext routingContext,
       @Nullable HttpResponseType responseType,
-      @NotNull XyzResponse response) {
+      @NotNull Response response) {
     try {
-      final String etag = response.getEtag();
-      if (etag != null) {
-        routingContext.response().putHeader(ETAG, etag);
-      }
+//      final String etag = response.getEtag();
+//      if (etag != null) {
+//        routingContext.response().putHeader(ETAG, etag);
+//      }
       if (response instanceof ErrorResponse er) {
         sendRawResponse(
             routingContext,
@@ -614,7 +608,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       }
       if (response instanceof XyzFeatureCollection fc && responseType == HttpResponseType.FEATURE) {
         // If we should only send back a single feature.
-        final List<? extends XyzFeature> features = fc.getFeatures();
+        final List<? extends NakshaFeatureProxy> features = fc.getFeatures();
         if (features.size() == 0) {
           sendEmptyResponse(routingContext, OK);
           return response;
@@ -650,7 +644,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
   }
 
   /**
-   * Send back a fatal error, type {@link XyzError#EXCEPTION}.
+   * Send back a fatal error, type {@link NakshaError#EXCEPTION}.
    *
    * @param routingContext The routing context to send the response to.
    * @param errorMessage   The error message to return.
@@ -697,14 +691,15 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
   }
 
   public @NotNull NakshaContext createNakshaContext(final @NotNull RoutingContext routingContext) {
-    final NakshaContext ctx = new NakshaContext(AccessLogUtil.getStreamId(routingContext));
+    final NakshaContext ctx = NakshaContext.currentContext();
+    ctx.setStreamId(AccessLogUtil.getStreamId(routingContext));
     // add streamInfo object to NakshaContext, which will be populated later during pipeline execution
-    ctx.attachStreamInfo(AccessLogUtil.getStreamInfo(routingContext));
+    ctx.setStreamInfo(AccessLogUtil.getStreamInfo(routingContext));
     // extract the JWT from authorization header
     final JWTPayload jwtPayload = extractJwtPayloadFromContext(routingContext);
     if (jwtPayload == null) {
       log.error("Cannot detect JWT payload in routing context: {}", routingContext);
-      sendErrorResponse(routingContext, XyzError.UNAUTHORIZED, "No JWT payload found.");
+      sendErrorResponse(routingContext, NakshaError.UNAUTHORIZED, "No JWT payload found.");
     } else {
       // attach authorization info into context
       ctx.setAppId(jwtPayload.appId);

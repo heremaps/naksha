@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core;
 
-import com.here.naksha.lib.core.models.storage.Result;
-import naksha.model.Request;
+import naksha.model.request.Request;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -33,7 +33,7 @@ public interface IEvent {
    * @return the request of the event.
    */
   @NotNull
-  Request<?> getRequest();
+  Request getRequest();
 
   /**
    * Replace the request of the event, returning the old request.
@@ -43,7 +43,7 @@ public interface IEvent {
    * @throws IllegalStateException if the thread calling the method does not hold the pipeline lock.
    */
   @NotNull
-  Request<?> setRequest(@NotNull Request<?> request);
+  Request setRequest(@NotNull Request request);
 
   /**
    * Send the event upstream to the next event handler. If no further handler is available, the default implementation at the end of each
@@ -53,7 +53,7 @@ public interface IEvent {
    * @throws IllegalStateException if the thread calling the method does not hold the pipeline lock.
    */
   @NotNull
-  Result sendUpstream();
+  Response sendUpstream();
 
   /**
    * Create a new event and send it upstream to the next event handler. If no further handler is available, the default implementation at
@@ -64,8 +64,8 @@ public interface IEvent {
    * @return the generated result.
    * @throws IllegalStateException if the thread calling the method does not hold the pipeline lock.
    */
-  default @NotNull Result sendUpstream(@NotNull Request<?> request) {
-    final Request<?> backup = setRequest(request);
+  default @NotNull Response sendUpstream(@NotNull Request request) {
+    final Request backup = setRequest(request);
     try {
       return sendUpstream();
     } finally {

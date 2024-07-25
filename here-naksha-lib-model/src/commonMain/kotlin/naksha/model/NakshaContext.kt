@@ -18,7 +18,7 @@ import kotlin.reflect.KClass
  * @since 2.0.5
  */
 @JsExport
-class NakshaContext private constructor() {
+open class NakshaContext protected constructor() {
     /**
      * The internal field of the **appId** getter and setters.
      */
@@ -242,6 +242,8 @@ class NakshaContext private constructor() {
         return this
     }
 
+    var streamInfo: StreamInfo? = null
+
     @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
         /**
@@ -253,14 +255,14 @@ class NakshaContext private constructor() {
         /**
          * Can be overridden by application code to modify the context creation.
          */
-        @JvmField
+        @JvmStatic
         @JsStatic
         var constructorRef: Fn0<NakshaContext> = Fn0(::NakshaContext)
 
         /**
          * Can be overridden by application code to modify the thread local context gathering.
          */
-        @JvmField
+        @JvmStatic
         @JsStatic
         var currentRef: Fn0<NakshaContext> = Fn0(threadLocal::get)
 

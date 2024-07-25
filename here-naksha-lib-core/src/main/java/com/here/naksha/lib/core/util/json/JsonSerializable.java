@@ -19,8 +19,6 @@
 package com.here.naksha.lib.core.util.json;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.models.XyzError.EXCEPTION;
-import static com.here.naksha.lib.core.models.XyzError.TIMEOUT;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -35,7 +33,9 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
-import naksha.model.ErrorResponse;
+import naksha.model.NakshaError;
+import naksha.model.NakshaErrorCode;
+import naksha.model.response.ErrorResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -135,13 +135,13 @@ public interface JsonSerializable {
       return null;
     }
 
-    final String errorMessage = errorResponse.getErrorMessage();
+    final String errorMessage = errorResponse.error.message;
     if (StringUtils.isEmpty(errorMessage)) {
       return errorResponse;
     }
 
     boolean timeout = errorMessage.contains("timed out");
-    return new ErrorResponse().withErrorMessage(errorMessage).withError(timeout ? TIMEOUT : EXCEPTION);
+    return new ErrorResponse(new NakshaError(NakshaErrorCode.STORAGE_NOT_INITIALIZED, errorMessage, null, null));
   }
 
   /**

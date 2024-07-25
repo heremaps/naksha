@@ -18,35 +18,35 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.ErrorResponse;
+import static naksha.model.NakshaErrorCode.EXCEPTION;
+
+import naksha.model.NakshaError;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /** An exception, which will cause the connector to respond with an ErrorResponse object. */
 public class XyzErrorException extends RuntimeException {
 
-  private ErrorResponse errorResponse;
-
   public XyzErrorException(@NotNull Throwable reason) {
     super(reason.getMessage(), reason);
-    this.xyzError = XyzError.EXCEPTION;
+    this.nakshaError = new NakshaError(EXCEPTION, reason.getMessage(), null, null);
   }
 
-  public XyzErrorException(@NotNull XyzError xyzError, @NotNull String errorMessage) {
-    this(xyzError, errorMessage, null);
+  public XyzErrorException(@NotNull NakshaError nakshaError) {
+    this(nakshaError, nakshaError.message, null);
   }
 
-  public XyzErrorException(@NotNull XyzError xyzError, @NotNull Throwable reason) {
+  public XyzErrorException(@NotNull NakshaError nakshaError, @NotNull Throwable reason) {
     super(reason.getMessage(), reason);
-    this.xyzError = xyzError;
+    this.nakshaError = nakshaError;
   }
 
-  public XyzErrorException(@NotNull XyzError xyzError, @NotNull String errorMessage, @Nullable Throwable reason) {
+  public XyzErrorException(
+      @NotNull NakshaError nakshaError, @NotNull String errorMessage, @Nullable Throwable reason) {
     super(errorMessage, reason);
-    this.xyzError = xyzError;
+    this.nakshaError = nakshaError;
   }
 
   /** The XYZ error to return. */
-  public final @NotNull XyzError xyzError;
+  public final @NotNull NakshaError nakshaError;
 }

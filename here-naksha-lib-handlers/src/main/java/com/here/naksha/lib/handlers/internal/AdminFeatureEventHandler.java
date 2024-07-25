@@ -33,6 +33,7 @@ import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.psql.PsqlStorage;
 import naksha.model.ReadRequest;
 import naksha.model.Request;
+import naksha.model.ErrorResult;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

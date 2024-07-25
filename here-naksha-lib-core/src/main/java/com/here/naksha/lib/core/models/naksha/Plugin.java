@@ -22,12 +22,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.INaksha;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class Plugin<API, SELF extends Plugin<API, SELF>> extends NakshaFeature {
+public abstract class Plugin<API, SELF extends Plugin<API, SELF>> extends NakshaFeatureProxy {
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String CLASS_NAME = "className";

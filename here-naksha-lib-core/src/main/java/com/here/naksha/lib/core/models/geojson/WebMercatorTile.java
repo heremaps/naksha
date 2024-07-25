@@ -18,12 +18,13 @@
  */
 package com.here.naksha.lib.core.models.geojson;
 
-import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.models.geojson.declaration.ILonLat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import naksha.geo.BBox;
+import naksha.geo.BoundingBoxProxy;
 import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.locationtech.jts.geom.prep.PreparedGeometry;
 import org.locationtech.jts.geom.prep.PreparedGeometryFactory;
 
@@ -71,10 +72,10 @@ public class WebMercatorTile {
   /** The Mercator meters of the bottom tile border. */
   public final double bottom;
 
-  private BBox bbox;
+  private BoundingBoxProxy bbox;
   private PreparedGeometry polygon;
   private String quadkey;
-  private BBox eBbox;
+  private BoundingBoxProxy eBbox;
   private int eBuffer;
   private PreparedGeometry ePolygon;
   private int ePolygonBuffer;
@@ -308,7 +309,7 @@ public class WebMercatorTile {
    * @param bbox of tile
    * @return ZoomLevel of tile
    */
-  public static int getZoomFromBBOX(BBox bbox) {
+  public static int getZoomFromBBOX(BoundingBoxProxy bbox) {
     return (int) Math.ceil(Math.log((360d / bbox.widthInDegree(false))) / Math.log(2));
   }
 
@@ -469,7 +470,7 @@ public class WebMercatorTile {
     return forWeb(level, x, (1 << level) - 1);
   }
 
-  public BBox getBBox(boolean clone) {
+  public BoundingBoxProxy getBBox(boolean clone) {
     if (bbox == null) {
       double mapSize = 1 << level;
       double x0 = (clip(x, 0, mapSize - 1) / mapSize) - 0.5;
@@ -484,10 +485,11 @@ public class WebMercatorTile {
       double minLat = 90.0 - 360.0 * Math.atan(Math.exp(-y1 * 2.0 * Math.PI)) / Math.PI;
       double maxLon = 360.0 * x1;
 
-      bbox = new BBox(minLon, minLat, maxLon, maxLat);
+      bbox = new BoundingBoxProxy(minLon, minLat, maxLon, maxLat);
     }
     if (clone) {
-      return new BBox(bbox.minLon(), bbox.minLat(), bbox.maxLon(), bbox.maxLat());
+      return new BoundingBoxProxy(
+          bbox.getMinLongitude(), bbox.getMinLatitude(), bbox.getMaxLongitude(), bbox.getMaxLatitude());
     }
     return bbox;
   }
@@ -497,9 +499,10 @@ public class WebMercatorTile {
       return polygon;
     }
 
-    final BBox bbox = getBBox(false);
-    final Envelope envelope = new Envelope(bbox.minLon(), bbox.maxLon(), bbox.minLat(), bbox.maxLat());
-    polygon = PreparedGeometryFactory.prepare(JTSHelper.factory.toGeometry(envelope));
+    final BoundingBoxProxy bbox = getBBox(false);
+    final Envelope envelope = new Envelope(
+        bbox.getMinLongitude(), bbox.getMaxLongitude(), bbox.getMinLatitude(), bbox.getMaxLatitude());
+    polygon = PreparedGeometryFactory.prepare(factory.toGeometry(envelope));
     return polygon;
   }
 
@@ -508,7 +511,7 @@ public class WebMercatorTile {
    *
    * @param buffer buffer size in pixels on the respective level.
    */
-  public BBox getExtendedBBox(int buffer) {
+  public BoundingBoxProxy getExtendedBBox(int buffer) {
     if (eBbox != null && eBuffer == buffer) {
       return eBbox;
     }
@@ -537,7 +540,7 @@ public class WebMercatorTile {
     double maxLon = 360.0 * x1;
 
     eBuffer = buffer;
-    eBbox = new BBox(minLon, minLat, maxLon, maxLat);
+    eBbox = new BoundingBoxProxy(minLon, minLat, maxLon, maxLat);
     return eBbox;
   }
 
@@ -546,13 +549,16 @@ public class WebMercatorTile {
       return ePolygon;
     }
 
-    final BBox bbox = getExtendedBBox(buffer);
-    final Envelope envelope = new Envelope(bbox.minLon(), bbox.maxLon(), bbox.minLat(), bbox.maxLat());
+    final BoundingBoxProxy bbox = getExtendedBBox(buffer);
+    final Envelope envelope = new Envelope(
+        bbox.getMinLongitude(), bbox.getMaxLongitude(), bbox.getMinLatitude(), bbox.getMaxLatitude());
 
     ePolygonBuffer = buffer;
-    ePolygon = PreparedGeometryFactory.prepare(JTSHelper.factory.toGeometry(envelope));
+    ePolygon = PreparedGeometryFactory.prepare(factory.toGeometry(envelope));
     return ePolygon;
   }
+
+  private static final GeometryFactory factory = new GeometryFactory(new PrecisionModel(), 4326);
 
   /**
    * Returns the quadKey representation of this tile address.

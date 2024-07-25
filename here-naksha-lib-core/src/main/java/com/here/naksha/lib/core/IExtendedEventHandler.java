@@ -19,9 +19,9 @@
 package com.here.naksha.lib.core;
 
 import static com.here.naksha.lib.core.NakshaLogger.currentLogger;
+import static naksha.model.NakshaErrorCode.EXCEPTION;
+import static naksha.model.NakshaErrorCode.NOT_IMPLEMENTED;
 
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.admin.ModifySubscriptionEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.DeleteFeaturesByTagEvent;
@@ -40,8 +40,9 @@ import com.here.naksha.lib.core.models.payload.events.info.GetStorageStatisticsE
 import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
 import com.here.naksha.lib.core.models.payload.events.space.ModifySpaceEvent;
 import javax.annotation.Nonnull;
-import naksha.model.ErrorResponse;
-import naksha.model.XyzResponse;
+import naksha.model.NakshaError;
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -54,13 +55,13 @@ import org.jetbrains.annotations.NotNull;
 public interface IExtendedEventHandler {
 
   /**
-   * The method invoked by the XYZ-Hub directly (embedded) or indirectly, when running in an HTTP vertx or as AWS lambda.
+   * The method invoked by the -Hub directly (embedded) or indirectly, when running in an HTTP vertx or as AWS lambda.
    *
    * @param eventContext the event context to process.
    * @return the response to send.
    */
   @Deprecated
-  default @NotNull XyzResponse processEvent(@NotNull IEvent eventContext) {
+  default @NotNull Response processEvent(@NotNull IEvent eventContext) {
     final Event event = null;
     try {
       if (event instanceof ModifySpaceEvent) {
@@ -127,21 +128,21 @@ public interface IExtendedEventHandler {
         initialize(eventContext);
         return processGetStorageStatisticsEvent((GetStorageStatisticsEvent) event);
       }
-      return new ErrorResponse()
-          .withStreamId(event.getStreamId())
-          .withError(XyzError.NOT_IMPLEMENTED)
-          .withErrorMessage("Unknown event type '" + event.getClass().getSimpleName() + "'");
-    } catch (XyzErrorException e) {
-      return new ErrorResponse(e, event.getStreamId());
+      return new ErrorResponse(new NakshaError(
+          NOT_IMPLEMENTED,
+          "Unknown event type '" + event.getClass().getSimpleName() + "'",
+          event.getStreamId(),
+          null));
     } catch (Exception e) {
       currentLogger()
           .atError("Uncaught exception in event processor")
           .setCause(e)
           .log();
-      return new ErrorResponse()
-          .withStreamId(event.getStreamId())
-          .withError(XyzError.EXCEPTION)
-          .withErrorMessage("Unexpected exception in storage connector: " + e.getMessage());
+      return new ErrorResponse(new NakshaError(
+          EXCEPTION,
+          "Unexpected exception in storage connector: " + e.getMessage(),
+          event.getStreamId(),
+          null));
     }
   }
 
@@ -162,79 +163,79 @@ public interface IExtendedEventHandler {
    */
   @NotNull
   @Deprecated
-  XyzResponse processHealthCheckEvent(@NotNull HealthCheckEvent event);
+  Response processHealthCheckEvent(@NotNull HealthCheckEvent event);
 
   /** Processes a GetStatistics event. */
   @NotNull
   @Deprecated
-  XyzResponse processGetStatistics(@NotNull GetStatisticsEvent event) throws Exception;
+  Response processGetStatistics(@NotNull GetStatisticsEvent event) throws Exception;
 
   /** Processes a GetStatistics event. */
   @NotNull
   @Deprecated
-  XyzResponse processGetHistoryStatisticsEvent(@NotNull GetHistoryStatisticsEvent event) throws Exception;
+  Response processGetHistoryStatisticsEvent(@NotNull GetHistoryStatisticsEvent event) throws Exception;
 
   /** Processes a GetFeaturesById event. */
   @NotNull
   @Deprecated
-  XyzResponse processGetFeaturesByIdEvent(@NotNull GetFeaturesByIdEvent event) throws Exception;
+  Response processGetFeaturesByIdEvent(@NotNull GetFeaturesByIdEvent event) throws Exception;
 
   /** Processes a GetFeaturesByGeometryEvent event. */
   @NotNull
   @Deprecated
-  XyzResponse processGetFeaturesByGeometryEvent(@NotNull GetFeaturesByGeometryEvent event) throws Exception;
+  Response processGetFeaturesByGeometryEvent(@NotNull GetFeaturesByGeometryEvent event) throws Exception;
 
   /** Processes a GetFeaturesByBBox event. */
   @NotNull
   @Deprecated
-  XyzResponse processGetFeaturesByBBoxEvent(@Nonnull GetFeaturesByBBoxEvent event) throws Exception;
+  Response processGetFeaturesByBBoxEvent(@Nonnull GetFeaturesByBBoxEvent event) throws Exception;
 
   /** Processes a GetFeaturesByTile event. */
   @NotNull
   @Deprecated
-  XyzResponse processGetFeaturesByTileEvent(@NotNull GetFeaturesByTileEvent event) throws Exception;
+  Response processGetFeaturesByTileEvent(@NotNull GetFeaturesByTileEvent event) throws Exception;
 
   /** Processes a IterateFeatures event. */
   @NotNull
   @Deprecated
-  XyzResponse processIterateFeaturesEvent(@NotNull IterateFeaturesEvent event) throws Exception;
+  Response processIterateFeaturesEvent(@NotNull IterateFeaturesEvent event) throws Exception;
 
   /** Processes a SearchForFeatures event. */
   @NotNull
   @Deprecated
-  XyzResponse processSearchForFeaturesEvent(@NotNull SearchForFeaturesEvent event) throws Exception;
+  Response processSearchForFeaturesEvent(@NotNull SearchForFeaturesEvent event) throws Exception;
 
   /** Processes a DeleteFeaturesEvent event. */
   @NotNull
   @Deprecated
-  XyzResponse processDeleteFeaturesByTagEvent(@NotNull DeleteFeaturesByTagEvent event) throws Exception;
+  Response processDeleteFeaturesByTagEvent(@NotNull DeleteFeaturesByTagEvent event) throws Exception;
 
   /** Processes a LoadFeaturesEvent event. */
   @NotNull
   @Deprecated
-  XyzResponse processLoadFeaturesEvent(@NotNull LoadFeaturesEvent event) throws Exception;
+  Response processLoadFeaturesEvent(@NotNull LoadFeaturesEvent event) throws Exception;
 
   /** Processes a ModifyFeaturesEvent event. */
   @NotNull
   @Deprecated
-  XyzResponse processModifyFeaturesEvent(@NotNull ModifyFeaturesEvent event) throws Exception;
+  Response processModifyFeaturesEvent(@NotNull ModifyFeaturesEvent event) throws Exception;
 
   /** Processes a DeleteSpaceEvent event. */
   @NotNull
   @Deprecated
-  XyzResponse processModifySpaceEvent(@NotNull ModifySpaceEvent event) throws Exception;
+  Response processModifySpaceEvent(@NotNull ModifySpaceEvent event) throws Exception;
 
   /** Processes a ModifySubscriptionEvent event. */
   @NotNull
   @Deprecated
-  XyzResponse processModifySubscriptionEvent(@NotNull ModifySubscriptionEvent event) throws Exception;
+  Response processModifySubscriptionEvent(@NotNull ModifySubscriptionEvent event) throws Exception;
 
   /** Processes a IterateFeatures event. */
   @NotNull
   @Deprecated
-  XyzResponse processIterateHistoryEvent(@NotNull IterateHistoryEvent event) throws Exception;
+  Response processIterateHistoryEvent(@NotNull IterateHistoryEvent event) throws Exception;
 
   @NotNull
   @Deprecated
-  XyzResponse processGetStorageStatisticsEvent(@NotNull GetStorageStatisticsEvent event) throws Exception;
+  Response processGetStorageStatisticsEvent(@NotNull GetStorageStatisticsEvent event) throws Exception;
 }

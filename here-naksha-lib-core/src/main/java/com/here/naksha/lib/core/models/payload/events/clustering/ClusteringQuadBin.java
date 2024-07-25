@@ -39,7 +39,7 @@ import org.jetbrains.annotations.Nullable;
 @JsonTypeName(value = "QuadBinClustering")
 public class ClusteringQuadBin extends Clustering {
 
-  /** The quad resolution [0,4]. The alternative (deprecated) name is “resolution”. */
+  /** The quad resolution [0,4]. The alternative (deprecated) name is "resolution". */
   private @Nullable Integer relativeResolution;
 
   public @Nullable Integer getRelativeResolution() {

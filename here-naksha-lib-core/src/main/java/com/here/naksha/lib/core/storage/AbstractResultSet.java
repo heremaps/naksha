@@ -22,13 +22,13 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.model.NakshaVersion.v2_0_5;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.here.naksha.lib.core.models.geojson.coordinates.JTSHelper;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.view.ViewDeserialize.Storage;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.util.NoSuchElementException;
-import naksha.geo.XyzGeometry;
-import naksha.model.XyzFeature;
+import naksha.geo.GeometryProxy;
+import naksha.geo.ProxyGeoUtil;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -47,7 +47,7 @@ import org.locationtech.jts.io.WKBWriter;
  */
 @Deprecated
 @AvailableSince(v2_0_5)
-public abstract class AbstractResultSet<FEATURE extends XyzFeature> implements IResultSet<FEATURE> {
+public abstract class AbstractResultSet<FEATURE extends NakshaFeatureProxy> implements IResultSet<FEATURE> {
 
   /**
    * Create a new result-set for the given feature-type.
@@ -87,7 +87,7 @@ public abstract class AbstractResultSet<FEATURE extends XyzFeature> implements I
       }
       if (geo != null) {
         final Geometry geometry = json.twkbReader.read(WKBReader.hexToBytes(geo));
-        f.setGeometry(JTSHelper.fromGeometry(geometry));
+        f.setGeometry(ProxyGeoUtil.toProxyGeometry(geometry));
       }
       return f;
     } catch (ParseException | JsonProcessingException e) {
@@ -105,7 +105,7 @@ public abstract class AbstractResultSet<FEATURE extends XyzFeature> implements I
   @SuppressWarnings("JavadocDeclaration")
   @AvailableSince(v2_0_5)
   protected @NotNull String jsonOf(@NotNull FEATURE feature) {
-    final XyzGeometry xyzGeometry = feature.getGeometry();
+    final GeometryProxy xyzGeometry = feature.getGeometry();
     feature.setGeometry(null);
     try {
       return json.writer(ViewSerialize.Storage.class)
@@ -127,13 +127,14 @@ public abstract class AbstractResultSet<FEATURE extends XyzFeature> implements I
    */
   @AvailableSince(v2_0_5)
   protected @Nullable String geometryOf(@NotNull FEATURE feature) {
-    final XyzGeometry xyzGeometry = feature.getGeometry();
+    final GeometryProxy xyzGeometry = feature.getGeometry();
     if (xyzGeometry == null) {
       return null;
     }
     feature.setGeometry(null);
     try {
-      final Geometry jtsGeometry = xyzGeometry.getJTSGeometry();
+      final Geometry jtsGeometry = ProxyGeoUtil.toJtsGeometry(xyzGeometry);
+      ProxyGeoUtil.toJtsGeometry(xyzGeometry);
       assure3d(jtsGeometry.getCoordinates());
       final byte[] geometryBytes = json.twkbWriter.write(jtsGeometry);
       return WKBWriter.toHex(geometryBytes);

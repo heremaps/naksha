@@ -20,13 +20,12 @@ package com.here.naksha.test.common.assertions;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.here.naksha.lib.core.models.storage.*;
 import java.util.List;
 import java.util.function.Consumer;
-import naksha.model.OpType;
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.PRef;
+import naksha.model.request.condition.OpType;
+import naksha.model.request.condition.POp;
+import naksha.model.request.condition.POpType;
+import naksha.model.request.condition.PRef;
 
 public class POpAssertion {
 
@@ -46,17 +45,18 @@ public class POpAssertion {
   }
 
   public POpAssertion existsWithTagName(String tagName) {
-    return hasType(POpType.EXISTS).hasTagName(tagName);
+    assertTrue(POp.contains(PRef.tags(), tagName));
+    return this;
   }
 
   public POpAssertion hasType(OpType expectedOpType) {
-    assertEquals(expectedOpType, subject.op());
+    assertEquals(expectedOpType, subject.getType());
     return this;
   }
 
   public POpAssertion hasTagName(String expectedTagName) {
     assertNotNull(subject.getPropertyRef());
-    assertEquals(expectedTagName, subject.getPropertyRef().getTagName());
+    assertEquals(expectedTagName, subject.getPropertyRef().tags());
     return this;
   }
 

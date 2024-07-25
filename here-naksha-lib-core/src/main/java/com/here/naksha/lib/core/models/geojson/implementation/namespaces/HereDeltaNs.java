@@ -26,9 +26,6 @@ import naksha.model.ReviewStateEnum;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static naksha.model.ChangeStateEnum.ChangeStateEnumCompanion;
-import static naksha.model.ReviewStateEnum.ReviewStateEnumCompanion;
-
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public class HereDeltaNs extends JsonObject {
 

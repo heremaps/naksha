@@ -25,6 +25,7 @@ import naksha.model.IReadSession;
 import java.util.concurrent.TimeUnit;
 
 import naksha.model.ReadRequest;
+import naksha.model.ErrorResult;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -26,7 +26,7 @@ public class ListDiff extends ArrayList<Difference> implements Difference {
   int originalLength;
   int newLength;
 
-  ListDiff(final int totalLength) {
+  public ListDiff(final int totalLength) {
     super(totalLength);
   }
 }

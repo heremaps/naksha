@@ -19,16 +19,16 @@
 package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.ChangeStateEnum;
-import naksha.model.ReviewStateEnum;
-import naksha.model.XyzFeature;
+import naksha.model.*;
 import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.storage.*;
 import java.util.ArrayList;
 import java.util.List;
+
+import naksha.model.request.ResultRow;
+import naksha.model.response.ExecutedOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,23 +39,16 @@ public final class HandlerUtil {
   private HandlerUtil() {}
 
   public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
-      final @NotNull List<XyzFeature> features,
-      final @Nullable List<XyzFeature> context,
-      final @Nullable List<XyzFeature> violations) {
-    // Create ForwardCursor with input features
-    final List<XyzFeatureCodec> codecs = new ArrayList<>();
-    final XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
-    for (final XyzFeature feature : features) {
-      final XyzFeatureCodec codec = codecFactory.newInstance();
-      codec.setOp(EExecutedOp.UPDATED);
-      codec.setFeature(feature);
-      codecs.add(codec);
+      final @NotNull List<NakshaFeatureProxy> features,
+      final @Nullable List<NakshaFeatureProxy> context,
+      final @Nullable List<NakshaFeatureProxy> violations) {
+    // Create list of ResultRow with input features
+    final List<ResultRow> resultRows = new ArrayList<>();
+    for (final NakshaFeatureProxy feature : features) {
+      resultRows.add(new ResultRow(ExecutedOp.UPDATED,null,feature));
     }
-    final ListBasedForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-        new ListBasedForwardCursor<>(codecFactory, codecs);
-
     // Create ContextResult with cursor, context and violations
-    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(cursor);
+    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(null,resultRows);
     ctxResult.setContext(context);
     ctxResult.setViolations(violations);
     return ctxResult;
@@ -71,7 +64,7 @@ public final class HandlerUtil {
 
     // Add features in the request
     for (final Object obj : features) {
-      final XyzFeature feature = checkInstanceOf(obj, XyzFeature.class, "Unsupported feature type");
+      final NakshaFeatureProxy feature = checkInstanceOf(obj, NakshaFeatureProxy.class, "Unsupported feature type");
       cwf.add(EWriteOp.PUT, feature);
     }
     // add context to write request
@@ -178,10 +171,10 @@ public final class HandlerUtil {
     return checkInstanceOf(input, returnType, XyzError.NOT_IMPLEMENTED, errDescPrefix);
   }
 
-  public static void setDeltaReviewState(final @NotNull XyzFeature feature, final @NotNull ReviewStateEnum reviewState) {
-    final XyzProperties properties = feature.getProperties();
-    final XyzNamespace xyzNs = properties.getXyzNamespace();
-    final HereDeltaNs deltaNs = properties.useDeltaNamespace();
+  public static void setDeltaReviewState(final @NotNull NakshaFeatureProxy feature, final @NotNull ReviewStateEnum reviewState) {
+    final NakshaPropertiesProxy properties = feature.getProperties();
+    final XyzProxy xyzNs = properties.getXyz();
+    final HereDeltaNs deltaNs = properties.del;
     deltaNs.setChangeState(ChangeStateEnum.UPDATED);
     deltaNs.setReviewState(reviewState);
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());

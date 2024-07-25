@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.Storage;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -43,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
   @JsonSubTypes.Type(value = TxModifyFeatures.class),
   @JsonSubTypes.Type(value = TxModifyCollection.class)
 })
-public class TxSignal extends XyzFeature {
+public class TxSignal extends NakshaFeatureProxy {
 
   @AvailableSince(NakshaVersion.v2_0_0)
   public static final String STORAGE_ID = "storageId";
@@ -59,6 +59,8 @@ public class TxSignal extends XyzFeature {
 
   @AvailableSince(NakshaVersion.v2_0_0)
   public static final String PUBLISH_TS = "publishTs";
+
+  public static final String ID = "id";
 
   /**
    * Create a new transaction signal.

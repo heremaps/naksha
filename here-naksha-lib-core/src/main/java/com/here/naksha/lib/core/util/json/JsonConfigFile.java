@@ -77,7 +77,7 @@ public abstract class JsonConfigFile<SELF extends JsonConfigFile<SELF>> extends 
 
   /**
    * An optional prefix to be placed in-front of all field names to be read from environment
-   * variables. So, the prefix "FOO_" will cause the property “bar” to be looked-up as "FOO_BAR". If
+   * variables. So, the prefix "FOO_" will cause the property "bar" to be looked-up as "FOO_BAR". If
    * no prefix is returned, the environment variable name must explicitly be declared using the
    * annotation {@link EnvName}. Multiple names can be defined and combined with the prefix.
    *

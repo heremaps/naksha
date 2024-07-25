@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.storage;
 
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -27,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
  * storage in memory.
  */
 @Deprecated
-public abstract class CollectionCache<FEATURE extends XyzFeature> {
+public abstract class CollectionCache<FEATURE extends NakshaFeatureProxy> {
   // TODO: Implement me!
 
   /**

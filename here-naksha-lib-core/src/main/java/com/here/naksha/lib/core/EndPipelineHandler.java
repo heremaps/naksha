@@ -18,9 +18,11 @@
  */
 package com.here.naksha.lib.core;
 
-import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Result;
+import static naksha.model.NakshaErrorCode.NOT_IMPLEMENTED;
+
+import naksha.model.NakshaError;
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +38,12 @@ public class EndPipelineHandler implements IEventHandler {
    * @return the result.
    */
   @Override
-  public @NotNull Result processEvent(@NotNull IEvent event) {
+  public @NotNull Response processEvent(@NotNull IEvent event) {
     log.atInfo()
         .setMessage("End of pipeline reached and no handle created a response")
         .setCause(new IllegalStateException())
         .log();
-    return new ErrorResult(
-        XyzError.NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported");
+    return new ErrorResponse(new NakshaError(
+        NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported", null, null));
   }
 }

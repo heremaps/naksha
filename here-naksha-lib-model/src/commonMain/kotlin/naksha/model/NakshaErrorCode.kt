@@ -49,6 +49,15 @@ open class NakshaErrorCode protected constructor() : JsEnum() {
         }
 
         /**
+         * The storage is not initialized.
+         */
+        @JsStatic
+        @JvmField
+        val STORAGE_NOT_INITIALIZED = def(NakshaErrorCode::class, "StorageNotInitialized") {
+                self -> self.defaultMessage = "The storage has not been initialized yet"
+        }
+
+        /**
          * The collection accessed does not exist.
          */
         @JsStatic

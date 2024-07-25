@@ -23,26 +23,28 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.here.naksha.lib.core.bin.ConnectorPayload;
+import com.here.naksha.lib.core.util.Hasher;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.nio.ByteBuffer;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A wrapper class which is based on {@link XyzResponse} for binary responses from connectors.
+ * A wrapper class which is based on {@link Response} for binary responses from connectors.
  * Internally it uses an actual binary representation for the payload.
  *
  * <p>An instance of {@link ConnectorPayload} will be used internally to convert it to binary form.
  * For all other protocol versions the payload will be encoded as JSON.
  *
  */
-public class BinaryResponse extends XyzResponse {
+public class BinaryResponse extends Response {
 
   @JsonCreator
   public BinaryResponse(@JsonProperty byte @NotNull [] bytes, @JsonProperty @NotNull String mimeType) {
     this.bytes = bytes;
     this.mimeType = mimeType;
-    setCalculatedEtag(XyzResponse.calculateEtagFor(bytes));
+    setCalculatedEtag("\"" + Hasher.getHash(bytes) + "\"");
   }
 
   public static final String BINARY_SUPPORT_VERSION = "0.6.0";
@@ -67,13 +69,9 @@ public class BinaryResponse extends XyzResponse {
     return bytes;
   }
 
-  @Override
   public @Nullable String getEtag() {
-    if (super.getEtag() != null) {
-      return super.getEtag();
-    }
     if (etagNeedsRecalculation) {
-      setCalculatedEtag(XyzResponse.calculateEtagFor(getBytes()));
+      setCalculatedEtag("\"" + Hasher.getHash(bytes) + "\"");
     }
     return calculatedEtag;
   }
@@ -84,7 +82,6 @@ public class BinaryResponse extends XyzResponse {
     etagNeedsRecalculation = false;
   }
 
-  @Override
   public byte @NotNull [] toByteArray(@Nullable Class<? extends ViewSerialize> viewClass) {
     return toByteArray();
   }
@@ -121,5 +118,20 @@ public class BinaryResponse extends XyzResponse {
     byte[] byteArray = new byte[buffer.remaining()];
     buffer.get(byteArray);
     return byteArray;
+  }
+
+  /**
+   * Set the e-tag (a hash above all features), when it was calculated.
+   *
+   * @param etag the e-tag, if null, the e-tag is removed.
+   */
+  @SuppressWarnings("WeakerAccess")
+  public void setEtag(String etag) {
+    this.calculatedEtag = etag;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

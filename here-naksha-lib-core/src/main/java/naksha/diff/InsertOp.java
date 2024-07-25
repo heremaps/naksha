@@ -21,7 +21,7 @@ package naksha.diff;
 /** An insert. */
 public class InsertOp extends PrimitiveDiff {
 
-  InsertOp(final Object value) {
+  public InsertOp(final Object value) {
     super(null, value);
   }
 }

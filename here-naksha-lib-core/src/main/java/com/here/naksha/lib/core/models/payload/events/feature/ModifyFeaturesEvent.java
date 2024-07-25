@@ -26,7 +26,7 @@ import com.here.naksha.lib.core.models.payload.events.FeatureEvent;
 import com.here.naksha.lib.core.models.payload.events.IfRowLock;
 import java.util.List;
 import java.util.Map;
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.XyzFeatureCollection.ModificationFailure;
 import org.jetbrains.annotations.NotNull;
@@ -46,7 +46,7 @@ import org.jetbrains.annotations.Nullable;
  * are returned in the {@link XyzFeatureCollection#getDeleted()} list.
  *
  * <p>When the operation for a feature failed, then the reason is returned in the {@link
- * XyzFeatureCollection#getFailed()} map, of which the key is the {@link XyzFeature#getId()} and the value
+ * XyzFeatureCollection#getFailed()} map, of which the key is the {@link NakshaFeatureProxy#getId()} and the value
  * is the error message (reason).
  *
  * @since 0.1.0
@@ -60,14 +60,14 @@ public final class ModifyFeaturesEvent extends FeatureEvent {
    *
    * @since 0.1.0
    */
-  private @Nullable List<@NotNull XyzFeature> insertFeatures;
+  private @Nullable List<@NotNull NakshaFeatureProxy> insertFeatures;
 
   /**
    * The features to update; if any.
    *
    * @since 0.1.0
    */
-  private @Nullable List<@NotNull XyzFeature> updateFeatures;
+  private @Nullable List<@NotNull NakshaFeatureProxy> updateFeatures;
 
   /**
    * The features for which to perform an upsert, this means no matter what the current state is, it
@@ -75,7 +75,7 @@ public final class ModifyFeaturesEvent extends FeatureEvent {
    *
    * @since 0.6.0
    */
-  private @Nullable List<@NotNull XyzFeature> upsertFeatures;
+  private @Nullable List<@NotNull NakshaFeatureProxy> upsertFeatures;
 
   /**
    * A map where the key is the identifier of the feature to delete, and the value optionally the
@@ -107,17 +107,17 @@ public final class ModifyFeaturesEvent extends FeatureEvent {
    * @return the list of all features to be inserted.
    */
   @SuppressWarnings("unused")
-  public List<XyzFeature> getInsertFeatures() {
+  public List<NakshaFeatureProxy> getInsertFeatures() {
     return this.insertFeatures;
   }
 
   @SuppressWarnings("WeakerAccess")
-  public void setInsertFeatures(List<XyzFeature> insertFeatures) {
+  public void setInsertFeatures(List<NakshaFeatureProxy> insertFeatures) {
     this.insertFeatures = insertFeatures;
   }
 
   @SuppressWarnings("unused")
-  public ModifyFeaturesEvent withInsertFeatures(List<XyzFeature> insertFeatures) {
+  public ModifyFeaturesEvent withInsertFeatures(List<NakshaFeatureProxy> insertFeatures) {
     setInsertFeatures(insertFeatures);
     return this;
   }
@@ -128,17 +128,17 @@ public final class ModifyFeaturesEvent extends FeatureEvent {
    * @return the list of all features to be updated.
    */
   @SuppressWarnings("unused")
-  public List<XyzFeature> getUpdateFeatures() {
+  public List<NakshaFeatureProxy> getUpdateFeatures() {
     return this.updateFeatures;
   }
 
   @SuppressWarnings("WeakerAccess")
-  public void setUpdateFeatures(List<XyzFeature> updateFeatures) {
+  public void setUpdateFeatures(List<NakshaFeatureProxy> updateFeatures) {
     this.updateFeatures = updateFeatures;
   }
 
   @SuppressWarnings("unused")
-  public ModifyFeaturesEvent withUpdateFeatures(List<XyzFeature> updateFeatures) {
+  public ModifyFeaturesEvent withUpdateFeatures(List<NakshaFeatureProxy> updateFeatures) {
     setUpdateFeatures(updateFeatures);
     return this;
   }
@@ -149,17 +149,17 @@ public final class ModifyFeaturesEvent extends FeatureEvent {
    * @return the list of all features to be updated.
    */
   @SuppressWarnings("unused")
-  public List<XyzFeature> getUpsertFeatures() {
+  public List<NakshaFeatureProxy> getUpsertFeatures() {
     return this.upsertFeatures;
   }
 
   @SuppressWarnings("WeakerAccess")
-  public void setUpsertFeatures(List<XyzFeature> upsertFeatures) {
+  public void setUpsertFeatures(List<NakshaFeatureProxy> upsertFeatures) {
     this.upsertFeatures = upsertFeatures;
   }
 
   @SuppressWarnings("unused")
-  public ModifyFeaturesEvent withUpsertFeatures(List<XyzFeature> upsertFeatures) {
+  public ModifyFeaturesEvent withUpsertFeatures(List<NakshaFeatureProxy> upsertFeatures) {
     setUpsertFeatures(upsertFeatures);
     return this;
   }

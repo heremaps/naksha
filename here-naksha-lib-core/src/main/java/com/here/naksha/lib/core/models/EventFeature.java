@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.models;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.AbstractEventTask;
@@ -26,22 +25,21 @@ import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.payload.Event;
 import java.util.List;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * A feature that holds the configuration for an {@link EventPipeline}. Logically this is a feature able to process events. Normally these
- * features are used in combination with {@link INaksha} interface, so creating an event task via {@link INaksha#executeTask(Class)},
- * adding the event {@link AbstractEventTask#setEvent(Event)}, adding this feature to the {@link AbstractEventTask#pipeline pipeline} of the
- * task via {@link EventPipeline#addEventHandler(EventFeature)}.
+ * features are used in combination with {@link INaksha} interface, so creating an event task via {@link INaksha},
+ * adding the event {@link AbstractEventTask#setEvent(Event)}, adding this feature to the {@link AbstractEventTask pipeline} of the
+ * task via {@link EventPipeline}.
  */
 @SuppressWarnings("unused")
 @AvailableSince(NakshaVersion.v2_0_0)
 @Deprecated
-public abstract class EventFeature extends XyzFeature {
+public abstract class EventFeature extends NakshaFeatureProxy {
 
   /**
    * Create a new empty pipeline.
@@ -53,24 +51,6 @@ public abstract class EventFeature extends XyzFeature {
   public EventFeature(@NotNull String id, @NotNull List<@NotNull String> connectorIds) {
     super(id);
     this.connectorIds = connectorIds;
-  }
-
-  /**
-   * Create a new empty pipeline.
-   *
-   * @param id           The identifier of this component.
-   * @param connectorIds The list of connector identifier that form the event-pipeline.
-   * @param packages     The packages this feature is part of.
-   */
-  @JsonCreator
-  @AvailableSince(NakshaVersion.v2_0_0)
-  public EventFeature(
-      @JsonProperty(ID) @NotNull String id,
-      @JsonProperty(CONNECTOR_IDS) @NotNull List<@NotNull String> connectorIds,
-      @JsonProperty(PACKAGES) @Nullable List<@NotNull String> packages) {
-    super(id);
-    setConnectorIds(connectorIds);
-    setPackages(packages);
   }
 
   @AvailableSince(NakshaVersion.v2_0_6)

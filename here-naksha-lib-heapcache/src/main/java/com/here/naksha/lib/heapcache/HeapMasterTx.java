@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.heapcache;
 
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import com.here.naksha.lib.core.storage.CollectionInfo;
 import com.here.naksha.lib.core.storage.IFeatureWriter;
 import com.here.naksha.lib.core.storage.IMasterTransaction;
@@ -88,7 +88,7 @@ public class HeapMasterTx extends HeapReadTx implements IMasterTransaction {
   }
 
   @Override
-  public @NotNull <F extends XyzFeature> IFeatureWriter<F> writeFeatures(
+  public @NotNull <F extends NakshaFeatureProxy> IFeatureWriter<F> writeFeatures(
       @NotNull Class<F> featureClass, @NotNull CollectionInfo collection) {
     return new HeapFeatureWriter<>(cache, featureClass, collection);
   }

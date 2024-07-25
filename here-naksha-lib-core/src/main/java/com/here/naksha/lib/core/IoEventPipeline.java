@@ -18,15 +18,11 @@
  */
 package com.here.naksha.lib.core;
 
-import com.here.naksha.lib.core.models.Typed;
-import com.here.naksha.lib.core.models.XyzError;
+import static naksha.model.NakshaErrorCode.EXCEPTION;
+
 import com.here.naksha.lib.core.models.payload.Payload;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.NanoTime;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import com.here.naksha.lib.core.view.ViewSerialize;
-import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -34,10 +30,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import naksha.model.BinaryResponse;
-import naksha.model.NotModifiedResponse;
-import naksha.model.Request;
-import naksha.model.XyzResponse;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
+import naksha.model.NakshaError;
+import naksha.model.request.Request;
+import naksha.model.response.ErrorResponse;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -82,11 +80,11 @@ public class IoEventPipeline extends EventPipeline {
    * @return the response that was encoded to the output stream.
    * @throws IllegalStateException if this method has already been called.
    */
-  public Result sendEvent(@NotNull InputStream input, @Nullable OutputStream output) {
+  public Response sendEvent(@NotNull InputStream input, @Nullable OutputStream output) {
     if (!sendingEvent.compareAndSet(false, true)) {
       throw new IllegalStateException("process must not be called multiple times");
     }
-    Result response;
+    Response response;
     final Request<?> request;
     try {
       String requestString;
@@ -129,8 +127,8 @@ public class IoEventPipeline extends EventPipeline {
             .addArgument(expected)
             .addArgument(deserialized)
             .log();
-        response = new ErrorResult(
-            XyzError.EXCEPTION, "Invalid event, expected " + expected + ", but found " + deserialized);
+        response = new ErrorResponse(new NakshaError(
+            EXCEPTION, "Invalid event, expected " + expected + ", but found " + deserialized, null, null));
         if (output != null) {
           writeDataOut(output, response, null);
         }
@@ -140,7 +138,7 @@ public class IoEventPipeline extends EventPipeline {
           .setMessage("Exception while processing the event")
           .setCause(e)
           .log();
-      response = new ErrorResult(XyzError.EXCEPTION, e.getMessage());
+      response = new ErrorResponse(new NakshaError(EXCEPTION, e.getMessage(), null, null));
       if (output != null) {
         writeDataOut(output, response, null);
       }
@@ -153,62 +151,14 @@ public class IoEventPipeline extends EventPipeline {
   /**
    * Write the output object to the output stream.
    */
-  private void writeDataOut(@NotNull OutputStream output, @NotNull Typed dataOut, @Nullable String ifNoneMatch) {
+  private void writeDataOut(@NotNull OutputStream output, @NotNull Response dataOut, @Nullable String ifNoneMatch) {
     try {
-      // Note: https://en.wikipedia.org/wiki/HTTP_ETag
-      // TODO: We need to fix this, because a weak e-tag is perfect here. For example the order of
-      //       the JSON document is not significant, therefore we should implement weak e-tags,
-      //       because {"a":1,"b":2} is semantically equals to {"b":2,"a":1} !
-      byte @NotNull [] bytes = dataOut.toByteArray(ViewSerialize.Internal.class);
+      byte @NotNull [] bytes =
+          Platform.toJSON(dataOut, ToJsonOptions.getDEFAULT()).getBytes(StandardCharsets.UTF_8);
       log.atInfo()
           .setMessage("Write data out for response with type: {}")
           .addArgument(dataOut.getClass().getSimpleName())
           .log();
-
-      // All this effort does not make sense for small responses.
-      if (bytes.length >= ETAG_THRESHOLD_SIZE) {
-        if (dataOut instanceof BinaryResponse) {
-          // NOTE: BinaryResponses contain an ETag automatically, nothing to calculate here
-          String etag = ((BinaryResponse) dataOut).getEtag();
-          if (XyzResponse.etagMatches(ifNoneMatch, etag)) {
-            final NotModifiedResponse resp = new NotModifiedResponse();
-            resp.setEtag(etag);
-            bytes = resp.toByteArray(ViewSerialize.Internal.class);
-          } else if (bytes.length > GZIP_THRESHOLD_SIZE) {
-            bytes = Payload.compress(bytes);
-          }
-        } else {
-          final @NotNull String etag = XyzResponse.calculateEtagFor(bytes);
-          if (XyzResponse.etagMatches(ifNoneMatch, etag)) {
-            final NotModifiedResponse resp = new NotModifiedResponse();
-            resp.setEtag(etag);
-            bytes = resp.toByteArray(ViewSerialize.Internal.class);
-          } else {
-            //noinspection StringBufferReplaceableByString
-            final StringBuilder sb = new StringBuilder();
-            sb.append(",\"etag\":\"\\\"").append(etag).append("\\\"\"}");
-            final String etagJson = sb.toString();
-            final byte @NotNull [] etagBytes = etagJson.getBytes(StandardCharsets.UTF_8);
-            try (final ByteArrayOutputStream os =
-                new ByteArrayOutputStream(bytes.length - 1 + etagBytes.length)) {
-              final OutputStream targetOs = (bytes.length > GZIP_THRESHOLD_SIZE ? Payload.gzip(os) : os);
-              targetOs.write(bytes, 0, bytes.length - 1); // last character is '}'.
-              targetOs.write(etagBytes); // basically looks like: ,"etag":"\"foo\""}
-              targetOs.flush();
-              targetOs.close();
-              os.flush();
-              os.close();
-              bytes = os.toByteArray();
-            } catch (Exception e) {
-              log.atError()
-                  .setMessage(
-                      "Unexpected exception while trying to generate response bytes with e-tag")
-                  .setCause(e)
-                  .log();
-            }
-          }
-        }
-      }
       output.write(bytes);
     } catch (Exception e) {
       log.atError()

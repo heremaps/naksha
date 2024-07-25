@@ -19,8 +19,10 @@
 package com.here.naksha.lib.core.models.storage;
 
 import java.util.List;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
-import naksha.model.WriteFeatures;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,64 +32,37 @@ import org.jetbrains.annotations.Nullable;
  * Implementing class will define actual data type of context and violations.
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-public abstract class ContextWriteFeatures<
-        FEATURE,
-        CTX_TYPE,
-        V_TYPE,
-        CODEC extends FeatureCodec<FEATURE, CODEC>,
-        SELF extends WriteFeatures<FEATURE, CODEC, SELF>>
-    extends WriteFeatures<FEATURE, CODEC, SELF> {
+public abstract class ContextWriteFeatures extends WriteRequest {
 
   /**
    * The list of features passed as context, as part of Write request
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  private @Nullable List<@NotNull CTX_TYPE> context;
+  private @Nullable List<@NotNull NakshaContext> context;
 
   /**
    * The list of violations passed as part of Write request
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  private @Nullable List<@NotNull V_TYPE> violations;
+  private @Nullable List<@NotNull NakshaFeatureProxy> violations;
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  protected ContextWriteFeatures(
-      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory, @NotNull String collectionId) {
-    super(codecFactory, collectionId);
-  }
-
-  /**
-   * Creates a new write request, with list of features already supplied as part of argument
-   *
-   * @param codecFactory The codec factory to use when creating new feature codecs.
-   * @param collectionId The identifier of the collection to write into.
-   * @param features the list of features to be added to the request
-   */
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public ContextWriteFeatures(
-      final @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
-      final @NotNull String collectionId,
-      final @NotNull List<@NotNull CODEC> features) {
-    super(codecFactory, collectionId, features);
-  }
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public @Nullable List<CTX_TYPE> getContext() {
+  public @Nullable List<NakshaContext> getContext() {
     return context;
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public void setContext(@Nullable List<CTX_TYPE> context) {
+  public void setContext(@Nullable List<NakshaContext> context) {
     this.context = context;
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public @Nullable List<V_TYPE> getViolations() {
+  public @Nullable List<NakshaFeatureProxy> getViolations() {
     return violations;
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public void setViolations(@Nullable List<V_TYPE> violations) {
+  public void setViolations(@Nullable List<NakshaFeatureProxy> violations) {
     this.violations = violations;
   }
 }

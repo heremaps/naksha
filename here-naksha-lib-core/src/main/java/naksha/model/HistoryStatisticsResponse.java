@@ -21,11 +21,12 @@ package naksha.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.events.info.GetStatisticsEvent;
+import naksha.model.response.Response;
 
 /** The response that is sent for a {@link GetStatisticsEvent}. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "HistoryStatisticsResponse")
-public class HistoryStatisticsResponse extends XyzResponse {
+public class HistoryStatisticsResponse extends Response {
 
   private StatisticsResponse.Value<Long> count;
 
@@ -35,6 +36,8 @@ public class HistoryStatisticsResponse extends XyzResponse {
   private StatisticsResponse.Value<Long> dataSize;
   private StatisticsResponse.Value<Integer> minVersion;
   private StatisticsResponse.Value<Integer> maxVersion;
+
+  public HistoryStatisticsResponse() {}
 
   /**
    * Returns the amount of features stored in the space.
@@ -153,5 +156,10 @@ public class HistoryStatisticsResponse extends XyzResponse {
   public HistoryStatisticsResponse withMaxVersion(StatisticsResponse.Value<Integer> maxVersion) {
     setMaxVersion(maxVersion);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

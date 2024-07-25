@@ -41,7 +41,7 @@ public class ClusteringHexBin extends Clustering {
 
   /**
    * The optional H3 hexagon resolution [0,13]. This parameter is as well available with the
-   * downward compatible naming “resolution”.
+   * downward compatible naming "resolution".
    */
   private @Nullable Integer absoluteResolution;
 

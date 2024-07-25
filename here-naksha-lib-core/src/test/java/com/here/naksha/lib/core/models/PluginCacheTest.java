@@ -33,11 +33,13 @@ import com.here.naksha.lib.core.lambdas.Fe3;
 import com.here.naksha.lib.core.models.PluginCache.EventHandlerConstructorByConfig;
 import com.here.naksha.lib.core.models.PluginCache.EventHandlerConstructorByTarget;
 import com.here.naksha.lib.core.models.PluginCache.ExtensionConstructorByClassNameMap;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
+import naksha.model.response.Response;
+import naksha.model.response.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 
 class PluginCacheTest {
 
@@ -48,8 +50,8 @@ class PluginCacheTest {
   public static class TestHandler implements IEventHandler {
 
     @Override
-    public @NotNull Result processEvent(@NotNull IEvent event) {
-      return new SuccessResult();
+    public @NotNull Response processEvent(@NotNull IEvent event) {
+      return new SuccessResponse(new ArrayList<>(),null);
     }
   }
 
@@ -80,7 +82,7 @@ class PluginCacheTest {
     assertNotNull(c);
     IEventHandler handler = c.call(null, null, null);
     assertNotNull(handler);
-    assertInstanceOf(SuccessResult.class, handler.processEvent(null));
+    assertInstanceOf(SuccessResponse.class, handler.processEvent(null));
 
     EventHandlerConstructorByConfig byConfig = eventHandlerConstructors.get(TestHandler.class.getName());
     assertNotNull(byConfig);
@@ -98,7 +100,7 @@ class PluginCacheTest {
     assertNotNull(c);
     IEventHandler handler = c.call(null, null, null);
     assertNotNull(handler);
-    assertInstanceOf(SuccessResult.class, handler.processEvent(null));
+    assertInstanceOf(SuccessResponse.class, handler.processEvent(null));
 
     ExtensionConstructorByClassNameMap byName = extensionCache.get(extensionId);
     assertNotNull(byName);

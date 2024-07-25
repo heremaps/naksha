@@ -20,14 +20,14 @@ package com.here.naksha.lib.core.models.features;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * A catalog is simple a namespace that prefixes spaces.
  */
 @JsonTypeName(value = "Catalog")
-public class Catalog extends XyzFeature {
+public class Catalog extends NakshaFeatureProxy {
 
   /**
    * Create a new empty feature.

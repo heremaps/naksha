@@ -24,7 +24,6 @@ import static naksha.diff.Patcher.calculateDifferenceOfPartialUpdate;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.storage.IfExists;
 import com.here.naksha.lib.core.models.storage.IfNotExists;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.util.HashMap;
 import java.util.Objects;
 import naksha.diff.ConflictResolution;
@@ -32,7 +31,7 @@ import naksha.diff.Difference;
 import naksha.diff.MergeConflictException;
 import naksha.diff.Patcher;
 import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param <FEATURE> the feature-type.
  */
-public class FeatureModificationEntry<FEATURE extends XyzFeature> {
+public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
 
   /**
    * The input state of the caller.
@@ -243,7 +242,7 @@ public class FeatureModificationEntry<FEATURE extends XyzFeature> {
     if (diff == null) {
       return null;
     }
-    final FEATURE result = JsonSerializable.deepClone(head);
+    final FEATURE result = head.cloneDeep();
     Patcher.patch(result, diff);
     return result;
   }
@@ -255,8 +254,8 @@ public class FeatureModificationEntry<FEATURE extends XyzFeature> {
     if (base == null
         || base == head
         || Objects.equals(
-            base.getProperties().getXyzNamespace().getUuid(),
-            input.getProperties().getXyzNamespace().getUuid())) {
+            base.getProperties().getXyz().getUuid(),
+            input.getProperties().getXyz().getUuid())) {
       return input;
     }
 
@@ -265,9 +264,7 @@ public class FeatureModificationEntry<FEATURE extends XyzFeature> {
       // This is totally unexpected, base and head are logically the same, but have different uuids.
       // Eventually this means, that we can just treat the input as a direct modification of the
       // head.
-      input.getProperties()
-          .getXyzNamespace()
-          .setUuid(head.getProperties().getXyzNamespace().getUuid());
+      input.getProperties().getXyz().setUuid(head.getProperties().getXyz().getUuid());
       return input;
     }
 
@@ -279,7 +276,7 @@ public class FeatureModificationEntry<FEATURE extends XyzFeature> {
       return null;
     }
     final Difference mergedDiff = Patcher.mergeDifferences(baseToHeadDiff, baseToInputDiff, cr);
-    final FEATURE result = JsonSerializable.deepClone(base);
+    final FEATURE result = base.cloneDeep();
     Patcher.patch(result, mergedDiff);
     return result;
   }

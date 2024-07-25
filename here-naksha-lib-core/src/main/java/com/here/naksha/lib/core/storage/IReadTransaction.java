@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core.storage;
 
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -83,6 +83,6 @@ public interface IReadTransaction extends AutoCloseable {
    * @param <FEATURE>    the feature-type.
    * @return the feature reader.
    */
-  <FEATURE extends XyzFeature> @NotNull IFeatureReader<FEATURE> readFeatures(
+  <FEATURE extends NakshaFeatureProxy> @NotNull IFeatureReader<FEATURE> readFeatures(
       @NotNull Class<FEATURE> featureClass, @NotNull CollectionInfo collection);
 }

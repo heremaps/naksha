@@ -37,9 +37,9 @@ public abstract class Tweaks implements Typed {
   /**
    * The sampling settings; if any.
    *
-   * <p>This is simplified, its called sometimes strength, then sampling and “samplingthreshold”. This is a combination of all, and we now
+   * <p>This is simplified, its called sometimes strength, then sampling and "samplingthreshold". This is a combination of all, and we now
    * allow to either select a pre-defined name via {@code &tweaks:sampling} and to override individual values via
-   * {@code &tweaks:sampling:strength}. The default selection is always “off”.
+   * {@code &tweaks:sampling:strength}. The default selection is always "off".
    */
   @JsonProperty
   public @NotNull Sampling sampling = Sampling.OFF;

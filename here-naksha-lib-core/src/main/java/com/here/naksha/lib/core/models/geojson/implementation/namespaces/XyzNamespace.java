@@ -30,7 +30,6 @@ import java.util.List;
 import naksha.geo.XyzProperties;
 import naksha.model.EXyzAction;
 import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

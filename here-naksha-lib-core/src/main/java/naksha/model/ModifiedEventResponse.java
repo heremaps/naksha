@@ -21,12 +21,17 @@ package naksha.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.Event;
+import org.jetbrains.annotations.NotNull;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "ModifiedEventResponse")
 public class ModifiedEventResponse extends ModifiedPayloadResponse {
 
   private Event event;
+
+  public ModifiedEventResponse(@NotNull String type) {
+    super(type);
+  }
 
   public Event getEvent() {
     return this.event;
@@ -39,5 +44,10 @@ public class ModifiedEventResponse extends ModifiedPayloadResponse {
   public ModifiedEventResponse withEvent(Event event) {
     setEvent(event);
     return this;
+  }
+
+  @Override
+  public int size() {
+    return 0;
   }
 }

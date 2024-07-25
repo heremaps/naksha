@@ -17,7 +17,7 @@ import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
+import naksha.model.ErrorResult;
 import naksha.model.Request;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;

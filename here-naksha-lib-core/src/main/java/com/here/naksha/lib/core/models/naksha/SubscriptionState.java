@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
 @SuppressWarnings("unused")
 @JsonTypeName(value = "SubscriptionState")
 @AvailableSince(NakshaVersion.v2_0_16)
-public final class SubscriptionState extends NakshaFeature {
+public final class SubscriptionState extends NakshaFeatureProxy {
 
   /** Indicates the last seqNumber, upto (and including) which the respective subscription pipeline has completed the transaction processing. */
   @AvailableSince(NakshaVersion.v2_0_16)
