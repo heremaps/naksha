@@ -20,7 +20,88 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         addAll(arrayOf(west, south, southWestAlt, east, north, northEastAlt))
     }
 
+    @JsName("fromCoord")
+    constructor(coord: ICoordinates) : this() {
+        when (coord) {
+            is PointCoord -> setToPoint(coord.getLongitude(),coord.getLatitude())
+            is MultiPointCoord -> addMultiPoint(coord)
+            is LineStringCoord -> addLineString(coord)
+            is MultiLineStringCoord -> addMultiLineString(coord)
+            is MultiPolygonCoord -> addMultiPolygon(coord)
+            is PolygonCoord -> addPolygon(coord)
+        }
+    }
+
     private fun has(value: Double?): Boolean = value != null && !value.isNaN()
+
+    fun setToPoint(longitude: Double, latitude: Double, margin: Double = 0.0): BoundingBoxProxy {
+        withMinLatitude(latitude-margin)
+        withMaxLatitude(latitude+margin)
+        withMinLongitude(longitude-margin)
+        withMaxLongitude(longitude+margin)
+        return this
+    }
+
+    fun addPoint(pointCoord: PointCoord): BoundingBoxProxy {
+        val longitude = pointCoord.getLongitude()
+        val latitude = pointCoord.getLatitude()
+        if (this.isEmpty()) setToPoint(longitude,latitude)
+        else {
+            // includes antimeridian case
+            // TODO still 2 cases where both longitudes are both positive (or both negative)
+            // TODO and the bbox still spans across the antimeridian
+            // TODO then the bbox should expand the side closest to the added point
+            if ((longitude < getMinLongitude()) && isSameSign(longitude,getMinLongitude())) withMinLongitude(longitude)
+            else if ((longitude > getMaxLongitude()) && isSameSign(longitude,getMaxLongitude())) withMaxLongitude(longitude)
+            if (latitude < getMinLatitude()) withMinLatitude(latitude)
+            else if (latitude > getMaxLatitude()) withMaxLatitude(latitude)
+        }
+        return this
+    }
+
+    private fun isSameSign(a: Double, b: Double): Boolean {
+        return (a>=0 && b>=0) || (a<=0 && b<=0)
+    }
+
+    fun addMultiPoint(multiPoint: MultiPointCoord): BoundingBoxProxy {
+        for (point in multiPoint) {
+            if (point==null) continue
+            addPoint(point)
+        }
+        return this
+    }
+
+    fun addLineString(lineString: LineStringCoord): BoundingBoxProxy {
+        for (point in lineString) {
+            if (point==null) continue
+            addPoint(point)
+        }
+        return this
+    }
+
+    fun addMultiLineString(multiLineString: MultiLineStringCoord): BoundingBoxProxy {
+        for (lineString in multiLineString) {
+            if (lineString==null) continue
+            addLineString(lineString)
+        }
+        return this
+    }
+
+    fun addPolygon(polygon: PolygonCoord): BoundingBoxProxy {
+        for (lineString in polygon) {
+            if (lineString==null) continue
+            addLineString(lineString)
+        }
+        return this
+    }
+
+    fun addMultiPolygon(multiPolygon: MultiPolygonCoord): BoundingBoxProxy {
+        for (polygon in multiPolygon) {
+            if (polygon==null) continue
+            addPolygon(polygon)
+        }
+        return this
+    }
 
     fun minLonIndex(): Int = 0
     fun minLatIndex(): Int = 1
