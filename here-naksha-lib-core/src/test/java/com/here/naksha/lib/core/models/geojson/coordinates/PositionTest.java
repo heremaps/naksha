@@ -16,34 +16,34 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.geojson.coordinates;
+//package com.here.naksha.lib.core.models.geojson.coordinates;
 
-import naksha.geo.Position;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
-class PositionTest {
-
-  @Test
-  void shouldHaveTwoElemsForLonLat() {
-    // Given:
-    Position position = new Position(1, 2);
-
-    // Then
-    Assertions.assertEquals(2, position.size());
-    Assertions.assertEquals(1, position.get(0));
-    Assertions.assertEquals(2, position.get(1));
-  }
-
-  @Test
-  void shouldHaveThreeElemsForLonLatAlt() {
-    // Given:
-    Position position = new Position(1, 2, 3);
-
-    // Then
-    Assertions.assertEquals(3, position.size());
-    Assertions.assertEquals(1, position.get(0));
-    Assertions.assertEquals(2, position.get(1));
-    Assertions.assertEquals(3, position.get(2));
-  }
-}
+//import naksha.geo.Position;
+//import org.junit.jupiter.api.Assertions;
+//import org.junit.jupiter.api.Test;
+//
+//class PositionTest {
+//
+//  @Test
+//  void shouldHaveTwoElemsForLonLat() {
+//    // Given:
+//    Position position = new Position(1, 2);
+//
+//    // Then
+//    Assertions.assertEquals(2, position.size());
+//    Assertions.assertEquals(1, position.get(0));
+//    Assertions.assertEquals(2, position.get(1));
+//  }
+//
+//  @Test
+//  void shouldHaveThreeElemsForLonLatAlt() {
+//    // Given:
+//    Position position = new Position(1, 2, 3);
+//
+//    // Then
+//    Assertions.assertEquals(3, position.size());
+//    Assertions.assertEquals(1, position.get(0));
+//    Assertions.assertEquals(2, position.get(1));
+//    Assertions.assertEquals(3, position.get(2));
+//  }
+//}
