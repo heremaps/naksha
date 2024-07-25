@@ -4,6 +4,8 @@ import naksha.geo.GeometryProxy
 import naksha.model.request.condition.geometry.GeometryTransformation
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
 /**
  * Spatial operations always executed against the geometry.
@@ -18,13 +20,15 @@ class SOp(
 
     override fun getType(): OpType = op
 
-    companion object {
+    companion object SOpCompanion{
         /**
          * Returns an operation that tests for an intersection of features with the given geometry.
          *
          * @param geometry The geometry against which existing features should be tested for intersection.
          * @return The operation describing this.
          */
+        @JvmStatic
+        @JsStatic
         fun intersects(geometry: GeometryProxy): SOp {
             return SOp(
                 SOpType.INTERSECTS,
@@ -45,6 +49,8 @@ class SOp(
          * @param geometryTransformation
          * @return
          */
+        @JvmStatic
+        @JsStatic
         fun intersectsWithTransformation(
             geometry: GeometryProxy,
             geometryTransformation: GeometryTransformation
