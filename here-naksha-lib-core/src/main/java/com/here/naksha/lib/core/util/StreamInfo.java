@@ -28,8 +28,6 @@ public class StreamInfo {
 
   private Long timeInStorageMs = 0L;
 
-  private Long timeWithoutStorageMs = null;
-
   public void setSpaceId(final String spaceId) {
     this.spaceId = spaceId;
   }
@@ -64,14 +62,6 @@ public class StreamInfo {
 
   public void increaseTimeInStorage(long diffMs) {
     timeInStorageMs += diffMs;
-  }
-
-  public void calculateTimeWithoutStorage(long totalMs) {
-    this.timeWithoutStorageMs = totalMs - timeInStorageMs;
-  }
-
-  public Long getTimeWithoutStorageMs() {
-    return timeWithoutStorageMs;
   }
 
   @Override

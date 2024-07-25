@@ -231,6 +231,6 @@ public class AccessLogUtil {
         res.statusCode,
         accessLog.ms,
         res.size,
-        (si == null || si.getTimeWithoutStorageMs() == null) ? "-" : si.getTimeWithoutStorageMs());
+        accessLog.timeWithoutStorageMs);
   }
 }

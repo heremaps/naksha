@@ -119,10 +119,13 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
     XyzCollection collection = chooseCollection(request);
     applyCollectionId(request, collection.getId());
+
     StopWatch storageTimer = new StopWatch();
-    Result result = forwardRequestToStorage(ctx, request, storageImpl, collection, FIRST_ATTEMPT, storageTimer);
-    addStorageTimeToStreamInfo(storageTimer, ctx);
-    return result;
+    try {
+      return forwardRequestToStorage(ctx, request, storageImpl, collection, FIRST_ATTEMPT, storageTimer);
+    } finally {
+      addStorageTimeToStreamInfo(storageTimer, ctx);
+    }
   }
 
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
