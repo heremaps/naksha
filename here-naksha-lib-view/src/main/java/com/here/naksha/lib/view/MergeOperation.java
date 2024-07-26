@@ -18,9 +18,11 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.model.request.ResultRow;
+
 import java.util.List;
 
-public interface MergeOperation<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
+public interface MergeOperation {
 
   /**
    * This operation is used to combine results from multiple layers into one.
@@ -37,5 +39,5 @@ public interface MergeOperation<FEATURE, CODEC extends FeatureCodec<FEATURE, COD
    * @return
    */
   // TODO should we know from which storage result comes from? If yes then we should return SingleStorageRow instead.
-  CODEC apply(List<ViewLayerRow<CODEC>> multipleResults);
+  ResultRow apply(List<ViewLayerRow> multipleResults);
 }

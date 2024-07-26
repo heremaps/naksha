@@ -158,11 +158,10 @@ public class ViewReadSession implements IReadSession {
     return new ViewSuccessResult(heapCacheCursor, null);
   }
 
-  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-      Map<String, List<ViewLayerRow>> getMissingFeatures(
-          @NotNull Map<String, List<ViewLayerRow>> multiLayerRows,
-          @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver,
-          @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
+  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Map<String, List<ViewLayerRow>> getMissingFeatures(
+      @NotNull Map<String, List<ViewLayerRow>> multiLayerRows,
+      @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver,
+      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
 
     Map<String, List<ViewLayerRow>> result = new HashMap<>();
     if (!missingIdResolver.skip()) {

@@ -18,16 +18,17 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.models.storage.MutableCursor;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
+import java.util.List;
 import java.util.Map;
+import naksha.model.request.ResultRow;
+import naksha.model.response.SuccessResponse;
 import org.jetbrains.annotations.Nullable;
 
-public class ViewSuccessResult extends SuccessResult {
+public class ViewSuccessResult extends SuccessResponse {
 
-  public ViewSuccessResult(
-      @Nullable MutableCursor<?, ?> cursor, @Nullable Map<String, Integer> originalFeaturesOrder) {
-    this.cursor = cursor;
+  public ViewSuccessResult(@Nullable List<ResultRow> rows, @Nullable Map<String, Integer> originalFeaturesOrder) {
+    super();
+    this.rows = rows;
     this.originalFeaturesOrder = originalFeaturesOrder;
   }
 }

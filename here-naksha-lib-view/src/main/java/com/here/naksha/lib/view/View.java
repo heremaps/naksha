@@ -20,10 +20,8 @@ package com.here.naksha.lib.view;
 
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
-
 import java.util.Map;
 import java.util.concurrent.Future;
-
 import naksha.base.Int64;
 import naksha.base.PlatformMap;
 import naksha.jbon.IDictManager;
@@ -103,14 +101,10 @@ public class View implements IView {
   }
 
   @Override
-  public void initRealm(@NotNull String realm) {
-
-  }
+  public void initRealm(@NotNull String realm) {}
 
   @Override
-  public void dropRealm(@NotNull String realm) {
-
-  }
+  public void dropRealm(@NotNull String realm) {}
 
   @NotNull
   @Override
@@ -143,7 +137,5 @@ public class View implements IView {
   }
 
   @Override
-  public void close() {
-
-  }
+  public void close() {}
 }

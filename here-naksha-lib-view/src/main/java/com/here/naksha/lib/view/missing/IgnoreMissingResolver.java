@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.view.missing;
 
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.view.MissingIdResolver;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerRow;
@@ -27,8 +26,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class IgnoreMissingResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-    implements MissingIdResolver<FEATURE, CODEC> {
+public class IgnoreMissingResolver
+    implements MissingIdResolver {
 
   @Override
   public boolean skip() {
@@ -36,8 +35,7 @@ public class IgnoreMissingResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, 
   }
 
   @Override
-  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(
-      @NotNull List<ViewLayerRow<CODEC>> multipleResults) {
+  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerRow> multipleResults) {
     return null;
   }
 }

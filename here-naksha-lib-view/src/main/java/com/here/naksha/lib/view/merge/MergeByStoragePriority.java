@@ -22,13 +22,15 @@ import com.here.naksha.lib.view.MergeOperation;
 import com.here.naksha.lib.view.ViewLayerRow;
 import java.util.Comparator;
 import java.util.List;
+
+import naksha.model.request.ResultRow;
 import org.jetbrains.annotations.NotNull;
 
-public class MergeByStoragePriority<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-    implements MergeOperation<FEATURE, CODEC> {
+public class MergeByStoragePriority
+    implements MergeOperation {
 
   @Override
-  public CODEC apply(@NotNull List<ViewLayerRow<CODEC>> sameFeatureFromEachStorage) {
+  public ResultRow apply(@NotNull List<ViewLayerRow> sameFeatureFromEachStorage) {
     return sameFeatureFromEachStorage.stream()
         .min(Comparator.comparing(ViewLayerRow::getStoragePriority))
         .map(ViewLayerRow::getRow)

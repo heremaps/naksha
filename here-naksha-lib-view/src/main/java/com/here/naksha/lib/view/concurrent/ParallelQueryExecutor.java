@@ -55,14 +55,12 @@ public class ParallelQueryExecutor {
     this.viewRef = viewRef;
   }
 
-  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-      Map<String, List<ViewLayerRow<CODEC>>> queryInParallel(
-          @NotNull List<LayerReadRequest> requests, FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
+  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Map<String, List<ViewLayerRow<CODEC>>> queryInParallel(
+      @NotNull List<LayerReadRequest> requests, FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
     List<Future<List<ViewLayerRow<CODEC>>>> futures = new ArrayList<>();
 
     for (LayerReadRequest layerReadRequest : requests) {
-      QueryTask<List<ViewLayerRow<CODEC>>> singleTask =
-          new QueryTask<>(null, NakshaContext.currentContext());
+      QueryTask<List<ViewLayerRow<CODEC>>> singleTask = new QueryTask<>(null, NakshaContext.currentContext());
 
       Future<List<ViewLayerRow<CODEC>>> futureResult = singleTask.start(() -> executeSingle(
               layerReadRequest.getViewLayer(),
