@@ -18,18 +18,18 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
+import naksha.model.request.ResultRow;
 
-public class ViewLayerRow<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
+public class ViewLayerRow {
 
-  private CODEC row;
+  private final ResultRow row;
 
   // priority 0 - is highest
-  private int storagePriority;
+  private final int storagePriority;
 
-  private ViewLayer viewLayerRef;
+  private final ViewLayer viewLayerRef;
 
-  public ViewLayerRow(CODEC row, int storagePriority, ViewLayer viewLayerRef) {
+  public ViewLayerRow(ResultRow row, int storagePriority, ViewLayer viewLayerRef) {
     this.row = row;
     this.storagePriority = storagePriority;
     this.viewLayerRef = viewLayerRef;
@@ -43,7 +43,7 @@ public class ViewLayerRow<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
     return viewLayerRef;
   }
 
-  public CODEC getRow() {
+  public ResultRow getRow() {
     return row;
   }
 }

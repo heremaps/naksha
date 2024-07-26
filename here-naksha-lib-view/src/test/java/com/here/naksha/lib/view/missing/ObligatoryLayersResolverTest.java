@@ -32,10 +32,10 @@ public class ObligatoryLayersResolverTest {
     ViewLayer otherLayer = new ViewLayer(storage, "collection1");
 
     XyzFeatureCodec feature = factory.newInstance();
-    List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
-    singleRowFeatures.add(new ViewLayerRow<>(feature, 0, otherLayer));
+    List<ViewLayerRow> singleRowFeatures = new ArrayList<>();
+    singleRowFeatures.add(new ViewLayerRow(feature, 0, otherLayer));
 
-    MissingIdResolver<XyzFeature, XyzFeatureCodec> missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
+    MissingIdResolver missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
 
     // when
     List<Pair<ViewLayer, String>> resolvedIds = missingIdsResolver.layersToSearch(singleRowFeatures);
@@ -53,10 +53,10 @@ public class ObligatoryLayersResolverTest {
     ViewLayer otherLayer = new ViewLayer(storage, "collection1");
 
     XyzFeatureCodec feature = factory.newInstance();
-    List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
-    singleRowFeatures.add(new ViewLayerRow<>(feature, 0, obligatoryLayer));
+    List<ViewLayerRow<XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    singleRowFeatures.add(new ViewLayerRow(feature, 0, obligatoryLayer));
 
-    MissingIdResolver<XyzFeature, XyzFeatureCodec> missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
+    MissingIdResolver missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
 
     // when
     List<Pair<ViewLayer, String>> resolvedIds = missingIdsResolver.layersToSearch(singleRowFeatures);
@@ -70,7 +70,7 @@ public class ObligatoryLayersResolverTest {
     // given
     IStorage storage = mock(IStorage.class);
     ViewLayer obligatoryLayer = new ViewLayer(storage, "collection1");
-    MissingIdResolver<XyzFeature, XyzFeatureCodec> missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
+    MissingIdResolver missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
 
     // expect
     assertNull(missingIdsResolver.layersToSearch(new ArrayList<>()));

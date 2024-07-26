@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.view.merge;
 
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.view.MergeOperation;
 import com.here.naksha.lib.view.ViewLayerRow;
 import java.util.Comparator;
@@ -29,7 +28,7 @@ public class MergeByStoragePriority<FEATURE, CODEC extends FeatureCodec<FEATURE,
     implements MergeOperation<FEATURE, CODEC> {
 
   @Override
-  public CODEC apply(@NotNull List<ViewLayerRow<FEATURE, CODEC>> sameFeatureFromEachStorage) {
+  public CODEC apply(@NotNull List<ViewLayerRow<CODEC>> sameFeatureFromEachStorage) {
     return sameFeatureFromEachStorage.stream()
         .min(Comparator.comparing(ViewLayerRow::getStoragePriority))
         .map(ViewLayerRow::getRow)

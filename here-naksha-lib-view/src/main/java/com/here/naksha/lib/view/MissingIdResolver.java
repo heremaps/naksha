@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -42,7 +41,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <b>Notice:</b> If your query is by IDs only, "fetch missing" query will be ignored regardless of {@link MissingIdResolver} implementation.
  */
-public interface MissingIdResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> {
+public interface MissingIdResolver {
 
   /**
    * True - turns off fetching missing features by ID.
@@ -64,5 +63,5 @@ public interface MissingIdResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, 
    * @return
    */
   @Nullable
-  List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerRow<FEATURE, CODEC>> multipleResults);
+  List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerRow> multipleResults);
 }

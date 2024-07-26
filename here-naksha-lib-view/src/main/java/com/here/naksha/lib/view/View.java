@@ -18,11 +18,16 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import naksha.model.IStorage;
+
+import java.util.Map;
 import java.util.concurrent.Future;
+
+import naksha.base.Int64;
+import naksha.base.PlatformMap;
+import naksha.jbon.IDictManager;
+import naksha.model.*;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -84,5 +89,61 @@ public class View implements IView {
   @Override
   public void setViewLayerCollection(ViewLayerCollection viewLayerCollection) {
     this.viewLayerCollection = viewLayerCollection;
+  }
+
+  @NotNull
+  @Override
+  public String id() {
+    return storage.getId();
+  }
+
+  @Override
+  public void initStorage(@Nullable Map<String, ?> params) {
+    storage.getOrInit();
+  }
+
+  @Override
+  public void initRealm(@NotNull String realm) {
+
+  }
+
+  @Override
+  public void dropRealm(@NotNull String realm) {
+
+  }
+
+  @NotNull
+  @Override
+  public NakshaFeatureProxy rowToFeature(@NotNull Row row) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public Row featureToRow(@NotNull PlatformMap feature) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public IDictManager dictManager(@NotNull NakshaContext nakshaContext) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public IWriteSession newWriteSession(@NotNull NakshaContext context) {
+    return null;
+  }
+
+  @Override
+  public void close() {
+
   }
 }

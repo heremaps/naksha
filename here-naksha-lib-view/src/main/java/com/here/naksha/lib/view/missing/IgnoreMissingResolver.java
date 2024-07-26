@@ -37,7 +37,7 @@ public class IgnoreMissingResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, 
 
   @Override
   public @Nullable List<Pair<ViewLayer, String>> layersToSearch(
-      @NotNull List<ViewLayerRow<FEATURE, CODEC>> multipleResults) {
+      @NotNull List<ViewLayerRow<CODEC>> multipleResults) {
     return null;
   }
 }

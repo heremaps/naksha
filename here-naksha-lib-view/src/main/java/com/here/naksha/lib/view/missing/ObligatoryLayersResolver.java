@@ -45,7 +45,7 @@ public class ObligatoryLayersResolver<FEATURE, CODEC extends FeatureCodec<FEATUR
 
   @Override
   public @Nullable List<Pair<ViewLayer, String>> layersToSearch(
-      @NotNull List<ViewLayerRow<FEATURE, CODEC>> multiFeature) {
+      @NotNull List<ViewLayerRow<CODEC>> multiFeature) {
 
     if (multiFeature.isEmpty()) {
       return null;

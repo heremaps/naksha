@@ -22,13 +22,10 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
-import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
 import com.here.naksha.lib.core.models.storage.MutableCursor;
-import naksha.model.ReadFeatures;
-import naksha.model.IReadSession;
 import com.here.naksha.lib.view.View;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerRow;
@@ -42,6 +39,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+import naksha.model.IReadSession;
+import naksha.model.NakshaContext;
+import naksha.model.ReadFeatures;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,15 +56,15 @@ public class ParallelQueryExecutor {
   }
 
   public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-      Map<String, List<ViewLayerRow<FEATURE, CODEC>>> queryInParallel(
+      Map<String, List<ViewLayerRow<CODEC>>> queryInParallel(
           @NotNull List<LayerReadRequest> requests, FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
-    List<Future<List<ViewLayerRow<FEATURE, CODEC>>>> futures = new ArrayList<>();
+    List<Future<List<ViewLayerRow<CODEC>>>> futures = new ArrayList<>();
 
     for (LayerReadRequest layerReadRequest : requests) {
-      QueryTask<List<ViewLayerRow<FEATURE, CODEC>>> singleTask =
+      QueryTask<List<ViewLayerRow<CODEC>>> singleTask =
           new QueryTask<>(null, NakshaContext.currentContext());
 
-      Future<List<ViewLayerRow<FEATURE, CODEC>>> futureResult = singleTask.start(() -> executeSingle(
+      Future<List<ViewLayerRow<CODEC>>> futureResult = singleTask.start(() -> executeSingle(
               layerReadRequest.getViewLayer(),
               layerReadRequest.getSession(),
               codecFactory,
@@ -80,8 +80,8 @@ public class ParallelQueryExecutor {
 
   @NotNull
   private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-      Map<String, List<ViewLayerRow<FEATURE, CODEC>>> getCollectedResults(
-          List<Future<List<ViewLayerRow<FEATURE, CODEC>>>> tasks, Long timeoutMillis) {
+      Map<String, List<ViewLayerRow<CODEC>>> getCollectedResults(
+          List<Future<List<ViewLayerRow<CODEC>>>> tasks, Long timeoutMillis) {
     return tasks.stream()
         .map(future -> {
           try {
@@ -106,7 +106,7 @@ public class ParallelQueryExecutor {
     }
   }
 
-  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Stream<ViewLayerRow<FEATURE, CODEC>> executeSingle(
+  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Stream<ViewLayerRow<CODEC>> executeSingle(
       @NotNull ViewLayer layer,
       @NotNull IReadSession session,
       @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,

@@ -23,22 +23,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.ErrorResult;
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
-import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
-import com.here.naksha.lib.core.models.storage.HeapCacheCursor;
-import com.here.naksha.lib.core.models.storage.Notification;
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
-import naksha.model.ReadRequest;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
-import naksha.model.IReadSession;
-import naksha.model.ISession;
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
@@ -52,6 +36,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import naksha.model.IReadSession;
+import naksha.model.ISession;
+import naksha.model.NakshaContext;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.ReadRequest;
+import naksha.model.request.Request;
+import naksha.model.request.condition.POp;
+import naksha.model.request.notification.Notification;
+import naksha.model.response.Response;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -92,7 +85,7 @@ public class ViewReadSession implements IReadSession {
   }
 
   @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
+  public @NotNull Response execute(@NotNull Request<?> readRequest) {
     return execute(
         readRequest,
         XyzFeatureCodecFactory.get(),
@@ -101,7 +94,7 @@ public class ViewReadSession implements IReadSession {
             Set.of(viewRef.getViewCollection().getTopPriorityLayer())));
   }
 
-  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result execute(
+  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Response execute(
       @NotNull ReadRequest<?> request,
       FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       @NotNull MergeOperation<FEATURE, CODEC> mergeOperation,
@@ -123,7 +116,7 @@ public class ViewReadSession implements IReadSession {
     List<LayerReadRequest> layerReadRequests = subSessions.entrySet().stream()
         .map(entry -> new LayerReadRequest((ReadFeatures) request, entry.getKey(), entry.getValue()))
         .collect(toList());
-    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows =
+    Map<String, List<ViewLayerRow>> multiLayerRows =
         parallelQueryExecutor.queryInParallel(layerReadRequests, codecFactory);
 
     /*
@@ -139,7 +132,7 @@ public class ViewReadSession implements IReadSession {
     ]
     or it might be empty if feature is not there
      */
-    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> fetchedById = isRequestOnlyById(request)
+    Map<String, List<ViewLayerRow>> fetchedById = isRequestOnlyById(request)
         ? Collections.emptyMap()
         : getMissingFeatures(multiLayerRows, missingIdResolver, codecFactory);
 
@@ -166,12 +159,12 @@ public class ViewReadSession implements IReadSession {
   }
 
   private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-      Map<String, List<ViewLayerRow<FEATURE, CODEC>>> getMissingFeatures(
-          @NotNull Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows,
+      Map<String, List<ViewLayerRow>> getMissingFeatures(
+          @NotNull Map<String, List<ViewLayerRow>> multiLayerRows,
           @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver,
           @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
 
-    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> result = new HashMap<>();
+    Map<String, List<ViewLayerRow>> result = new HashMap<>();
     if (!missingIdResolver.skip()) {
       // Prepare map of <Layer_x, [FeatureId_x, ..., FeatureId_z]> features and layers you want to search by id.
       // to query only once each layer
@@ -246,8 +239,7 @@ public class ViewReadSession implements IReadSession {
     subSessions.values().forEach(session -> session.setLockTimeout(timeout, timeUnit));
   }
 
-  @Override
-  public @NotNull Result process(@NotNull Notification<?> notification) {
+  public @NotNull Response process(@NotNull Notification<?> notification) {
     return new ErrorResult(XyzError.NOT_IMPLEMENTED, "process");
   }
 

@@ -21,7 +21,7 @@ public class MergeByStoragePriorityTest {
   @Test
   void checkPriorityMerge() {
     // given
-    List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    List<ViewLayerRow<XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
 
     XyzFeatureCodec f1 = factory.newInstance();
     XyzFeatureCodec f2 = factory.newInstance();
@@ -41,7 +41,7 @@ public class MergeByStoragePriorityTest {
   @Test
   void checkSamePriorityMerge() {
     // given
-    List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    List<ViewLayerRow<XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
 
     XyzFeatureCodec f1 = factory.newInstance();
     XyzFeatureCodec f2 = factory.newInstance();
@@ -61,7 +61,7 @@ public class MergeByStoragePriorityTest {
   @Test
   void checkEmptyMerge() {
     // given
-    List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    List<ViewLayerRow<XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
 
     // expect
     assertThrows(NoSuchElementException.class, () -> mergeStrategy.apply(singleRowFeatures));
