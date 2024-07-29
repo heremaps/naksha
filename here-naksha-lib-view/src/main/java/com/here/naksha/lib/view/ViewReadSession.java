@@ -94,11 +94,10 @@ public class ViewReadSession implements IReadSession {
             Set.of(viewRef.getViewCollection().getTopPriorityLayer())));
   }
 
-  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Response execute(
+  public Response execute(
       @NotNull ReadRequest<?> request,
-      FeatureCodecFactory<FEATURE, CODEC> codecFactory,
-      @NotNull MergeOperation<FEATURE, CODEC> mergeOperation,
-      @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver) {
+      @NotNull MergeOperation mergeOperation,
+      @NotNull MissingIdResolver missingIdResolver) {
 
     if (!(request instanceof ReadFeatures)) {
       throw new UnsupportedOperationException("Only ReadFeatures are supported.");

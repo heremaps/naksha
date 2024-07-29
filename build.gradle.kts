@@ -369,6 +369,7 @@ project(":here-naksha-lib-view") {
     }
     dependencies {
         api(project(":here-naksha-lib-core"))
+        implementation(project(":here-naksha-lib-psql"))
 
         implementation(commons_lang3)
         testImplementation(mockito)

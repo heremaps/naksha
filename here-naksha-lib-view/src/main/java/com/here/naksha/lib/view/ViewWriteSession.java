@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit;
 import naksha.model.IStorageLock;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
-import naksha.model.WriteFeatures;
-import naksha.model.WriteRequest;
+import naksha.model.request.WriteRequest;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,7 +65,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
    * @return
    */
   @Override
-  public @NotNull Result execute(@NotNull WriteRequest<?, ?, ?> writeRequest) {
+  public @NotNull Response execute(@NotNull WriteRequest writeRequest) {
     if (!(writeRequest instanceof WriteFeatures)) {
       throw new UnsupportedOperationException("Only WriteFeatures are supported.");
     }

@@ -22,10 +22,7 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
-import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
-import com.here.naksha.lib.core.models.storage.MutableCursor;
+
 import com.here.naksha.lib.view.View;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerRow;
@@ -41,7 +38,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
-import naksha.model.ReadFeatures;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.ResultRow;
+import naksha.model.response.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,17 +54,16 @@ public class ParallelQueryExecutor {
     this.viewRef = viewRef;
   }
 
-  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Map<String, List<ViewLayerRow<CODEC>>> queryInParallel(
-      @NotNull List<LayerReadRequest> requests, FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
-    List<Future<List<ViewLayerRow<CODEC>>>> futures = new ArrayList<>();
+  public Map<String, List<ViewLayerRow>> queryInParallel(
+      @NotNull List<LayerReadRequest> requests) {
+    List<Future<List<ViewLayerRow>>> futures = new ArrayList<>();
 
     for (LayerReadRequest layerReadRequest : requests) {
-      QueryTask<List<ViewLayerRow<CODEC>>> singleTask = new QueryTask<>(null, NakshaContext.currentContext());
+      QueryTask<List<ViewLayerRow>> singleTask = new QueryTask<>(null, NakshaContext.currentContext());
 
-      Future<List<ViewLayerRow<CODEC>>> futureResult = singleTask.start(() -> executeSingle(
+      Future<List<ViewLayerRow>> futureResult = singleTask.start(() -> executeSingle(
               layerReadRequest.getViewLayer(),
               layerReadRequest.getSession(),
-              codecFactory,
               layerReadRequest.getRequest())
           .collect(toList()));
       futures.add(futureResult);
@@ -77,9 +75,8 @@ public class ParallelQueryExecutor {
   }
 
   @NotNull
-  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-      Map<String, List<ViewLayerRow<CODEC>>> getCollectedResults(
-          List<Future<List<ViewLayerRow<CODEC>>>> tasks, Long timeoutMillis) {
+  private Map<String, List<ViewLayerRow>> getCollectedResults(
+          List<Future<List<ViewLayerRow>>> tasks, Long timeoutMillis) {
     return tasks.stream()
         .map(future -> {
           try {
@@ -89,7 +86,7 @@ public class ParallelQueryExecutor {
           }
         })
         .flatMap(Collection::stream)
-        .collect(groupingBy(viewRow -> viewRow.getRow().getId()));
+        .collect(groupingBy(viewRow -> viewRow.getRow().getFeature().getId()));
   }
 
   private @NotNull Long getTimeout(@NotNull List<LayerReadRequest> requests) {
@@ -104,10 +101,9 @@ public class ParallelQueryExecutor {
     }
   }
 
-  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Stream<ViewLayerRow<CODEC>> executeSingle(
+  private Stream<ViewLayerRow> executeSingle(
       @NotNull ViewLayer layer,
       @NotNull IReadSession session,
-      @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory,
       @NotNull ReadFeatures request) {
     final long startTime = System.currentTimeMillis();
     String status = "OK";
@@ -116,26 +112,20 @@ public class ParallelQueryExecutor {
     final String collectionId = layer.getCollectionId();
 
     // prepare request
-    ReadFeatures clonedRequest = request.shallowClone();
-    clonedRequest.withCollections(List.of(collectionId));
+    ReadFeatures clonedRequest = request; //TODO shallow clone
+    clonedRequest.addCollectionId(collectionId);
 
-    try (MutableCursor<FEATURE, CODEC> cursor =
-        session.execute(clonedRequest).mutableCursor(codecFactory)) {
-      List<CODEC> featureList = cursor.asList();
-      featureCnt = featureList.size();
-      return featureList.stream().map(row -> new ViewLayerRow<>(row, layerPriority, layer));
-    } catch (NoCursor e) {
-      status = "NOK";
-      throw unchecked(e);
-    } finally {
-      log.info(
-          "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
-          NakshaContext.currentContext().getStreamId(),
-          collectionId,
-          "READ",
-          status,
-          System.currentTimeMillis() - startTime,
-          featureCnt);
-    }
+    SuccessResponse cursor = (SuccessResponse) session.execute(clonedRequest);
+
+      List<ResultRow> featureList = cursor.rows;
+    log.info(
+            "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
+            NakshaContext.currentContext().getStreamId(),
+            collectionId,
+            "READ",
+            status,
+            System.currentTimeMillis() - startTime,
+            featureCnt);
+      return featureList.stream().map(row -> new ViewLayerRow(row, layerPriority, layer));
   }
 }
