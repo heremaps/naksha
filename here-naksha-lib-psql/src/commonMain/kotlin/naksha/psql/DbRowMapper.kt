@@ -6,7 +6,7 @@ import naksha.base.Int64
 import naksha.base.JsEnum
 import naksha.model.*
 import naksha.model.request.ResultRow
-import naksha.model.response.ExecutedOp
+import naksha.model.request.ExecutedOp
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
@@ -27,7 +27,7 @@ internal class DbRowMapper {
         @JvmStatic
         fun readRow(storage: IStorage, collection: String, cursor: PgCursor, decodeMeta: Boolean): Row {
             val id: String = cursor[COL_ID]
-            val txn = Txn(cursor[COL_TXN])
+            val txn = Version(cursor[COL_TXN])
             val uid = cursor.columnOr(COL_UID, 0)
             val luid = Luid(txn, uid)
             val guid = Guid(storage.id(), collection, id, luid)
@@ -44,7 +44,7 @@ internal class DbRowMapper {
                     ptxn = cursor.column(COL_PTXN) as Int64?,
                     uid = uid,
                     puid = cursor.columnOr(COL_PUID, 0),
-                    fnva1 = cursor[COL_FNVA1],
+                    hash = cursor[COL_FNVA1],
                     version = cursor.columnOr(COL_VERSION, 0),
                     //changeCount = cursor.columnOr(COL_VERSION, 0),
                     geoGrid = cursor[COL_GEO_GRID],
@@ -65,7 +65,7 @@ internal class DbRowMapper {
                 flags = flags,
                 feature = cursor.column(COL_FEATURE) as ByteArray?,
                 geo = cursor.column(COL_GEOMETRY) as ByteArray?,
-                geoRef = cursor.column(COL_GEO_REF) as ByteArray?,
+                referencePoint = cursor.column(COL_GEO_REF) as ByteArray?,
                 tags = cursor.column(COL_TAGS) as ByteArray?
             )
             return row
@@ -132,7 +132,7 @@ internal class DbRowMapper {
                 pgRow.ptxn = meta.ptxn
                 pgRow.uid = meta.uid
                 pgRow.puid = meta.puid
-                pgRow.fnva1 = meta.fnva1
+                pgRow.fnva1 = meta.hash
                 pgRow.version = meta.version
                 pgRow.geo_grid = meta.geoGrid
                 pgRow.flags = meta.flags
@@ -145,7 +145,7 @@ internal class DbRowMapper {
             pgRow.feature = row.feature
             pgRow.tags = row.tags
             pgRow.geo = row.geo
-            pgRow.geo_ref = row.geoRef
+            pgRow.geo_ref = row.referencePoint
             return pgRow
         }
 
@@ -170,7 +170,7 @@ internal class DbRowMapper {
                     ptxn = ptxn,
                     uid = uid ?: 0,
                     puid = puid ?: 0,
-                    fnva1 = fnva1!!,
+                    hash = fnva1!!,
                     version = version ?: 1,
                     geoGrid = geo_grid!!,
                     flags = flags ?: Flags(), // FIXME with default flags
@@ -195,7 +195,7 @@ internal class DbRowMapper {
         @JvmStatic
         fun pgRowToRow(pgRow: PgRow, storage: IStorage, collection: String): Row {
             val meta = pgRowToMetadata(pgRow)
-            val txn = Txn(meta.txn)
+            val txn = Version(meta.txn)
             val luid = Luid(txn, meta.uid)
             val guid = Guid(storage.id(), collection, meta.id, luid)
             return Row(
@@ -206,7 +206,7 @@ internal class DbRowMapper {
                 type = meta.type,
                 flags = meta.flags,
                 feature = pgRow.feature,
-                geoRef = pgRow.geo_ref,
+                referencePoint = pgRow.geo_ref,
                 geo = pgRow.geo,
                 tags = pgRow.tags
             )

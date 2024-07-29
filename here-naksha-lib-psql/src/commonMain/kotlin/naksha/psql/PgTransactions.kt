@@ -4,7 +4,7 @@ package naksha.psql
 
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaException
-import naksha.model.Txn
+import naksha.model.Version
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmField
@@ -24,8 +24,8 @@ class PgTransactions(c: PgCollection) : PgHead(c, "${c.id}${PG_HEAD}", PgStorage
      */
     @JvmField
     val years: MutableMap<Int, PgTransactionsYear> = mutableMapOf()
-    @JsName("getYear") operator fun get(txn: Txn): PgTransactionsYear? = years[txn.year()]
-    @JsName("setYear") operator fun set(txn: Txn, partition: PgTransactionsYear) {
+    @JsName("getYear") operator fun get(txn: Version): PgTransactionsYear? = years[txn.year()]
+    @JsName("setYear") operator fun set(txn: Version, partition: PgTransactionsYear) {
         years[txn.year()] = partition
     }
 

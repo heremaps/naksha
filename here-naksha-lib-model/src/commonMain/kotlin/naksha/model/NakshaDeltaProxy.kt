@@ -5,11 +5,11 @@ package naksha.model
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import kotlin.js.JsExport
 
 @JsExport
-class NakshaDeltaProxy : ObjectProxy() {
+class NakshaDeltaProxy : AnyObject() {
 
     companion object NakshaDeltaProxyCompanion {
         private val STRING_NULL = NullableProperty<Any, NakshaDeltaProxy, String>(String::class)

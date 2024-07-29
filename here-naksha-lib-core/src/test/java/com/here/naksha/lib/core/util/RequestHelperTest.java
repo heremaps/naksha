@@ -1,8 +1,8 @@
 package com.here.naksha.lib.core.util;
 
 import com.here.naksha.lib.core.util.storage.RequestHelper;
-import naksha.model.request.condition.PRef;
-import naksha.model.request.condition.PRef.NON_INDEXED_PREF;
+import naksha.model.request.query.PRef;
+import naksha.model.request.query.PRef.NON_INDEXED_PREF;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

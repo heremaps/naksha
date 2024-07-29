@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import naksha.base.Platform
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
@@ -89,7 +89,7 @@ interface PgCursor : AutoCloseable {
      * @return the proxy about the row.
      * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
      */
-    fun <T : ObjectProxy> map(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
+    fun <T : AnyObject> map(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
 
     /**
      * Closes the cursor.

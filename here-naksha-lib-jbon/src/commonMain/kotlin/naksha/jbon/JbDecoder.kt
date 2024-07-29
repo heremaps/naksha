@@ -193,8 +193,8 @@ open class JbDecoder {
          * @return The platform native map.
          */
         @JvmStatic
-        internal fun readMap(jbMapDecoder: JbMapDecoder): ObjectProxy {
-            val imap = ObjectProxy()
+        internal fun readMap(jbMapDecoder: JbMapDecoder): AnyObject {
+            val imap = AnyObject()
             while (jbMapDecoder.next()) {
                 imap[jbMapDecoder.key()] = jbMapDecoder.value().decodeValue()
             }

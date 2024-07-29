@@ -23,8 +23,8 @@ import static java.util.Collections.emptyList;
 import java.util.*;
 import naksha.model.NakshaFeatureProxy;
 import naksha.model.request.ResultRow;
-import naksha.model.response.ExecutedOp;
-import naksha.model.response.SuccessResponse;
+import naksha.model.request.ExecutedOp;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

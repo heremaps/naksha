@@ -1,7 +1,7 @@
 package naksha.model
 
 import naksha.base.NullableProperty
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import kotlin.js.JsExport
 
 /**
@@ -9,7 +9,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class XyzReferenceProxy : ObjectProxy() {
+class XyzReferenceProxy : AnyObject() {
 
     companion object XyzReferenceCompanion {
         private val STRING_NULL = NullableProperty<Any, XyzReferenceProxy, String>(String::class)

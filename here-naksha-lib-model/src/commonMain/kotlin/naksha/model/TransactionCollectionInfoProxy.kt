@@ -4,11 +4,11 @@ package naksha.model
 
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import kotlin.js.JsExport
 
 @JsExport
-class TransactionCollectionInfoProxy : ObjectProxy() {
+class TransactionCollectionInfoProxy : AnyObject() {
 
     companion object {
         private val COLLECTION_ID = NullableProperty<Any, TransactionCollectionInfoProxy, String>(String::class)

@@ -52,7 +52,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
     /**
      * The current transaction number.
      */
-    private var _txn: Txn? = null
+    private var _txn: Version? = null
 
     /**
      * The epoch milliseconds of when the transaction started (`transaction_timestamp()`).
@@ -143,9 +143,9 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
                         OLD.tags,
                         OLD.geo,
                         OLD.feature,
-                        OLD.geoRef,
+                        OLD.referencePoint,
                         OLD.type,
-                        oldMeta.fnva1
+                        oldMeta.hash
                     )
                 )
             }
@@ -194,9 +194,9 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
                     OLD.tags,
                     OLD.geo,
                     OLD.feature,
-                    OLD.geoRef,
+                    OLD.referencePoint,
                     OLD.type,
-                    oldMeta.fnva1
+                    oldMeta.hash
                 )
             ).close()
         }
@@ -267,7 +267,7 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
      * Uses the current session, does not commit or rollback the current session.
      * @return The current transaction number.
      */
-    fun txn(): Txn {
+    fun txn(): Version {
         if (_txn == null) {
             val conn = usePgConnection()
             conn.execute(
@@ -281,7 +281,7 @@ FROM ns, txn_seq;
                 val schemaOid: Int = it["ns_oid"]
                 val txnSeqOid: Int = it["txn_oid"]
                 val txts: Int64 = it["time"]
-                var txn = Txn(it["txn"])
+                var txn = Version(it["txn"])
                 verifyCache(schemaOid)
                 _txts = txts
                 _txn = txn
@@ -291,12 +291,12 @@ FROM ns, txn_seq;
                     conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                     try {
                         conn.execute("SELECT nextval($1) as v", arrayOf(txnSeqOid)).fetch().use {
-                            txn = Txn(it["v"])
+                            txn = Version(it["v"])
                         }
                         _txn = txn
                         if (txn.year() != txDate.year || txn.month() != txDate.monthNumber || txn.day() != txDate.dayOfMonth) {
                             // Rollover, we update sequence of the day.
-                            txn = Txn.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
+                            txn = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
                             _txn = txn
                             conn.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1)).close()
                         }

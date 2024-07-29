@@ -108,6 +108,29 @@ interface IStorage : AutoCloseable {
     fun newReadSession(context: NakshaContext = NakshaContext.currentContext(), options: NakshaSessionOptions? = null): IReadSession
 
     /**
+     * Tests if the given handle is valid, and if it is, tries to extend its live-time to the given amount of milliseconds.
+     *
+     * Some handles may expire after some time. For example, when custom filters were applied, the generated result-set must be stored somewhere to guarantee that it is always the same (we can't store the filter code!), but we do not store this forever, so the handle does have an expiry. Some handles may not have an expiry, for example when the storage can reproduce them at any moment, using just the information from the handle.
+     *
+     * There is no guarantee that the life-time of the handle can be extended.
+     * @param handle the handle to test.
+     * @param ttl if not _null_, the time-to-live of the handle should be extended by the given amount of milliseconds, if possible.
+     * @return _true_ if the handle is valid, _false_ otherwise.
+     */
+    fun validateHandle(handle: String, ttl: Int? = null): Boolean
+
+    /**
+     * Fetches all rows with the given addresses from the storage.
+     * @param map the map from which to fetch.
+     * @param collectionId the collection from to fetch.
+     * @param rowAddressList the list of rows to fetch.
+     * @param cacheOnly if _true_, then row is only returned, when being cached in memory.
+     * @return a map between the given row-addresses and the row fetched from the storage or _null_, if the row was not found.
+     * @since 3.0.0
+     */
+    fun fetch(map: String, collectionId: String, rowAddressList: List<RowAddr>, cacheOnly: Boolean = false): Map<RowAddr, Row?>
+
+    /**
      * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).
      *
      * @since 2.0.7

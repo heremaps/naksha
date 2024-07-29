@@ -26,7 +26,7 @@ import com.here.naksha.lib.core.bin.ConnectorPayload;
 import com.here.naksha.lib.core.util.Hasher;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.nio.ByteBuffer;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -131,7 +131,7 @@ public class BinaryResponse extends Response {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 }

@@ -242,7 +242,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
     if (diff == null) {
       return null;
     }
-    final FEATURE result = head.cloneDeep();
+    final FEATURE result = head.copy();
     Patcher.patch(result, diff);
     return result;
   }
@@ -276,7 +276,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
       return null;
     }
     final Difference mergedDiff = Patcher.mergeDifferences(baseToHeadDiff, baseToInputDiff, cr);
-    final FEATURE result = base.cloneDeep();
+    final FEATURE result = base.copy();
     Patcher.patch(result, mergedDiff);
     return result;
   }

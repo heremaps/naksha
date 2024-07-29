@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.Map;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "ChangesetCollection")
@@ -95,7 +95,7 @@ public class ChangesetCollection extends Response {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 }

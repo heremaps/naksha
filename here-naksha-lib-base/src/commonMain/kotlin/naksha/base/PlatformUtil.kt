@@ -128,5 +128,36 @@ class PlatformUtil {
             return sb.toString()
         }
 
+        /**
+         * Calculates a hash code above all given values.
+         * @param values the value above which to calculate a hash-code.
+         * @return the calculated hash-code.
+         */
+        @JvmStatic
+        @JsStatic
+        fun hashCodeOf(vararg values: Any?): Int {
+            var result = 0
+            for (v in values) {
+                if (v == null) result = 31 * result
+                if (v is Array<*>)
+                when (v) {
+                    is Array -> result = v.hashCode()
+                }
+            }
+            createdAt.hashCode()
+            result = 31 * result + updatedAt.hashCode()
+            result = 31 * result + authorTs.hashCode()
+            result = 31 * result + txnNext.hashCode()
+            result = 31 * result + flags
+            result = 31 * result + id.hashCode()
+            result = 31 * result + (type?.hashCode() ?: 0)
+            result = 31 * result + (meta?.hashCode() ?: 0)
+            result = 31 * result + (feature?.contentHashCode() ?: 0)
+            result = 31 * result + (geo?.contentHashCode() ?: 0)
+            result = 31 * result + (referencePoint?.contentHashCode() ?: 0)
+            result = 31 * result + (tags?.contentHashCode() ?: 0)
+            return result
+
+        }
     }
 }

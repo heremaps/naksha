@@ -6,7 +6,7 @@ import naksha.model.request.*
 import naksha.model.request.Write.Companion.XYZ_OP_CREATE
 import naksha.model.request.Write.Companion.XYZ_OP_DELETE
 import naksha.model.request.Write.Companion.XYZ_OP_PURGE
-import naksha.model.Txn
+import naksha.model.Version
 import naksha.psql.ERR_UNIQUE_VIOLATION
 import naksha.psql.NakshaException
 import naksha.psql.PgSession
@@ -105,7 +105,7 @@ internal class NakshaRequestOp(
         private fun requestedUUID(storageId: String, writeOp: Write): String? {
             return when (writeOp) {
                 is UpdateRow -> if (writeOp.atomic) {
-                    val luid = Luid(Txn(writeOp.row.meta!!.txn), writeOp.row.meta!!.uid)
+                    val luid = Luid(Version(writeOp.row.meta!!.txn), writeOp.row.meta!!.uid)
                     Guid(storageId, writeOp.collectionId, writeOp.getId(), luid).toString()
                 } else null
 

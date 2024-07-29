@@ -2,51 +2,38 @@
 
 package naksha.model.request
 
+import naksha.base.NullableProperty
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
 
 /**
  * All read-requests should extend this base class.
+ * @since 3.0.0
  */
 @JsExport
-abstract class ReadRequest<SELF: ReadRequest<SELF>>: Request<SELF>() {
-
-    /**
-     * Limit the size of the response, if _null_ a default defined by the storage is used.
-     */
-    @JvmField
-    var limit: Int? = null
-
-    /**
-     * Changes the maximal number of features to return at ones.
-     * @param limit the maximum number of features to return at ones.
-     * @return this.
-     */
-    @Suppress("UNCHECKED_CAST")
-    fun withLimit(limit: Int?): SELF {
-        this.limit = limit
-        return this as SELF
+open class ReadRequest: Request() {
+    companion object ReadRequestCompanion {
+        private val INT_NULL = NullableProperty<ReadRequest, Int>(Int::class)
+        private val BOOLEAN = NullableProperty<ReadRequest, Boolean>(Boolean::class) { _,_ -> false }
     }
 
     /**
-     * When [limit] is reached, and this property is _true_, then a [success response][naksha.model.response.SuccessResponse] will have a [handle][naksha.model.response.SuccessResponse.handle] that allows fetching more data (beyond the limit). This can be expensive to generate, and should be avoided.
+     * A soft-cap, so the amount of rows the client needs.
+     *
+     * If _null_, the storage will automatically decide for some soft-cap value. If all results are needed, setting it to [Int.MAX_VALUE] should be considered. If the soft-cap (_limit_) is bigger than what the storage supports as hard-cap, the hard-cap is used by the storage. For example `lib-psql` has a default hard-cap of 1,000,000, and therefore will never fetch more than one million rows, even when requested.
+     *
+     * To query more than the hard-cap of a storage, a streaming processing is needed. The interface for this is not yet designed, but may come with later model specifications.
+     * @since 3.0.0
      */
-    @JvmField
-    var returnHandle: Boolean = false
+    var limit by INT_NULL
 
     /**
-     * Return a [SuccessResponse.handle][naksha.model.response.SuccessResponse.handle], when the `limit` is reached.
+     * A parameter to tell the storage if the client wants a handle later generated.
+     *
+     * If _true_, the storage need to always generate the full result-set. It does not need to load all features into memory all the time, but as soon as a handle should be generated, an ordered result-set is needed, which requires to fetch all results to order them. Therefore, the storage at least need to generate the list of all [row addresses][naksha.model.RowAddr] being part of the result, then ordering them, optimally only by `txn` and `uid`, which does not require to load the row data. This is needed to be able to generate a handle from it.
+     *
+     * If the storage need to apply any filtering lambdas, perform a _property_ search (which is as well an intrinsic filtering lambda), it at least need to load as many results as the [limit] describes fully from the storage.
+     *
+     * The worst case is an order by anything else than the transaction numbers, when requested, it needs not only the [row addresses][naksha.model.RowAddr], but the full rows with all data. In that case all results are loaded into memory, filtered, and eventually ordered.
      */
-    @Suppress("UNCHECKED_CAST")
-    fun withReturnHandle(): SELF {
-        returnHandle = true
-        return this as SELF
-    }
-
-    override fun copyTo(copy: SELF): SELF {
-        super.copyTo(copy)
-        copy.limit = limit
-        copy.returnHandle = returnHandle
-        return copy
-    }
+    var returnHandle by BOOLEAN
 }

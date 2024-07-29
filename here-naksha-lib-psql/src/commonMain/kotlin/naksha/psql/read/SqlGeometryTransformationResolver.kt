@@ -18,7 +18,7 @@
  */
 package naksha.psql.read
 
-import naksha.model.request.condition.SpTransformation
+import naksha.model.request.query.SpTransformation
 
 
 class SqlGeometryTransformationResolver {

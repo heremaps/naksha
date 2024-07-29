@@ -20,15 +20,13 @@ package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import naksha.model.*;
-import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.storage.*;
 import java.util.ArrayList;
 import java.util.List;
 
 import naksha.model.request.ResultRow;
-import naksha.model.response.ExecutedOp;
+import naksha.model.request.ExecutedOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -173,7 +171,7 @@ public final class HandlerUtil {
 
   public static void setDeltaReviewState(final @NotNull NakshaFeatureProxy feature, final @NotNull ReviewStateEnum reviewState) {
     final NakshaPropertiesProxy properties = feature.getProperties();
-    final XyzProxy xyzNs = properties.getXyz();
+    final XyzNs xyzNs = properties.getXyz();
     final HereDeltaNs deltaNs = properties.del;
     deltaNs.setChangeState(ChangeStateEnum.UPDATED);
     deltaNs.setReviewState(reviewState);

@@ -20,8 +20,8 @@ open class NakshaFeatureProxy() : GeoFeatureProxy() {
     }
 
     companion object {
-        private val REFERENCE_POINT = NullableProperty<Any, NakshaFeatureProxy, PointGeometry>(PointGeometry::class)
-        private val PROPERTIES = NotNullProperty<Any, NakshaFeatureProxy, NakshaPropertiesProxy>(NakshaPropertiesProxy::class)
+        private val REFERENCE_POINT = NullableProperty<NakshaFeatureProxy, PointGeometry>(PointGeometry::class)
+        private val PROPERTIES = NotNullProperty<NakshaFeatureProxy, NakshaPropertiesProxy>(NakshaPropertiesProxy::class)
         const val ID = "id"
     }
 

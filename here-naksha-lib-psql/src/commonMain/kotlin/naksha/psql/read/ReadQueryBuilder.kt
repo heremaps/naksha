@@ -1,7 +1,7 @@
 package naksha.psql.read
 
 import naksha.model.request.*
-import naksha.model.request.condition.*
+import naksha.model.request.query.*
 import naksha.psql.*
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 
@@ -67,7 +67,7 @@ internal class ReadQueryBuilder {
         if (req.rowOptions.geometry) {
             columns += ", $COL_GEOMETRY"
         }
-        if (req.rowOptions.feature) {
+        if (req.rowOptions.noFeature) {
             columns += ", $COL_FEATURE"
         }
         return columns
@@ -87,7 +87,7 @@ internal class ReadQueryBuilder {
      * @param whereSql - sql to add new conditions to
      * @param paramsList - list of params to add conditions values to
      */
-    private fun resolveOps(whereSql: StringBuilder, paramsList: MutableList<Any?>, op: QueryOp?) {
+    private fun resolveOps(whereSql: StringBuilder, paramsList: MutableList<Any?>, op: AnyOp?) {
         if (op == null) return
 
         // TODO: Fix me !!!
@@ -123,7 +123,7 @@ internal class ReadQueryBuilder {
      * @param whereSql - StringBuilder to add conditions
      * @param paramsList - list of params - will be modified whenever condition is compared to value provided by request.
      */
-    private fun addPOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: Query) {
+    private fun addPOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: PropertyQuery) {
         // TODO: Fix me !!!
         // real column names
 //        val col = when (pop.property) {
@@ -157,7 +157,7 @@ internal class ReadQueryBuilder {
      * @param paramsList - list of params - will be modified whenever condition is compared to value provided by request.
      * @param sop - requested spatial operations.
      */
-    private fun addSop(whereSql: StringBuilder, paramsList: MutableList<Any?>, sop: SpatialOuery) {
+    private fun addSop(whereSql: StringBuilder, paramsList: MutableList<Any?>, sop: AbstractSpatialQuery) {
         // TODO: Fix me !!!
 //        val valuePlaceholder = paramsList.nextPlaceHolder()
 //        val GEO_TWKB = 0
@@ -181,7 +181,7 @@ internal class ReadQueryBuilder {
      * To query UUID we have to query particular columns.
      * Only `=` operation is allowed.
      */
-    private fun customUuidOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: Query) {
+    private fun customUuidOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: PropertyQuery) {
         // TODO: Fix me !!!
 //        check(pop.value != null)
 //        check(pop.op == POpType.EQ)

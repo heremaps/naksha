@@ -7,7 +7,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 @JsExport
-open class GeometryProxy() : ObjectProxy() {
+open class GeometryProxy() : AnyObject() {
 
     @JsName("of")
     constructor(coordinates: ICoordinates) : this() {

@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.events.info.GetStatisticsEvent;
 import java.util.List;
 import naksha.geo.BoundingBoxProxy;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 
 /** The response that is sent for a {@link GetStatisticsEvent}. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -216,7 +216,7 @@ public class StatisticsResponse extends Response {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 

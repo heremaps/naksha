@@ -73,18 +73,18 @@ class JbCoreTest {
     }
 }""".trimIndent())
         assertTrue(raw is PlatformMap)
-        val map = raw.proxy(ObjectProxy::class)
+        val map = raw.proxy(AnyObject::class)
         assertEquals(2, map.size)
         assertTrue(map.containsKey("id"))
         assertEquals("foo", map["id"])
         assertTrue(map.containsKey("properties"))
-        assertTrue(map["properties"] is ObjectProxy)
-        val properties = map["properties"] as ObjectProxy
+        assertTrue(map["properties"] is AnyObject)
+        val properties = map["properties"] as AnyObject
         assertEquals(3, properties.size)
         assertEquals("Tim", properties["name"])
         assertEquals(99, properties["age"])
-        assertTrue(properties["array"] is AnyListProxy)
-        val array = properties["array"] as AnyListProxy
+        assertTrue(properties["array"] is AnyList)
+        val array = properties["array"] as AnyList
         assertEquals(5, array.size)
         assertEquals(1, array[0])
         assertEquals(2, array[1])
@@ -841,7 +841,7 @@ class JbCoreTest {
         val builder = JbEncoder()
         val featureJson = """{"id":"bar"}"""
         val featureMap = Platform.fromJSON(featureJson) as PlatformMap
-        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(ObjectProxy::class))
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
         val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())

@@ -8,9 +8,9 @@ package naksha.psql
 //import naksha.model.request.WriteFeature
 //import naksha.model.request.WriteRequest
 //import naksha.model.request.WriteRow
-//import naksha.model.response.ErrorResponse
+//import naksha.model.request.ErrorResponse
 //import naksha.model.Row
-//import naksha.model.response.SuccessResponse
+//import naksha.model.request.SuccessResponse
 //import naksha.psql.*
 //import naksha.psql.NKC_TABLE
 //import naksha.psql.PsqlTestStorage

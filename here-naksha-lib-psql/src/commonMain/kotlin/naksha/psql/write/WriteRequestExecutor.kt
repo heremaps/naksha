@@ -2,7 +2,7 @@ package naksha.psql.write
 
 import naksha.model.request.ResultRow
 import naksha.model.request.WriteRequest
-import naksha.model.response.SuccessResponse
+import naksha.model.request.SuccessResponse
 import naksha.psql.NKC_TABLE
 import naksha.psql.PgResultSet
 import naksha.psql.PgSession

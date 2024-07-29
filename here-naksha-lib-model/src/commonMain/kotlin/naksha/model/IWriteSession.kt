@@ -1,6 +1,5 @@
 package naksha.model
 
-import naksha.model.response.Response
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

@@ -189,7 +189,7 @@ SELECT
             flags = Flags(),
             id = nakshaFeature.id,
             feature = XyzEncoder().buildFeatureFromMap(nakshaFeature), // FIXME split feature to geo etc
-            geoRef = null,
+            referencePoint = null,
             geo = null,
             tags = null
         )

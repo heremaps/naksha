@@ -35,7 +35,7 @@ import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
 import java.util.ArrayList;
 import java.util.List;
 import naksha.geo.BoundingBoxProxy;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -495,7 +495,7 @@ public class XyzFeatureCollection extends Response {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return Math.toIntExact(count);
   }
 

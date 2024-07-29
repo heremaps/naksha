@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.model.Row
 import kotlin.js.JsExport
 
 /**
@@ -9,7 +8,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PgRow : ObjectProxy() { // TODO: Replace with Row and Metadata from naksha.models!
+class PgRow : AnyObject() { // TODO: Replace with Row and Metadata from naksha.models!
     companion object {
         private val INT64 = NullableProperty<Any, PgRow, Int64>(Int64::class)
         private val INT = NullableProperty<Any, PgRow, Int>(Int::class)

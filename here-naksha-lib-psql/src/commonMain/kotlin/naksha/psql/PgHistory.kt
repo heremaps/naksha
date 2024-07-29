@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.model.Txn
+import naksha.model.Version
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmField
@@ -21,9 +21,9 @@ class PgHistory(val head: PgHead) : PgTable(
     @JvmField
     val years: MutableMap<Int, PgHistoryYear> = mutableMapOf()
     @JsName("getYear")
-    operator fun get(txn_next: Txn): PgHistoryYear? = years[txn_next.year()]
+    operator fun get(txn_next: Version): PgHistoryYear? = years[txn_next.year()]
     @JsName("setYear")
-    operator fun set(txn_next: Txn, partition: PgHistoryYear) {
+    operator fun set(txn_next: Version, partition: PgHistoryYear) {
         years[txn_next.year()] = partition
     }
 

@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.longToInt64
 import java.sql.ResultSet
@@ -223,7 +223,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
      * @param klass the type of the proxy object to create.
      * @return the created proxy object.
      */
-    override fun <T : ObjectProxy> map(klass: KClass<T>): T {
+    override fun <T : AnyObject> map(klass: KClass<T>): T {
         val rs = rsAtRow()
         val columnNames = columnNames()
         val columnTypes = columnTypes()

@@ -5,6 +5,9 @@ package naksha.psql
 import naksha.base.Fnv1a32
 import naksha.base.Fnv1a64
 import naksha.base.Int64
+import naksha.model.NakshaUtil
+import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
+import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -77,24 +80,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun quoteLiteral(vararg parts: String): String {
-            val literal = PgPlatform.quote_literal(*parts)
-            if (literal != null) return literal
-
-            val sb = StringBuilder()
-            sb.append("E'")
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '\'' -> sb.append('\'').append('\'')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('\'')
-            return sb.toString()
-        }
+        fun quoteLiteral(vararg parts: String): String = quote_literal(*parts) ?: NakshaUtil.quoteLiteral(*parts)
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
@@ -104,24 +90,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun quoteIdent(vararg parts: String): String {
-            val ident = PgPlatform.quote_ident(*parts)
-            if (ident != null) return ident
-
-            val sb = StringBuilder()
-            sb.append('"')
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '"' -> sb.append('"').append('"')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('"')
-            return sb.toString()
-        }
+        fun quoteIdent(vararg parts: String): String = quote_ident(*parts) ?: NakshaUtil.quoteIdent(*parts)
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the

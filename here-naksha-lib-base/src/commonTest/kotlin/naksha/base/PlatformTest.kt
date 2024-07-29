@@ -19,11 +19,11 @@ class PlatformTest {
   }
 }""", FromJsonOptions(true))
         val map = assertIs<PlatformMap>(raw)
-        val feature = map.proxy(ObjectProxy::class)
+        val feature = map.proxy(AnyObject::class)
         assertEquals("Foo", feature["id"])
-        val properties = feature.getAs("properties", ObjectProxy::class)
+        val properties = feature.getAs("properties", AnyObject::class)
         assertNotNull(properties)
-        val xyz = properties.getAs("@ns:com:here:xyz", ObjectProxy::class)
+        val xyz = properties.getAs("@ns:com:here:xyz", AnyObject::class)
         assertNotNull(xyz)
         assertEquals(14, xyz.getAs("someInt", Int::class))
         assertTrue(xyz["bigInt"] is Number)
@@ -33,7 +33,7 @@ class PlatformTest {
         val decimalBigInt = xyz["decimalBigInt"]
         assertTrue(decimalBigInt is Int64)
         assertEquals(Int64(9007199254740991L), decimalBigInt)
-        val tags = xyz.getAs("tags", StringListProxy::class)
+        val tags = xyz.getAs("tags", StringList::class)
         assertNotNull(tags)
         assertEquals(2, tags.size)
         assertEquals("a", tags[0])
@@ -42,16 +42,16 @@ class PlatformTest {
 
     @Test
     fun testToJson() {
-        val data = ObjectProxy()
+        val data = AnyObject()
         data["name"] = "Mustermann"
         data["age"] = 69
         data["boolean"] = true
-        data["array"] = AnyListProxy()
-        (data["array"] as AnyListProxy).add("a")
-        (data["array"] as AnyListProxy).add("b")
-        (data["array"] as AnyListProxy).add("c")
-        data["map"] = ObjectProxy()
-        (data["map"] as ObjectProxy)["foo"] = "bar"
+        data["array"] = AnyList()
+        (data["array"] as AnyList).add("a")
+        (data["array"] as AnyList).add("b")
+        (data["array"] as AnyList).add("c")
+        data["map"] = AnyObject()
+        (data["map"] as AnyObject)["foo"] = "bar"
         val json = Platform.toJSON(data)
         Platform.logger.info("json: {}", json)
         val jsonString = "{\"name\":\"Mustermann\",\"age\":69,\"boolean\":true,\"array\":[\"a\",\"b\",\"c\"],\"map\":{\"foo\":\"bar\"}}"

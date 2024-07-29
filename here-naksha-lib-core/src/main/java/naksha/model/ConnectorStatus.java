@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.Map;
 import java.util.Set;
-import naksha.model.response.ErrorResponse;
-import naksha.model.response.Response;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
 
 /** TBD send back an {@link ErrorResponse}. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -98,7 +98,7 @@ public class ConnectorStatus extends Response {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 

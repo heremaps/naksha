@@ -5,7 +5,7 @@ package naksha.model
 import naksha.model.request.ReadRequest
 import naksha.model.request.Request
 import naksha.model.request.WriteRequest
-import naksha.model.response.Response
+import naksha.model.request.Response
 import kotlin.js.JsExport
 
 /**

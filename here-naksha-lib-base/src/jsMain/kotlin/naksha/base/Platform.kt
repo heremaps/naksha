@@ -483,6 +483,46 @@ actual class Platform {
             }
         }
 
+        @JsStatic
+        actual fun <T> copy(obj: T?, recursive: Boolean): T? = js("""
+if (typeof obj !== 'object' || obj === null) return obj;
+if (Array.isArray(obj)) {
+  if (recursive) {
+    var copy = [];
+    for (v in obj) copy.push(arguments.callee(item, true));
+    return copy;
+  }
+  return obj.slice();
+}
+if (obj instanceof Map) {
+  if (recursive) {
+    var map = new Map();
+    var it = obj[Symbol.iterator]();
+    var e = it.next();
+    while (!e.done) {
+      map.set(e.value[0], arguments.callee(e.value[1], true));
+      e = it.next();
+    }
+    return map;
+  }
+  return new Map(obj);
+}
+if (obj instanceof DataView) {
+  return new DataView(obj.buffer.slice(0));
+}
+if (obj instanceof Object) {
+  if (recursive) {
+    var map = new Map();
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) map.set(key, arguments.callee(obj[key], true));
+    }
+    return map;
+  }
+  return new Map(Object.entries(v));
+}
+return obj;
+""").unsafeCast<T?>()
+
         /**
          * Serialize the given value to JSON.
          * @param obj The object to serialize.

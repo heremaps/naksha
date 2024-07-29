@@ -1,12 +1,10 @@
 package naksha.psql
 
-import kotlinx.datetime.Clock
 import naksha.base.Epoch
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.currentMillis
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.PlatformUtil
 import naksha.base.PlatformUtil.PlatformUtilCompanion.HOUR
 import naksha.base.PlatformUtil.PlatformUtilCompanion.SECOND
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
@@ -79,7 +77,7 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
      *
      * If this is an ordinary table, the is can be performance partitioned using [PgPlatform.partitionNumber] above the `feature.id`.
      *
-     * If this is a `TRANSACTION` table, then the partitioning is done by [naksha.model.Txn.year].
+     * If this is a `TRANSACTION` table, then the partitioning is done by [naksha.model.Version.year].
      *
      * Writing directly into partitions, or reading from them, is discouraged, but in some cases necessary to improve performance drastically. In AWS the speed of every [single-flow](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html) connection is limited to 5 Gbps (10 Gbps when being in the same [cluster placement group](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-strategies.html#placement-groups-cluster)), but still always limited. When the PostgresQL database and the client both have higher bandwidth, then multiple parallel connection need to be used, for example to saturate the HERE temporary or consistent store bandwidth of 200 Gbps, between 20 and 40 connections are needed.
      *

@@ -9,7 +9,7 @@ import naksha.model.XYZ_EXEC_PURGED
 import naksha.model.XYZ_EXEC_RETAINED
 import naksha.model.request.ResultRow
 import naksha.model.Row
-import naksha.model.response.ExecutedOp
+import naksha.model.request.ExecutedOp
 import naksha.psql.*
 import naksha.psql.COL_ALL
 import naksha.psql.COL_ALL_TYPES
@@ -326,7 +326,7 @@ internal class NakshaBulkLoaderPlan(
                     session.storage.id(),
                     collectionId,
                     currentHead.id,
-                    Luid(Txn(currentHead.meta!!.txn), currentHead.meta!!.uid)
+                    Luid(Version(currentHead.meta!!.txn), currentHead.meta!!.uid)
                 ).toString()
             if (reqGuid != headUuid) {
                 throw NakshaException.forId(

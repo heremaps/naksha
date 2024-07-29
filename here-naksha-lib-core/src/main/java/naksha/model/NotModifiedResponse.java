@@ -19,13 +19,13 @@
 package naksha.model;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 
 @JsonTypeName(value = "NotModifiedResponse")
 public class NotModifiedResponse extends Response {
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 }

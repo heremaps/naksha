@@ -5,7 +5,7 @@ import naksha.base.PlatformUtil
 import naksha.geo.PointCoord
 import naksha.geo.PointGeometry
 import naksha.model.NakshaFeatureProxy
-import naksha.model.TagsProxy
+import naksha.model.Tags
 
 /**
  * A helper class to generate random [NakshaFeatureProxy]'s.
@@ -400,7 +400,7 @@ class ProxyFeatureGenerator {
         // 33% to get tags
         if (Platform.random() <= 0.33) {
             val xyz = feature.properties.xyz
-            val tags = TagsProxy()
+            val tags = Tags()
             // We add between 1 and 4 tags.
             for (j in 0..3) {
                 var i = (Platform.random() * (adverbs.size - 1)).toInt()

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.kotlinModule
+import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
 import java.text.Normalizer
@@ -343,6 +344,39 @@ actual class Platform {
         @JvmStatic
         actual fun initializeKlass(klass: KClass<*>) {
             unsafe.ensureClassInitialized(klass.java)
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        actual fun <T> copy(obj: T?, recursive: Boolean): T? {
+            if (obj == null) return null
+            return when (obj) {
+                is Short -> obj
+                is Int -> obj
+                is Long -> obj
+                is Int64 -> obj
+                is Float -> obj
+                is Double -> obj
+                is String -> obj
+                is JvmDataView -> newDataView(obj.getByteArray().copyOf()) as T
+                is JvmMap -> {
+                    val copy = JvmMap()
+                    for (entry in obj) {
+                        if (recursive) copy.put(entry.key, copy(entry.value, true))
+                        else copy.put(entry.key, entry.value)
+                    }
+                    copy as T
+                }
+                is JvmList -> {
+                    val copy = JvmList(obj.size)
+                    for (value in obj) {
+                        if (recursive) copy.add(copy(value, true))
+                        else copy.add(value)
+                    }
+                    copy as T
+                }
+                else -> obj
+            }
         }
 
         @JvmField

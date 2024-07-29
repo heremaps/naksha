@@ -4,7 +4,7 @@ package naksha.geo
 
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import naksha.base.PlatformUtil
 import kotlin.js.JsExport
 
@@ -12,7 +12,7 @@ import kotlin.js.JsExport
  * The data mode for a GeoJSON feature.
  */
 @JsExport
-open class GeoFeatureProxy : ObjectProxy() {
+open class GeoFeatureProxy : AnyObject() {
 
     companion object GeoFeatureProxyCompanion {
         private val ID = NotNullProperty<Any, GeoFeatureProxy, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }

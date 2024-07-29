@@ -21,8 +21,8 @@ package naksha.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
-import naksha.model.response.ErrorResponse;
-import naksha.model.response.Response;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
 
 /**
  * The response being sent in response to an {@link HealthCheckEvent} when the service is healthy.
@@ -54,7 +54,7 @@ public class HealthStatus extends Response {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 }

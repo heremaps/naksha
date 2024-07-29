@@ -655,3 +655,40 @@ BEGIN
   RETURN ((flags>>6)::bit(6))::int4;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION buf2bytes (in buffers int, in decimals int default 2, out bytes text)
+LANGUAGE 'sql'
+IMMUTABLE
+PARALLEL SAFE
+SET search_path FROM CURRENT
+AS $$
+  with settings as (
+    select current_setting('block_size')::numeric as bs
+  ), data as (
+    select
+      buffers::numeric * bs / 1024 as kib,
+      floor(log(1024, buffers::numeric * bs / 1024)) + 1 as log,
+      bs
+    from settings
+  ), prep as (
+    select
+      case
+        when log <= 8 then round((kib / 2 ^ (10 * (log - 1)))::numeric, decimals)
+        else buffers * bs
+      end as value,
+      case log -- see https://en.wikipedia.org/wiki/Byte#Multiple-byte_units
+        when 1 then 'KiB'
+        when 2 then 'MiB'
+        when 3 then 'GiB'
+        when 4 then 'TiB'
+        when 5 then 'PiB'
+        when 6 then 'EiB'
+        when 7 then 'ZiB'
+        when 8 then 'YiB'
+        else 'B'
+      end as unit
+    from data
+  )
+  select format('%s %s', value, unit)
+  from prep;
+$$;

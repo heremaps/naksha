@@ -6,7 +6,7 @@ package naksha.psql
 //import naksha.model.request.InsertRow
 //import naksha.model.request.WriteRequest
 //import naksha.model.Row
-//import naksha.model.response.SuccessResponse
+//import naksha.model.request.SuccessResponse
 //import naksha.psql.write.RowUpdater
 //import naksha.psql.write.WriteRequestExecutor
 //import org.junit.jupiter.api.Assertions.assertInstanceOf

@@ -4,7 +4,6 @@ package naksha.model.request
 
 import naksha.model.Row
 import naksha.model.NakshaFeatureProxy
-import naksha.model.response.ExecutedOp
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 

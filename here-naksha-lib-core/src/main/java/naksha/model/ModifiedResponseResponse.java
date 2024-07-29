@@ -48,7 +48,7 @@ public class ModifiedResponseResponse extends ModifiedPayloadResponse {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 }

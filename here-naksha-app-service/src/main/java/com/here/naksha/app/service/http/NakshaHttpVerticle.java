@@ -78,9 +78,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.regex.Pattern;
 
-import naksha.model.response.ErrorResponse;
+import naksha.model.request.ErrorResponse;
 import naksha.model.response.NakshaError;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;

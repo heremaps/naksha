@@ -5,7 +5,7 @@ package naksha.psql
 import naksha.base.*
 import naksha.model.Guid
 import naksha.model.Luid
-import naksha.model.Txn
+import naksha.model.Version
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -21,7 +21,7 @@ open class PgTx(val session: PgSession) : AutoCloseable {
      * The transaction number of this transaction.
      */
     @JvmField
-    val txn: Txn
+    val txn: Version
 
     /**
      * The `uid` counter (unique identifier within a transaction).
@@ -53,7 +53,7 @@ open class PgTx(val session: PgSession) : AutoCloseable {
 
     init {
         // TODO: Fix it!
-        txn = Txn(Int64(0))
+        txn = Version(Int64(0))
         conn = session.storage.newConnection()
     }
 

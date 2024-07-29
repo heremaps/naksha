@@ -5,8 +5,9 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * A row represents all information stored about a feature in a storage. It is not required that the storage stores the information
- * exactly in this form, this is only the exchange format.
+ * A row represents potentially all information stored about a feature in a storage.
+ *
+ * It is not required that the storage stores the information exactly in this form, this is only the exchange format.
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
@@ -18,43 +19,37 @@ data class Row(
     val storage: IStorage,
 
     /**
-     * The feature id.
+     * The map in which the row is located.
      */
     @JvmField
-    val id: String,
+    val map: String,
 
     /**
-     * The GUID (global unique identifier) of the feature. When features are written, the value can be provided by the client (using the
-     * [XyzProxy]) to signal that an existing state was modified.
+     * The collection-id of the collection in which the row is located.
+     */
+    @JvmField
+    val collectionId: String,
+
+    /**
+     * The row-address in the collection.
+     */
+    @JvmField
+    val addr: RowAddr,
+
+    /**
+     * The GUID (global unique identifier) of the feature.
+     *
+     * When features are written, the value can be provided by the client (using the [XyzNs]) to signal that an existing state was modified.
      */
     @JvmField
     val guid: Guid? = null,
 
     /**
-     * Feature type, extracted from `properties.featureType`, if this is no string, then `type` from the root is used, which normally is
-     * always `Feature` for _Geo-JSON_ features. The value _null_ indicates the type is the collection default type, it saves a lot of
-     * storage space, when all features in a collection are of the same type, to encode the type in the collection, when creating the
-     * collection. Beware, the default feature-type of a collection is an immutable property!
-     */
-    @JvmField
-    val type: String? = null,
-
-    /**
-     * Metadata, this is going into the [XYZ namespace][XyzProxy], when decoding the [Row] into a [NakshaFeatureProxy].
+     * Metadata, this is going into the [XYZ namespace][XyzNs], when decoding the [Row] into a [NakshaFeatureProxy].
      * In response might be _null_ when proper request flag was set.
      */
     @JvmField
     var meta: Metadata? = null,
-
-    /**
-     * The flags of the row, this bitmask stores how the geometry, reference-point, feature and tags are encoded, as well as the action.
-     * @see GeoEncoding
-     * @see FeatureEncoding
-     * @see TagsEncoding
-     * @see Action
-     */
-    @JvmField
-    val flags: Flags,
 
     /**
      * Feature encoded with [FeatureEncoding] algorithm described by [flags].
@@ -75,7 +70,7 @@ data class Row(
      * In response might be _null_ when proper request flag was set.
      */
     @JvmField
-    val geoRef: ByteArray? = null,
+    val referencePoint: ByteArray? = null,
 
     /**
      * Tags encoded with [TagsEncoding] algorithm described by [flags].
@@ -111,10 +106,10 @@ data class Row(
             if (other.geo == null) return false
             if (!geo.contentEquals(other.geo)) return false
         } else if (other.geo != null) return false
-        if (geoRef != null) {
-            if (other.geoRef == null) return false
-            if (!geoRef.contentEquals(other.geoRef)) return false
-        } else if (other.geoRef != null) return false
+        if (referencePoint != null) {
+            if (other.referencePoint == null) return false
+            if (!referencePoint.contentEquals(other.referencePoint)) return false
+        } else if (other.referencePoint != null) return false
         if (tags != null) {
             if (other.tags == null) return false
             if (!tags.contentEquals(other.tags)) return false
@@ -132,7 +127,7 @@ data class Row(
         result = 31 * result + (meta?.hashCode() ?: 0)
         result = 31 * result + (feature?.contentHashCode() ?: 0)
         result = 31 * result + (geo?.contentHashCode() ?: 0)
-        result = 31 * result + (geoRef?.contentHashCode() ?: 0)
+        result = 31 * result + (referencePoint?.contentHashCode() ?: 0)
         result = 31 * result + (tags?.contentHashCode() ?: 0)
         return result
     }

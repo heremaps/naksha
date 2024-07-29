@@ -2,35 +2,33 @@
 
 package naksha.model
 
+import naksha.base.AnyObject
+import naksha.base.NotNullProperty
+import naksha.base.NullableProperty
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
+import kotlin.js.JsName
 
 /**
  * An error class.
- * @property code the error code.
- * @property msg a human-readable message.
- * @property id the identifier of the object that relates to the error; if any.
- * @property cause the origin exception that caused this error; if any.
  * @since 3.0.0
  */
 @JsExport
-data class NakshaError(
-    @JvmField val code: String,
-    @JvmField val msg: String,
-    @JvmField val id: String? = null,
-    @JvmField val cause: Throwable? = null
-) {
+open class NakshaError() : AnyObject() {
 
-    override fun hashCode(): Int = code.hashCode()
-    override fun equals(other: Any?): Boolean {
-        return other is NakshaError
-                && code == other.code
-                && msg == other.msg
-                && id == other.id
-                && cause == other.cause
+    /**
+     * Create a new error from the given arguments.
+     * @param code the error code.
+     * @param msg a human-readable message.
+     * @param id the identifier of the object that relates to the error; if any.
+     * @param cause the origin exception that caused this error; if any.
+     */
+    @JsName("of")
+    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this() {
+        this.code = code
+        this.msg = msg
+        this.id = id
+        this.cause = cause
     }
-
-    override fun toString(): String = code
 
     companion object NakshaErrorCompanion {
         /**
@@ -170,5 +168,41 @@ data class NakshaError(
          * @since 3.0.0
          */
         const val NOT_FOUND = "NotFound"
+
+        private val CODE = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
+        private val MSG = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
+        private val ID = NullableProperty<NakshaError, String>(String::class)
+        private val THROWABLE = NullableProperty<NakshaError, Throwable>(Throwable::class)
     }
+
+    /**
+     * The error code.
+     */
+    var code by CODE
+
+    /**
+     * A human-readable message.
+     */
+    var msg by MSG
+
+    /**
+     * The identifier of the object that relates to the error; if any.
+     */
+    var id by ID
+
+    /**
+     * The origin exception that caused this error; if any.
+     */
+    var cause by THROWABLE
+
+    override fun hashCode(): Int = code.hashCode()
+    override fun equals(other: Any?): Boolean {
+        return other is NakshaError
+                && code == other.code
+                && msg == other.msg
+                && id == other.id
+                && cause == other.cause
+    }
+
+    override fun toString(): String = code
 }

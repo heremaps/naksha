@@ -12,9 +12,8 @@ import naksha.model.request.Write.Companion.XYZ_OP_UPDATE
 import naksha.model.request.Write.Companion.XYZ_OP_UPSERT
 import naksha.model.request.WriteRequest
 import naksha.model.Row
-import naksha.model.response.SuccessResponse
+import naksha.model.request.SuccessResponse
 import naksha.psql.PgSession
-import naksha.psql.PgPlatform
 import naksha.psql.PgResultSet
 import naksha.psql.PgUtil
 import naksha.psql.PgUtil.PgUtilCompanion.partitionPosix

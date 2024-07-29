@@ -5,9 +5,9 @@ import naksha.model.*
 import naksha.model.request.ResultRow
 import naksha.model.request.WriteFeature
 import naksha.model.request.WriteRequest
-import naksha.model.response.ExecutedOp.Companion.CREATED
-import naksha.model.response.Response
-import naksha.model.response.SuccessResponse
+import naksha.model.request.ExecutedOp.Companion.CREATED
+import naksha.model.request.Response
+import naksha.model.request.SuccessResponse
 import kotlin.test.*
 
 /**

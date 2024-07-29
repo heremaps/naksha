@@ -1,7 +1,7 @@
 package naksha.model
 
-import naksha.model.XyzProxy.Companion.normalizeTag
-import naksha.model.XyzProxy.Companion.normalizeTags
+import naksha.model.XyzNs.Companion.normalizeTag
+import naksha.model.XyzNs.Companion.normalizeTags
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -24,7 +24,7 @@ class XyzProxyTest {
     @Test
     fun testTagsNormalization() {
         // given
-        val tags = TagsProxy("A", "B", "#C")
+        val tags = Tags("A", "B", "#C")
 
         // when
         normalizeTags(tags)
@@ -36,7 +36,7 @@ class XyzProxyTest {
     @Test
     fun testAddTag() {
         // given
-        val xyz = XyzProxy()
+        val xyz = XyzNs()
 
         /// when
         xyz.addTag("A", false)
@@ -49,7 +49,7 @@ class XyzProxyTest {
     @Test
     fun testAddTags() {
         // given
-        val xyz = XyzProxy()
+        val xyz = XyzNs()
 
         /// when
         xyz.addTags(listOf("A", "B"), false)
@@ -61,7 +61,7 @@ class XyzProxyTest {
     @Test
     fun testAddAndNormalizeTags() {
         // given
-        val xyz = XyzProxy()
+        val xyz = XyzNs()
 
         /// when
         xyz.addAndNormalizeTags("A", "B")
@@ -73,7 +73,7 @@ class XyzProxyTest {
     @Test
     fun testRemoveTag() {
         // given
-        val xyz = XyzProxy()
+        val xyz = XyzNs()
         xyz.addTags(listOf("A", "B"), true)
 
         /// when
@@ -93,7 +93,7 @@ class XyzProxyTest {
     @Test
     fun testRemoveTags() {
         // given
-        val xyz = XyzProxy()
+        val xyz = XyzNs()
         xyz.addTags(listOf("A", "B"), true)
 
         /// when
@@ -113,7 +113,7 @@ class XyzProxyTest {
     @Test
     fun testRemoveTagsWithPrefix() {
         // given
-        val xyz = XyzProxy()
+        val xyz = XyzNs()
         xyz.addTags(listOf("Alicja", "Baba", "Alan"), false)
 
         // when
@@ -126,7 +126,7 @@ class XyzProxyTest {
     @Test
     fun testRemoveTagsWithPrefixNormalized() {
         // given
-        val xyz = XyzProxy()
+        val xyz = XyzNs()
         xyz.addTags(listOf("Alicja", "Baba", "Alan"), true)
 
         // when
@@ -140,7 +140,7 @@ class XyzProxyTest {
     @Test
     fun testRemoveTagsWithPrefixes() {
         // given
-        val xyz = XyzProxy()
+        val xyz = XyzNs()
         xyz.addTags(listOf("Alicja", "Baba", "Alan"), false)
 
         // when
@@ -153,16 +153,16 @@ class XyzProxyTest {
     @Test
     fun testSetTags() {
         // given
-        val xyz = XyzProxy()
+        val xyz = XyzNs()
 
         // when
-        xyz.setTags(TagsProxy("Alicja", "Baba", "Alan"), false)
+        xyz.setTags(Tags("Alicja", "Baba", "Alan"), false)
 
         // then
         assertEquals(listOf("Alicja", "Baba", "Alan"), xyz.tags?.toList())
 
         // when
-        xyz.setTags(TagsProxy("Cecil"), true)
+        xyz.setTags(Tags("Cecil"), true)
         assertEquals(listOf("cecil"), xyz.tags?.toList())
     }
 }

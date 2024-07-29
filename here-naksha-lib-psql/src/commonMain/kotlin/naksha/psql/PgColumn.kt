@@ -124,36 +124,43 @@ class PgColumn : JsEnum() {
 
         @JvmField
         @JsStatic
-        val uid = def(PgColumn::class, "uid") { self ->
+        val ptxn = def(PgColumn::class, "ptxn") { self ->
             self._i = 5
-            self._type = PgType.INT
+            self._type = PgType.INT64
         }
 
         @JvmField
         @JsStatic
-        val puid = def(PgColumn::class, "puid") { self ->
+        val uid = def(PgColumn::class, "uid") { self ->
             self._i = 6
             self._type = PgType.INT
         }
 
         @JvmField
         @JsStatic
-        val hash = def(PgColumn::class, "hash") { self ->
+        val puid = def(PgColumn::class, "puid") { self ->
             self._i = 7
             self._type = PgType.INT
         }
 
         @JvmField
         @JsStatic
-        val change_count = def(PgColumn::class, "change_count") { self ->
+        val hash = def(PgColumn::class, "hash") { self ->
             self._i = 8
             self._type = PgType.INT
         }
 
         @JvmField
         @JsStatic
-        val geo_grid = def(PgColumn::class, "geo_grid") { self ->
+        val change_count = def(PgColumn::class, "change_count") { self ->
             self._i = 9
+            self._type = PgType.INT
+        }
+
+        @JvmField
+        @JsStatic
+        val geo_grid = def(PgColumn::class, "geo_grid") { self ->
+            self._i = 10
             self._type = PgType.INT
         }
 
@@ -180,20 +187,13 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val flags = def(PgColumn::class, "flags") { self ->
-            self._i = 10
+            self._i = 11
             self._type = PgType.INT
         }
 
         @JvmField
         @JsStatic
         val id = def(PgColumn::class, "id") { self ->
-            self._i = 11
-            self._type = PgType.STRING
-        }
-
-        @JvmField
-        @JsStatic
-        val origin = def(PgColumn::class, "origin") { self ->
             self._i = 12
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN COLLATE \"C\""
@@ -225,34 +225,42 @@ class PgColumn : JsEnum() {
 
         @JvmField
         @JsStatic
-        val tags = def(PgColumn::class, "tags") { self ->
+        val origin = def(PgColumn::class, "origin") { self ->
             self._i = 16
+            self._type = PgType.STRING
+            self._extra = "STORAGE PLAIN COLLATE \"C\""
+        }
+
+        @JvmField
+        @JsStatic
+        val tags = def(PgColumn::class, "tags") { self ->
+            self._i = 17
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE MAIN"
+            self._extra = "STORAGE EXTENDED"
         }
 
         @JvmField
         @JsStatic
         val geo_ref = def(PgColumn::class, "geo_ref") { self ->
-            self._i = 17
+            self._i = 18
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE MAIN"
+            self._extra = "STORAGE EXTENDED"
         }
 
         @JvmField
         @JsStatic
         val geo = def(PgColumn::class, "geo") { self ->
-            self._i = 18
+            self._i = 19
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE MAIN"
+            self._extra = "STORAGE EXTENDED"
         }
 
         @JvmField
         @JsStatic
         val feature = def(PgColumn::class, "feature") { self ->
-            self._i = 19
+            self._i = 20
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE MAIN"
+            self._extra = "STORAGE EXTENDED"
         }
 
         /**
@@ -273,9 +281,9 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val columns = arrayOf(
-            created_at, updated_at, author_ts, txn_next, txn,
+            created_at, updated_at, author_ts, txn_next, txn, ptxn,
             uid, puid, hash, change_count, geo_grid, flags,
-            id, origin, app_id, author, type,
+            id, app_id, author, type, origin,
             tags, geo_ref, geo, feature
         )
 

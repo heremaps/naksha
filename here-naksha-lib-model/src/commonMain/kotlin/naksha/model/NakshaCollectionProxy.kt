@@ -161,24 +161,25 @@ open class NakshaCollectionProxy() : NakshaFeatureProxy() {
          */
         const val DEFAULT_GEO_INDEX = GEO_INDEX_GIST
 
+        /**
+         * The value returned as [estimatedFeatureCount] and [estimatedDeletedFeatures], before the estimation is actually done.
+         */
         @JvmStatic
         @JsStatic
-        val BEFORE_ESTIMATION = Int64(1)
+        val BEFORE_ESTIMATION = Int64(-1)
 
-        private val PARTITIONS = NotNullProperty<Any, NakshaCollectionProxy, Int>(Int::class) { _, _ -> 0 }
-        private val GEO_INDEX = NotNullProperty<Any, NakshaCollectionProxy, String>(String::class) { _, _ -> DEFAULT_GEO_INDEX }
-        private val STORAGE_CLASS = NullableProperty<Any, NakshaCollectionProxy, String>(String::class)
-        private val PROTECTION_CLASS = NullableProperty<Any, NakshaCollectionProxy, String>(String::class)
-        private val DEFAULT_TYPE = NotNullProperty<Any, NakshaCollectionProxy, String>(String::class) { _, _ -> "Feature" }
-        private val DEFAULT_FLAGS = NotNullProperty<Any, NakshaCollectionProxy, Flags>(Flags::class) { _, _ -> Flags() }
-        private val DISABLE_HISTORY = NotNullProperty<Any, NakshaCollectionProxy, Boolean>(Boolean::class) { _, _ -> false }
-        private val AUTO_PURGE = NotNullProperty<Any, NakshaCollectionProxy, Boolean>(Boolean::class) { _, _ -> false }
-        private val INDICES = NotNullProperty<Any, NakshaCollectionProxy, IndicesListProxy>(IndicesListProxy::class)
-        private val MAX_AGE = NotNullProperty<Any, NakshaCollectionProxy, Int64>(Int64::class) { _, _ -> Int64(-1) }
-        private val QUAD_PARTITION_SIZE = NotNullProperty<Any, NakshaCollectionProxy, Int>(Int::class) { _, _ -> 10_485_760 }
-        private val ESTIMATED_FEATURE_COUNT = NotNullProperty<Any, NakshaCollectionProxy, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
-        private val ESTIMATED_DELETED_FEATURES =
-            NotNullProperty<Any, NakshaCollectionProxy, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
-
+        private val PARTITIONS = NotNullProperty<NakshaCollectionProxy, Int>(Int::class) { _, _ -> 0 }
+        private val GEO_INDEX = NotNullProperty<NakshaCollectionProxy, String>(String::class) { _, _ -> DEFAULT_GEO_INDEX }
+        private val STORAGE_CLASS = NullableProperty<NakshaCollectionProxy, String>(String::class)
+        private val PROTECTION_CLASS = NullableProperty<NakshaCollectionProxy, String>(String::class)
+        private val DEFAULT_TYPE = NotNullProperty<NakshaCollectionProxy, String>(String::class) { _, _ -> "Feature" }
+        private val DEFAULT_FLAGS = NotNullProperty<NakshaCollectionProxy, Flags>(Flags::class) { _, _ -> Flags() }
+        private val DISABLE_HISTORY = NotNullProperty<NakshaCollectionProxy, Boolean>(Boolean::class) { _, _ -> false }
+        private val AUTO_PURGE = NotNullProperty<NakshaCollectionProxy, Boolean>(Boolean::class) { _, _ -> false }
+        private val INDICES = NotNullProperty<NakshaCollectionProxy, IndicesListProxy>(IndicesListProxy::class)
+        private val MAX_AGE = NotNullProperty<NakshaCollectionProxy, Int64>(Int64::class) { _, _ -> Int64(-1) }
+        private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollectionProxy, Int>(Int::class) { _, _ -> 10_485_760 }
+        private val ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollectionProxy, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
+        private val ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollectionProxy, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
     }
 }

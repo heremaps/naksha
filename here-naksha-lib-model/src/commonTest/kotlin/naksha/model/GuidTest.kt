@@ -15,7 +15,7 @@ class GuidTest {
             featureId = "Feature1",
             luid = Luid(
                 uid = 11,
-                txn = Txn.of(2001, 11, 26, Int64(3))
+                version = Version.of(2001, 11, 26, Int64(3))
             )
         )
 
@@ -26,7 +26,7 @@ class GuidTest {
     @Test
     fun shouldTransformTxtToGuid() {
         // given
-        val txn = Txn.of(2001, 11, 26, Int64(3))
+        val txn = Version.of(2001, 11, 26, Int64(3))
 
         // when
         val guid = txn.toGuid("naksha", "foo", "foo1")

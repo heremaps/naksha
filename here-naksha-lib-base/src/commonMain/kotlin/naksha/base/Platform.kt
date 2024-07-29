@@ -397,6 +397,29 @@ expect class Platform {
         fun initializeKlass(klass: KClass<*>)
 
         /**
+         * Ask the platform to make a copy of the given platform object.
+         *
+         * This method supports copy of:
+         * - [PlatformMap]
+         * - [PlatformList]
+         * - [PlatformDataView]
+         * - [Boolean]
+         * - [Short]
+         * - [Int]
+         * - [Int64]
+         * - [Float]
+         * - [Double]
+         * - [String]
+         *
+         * No other types are supported.
+         *
+         * @param obj the object to make a copy of.
+         * @param recursive _true_ if the copy should be made recursive; _false_ if a shallow copy should be made.
+         * @return the copy.
+         */
+        fun <T> copy(obj: T?, recursive: Boolean) : T?
+
+        /**
          * Serialize the given value to JSON.
          * @param obj The object to serialize.
          * @return The JSON.

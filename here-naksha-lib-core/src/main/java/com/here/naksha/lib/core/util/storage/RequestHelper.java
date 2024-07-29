@@ -18,11 +18,6 @@
  */
 package com.here.naksha.lib.core.util.storage;
 
-import static naksha.model.request.condition.LOpType.OR;
-import static naksha.model.request.condition.POp.eq;
-import static naksha.model.request.condition.PRef.id;
-import static naksha.model.request.condition.PRef.pRefPathMap;
-
 import com.here.naksha.lib.core.models.storage.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,7 +29,6 @@ import naksha.model.NakshaCollectionProxy;
 import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
 import naksha.model.request.*;
-import naksha.model.request.condition.*;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

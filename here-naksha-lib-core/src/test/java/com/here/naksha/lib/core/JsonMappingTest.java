@@ -33,7 +33,7 @@
 //import naksha.model.NakshaError;
 //import naksha.model.NakshaErrorCode;
 //import naksha.model.NakshaFeatureProxy;
-//import naksha.model.response.ErrorResponse;
+//import naksha.model.request.ErrorResponse;
 //import org.junit.jupiter.api.Test;
 //
 //@SuppressWarnings("unused")

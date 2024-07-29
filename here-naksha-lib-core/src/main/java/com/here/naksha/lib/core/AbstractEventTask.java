@@ -27,8 +27,8 @@ import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaErrorCode;
 import naksha.model.XyzResponseType;
-import naksha.model.response.ErrorResponse;
-import naksha.model.response.Response;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

@@ -2,7 +2,7 @@
 
 package naksha.auth.attribute
 
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import kotlin.js.JsExport
 
 /**
@@ -10,4 +10,4 @@ import kotlin.js.JsExport
  * all attributes set.
  */
 @JsExport
-open class ResourceAttributes : ObjectProxy()
+open class ResourceAttributes : AnyObject()

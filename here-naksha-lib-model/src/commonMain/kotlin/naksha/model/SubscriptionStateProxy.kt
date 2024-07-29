@@ -2,9 +2,9 @@
 
 package naksha.model
 
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import kotlin.js.JsExport
 
 @JsExport
-class SubscriptionStateProxy : ObjectProxy() {
+class SubscriptionStateProxy : AnyObject() {
 }
