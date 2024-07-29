@@ -94,7 +94,6 @@ public class AmazonS3Helper implements FileClient {
   }
 
   public List<String> listKeysInBucket(String url) {
-    //editor
     S3Uri fileUri = getS3Uri(url);
     String delimiter = "/";
 
