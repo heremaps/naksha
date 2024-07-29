@@ -1,12 +1,5 @@
 on:
   workflow_call:
-    outputs:
-      pipeline-artifact-name:
-        description: 'Name of the uploaded artifact which can be downloaded using actions/download-artifact within the same pipeline (e.g. codedeploy-artifact)'
-        value: ${{ jobs.main.outputs.pipeline-artifact-name }}
-      app-version:
-        description: 'Application version identified using maven (e.g. 1.1.1-SNAPSHOT, 1.2.0)'
-        value: ${{ jobs.main.outputs.app-version }}
 
 
 env:
@@ -22,9 +15,6 @@ env:
 jobs:
   main:
     runs-on: ubuntu-latest
-    outputs:
-      pipeline-artifact-name: ${{ steps.save-artifact-name.outputs.name }}
-      app-version: ${{ steps.save-app-version.outputs.version }}
     services:
       postgres:
         image: postgis/postgis
