@@ -135,29 +135,23 @@ class PlatformUtil {
          */
         @JvmStatic
         @JsStatic
-        fun hashCodeOf(vararg values: Any?): Int {
-            var result = 0
+        fun hashCodeOf(vararg values: Any?): Int = hashCodeOf(0, *values)
+
+        @JvmStatic
+        @JsStatic
+        private fun hashCodeOf(hashInput: Int, vararg values: Any?): Int {
+            var hash = hashInput
             for (v in values) {
-                if (v == null) result = 31 * result
-                if (v is Array<*>)
                 when (v) {
-                    is Array -> result = v.hashCode()
+                    null -> hash *= 31
+                    is ByteArray -> hash = hash * 31 + v.contentHashCode()
+                    is Array<*> -> for (e in v) hash = hashCodeOf(e)
+                    is List<*> -> for (e in v) hash = hashCodeOf(e)
+                    is Map<*,*> -> for (e in v) hash = hashCodeOf(e.value)
+                    else -> hash = hash * 31 + v.hashCode()
                 }
             }
-            createdAt.hashCode()
-            result = 31 * result + updatedAt.hashCode()
-            result = 31 * result + authorTs.hashCode()
-            result = 31 * result + txnNext.hashCode()
-            result = 31 * result + flags
-            result = 31 * result + id.hashCode()
-            result = 31 * result + (type?.hashCode() ?: 0)
-            result = 31 * result + (meta?.hashCode() ?: 0)
-            result = 31 * result + (feature?.contentHashCode() ?: 0)
-            result = 31 * result + (geo?.contentHashCode() ?: 0)
-            result = 31 * result + (referencePoint?.contentHashCode() ?: 0)
-            result = 31 * result + (tags?.contentHashCode() ?: 0)
-            return result
-
+            return hash
         }
     }
 }
