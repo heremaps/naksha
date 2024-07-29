@@ -78,7 +78,7 @@ jobs:
       - name: List artifact content
         run: |
           ls -lR $ARTIFACT_DIR
-      - name: Save CodeDeploy artifact content
+      - name: Save artifact content
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.GITHUB_ARTIFACT_NAME }}
