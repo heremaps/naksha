@@ -20,12 +20,12 @@ object TagsEncoding : FlagsBits() {
     const val JSON_GZIP = 1 shl TAGS_SHIFT
 
     /**
-     * A JSON encoded using [JBON](https://github.com/xeus2001/xyz-hub/blob/v3/docs/JBON.md) encoding.
+     * A JSON encoded using [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md) encoding.
      */
     const val JBON = 2 shl TAGS_SHIFT
 
     /**
-     * A JSON encoded using [JBON](https://github.com/xeus2001/xyz-hub/blob/v3/docs/JBON.md) encoding, compressed using
+     * A JSON encoded using [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md) encoding, compressed using
      * [GZIP](https://en.wikipedia.org/wiki/Gzip).
      */
     const val JBON_GZIP = 3 shl TAGS_SHIFT
