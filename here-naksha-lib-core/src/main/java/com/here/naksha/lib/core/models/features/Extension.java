@@ -36,7 +36,7 @@ public class Extension extends XyzFeature {
   public static final String URL = "url";
   public static final String VERSION = "version";
   public static final String INIT_CLASS_NAME = "initClassName";
-  //TODO check if required
+
   public static final String ENV = "env";
 
   @JsonProperty(URL)
