@@ -26,6 +26,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class ViewSuccessResult extends SuccessResponse {
 
+  public Map<String, Integer> originalFeaturesOrder;
+
   public ViewSuccessResult(@Nullable List<ResultRow> rows, @Nullable Map<String, Integer> originalFeaturesOrder) {
     super();
     this.rows = rows;

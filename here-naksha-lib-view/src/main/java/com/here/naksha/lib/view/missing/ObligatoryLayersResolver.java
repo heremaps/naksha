@@ -28,8 +28,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ObligatoryLayersResolver
-    implements MissingIdResolver {
+public class ObligatoryLayersResolver implements MissingIdResolver {
 
   private final Set<ViewLayer> obligatoryLayers;
 
@@ -54,7 +53,8 @@ public class ObligatoryLayersResolver
 
     List<Pair<ViewLayer, String>> missingObligatoryLayers = obligatoryLayers.stream()
         .filter(obligatoryLayer -> !layersHavingFeature.contains(obligatoryLayer))
-        .map(layer -> Pair.of(layer, multiFeature.get(0).getRow().getFeature().getId()))
+        .map(layer ->
+            Pair.of(layer, multiFeature.get(0).getRow().getFeature().getId()))
         .collect(Collectors.toList());
 
     return missingObligatoryLayers;

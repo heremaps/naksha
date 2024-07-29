@@ -26,8 +26,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class IgnoreMissingResolver
-    implements MissingIdResolver {
+public class IgnoreMissingResolver implements MissingIdResolver {
 
   @Override
   public boolean skip() {

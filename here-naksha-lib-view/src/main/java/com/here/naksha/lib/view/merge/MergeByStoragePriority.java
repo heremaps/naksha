@@ -22,12 +22,10 @@ import com.here.naksha.lib.view.MergeOperation;
 import com.here.naksha.lib.view.ViewLayerRow;
 import java.util.Comparator;
 import java.util.List;
-
 import naksha.model.request.ResultRow;
 import org.jetbrains.annotations.NotNull;
 
-public class MergeByStoragePriority
-    implements MergeOperation {
+public class MergeByStoragePriority implements MergeOperation {
 
   @Override
   public ResultRow apply(@NotNull List<ViewLayerRow> sameFeatureFromEachStorage) {

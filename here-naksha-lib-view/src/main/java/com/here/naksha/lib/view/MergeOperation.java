@@ -18,9 +18,8 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.request.ResultRow;
-
 import java.util.List;
+import naksha.model.request.ResultRow;
 
 public interface MergeOperation {
 
