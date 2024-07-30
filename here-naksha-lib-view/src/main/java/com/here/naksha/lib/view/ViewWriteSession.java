@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import naksha.model.IStorageLock;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
+import naksha.model.request.WriteFeature;
 import naksha.model.request.WriteRequest;
 import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
@@ -65,12 +66,12 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
    * @return
    */
   @Override
-  public @NotNull Response execute(@NotNull WriteRequest writeRequest) {
-    if (!(writeRequest instanceof WriteFeatures)) {
+  public @NotNull Response execute(@NotNull WriteFeature writeRequest) {
+    if (!(writeRequest instanceof WriteFeature)) {
       throw new UnsupportedOperationException("Only WriteFeatures are supported.");
     }
     getSession();
-    ((WriteFeatures) writeRequest).setCollectionId(writeLayer.getCollectionId());
+    ((WriteFeature) writeRequest).setCollectionId(writeLayer.getCollectionId());
     return this.session.execute(writeRequest);
   }
 
@@ -88,7 +89,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   @Override
-  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
+  public @NotNull Response executeBulkWriteFeatures(@NotNull WriteRequest writeRequest) {
     throw new UnsupportedOperationException("bulk write on view is not yet supported");
   }
 

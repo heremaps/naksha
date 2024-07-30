@@ -59,30 +59,30 @@ public class View implements IView {
     return new ViewWriteSession(this, context, useMaster);
   }
 
-  @Override
-  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    throw new NotImplementedException();
-  }
+//  @Override
+//  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
+//    throw new NotImplementedException();
+//  }
 
-  @Override
-  public void initStorage() {
-    throw new UnsupportedOperationException("init all individual storages first");
-  }
+//  @Override
+//  public void initStorage() {
+//    throw new UnsupportedOperationException("init all individual storages first");
+//  }
 
-  @Override
-  public void startMaintainer() {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void maintainNow() {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void stopMaintainer() {
-    throw new NotImplementedException();
-  }
+//  @Override
+//  public void startMaintainer() {
+//    throw new NotImplementedException();
+//  }
+//
+//  @Override
+//  public void maintainNow() {
+//    throw new NotImplementedException();
+//  }
+//
+//  @Override
+//  public void stopMaintainer() {
+//    throw new NotImplementedException();
+//  }
 
   @Override
   public void setViewLayerCollection(ViewLayerCollection viewLayerCollection) {

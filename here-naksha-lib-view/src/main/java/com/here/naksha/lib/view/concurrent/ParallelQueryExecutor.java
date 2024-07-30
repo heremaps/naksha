@@ -22,7 +22,6 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
-
 import com.here.naksha.lib.view.View;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerRow;
@@ -54,8 +53,7 @@ public class ParallelQueryExecutor {
     this.viewRef = viewRef;
   }
 
-  public Map<String, List<ViewLayerRow>> queryInParallel(
-      @NotNull List<LayerReadRequest> requests) {
+  public Map<String, List<ViewLayerRow>> queryInParallel(@NotNull List<LayerReadRequest> requests) {
     List<Future<List<ViewLayerRow>>> futures = new ArrayList<>();
 
     for (LayerReadRequest layerReadRequest : requests) {
@@ -76,7 +74,7 @@ public class ParallelQueryExecutor {
 
   @NotNull
   private Map<String, List<ViewLayerRow>> getCollectedResults(
-          List<Future<List<ViewLayerRow>>> tasks, Long timeoutMillis) {
+      List<Future<List<ViewLayerRow>>> tasks, Long timeoutMillis) {
     return tasks.stream()
         .map(future -> {
           try {
@@ -102,9 +100,7 @@ public class ParallelQueryExecutor {
   }
 
   private Stream<ViewLayerRow> executeSingle(
-      @NotNull ViewLayer layer,
-      @NotNull IReadSession session,
-      @NotNull ReadFeatures request) {
+      @NotNull ViewLayer layer, @NotNull IReadSession session, @NotNull ReadFeatures request) {
     final long startTime = System.currentTimeMillis();
     String status = "OK";
     int featureCnt = 0;
@@ -112,20 +108,20 @@ public class ParallelQueryExecutor {
     final String collectionId = layer.getCollectionId();
 
     // prepare request
-    ReadFeatures clonedRequest = request; //TODO shallow clone
+    ReadFeatures clonedRequest = request; // TODO shallow clone
     clonedRequest.addCollectionId(collectionId);
 
     SuccessResponse cursor = (SuccessResponse) session.execute(clonedRequest);
 
-      List<ResultRow> featureList = cursor.rows;
+    List<ResultRow> featureList = cursor.rows;
     log.info(
-            "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
-            NakshaContext.currentContext().getStreamId(),
-            collectionId,
-            "READ",
-            status,
-            System.currentTimeMillis() - startTime,
-            featureCnt);
-      return featureList.stream().map(row -> new ViewLayerRow(row, layerPriority, layer));
+        "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
+        NakshaContext.currentContext().getStreamId(),
+        collectionId,
+        "READ",
+        status,
+        System.currentTimeMillis() - startTime,
+        featureCnt);
+    return featureList.stream().map(row -> new ViewLayerRow(row, layerPriority, layer));
   }
 }

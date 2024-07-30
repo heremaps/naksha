@@ -22,15 +22,15 @@ import java.util.List;
 import java.util.Map;
 import naksha.model.request.ResultRow;
 import naksha.model.response.SuccessResponse;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ViewSuccessResult extends SuccessResponse {
 
   public Map<String, Integer> originalFeaturesOrder;
 
-  public ViewSuccessResult(@Nullable List<ResultRow> rows, @Nullable Map<String, Integer> originalFeaturesOrder) {
-    super();
-    this.rows = rows;
+  public ViewSuccessResult(@NotNull List<ResultRow> rows, @Nullable Map<String, Integer> originalFeaturesOrder) {
+    super(rows,null);
     this.originalFeaturesOrder = originalFeaturesOrder;
   }
 }
