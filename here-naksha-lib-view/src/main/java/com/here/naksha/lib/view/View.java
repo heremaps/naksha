@@ -55,8 +55,8 @@ public class View implements IView {
   }
 
   @Override
-  public @NotNull ViewWriteSession newWriteSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new ViewWriteSession(this, context, useMaster);
+  public @NotNull ViewWriteSession newWriteSession(@Nullable NakshaContext context) {
+    return new ViewWriteSession(this, context, true);
   }
 
 //  @Override
@@ -127,12 +127,6 @@ public class View implements IView {
   @NotNull
   @Override
   public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
-    return null;
-  }
-
-  @NotNull
-  @Override
-  public IWriteSession newWriteSession(@NotNull NakshaContext context) {
     return null;
   }
 

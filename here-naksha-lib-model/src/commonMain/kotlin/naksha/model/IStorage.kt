@@ -70,7 +70,7 @@ interface IStorage : AutoCloseable {
     fun enterLock(id: String, waitMillis: Int64): ILock
 
     /**
-     * Open a new write session, optionally to a master-node (when being in a multi-writer cluster).
+     * Open a new write session to a master-node (when being in a multi-writer cluster).
      *
      * @param context The naksha context to use in the session.
      * @return the write session.
