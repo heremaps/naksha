@@ -9,12 +9,12 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * The XYZ namespace stored in [properties.@ns:com:here:xyz][NakshaPropertiesProxy.XYZ] of the [NakshaFeatureProxy].
+ * The XYZ namespace stored in [properties.@ns:com:here:xyz][NakshaProperties.XYZ] of the [NakshaFeature].
  */
 @JsExport
 class XyzNs : AnyObject() {
     companion object XyzNsCompanion {
-        private val ACTION = NotNullEnum<XyzNs, ActionEnum>(ActionEnum::class) { _, _ -> ActionEnum.CREATED }
+        private val ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
         private val STRING = NotNullProperty<XyzNs, String>(String::class) { _, name ->
             throw IllegalStateException("The field $name must have a value")
         }
@@ -26,7 +26,7 @@ class XyzNs : AnyObject() {
             throw IllegalStateException("The field $name must have a value")
         }
         private val INT64_NULL = NullableProperty<XyzNs, Int64>(Int64::class)
-        private val TAGS = NullableProperty<XyzNs, Tags>(Tags::class)
+        private val TAGS = NullableProperty<XyzNs, TagList>(TagList::class)
 
         private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
         private var TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
@@ -39,7 +39,7 @@ class XyzNs : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun normalizeTags(tags: Tags?): Tags? {
+        fun normalizeTags(tags: TagList?): TagList? {
             if (!tags.isNullOrEmpty()) {
                 for ((idx, tag) in tags.withIndex()) {
                     if (tag != null) {
@@ -99,7 +99,7 @@ class XyzNs : AnyObject() {
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
      * - **Naksha**: This field is always set, but does not store a real UUID, but rather a [Guid] (global unique identifier).
      */
-    var uuid: String by STRING
+    val uuid: String by STRING
 
     /**
      * The universal unique identifier of the previous state of a feature.
@@ -110,7 +110,7 @@ class XyzNs : AnyObject() {
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
      * - **Naksha**: This field is always set, but does not store a real UUID, but rather a GUID (global unique identifier).
      */
-    var puuid: String? by STRING_NULL
+    val puuid: String? by STRING_NULL
 
     /**
      * The universal unique identifier of the state of the feature that was used to merge with the previous state to produce this state.
@@ -123,7 +123,7 @@ class XyzNs : AnyObject() {
      * - **Naksha**: Does not support this field, it will always be _null_.
      */
     @Deprecated("This field is not supported by Naksha, but part of MOM specification", level = WARNING)
-    var muuid: String? by STRING_NULL
+    val muuid: String? by STRING_NULL
 
     /**
      * The time when this feature was created.
@@ -135,7 +135,7 @@ class XyzNs : AnyObject() {
      * - **XYZ Hub**: Always sets this field.
      * - **Naksha**: Always sets this field.
      */
-    var createdAt: Int64 by INT64
+    val createdAt: Int64 by INT64
 
     /**
      * The last time when this feature was modified.
@@ -147,7 +147,7 @@ class XyzNs : AnyObject() {
      * - **XYZ Hub**: Always sets this field.
      * - **Naksha**: Always sets this field.
      */
-    var updatedAt: Int64 by INT64
+    val updatedAt: Int64 by INT64
 
     /**
      * The space in which this feature is located.
@@ -160,7 +160,7 @@ class XyzNs : AnyObject() {
      * - **Naksha**: Does not support this field, it will always be _null_.
      */
     @Deprecated("This field is not supported by Naksha, but part of MOM specification", level = WARNING)
-    var space: String? by STRING_NULL
+    val space: String? by STRING_NULL
 
     /**
      * Customer defined tags for this feature.
@@ -174,7 +174,7 @@ class XyzNs : AnyObject() {
      * `age:=5`). The server guarantees that when two tags have the same key, they are collapsed, by the later version overriding the
      * previous one.
      */
-    var tags: Tags? by TAGS
+    var tags: TagList? by TAGS
 
     /**
      * The version of the feature.
@@ -186,21 +186,21 @@ class XyzNs : AnyObject() {
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
      * - **Naksha**: This field stores the transaction-number (`txn`).
      */
-    var version: Int64 by INT64
+    val version: Int64 by INT64
 
     /**
      * The change-count, so how often the feature has been changed since it was created. The value starts with 1.
      *
      * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
-    var changeCount: Int by INT
+    val changeCount: Int by INT
 
     /**
      * The change that was applied to the feature.
      *
      * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
-    var action: ActionEnum by ACTION
+    val action: Action by ACTION
 
     /**
      * The identifier of the application that modified the feature the last.
@@ -216,7 +216,7 @@ class XyzNs : AnyObject() {
      *
      * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
-    var author: String? by STRING_NULL
+    val author: String? by STRING_NULL
 
     /**
      * The time when this author of the feature was modified.
@@ -224,14 +224,14 @@ class XyzNs : AnyObject() {
      * The value is a valid Unix timestamp which is the number of milliseconds since January 1st, 1970, leap seconds are ignored. This
      * field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
-    var authorTs: Int64? by INT64_NULL
+    val authorTs: Int64? by INT64_NULL
 
     /**
      * The hash above the feature, calculated server side.
      *
      * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
-    var hash: Int by INT
+    val hash: Int by INT
 
     /**
      * The origin of the feature.
@@ -240,14 +240,14 @@ class XyzNs : AnyObject() {
      *
      * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
-    var origin: String? by STRING_NULL
+    val origin: String? by STRING_NULL
 
     /**
      * The HERE tile-id in which the reference-point of the feature is located at level 15.
      *
      * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
-    var geoGrid: Int by INT
+    val geoGrid: Int by INT
 
     /**
      * Returns 'true' if the tag was removed, 'false' if it was not present.
@@ -257,7 +257,7 @@ class XyzNs : AnyObject() {
      * @return true if the tag was removed; false otherwise.
      */
     fun removeTag(tag: String, normalize: Boolean): Boolean {
-        val thisTags: Tags = tags ?: return false
+        val thisTags: TagList = tags ?: return false
         return thisTags.removeTag(tag, normalize)
     }
 
@@ -301,7 +301,7 @@ class XyzNs : AnyObject() {
      * @param tags      The tags to set.
      * @param normalize `true` if the given tags should be normalized; `false`, if they are already normalized.
      */
-    fun setTags(tags: Tags?, normalize: Boolean): XyzNs {
+    fun setTags(tags: TagList?, normalize: Boolean): XyzNs {
         if (normalize) {
             if (tags != null ) {
                 for ((i, tag) in tags.withIndex()) {
@@ -322,7 +322,7 @@ class XyzNs : AnyObject() {
      * @return true if the tag added; false otherwise.
      */
     fun addTag(tag: String, normalize: Boolean): Boolean {
-        val thisTags = this.tags?: Tags().also { this.tags = it }
+        val thisTags = this.tags?: TagList().also { this.tags = it }
         return thisTags.addTag(tag, normalize)
     }
 
@@ -334,7 +334,7 @@ class XyzNs : AnyObject() {
      * @return this.
      */
     fun addTags(tags: List<String>?, normalize: Boolean): XyzNs {
-        val thisTags = this.tags?: Tags().also { this.tags = it }
+        val thisTags = this.tags?: TagList().also { this.tags = it }
         thisTags.addTags(tags, normalize)
         return this
     }
@@ -346,7 +346,7 @@ class XyzNs : AnyObject() {
      * @return this.
      */
     fun addAndNormalizeTags(vararg tags: String): XyzNs {
-        val thisTags = this.tags?: Tags().also { this.tags = it }
+        val thisTags = this.tags?: TagList().also { this.tags = it }
         thisTags.addAndNormalizeTags(*tags)
         return this
     }

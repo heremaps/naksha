@@ -6,8 +6,8 @@ import naksha.base.Int64
 import naksha.base.Platform
 import naksha.jbon.IDictManager
 import naksha.jbon.JbFeatureDecoder
-import naksha.model.NakshaCollectionProxy
-import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
+import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaCollection.Companion.PARTITION_COUNT_NONE
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -64,10 +64,10 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(di
     }
 
     fun partitionCount(): Int = _partitionCount
-    fun geoIndex(): String = _geoIndex ?: NakshaCollectionProxy.DEFAULT_GEO_INDEX
+    fun geoIndex(): String = _geoIndex ?: NakshaCollection.DEFAULT_GEO_INDEX
     fun disableHistory(): Boolean = _disableHistory
     fun autoPurge(): Boolean = _autoPurge
     fun maxAge(): Int64 = _maxAge ?: Platform.INT64_MAX_VALUE
-    fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollectionProxy.BEFORE_ESTIMATION
+    fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollection.BEFORE_ESTIMATION
     fun storageClass(): String = _storageClass ?: PgStorageClass.Consistent.toString()
 }

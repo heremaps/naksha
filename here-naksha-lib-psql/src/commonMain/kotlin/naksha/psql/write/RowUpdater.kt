@@ -83,7 +83,7 @@ internal class RowUpdater(val session: PgSession) {
         val txnTs = session.txnTs()
         OLD.txn = txn.value
         OLD.txn_next = txn.value
-        OLD.flags = Flags(OLD.flags!!).action(ActionEnum.DELETED)
+        OLD.flags = Flags(OLD.flags!!).action(Action.DELETED)
         OLD.author = session.options.author ?: session.options.appId
         if (session.options.author != null) {
             OLD.author_ts = txnTs

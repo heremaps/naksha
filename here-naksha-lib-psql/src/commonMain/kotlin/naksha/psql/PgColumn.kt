@@ -180,9 +180,9 @@ class PgColumn : JsEnum() {
          * - Reserved - bits: 16-31
          *
          * Possible actions are:
-         * - [naksha.model.Action.CREATED]
-         * - [naksha.model.Action.UPDATED]
-         * - [naksha.model.Action.DELETED]
+         * - [naksha.model.ActionValues.CREATED]
+         * - [naksha.model.ActionValues.UPDATED]
+         * - [naksha.model.ActionValues.DELETED]
          */
         @JvmField
         @JsStatic

@@ -1,9 +1,8 @@
-@file:Suppress("OPT_IN_USAGE")
+@file:Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate")
 
 package naksha.model
 
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
 
 /**
  * Collection of bits definitions for the `flags`. The flags store the encoding in the storage, it stores how the binaries are encoded:
@@ -124,5 +123,27 @@ open class FlagsBits {
          * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
          */
         const val ACTION_CLEAR = ACTION_MASK.inv()
+
+        // -------------------------------< PARTITION NUMBER >------------------------------------
+
+        /**
+         * The bits to shift the value in the [Flags].
+         */
+        const val PARTITION_NUMBER_SHIFT = 14
+
+        /**
+         * The bits used to encode the value in [Flags].
+         */
+        const val PARTITION_NUMBER_BITS = 8
+
+        /**
+         * The bitmask to AND combine with [Flags] to read the value from [Flags].
+         */
+        const val PARTITION_NUMBER_MASK = ((1 shl PARTITION_NUMBER_BITS) - 1) shl PARTITION_NUMBER_SHIFT
+
+        /**
+         * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
+         */
+        const val PARTITION_NUMBER_CLEAR = PARTITION_NUMBER_MASK.inv()
     }
 }

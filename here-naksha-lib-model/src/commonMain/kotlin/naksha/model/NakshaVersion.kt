@@ -16,6 +16,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model;
 
 import naksha.base.Int64

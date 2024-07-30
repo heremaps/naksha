@@ -47,7 +47,7 @@ interface ISession : AutoCloseable {
      * @return the response.
      * @since 2.0.7
      */
-    fun execute(request: Request<*>): Response
+    fun execute(request: Request): Response
 
     /**
      * Execute the given [Request] in parallel, if possible, otherwise fallback to a normal [execute].
@@ -57,7 +57,7 @@ interface ISession : AutoCloseable {
      * For example in `lib-psql`, even after all requests have been executed successfully, committing may fail partially, for example when only one connection aborts or the server crashes in the middle of the operation, while having committed already some connections, with others not yet to be done.
      * @since 3.0.0
      */
-    fun executeParallel(request: Request<*>): Response
+    fun executeParallel(request: Request): Response
 
     /**
      * Tests if the session is closed.

@@ -699,63 +699,71 @@ return obj;
         }
 
         /**
-         * Compress bytes.
-         * @param raw The bytes to compress.
-         * @param offset The offset of the first byte to compress.
-         * @param size The amount of bytes to compress.
-         * @return The deflated (compressed) bytes.
+         * Tests if this code is executed within a PostgresQL database using [PLV8 extension](https://plv8.github.io/).
+         * @return _true_ if this code is executed within PostgresQL database using [PLV8 extension](https://plv8.github.io/).
          */
         @JsStatic
-        actual fun lz4Deflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
-            TODO("Not yet implemented lz4Deflate")
-        }
+        actual fun isPlv8(): Boolean = js("typeof plv8==='object'").unsafeCast<Boolean>()
 
         /**
-         * Decompress bytes.
-         * @param compressed The bytes to decompress.
-         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
-         * @param offset The offset of the first byte to decompress.
-         * @param size The amount of bytes to decompress.
-         * @return The inflated (decompress) bytes.
+         * Calculates the MD5 hash about the given text.
+         *
+         * @param text the text to hash.
+         * @return the MD5 hash, being a byte-array with size 16 (128-bit).
          */
         @JsStatic
-        actual fun lz4Inflate(
-            compressed: ByteArray,
-            bufferSize: Int,
-            offset: Int,
-            size: Int
-        ): ByteArray {
-            TODO("Not yet implemented lz4Inflate")
+        actual fun md5(text: String): ByteArray {
+            if (isPlv8()) return js("plv8.execute(\"SELECT digest(\$1,'md5') as i\",[text])[0].i").unsafeCast<ByteArray>()
+            // TODO: Use SubtleCrypto-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto
+            throw UnsupportedOperationException("md5 is not implemented in the current environment")
         }
 
         /**
          * Compress bytes.
          * @param raw The bytes to compress.
-         * @param offset The offset of the first byte to compress.
-         * @param size The amount of bytes to compress.
          * @return The deflated (compressed) bytes.
          */
         @JsStatic
-        actual fun gzipDeflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
-            TODO("Not yet implemented gzipDeflate")
+        actual fun lz4Deflate(raw: ByteArray): ByteArray {
+            if (isPlv8()) js("""plv8.execute('SELECT lz4_deflate($1) as c',[raw])[0].c""").unsafeCast<ByteArray>()
+            // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
+            throw UnsupportedOperationException("lz4Deflate is not implemented in the current environment")
         }
 
         /**
          * Decompress bytes.
          * @param compressed The bytes to decompress.
-         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
-         * @param offset The offset of the first byte to decompress.
-         * @param size The amount of bytes to decompress.
          * @return The inflated (decompress) bytes.
          */
         @JsStatic
-        actual fun gzipInflate(
-            compressed: ByteArray,
-            bufferSize: Int,
-            offset: Int,
-            size: Int
-        ): ByteArray {
-            TODO("Not yet implemented gzipInflate")
+        actual fun lz4Inflate(compressed: ByteArray): ByteArray {
+            if (isPlv8()) js("""plv8.execute('SELECT lz4_inflate($1) as c',[compressed])[0].c""").unsafeCast<ByteArray>()
+            // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
+            throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
+        }
+
+        /**
+         * Compress bytes.
+         * @param raw The bytes to compress.
+         * @return The deflated (compressed) bytes.
+         */
+        @JsStatic
+        actual fun gzipDeflate(raw: ByteArray): ByteArray {
+            if (isPlv8()) js("""plv8.execute('SELECT gzip($1) as c',[raw])[0].c""").unsafeCast<ByteArray>()
+            // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
+            throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
+        }
+
+        /**
+         * Decompress bytes.
+         * @param compressed The bytes to decompress.
+         * @return The inflated (decompress) bytes.
+         */
+        @JsStatic
+        actual fun gzipInflate(compressed: ByteArray): ByteArray {
+            if (isPlv8()) js("""plv8.execute('SELECT gunzip($1) as c',[compressed])[0].c""").unsafeCast<ByteArray>()
+            // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
+            throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
         }
 
         @JsStatic

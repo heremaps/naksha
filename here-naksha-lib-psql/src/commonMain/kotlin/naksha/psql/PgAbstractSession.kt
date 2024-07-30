@@ -1,3 +1,5 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.model.IReadSession
@@ -10,9 +12,8 @@ import kotlin.js.JsExport
  * @property storage the storage to which this session is bound.
  * @param options the options to be used, when opening new connections.
  */
-@Suppress("OPT_IN_USAGE")
 @JsExport
-abstract class PgAbstractSession<T>(val storage: PgStorage, options: PgOptions) : IWriteSession, IReadSession, ISession {
+abstract class PgAbstractSession(val storage: PgStorage, options: PgOptions) : IWriteSession, IReadSession, ISession {
 
     /**
      * The options when opening new connections. The options are mostly immutable, except for the timeout values, for which there are

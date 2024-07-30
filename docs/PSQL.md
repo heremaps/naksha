@@ -128,10 +128,10 @@ The local **sequence-number** is stored in a sequence named `naksha_txn_seq`. Ev
 - 5-bit **day**, between 1 and 31 {_shift-by 32_}.
 - 32-bit **seq**uence number.
 
-This concept allows up to 4 billion transactions per day (between 0 and 2^32-1). It will overflow in browsers in the year 4096, because 
-in that year the transaction number needs 53-bit to be encoded, which is beyond the precision of a double floating point number. Should 
-there be more than 4 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, 
-should it happen at the last day of a given month. We ignore this situation, it seems currently impossible.
+This concept allows up to 4 billion transactions per day (between 0 and 4,294,967,295, _2^32-1_). It will overflow in browsers in the year 4096, because in that year the transaction number needs 53-bit to be encoded, which is beyond the precision of a double floating point number. Should there be more than 4 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible. Check in the browser:
+
+- `((4095n << 41n)+(12n << 37n)+(31n << 32n)+4294967295n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _true_
+- `(4096n << 41n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _false_
 
 The human-readable (Javascript compatible) representation is as a string in the format:
 
@@ -221,7 +221,7 @@ First, calculate the size of each database row:
 | feature      | ~ 2000+ |                                                          |
 
 In summary:
-- The amount of byte we need to actually identify a record uniquely are 12 (`txn` and `uid`)
+- The amount of byte we need to actually identify a row uniquely are 12 (`txn` and `uid`)
 - To identify in which partition a feature is located we need as well the `id`
   - If we encode the partition-number of a feature into `flags`, we are fine with only 16 byte from `txn`, `uid` and `flags`!
 

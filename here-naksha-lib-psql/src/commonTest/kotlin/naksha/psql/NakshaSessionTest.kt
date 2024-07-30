@@ -4,10 +4,10 @@ package naksha.psql
 //import naksha.model.Flags.DEFAULT_FLAGS
 //import naksha.model.NakshaCollectionProxy
 //import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
-//import naksha.model.request.InsertRow
-//import naksha.model.request.WriteFeature
+//import naksha.model.request.op.InsertRow
+//import naksha.model.request.op.WriteFeature
 //import naksha.model.request.WriteRequest
-//import naksha.model.request.WriteRow
+//import naksha.model.request.op.WriteRow
 //import naksha.model.request.ErrorResponse
 //import naksha.model.Row
 //import naksha.model.request.SuccessResponse

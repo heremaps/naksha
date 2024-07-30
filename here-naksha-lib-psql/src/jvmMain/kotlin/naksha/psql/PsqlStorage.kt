@@ -6,6 +6,8 @@ import naksha.base.fn.Fx2
 import naksha.jbon.*
 import naksha.model.*
 import naksha.model.Row
+import naksha.model.objects.NakshaFeature
+import naksha.model.request.ResultRow
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgUtil.PgUtilCompanion.ID
 import naksha.psql.PgUtil.PgUtilCompanion.OPTIONS
@@ -171,28 +173,20 @@ SELECT
         }
     }
 
-    override fun rowToFeature(row: Row): NakshaFeatureProxy {
+    override fun rowToFeature(row: Row): NakshaFeature {
         return if (row.feature != null) {
             // TODO: FIXME, we need the XYZ namespace
             val featureReader = JbFeatureDecoder(JbDictManager()).mapBytes(row.feature!!).reader
-            val feature = JbMapDecoder().mapReader(featureReader).toIMap().proxy(NakshaFeatureProxy::class)
+            val feature = JbMapDecoder().mapReader(featureReader).toAnyObject().proxy(NakshaFeature::class)
             feature
         } else {
             TODO("We will always have at least the id, which is formally enough to generate an empty feature!")
         }
     }
 
-    override fun featureToRow(feature: PlatformMap): Row {
-        val nakshaFeature = feature.proxy(NakshaFeatureProxy::class)
-        return Row(
-            storage = this,
-            flags = Flags(),
-            id = nakshaFeature.id,
-            feature = XyzEncoder().buildFeatureFromMap(nakshaFeature), // FIXME split feature to geo etc
-            referencePoint = null,
-            geo = null,
-            tags = null
-        )
+    override fun featureToRow(feature: NakshaFeature): Row {
+        val nakshaFeature = feature.proxy(NakshaFeature::class)
+        TODO("Implement me")
     }
 
     override fun enterLock(id: String, waitMillis: Int64): ILock {
@@ -242,7 +236,7 @@ SELECT
         TODO("Not yet implemented")
     }
 
-    override fun dictManager(nakshaContext: NakshaContext): IDictManager {
+    override fun dictManager(map: String): IDictManager {
         TODO("Not yet implemented")
     }
 
@@ -285,6 +279,22 @@ SELECT
             schemata.putIfAbsent(schemaName, schemaRef) ?: return schema
             // Conflict, another thread was faster, retry.
         }
+    }
+
+    override fun validateHandle(handle: String, ttl: Int?): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun fetchRowsById(map: String, collectionId: String, rowIds: List<RowId>, cacheOnly: Boolean): List<Row?> {
+        TODO("Not yet implemented")
+    }
+
+    override fun fetchRows(rows: List<ResultRow>, cacheOnly: Boolean) {
+        TODO("Not yet implemented")
+    }
+
+    override fun fetchRow(row: ResultRow, cacheOnly: Boolean) {
+        TODO("Not yet implemented")
     }
 
     // TODO: We need a background job that listens to notification (see PG notify).

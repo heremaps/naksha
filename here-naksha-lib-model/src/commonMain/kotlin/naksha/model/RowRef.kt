@@ -1,4 +1,4 @@
-@file:Suppress("OPT_IN_USAGE")
+@file:Suppress("OPT_IN_USAGE", "unused")
 
 package naksha.model
 
@@ -9,7 +9,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * A row reference, being a [proxy][naksha.base.Proxy] version of a [row address][RowAddr].
+ * A row reference, being the local unique row identifier (a [proxy][naksha.base.Proxy] version of a [row identifier][RowId]).
  */
 @JsExport
 class RowRef() : AnyObject() {
@@ -18,7 +18,7 @@ class RowRef() : AnyObject() {
      * Create a row-reference from the given individual parameters.
      * @param txn the transaction number.
      * @param uid the unique transaction local identifier.
-     * @param flags the flags of the tow.
+     * @param flags the partition number of the row.
      */
     @JsName("of")
     constructor(txn: Double, uid: Int, flags: Int) : this() {
@@ -28,19 +28,19 @@ class RowRef() : AnyObject() {
     }
 
     /**
-     * Create a row-reference from an internal [row address][RowAddr].
-     * @param addr the internal [row address][RowAddr].
+     * Create a row-reference from an internal [row address][RowId].
+     * @param rowId the internal [row identifier][RowId].
      */
-    @JsName("fromRowAddr")
-    constructor(addr: RowAddr) : this() {
-        setRaw("txn", addr.txn.value.toDouble())
-        setRaw("uid", addr.uid)
-        setRaw("flags", addr.flags)
+    @JsName("fromRowId")
+    constructor(rowId: RowId) : this() {
+        setRaw("txn", rowId.version.value.toDouble())
+        setRaw("uid", rowId.uid)
+        setRaw("flags", rowId.flags)
     }
 
     companion object RowRef_C {
         val DOUBLE = NotNullProperty<RowRef, Double>(Double::class) { _, _ -> 0.0 }
-        val INT = NotNullProperty<RowRef, Int>(Int::class) { _, _ -> 0 }
+        val FLAGS = NotNullProperty<RowRef, Flags>(Flags::class) { _, _ -> 0 }
     }
 
     /**
@@ -51,16 +51,16 @@ class RowRef() : AnyObject() {
     /**
      * The unique transaction local identifier.
      */
-    val uid by INT
+    val uid by FLAGS
 
     /**
-     * The row flags.
+     * The partition number.
      */
-    val flags by INT
+    val flags by FLAGS
 
     /**
-     * Convert this proxy into an internal [row address][RowAddr].
-     * @return this proxy as [row address][RowAddr].
+     * Convert this proxy into an internal [row identifier][RowId].
+     * @return this proxy as [row address][RowId].
      */
-    fun toAddr() : RowAddr = RowAddr(Version(Int64(txn)), uid, flags)
+    fun toRowId() : RowId = RowId(Version(Int64(txn)), uid, flags)
 }

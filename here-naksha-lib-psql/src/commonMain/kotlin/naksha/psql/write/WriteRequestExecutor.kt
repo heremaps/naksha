@@ -20,7 +20,7 @@ class WriteRequestExecutor(
      */
     fun write(writeRequest: WriteRequest): SuccessResponse {
         val responseRows: MutableList<ResultRow> = mutableListOf()
-        val collectionOperationsMap = writeRequest.ops.groupBy { it.collectionId }.toMutableMap()
+        val collectionOperationsMap = writeRequest.writes.groupBy { it.collectionId }.toMutableMap()
 
         // first execute operations on NKC and then on features
         if (collectionOperationsMap.contains(NKC_TABLE)) {

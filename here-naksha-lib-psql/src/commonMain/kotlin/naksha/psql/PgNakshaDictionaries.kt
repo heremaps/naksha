@@ -3,27 +3,27 @@
 package naksha.psql
 
 import naksha.jbon.IDictManager
-import naksha.jbon.JbDictDecoder
+import naksha.jbon.JbDictionary
+import naksha.model.NakshaUtil
 import kotlin.js.JsExport
 
 /**
  * The internal dictionaries table.
  */
 @JsExport
-class PgNakshaDictionaries internal constructor(schema: PgSchema) : PgCollection(schema, ID), PgInternalCollection, IDictManager {
-    companion object NakshaDictionariesCompanion {
-        const val ID = "naksha~dictionaries"
-    }
+class PgNakshaDictionaries internal constructor(schema: PgSchema) :
+    PgCollection(schema, NakshaUtil.VIRT_DICTIONARIES), PgInternalCollection, IDictManager
+{
 
-    override fun putDictionary(dict: JbDictDecoder) {
+    override fun putDictionary(dict: JbDictionary) {
         TODO("Not yet implemented")
     }
 
-    override fun deleteDictionary(dict: JbDictDecoder): Boolean {
+    override fun deleteDictionary(dict: JbDictionary): Boolean {
         TODO("Not yet implemented")
     }
 
-    override fun getDictionary(id: String): JbDictDecoder? {
+    override fun getDictionary(id: String): JbDictionary? {
         // TODO: Implement me!
         return null
     }

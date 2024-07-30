@@ -326,7 +326,7 @@ internal class NakshaBulkLoaderPlan(
                     session.storage.id(),
                     collectionId,
                     currentHead.id,
-                    Luid(Version(currentHead.meta!!.txn), currentHead.meta!!.uid)
+                    RowId(Version(currentHead.meta!!.version), currentHead.meta!!.uid)
                 ).toString()
             if (reqGuid != headUuid) {
                 throw NakshaException.forId(

@@ -2,14 +2,11 @@
 
 package naksha.psql
 
+import naksha.model.NakshaUtil
 import kotlin.js.JsExport
 
 /**
  * The internal collections table.
  */
 @JsExport
-class PgNakshaCollections internal constructor(schema: PgSchema) : PgCollection(schema, ID), PgInternalCollection {
-    companion object NakshaCollectionsCompanion {
-        const val ID = "naksha~collections"
-    }
-}
+class PgNakshaCollections internal constructor(schema: PgSchema) : PgCollection(schema, NakshaUtil.VIRT_COLLECTIONS), PgInternalCollection

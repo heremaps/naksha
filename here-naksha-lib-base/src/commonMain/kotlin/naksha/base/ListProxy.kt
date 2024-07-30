@@ -127,9 +127,11 @@ open class ListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutabl
         return box(array_delete(data, index), elementKlass)
     }
 
-    override fun subList(fromIndex: Int, toIndex: Int): MutableList<E?> {
-        val mutableList: MutableList<E?> = toMutableList(platformObject())
-        return mutableList.subList(fromIndex, toIndex)
+    override fun subList(fromIndex: Int, toIndex: Int): ListProxy<E> {
+        val list = Platform.newInstanceOf(this::class)
+        var i = fromIndex
+        while (i < toIndex) list.add(get(i++))
+        return list
     }
 
     override fun set(index: Int, element: E?): E? {
@@ -216,4 +218,11 @@ open class ListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutabl
         }
         return mutableList
     }
+
+    /**
+     * A small helper to fix casting system in some cases.
+     *
+     * @return this cast to List<E>.
+     */
+    fun asList(): List<E?> = this
 }

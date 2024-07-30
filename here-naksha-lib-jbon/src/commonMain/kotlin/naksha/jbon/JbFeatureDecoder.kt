@@ -1,5 +1,7 @@
 package naksha.jbon
 
+import naksha.base.AnyObject
+import naksha.base.PlatformMap
 import kotlin.js.JsExport
 
 /**
@@ -30,4 +32,15 @@ open class JbFeatureDecoder(dictManager: IDictManager? = null) : JbRecordDecoder
      * @return The map reader of root.
      */
     open fun root() : JbMapDecoder = _map
+
+    /**
+     * Decode the feature into a map.
+     * @return the map.
+     */
+    open fun toAnyObject(): AnyObject {
+        val feature = root().toAnyObject()
+        val id = id()
+        if (id != null && "id" !in feature) feature.setRaw("id", id)
+        return feature
+    }
 }

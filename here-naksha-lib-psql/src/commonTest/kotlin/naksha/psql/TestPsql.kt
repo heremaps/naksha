@@ -2,8 +2,9 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.model.*
+import naksha.model.objects.NakshaCollection
 import naksha.model.request.ResultRow
-import naksha.model.request.WriteFeature
+import naksha.model.request.op.UpsertFeature
 import naksha.model.request.WriteRequest
 import naksha.model.request.ExecutedOp.Companion.CREATED
 import naksha.model.request.Response
@@ -49,9 +50,9 @@ class TestPsql {
     }
 
     private fun create_collection(id: String, partitions: Int) {
-        val nakCollection = NakshaCollectionProxy(id, partitions, autoPurge = false, disableHistory = false)
+        val nakCollection = NakshaCollection(id, partitions, autoPurge = false, disableHistory = false)
         val collectionWriteReq = WriteRequest()
-        collectionWriteReq.add(WriteFeature(NKC_TABLE, nakCollection))
+        collectionWriteReq.add(UpsertFeature(NKC_TABLE, nakCollection))
         try {
             val response: Response = env.pgSession.write(collectionWriteReq)
             assertIs<SuccessResponse>(response, response.toString())
@@ -59,9 +60,9 @@ class TestPsql {
             val responseRow: ResultRow = successResponse.resultSet.rows()[0]
             val row: Row = responseRow.row!!
             assertEquals(id, row.id)
-            assertNotNull(row.meta?.getLuid())
+            assertNotNull(row.meta?.rowId())
             assertSame(CREATED, responseRow.op)
-            val collection = responseRow.getFeature()?.proxy(NakshaCollectionProxy::class)!!
+            val collection = responseRow.getFeature()?.proxy(NakshaCollection::class)!!
             assertNotNull(collection)
             assertEquals(id, row.id)
             assertFalse(collection.disableHistory)

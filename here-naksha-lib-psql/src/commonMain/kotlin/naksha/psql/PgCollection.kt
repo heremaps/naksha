@@ -21,7 +21,7 @@ import kotlin.js.JsExport
  *
  * Additionally, this implementation supports methods to create new collections (so the whole set of tables), or to refresh the information about the collection, to add or remove indices at runtime.
  *
- * This table should only be used in combination with [naksha.model.NakshaCollectionProxy] and is build according to the data stored in the feature. Actually, clients do operate on the collection features, and the `lib-psql` internally modifies the `PgCollection` accordingly to the external instructions. So, this class is a low level helper, and should only be used with great care, when directly using `lib-psql`.
+ * This table should only be used in combination with [naksha.model.NakshaCollection] and is build according to the data stored in the feature. Actually, clients do operate on the collection features, and the `lib-psql` internally modifies the `PgCollection` accordingly to the external instructions. So, this class is a low level helper, and should only be used with great care, when directly using `lib-psql`.
  *
  * @constructor Creates a new collection object.
  * @property schema the schema.

@@ -3,7 +3,7 @@
 package naksha.psql
 
 import naksha.model.Guid
-import naksha.model.NakshaFeatureProxy
+import naksha.model.objects.NakshaFeature
 import naksha.model.request.ResultRow
 import naksha.model.request.ResultSet
 import naksha.model.request.RowOptions
@@ -15,7 +15,7 @@ class PgResultSet(
     rowOptions: RowOptions,
     private var _rows: MutableList<ResultRow>,
     private var _handle: String? = null,
-) : ResultSet(storage, rowOptions) {
+) : ResultSet {
     // TODO: Improve with implementation!
 
     override fun isFetched(): Boolean = true
@@ -42,9 +42,9 @@ class PgResultSet(
 
     override fun rows(): MutableList<ResultRow> = _rows
 
-    private var _features: MutableList<NakshaFeatureProxy>? = null
+    private var _features: MutableList<NakshaFeature>? = null
 
-    override fun features(): MutableList<NakshaFeatureProxy> {
+    override fun features(): MutableList<NakshaFeature> {
         var list = _features
         if (list == null) {
             list = mutableListOf()

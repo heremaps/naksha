@@ -1,12 +1,14 @@
 package naksha.psql.write
 
 import naksha.model.Guid
-import naksha.model.Luid
-import naksha.model.request.*
+import naksha.model.RowId
 import naksha.model.request.Write.Companion.XYZ_OP_CREATE
 import naksha.model.request.Write.Companion.XYZ_OP_DELETE
 import naksha.model.request.Write.Companion.XYZ_OP_PURGE
 import naksha.model.Version
+import naksha.model.request.Write
+import naksha.model.request.WriteRequest
+import naksha.model.request.op.*
 import naksha.psql.ERR_UNIQUE_VIOLATION
 import naksha.psql.NakshaException
 import naksha.psql.PgSession
@@ -38,13 +40,13 @@ internal class NakshaRequestOp(
             collectionPartitionCount: Int
         ): CollectionWriteOps {
             var partition: Int = UNDETERMINED_PARTITION
-            val size = writeRequest.ops.size
+            val size = writeRequest.writes.size
             val operations = ArrayList<NakshaRequestOp>(size)
             val idsToModify = ArrayList<String>(size)
             val idsToPurge = ArrayList<String>()
             val idsToDel = ArrayList<String>()
             val uniqueIds = HashSet<String>(size)
-            for (nakWriteOp in writeRequest.ops) {
+            for (nakWriteOp in writeRequest.writes) {
 
                 val id = nakWriteOp.getId()
 
@@ -96,8 +98,8 @@ internal class NakshaRequestOp(
 
         private fun prepareRow(session: PgSession, nakWriteOp: Write): PgRow? {
             return when (nakWriteOp) {
-                is FeatureOp -> DbRowMapper.rowToPgRow(session.storage.featureToRow(nakWriteOp.feature.platformObject()))
-                is RowOp -> DbRowMapper.rowToPgRow(nakWriteOp.row)
+                is WriteFeature -> DbRowMapper.rowToPgRow(session.storage.featureToRow(nakWriteOp.feature.platformObject()))
+                is WriteRow -> DbRowMapper.rowToPgRow(nakWriteOp.row)
                 else -> null
             }
         }
@@ -105,8 +107,8 @@ internal class NakshaRequestOp(
         private fun requestedUUID(storageId: String, writeOp: Write): String? {
             return when (writeOp) {
                 is UpdateRow -> if (writeOp.atomic) {
-                    val luid = Luid(Version(writeOp.row.meta!!.txn), writeOp.row.meta!!.uid)
-                    Guid(storageId, writeOp.collectionId, writeOp.getId(), luid).toString()
+                    val rowId = RowId(Version(writeOp.row.meta!!.version), writeOp.row.meta!!.uid)
+                    Guid(storageId, writeOp.collectionId, writeOp.getId(), rowId).toString()
                 } else null
 
                 is DeleteFeature -> writeOp.guid.toString()

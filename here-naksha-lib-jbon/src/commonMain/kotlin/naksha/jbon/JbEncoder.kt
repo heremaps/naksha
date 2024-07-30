@@ -13,7 +13,7 @@ import kotlin.math.floor
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
 @JsExport
-open class JbEncoder(var global: JbDictDecoder? = null) : Binary() {
+open class JbEncoder(var global: JbDictionary? = null) : Binary() {
 
     /**
      * Create a new resizable editor with a new byte-array of the given size backing it.
@@ -22,7 +22,7 @@ open class JbEncoder(var global: JbDictDecoder? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forSize")
-    constructor(size: Int, global: JbDictDecoder? = null) : this(global) {
+    constructor(size: Int, global: JbDictionary? = null) : this(global) {
         view = Platform.newDataView(ByteArray(size))
         this.readOnly = false
         this.resize = true
@@ -37,7 +37,7 @@ open class JbEncoder(var global: JbDictDecoder? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forBinary")
-    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: JbDictDecoder? = null) : this(global) {
+    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: JbDictionary? = null) : this(global) {
         this.view = binaryView.view
         this.pos = pos
         this.end = end
@@ -54,7 +54,7 @@ open class JbEncoder(var global: JbDictDecoder? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forDataView")
-    constructor(view: PlatformDataView, pos: Int = 0, end: Int = dataview_get_size(view), global: JbDictDecoder? = null) : this(global) {
+    constructor(view: PlatformDataView, pos: Int = 0, end: Int = dataview_get_size(view), global: JbDictionary? = null) : this(global) {
         this.view = view
         this.pos = pos
         this.end = end
@@ -71,7 +71,7 @@ open class JbEncoder(var global: JbDictDecoder? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forUint8Array")
-    constructor(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset, global: JbDictDecoder? = null) : this(global) {
+    constructor(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset, global: JbDictionary? = null) : this(global) {
         view = Platform.newDataView(byteArray, offset, length)
         this.pos = 0
         this.end = dataview_get_size(view)

@@ -12,9 +12,9 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.kotlinModule
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
+import java.security.MessageDigest
 import java.text.Normalizer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
@@ -641,45 +641,48 @@ actual class Platform {
             return if (end > bytes.size) bytes.size else end
         }
 
+        @JvmStatic
+        actual fun isPlv8(): Boolean = false
+
+        @JvmStatic
+        private val md5Digest = ThreadLocal.withInitial { MessageDigest.getInstance("MD5") }
+
+        @JvmStatic
+        actual fun md5(text: String): ByteArray {
+            val digest = md5Digest.get()
+            digest.reset()
+            digest.update(text.toByteArray(Charsets.UTF_8))
+            return digest.digest()
+        }
+
         @JvmField
         internal val lz4Factory: LZ4Factory = LZ4Factory.fastestInstance()
 
         /**
          * Compress bytes.
          * @param raw The bytes to compress.
-         * @param offset The offset of the first byte to compress.
-         * @param size The amount of bytes to compress.
          * @return The deflated (compressed) bytes.
          */
         @JvmStatic
-        actual fun lz4Deflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
-            val end = endOf(raw, offset, size)
+        actual fun lz4Deflate(raw: ByteArray): ByteArray {
             val compressor = lz4Factory.fastCompressor()
-            val maxCompressedLength = compressor.maxCompressedLength(end - offset)
+            val maxCompressedLength = compressor.maxCompressedLength(raw.size)
             val compressed = ByteArray(maxCompressedLength)
-            val compressedLength = compressor.compress(raw, offset, end - offset, compressed, 0, maxCompressedLength)
+            val compressedLength = compressor.compress(raw, 0, raw.size, compressed, 0, maxCompressedLength)
             return compressed.copyOf(compressedLength)
         }
 
         /**
          * Decompress bytes.
          * @param compressed The bytes to decompress.
-         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
-         * @param offset The offset of the first byte to decompress.
-         * @param size The amount of bytes to decompress.
          * @return The inflated (decompress) bytes.
          */
         @JvmStatic
-        actual fun lz4Inflate(
-            compressed: ByteArray,
-            bufferSize: Int,
-            offset: Int,
-            size: Int
-        ): ByteArray {
-            val end = endOf(compressed, offset, size)
+        actual fun lz4Inflate(compressed: ByteArray): ByteArray {
+            // TODO: Simple multiplication of the compressed by 12 is not optimal!
             val decompressor = lz4Factory.fastDecompressor()
-            val restored = if (bufferSize <= 0) ByteArray((end - offset) * 10) else ByteArray(bufferSize)
-            val decompressedLength = decompressor.decompress(compressed, offset, restored, 0, restored.size)
+            val restored = ByteArray(compressed.size * 12)
+            val decompressedLength = decompressor.decompress(compressed, 0, restored, 0, restored.size)
             if (decompressedLength < restored.size) {
                 return restored.copyOf(decompressedLength)
             }
@@ -689,32 +692,18 @@ actual class Platform {
         /**
          * Compress bytes.
          * @param raw The bytes to compress.
-         * @param offset The offset of the first byte to compress.
-         * @param size The amount of bytes to compress.
          * @return The deflated (compressed) bytes.
          */
         @JvmStatic
-        actual fun gzipDeflate(raw: ByteArray, offset: Int, size: Int): ByteArray {
-            TODO("Not yet implemented")
-        }
+        actual fun gzipDeflate(raw: ByteArray): ByteArray = GZip.gzip(raw)
 
         /**
          * Decompress bytes.
          * @param compressed The bytes to decompress.
-         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
-         * @param offset The offset of the first byte to decompress.
-         * @param size The amount of bytes to decompress.
          * @return The inflated (decompress) bytes.
          */
         @JvmStatic
-        actual fun gzipInflate(
-            compressed: ByteArray,
-            bufferSize: Int,
-            offset: Int,
-            size: Int
-        ): ByteArray {
-            TODO("Not yet implemented")
-        }
+        actual fun gzipInflate(compressed: ByteArray): ByteArray = GZip.gunzip(compressed)
 
         actual fun stackTrace(t: Throwable): String = t.stackTraceToString()
 

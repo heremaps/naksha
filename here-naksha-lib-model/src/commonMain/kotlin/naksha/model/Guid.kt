@@ -4,7 +4,6 @@ package naksha.model
 
 import naksha.base.Int64
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
@@ -12,7 +11,7 @@ import kotlin.jvm.JvmStatic
 /**
  * The Global Unique Identifier uniquely identifies a feature, world-wide. When [toString] is invoked, it is serialized into a [URN](https://datatracker.ietf.org/doc/html/rfc8141). It can be restored from a [URN](https://datatracker.ietf.org/doc/html/rfc8141). The format of the URN is:
  *
- * `urn:here:naksha:guid:{storage-id}:{map}:{collection-id}:{feature-id}:{year}:{month}:{day}:{seq}:{uid}`
+ * `urn:here:naksha:guid:{storage-id}:{map}:{collection-id}:{feature-id}:{year}:{month}:{day}:{seq}:{uid}:{flags}`
  * @since 3.0.0
  */
 @JsExport
@@ -45,21 +44,9 @@ data class Guid(
      * The local unique identifier of the state of the feature referred. This persists out of the `version` and the `uid`, which is the version local unique identifier.
      */
     @JvmField
-    val luid: Luid
+    val rowId: RowId
 ) {
     private lateinit var _string: String
-
-    /**
-     * Create a [Guid] from a [row-address][RowAddr].
-     * @param storageId the storage-id.
-     * @param map the map.
-     * @param collectionId the collection-id.
-     * @param featureId the feature-id.
-     * @param addr the row-address.
-     */
-    @JsName("of")
-    constructor(storageId: String, map: String, collectionId: String, featureId: String, addr: RowAddr) :
-            this(storageId, map, collectionId, featureId, Luid(addr.txn, addr.uid))
 
     /**
      * Return the GUID in URN form.
@@ -67,7 +54,9 @@ data class Guid(
      * @since 3.0.0
      */
     override fun toString(): String {
-        if (!this::_string.isInitialized) _string = "urn:here:naksha:guid:${storageId}:${map}:${collectionId}:${featureId}:$luid"
+        if (!this::_string.isInitialized) {
+            _string = "urn:here:naksha:guid:$storageId:$map:$collectionId:$featureId:$rowId"
+        }
         return _string
     }
 
@@ -85,7 +74,8 @@ data class Guid(
         const val DAY = 10
         const val SEQ = 11
         const val UID = 12
-        const val PARTS = 13
+        const val FLAGS = 13
+        const val PARTS = 14
 
         @JsStatic
         @JvmStatic
@@ -102,7 +92,8 @@ data class Guid(
                 v[MAP],
                 v[COLLECTION_ID],
                 v[FEATURE_ID],
-                Luid(Version.of(v[YEAR].toInt(), v[MONTH].toInt(),v[DAY].toInt(), Int64(v[SEQ].toLong())), v[UID].toInt())
+                RowId(Version.of(v[YEAR].toInt(), v[MONTH].toInt(),v[DAY].toInt(), Int64(v[SEQ].toLong())),
+                    v[UID].toInt(), v[FLAGS].toInt())
             )
         }
     }

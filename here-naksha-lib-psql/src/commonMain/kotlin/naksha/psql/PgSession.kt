@@ -8,8 +8,10 @@ import naksha.jbon.JbMapDecoder
 import naksha.jbon.JbFeatureDecoder
 import naksha.jbon.XyzVersion
 import naksha.model.*
+import naksha.model.objects.NakshaCollection
 import naksha.model.request.*
-import naksha.model.response.*
+import naksha.model.request.WriteRequest
+import naksha.model.objects.Transaction
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.read.ReadQueryBuilder
 import naksha.psql.write.RowUpdater
@@ -24,7 +26,7 @@ import naksha.psql.write.WriteRequestExecutor
  * @param options the default options to use, when opening new database connections.
  */
 // @JsExport // <-- when uncommenting this, we get a compiler error!
-class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>(storage, options) {
+class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession(storage, options) {
 
     // TODO: Add a NakshaRow, which should hold the reference to a PgRow of the collection, plus
     //       the JbCollection, which is a JBON reader of the collection JBON. We need this, because
@@ -62,12 +64,12 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
     /**
      * Keeps transaction's counters.
      */
-    var transaction: NakshaTransactionProxy? = null
+    var transaction: Transaction? = null
 
     /**
      * A cache to remember collections configuration <collectionId, configMap>
      */
-    var collectionConfiguration = mutableMapOf<String, NakshaCollectionProxy>()
+    var collectionConfiguration = mutableMapOf<String, NakshaCollection>()
 
     /**
      * The last error number as SQLState.
@@ -126,10 +128,10 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
                 val oldMeta = OLD.meta!!
                 hstInsertPlan.execute(
                     arrayOf(
-                        oldMeta.txnNext,
-                        oldMeta.txn,
+                        oldMeta.nextVersion,
+                        oldMeta.version,
                         oldMeta.uid,
-                        oldMeta.ptxn,
+                        oldMeta.prevVersion,
                         oldMeta.puid,
                         oldMeta.flags,
                         oldMeta.version,
@@ -177,10 +179,10 @@ class PgSession(storage: PgStorage, options: PgOptions) : PgAbstractSession<Any>
             conn.execute(
                 "INSERT INTO $collectionIdQuoted ($COL_ALL) VALUES ($COL_ALL_DOLLAR)",
                 arrayOf(
-                    oldMeta.txnNext,
-                    oldMeta.txn,
+                    oldMeta.nextVersion,
+                    oldMeta.version,
                     oldMeta.uid,
-                    oldMeta.ptxn,
+                    oldMeta.prevVersion,
                     oldMeta.puid,
                     oldMeta.flags,
                     oldMeta.version,
@@ -398,7 +400,7 @@ FROM ns, txn_seq;
         }
     }
 
-    fun getCollectionConfig(collectionId: String): NakshaCollectionProxy {
+    fun getCollectionConfig(collectionId: String): NakshaCollection {
         return if (collectionConfiguration.containsKey(collectionId)) {
             collectionConfiguration[collectionId]!!
         } else {
@@ -414,7 +416,7 @@ FROM ns, txn_seq;
                     id = collectionId,
                     guid = null
                 )
-                val nakCollection = row.toMemoryModel()!!.proxy(NakshaCollectionProxy::class)
+                val nakCollection = row.toFeature()!!.proxy(NakshaCollection::class)
                 collectionConfiguration[collectionId] = nakCollection
                 nakCollection
             }
@@ -427,17 +429,17 @@ FROM ns, txn_seq;
     }
 
     private inner class TransactionAction internal constructor(
-        val transaction: NakshaTransactionProxy,
+        val transaction: Transaction,
         writeRequest: WriteRequest
     ) {
-        private val transactionWriter: SingleCollectionWriter? = if (writeRequest.ops.any { it.collectionId == NKC_TABLE })
+        private val transactionWriter: SingleCollectionWriter? = if (writeRequest.writes.any { it.collectionId == NKC_TABLE })
             null
         else
             SingleCollectionWriter(TRANSACTIONS_COL, this@PgSession, modifyCounters = false)
 
         fun write() {
             transactionWriter?.writeFeatures(
-                WriteRequest().add(WriteFeature(TRANSACTIONS_COL, transaction)).withNoResults()
+                WriteRequest().add(UpsertFeature(TRANSACTIONS_COL, transaction)).withNoResults()
             )
         }
     }
@@ -463,9 +465,9 @@ FROM ns, txn_seq;
         }
     }
 
-    internal fun transaction(): NakshaTransactionProxy {
+    internal fun transaction(): Transaction {
         if (transaction == null) {
-            transaction = NakshaTransactionProxy()
+            transaction = Transaction()
             transaction!!.id = txn().toGuid(storage.id(), "txn", "txn").toString()
         }
         return transaction!!

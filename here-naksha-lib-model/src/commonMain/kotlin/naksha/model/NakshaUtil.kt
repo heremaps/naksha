@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.Platform
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -14,17 +15,21 @@ import kotlin.jvm.JvmStatic
 class NakshaUtil private constructor() {
     companion object NakshaUtilCompanion {
         /**
-         * The collection identifier in which versions are stored.
+         * The prefix for virtual (internal) collections.
          */
-        const val VERSIONS_COL_ID = "naksha~versions"
+        const val VIRT_PREFIX = "naksha~"
         /**
-         * The collection identifier in which the collections them-self are stored.
+         * The identifier of the virtual collection in which transactions are stored.
          */
-        const val COLLECTIONS_COL_ID = "naksha~collections"
+        const val VIRT_TRANSACTIONS = "naksha~transactions"
         /**
-         * The collection identifier in which the dictionaries are stored.
+         * The identifier of the virtual collection in which the collections them-self are stored.
          */
-        const val DICTIONARIES_COL_ID = "naksha~dictionaries"
+        const val VIRT_COLLECTIONS = "naksha~collections"
+        /**
+         * The identifier of the virtual collection in which the dictionaries are stored.
+         */
+        const val VIRT_DICTIONARIES = "naksha~dictionaries"
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
@@ -126,5 +131,18 @@ class NakshaUtil private constructor() {
             sb.append('"')
             return sb.toString()
         }
+
+        /**
+         * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
+         * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions, and the rest
+         * addresses the partition, for example for 4 partitions do `partitionNumber(id) % 4`, what will be a value between 0 and 3.
+         *
+         * @param featureId the feature id.
+         * @return the partition number of the feature, a value between 0 and 255.
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionNumber(featureId: String): Int = Platform.md5(featureId)[0].toInt() and 255
+
     }
 }

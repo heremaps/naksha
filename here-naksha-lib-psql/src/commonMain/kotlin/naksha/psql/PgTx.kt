@@ -4,7 +4,7 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.model.Guid
-import naksha.model.Luid
+import naksha.model.RowId
 import naksha.model.Version
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -88,18 +88,15 @@ open class PgTx(val session: PgSession) : AutoCloseable {
     // TODO: We need a map of ongoing transaction logs, one per schema!
 
     /**
-     * Creates a new [local unique identifier][naksha.model.Luid] by consuming the current [txn], and generating a new [unique transaction local identifier][uid].
-     */
-    fun newLuid(): Luid = Luid(txn, uid.getAndAdd(1))
-
-    /**
      * Generates a [global unique identifier][Guid] of a feature from the given arguments.
      * @param collectionId the collection-id of the collection in which the feature is located.
      * @param featureId the ID of the feature.
-     * @param luid the local unique identifier; defaults to create a new one.
+     * @param rowId the local unique identifier; defaults to create a new one.
      * @return the global unique identifier of the given local unique identifier.
      */
-    fun guidOf(collectionId: String, featureId: String, luid: Luid): Guid = Guid(session.storage.id(), collectionId, featureId, luid)
+    fun guidOf(collectionId: String, featureId: String, rowId: RowId): Guid {
+        TODO("IMplement me!")
+    }
 
     //
 

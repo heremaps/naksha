@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.geo.GeometryProxy
 import java.security.MessageDigest
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
@@ -148,5 +149,27 @@ actual class PgPlatform {
          */
         @JvmStatic
         actual fun newTestStorage(): PgStorage = PsqlTestStorage.newTestStorage()
+
+        /**
+         * Decode a GeoJSON geometry from encoded bytes.
+         * @param bytes the bytes to decode.
+         * @param flags the codec flags.
+         * @return the GeoJSON geometry.
+         * @since 3.0.0
+         */
+        actual fun decodeGeometry(bytes: ByteArray?, flags: Int): GeometryProxy? {
+            TODO("Not yet implemented")
+        }
+
+        /**
+         * Encodes the given GeoJSON geometry into bytes.
+         * @param geometry the geometry to encode.
+         * @param flags the codec flags.
+         * @return the encoded GeoJSON geometry.
+         * @since 3.0.0
+         */
+        actual fun encodeGeometry(geometry: GeometryProxy?, flags: Int): ByteArray {
+            TODO("Not yet implemented")
+        }
     }
 }

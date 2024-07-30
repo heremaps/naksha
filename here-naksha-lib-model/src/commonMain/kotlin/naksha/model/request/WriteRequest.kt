@@ -2,29 +2,49 @@
 
 package naksha.model.request
 
+import naksha.base.NotNullProperty
+import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
 
+/**
+ * Ask the storage to perform a set of write operations.
+ *
+ * Example:
+ * ```kotlin
+ * val req = WriteRequest()
+ * req.add(Write().createFeature(null, collection.id, feature))
+ * ...
+ * ```
+ * ```java
+ * final WriteRequest req = new WriteRequest();
+ * req.add(new Write()
+ *         .createFeature(null, collection.getId(), feature));
+ * ...
+ * ```
+ */
 @JsExport
-open class WriteRequest : Request<WriteRequest>() {
+open class WriteRequest : Request() {
+    companion object WriteRequest_C {
+        private val WRITE_LIST = NotNullProperty<WriteRequest, WriteList>(WriteList::class)
+        private val BOOLEAN = NotNullProperty<WriteRequest, Boolean>(Boolean::class) { _, _ -> false }
+    }
+
     /**
-     * Write operations to perform.
-     * It might have, operations of different types (Insert/Update/etc.) and to different collections (tables).
+     * All writes to perform.
+     *
+     * It might have, operations of different types (insert/update/etc.), and to different collections.
      */
-    @JvmField
-    var ops: MutableList<Write> = mutableListOf()
+    var writes by WRITE_LIST
 
     fun add(op: Write): WriteRequest {
-        ops.add(op)
+        writes.add(op)
         return this
     }
 
     /**
-     * When noResults is set, the response will not contain any results (rows). This is the fastest way to perform a write-request.
-     * You'll still get information if request succeeded or not.
+     * When `noResults` is set, the response will not contain any results (rows), it will not even hold a result-set. This is the fastest way to perform a write-request. You'll still get information if request succeeded or not.
      */
-    @JvmField
-    var noResults: Boolean = false
+    var noResults by BOOLEAN
 
     fun withNoResults(): WriteRequest {
         noResults = true
@@ -32,21 +52,13 @@ open class WriteRequest : Request<WriteRequest>() {
     }
 
     /**
-     * By default, the response will return rows in same order as were given in request. It's possible to change this behaviour by setting this flag to `true`, in such case response will return rows in order that is most convenient for the storage, which is less effort for the storage in some cases, because it does not have to order results.
+     * By default, the response will return the rows in same order as they were given in request. It's possible to change this behaviour by setting this flag to _true_, in such case response will return rows in the order that is most convenient for the storage, which is less effort for the storage in some cases, because it does not have to order results.
      */
-    @JvmField
-    var allowRandomOrder: Boolean = false
+    var allowRandomOrder by BOOLEAN
 
     fun withAllowRandomOrder(): WriteRequest {
         allowRandomOrder = true
         return this
     }
 
-    override fun copyTo(copy: WriteRequest): WriteRequest {
-        super.copyTo(copy)
-        copy.ops = this.ops.toMutableList()
-        copy.noResults = this.noResults
-        copy.allowRandomOrder = this.allowRandomOrder
-        return copy
-    }
 }

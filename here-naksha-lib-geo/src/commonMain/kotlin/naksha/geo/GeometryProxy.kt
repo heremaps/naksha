@@ -15,7 +15,7 @@ open class GeometryProxy() : AnyObject() {
     }
 
     companion object GeometryProxyCompanion {
-        private val TYPE = NullableProperty<Any, GeometryProxy, String>(String::class)
+        private val TYPE = NullableProperty<GeometryProxy, String>(String::class)
     }
 
     /**

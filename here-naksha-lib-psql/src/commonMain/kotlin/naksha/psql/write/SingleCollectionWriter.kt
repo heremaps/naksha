@@ -2,9 +2,9 @@ package naksha.psql.write
 
 import naksha.base.Platform.PlatformCompanion.currentMillis
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.model.NakshaCollectionProxy
+import naksha.model.objects.NakshaCollection
 import naksha.model.TransactionCollectionInfoProxy
-import naksha.model.request.FeatureOp
+import naksha.model.request.op.WriteFeature
 import naksha.model.request.Write.Companion.XYZ_OP_CREATE
 import naksha.model.request.Write.Companion.XYZ_OP_DELETE
 import naksha.model.request.Write.Companion.XYZ_OP_PURGE
@@ -76,14 +76,14 @@ class SingleCollectionWriter(
         if (modifyCounters) {
             // no exception was thrown - execution succeeded, we can increase transaction counter
             val transaction = session.transaction()
-            transaction.incFeaturesModified(writeRequest.ops.size)
-            transaction.addCollectionCounts(counts)
+            transaction.incFeaturesModified(writeRequest.writes.size)
+            transaction.addTxCollectionInfo(counts)
         }
         val END_EXECUTION = currentMillis()
 
         val END = currentMillis()
         logger.info("[{} feature]: {}ms, loading: {}ms, execution: {}ms, mapping: {}ms, preparing: {}ms",
-            writeRequest.ops.size,
+            writeRequest.writes.size,
             END - START,
             END_LOADING - START,
             END_EXECUTION - START_EXECUTION,
@@ -111,7 +111,7 @@ class SingleCollectionWriter(
             when (opType) {
                 XYZ_OP_CREATE -> {
                     val newCollection = when (op.reqWrite) {
-                        is FeatureOp ->op.reqWrite.feature.proxy(NakshaCollectionProxy::class)
+                        is WriteFeature ->op.reqWrite.feature.proxy(NakshaCollection::class)
                         else -> throw RuntimeException("add support for WriteRow collection")
                     }
 // TODO: Fix me!!!
@@ -167,7 +167,7 @@ class SingleCollectionWriter(
         if (isCollectionPartitioned == true) PgUtil.quoteIdent("${headCollectionId}\$p${partitionPosix(partitionKey)}") else
             PgUtil.quoteIdent(collectionId)
 
-    private fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: Row?, collectionConfig: NakshaCollectionProxy): Int {
+    private fun calculateOpToPerform(row: NakshaRequestOp, existingFeature: Row?, collectionConfig: NakshaCollection): Int {
         return if (row.reqWrite.op == XYZ_OP_UPSERT) {
             if (existingFeature != null) {
                 XYZ_OP_UPDATE

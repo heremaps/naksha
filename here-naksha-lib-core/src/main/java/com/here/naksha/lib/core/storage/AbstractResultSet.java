@@ -28,7 +28,7 @@ import com.here.naksha.lib.core.view.ViewSerialize;
 import java.util.NoSuchElementException;
 import naksha.geo.GeometryProxy;
 import naksha.geo.ProxyGeoUtil;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -47,7 +47,7 @@ import org.locationtech.jts.io.WKBWriter;
  */
 @Deprecated
 @AvailableSince(v2_0_5)
-public abstract class AbstractResultSet<FEATURE extends NakshaFeatureProxy> implements IResultSet<FEATURE> {
+public abstract class AbstractResultSet<FEATURE extends NakshaFeature> implements IResultSet<FEATURE> {
 
   /**
    * Create a new result-set for the given feature-type.

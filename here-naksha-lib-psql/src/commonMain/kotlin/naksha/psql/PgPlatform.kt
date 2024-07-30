@@ -1,5 +1,10 @@
 package naksha.psql
 
+import naksha.geo.GeometryProxy
+import naksha.model.Flags
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
+
 /**
  * PostgresQL utility and factory functions. They are implemented differently on every platform.
  */
@@ -116,5 +121,25 @@ expect class PgPlatform {
          * @throws UnsupportedOperationException if this platform does not support running tests.
          */
         fun newTestStorage(): PgStorage
+
+        /**
+         * Decode a GeoJSON geometry from encoded bytes.
+         * @param bytes the bytes to decode.
+         * @param flags the codec flags.
+         * @return the GeoJSON geometry.
+         * @since 3.0.0
+         */
+        fun decodeGeometry(bytes: ByteArray?, flags: Int): GeometryProxy?
+        // TODO: In Java use JTS, in PLV8 use PostGis functions!
+
+        /**
+         * Encodes the given GeoJSON geometry into bytes.
+         * @param geometry the geometry to encode.
+         * @param flags the codec flags.
+         * @return the encoded GeoJSON geometry.
+         * @since 3.0.0
+         */
+        fun encodeGeometry(geometry: GeometryProxy?, flags: Int): ByteArray
+        // TODO: In Java use JTS, in PLV8 use PostGis functions!
     }
 }

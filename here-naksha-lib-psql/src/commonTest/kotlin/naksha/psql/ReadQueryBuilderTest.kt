@@ -1,6 +1,8 @@
 package naksha.psql
 
 import naksha.geo.GeometryProxy
+import naksha.model.NakshaUtil
+import naksha.model.NakshaUtil.NakshaUtilCompanion.VIRT_COLLECTIONS
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadFeatures.ReadFeaturesCompanion.readIdsOnly
@@ -169,7 +171,7 @@ class ReadQueryBuilderTest {
     fun testReadWithAnd() {
         // given
         val req = readIdsOnly("foo")
-            .withQueryProperties(LOr(PropertyQuery(id, EQUALS, "f1"), LAnd(PropertyQuery(id, EQUALS, "f2"), PropertyQuery(uid, LT, "f1"))))
+            .withQueryProperties(LOr(PQuery(id, EQUALS, "f1"), LAnd(PQuery(id, EQUALS, "f2"), PQuery(uid, LT, "f1"))))
 
         // when
         val (sql, params) = builder.build(req)
@@ -211,7 +213,7 @@ class ReadQueryBuilderTest {
             .addCollectionId("foo")
             .withQueryHistory()
             .withQueryDeleted()
-            .withQueryProperties(PropertyQuery(id, EQUALS, "X"))
+            .withQueryProperties(PQuery(id, EQUALS, "X"))
             .withRowOptions(RowOptions(meta = false, tags = false, feature = false, geometry = false))
 
         // when
@@ -233,7 +235,7 @@ class ReadQueryBuilderTest {
     //@Test
     fun testReadByIdIsNotNull() {
         // given
-        val req = readIdsOnly("foo").withQueryProperties(PropertyQuery(id, IS_NOT_NULL))
+        val req = readIdsOnly("foo").withQueryProperties(PQuery(id, IS_NOT_NULL))
 
         // when
         val (sql, params) = builder.build(req)
@@ -292,7 +294,7 @@ class ReadQueryBuilderTest {
         // then
         assertEquals(0, params.size)
         assertEquals(
-            """(SELECT id, type, geo_ref, flags, txn_next, txn, uid, ptxn, puid, version, created_at, updated_at, author_ts, author, app_id, geo_grid, tags, geo, feature FROM "naksha~collections")""",
+            """(SELECT id, type, geo_ref, flags, txn_next, txn, uid, ptxn, puid, version, created_at, updated_at, author_ts, author, app_id, geo_grid, tags, geo, feature FROM "$VIRT_COLLECTIONS")""",
             removeLimitWrapper(sql)
         )
     }
@@ -313,7 +315,7 @@ class ReadQueryBuilderTest {
         assertEquals(1, params.size)
         assertTrue(arrayOf("foo", "bar", "baz") contentEquals params[0] as Array<String>)
         assertEquals(
-            """(SELECT id, type, geo_ref, flags FROM "naksha~collections" WHERE id in $1)""",
+            """(SELECT id, type, geo_ref, flags FROM "$VIRT_COLLECTIONS" WHERE id in $1)""",
             removeLimitWrapper(sql)
         )
     }
@@ -333,9 +335,9 @@ class ReadQueryBuilderTest {
         assertEquals(2, params.size)
         assertEquals(
             """
-            (SELECT id, type, geo_ref, flags FROM "naksha~collections" WHERE id in $1)
+            (SELECT id, type, geo_ref, flags FROM "$VIRT_COLLECTIONS" WHERE id in $1)
             UNION ALL
-            (SELECT id, type, geo_ref, flags FROM "naksha~collections${'$'}del" WHERE id in $2)
+            (SELECT id, type, geo_ref, flags FROM "$VIRT_COLLECTIONS${'$'}del" WHERE id in $2)
             """.trimIndent().trimMargin(),
             removeLimitWrapper(sql)
         )
@@ -347,7 +349,7 @@ class ReadQueryBuilderTest {
         val uuid = "test_storage:building_delta:feature1:2024:01:23:1:0"
 
         val req = readIdsOnly("foo")
-            .withQueryProperties(PropertyQuery(Property.uuid, EQUALS, uuid))
+            .withQueryProperties(PQuery(Property.uuid, EQUALS, uuid))
 
         // when
         val (sql, params) = builder.build(req)

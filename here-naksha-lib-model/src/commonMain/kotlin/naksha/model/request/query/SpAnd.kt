@@ -20,13 +20,4 @@ class SpAnd() : ListProxy<ISpatialQuery>(ISpatialQuery::class), ISpatialQuery {
     constructor(vararg queries: ISpatialQuery) : this() {
         addAll(queries)
     }
-
-    /**
-     * Create a logical AND combination of the given queries.
-     * @param queries the queries to combine.
-     */
-    @JsName("ofArray")
-    constructor(queries: Array<ISpatialQuery>) : this() {
-        addAll(queries)
-    }
 }

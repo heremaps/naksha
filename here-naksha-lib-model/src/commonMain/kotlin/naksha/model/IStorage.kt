@@ -3,8 +3,9 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.base.PlatformMap
 import naksha.jbon.IDictManager
+import naksha.model.objects.NakshaFeature
+import naksha.model.request.ResultRow
 import kotlin.js.JsExport
 
 /**
@@ -13,6 +14,7 @@ import kotlin.js.JsExport
  * Storages operate on maps. A map is an isolated data sink within the same storage (like an own database schema, an own S3 bucket, an own SQLite database, an own file, aso.). Some implementations only support one map, but if multiple maps are supported, a map is a fully separated storage entity. Each map has its own collections, its own transaction log, and all other entities. Some storages allow to access multiple maps from one session, others may limit a session to a single map. The capabilities can be queried at the session.
  *
  * The storage may or may not support dictionaries, but in any case it needs to return a dictionary manager (even, if this is only an immutable one with no content).
+ * @since 2.0.7
  */
 @JsExport
 interface IStorage : AutoCloseable {
@@ -55,12 +57,13 @@ interface IStorage : AutoCloseable {
     fun dropMap(map: String)
 
     /**
-     * Convert the given [Row] into a [NakshaFeatureProxy].
-     * @param row The row to convert.
-     * @return The feature generated from the row.
+     * Convert the given [Row] into a [NakshaFeature].
+     *
+     * @param row the row to convert.
+     * @return the feature generated from the row.
      * @since 3.0.0
      */
-    fun rowToFeature(row: Row): NakshaFeatureProxy
+    fun rowToFeature(row: Row): NakshaFeature
 
     /**
      * Convert the given feature into a [Row].
@@ -68,16 +71,17 @@ interface IStorage : AutoCloseable {
      * @return the [Row] generated from the given feature.
      * @since 3.0.0
      */
-    fun featureToRow(feature: PlatformMap): Row
+    fun featureToRow(feature: NakshaFeature): Row
 
     /**
      * Returns the dictionary manager of the storage.
      *
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * @param map the map for which to return the dictionary manager.
      * @return The dictionary manager of the storage.
      * @since 3.0.0
      */
-    fun dictManager(nakshaContext: NakshaContext): IDictManager
+    fun dictManager(map: String = NakshaContext.currentContext().map): IDictManager
 
     @Deprecated(
         "This is not yet implemented and need further review",
@@ -116,19 +120,36 @@ interface IStorage : AutoCloseable {
      * @param handle the handle to test.
      * @param ttl if not _null_, the time-to-live of the handle should be extended by the given amount of milliseconds, if possible.
      * @return _true_ if the handle is valid, _false_ otherwise.
+     * @since 3.0.0
      */
     fun validateHandle(handle: String, ttl: Int? = null): Boolean
 
     /**
-     * Fetches all rows with the given addresses from the storage.
+     * Fetches all rows with the given row identifiers.
      * @param map the map from which to fetch.
      * @param collectionId the collection from to fetch.
-     * @param rowAddressList the list of rows to fetch.
+     * @param rowIds a list of row identifiers of the rows to fetch.
      * @param cacheOnly if _true_, then row is only returned, when being cached in memory.
-     * @return a map between the given row-addresses and the row fetched from the storage or _null_, if the row was not found.
+     * @return the list of the fetched rows, _null_, if the row was not in cached or not found in the storage.
      * @since 3.0.0
      */
-    fun fetch(map: String, collectionId: String, rowAddressList: List<RowAddr>, cacheOnly: Boolean = false): Map<RowAddr, Row?>
+    fun fetchRowsById(map: String, collectionId: String, rowIds: List<RowId>, cacheOnly: Boolean = false): List<Row?>
+
+    /**
+     * Fetches all rows in the result-rows given.
+     * @param rows a list of result-rows to fetch.
+     * @param cacheOnly if _true_, then the row is only returned, when being cached in memory.
+     * @since 3.0.0
+     */
+    fun fetchRows(rows: List<ResultRow>, cacheOnly: Boolean = false)
+
+    /**
+     * Fetches a signle result-row.
+     * @param row the result-row into which to load the row.
+     * @param cacheOnly if _true_, then the row is only returned, when being cached in memory.
+     * @since 3.0.0
+     */
+    fun fetchRow(row: ResultRow, cacheOnly: Boolean = false)
 
     /**
      * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).

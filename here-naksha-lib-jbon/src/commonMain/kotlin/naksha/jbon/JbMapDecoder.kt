@@ -1,6 +1,7 @@
 package naksha.jbon
 
 import naksha.base.AnyObject
+import naksha.base.PlatformMap
 import kotlin.js.JsExport
 
 /**
@@ -98,7 +99,7 @@ class JbMapDecoder : JbEntryArray<JbMapDecoder>() {
      * Returns this map as [AnyObject].
      * @return This binary as [AnyObject].
      */
-    fun toIMap(): AnyObject {
+    fun toAnyObject(): AnyObject {
         return JbDecoder.readMap(this)
     }
 }

@@ -4,6 +4,7 @@ package naksha.psql
 
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaException
+import naksha.model.NakshaUtil
 import kotlin.js.JsExport
 
 /**
@@ -11,10 +12,7 @@ import kotlin.js.JsExport
  *
  */
 @JsExport
-class PgNakshaTransactions internal constructor(schema: PgSchema) : PgCollection(schema, ID), PgInternalCollection {
-    companion object NakshaTransactionsCompanion {
-        const val ID = "naksha~transactions"
-    }
+class PgNakshaTransactions internal constructor(schema: PgSchema) : PgCollection(schema, NakshaUtil.VIRT_TRANSACTIONS), PgInternalCollection {
 
     /**
      * The transactions table.

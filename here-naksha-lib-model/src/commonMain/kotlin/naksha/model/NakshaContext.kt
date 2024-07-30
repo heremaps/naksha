@@ -5,6 +5,7 @@ package naksha.model
 import naksha.auth.UserRightsMatrix
 import naksha.base.*
 import naksha.base.fn.Fn0
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -20,18 +21,23 @@ import kotlin.reflect.KClass
 @JsExport
 open class NakshaContext protected constructor() {
     /**
-     * The internal field of the **appId** getter and setters.
-     */
-    private var _appId: String? = null
-
-    /**
      * The application identifier of the client that acts. It is used at many places, for authorization, ownership of features and logging.
      */
-    var appId: String
-        get() = _appId ?: throw IllegalStateException("AppId must not be null")
-        set(value) {
-            _appId = value
-        }
+    var appId: String? = null
+
+    /**
+     * Returns the appId or the given alternative.
+     * @param alternative the alternative to return, when no appId is available.
+     * @return the appId.
+     */
+    fun getAppIdOr(alternative: String): String = appId ?: alternative
+
+    /**
+     * Returns the appId or throws a [NakshaError.ILLEGAL_STATE].
+     * @return the appId.
+     */
+    fun getAppIdOrThrow(msgFn: Fn0<String>? = null): String =
+        appId ?: throw NakshaException(ILLEGAL_STATE, msgFn?.call() ?: "The current context has no appId")
 
     /**
      * Changes the application-identifier and returns the [NakshaContext].
@@ -145,10 +151,13 @@ open class NakshaContext protected constructor() {
 
     /**
      * Returns the _actor_, which is normally the [author]. If author is _null_, then it returns the [appId].
+     * @param alternative the alternative to return, when no [author] and no [appId] are available.
+     * @param errMsgFn a function to generate an error message, when no [author], no [appId], and no [alternative] are available.
+     * @return the actor.
      * @since 2.0.15
      */
-    fun getActor(): String {
-        return author ?: appId
+    fun getActor(alternative: String? = null, errMsgFn: Fn0<String>? = null): String {
+        return author ?: appId ?: alternative ?: throw NakshaException(ILLEGAL_STATE, errMsgFn?.call()?: "Missing actor")
     }
 
     /**
@@ -179,7 +188,7 @@ open class NakshaContext protected constructor() {
      * @param key the key to set.
      * @param value the value to set.
      */
-    operator fun <T: Any> set(key: KClass<T>, value: T) {
+    operator fun <T : Any> set(key: KClass<T>, value: T) {
         attachments[key] = value
     }
 
@@ -200,7 +209,6 @@ open class NakshaContext protected constructor() {
      * @return the previously set value.
      */
     fun put(attachment: Any): Any? {
-        val key = attachment::class
         return attachments.put(attachment::class, attachment)
     }
 
@@ -219,7 +227,7 @@ open class NakshaContext protected constructor() {
      * @param value the new value.
      * @return _true_ if the replacement was successful; _false_ otherwise.
      */
-    fun <T: Any> replace(existing: T, value: T): Boolean {
+    fun <T : Any> replace(existing: T, value: T): Boolean {
         return attachments.replace(existing::class, existing, value)
     }
 
@@ -228,7 +236,7 @@ open class NakshaContext protected constructor() {
      * @param attachmentType the key to remove.
      * @return the currently assigned value.
      */
-    fun <T: Any> remove(attachmentType: KClass<T>): T? {
+    fun <T : Any> remove(attachmentType: KClass<T>): T? {
         val raw = attachments.remove(attachmentType)
         return if (attachmentType.isInstance(raw)) raw as T else null
     }
@@ -257,6 +265,30 @@ open class NakshaContext protected constructor() {
          * The default map, being an empty string.
          */
         const val DEFAULT_MAP = ""
+
+        /**
+         * Returns the current map.
+         * @return the current map.
+         */
+        @JvmStatic
+        @JsStatic
+        fun map(): String = currentContext().map
+
+        /**
+         * Returns the current author.
+         * @return the current author.
+         */
+        @JvmStatic
+        @JsStatic
+        fun appId(): String? = currentContext().appId
+
+        /**
+         * Returns the current author.
+         * @return the current author.
+         */
+        @JvmStatic
+        @JsStatic
+        fun author(): String? = currentContext().author
 
         /**
          * The thread local that stores the [NakshaContext].

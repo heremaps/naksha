@@ -1,32 +1,55 @@
 package naksha.model
 
+import naksha.base.JsEnum
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
+import kotlin.reflect.KClass
 
 /**
- * Helper for action encoding in [Flags].
+ * An enumeration about the supported actions.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class Action : FlagsBits() {
-    companion object ActionCompanion {
+class Action : JsEnum() {
+    @Suppress("NON_EXPORTABLE_TYPE")
+    override fun namespace(): KClass<out JsEnum> = Action::class
+
+    override fun initClass() {}
+
+    companion object ActionEnumCompanion {
         /**
-         * Create action.
+         * The feature was created.
          */
-        const val CREATED = 0 shl ACTION_SHIFT
+        @JsStatic
+        @JvmField
+        val CREATED = defIgnoreCase(Action::class, "CREATED") { self -> self.action = ActionValues.CREATED }
 
         /**
-         * Update action.
+         * The feature was updated.
          */
-        const val UPDATED = 1 shl ACTION_SHIFT
+        @JsStatic
+        @JvmField
+        val UPDATED = defIgnoreCase(Action::class, "UPDATED") { self -> self.action = ActionValues.UPDATED }
 
         /**
-         * Delete action.
+         * The feature was deleted.
          */
-        const val DELETED = 2 shl ACTION_SHIFT
+        @JsStatic
+        @JvmField
+        val DELETED = defIgnoreCase(Action::class, "DELETED") { self -> self.action = ActionValues.DELETED }
 
         /**
-         * Unknown action.
+         * The action is unknown (invalid state).
          */
-        const val UNKNOWN = 3 shl ACTION_SHIFT
+        @JsStatic
+        @JvmField
+        val UNKNOWN = defIgnoreCase(Action::class, "UNKNOWN") { self -> self.action = ActionValues.UNKNOWN }
     }
+
+    /**
+     * The action value.
+     */
+    var action: Int = ActionValues.UNKNOWN
+        private set
 }

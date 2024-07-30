@@ -4,11 +4,11 @@ import naksha.base.Platform
 import naksha.base.PlatformUtil
 import naksha.geo.PointCoord
 import naksha.geo.PointGeometry
-import naksha.model.NakshaFeatureProxy
-import naksha.model.Tags
+import naksha.model.objects.NakshaFeature
+import naksha.model.TagList
 
 /**
- * A helper class to generate random [NakshaFeatureProxy]'s.
+ * A helper class to generate random [NakshaFeature]'s.
  */
 class ProxyFeatureGenerator {
     var adverbs: Array<String> = arrayOf(
@@ -362,10 +362,10 @@ class ProxyFeatureGenerator {
      *
      * @return A new random feature.
      */
-    fun newRandomFeature(): NakshaFeatureProxy {
+    fun newRandomFeature(): NakshaFeature {
         val rand = Platform.random()
         val featureId = PlatformUtil.randomString(20)
-        val feature = NakshaFeatureProxy(featureId)
+        val feature = NakshaFeature(featureId)
         val longitude = Platform.random() * 360 - 180 // -180.0 to 180.0
         val latitude = Platform.random() * 180 - 90 // -90 to 90.0
         feature.geometry = PointGeometry(PointCoord(longitude, latitude))
@@ -400,7 +400,7 @@ class ProxyFeatureGenerator {
         // 33% to get tags
         if (Platform.random() <= 0.33) {
             val xyz = feature.properties.xyz
-            val tags = Tags()
+            val tags = TagList()
             // We add between 1 and 4 tags.
             for (j in 0..3) {
                 var i = (Platform.random() * (adverbs.size - 1)).toInt()

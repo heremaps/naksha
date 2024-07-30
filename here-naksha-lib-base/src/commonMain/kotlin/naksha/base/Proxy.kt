@@ -54,6 +54,13 @@ abstract class Proxy : PlatformObject {
                     if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
                 }
             } else if (klass.isInstance(data)) return data as T
+            if (klass == Int64::class) when (raw) {
+                is Short -> Int64(raw.toInt())
+                is Int -> Int64(raw)
+                is Long -> Int64(raw)
+                is Float -> Int64(raw.toDouble())
+                is Double -> Int64(raw)
+            }
             return if (init != null) init.call() else alternative
         }
 

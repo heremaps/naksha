@@ -137,8 +137,6 @@ class PlatformUtil {
         @JsStatic
         fun hashCodeOf(vararg values: Any?): Int = hashCodeOf(0, *values)
 
-        @JvmStatic
-        @JsStatic
         private fun hashCodeOf(hashInput: Int, vararg values: Any?): Int {
             var hash = hashInput
             for (v in values) {

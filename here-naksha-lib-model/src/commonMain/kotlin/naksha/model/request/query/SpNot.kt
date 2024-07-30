@@ -8,13 +8,13 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * Negates the spatial query.
+ * Negates the query.
  */
 @JsExport
 class SpNot() : AnyObject(), ISpatialQuery {
 
     /**
-     * Create a negation of the given spatial query.
+     * Create a negation of the given query.
      * @param query the query to negate.
      */
     @JsName("of")

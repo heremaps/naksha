@@ -36,18 +36,18 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LazyParsableFeatureList {
 
   /** Type for a feature list. */
-  public static final TypeReference<List<@NotNull NakshaFeatureProxy>> FEATURE_LIST = new TypeReference<>() {};
+  public static final TypeReference<List<@NotNull NakshaFeature>> FEATURE_LIST = new TypeReference<>() {};
 
   private static final String FEATURE_TYPE = "Feature";
   private String valueString;
-  private List<? extends NakshaFeatureProxy> value;
+  private List<? extends NakshaFeature> value;
 
   public LazyParsableFeatureList() {}
 
@@ -57,12 +57,12 @@ public class LazyParsableFeatureList {
   }
 
   @JsonCreator(mode = Mode.DELEGATING)
-  public LazyParsableFeatureList(@Nullable List<@NotNull NakshaFeatureProxy> value) {
+  public LazyParsableFeatureList(@Nullable List<@NotNull NakshaFeature> value) {
     this.value = value;
   }
 
   @JsonValue
-  public @NotNull List<? extends NakshaFeatureProxy> get() {
+  public @NotNull List<? extends NakshaFeature> get() {
     if (valueString != null) {
       value = JsonSerializable.deserialize(valueString, FEATURE_LIST);
       valueString = null;
@@ -73,7 +73,7 @@ public class LazyParsableFeatureList {
     return value;
   }
 
-  public void set(@NotNull List<@NotNull ? extends NakshaFeatureProxy> value) {
+  public void set(@NotNull List<@NotNull ? extends NakshaFeature> value) {
     this.value = value;
     this.valueString = null;
   }

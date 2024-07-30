@@ -486,7 +486,7 @@ class JbCoreTest {
         assertFalse(dictReader.nextUnit())
 
         // Test the dictionary class.
-        val dict = JbDictDecoder().mapBinary(dictView, 0)
+        val dict = JbDictionary().mapBinary(dictView, 0)
         assertEquals(-1, dict.length())
         dict.loadAll()
         assertEquals(2, dict.length())

@@ -8,6 +8,8 @@ import naksha.base.StringList
 import naksha.model.NakshaUtil.NakshaUtilCompanion.quoteLiteral
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
 /**
  * The reference to a property within a feature.
@@ -22,15 +24,6 @@ open class Property() : StringList() {
     @JsName("of")
     constructor(vararg path: String) : this() {
         for (p in path) add(p)
-    }
-
-    /**
-     * Create a property from a path given as variable argument list.
-     * @param path the path as string-array.
-     */
-    @JsName("fromArray")
-    constructor(path: Array<String>) : this() {
-        addAll(path)
     }
 
     private var array: Array<String>? = null
@@ -79,6 +72,19 @@ open class Property() : StringList() {
     }
 
     companion object Property_C {
+        /**
+         * Create a property from a path given as variable argument list.
+         * @param path the path as string-array.
+         * @return the property.
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromArray(path: Array<String>): Property {
+            val p = Property()
+            p.addAll(path)
+            return p
+        }
+
         /**
          * Simple constant for `properties`.
          */

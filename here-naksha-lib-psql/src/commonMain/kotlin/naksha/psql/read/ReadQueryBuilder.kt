@@ -123,7 +123,7 @@ internal class ReadQueryBuilder {
      * @param whereSql - StringBuilder to add conditions
      * @param paramsList - list of params - will be modified whenever condition is compared to value provided by request.
      */
-    private fun addPOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: PropertyQuery) {
+    private fun addPOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: PQuery) {
         // TODO: Fix me !!!
         // real column names
 //        val col = when (pop.property) {
@@ -181,7 +181,7 @@ internal class ReadQueryBuilder {
      * To query UUID we have to query particular columns.
      * Only `=` operation is allowed.
      */
-    private fun customUuidOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: PropertyQuery) {
+    private fun customUuidOp(whereSql: StringBuilder, paramsList: MutableList<Any?>, pop: PQuery) {
         // TODO: Fix me !!!
 //        check(pop.value != null)
 //        check(pop.op == POpType.EQ)

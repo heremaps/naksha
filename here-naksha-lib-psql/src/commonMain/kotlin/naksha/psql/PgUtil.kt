@@ -2,10 +2,17 @@
 
 package naksha.psql
 
-import naksha.base.Fnv1a32
-import naksha.base.Fnv1a64
-import naksha.base.Int64
-import naksha.model.NakshaUtil
+import naksha.base.*
+import naksha.geo.GeometryProxy
+import naksha.jbon.IDictManager
+import naksha.jbon.JbDictionary
+import naksha.jbon.JbFeatureDecoder
+import naksha.model.*
+import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
+import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
+import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
+import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
+import naksha.model.objects.NakshaFeature
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
 import kotlin.js.JsExport
@@ -150,5 +157,109 @@ class PgUtil private constructor() {
         @JsStatic
         @JvmStatic
         fun lockId(name: String): Int64 = Fnv1a64.string(Fnv1a64.start(), name)
+
+        /**
+         * Decode the Naksha feature.
+         * @param bytes the bytes to decode.
+         * @param flags the codec flags.
+         * @param dictManager the dictionary manager to use for decoding; if any.
+         * @return the Naksha feature.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? {
+            if (bytes == null) return null
+            var raw = bytes
+            if (flags.featureGzip()) raw = Platform.gzipInflate(bytes)
+            val encoding = flags.featureEncoding()
+            if (encoding == JBON || encoding == JBON_GZIP) {
+                val decoder = JbFeatureDecoder(dictManager)
+                decoder.mapBytes(raw)
+                return decoder.toAnyObject().proxy(NakshaFeature::class)
+            }
+            if (encoding == JSON || encoding == JSON_GZIP) {
+                val decoded = Platform.fromJSON(bytes.decodeToString())
+                if (decoded is PlatformMap) return decoded.proxy(NakshaFeature::class)
+            }
+            return null
+        }
+
+        /**
+         * Decode the Naksha tags.
+         * @param bytes the bytes to decode.
+         * @param flags the codec flags.
+         * @param dictManager the dictionary manager to use for decoding; if any.
+         * @return the Naksha tags.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? {
+            if (bytes == null) return null
+            var raw = bytes
+            if (flags.tagsGzip()) raw = Platform.gzipInflate(bytes)
+            val encoding = flags.tagsEncoding()
+            if (encoding == JBON || encoding == JBON_GZIP) {
+                val decoder = JbFeatureDecoder(dictManager)
+                decoder.mapBytes(raw)
+                return decoder.toAnyObject().proxy(TagMap::class)
+            }
+            if (encoding == JSON || encoding == JSON_GZIP) {
+                val decoded = Platform.fromJSON(bytes.decodeToString())
+                if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
+            }
+            return null
+        }
+
+        /**
+         * Encodes the given map into bytes.
+         * @param map the map to encode.
+         * @param flags the codec flags.
+         * @param dict the dictionary to use for encoding; if any.
+         * @return the encoded map.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray {
+            TODO("Implement me!")
+        }
+
+        /**
+         * Encodes the given map into bytes.
+         * @param map the map to encode.
+         * @param flags the codec flags.
+         * @param dict the dictionary to use for encoding; if any.
+         * @return the encoded map.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun encodeTags(tags: TagMap?, flags: Flags, dict: JbDictionary? = null): ByteArray {
+            TODO("Implement me!")
+        }
+
+        /**
+         * Decode a GeoJSON geometry from encoded bytes.
+         * @param bytes the bytes to decode.
+         * @param flags the codec flags.
+         * @return the geometry.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun decodeGeometry(bytes: ByteArray?, flags: Flags): GeometryProxy? = PgPlatform.decodeGeometry(bytes, flags)
+
+        /**
+         * Encodes the given GeoJSON geometry into bytes.
+         * @param geometry the geometry to encode.
+         * @param flags the codec flags.
+         * @return the encoded GeoJSON geometry.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun encodeGeometry(geometry: GeometryProxy?, flags: Flags): ByteArray = PgPlatform.encodeGeometry(geometry, flags)
     }
 }

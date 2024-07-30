@@ -10,6 +10,9 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_MASK
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_GZIP_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_MASK
+import naksha.model.FlagsBits.FlagsBitsCompanion.PARTITION_NUMBER_CLEAR
+import naksha.model.FlagsBits.FlagsBitsCompanion.PARTITION_NUMBER_MASK
+import naksha.model.FlagsBits.FlagsBitsCompanion.PARTITION_NUMBER_SHIFT
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_GZIP_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
@@ -17,14 +20,14 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
 /**
  * Type alias for the flags encoding in the storage, it stores how the binaries are encoded:
  * ```
- *  Reserved       PN       HD  AE   TE     FE    GE
+ *  Reserved       PN       R0  AE   TE     FE    GE
  * [0000-0000]-[0000-0000]-[00][00][0000]-[0000][0000]
  * ```
  * - GE: geometry (and reference point) encoding - bits: 0-3
  * - FE: feature encoding - bits: 4-7
  * - TE: tags encoding - bits: 8-11
  * - AE: action - bits: 12+13
- * - HD: head, history or deleted - bits: 14+15
+ * - R0: reserved - bit: 14-15
  * - PN: partition number - bits: 16-23
  * - ---
  * - Reserved - bits: 24-31
@@ -152,11 +155,11 @@ inline fun Flags.action(): Int = this and ACTION_MASK
  * Returns the action-enumeration value from the encoding.
  * @return the action-enumeration value from the encoding.
  */
-inline fun Flags.actionEnum(): ActionEnum = when (this.action()) {
-    Action.CREATED -> ActionEnum.CREATED
-    Action.UPDATED -> ActionEnum.UPDATED
-    Action.DELETED -> ActionEnum.DELETED
-    else -> ActionEnum.UNKNOWN
+inline fun Flags.actionEnum(): Action = when (this.action()) {
+    ActionValues.CREATED -> Action.CREATED
+    ActionValues.UPDATED -> Action.UPDATED
+    ActionValues.DELETED -> Action.DELETED
+    else -> Action.UNKNOWN
 }
 
 /**
@@ -171,4 +174,18 @@ inline fun Flags.action(encoding: Int): Flags = (this and ACTION_CLEAR) or (enco
  * @param action the action-enumeration value to set.
  * @return the new flags.
  */
-inline fun Flags.action(action: ActionEnum): Flags = (this and ACTION_CLEAR) or (action.action and ACTION_MASK)
+inline fun Flags.action(action: Action): Flags = (this and ACTION_CLEAR) or (action.action and ACTION_MASK)
+
+/**
+ * Returns the partition number.
+ * @return the partition number.
+ */
+inline fun Flags.partitionNumber(): Int = (this and PARTITION_NUMBER_MASK) ushr PARTITION_NUMBER_SHIFT
+
+/**
+ * Updates the partition number in the given flags.
+ * @param partitionNumber the partition number to set.
+ * @return the new flags.
+ */
+inline fun Flags.partitionNumber(partitionNumber: Int): Flags =
+    (this and PARTITION_NUMBER_CLEAR) or ((partitionNumber and 255) shl PARTITION_NUMBER_SHIFT)

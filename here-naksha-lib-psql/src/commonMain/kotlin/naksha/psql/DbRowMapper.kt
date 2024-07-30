@@ -29,19 +29,19 @@ internal class DbRowMapper {
             val id: String = cursor[COL_ID]
             val txn = Version(cursor[COL_TXN])
             val uid = cursor.columnOr(COL_UID, 0)
-            val luid = Luid(txn, uid)
-            val guid = Guid(storage.id(), collection, id, luid)
-            val type = cursor.column(COL_TYPE) as String?
             val flags: Flags = cursor[COL_FLAGS]
+            val rowId = RowId(txn, uid, flags)
+            val guid = Guid(storage.id(), collection, id, rowId)
+            val type = cursor.column(COL_TYPE) as String?
             val meta = if (decodeMeta) {
                 val updatedAt = cursor.column(COL_UPDATE_AT) as? Int64 ?: cursor[COL_CREATED_AT]
                 Metadata(
                     updatedAt = updatedAt,
                     createdAt = cursor.column(COL_CREATED_AT) as? Int64 ?: cursor[COL_UPDATE_AT],
                     authorTs = cursor.columnOr(COL_AUTHOR_TS, updatedAt),
-                    txnNext = cursor.column(COL_TXN_NEXT) as Int64?,
-                    txn = txn.value,
-                    ptxn = cursor.column(COL_PTXN) as Int64?,
+                    nextVersion = cursor.column(COL_TXN_NEXT) as Int64?,
+                    version = txn.value,
+                    prevVersion = cursor.column(COL_PTXN) as Int64?,
                     uid = uid,
                     puid = cursor.columnOr(COL_PUID, 0),
                     hash = cursor[COL_FNVA1],
@@ -127,9 +127,9 @@ internal class DbRowMapper {
                 pgRow.created_at = meta.createdAt
                 pgRow.updated_at = meta.updatedAt
                 pgRow.author_ts = meta.authorTs
-                pgRow.txn_next = meta.txnNext
-                pgRow.txn = meta.txn
-                pgRow.ptxn = meta.ptxn
+                pgRow.txn_next = meta.nextVersion
+                pgRow.txn = meta.version
+                pgRow.ptxn = meta.prevVersion
                 pgRow.uid = meta.uid
                 pgRow.puid = meta.puid
                 pgRow.fnva1 = meta.hash
@@ -165,9 +165,9 @@ internal class DbRowMapper {
                     updatedAt = updatedAtFinal,
                     createdAt = created_at ?: updated_at!!,
                     authorTs = author_ts ?: updatedAtFinal,
-                    txnNext = txn_next,
-                    txn = txn!!,
-                    ptxn = ptxn,
+                    nextVersion = txn_next,
+                    version = txn!!,
+                    prevVersion = ptxn,
                     uid = uid ?: 0,
                     puid = puid ?: 0,
                     hash = fnva1!!,
@@ -195,9 +195,9 @@ internal class DbRowMapper {
         @JvmStatic
         fun pgRowToRow(pgRow: PgRow, storage: IStorage, collection: String): Row {
             val meta = pgRowToMetadata(pgRow)
-            val txn = Version(meta.txn)
-            val luid = Luid(txn, meta.uid)
-            val guid = Guid(storage.id(), collection, meta.id, luid)
+            val txn = Version(meta.version)
+            val rowId = RowId(txn, meta.uid)
+            val guid = Guid(storage.id(), collection, meta.id, rowId)
             return Row(
                 storage = storage,
                 meta = meta,

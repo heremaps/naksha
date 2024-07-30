@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.storage;
 
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -147,6 +147,6 @@ public interface IMasterTransaction extends IReadTransaction {
    */
   // TODO HP_QUERY : Should be renamed to something like featureWriter() and similarly featureReader()
   @Deprecated
-  <F extends NakshaFeatureProxy> @NotNull IFeatureWriter<F> writeFeatures(
+  <F extends NakshaFeature> @NotNull IFeatureWriter<F> writeFeatures(
       @NotNull Class<F> featureClass, @NotNull CollectionInfo collection);
 }

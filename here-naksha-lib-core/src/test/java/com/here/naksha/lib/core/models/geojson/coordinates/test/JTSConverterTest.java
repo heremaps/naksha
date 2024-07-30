@@ -20,7 +20,6 @@ package com.here.naksha.lib.core.models.geojson.coordinates.test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -29,7 +28,7 @@ import naksha.base.JvmMap;
 import naksha.base.Platform;
 import naksha.geo.GeometryProxy;
 import naksha.geo.ProxyGeoUtil;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Test;
 
 public class JTSConverterTest {
@@ -41,7 +40,7 @@ public class JTSConverterTest {
         .toURI()));
     String featureText = new String(bytes);
     JvmMap jvmMap = (JvmMap) Platform.fromJSON(featureText, FromJsonOptions.getDEFAULT());
-    NakshaFeatureProxy feature = jvmMap.proxy(Platform.klassOf(NakshaFeatureProxy.class));
+    NakshaFeature feature = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));
 
     GeometryProxy sourceGeometry = feature.getGeometry();
     org.locationtech.jts.geom.Geometry jtsGeometry = ProxyGeoUtil.toJtsGeometry(sourceGeometry);

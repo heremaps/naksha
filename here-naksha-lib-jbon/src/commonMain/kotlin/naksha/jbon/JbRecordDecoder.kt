@@ -42,7 +42,7 @@ open class JbRecordDecoder(var dictManager: IDictManager? = null) : JbStructDeco
         check(reader.nextUnit()) { "Failed to seek forward to local dictionary field" }
         // The embedded local dictionary.
         check(reader.isDictionary()) { "Expect local dictionary, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
-        reader.localDict = JbDictDecoder().mapReader(reader)
+        reader.localDict = JbDictionary().mapReader(reader)
         check(reader.nextUnit()) { "Failed to seek forward to the feature payload" }
         featureType = reader.unitType()
     }

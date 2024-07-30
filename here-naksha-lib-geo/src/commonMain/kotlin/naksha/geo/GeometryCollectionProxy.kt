@@ -14,7 +14,7 @@ class GeometryCollectionProxy() : GeometryProxy() {
     }
 
     companion object GeometryCollectionCompanion {
-        private val GEOMETRIES = NullableProperty<Any, GeometryCollectionProxy, GeometriesProxy>(GeometriesProxy::class)
+        private val GEOMETRIES = NullableProperty<GeometryCollectionProxy, GeometriesProxy>(GeometriesProxy::class)
     }
 
     var geometries by GEOMETRIES

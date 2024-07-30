@@ -3,28 +3,30 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.model.NakshaUtil.NakshaUtilCompanion.VERSIONS_COL_ID
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
- * Wrapper for a transaction number. The Naksha specification clarifies the parts of a transaction number as being the _year_, _month_, and _day_ when the transaction started, and a unique sequence number within that day.
+ * Wrapper for a version number.
+ *
+ * Every version persists out of _year_, _month_, and _day_ when the change started, and a unique sequence number within that day. The version number is encoded in a way, so that it can be stored either as 64-bit integer, or as double (it does only use 52 bit).
  * @property value the raw value as 64-bit integer.
  */
 @JsExport
 class Version(val value: Int64) : Comparable<Version> {
 
-    /**
-     * Create the transaction number from a double (in JavaScript, number).
-     * @param v the transaction number encoded in a double.
-     */
-    @JsName("of")
-    constructor(v: Double) : this(Int64(v))
-
     companion object VersionCompanion {
+        /**
+         * Create the version number from a double (in JavaScript, number).
+         * @param v the version number encoded in a double.
+         * @return the version wrapper.
+         */
+        @JsStatic
+        @JvmStatic
+        fun fromDouble(v: Double) : Version = Version(Int64(v))
+
         /**
          * The minimum value of the sequence, so just zero.
          */
@@ -62,7 +64,7 @@ class Version(val value: Int64) : Comparable<Version> {
     private var _year = -1
 
     /**
-     * The year when the transaction happened, a value between 0 and 8388608 (23-bit).
+     * The year when the version started, a value between 0 and 8388608 (23-bit).
      */
     fun year(): Int {
         if (_year < 0) _year = (value ushr 41).toInt()
@@ -72,7 +74,7 @@ class Version(val value: Int64) : Comparable<Version> {
     private var _month = -1
 
     /**
-     * The month when the transaction happened, a value between 1 and 12 (4-bit).
+     * The month when the version started, a value between 1 and 12 (4-bit).
      */
     fun month(): Int {
         if (_month < 0) _month = (value ushr 37).toInt() and 15
@@ -82,7 +84,7 @@ class Version(val value: Int64) : Comparable<Version> {
     private var _day = -1
 
     /**
-     * The day when the transaction happened, a value between 1 and 12 (4-bit).
+     * The day when the version started, a value between 1 and 12 (4-bit).
      */
     fun day(): Int {
         if (_day < 0) _day = (value ushr 32).toInt() and 31
@@ -119,34 +121,11 @@ class Version(val value: Int64) : Comparable<Version> {
     }
 
     /**
-     * Returns transaction number as string.
+     * Returns version number as string.
      * @return `{year}:{month}:{day}:{seq}`
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) _string = "${year()}:${month()}:${day()}:${seq()}"
         return _string
     }
-
-    /**
-     * Create a [Guid] for the transaction itself.
-     * @param storageId the storage-identifier of the storage in which this version is stored.
-     * @param map the map in which this version is stored.
-     * @return the [Guid] of that feature.
-     */
-    fun toGuid(storageId: String, map: String): Guid {
-        if (!this::_guid.isInitialized) _guid = Guid(storageId, map, VERSIONS_COL_ID, toString(), Luid(this, 0))
-        return _guid
-    }
-
-    /**
-     * Create a [Guid] for a specific feature state, being part of this version.
-     * @param storageId the storage-identifier of the storage in which this version is stored.
-     * @param map the map in which this version is stored.
-     * @param collectionId the collection-identifier in which the feature is stored.
-     * @param featureId the feature-identifier.
-     * @param uid the unique state identifier within the version.
-     * @return the [Guid] that describes this state world-wide uniquely.
-     */
-    fun newFeatureGuid(storageId: String, map: String, collectionId: String, featureId: String, uid: Int): Guid =
-        Guid(storageId, map, collectionId, featureId, Luid(this, uid))
 }

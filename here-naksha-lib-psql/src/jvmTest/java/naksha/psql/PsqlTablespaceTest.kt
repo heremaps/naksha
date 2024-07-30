@@ -3,9 +3,9 @@ package naksha.psql
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import naksha.model.NakshaCollectionProxy
-import naksha.model.NakshaCollectionProxy.Companion.DEFAULT_GEO_INDEX
-import naksha.model.request.WriteFeature
+import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaCollection.Companion.DEFAULT_GEO_INDEX
+import naksha.model.request.op.UpsertFeature
 import naksha.model.request.WriteRequest
 import naksha.model.request.SuccessResponse
 import org.junit.jupiter.api.Disabled
@@ -39,9 +39,9 @@ class PsqlTablespaceTest {
         val collectionId = "foo_temp"
 
         val nakCollection =
-            NakshaCollectionProxy(collectionId, partitionCount(), DEFAULT_GEO_INDEX, "brittle", false, false)
+            NakshaCollection(collectionId, partitionCount(), DEFAULT_GEO_INDEX, "brittle", false, false)
         val collectionWriteReq = WriteRequest()
-        collectionWriteReq.add(WriteFeature(NKC_TABLE, nakCollection))
+        collectionWriteReq.add(UpsertFeature(NKC_TABLE, nakCollection))
         val response = env.pgSession.write(collectionWriteReq)
         assertIs<SuccessResponse>(response)
 
