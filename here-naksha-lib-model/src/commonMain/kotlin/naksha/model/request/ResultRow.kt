@@ -17,7 +17,7 @@ import kotlin.jvm.JvmField
  * Assume for example, there are 500,000 rows being part of a transaction, it is most often not useful to load all of them into memory, but we need at least the meta-information about all of them, so that they are part of the result-set, then normally a process steps through the result-set and stops, when enough have been processed.
  */
 @JsExport
-data class ResultRow(
+open class ResultRow(
     /**
      * The operation that was executed.
      */
@@ -47,6 +47,8 @@ data class ResultRow(
      * The feature-id.
      *
      * Can be _null_, when not yet fetched from the storage, use [IStorage.fetchRows].
+     *
+     * When ordering by feature-id, the storage should load the feature identifiers together with the row identifiers. This operation will be slower than loading only the row identifiers, but still fast enough. However, at many places it is needed, like to create seekable views.
      */
     @JvmField var featureId: String?,
 

@@ -40,12 +40,12 @@ class SingleCollectionWriter(
 
         session.usePgConnection().execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
-        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
-        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.noResults)
+        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.returnResults)
+        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.returnResults)
         val END_LOADING = currentMillis()
 
         val START_PREPARE = currentMillis()
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.disableHistory, collectionConfig.autoPurge)
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.returnResults, collectionConfig.disableHistory, collectionConfig.autoPurge)
         for (op in operations.operations) {
             val existingFeature: Row? = existingFeatures[op.id]
             val opType = calculateOpToPerform(op, existingFeature, collectionConfig)
@@ -98,9 +98,9 @@ class SingleCollectionWriter(
 
         session.usePgConnection().execute("SET LOCAL session_replication_role = replica; SET plan_cache_mode=force_custom_plan;")
 
-        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.noResults)
-        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.noResults)
-        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.noResults, collectionConfig.disableHistory, collectionConfig.autoPurge)
+        val existingFeatures = operations.getExistingHeadFeatures(session, writeRequest.returnResults)
+        val existingInDelFeatures = operations.getExistingDelFeatures(session, writeRequest.returnResults)
+        val plan: NakshaBulkLoaderPlan = nakshaBulkLoaderPlan(operations.partition, writeRequest.returnResults, collectionConfig.disableHistory, collectionConfig.autoPurge)
 
         for (op in operations.operations) {
             val query = "SELECT oid FROM pg_namespace WHERE nspname = $1"

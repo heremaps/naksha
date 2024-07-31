@@ -285,7 +285,7 @@ internal class NakshaBulkLoaderPlan(
 
     private fun addCopyHeadToHstParams(id: String, isHstDisabled: Boolean?) {
         if (isHstDisabled == false) {
-            copyHeadToHstBulkParams.add(arrayOf(session.txn().value, id))
+            copyHeadToHstBulkParams.add(arrayOf(session.txn().txn, id))
         }
     }
 

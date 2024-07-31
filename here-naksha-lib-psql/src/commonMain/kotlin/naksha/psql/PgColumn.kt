@@ -263,6 +263,14 @@ class PgColumn : JsEnum() {
             self._extra = "STORAGE EXTENDED"
         }
 
+        @JvmField
+        @JsStatic
+        val attachment = def(PgColumn::class, "attachment") { self ->
+            self._i = 21
+            self._type = PgType.BYTE_ARRAY
+            self._extra = "STORAGE EXTENDED"
+        }
+
         /**
          * All columns being used with Naksha.
          *
@@ -284,7 +292,7 @@ class PgColumn : JsEnum() {
             created_at, updated_at, author_ts, txn_next, txn, ptxn,
             uid, puid, hash, change_count, geo_grid, flags,
             id, app_id, author, type, origin,
-            tags, geo_ref, geo, feature
+            tags, geo_ref, geo, feature, attachment
         )
 
         init {

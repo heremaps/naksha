@@ -5,8 +5,9 @@ package naksha.model.request
 import naksha.base.NotNullEnum
 import naksha.base.NullableProperty
 import naksha.base.AnyObject
-import naksha.model.request.query.Property
+import naksha.model.request.query.RowColumn
 import naksha.model.request.query.SortOrder
+import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -15,6 +16,12 @@ import kotlin.jvm.JvmStatic
 /**
  * Describes a sort order in a [result-set][naksha.model.request.ResultSet].
  *
+ * **Warning**: Using custom ordering may not be supported by the storage. The best is to only use the pre-defined sort orders:
+ * - [deterministic]
+ * - [version]
+ * - [id]
+ * - [author]
+ *
  * @constructor Creating an ordering, where the details
  */
 @JsExport
@@ -22,34 +29,55 @@ open class OrderBy() : AnyObject() {
 
     /**
      * Create a new order.
-     * @param property the property by which to order by, if _null_, any property is okay, just a deterministic order is requested.
+     * @param column the column by which to order by, if _null_, any column is okay, just a deterministic order is requested.
      * @param order the sort order, if [ANY][SortOrder.ANY] is given, then the storage can pick whatever is faster.
      * @param next if a second-level order is requested, for example order by `id` and then by `txn`, and finally by `uid`.
      */
     @JsName("of")
-    constructor(property: Property? = null, order: SortOrder = SortOrder.ANY, next: OrderBy? =null) : this() {
-        this.property = property
+    constructor(column: RowColumn? = null, order: SortOrder = SortOrder.ANY, next: OrderBy? =null) : this() {
+        this.column = column
         this.order = order
         this.next = next
     }
 
     companion object OrderByCompanion {
         /**
-         * Create a deterministic order of a result-set, but without specifying by which property to order, nor how to [sort][SortOrder.ANY]. Therefore, the ordering can be done very efficiently by the storage (it can for example read in index order).
+         * Create a deterministic order of a result-set, but without specifying by which column to order, nor how to [sort][SortOrder.ANY]. Therefore, the ordering can be done very efficiently by the storage (it can for example read in index order).
          */
         @JsStatic
         @JvmStatic
         fun deterministic(): OrderBy = OrderBy()
 
-        private val PROPERTY_NULL = NullableProperty<OrderBy, Property>(Property::class)
+        /**
+         * Supported ordering by `version`.
+         */
+        @JsStatic
+        @JvmStatic
+        fun version(): OrderBy = OrderBy(RowColumn.version(), DESCENDING, OrderBy(RowColumn.uid(), DESCENDING))
+
+        /**
+         * Supported ordering by `id` and `version`.
+         */
+        @JsStatic
+        @JvmStatic
+        fun id(): OrderBy = OrderBy(RowColumn.id(), next = version())
+
+        /**
+         * Supported ordering by `author`, `updatedAt`, `id`, and `version`.
+         */
+        @JsStatic
+        @JvmStatic
+        fun author(): OrderBy = OrderBy(RowColumn.author(), next = OrderBy(RowColumn.updatedAt(), DESCENDING, id()))
+
+        private val COLUMN_NULL = NullableProperty<OrderBy, RowColumn>(RowColumn::class)
         private val ORDER_ENUM = NotNullEnum<OrderBy, SortOrder>(SortOrder::class) { _, _ -> SortOrder.ANY }
         private val ORDER_BY_NULL = NullableProperty<OrderBy, OrderBy>(OrderBy::class)
     }
 
     /**
-     * The property by which to order, if _null_, then ordering is requested, but no specific order is needed.
+     * The [row column][RowColumn] by which to order, if _null_, then ordering is requested, but no specific order is needed.
      */
-    var property by PROPERTY_NULL
+    var column by COLUMN_NULL
 
     /**
      * The sort order, it is strongly recommended to stick with the default value [SortOrder.ANY].

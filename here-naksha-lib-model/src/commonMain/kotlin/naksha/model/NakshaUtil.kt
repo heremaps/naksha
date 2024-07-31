@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.CodePoints
 import naksha.base.Platform
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import kotlin.js.JsExport
@@ -18,14 +19,17 @@ class NakshaUtil private constructor() {
          * The prefix for virtual (internal) collections.
          */
         const val VIRT_PREFIX = "naksha~"
+
         /**
          * The identifier of the virtual collection in which transactions are stored.
          */
         const val VIRT_TRANSACTIONS = "naksha~transactions"
+
         /**
          * The identifier of the virtual collection in which the collections them-self are stored.
          */
         const val VIRT_COLLECTIONS = "naksha~collections"
+
         /**
          * The identifier of the virtual collection in which the dictionaries are stored.
          */

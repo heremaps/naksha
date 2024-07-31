@@ -40,7 +40,7 @@ internal class DbRowMapper {
                     createdAt = cursor.column(COL_CREATED_AT) as? Int64 ?: cursor[COL_UPDATE_AT],
                     authorTs = cursor.columnOr(COL_AUTHOR_TS, updatedAt),
                     nextVersion = cursor.column(COL_TXN_NEXT) as Int64?,
-                    version = txn.value,
+                    version = txn.txn,
                     prevVersion = cursor.column(COL_PTXN) as Int64?,
                     uid = uid,
                     puid = cursor.columnOr(COL_PUID, 0),

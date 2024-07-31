@@ -3,7 +3,6 @@
 package naksha.model.request
 
 import naksha.base.NotNullProperty
-import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 
 /**
@@ -29,6 +28,8 @@ open class WriteRequest : Request() {
         private val BOOLEAN = NotNullProperty<WriteRequest, Boolean>(Boolean::class) { _, _ -> false }
     }
 
+    override fun defaultRowOptions() : RowOptions = RowOptions().withMeta(true)
+
     /**
      * All writes to perform.
      *
@@ -42,23 +43,23 @@ open class WriteRequest : Request() {
     }
 
     /**
-     * When `noResults` is set, the response will not contain any results (rows), it will not even hold a result-set. This is the fastest way to perform a write-request. You'll still get information if request succeeded or not.
+     * By default, a write request will return either a [SuccessResponse] or an [ErrorResponse], but the storage does not return details about the outcome.
+     *
+     * This improves the performance, because some operations can be done directly within the database, without reading any data back, like for example deleting a feature.
+     *
+     * However, if results are needed, this option can be enabled. Beware, that when enabling this option, the default [rowOptions] are limited to return only the [metadata][naksha.model.Metadata]. The reason behind this is, that the client normally only need this, it can merge
+     *
+     * The reason is, that in the most cases, when writing was successful, the client knows the state of
+     *
+     * When [returnResults] is set to _true_, the response will not contain any results (rows), it will not even hold a result-set. This is the fastest way to perform a write-request. You'll still get information if request succeeded or not.
      */
-    var noResults by BOOLEAN
-
-    fun withNoResults(): WriteRequest {
-        noResults = true
-        return this
-    }
+    var returnResults by BOOLEAN
 
     /**
-     * By default, the response will return the rows in same order as they were given in request. It's possible to change this behaviour by setting this flag to _true_, in such case response will return rows in the order that is most convenient for the storage, which is less effort for the storage in some cases, because it does not have to order results.
+     * By default, the response will return the write results in any order.
+     *
+     * If needed, it's possible to change this behaviour by setting this flag to _true_, in such case response will return rows in the order in which the write instructions where given. that is most convenient for the storage, which is less effort for the storage in some cases, because it does not have to order results.
      */
-    var allowRandomOrder by BOOLEAN
-
-    fun withAllowRandomOrder(): WriteRequest {
-        allowRandomOrder = true
-        return this
-    }
+    var strictOrder by BOOLEAN
 
 }

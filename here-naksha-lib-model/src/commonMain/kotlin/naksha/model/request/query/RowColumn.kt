@@ -1,4 +1,4 @@
-@file:Suppress("OPT_IN_USAGE")
+@file:Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate")
 
 package naksha.model.request.query
 
@@ -7,15 +7,17 @@ import naksha.base.NotNullProperty
 import naksha.model.request.query.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
 /**
- * A reference to a row-field.
+ * A reference to a column of a virtual [row][naksha.model.Row].
  */
 @JsExport
-open class RowField() : AnyObject() {
+open class RowColumn() : AnyObject() {
 
     /**
-     * Create a field reference.
+     * Create a column reference.
      * @param name the field name.
      */
     @JsName("of")
@@ -39,6 +41,14 @@ open class RowField() : AnyObject() {
         const val ID = "id"
 
         /**
+         * Returns a new row-column for [ID].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun id(): RowColumn = RowColumn(ID)
+
+        /**
          * The reference to the [creation timestamp][naksha.model.Metadata.createdAt].
          *
          * This value is exposed through [naksha.model.XyzNs.createdAt].
@@ -48,6 +58,14 @@ open class RowField() : AnyObject() {
          * - [AnyOp.IS_ANY_OF]
          */
         const val CREATED_AT = "createdAt"
+
+        /**
+         * Returns a new row-column for [CREATED_AT].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun createAt(): RowColumn = RowColumn(CREATED_AT)
 
         /**
          * The reference to the [update timestamp][naksha.model.Metadata.updatedAt].
@@ -61,6 +79,14 @@ open class RowField() : AnyObject() {
         const val UPDATED_AT = "updatedAt"
 
         /**
+         * Returns a new row-column for [UPDATED_AT].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun updatedAt(): RowColumn = RowColumn(UPDATED_AT)
+
+        /**
          * The reference to the [encoding flags and actions][naksha.model.Metadata.flags].
          *
          * This value is partially exposed through [naksha.model.XyzNs.action].
@@ -69,6 +95,14 @@ open class RowField() : AnyObject() {
          * - [QueryNumber.*][DoubleOp]
          */
         const val FLAGS = "flags"
+
+        /**
+         * Returns a new row-column for [FLAGS].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun flags(): RowColumn = RowColumn(FLAGS)
 
         /**
          * The reference to the [hash][naksha.model.Metadata.hash].
@@ -82,7 +116,32 @@ open class RowField() : AnyObject() {
         const val HASH = "hash"
 
         /**
-         * The reference to the [transaction number][naksha.model.Metadata.version].
+         * Returns a new row-column for [HASH].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun hash(): RowColumn = RowColumn(HASH)
+
+        /**
+         * The reference to the [next version][naksha.model.Metadata.nextVersion].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [QueryNumber.*][DoubleOp]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val NEXT_VERSION = "txn_next"
+
+        /**
+         * Returns a new row-column for [NEXT_VERSION].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun nextVersion(): RowColumn = RowColumn(NEXT_VERSION)
+
+        /**
+         * The reference to the [version][naksha.model.Metadata.version] (_transaction number_).
          *
          * This value is exposed through [naksha.model.XyzNs.version].
          *
@@ -90,10 +149,18 @@ open class RowField() : AnyObject() {
          * - [QueryNumber.*][DoubleOp]
          * - [AnyOp.IS_ANY_OF]
          */
-        const val TXN = "txn"
+        const val VERSION = "txn"
 
         /**
-         * The reference to the [previous transaction number][naksha.model.Metadata.prevVersion].
+         * Returns a new row-column for [VERSION].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun version(): RowColumn = RowColumn(VERSION)
+
+        /**
+         * The reference to the [previous version][naksha.model.Metadata.prevVersion].
          *
          * This value is part of the [naksha.model.XyzNs.puuid].
          *
@@ -101,7 +168,15 @@ open class RowField() : AnyObject() {
          * - [QueryNumber.*][DoubleOp]
          * - [AnyOp.IS_ANY_OF]
          */
-        const val PTXN = "ptxn"
+        const val PREV_VERSION = "ptxn"
+
+        /**
+         * Returns a new row-column for [PREV_VERSION].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun prevVersion(): RowColumn = RowColumn(PREV_VERSION)
 
         /**
          * The reference to the [transaction local identifier][naksha.model.Metadata.uid].
@@ -115,6 +190,14 @@ open class RowField() : AnyObject() {
         const val UID = "uid"
 
         /**
+         * Returns a new row-column for [UID].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun uid(): RowColumn = RowColumn(UID)
+
+        /**
          * The reference to the [previous transaction local identifier][naksha.model.Metadata.puid].
          *
          * This value is part of the [naksha.model.XyzNs.puuid].
@@ -124,6 +207,14 @@ open class RowField() : AnyObject() {
          * - [AnyOp.IS_ANY_OF]
          */
         const val PUID = "puid"
+
+        /**
+         * Returns a new row-column for [PUID].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun puid(): RowColumn = RowColumn(PUID)
 
         /**
          * The reference to the [reference point HERE tile identifier in level 15][naksha.model.Metadata.geoGrid].
@@ -139,6 +230,14 @@ open class RowField() : AnyObject() {
         const val GEO_GRID = "geoGrid"
 
         /**
+         * Returns a new row-column for [PUID].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun geoGrid(): RowColumn = RowColumn(GEO_GRID)
+
+        /**
          * The property reference to the [author][naksha.model.Metadata.author].
          *
          * This value is exposed as [naksha.model.XyzNs.author].
@@ -151,6 +250,14 @@ open class RowField() : AnyObject() {
         const val AUTHOR = "author"
 
         /**
+         * Returns a new row-column for [AUTHOR].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun author(): RowColumn = RowColumn(AUTHOR)
+
+        /**
          * The property reference to the [author change timestamp][naksha.model.Metadata.authorTs].
          *
          * This value is exposed as [naksha.model.XyzNs.authorTs].
@@ -160,6 +267,14 @@ open class RowField() : AnyObject() {
          * - [AnyOp.IS_ANY_OF]
          */
         const val AUTHOR_TS = "author_ts"
+
+        /**
+         * Returns a new row-column for [AUTHOR_TS].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun authorTs(): RowColumn = RowColumn(AUTHOR_TS)
 
         /**
          * The property reference to the [author change timestamp][naksha.model.Metadata.appId].
@@ -174,11 +289,27 @@ open class RowField() : AnyObject() {
         const val APP_ID = "app_id"
 
         /**
+         * Returns a new row-column for [APP_ID].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun appId(): RowColumn = RowColumn(APP_ID)
+
+        /**
          * The reference to the [feature][naksha.model.Row.feature].
          *
          * This can only be queried using a special [property query][IPropertyQuery].
          */
         const val FEATURE = "feature"
+
+        /**
+         * Returns a new row-column for [FEATURE].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun feature(): RowColumn = RowColumn(FEATURE)
 
         /**
          * The reference to the [geometry][naksha.model.Row.geo].
@@ -188,11 +319,27 @@ open class RowField() : AnyObject() {
         const val GEOMETRY = "geo"
 
         /**
+         * Returns a new row-column for [GEOMETRY].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun geometry(): RowColumn = RowColumn(GEOMETRY)
+
+        /**
          * The reference to the [reference point][naksha.model.Row.referencePoint].
          *
          * This can only be queried using a special [spatial query][ISpatialQuery].
          */
         const val REF_POINT = "referencePoint"
+
+        /**
+         * Returns a new row-column for [REF_POINT].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun referencePoint(): RowColumn = RowColumn(REF_POINT)
 
         /**
          * The reference to the [tags][naksha.model.Row.tags].
@@ -201,7 +348,15 @@ open class RowField() : AnyObject() {
          */
         const val TAGS = "tags"
 
-        private val STRING = NotNullProperty<RowField, String>(String::class) { _, _ -> "" }
+        /**
+         * Returns a new row-column for [TAGS].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun tags(): RowColumn = RowColumn(TAGS)
+
+        private val STRING = NotNullProperty<RowColumn, String>(String::class) { _, _ -> "" }
     }
 
     /**

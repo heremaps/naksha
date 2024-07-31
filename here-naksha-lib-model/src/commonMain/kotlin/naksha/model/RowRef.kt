@@ -33,7 +33,7 @@ class RowRef() : AnyObject() {
      */
     @JsName("fromRowId")
     constructor(rowId: RowId) : this() {
-        setRaw("txn", rowId.version.value.toDouble())
+        setRaw("txn", rowId.version.txn.toDouble())
         setRaw("uid", rowId.uid)
         setRaw("flags", rowId.flags)
     }

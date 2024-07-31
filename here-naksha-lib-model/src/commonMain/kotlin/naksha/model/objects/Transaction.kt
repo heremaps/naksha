@@ -5,7 +5,6 @@ package naksha.model.objects
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.model.Version
-import naksha.model.request.notification.RowsByTxn
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -47,7 +46,7 @@ open class Transaction() : NakshaFeature() {
     fun version(): Version {
         val txn = this.txn
         var v = version
-        if (v == null || v.value != txn) {
+        if (v == null || v.txn != txn) {
             v = Version(txn)
             version = v
         }

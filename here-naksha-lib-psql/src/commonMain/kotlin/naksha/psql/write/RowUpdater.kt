@@ -38,7 +38,7 @@ internal class RowUpdater(val session: PgSession) {
             session.nextUid()
         }
 
-        NEW.txn = txn.value
+        NEW.txn = txn.txn
         NEW.txn_next = null
         NEW.ptxn = null
         NEW.puid = 0
@@ -81,8 +81,8 @@ internal class RowUpdater(val session: PgSession) {
     internal fun xyzDel(OLD: PgRow) {
         val txn = session.txn()
         val txnTs = session.txnTs()
-        OLD.txn = txn.value
-        OLD.txn_next = txn.value
+        OLD.txn = txn.txn
+        OLD.txn_next = txn.txn
         OLD.flags = Flags(OLD.flags!!).action(Action.DELETED)
         OLD.author = session.options.author ?: session.options.appId
         if (session.options.author != null) {

@@ -9,6 +9,11 @@ import kotlin.js.JsName
 
 /**
  * Read features from a collection of a map of a storage.
+ *
+ * If a logical **OR** between the different condition is needed, for example search for features being in a certain bounding box **or** having a certain tag, then two read-requests should be executed, and joined by the client. These queries can be executed in parallel using two distinct sessions to improve the performance.
+ *
+ * Read requests by default return full [rows][naksha.model.Row], but allows to unselect some parts via [rowOptions]. Beware, that there is no guarantee what the storage will do, but it may improve the performance.
+ *
  * @since 3.0.0
  */
 @JsExport

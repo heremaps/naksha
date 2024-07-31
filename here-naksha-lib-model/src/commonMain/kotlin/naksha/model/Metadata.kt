@@ -146,4 +146,28 @@ data class Metadata(
         ActionValues.DELETED -> Action.DELETED
         else -> Action.UNKNOWN
     }
+
+    override fun hashCode(): Int = rowId().hashCode()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Metadata) return false
+        // Note: No, we did not forget "nextVersion" in this compare !!!
+        //       Even when next-version is set eventually, the metadata should be treated as the same!
+        return createdAt == other.createdAt
+                && updatedAt == other.updatedAt
+                && authorTs == other.authorTs
+                && version == other.version
+                && prevVersion == other.prevVersion
+                && uid == other.uid
+                && puid == other.puid
+                && hash == other.hash
+                && changeCount == other.changeCount
+                && geoGrid == other.geoGrid
+                && flags == other.flags
+                && appId == other.appId
+                && author == other.author
+                && type == other.type
+                && id == other.id
+    }
+    override fun toString(): String = "$id:$rowId"
 }

@@ -2,6 +2,7 @@
 
 package naksha.model.request.query
 
+import naksha.base.NotNullProperty
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
 import naksha.base.StringList
@@ -15,22 +16,54 @@ import kotlin.jvm.JvmStatic
  * The reference to a property within a feature.
  */
 @JsExport
-open class Property() : StringList() {
+open class Property() : RowColumn(FEATURE) {
+
     /**
      * Create a property from a path given as variable argument list.
      * @param path the path-segments.
      */
-    @Suppress("LeakingThis")
     @JsName("of")
     constructor(vararg path: String) : this() {
-        for (p in path) add(p)
+        for (p in path) this.path.add(p)
     }
+
+    companion object Property_C {
+        /**
+         * Create a property from a path given as variable argument list.
+         * @param path the path as string-array.
+         * @return the property.
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromArray(path: Array<String>): Property {
+            val p = Property()
+            p.addAll(path)
+            return p
+        }
+
+        /**
+         * Simple constant for `properties`.
+         */
+        const val PROPERTIES = "properties"
+
+        /**
+         * Simple constant for `@ns:com:here:xyz`.
+         */
+        const val XYZ = "@ns:com:here:xyz"
+
+        private val PATH = NotNullProperty<Property, StringList>(StringList::class)
+    }
+
+    /**
+     * The path inside the feature.
+     */
+    val path by PATH
 
     private var array: Array<String>? = null
     private var string: String? = null
 
     override fun toString(): String {
-        val po = platformObject()
+        val po = path.platformObject()
         var array = this.array
         var s = string
         if (s != null) {
@@ -59,8 +92,8 @@ open class Property() : StringList() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Property) return false
-        val po = platformObject()
-        val other_po = other.platformObject()
+        val po = path.platformObject()
+        val other_po = other.path.platformObject()
         val length = array_get_length(po)
         if (length != array_get_length(other_po)) return false
         var i = 0
@@ -71,28 +104,4 @@ open class Property() : StringList() {
         return true
     }
 
-    companion object Property_C {
-        /**
-         * Create a property from a path given as variable argument list.
-         * @param path the path as string-array.
-         * @return the property.
-         */
-        @JvmStatic
-        @JsStatic
-        fun fromArray(path: Array<String>): Property {
-            val p = Property()
-            p.addAll(path)
-            return p
-        }
-
-        /**
-         * Simple constant for `properties`.
-         */
-        const val PROPERTIES = "properties"
-
-        /**
-         * Simple constant for `@ns:com:here:xyz`.
-         */
-        const val XYZ = "@ns:com:here:xyz"
-    }
 }

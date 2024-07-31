@@ -300,7 +300,7 @@ FROM ns, txn_seq;
                             // Rollover, we update sequence of the day.
                             txn = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
                             _txn = txn
-                            conn.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.value + 1)).close()
+                            conn.execute("SELECT setval($1, $2)", arrayOf(txnSeqOid, txn.txn + 1)).close()
                         }
                     } finally {
                         conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()

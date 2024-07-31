@@ -31,7 +31,7 @@ data class RowId(@JvmField val version: Version, @JvmField val uid: Int, @JvmFie
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other is RowRef && version.value == Int64(other.txn) && uid == other.uid) return true
+        if (other is RowRef && version.txn == Int64(other.txn) && uid == other.uid) return true
         return false
     }
 

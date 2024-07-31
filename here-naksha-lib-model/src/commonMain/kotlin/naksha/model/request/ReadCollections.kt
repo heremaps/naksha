@@ -20,14 +20,13 @@ open class ReadCollections() : ReadRequest() {
      * @param collectionIds the collection identifiers.
      * @since 3.0.0
      */
-    @JsName("forCollections")
+    @JsName("of")
     constructor(vararg collectionIds: String) : this() {
        this.collectionIds.addAll(collectionIds)
     }
 
     companion object ReadCollections_C {
         private val STRING_LIST = NotNullProperty<ReadCollections, StringList>(StringList::class)
-        private val BOOLEAN = NotNullProperty<ReadCollections, Boolean>(Boolean::class) { _, _ -> false }
     }
 
     /**
@@ -35,16 +34,6 @@ open class ReadCollections() : ReadRequest() {
      * @since 3.0.0
      */
     var collectionIds by STRING_LIST
-
-    /**
-     * Extend the request to search through deleted features.
-     */
-    var queryDeleted by BOOLEAN
-
-    /**
-     * Extend the request to search through historic states of features.
-     */
-    var queryHistory by BOOLEAN
 
     /**
      * Convert this request into a [ReadFeatures] request.
@@ -55,8 +44,8 @@ open class ReadCollections() : ReadRequest() {
      */
     fun toReadFeatures(): ReadFeatures {
         val req = ReadFeatures(NakshaUtil.VIRT_COLLECTIONS)
-        req.queryDeleted = queryDeleted
-        req.queryHistory = queryHistory
+        req.queryDeleted = false
+        req.queryHistory = false
         req.featureIds.addAll(collectionIds)
         return req
     }

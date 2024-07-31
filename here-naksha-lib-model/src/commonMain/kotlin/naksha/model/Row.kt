@@ -1,5 +1,6 @@
 package naksha.model
 
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -41,27 +42,30 @@ data class Row(
     /**
      * Feature encoded with [FeatureEncoding] algorithm described by [Metadata.flags].
      */
-    @JvmField val feature: ByteArray,
+    @JvmField val feature: ByteArray? = null,
 
     /**
      * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
      * Might be _null_, when the feature does not have a geometry.
      */
-    @JvmField val geo: ByteArray?,
+    @JvmField val geo: ByteArray? = null,
 
     /**
      * Geometry-Reference-Point, encoded with the [GeoEncoding] algorithm described by [Metadata.flags].
      * Might be _null_, when the feature does not have a reference point.
      */
-    @JvmField
-    val referencePoint: ByteArray?,
+    @JvmField val referencePoint: ByteArray? = null,
 
     /**
      * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
      * Might be _null_, when the feature does not have any tags.
      */
-    @JvmField
-    var tags: ByteArray?
+    @JvmField val tags: ByteArray? = null,
+
+    /**
+     * An arbitrary binary attachment.
+     */
+    @JvmField val attachment: ByteArray? = null
 ) {
     override fun equals(other: Any?): Boolean = this === other
     override fun hashCode(): Int = super.hashCode()
@@ -85,5 +89,34 @@ data class Row(
             guid = g
         }
         return g
+    }
+
+    /**
+     * Merge two rows into a new one. If this row is up-to-date, the method returns this row again.
+     *
+     * This is basically done, when more details become available about a row.
+     *
+     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given row is not the same.
+     * @param other the row to merge this with.
+     * @return a new row, where nothing is _null_.
+     */
+    fun merge(other: Row): Row {
+        if (storage != other.storage
+            || map != other.map
+            || collectionId != other.collectionId
+            || id != other.id
+            || meta != other.meta) throw NakshaException(ILLEGAL_ARGUMENT, "Can't merge two different rows")
+        meta.nextVersion = meta.nextVersion ?: other.meta.nextVersion
+        if (feature === other.feature
+            && geo === other.geo
+            && referencePoint === other.referencePoint
+            && tags === other.tags
+            && attachment === other.attachment) return this
+        return Row(storage, map, collectionId, id, meta,
+            feature ?: other.feature,
+            geo ?: other.geo,
+            referencePoint ?: other.referencePoint,
+            tags ?: other.tags,
+            attachment ?: other.attachment)
     }
 }
