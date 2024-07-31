@@ -5,12 +5,14 @@ package naksha.base
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_delete
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_entries
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_capacity
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_index_of
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_last_index_of
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_push
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_retain_all
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_capacity
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_length
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_splice
 import naksha.base.fn.Fn2
@@ -21,11 +23,16 @@ import kotlin.reflect.KClass
 /**
  * A multi-platform list that can store _null_ values.
  * @param <E> The not nullable element type.
- * @property elementKlass The class of the element.
+ * @property _elementKlass The class of the element.
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-open class ListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
+open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
+    /**
+     * Returns the element class of the proxy.
+     */
+    val elementKlass: KClass<out E>
+        get() = _elementKlass
 
     override fun createData(): PlatformList = Platform.newList()
     override fun platformObject(): PlatformList = super.platformObject() as PlatformList
@@ -36,13 +43,27 @@ open class ListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutabl
     }
 
     /**
+     * Returns the current capacity of the underlying platform object.
+     * @return the current capacity of the platform list.
+     */
+    fun getCapacity() : Int = array_get_capacity(platformObject())
+
+    /**
+     * Sets the capacity to the given value, if possible, there is no guarantee that this method has any real effect.
+     *
+     * Note, the capacity can never be changed below the current size, any call like this will be ignored.
+     * @param capacity the wished minimum capacity.
+     */
+    fun setCapacity(capacity:Int) = array_set_capacity(platformObject(), capacity)
+
+    /**
      * Returns the element at the given index. If no such index exists or the element is not of the specified type,
      * returns the given alternative.
      * @param index The index to query.
      * @param alternative The alternative to return, when the element is not of the specified type.
      * @return The element.
      */
-    protected open fun getOr(index: Int, alternative: E): E? = box(array_get(platformObject(), index), elementKlass, alternative)
+    protected open fun getOr(index: Int, alternative: E): E? = box(array_get(platformObject(), index), _elementKlass, alternative)
 
     /**
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new value is created, stored
@@ -105,7 +126,7 @@ open class ListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutabl
 
     override fun clear() = array_set_length(platformObject(), 0)
 
-    override fun get(index: Int): E? = box(array_get(platformObject(), index), elementKlass)
+    override fun get(index: Int): E? = box(array_get(platformObject(), index), _elementKlass)
 
     override fun isEmpty(): Boolean = array_get_length(platformObject()) == 0
 
@@ -124,11 +145,13 @@ open class ListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutabl
     override fun removeAt(index: Int): E? {
         val data = platformObject()
         if (index < 0 || index >= array_get_length(data)) return null
-        return box(array_delete(data, index), elementKlass)
+        return box(array_delete(data, index), _elementKlass)
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): ListProxy<E> {
-        val list = Platform.newInstanceOf(this::class)
+        val list = Platform.allocateInstance(this::class)
+        list._elementKlass = _elementKlass
+        list.setCapacity(max(toIndex - fromIndex, 16))
         var i = fromIndex
         while (i < toIndex) list.add(get(i++))
         return list
@@ -136,7 +159,7 @@ open class ListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutabl
 
     override fun set(index: Int, element: E?): E? {
         val data = platformObject()
-        return box(array_set(data, index, unbox(element)), elementKlass)
+        return box(array_set(data, index, unbox(element)), _elementKlass)
     }
 
     override fun retainAll(elements: Collection<E?>): Boolean {
@@ -213,7 +236,7 @@ open class ListProxy<E : Any>(val elementKlass: KClass<out E>) : Proxy(), Mutabl
         val mutableList: MutableList<E?> = mutableListOf()
         var next = iterator.next()
         while (!next.done) {
-            mutableList.add(box(next.value, elementKlass))
+            mutableList.add(box(next.value, _elementKlass))
             next = iterator.next()
         }
         return mutableList

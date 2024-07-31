@@ -5,7 +5,7 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.NakshaVersion
 import naksha.model.NakshaException
-import naksha.model.NakshaUtil
+import naksha.model.Naksha
 import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
 import naksha.psql.PgIndex.PgIndexCompanion.tags_id_txn_uid
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -20,7 +20,7 @@ import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 @Suppress("MemberVisibilityCanBePrivate")
 class PsqlSchema internal constructor(storage: PgStorage, name: String) : PgSchema(storage, name) {
     override fun init(connection: PgConnection?) {
-        NakshaUtil.verifyId(name)
+        Naksha.verifyId(name)
         init_internal(storage.id(), connection)
     }
 
@@ -186,8 +186,12 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 "storageIdLiteral" to quoteLiteral(storage_id),
             ))
 
-            logger.info("Installation done, create transaction sequence ...")
-            conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64}").close()
+            logger.info("Installation done ...")
+            if (isDefault()) {
+                logger.info("Creating the default schema, therefore create transaction sequences")
+                conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} CACHE 10;" +
+                        "\nCREATE SEQUENCE IF NOT EXISTS $NAKSHA_ID_SEQ AS ${PgType.INT64} CACHE 1000;").close()
+            }
             logger.info("Create internal collections: transactions, collections, and dictionaries")
             transactions().create_internal(
                 conn, 0, PgStorageClass.Consistent,

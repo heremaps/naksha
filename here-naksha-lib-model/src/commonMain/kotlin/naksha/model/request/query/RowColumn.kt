@@ -124,6 +124,25 @@ open class RowColumn() : AnyObject() {
         fun hash(): RowColumn = RowColumn(HASH)
 
         /**
+         * The reference to the [change-count][naksha.model.Metadata.changeCount].
+         *
+         * This value is exposed through [naksha.model.XyzNs.changeCount].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [DoubleOp.EQ]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CHANGE_COUNT = "changeCount"
+
+        /**
+         * Returns a new row-column for [CHANGE_COUNT].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun changeCount(): RowColumn = RowColumn(CHANGE_COUNT)
+
+        /**
          * The reference to the [next version][naksha.model.Metadata.nextVersion].
          *
          * Supported [query operations][AnyOp] are:
@@ -256,6 +275,26 @@ open class RowColumn() : AnyObject() {
         @JvmStatic
         @JsStatic
         fun author(): RowColumn = RowColumn(AUTHOR)
+
+        /**
+         * The property reference to the [type][naksha.model.Metadata.type].
+         *
+         * This value is exposed as [properties.featureType][naksha.model.objects.NakshaProperties.featureType].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [StringOp.EQUALS]
+         * - [StringOp.STARTS_WITH]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val TYPE = "type"
+
+        /**
+         * Returns a new row-column for [TYPE].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun type(): RowColumn = RowColumn(TYPE)
 
         /**
          * The property reference to the [author change timestamp][naksha.model.Metadata.authorTs].

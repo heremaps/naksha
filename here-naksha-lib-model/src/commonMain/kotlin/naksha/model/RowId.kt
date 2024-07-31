@@ -23,14 +23,16 @@ data class RowId(@JvmField val version: Version, @JvmField val uid: Int, @JvmFie
     override fun hashCode(): Int = version.hashCode() xor uid
 
     override fun compareTo(other: RowId): Int {
-        var v = version.compareTo(other.version)
-        if (v != 0) return v
-        v = uid - other.uid
-        return if (v == 0) 0 else if (v < 0) -1 else 1
+        var diff = version.compareTo(other.version)
+        if (diff < 0) return -1
+        if (diff > 1) return 1
+        diff = uid - other.uid
+        return if (diff == 0) 0 else if (diff < 0) -1 else 1
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        if (other is RowId && version.txn == other.version.txn && uid == other.uid) return true
         if (other is RowRef && version.txn == Int64(other.txn) && uid == other.uid) return true
         return false
     }

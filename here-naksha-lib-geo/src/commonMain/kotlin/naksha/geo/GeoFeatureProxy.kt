@@ -31,7 +31,7 @@ open class GeoFeatureProxy : AnyObject() {
     /**
      * The unique identifier of the feature.
      */
-    var id by ID
+    open var id by ID
 
     /**
      * The bounding box.

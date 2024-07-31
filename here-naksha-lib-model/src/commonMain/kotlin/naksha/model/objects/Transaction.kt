@@ -2,6 +2,7 @@
 
 package naksha.model.objects
 
+import naksha.base.AtomicInt
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.model.Version
@@ -24,7 +25,6 @@ open class Transaction() : NakshaFeature() {
     }
 
     companion object NakshaTransaction_C {
-        private val INT64_0 = NotNullProperty<Transaction, Int64>(Int64::class) { _,_ -> Int64(0) }
         private val INT_0 = NotNullProperty<Transaction, Int>(Int::class, init = { _, _ -> 0 })
         private val COLLECTIONS = NotNullProperty<Transaction, TxCollectionInfoMap>(TxCollectionInfoMap::class)
         private val INT64_NULL = NotNullProperty<Transaction, Int64>(Int64::class)
@@ -32,10 +32,31 @@ open class Transaction() : NakshaFeature() {
 
     override fun typeDefaultValue(): String = "naksha.Tx"
 
+    override var id: String
+        get() {
+            val id = getRaw("id")
+            if (id is String) return id
+            setRaw("id", "0")
+            setRaw("txn", Int64(0))
+            return "0"
+        }
+        set(value) {
+            setRaw("txn", Int64(value.toLong()))
+            setRaw("id", value)
+        }
+
     /**
-     * The transaction number, being as well the version.
+     * The transaction number.
      */
-    var txn by INT64_0
+    var txn: Int64
+        get() = getOrCreate<Int64, String, Transaction>("txn", Int64::class) { self, _ ->
+            self.id = "0"
+            Int64(0)
+        }
+        set(value) {
+            setRaw("id", value.toString())
+            setRaw("txn", value)
+        }
 
     private var version: Version? = null
 

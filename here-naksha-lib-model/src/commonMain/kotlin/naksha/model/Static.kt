@@ -1,5 +1,9 @@
 package naksha.model
 
+// This will be exposed
+// - in JavaScript at the namespace: naksha.model.{name}
+// - jn Java at the class naksha.model.StaticKt
+
 const val ACTION_CREATE = 0
 const val ACTION_UPDATE = 1
 const val ACTION_DELETE = 2

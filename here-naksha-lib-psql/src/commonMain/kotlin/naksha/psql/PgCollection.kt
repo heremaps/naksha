@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.AtomicRef
 import naksha.base.Epoch
 import naksha.base.Int64
 import naksha.base.Platform
@@ -11,25 +12,54 @@ import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
-import naksha.model.NakshaUtil
+import naksha.model.Naksha
+import naksha.model.objects.NakshaCollection
 import naksha.psql.PgStorageClass.Companion.Consistent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
  * A collection is a set of database tables, that together form a logical feature store. This lower level implementation ensures that all collection information are cached, including statistical information, and that the cache is refreshed on demand from time to time.
  *
  * Additionally, this implementation supports methods to create new collections (so the whole set of tables), or to refresh the information about the collection, to add or remove indices at runtime.
  *
- * This table should only be used in combination with [naksha.model.NakshaCollection] and is build according to the data stored in the feature. Actually, clients do operate on the collection features, and the `lib-psql` internally modifies the `PgCollection` accordingly to the external instructions. So, this class is a low level helper, and should only be used with great care, when directly using `lib-psql`.
+ * This table should only be used in combination with [NakshaCollection][_nakshaCollection.model.objects.NakshaCollection] and is build according to the data stored in the feature. Actually, clients do operate on the collection features, and the `lib-psql` internally modifies the `PgCollection` accordingly to the external instructions. So, this class is a low level helper, and should only be used with great care, when directly using `lib-psql`.
  *
- * @constructor Creates a new collection object.
- * @property schema the schema.
- * @property id the collection id.
+ * @since 3.0.0
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class PgCollection internal constructor(val schema: PgSchema, val id: String) {
+open class PgCollection internal constructor(
+    /**
+     * The schema in which the collection is located.
+     * @since 3.0.0
+     */
+    @JvmField val schema: PgSchema,
+    /**
+     * The unique identifier of the collection in the schema.
+     * @since 3.0.0
+     */
+    @JvmField val id: String
+) {
+    /**
+     * The map in which this collection is located. This is an alias for `schema.map`.
+     */
+    val map: String
+        get() = schema.map
+
+    private val _nakshaCollection = AtomicRef<NakshaCollection>(null)
+
+    /**
+     * The reference to the latest [NakshaCollection].
+     */
+    val nakshaCollection: NakshaCollection
+        get() {
+            if (!exists()) throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id)
+            val c = _nakshaCollection.get() ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id)
+            return c
+        }
+
     /**
      * A lock internally used to synchronize access, like cache refresh.
      */
@@ -77,7 +107,7 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
      *
      * If this is an ordinary table, the is can be performance partitioned using [PgPlatform.partitionNumber] above the `feature.id`.
      *
-     * If this is a `TRANSACTION` table, then the partitioning is done by [naksha.model.Version.year].
+     * If this is a `TRANSACTION` table, then the partitioning is done by [_nakshaCollection.model.Version.year].
      *
      * Writing directly into partitions, or reading from them, is discouraged, but in some cases necessary to improve performance drastically. In AWS the speed of every [single-flow](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html) connection is limited to 5 Gbps (10 Gbps when being in the same [cluster placement group](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-strategies.html#placement-groups-cluster)), but still always limited. When the PostgresQL database and the client both have higher bandwidth, then multiple parallel connection need to be used, for example to saturate the HERE temporary or consistent store bandwidth of 200 Gbps, between 20 and 40 connections are needed.
      *
@@ -87,7 +117,7 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
      */
     val head: PgHead
         get() {
-            check(exists()) { throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id) }
+            if (!exists()) throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id)
             return _head ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id)
         }
 
@@ -98,7 +128,7 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
      */
     var history: PgHistory? = null
         get() {
-            check(exists()) { throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id) }
+            if (!exists()) throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id)
             return field
         }
         private set
@@ -159,7 +189,7 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
         check(!PgTable.isInternal(id)) {
             throw NakshaException(ILLEGAL_ARGUMENT, "It is not allowed to modify internal tables", id = id)
         }
-        NakshaUtil.verifyId(id)
+        Naksha.verifyId(id)
         check(partitions in 1..256) {
             throw NakshaException(ILLEGAL_ARGUMENT, "Invalid amount of partitions requested, must be 0 to 256, was: $partitions")
         }
@@ -179,22 +209,23 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
         val conn = connection ?: s.newConnection(s.defaultOptions.copy(schema = schema.name, useMaster = true, readOnly = false))
         try {
             val NOW = Epoch()
-            if (this.id == PgNakshaTransactions.ID) {
+            if (this.id == Naksha.VIRT_TRANSACTIONS) {
                 val txn = PgTransactions(this)
                 txn.create(conn)
                 txn.createYear(conn, NOW.year)
                 txn.createYear(conn, NOW.year + 1)
-
+                txn.createIndex(conn, PgIndex.rowid_pkey)
                 txn.createIndex(conn, PgIndex.txn_unique)
-                for (index in indices) txn.createIndex(conn, index)
+                for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.txn_unique) txn.createIndex(conn, index)
 
                 // We can have a meta table for transactions, but no history or deleted!
                 val meta: PgMeta?
                 if (storeMeta) {
                     meta = PgMeta(txn)
                     meta.create(conn)
+                    meta.createIndex(conn, PgIndex.rowid_pkey)
                     meta.createIndex(conn, PgIndex.id_unique)
-                    for (index in indices) meta.createIndex(conn, index)
+                    for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
                 } else {
                     meta = null
                 }
@@ -203,31 +234,35 @@ open class PgCollection internal constructor(val schema: PgSchema, val id: Strin
             }
             val head = PgHead(this, storageClass, partitions)
             head.create(conn)
+            head.createIndex(conn, PgIndex.rowid_pkey)
             head.createIndex(conn, PgIndex.id_unique)
-            for (index in indices) head.createIndex(conn, index)
+            for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) head.createIndex(conn, index)
 
             val deleted = if (storedDeleted) PgDeleted(head) else null
             if (deleted != null) {
                 deleted.create(conn)
+                deleted.createIndex(conn, PgIndex.rowid_pkey)
                 deleted.createIndex(conn, PgIndex.id_unique)
-                for (index in indices) deleted.createIndex(conn, index)
+                for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) deleted.createIndex(conn, index)
             }
             val history = if (storeHistory) PgHistory(head) else null
             if (history != null) {
                 history.create(conn)
                 history.createYear(conn, NOW.year)
                 history.createYear(conn, NOW.year + 1)
+                history.createIndex(conn, PgIndex.rowid_pkey)
                 history.createIndex(conn, PgIndex.id_txn_uid_unique)
-                for (index in indices) {
+                for (index in indices) if (index != PgIndex.rowid_pkey
+                    && index != PgIndex.id_txn_uid_unique
                     // We do not need this index, because it would only duplicate the stronger unique one!
-                    if (index != PgIndex.id_txn_uid) history.createIndex(conn, index)
-                }
+                    && index != PgIndex.id_txn_uid) history.createIndex(conn, index)
             }
             val meta = if (storeMeta) PgMeta(head) else null
             if (meta != null) {
                 meta.create(conn)
+                meta.createIndex(conn, PgIndex.rowid_pkey)
                 meta.createIndex(conn, PgIndex.id_unique)
-                for (index in indices) meta.createIndex(conn, index)
+                for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
             }
             update(head, deleted, history, meta)
         } finally {
@@ -362,7 +397,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                         val metaIndices: MutableList<PgIndex> = mutableListOf()
                         while (cursor.next()) {
                             val rel = PgRelation(cursor)
-                            if (id == PgNakshaTransactions.ID) {
+                            if (id == Naksha.VIRT_TRANSACTIONS) {
                                 // We know that the transaction table does only have a HEAD.
                                 // We further know, that head is split yearly!
                                 if (rel.isAnyHeadRelation()) {
@@ -465,6 +500,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                             for (index in metaIndices) meta!!.addIndex(index)
                         }
                     }
+                    // TODO: Updated _nakshaCollection !
                     done = true
                 } finally {
                     if (done) update(head, deleted, history, meta) else update(null, null, null, null)

@@ -87,7 +87,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun quoteLiteral(vararg parts: String): String = quote_literal(*parts) ?: NakshaUtil.quoteLiteral(*parts)
+        fun quoteLiteral(vararg parts: String): String = quote_literal(*parts) ?: Naksha.quoteLiteral(*parts)
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
@@ -97,7 +97,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun quoteIdent(vararg parts: String): String = quote_ident(*parts) ?: NakshaUtil.quoteIdent(*parts)
+        fun quoteIdent(vararg parts: String): String = quote_ident(*parts) ?: Naksha.quoteIdent(*parts)
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the

@@ -19,11 +19,6 @@ import kotlin.jvm.JvmField
 @JsExport
 open class ResultRow(
     /**
-     * The operation that was executed.
-     */
-    @JvmField val op: ExecutedOp,
-
-    /**
      * Reference to storage from which the row was received.
      */
     @JvmField val storage: IStorage,
@@ -42,6 +37,11 @@ open class ResultRow(
      * The row-identifier.
      */
     @JvmField val rowId: RowId,
+
+    /**
+     * The operation that was executed.
+     */
+    @JvmField var op: ExecutedOp,
 
     /**
      * The feature-id.

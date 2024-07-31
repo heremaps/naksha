@@ -140,9 +140,9 @@ open class NakshaCollection() : NakshaFeature() {
     companion object {
 
         /**
-         * partition count = 1 -> no partitions only head
-         * partition count = 2 -> head + 2 partitions
-         * partition count = n -> had + n partitions
+         * partition count = 0 -> no partitions only head
+         * partition count = 2 -> 2 partitions
+         * partition count = n -> n partitions
          */
         const val PARTITION_COUNT_NONE = 1
 
@@ -155,11 +155,6 @@ open class NakshaCollection() : NakshaFeature() {
          * The constant for the SP-GIST geo-index.
          */
         const val GEO_INDEX_SP_GIST = "sp-gist"
-
-        /**
-         * The constant for the SP-GIST geo-index.
-         */
-        const val GEO_INDEX_BRIN = "brin"
 
         /**
          * Default geo_index - may change over time.

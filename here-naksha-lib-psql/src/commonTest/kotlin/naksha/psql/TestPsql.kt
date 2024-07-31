@@ -2,11 +2,12 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.model.*
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
+import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ResultRow
-import naksha.model.request.op.UpsertFeature
 import naksha.model.request.WriteRequest
-import naksha.model.request.ExecutedOp.Companion.CREATED
 import naksha.model.request.Response
 import naksha.model.request.SuccessResponse
 import kotlin.test.*
@@ -31,12 +32,12 @@ class TestPsql {
         val schema = env.storage.defaultSchema()
         assertTrue(schema.exists(), "The default schema should exists!")
 
-        val naksha_collections = schema[PgNakshaCollections.ID]
-        assertTrue(naksha_collections.exists(), "${PgNakshaCollections.ID} should exist!")
-        val naksha_dictionaries = schema[PgNakshaDictionaries.ID]
-        assertTrue(naksha_dictionaries.exists(), "${PgNakshaDictionaries.ID} should exist!")
-        val naksha_transactions = schema[PgNakshaTransactions.ID]
-        assertTrue(naksha_transactions.exists(), "${PgNakshaTransactions.ID} should exist!")
+        val naksha_collections = schema[VIRT_COLLECTIONS]
+        assertTrue(naksha_collections.exists(), "$VIRT_COLLECTIONS should exist!")
+        val naksha_dictionaries = schema[VIRT_DICTIONARIES]
+        assertTrue(naksha_dictionaries.exists(), "$VIRT_DICTIONARIES should exist!")
+        val naksha_transactions = schema[VIRT_TRANSACTIONS]
+        assertTrue(naksha_transactions.exists(), "$VIRT_TRANSACTIONS should exist!")
 
         // create_collection("test", 0)
     }
@@ -49,29 +50,29 @@ class TestPsql {
 
     }
 
-    private fun create_collection(id: String, partitions: Int) {
-        val nakCollection = NakshaCollection(id, partitions, autoPurge = false, disableHistory = false)
-        val collectionWriteReq = WriteRequest()
-        collectionWriteReq.add(UpsertFeature(NKC_TABLE, nakCollection))
-        try {
-            val response: Response = env.pgSession.write(collectionWriteReq)
-            assertIs<SuccessResponse>(response, response.toString())
-            val successResponse: SuccessResponse = response
-            val responseRow: ResultRow = successResponse.resultSet.rows()[0]
-            val row: Row = responseRow.row!!
-            assertEquals(id, row.id)
-            assertNotNull(row.meta?.rowId())
-            assertSame(CREATED, responseRow.op)
-            val collection = responseRow.getFeature()?.proxy(NakshaCollection::class)!!
-            assertNotNull(collection)
-            assertEquals(id, row.id)
-            assertFalse(collection.disableHistory)
-            assertEquals(partitions > 0, collection.hasPartitions())
-            assertNotNull(collection.properties)
-            assertSame(ACTION_CREATE, Flags(row.meta!!.flags).action())
-        } finally {
-            env.pgSession.commit()
-        }
-    }
+//    private fun create_collection(id: String, partitions: Int) {
+//        val nakCollection = NakshaCollection(id, partitions, autoPurge = false, disableHistory = false)
+//        val collectionWriteReq = WriteRequest()
+//        collectionWriteReq.add(UpsertFeature(NKC_TABLE, nakCollection))
+//        try {
+//            val response: Response = env.pgSession.write(collectionWriteReq)
+//            assertIs<SuccessResponse>(response, response.toString())
+//            val successResponse: SuccessResponse = response
+//            val responseRow: ResultRow = successResponse.resultSet.rows()[0]
+//            val row: Row = responseRow.row!!
+//            assertEquals(id, row.id)
+//            assertNotNull(row.meta?.rowId())
+//            assertSame(CREATED, responseRow.op)
+//            val collection = responseRow.getFeature()?.proxy(NakshaCollection::class)!!
+//            assertNotNull(collection)
+//            assertEquals(id, row.id)
+//            assertFalse(collection.disableHistory)
+//            assertEquals(partitions > 0, collection.hasPartitions())
+//            assertNotNull(collection.properties)
+//            assertSame(ACTION_CREATE, Flags(row.meta!!.flags).action())
+//        } finally {
+//            env.pgSession.commit()
+//        }
+//    }
 
 }

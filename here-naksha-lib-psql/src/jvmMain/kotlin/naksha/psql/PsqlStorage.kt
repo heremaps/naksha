@@ -5,6 +5,7 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx2
 import naksha.jbon.*
 import naksha.model.*
+import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.model.Row
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ResultRow
@@ -16,62 +17,48 @@ import naksha.psql.PgPlatform.PgPlatformCompanion.VERSION
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * The Java implementation of the [IStorage] interface. This storage class is extended in `here-naksha-storage-psql`, which has a
- * `PsqlStoragePlugin` class, which implements the `Plugin` contract (internal contract in _Naksha-Hub_) and makes the storage available
- * to **Naksha-Hub** as storage plugin. It parses the configuration from feature properties given, and calls this constructor.
+ * The Java implementation of the [IStorage] interface.
+ *
+ * This storage class is extended in `here-naksha-storage-psql`, which has a `PsqlStoragePlugin` class that implements the `Plugin` contract (internal contract in _Naksha-Hub_) and makes the storage available to the **Naksha-Hub** as a storage plugin. It parses the configuration from feature properties given, and calls this constructor.
  * @constructor Creates a new PSQL storage.
- * @property id the identifier of the storage.
  * @property cluster the PostgresQL instances used by this storage.
- * @property defaultOptions the default connection options, ignores the [PgOptions.readOnly] and [PgOptions.useMaster].
+ * @property defaultOptions the default connection options.
  */
 open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOptions: PgOptions) : PgStorage, IStorage {
+    override var hardCap: Int = 1_000_000
+
     private var _pageSize: Int? = null
     override val pageSize: Int
-        get() {
-            val _pageSize = this._pageSize
-            check(_pageSize != null) { "initStorage must be invoked before the 'pageSize' can be queried!" }
-            return _pageSize
-        }
+        get() = _pageSize ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     private var _maxTupleSize: Int? = null
     override val maxTupleSize: Int
-        get() {
-            val _maxTupleSize = this._maxTupleSize
-            check(_maxTupleSize != null) { "initStorage must be invoked before the 'maxTupleSize' can be queried!" }
-            return _maxTupleSize
-        }
+        get() = _maxTupleSize ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     private var _brittleTableSpace: String? = null
     override val brittleTableSpace: String?
         get() {
-            check(id.get() != null) { "initStorage must be invoked before the 'brittleTableSpace' can be queried!" }
+            if (id.get() == null) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
             return _brittleTableSpace
         }
 
     private var _tempTableSpace: String? = null
     override val tempTableSpace: String?
         get() {
-            check(id.get() != null) { "initStorage must be invoked before the 'tempTableSpace' can be queried!" }
+            if (id.get() == null) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
             return _tempTableSpace
         }
 
     private var _gzipExtension: Boolean? = null
     override val gzipExtension: Boolean
-        get() {
-            val _gzipExtension = this._gzipExtension
-            check(_gzipExtension != null) { "initStorage must be invoked before the 'gzipExtension' can be queried!" }
-            return _gzipExtension
-        }
+        get() = _gzipExtension ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     private var _postgresVersion: NakshaVersion? = null
     override val postgresVersion: NakshaVersion
-        get() {
-            val _postgresVersion = this._postgresVersion
-            check(_postgresVersion != null) { "initStorage must be invoked before the 'postgresVersion' can be queried!" }
-            return _postgresVersion
-        }
+        get() = _postgresVersion ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     private var id: AtomicReference<String?> = AtomicReference(null)
+    private var _txnSequenceOid: Int? = null
 
     /**
      * The storage-id.
@@ -109,7 +96,7 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
                 require(v is PgOptions) { "params.${OPTIONS} must be an instance of PgOptions" }
                 options = v
             }
-            options = (options?: defaultOptions).copy(schema = defaultOptions.schema, readOnly = false, useMaster = true)
+            options = (options ?: defaultOptions).copy(schema = defaultOptions.schema, readOnly = false, useMaster = true)
             val initId: String? = if (params != null && params.containsKey(ID)) {
                 val _id = params[ID]
                 require(_id is String && _id.length > 0) { "params.${ID} must be a string with a minimal length of 1" }
@@ -138,14 +125,15 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
                 conn.jdbc.autoCommit = false
 
                 logger.info("Query basic database information")
-                val cursor = conn.execute(
+                var cursor = conn.execute(
                     """
 SELECT 
     current_setting('block_size')::int4 as bs, 
     (select oid FROM pg_catalog.pg_tablespace WHERE spcname = '$TEMPORARY_TABLESPACE') as temp_oid,
     (select oid FROM pg_catalog.pg_extension WHERE extname = 'gzip') as gzip_oid,
     version() as version
-""").fetch()
+"""
+                ).fetch()
                 cursor.use {
                     _pageSize = cursor["bs"]
                     val tupleSize = pageSize - 32
@@ -169,6 +157,12 @@ SELECT
                 val schema = defaultSchema()
                 val storage_id = schema.init_internal(initId, conn, version, override)
                 id.set(storage_id)
+
+                logger.info("Load OID of transaction sequence counter (located only in default schema)")
+                cursor = conn.execute("SELECT oid FROM pg_class WHERE relname='$NAKSHA_TXN_SEQ' AND relnamespace=${schema.oid}").fetch()
+                cursor.use {
+                    _txnSequenceOid = cursor["oid"]
+                }
             }
         }
     }
@@ -195,10 +189,12 @@ SELECT
 
     /**
      * Returns a new PostgresQL session.
+     *
+     * This method is invoked from [newReadSession] and [newWriteSession], just with adjusted [options].
      * @param options the options to use for the database connection used by this session.
      * @return the session.
      */
-    override fun newSession(options: PgOptions): PgSession = PgSession(this, options)
+    override fun newSession(options: PgOptions): PgSession = PsqlSession(this, options)
 
     /**
      * Opens a new PostgresQL database connection. A connection received through this method will not really close when
@@ -285,17 +281,19 @@ SELECT
         TODO("Not yet implemented")
     }
 
-    override fun fetchRowsById(map: String, collectionId: String, rowIds: List<RowId>, cacheOnly: Boolean): List<Row?> {
+    override fun fetchRowsById(map: String, collectionId: String, rowIds: Array<RowId>, mode: String): List<Row?> {
         TODO("Not yet implemented")
     }
 
-    override fun fetchRows(rows: List<ResultRow>, cacheOnly: Boolean) {
+    override fun fetchRows(rows: List<ResultRow?>, from: Int, to: Int, mode: String) {
         TODO("Not yet implemented")
     }
 
-    override fun fetchRow(row: ResultRow, cacheOnly: Boolean) {
+    override fun fetchRow(row: ResultRow, mode: String) {
         TODO("Not yet implemented")
     }
+
+    override fun txnSequenceOid(): Int = _txnSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     // TODO: We need a background job that listens to notification (see PG notify).
     //       This job should update the schema, table, and all other caches instantly!

@@ -34,7 +34,7 @@ open class OrderBy() : AnyObject() {
      * @param next if a second-level order is requested, for example order by `id` and then by `txn`, and finally by `uid`.
      */
     @JsName("of")
-    constructor(column: RowColumn? = null, order: SortOrder = SortOrder.ANY, next: OrderBy? =null) : this() {
+    constructor(column: RowColumn? = null, order: SortOrder = SortOrder.ANY, next: OrderBy? = null) : this() {
         this.column = column
         this.order = order
         this.next = next
@@ -88,4 +88,19 @@ open class OrderBy() : AnyObject() {
      * Optionally next order, so after ordering by this property, order those that are equal by the given one. If _null_, the order will be random when the properties are equal.
      */
     var next by ORDER_BY_NULL
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is OrderBy) return false
+        return column == other.column
+                && order == other.order
+                && next == other.next
+    }
+
+    override fun hashCode(): Int = super.hashCode()
+
+    override fun toString(): String {
+        val col = column ?: return ""
+        val next = this.next
+        return "${col.name} $order${if (next != null) ", $next" else ""}"
+    }
 }

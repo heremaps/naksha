@@ -19,21 +19,15 @@ import kotlin.jvm.JvmField
 @JsExport
 open class NakshaProperties : AnyObject() {
     companion object {
-        @JvmField
-        @JsStatic
-        val XYZ_KEY = Platform.intern("@ns:com:here:xyz")
-
-        @JvmField
-        @JsStatic
-        val DELTA_KEY = Platform.intern("@ns:com:here:delta")
-
-        @JvmField
-        @JsStatic
-        val META_KEY = Platform.intern("@ns:com:here:meta")
+        const val FEATURE_TYPE = "featureType"
+        const val XYZ_KEY = "@ns:com:here:xyz"
+        const val DELTA_KEY = "@ns:com:here:delta"
+        const val META_KEY = "@ns:com:here:meta"
 
         private val XYZ = NotNullProperty<NakshaProperties, XyzNs>(XyzNs::class, name = XYZ_KEY) { _, _ -> XyzNs() }
         private val DELTA_PROXY_NULL = NullableProperty<NakshaProperties, MomDeltaNs>(MomDeltaNs::class, name = META_KEY)
         private val REFERENCES = NullableProperty<NakshaProperties, MomReferenceList>(MomReferenceList::class)
+        private val STRING_NULL = NullableProperty<NakshaProperties, String>(String::class)
     }
 
     /**
@@ -50,6 +44,11 @@ open class NakshaProperties : AnyObject() {
      * References to MOM objects.
      */
     var references: MomReferenceList? by REFERENCES
+
+    /**
+     * The feature-type; if any.
+     */
+    var featureType by STRING_NULL
 
     fun useDeltaNamespace(): MomDeltaNs {
         var deltaProxy = this.delta

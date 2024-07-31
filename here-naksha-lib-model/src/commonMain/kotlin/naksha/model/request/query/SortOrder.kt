@@ -27,20 +27,20 @@ class SortOrder : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val ANY = def(SortOrder::class, "any")
+        val ANY = def(SortOrder::class, "")
 
         /**
          * Sort ascending.
          */
         @JvmField
         @JsStatic
-        val ASCENDING = def(SortOrder::class, "asc")
+        val ASCENDING = def(SortOrder::class, "ASC")
 
         /**
          * Sort descending.
          */
         @JvmField
         @JsStatic
-        val DESCENDING = def(SortOrder::class, "desc")
+        val DESCENDING = def(SortOrder::class, "DESC")
     }
 }

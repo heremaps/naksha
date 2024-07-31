@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.NakshaUtil
+import naksha.model.Naksha
 import naksha.psql.PgType.Companion.BYTE_ARRAY
 import naksha.psql.PgType.Companion.INT
 import naksha.psql.PgType.Companion.INT64
@@ -50,16 +50,17 @@ internal const val PG_YEAR = "${PG_S}y"
 /**
  * The prefix used for all internal tables.
  */
-internal const val PG_INTERNAL_PREFIX = NakshaUtil.VIRT_PREFIX
+internal const val PG_INTERNAL_PREFIX = Naksha.VIRT_PREFIX
 
+internal const val NAKSHA_ID_SEQ = "naksha_id_seq"
 internal const val NAKSHA_TXN_SEQ = "naksha_txn_seq"
 internal const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
 internal const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048
 
-internal const val TRANSACTIONS_COL = NakshaUtil.VIRT_TRANSACTIONS
+internal const val TRANSACTIONS_COL = Naksha.VIRT_TRANSACTIONS
 
-internal const val NKC_TABLE = NakshaUtil.VIRT_TRANSACTIONS
-internal const val NKC_TABLE_ESC = "\"${NakshaUtil.VIRT_TRANSACTIONS}\""
+internal const val NKC_TABLE = Naksha.VIRT_TRANSACTIONS
+internal const val NKC_TABLE_ESC = "\"${Naksha.VIRT_TRANSACTIONS}\""
 internal const val NKC_PARTITION_COUNT = "partitionCount"
 internal const val NKC_ID = "id"
 internal const val NKC_GEO_INDEX = "geoIndex"

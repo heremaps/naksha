@@ -54,7 +54,7 @@ inline fun Long.toInt64(): Int64 = Platform.longToInt64(this)
 
 inline fun <K : Any, V : Any> AtomicMap(): AtomicMap<K, V> = Platform.newAtomicMap()
 inline fun AtomicInt(initialValue: Int = 0): AtomicInt = Platform.newAtomicInt(initialValue)
-inline fun <T : Any> AtomicRef(referee: T): AtomicRef<T> = Platform.newAtomicRef(referee)
+inline fun <T : Any> AtomicRef(referee: T?): AtomicRef<T> = Platform.newAtomicRef(referee)
 inline fun <T : Any> WeakRef(referee: T): WeakRef<T> = Platform.newWeakRef(referee)
 
 /**

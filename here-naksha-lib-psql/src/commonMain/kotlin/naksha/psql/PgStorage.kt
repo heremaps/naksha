@@ -3,21 +3,25 @@ package naksha.psql
 import naksha.base.fn.Fx2
 import naksha.model.*
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
- * The PostgresQL storage that manages session and connections. This is basically the [IStorage], but extended with some special methods
- * to acquire real PostgresQL database connections.
+ * The PostgresQL storage that manages session and connections.
  *
- * In Java multiple instances can be created. Within the database, a new storage instance is created as singleton and added into to global
- * `plv8` object, when the `naksha_start_session` SQL function is executed, which is necessary for all other Naksha SQL functions to work.
- * This singleton will hold only a single [PgSession], trying to acquire a second one, will always throw an [IllegalStateException].
+ * This interfaces extends the [IStorage] interface with some PostgresQL specific properties and methods.
+ *
+ * In Java multiple instances can be created. Within the PostgresQL database (so running in PLV8 extension), a new storage instance is created as singleton and added into to the global `plv8` object, when the `naksha_start_session` SQL function is executed, which is necessary for all other Naksha SQL functions to work. This singleton will hold only a single [PgSession], trying to acquire a second one, will always throw an [IllegalStateException].
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
 interface PgStorage : IStorage {
     /**
-     * The PostgresQL cluster to which this storage is connected. Will be _null_, if being executed within
-     * [PLV8 extension](https://plv8.github.io/).
+     * The hard-cap (limit) of the storage. No result-set every should become bigger than this amount of features.
+     */
+    var hardCap: Int
+
+    /**
+     * The PostgresQL cluster to which this storage is connected. Will be _null_, if being executed within [PLV8 extension](https://plv8.github.io/).
      */
     val cluster: PgCluster?
 
@@ -47,9 +51,7 @@ interface PgStorage : IStorage {
     val tempTableSpace: String?
 
     /**
-     * If the [pgsql-gzip][https://github.com/pramsey/pgsql-gzip] extension is installed, therefore PostgresQL supported `gzip`/`gunzip`
-     * as standalone SQL function by the database. Note, that if this is not the case, we're installing code that is implemented in
-     * JavaScript.
+     * If the [pgsql-gzip][https://github.com/pramsey/pgsql-gzip] extension is installed, therefore PostgresQL supported `gzip`/`gunzip` as standalone SQL function by the database. Note, that if this is not the case, we're installing code that is implemented in JavaScript.
      */
     val gzipExtension: Boolean
 
@@ -59,10 +61,29 @@ interface PgStorage : IStorage {
     val postgresVersion: NakshaVersion
 
     /**
-     * Returns the default (root) schema.
-     * @return the default (root) schema.
+     * Translate the map name into a schema name.
+     * @param map the map name.
+     * @return the schema name.
+     */
+    fun mapToSchema(map: String): String = if (map.isEmpty()) defaultOptions.schema else map
+
+    /**
+     * Translate the schema name into a map name.
+     * @param schema the schema name.
+     * @return the map name.
+     */
+    fun schemaToMap(schema: String): String = if (schema == defaultOptions.schema) defaultOptions.schema else schema
+
+    /**
+     * Returns the default schema that maps to the default map (empty string), which matches [PgOptions.schema] of the [defaultOptions].
+     * @return the default schema.
      */
     fun defaultSchema(): PgSchema
+
+    /**
+     * Returns the OID of the transaction sequence.
+     */
+    fun txnSequenceOid(): Int
 
     /**
      * Tests if this storage contains the given schema.
@@ -104,7 +125,7 @@ interface PgStorage : IStorage {
                 readOnly = false,
                 useMaster = true,
                 parallel = options?.parallel ?: false,
-                appId = context.appId,
+                appId = context.getAppIdOrThrow { "The storage sub-system requires a valid 'appId' in context" },
                 author = context.author
             )
         )
@@ -115,13 +136,15 @@ interface PgStorage : IStorage {
                 readOnly = true,
                 useMaster = options?.useMaster ?: false,
                 parallel = options?.parallel ?: false,
-                appId = context.appId,
+                appId = context.getAppIdOrThrow { "The storage sub-system requires a valid 'appId' in context" },
                 author = context.author
             )
         )
 
     /**
      * Returns a new PostgresQL session.
+     *
+     * This method is invoked from [newReadSession] and [newWriteSession], just with adjusted [options].
      * @param options the options to use for the database connection used by this session.
      * @return the session.
      */

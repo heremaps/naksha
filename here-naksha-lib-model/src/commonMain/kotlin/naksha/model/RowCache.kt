@@ -12,7 +12,7 @@ import kotlin.jvm.JvmField
  * A cache for rows.
  */
 @JsExport
-class NakshaRowCache internal constructor(
+class RowCache internal constructor(
     /**
      * The storage identifier for which this cache holds rows.
      */
@@ -25,7 +25,7 @@ class NakshaRowCache internal constructor(
      * @param row the row to add.
      * @return this
      */
-    fun add(row: Row): NakshaRowCache {
+    fun add(row: Row): RowCache {
         store(row)
         return this
     }
@@ -45,20 +45,20 @@ class NakshaRowCache internal constructor(
      * @return either the existing row, the given one or a merge row.
      */
     fun store(row: Row): Row {
-        val id = row.id
-        val existingRef = rows[id]
+        val row_id = row.id
+        val existingRef = rows[row_id]
         if (existingRef != null) {
             val existing = existingRef.deref()
-            if (existing != null && existing.id == id) {
+            if (existing != null && existing.id == row_id) {
                 val merged = existing.merge(row)
                 if (existing !== merged) {
-                    rows[id] = WeakRef(merged)
+                    rows[row_id] = WeakRef(merged)
                     return merged
                 }
                 return existing
             }
         }
-        rows[id] = WeakRef(row)
+        rows[row_id] = WeakRef(row)
         return row
     }
 

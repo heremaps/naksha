@@ -24,5 +24,5 @@ interface IReadSession: ISession {
      * @return a map that contains all features that where read.
      * @since 3.0.0
      */
-    fun getFeaturesByIds(ids: List<String>): Map<String, ResultRow>
+    fun getFeaturesByIds(vararg ids: String): Map<String, ResultRow>
 }

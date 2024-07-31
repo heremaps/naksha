@@ -4,7 +4,7 @@ package naksha.model.request
 
 import naksha.base.*
 import naksha.model.NakshaContext
-import naksha.model.NakshaUtil
+import naksha.model.Naksha
 import naksha.model.objects.NakshaFeature
 import naksha.model.Row
 import naksha.model.RowRef
@@ -162,7 +162,7 @@ open class Write : AnyObject() {
      */
     fun createCollection(map: String?, collection: NakshaCollection) : Write {
         this.map = map ?: NakshaContext.map()
-        this.collectionId = NakshaUtil.VIRT_COLLECTIONS
+        this.collectionId = Naksha.VIRT_COLLECTIONS
         this.op = WriteOp.CREATE
         this.id = collection.id
         this.rowRef = null
@@ -180,7 +180,7 @@ open class Write : AnyObject() {
      */
     fun updateCollection(map: String?, collection: NakshaCollection, atomic: Boolean = false) : Write {
         this.map = map ?: NakshaContext.map()
-        this.collectionId = NakshaUtil.VIRT_COLLECTIONS
+        this.collectionId = Naksha.VIRT_COLLECTIONS
         this.op = WriteOp.UPDATE
         this.id = collection.id
         this.rowRef = null
@@ -197,7 +197,7 @@ open class Write : AnyObject() {
      */
     fun upsertCollection(map: String?, collection: NakshaCollection) : Write {
         this.map = map ?: NakshaContext.map()
-        this.collectionId = NakshaUtil.VIRT_COLLECTIONS
+        this.collectionId = Naksha.VIRT_COLLECTIONS
         this.op = WriteOp.UPSERT
         this.id = collection.id
         this.rowRef = null

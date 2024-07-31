@@ -4,7 +4,7 @@ package naksha.model.request
 
 import naksha.base.NotNullProperty
 import naksha.base.StringList
-import naksha.model.NakshaUtil
+import naksha.model.Naksha
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -43,7 +43,7 @@ open class ReadCollections() : ReadRequest() {
      * @return this request as [ReadFeatures] request.
      */
     fun toReadFeatures(): ReadFeatures {
-        val req = ReadFeatures(NakshaUtil.VIRT_COLLECTIONS)
+        val req = ReadFeatures(Naksha.VIRT_COLLECTIONS)
         req.queryDeleted = false
         req.queryHistory = false
         req.featureIds.addAll(collectionIds)

@@ -6,7 +6,7 @@ import naksha.base.NotNullProperty
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
 import naksha.base.StringList
-import naksha.model.NakshaUtil.NakshaUtilCompanion.quoteLiteral
+import naksha.model.Naksha.NakshaCompanion.quoteLiteral
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic

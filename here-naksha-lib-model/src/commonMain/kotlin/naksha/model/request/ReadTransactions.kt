@@ -2,7 +2,7 @@
 
 package naksha.model.request
 
-import naksha.model.NakshaUtil
+import naksha.model.Naksha
 import kotlin.js.JsExport
 
 /**
@@ -11,4 +11,4 @@ import kotlin.js.JsExport
  * Note that the [featureIds] are the [versions][naksha.model.Version] converted to a string, which can be done by calling [transaction.toId()][naksha.model.Version.toId], which basically is just the [transaction number][naksha.model.Version.txn] as string.
  */
 @JsExport
-open class ReadTransactions : ReadFeatures(NakshaUtil.VIRT_TRANSACTIONS)
+open class ReadTransactions : ReadFeatures(Naksha.VIRT_TRANSACTIONS)

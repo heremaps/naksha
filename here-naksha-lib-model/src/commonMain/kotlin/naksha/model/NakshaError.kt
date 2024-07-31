@@ -169,6 +169,20 @@ open class NakshaError() : AnyObject() {
          */
         const val NOT_FOUND = "NotFound"
 
+        /**
+         * A feature does exist, but is expected to not exist.
+         *
+         * @since 3.0.0
+         */
+        const val FEATURE_EXISTS = "featureExists"
+
+        /**
+         * A feature does not exist, but is expected to exist.
+         *
+         * @since 3.0.0
+         */
+        const val FEATURE_NOT_EXISTS = "featureNotExists"
+
         private val CODE = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
         private val MSG = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
         private val ID = NullableProperty<NakshaError, String>(String::class)

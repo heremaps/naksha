@@ -4,6 +4,10 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.jbon.IDictManager
+import naksha.model.Naksha.NakshaCompanion.FETCH_ALL
+import naksha.model.Naksha.NakshaCompanion.FETCH_ID
+import naksha.model.Naksha.NakshaCompanion.FETCH_META
+import naksha.model.Naksha.NakshaCompanion.FETCH_CACHE
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ResultRow
 import kotlin.js.JsExport
@@ -129,27 +133,29 @@ interface IStorage : AutoCloseable {
      * @param map the map from which to fetch.
      * @param collectionId the collection from to fetch.
      * @param rowIds a list of row identifiers of the rows to fetch.
-     * @param cacheOnly if _true_, then row is only returned, when being cached in memory.
+     * @param mode the fetch mode, can be [all][FETCH_ALL], [id][FETCH_ID], [meta][FETCH_META], or [cache][FETCH_CACHE].
      * @return the list of the fetched rows, _null_, if the row was not in cached or not found in the storage.
      * @since 3.0.0
      */
-    fun fetchRowsById(map: String, collectionId: String, rowIds: List<RowId>, cacheOnly: Boolean = false): List<Row?>
+    fun fetchRowsById(map: String, collectionId: String, rowIds: Array<RowId>, mode: String = FETCH_ALL): List<Row?>
 
     /**
-     * Fetches all rows in the result-rows given.
+     * Fetches all rows in the given result-rows.
      * @param rows a list of result-rows to fetch.
-     * @param cacheOnly if _true_, then the row is only returned, when being cached in memory.
+     * @param from the index of the first result-row to fetch.
+     * @param to the index of the first result-row to ignore.
+     * @param mode the fetch mode, can be [all][FETCH_ALL], [id][FETCH_ID], [meta][FETCH_META], or [cache][FETCH_CACHE].
      * @since 3.0.0
      */
-    fun fetchRows(rows: List<ResultRow>, cacheOnly: Boolean = false)
+    fun fetchRows(rows: List<ResultRow?>, from:Int = 0, to:Int = rows.size, mode: String = FETCH_ALL)
 
     /**
-     * Fetches a signle result-row.
+     * Fetches a single result-row.
      * @param row the result-row into which to load the row.
-     * @param cacheOnly if _true_, then the row is only returned, when being cached in memory.
+     * @param mode the fetch mode, can be [all][FETCH_ALL], [id][FETCH_ID], [meta][FETCH_META], or [cache][FETCH_CACHE].
      * @since 3.0.0
      */
-    fun fetchRow(row: ResultRow, cacheOnly: Boolean = false)
+    fun fetchRow(row: ResultRow, mode: String = FETCH_ALL)
 
     /**
      * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).

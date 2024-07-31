@@ -24,17 +24,12 @@ interface ResultSet {
     fun storage(): IStorage
 
     /**
-     * The map that was read.
-     */
-    fun map(): String
-
-    /**
-     * The amount of rows that were requested by the client via [ReadRequest.limit].
+     * The amount of rows that were requested by the client via [ReadRequest.limit]. If the client did not request any limit, the limit that the API selected.
      */
     fun limit(): Int
 
     /**
-     * The amount of rows that were requested from the storage.
+     * The maximum amount of rows that were requested from the storage.
      */
     fun hardCap(): Int
 
@@ -53,8 +48,9 @@ interface ResultSet {
     /**
      * Creates a result from all [rows], that should be part of the success response.
      *
-     * Note, when the result-rows in this list are modified, it has only a limited effect to the real result-set. Actually, it only allows to modify the cached feature copies.
-     * @return a sub-list with all result-rows, that should be part of the success response.
+     * **Note**: The storage will not fetch the rows of the result-rows, when there is no need to do this. Therefore, [IStorage.fetchRows] should be invoked ones for this result-row list.
+     *
+     * @return a sub-list from [offset] to [end] with all result-rows, that should be part of the success response.
      */
     fun result(): ResultRowList
 
@@ -62,12 +58,12 @@ interface ResultSet {
      * Returns the size of the result, actually this is simply `result().size`.
      * @return the amount of rows being part of the result.
      */
-    fun resultSize(): Int = min(max(0, end() - offset()), limit())
+    fun resultSize(): Int = result().size
 
     /**
-     * Returns all [rows][Row] being part of the result-set, the rows may not have been read from the storage yet, and may require to invoke [IStorage.fetchRows].
+     * Returns all [rows][Row] being part of the result-set, the rows may not have been read from the storage yet, and may require to invoke [IStorage.fetchRows]. Only the rows till [validationEnd] are validated (filtered), all others are in an unknown state, except [isComplete].
      *
-     * To generate the features for an [SuccessResponse], simply read all rows from [offset] till [end], and convert them into features. Beware that only the rows till [validationEnd] are reliable. All rows returned behind [validationEnd] are not yet validated, therefore some filters (like property query, lambdas) have not been applied yet.
+     * To generate the features for an [SuccessResponse], simply read all rows from [offset] till [end] (or use the [result] method), and convert them into features. Beware that only the rows till [validationEnd] are reliable. All rows returned starting with the one at [validationEnd] are not yet validated, therefore some filters (like property query, lambdas) have not been applied yet.
      * @return the list of all rows being part of the result-set.
      */
     fun rows(): ResultRowList
@@ -80,19 +76,9 @@ interface ResultSet {
     fun validationEnd(): Int
 
     /**
-     * Force the storage to load the complete result-set, if not already done.
-     *
-     * After calling this method the result-set will be either [partially complete][isPartial] or [complete][isComplete].
-     *
-     * **Warning**: This method does nothing, when the result-set is already [partially complete][isPartial] or [complete][isComplete], but can become extremely expensive, if the result-set is [incomplete][isIncomplete]! This causes the request to be executed again, therefore the result-set will be [incomplete][isIncomplete]. To load all rows, the query need to be executed again, and all rows need to be fetched, which basically can mean, that instead of only loading for example the 100 requested rows, this time all, maybe 1,000,000 rows, are read!
-     *
-     */
-    fun loadAll()
-
-    /**
      * Force the storage to validate more rows.
      *
-     * If the result-set is [incomplete][isIncomplete], the method will throw an [NakshaError.ILLEGAL_STATE] error. This can be prevented by calling [loadAll] before.
+     * If the result-set is [incomplete][isIncomplete], the method will throw an [NakshaError.ILLEGAL_STATE] error.
      * @param end the position until which to validate the result-set, if `rows().size` is given, the result-set will become [complete][isComplete].
      * @param end the offset of the first row **not** to validate.
      */
@@ -126,5 +112,5 @@ interface ResultSet {
      * @param end the offset of the first row to exclude.
      * @return returns a handle that allows to read results between the given `offset`, and the given `end`, or _null_, if there are no more results (the new result-set would be empty).
      */
-    fun createHandle(start: Int = offset(), end: Int = max(end(), start + limit())): String?
+    fun createHandle(start: Int = offset(), end: Int = end()): String?
 }

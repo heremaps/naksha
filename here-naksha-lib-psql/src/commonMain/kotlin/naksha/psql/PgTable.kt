@@ -213,7 +213,11 @@ open class PgTable(
                 TABLESPACE = ""
             }
         }
-        val TABLE_BODY = "(${PgColumn.columns.joinToString(",\n") { it.sqlDefinition }})"
+        // Note: The rowid is important to implement fetch:
+        // SELECT * FROM table WHERE rowid = ANY($1::bytea[]);
+        // aka: SELECT * FROM table WHERE rowid = ANY(array[(int8send($txn)||int4send($uid)||int4send($flags)), ...]::bytea[]);
+        // SELECT array_agg(rowid) AS rowid_arr FROM table WHERE ...;
+        val TABLE_BODY = "(${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }}) "
         // See: https://www.ongres.com/blog/toast_and_its_influences_-on_parallelism_in_postgres/
         // parallel_workers: A storage parameter for tables, that allows change the behavior of number of workers to
         // execute a query activity in parallel, similar to max_parallel_workers_per_gather, but only for a specific table;

@@ -4,7 +4,7 @@ package naksha.psql
 
 import naksha.jbon.IDictManager
 import naksha.jbon.JbDictionary
-import naksha.model.NakshaUtil
+import naksha.model.Naksha
 import kotlin.js.JsExport
 
 /**
@@ -12,7 +12,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgNakshaDictionaries internal constructor(schema: PgSchema) :
-    PgCollection(schema, NakshaUtil.VIRT_DICTIONARIES), PgInternalCollection, IDictManager
+    PgCollection(schema, Naksha.VIRT_DICTIONARIES), PgInternalCollection, IDictManager
 {
 
     override fun putDictionary(dict: JbDictionary) {

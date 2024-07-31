@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.CodePoints
 import naksha.base.Platform
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import kotlin.js.JsExport
@@ -13,8 +12,8 @@ import kotlin.jvm.JvmStatic
  * Utility singleton.
  */
 @JsExport
-class NakshaUtil private constructor() {
-    companion object NakshaUtilCompanion {
+class Naksha private constructor() {
+    companion object NakshaCompanion {
         /**
          * The prefix for virtual (internal) collections.
          */
@@ -34,6 +33,26 @@ class NakshaUtil private constructor() {
          * The identifier of the virtual collection in which the dictionaries are stored.
          */
         const val VIRT_DICTIONARIES = "naksha~dictionaries"
+
+        /**
+         * Fetch only the `id` into the [Row].
+         */
+        const val FETCH_ID = "id"
+
+        /**
+         * Fetch the [metadata][Metadata] into the [Row].
+         */
+        const val FETCH_META = "meta"
+
+        /**
+         * Fetch all columns into the [Row].
+         */
+        const val FETCH_ALL = "all"
+
+        /**
+         * Only load form cache into the [Row].
+         */
+        const val FETCH_CACHE = "cache"
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:

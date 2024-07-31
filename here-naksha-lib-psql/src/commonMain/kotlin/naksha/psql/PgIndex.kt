@@ -7,6 +7,7 @@ import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
 import naksha.psql.PgColumn.PgColumnCompanion.txn as c_txn
 import naksha.psql.PgColumn.PgColumnCompanion.uid as c_uid
 import naksha.psql.PgColumn.PgColumnCompanion.flags as c_flags
+import naksha.psql.PgColumn.PgColumnCompanion.rowid as c_rowid
 import naksha.psql.PgColumn.PgColumnCompanion.app_id as c_app_id
 import naksha.psql.PgColumn.PgColumnCompanion.author as c_author
 import naksha.psql.PgColumn.PgColumnCompanion.author_ts as c_author_ts
@@ -82,6 +83,23 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         }
 
         /**
+         * A unique index above the [PgColumn.id] column, only used in [HEAD][PgHead] tables.
+         */
+        @JvmField
+        @JsStatic
+        val rowid_pkey = def(PgIndex::class, "rowid_pkey") { self ->
+            self.columns = listOf(c_rowid)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """btree ($c_rowid DESC)""",
+                        table, unique = true, addFillFactor = true
+                    )
+                ).close()
+            }
+        }
+
+        /**
          * A unique index above the [PgColumn.txn] column, only used in the [TRANSACTIONS][PgTransactions] table.
          */
         @JvmField
@@ -116,7 +134,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         }
 
         /**
-         * Index above the [PgColumn.id], [PgColumn.txn] and [PgColumn.uid] columns. To query this index above transaction numbers only, use `WHERE id like '%' AND txn ...`. If ordering is required, order via `ORDER BY id DESC, txn DESC, uid ASC`.
+         * Index above the [PgColumn.id], [PgColumn.txn] and [PgColumn.uid] columns. To query this index above transaction numbers only, use `WHERE id is not null AND txn = $1 AND uid = $2`. If ordering is required, order via `ORDER BY id DESC, txn DESC, uid ASC`.
          */
         @JvmField
         @JsStatic
