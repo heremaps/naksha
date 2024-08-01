@@ -18,15 +18,12 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import java.util.Map;
-import java.util.concurrent.Future;
 import naksha.base.Int64;
 import naksha.base.PlatformMap;
 import naksha.jbon.IDictManager;
 import naksha.model.*;
-import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -59,30 +56,30 @@ public class View implements IView {
     return new ViewWriteSession(this, context, true);
   }
 
-//  @Override
-//  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-//    throw new NotImplementedException();
-//  }
+  //  @Override
+  //  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
+  //    throw new NotImplementedException();
+  //  }
 
-//  @Override
-//  public void initStorage() {
-//    throw new UnsupportedOperationException("init all individual storages first");
-//  }
+  //  @Override
+  //  public void initStorage() {
+  //    throw new UnsupportedOperationException("init all individual storages first");
+  //  }
 
-//  @Override
-//  public void startMaintainer() {
-//    throw new NotImplementedException();
-//  }
-//
-//  @Override
-//  public void maintainNow() {
-//    throw new NotImplementedException();
-//  }
-//
-//  @Override
-//  public void stopMaintainer() {
-//    throw new NotImplementedException();
-//  }
+  //  @Override
+  //  public void startMaintainer() {
+  //    throw new NotImplementedException();
+  //  }
+  //
+  //  @Override
+  //  public void maintainNow() {
+  //    throw new NotImplementedException();
+  //  }
+  //
+  //  @Override
+  //  public void stopMaintainer() {
+  //    throw new NotImplementedException();
+  //  }
 
   @Override
   public void setViewLayerCollection(ViewLayerCollection viewLayerCollection) {

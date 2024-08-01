@@ -30,7 +30,7 @@ public class ViewSuccessResult extends SuccessResponse {
   public Map<String, Integer> originalFeaturesOrder;
 
   public ViewSuccessResult(@NotNull List<ResultRow> rows, @Nullable Map<String, Integer> originalFeaturesOrder) {
-    super(rows,null);
+    super(rows, null);
     this.originalFeaturesOrder = originalFeaturesOrder;
   }
 }

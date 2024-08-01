@@ -18,35 +18,26 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.storage.EExecutedOp;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
+import naksha.model.NakshaFeatureProxy;
+import naksha.model.request.ResultRow;
+import naksha.model.response.ExecutedOp;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class Sample {
 
-  public static List<XyzFeatureCodec> sampleXyzResponse(int size) {
-    XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
-    List<XyzFeatureCodec> returnList = new ArrayList<>();
+  public static List<ResultRow> sampleXyzResponse(int size) {
+    List<ResultRow> returnList = new ArrayList<>();
     for (int i = 0; i < size; i++) {
-      XyzFeatureCodec codec = codecFactory.newInstance();
-      codec.setFeature(new XyzFeature("id" + i));
-      codec.decodeParts(true);
-      returnList.add(codec);
+      returnList.add(new ResultRow(ExecutedOp.UPDATED, null, new NakshaFeatureProxy("id" + i)));
     }
     return returnList;
   }
-  public static List<XyzFeatureCodec> sampleXyzWriteResponse(int size, EExecutedOp op) {
-    XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
-    List<XyzFeatureCodec> returnList = new ArrayList<>();
+  public static List<ResultRow> sampleXyzWriteResponse(int size, ExecutedOp op) {
+    List<ResultRow> returnList = new ArrayList<>();
     for (int i = 0; i < size; i++) {
-      XyzFeatureCodec codec = codecFactory.newInstance();
-      codec.setFeature(new XyzFeature("id" + i));
-      codec.decodeParts(true);
-      codec.setOp(op);
-      returnList.add(codec);
+      returnList.add(new ResultRow(op, null, new NakshaFeatureProxy("id" + i)));
     }
     return returnList;
   }

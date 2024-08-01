@@ -19,67 +19,97 @@
 package com.here.naksha.lib.view;
 
 import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.storage.Notification;
-import naksha.model.ReadRequest;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import naksha.model.IReadSession;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import naksha.model.request.ReadRequest;
+import naksha.model.request.Request;
+import naksha.model.request.ResultRow;
+import naksha.model.request.notification.Notification;
+import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class MockReadSession implements IReadSession {
 
-  List<XyzFeatureCodec> results;
+  List<ResultRow> results;
 
-  public MockReadSession(List<XyzFeatureCodec> results) {
+  public MockReadSession(List<ResultRow> results) {
     this.results = results;
   }
 
   @Override
-  public boolean isMasterConnect() {
+  public void close() {}
+
+  @NotNull
+  @Override
+  public Response execute(@NotNull Request<?> request) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request<?> request) {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public ResultRow getFeatureById(@NotNull String id) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public Map<String, ResultRow> getFeaturesByIds(@NotNull List<String> ids) {
+    return Map.of();
+  }
+
+  @Override
+  public int getSocketTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setSocketTimeout(int i) {
+
+  }
+
+  @Override
+  public int getStmtTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setStmtTimeout(int i) {
+
+  }
+
+  @Override
+  public int getLockTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setLockTimeout(int i) {
+
+  }
+
+  @NotNull
+  @Override
+  public String getRealm() {
+    return "";
+  }
+
+  @Override
+  public void setRealm(@NotNull String s) {
+
+  }
+
+  @Override
+  public boolean isClosed() {
     return false;
   }
-
-  @Override
-  public @NotNull NakshaContext getNakshaContext() {
-    return null;
-  }
-
-  @Override
-  public int getFetchSize() {
-    return 0;
-  }
-
-  @Override
-  public void setFetchSize(int size) {}
-
-  @Override
-  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-    return 0;
-  }
-
-  @Override
-  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {}
-
-  @Override
-  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-    return 0;
-  }
-
-  @Override
-  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {}
-
-  @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
-    return new MockResult<>(results);
-  }
-
-  @Override
-  public @NotNull Result process(@NotNull Notification<?> notification) {
-    return null;
-  }
-
-  @Override
-  public void close() {}
 }

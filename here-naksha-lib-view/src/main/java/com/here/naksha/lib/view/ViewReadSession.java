@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import naksha.model.IReadSession;
 import naksha.model.ISession;
 import naksha.model.NakshaContext;
@@ -44,7 +43,6 @@ import naksha.model.request.ReadRequest;
 import naksha.model.request.Request;
 import naksha.model.request.ResultRow;
 import naksha.model.request.condition.POp;
-import naksha.model.request.notification.Notification;
 import naksha.model.response.Response;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -85,12 +83,19 @@ public class ViewReadSession implements IReadSession {
     this.parallelQueryExecutor = new ParallelQueryExecutor(viewRef);
   }
 
+  @Override
+  public @NotNull Response execute(@NotNull Request<?> readRequest) {
+    if (!(readRequest instanceof ReadFeatures)) {
+      throw new UnsupportedOperationException("Only ReadFeatures are supported.");
+    }
+    return execute((ReadRequest<?>) readRequest);
+  }
+
   public @NotNull Response execute(@NotNull ReadRequest<?> readRequest) {
     return execute(
         readRequest,
         new MergeByStoragePriority(),
-        new ObligatoryLayersResolver(
-            Set.of(viewRef.getViewCollection().getTopPriorityLayer())));
+        new ObligatoryLayersResolver(Set.of(viewRef.getViewCollection().getTopPriorityLayer())));
   }
 
   public Response execute(
@@ -114,8 +119,7 @@ public class ViewReadSession implements IReadSession {
     List<LayerReadRequest> layerReadRequests = subSessions.entrySet().stream()
         .map(entry -> new LayerReadRequest((ReadFeatures) request, entry.getKey(), entry.getValue()))
         .collect(toList());
-    Map<String, List<ViewLayerRow>> multiLayerRows =
-        parallelQueryExecutor.queryInParallel(layerReadRequests);
+    Map<String, List<ViewLayerRow>> multiLayerRows = parallelQueryExecutor.queryInParallel(layerReadRequests);
 
     /*
     If one of the features is missing on one or few layers, we use getMissingFeatures and missingIdResolver to try to fetch it again by id.
@@ -155,8 +159,7 @@ public class ViewReadSession implements IReadSession {
   }
 
   private Map<String, List<ViewLayerRow>> getMissingFeatures(
-      @NotNull Map<String, List<ViewLayerRow>> multiLayerRows,
-      @NotNull MissingIdResolver missingIdResolver) {
+      @NotNull Map<String, List<ViewLayerRow>> multiLayerRows, @NotNull MissingIdResolver missingIdResolver) {
 
     Map<String, List<ViewLayerRow>> result = new HashMap<>();
     if (!missingIdResolver.skip()) {
@@ -185,55 +188,55 @@ public class ViewReadSession implements IReadSession {
     return false;
   }
 
-//  public @NotNull NakshaContext getNakshaContext() {
-//    return subSessions.values().stream()
-//        .findAny()
-//        .map(IReadSession::getNakshaContext)
-//        .orElseThrow();
-//  }
-//
-//  @Override
-//  public int getFetchSize() {
-//    return subSessions.values().stream()
-//        .findAny()
-//        .map(IReadSession::getFetchSize)
-//        .orElseThrow();
-//  }
+  //  public @NotNull NakshaContext getNakshaContext() {
+  //    return subSessions.values().stream()
+  //        .findAny()
+  //        .map(IReadSession::getNakshaContext)
+  //        .orElseThrow();
+  //  }
+  //
+  //  @Override
+  //  public int getFetchSize() {
+  //    return subSessions.values().stream()
+  //        .findAny()
+  //        .map(IReadSession::getFetchSize)
+  //        .orElseThrow();
+  //  }
 
-//  @Override
-//  public void setFetchSize(int size) {
-//    subSessions.values().forEach(session -> session.setFetchSize(size));
-//  }
-//
-//  @Override
-//  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-//    return subSessions.values().stream()
-//        .findAny()
-//        .map(session -> session.getStatementTimeout(timeUnit))
-//        .orElseThrow();
-//  }
+  //  @Override
+  //  public void setFetchSize(int size) {
+  //    subSessions.values().forEach(session -> session.setFetchSize(size));
+  //  }
+  //
+  //  @Override
+  //  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
+  //    return subSessions.values().stream()
+  //        .findAny()
+  //        .map(session -> session.getStatementTimeout(timeUnit))
+  //        .orElseThrow();
+  //  }
 
-//  @Override
-//  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-//    subSessions.values().forEach(session -> session.setStatementTimeout(timeout, timeUnit));
-//  }
-//
-//  @Override
-//  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-//    return subSessions.values().stream()
-//        .findAny()
-//        .map(session -> session.getLockTimeout(timeUnit))
-//        .orElseThrow();
-//  }
-//
-//  @Override
-//  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-//    subSessions.values().forEach(session -> session.setLockTimeout(timeout, timeUnit));
-//  }
+  //  @Override
+  //  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {
+  //    subSessions.values().forEach(session -> session.setStatementTimeout(timeout, timeUnit));
+  //  }
+  //
+  //  @Override
+  //  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
+  //    return subSessions.values().stream()
+  //        .findAny()
+  //        .map(session -> session.getLockTimeout(timeUnit))
+  //        .orElseThrow();
+  //  }
+  //
+  //  @Override
+  //  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {
+  //    subSessions.values().forEach(session -> session.setLockTimeout(timeout, timeUnit));
+  //  }
 
-//  public @NotNull Response process(@NotNull Notification<?> notification) {
-//    return new ErrorResult(XyzError.NOT_IMPLEMENTED, "process");
-//  }
+  //  public @NotNull Response process(@NotNull Notification<?> notification) {
+  //    return new ErrorResult(XyzError.NOT_IMPLEMENTED, "process");
+  //  }
 
   @Override
   public void close() {

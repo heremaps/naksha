@@ -19,21 +19,18 @@
 package com.here.naksha.lib.view;
 
 import com.here.naksha.lib.core.*;
-import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.TooManyTasks;
 import com.here.naksha.lib.core.exceptions.UncheckedException;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.storage.*;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.IWriteSession;
+import naksha.model.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
-import naksha.model.NakshaContext;
-import naksha.model.ReadFeatures;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.ResultRow;
+import naksha.model.response.Response;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
@@ -45,10 +42,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
-import static naksha.model.POp.eq;
-import static naksha.model.POp.or;
-import static naksha.model.PRef.app_id;
-import static naksha.model.PRef.id;
 import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
 import static com.here.naksha.lib.view.Sample.sampleXyzWriteResponse;
 import static java.util.Collections.emptyList;
@@ -58,13 +51,12 @@ import static org.mockito.Mockito.*;
 
 public class ViewTest {
 
-  private NakshaContext nc =
-      new NakshaContext().withAppId("VIEW_API_TEST").withAuthor("VIEW_API_AUTHOR");
+  private NakshaContext nc = NakshaContext.currentContext().withAppId("VIEW_API_TEST").withAuthor("VIEW_API_AUTHOR");
 
   private final static String TOPO = "topologies";
 
   @Test
-  void testReadApiNotation() throws NoCursor {
+  void testReadApiNotation() {
 
     // given
     IStorage storage = mock(IStorage.class);
@@ -73,20 +65,20 @@ public class ViewTest {
     ViewLayer topologiesCS = new ViewLayer(storage, "topologies");
 
     // each layer is going to return 3 same records
-    List<XyzFeatureCodec> results = sampleXyzResponse(3);
+    List<ResultRow> results = sampleXyzResponse(3);
     when(storage.newReadSession(nc, false)).thenReturn(new MockReadSession(results));
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
 
     View view = new View(viewLayerCollection);
 
-    MergeOperation<XyzFeature, XyzFeatureCodec> customMergeOperation = new MergeByStoragePriority<>();
-    MissingIdResolver<XyzFeature, XyzFeatureCodec> skipFetchingResolver = new IgnoreMissingResolver<>();
+    MergeOperation customMergeOperation = new MergeByStoragePriority();
+    MissingIdResolver skipFetchingResolver = new IgnoreMissingResolver();
 
     // when
     ViewReadSession readSession = view.newReadSession(nc, false);
     ReadFeatures readFeatures = new ReadFeatures();
-    Result result = readSession.execute(
+    Response result = readSession.execute(
         readFeatures, XyzFeatureCodecFactory.get(), customMergeOperation, skipFetchingResolver);
     MutableCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzMutableCursor();
 
@@ -98,7 +90,7 @@ public class ViewTest {
   }
 
   @Test
-  void testWriteApiNotation() throws NoCursor {
+  void testWriteApiNotation() {
     IStorage storage = mock(IStorage.class);
     IWriteSession session = mock(IWriteSession.class);
 
@@ -108,7 +100,7 @@ public class ViewTest {
     when(storage.newWriteSession(nc, true)).thenReturn(session);
 
     final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
-    final XyzFeature feature = new XyzFeature("id0");
+    final NakshaFeatureProxy feature = new NakshaFeatureProxy("id0");
     request.add(EWriteOp.CREATE, feature);
 
     when(session.execute(request)).thenReturn(new MockResult<>(sampleXyzWriteResponse(1, EExecutedOp.CREATED)));
