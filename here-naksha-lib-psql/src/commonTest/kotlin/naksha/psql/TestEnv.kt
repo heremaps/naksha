@@ -66,5 +66,6 @@ class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs:Boolean 
     init {
         if (dropSchema) dropSchema()
         if (initStorage) initStorage()
+        context.attachToCurrentThread()
     }
 }

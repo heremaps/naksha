@@ -1,21 +1,22 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.model.*
+import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.objects.NakshaCollection
-import naksha.model.request.ResultRow
-import naksha.model.request.WriteRequest
-import naksha.model.request.Response
+import naksha.model.request.ReadCollections
 import naksha.model.request.SuccessResponse
+import naksha.model.request.Write
+import naksha.model.request.WriteRequest
 import kotlin.test.*
 
 /**
  * We add all tests into a single file, because ordering of tests is not supported, and we do not want to create a new schema and initialize the database for every single test. I understand that in theory, each test should be independent, but if we do this, tests will become so slow, that it takes hours to run them all eventually, and this is worse than the alternative of having tests being strongly dependent on each other. Specifically, this makes writing more tests faster, because we can reuse test code and create multiple things in a row, testing multiple things at ones, and not need to always set up everything gain. As said, it is true that this way of testing is suboptimal from testing perspective, but it is a lot faster in writing the tests, and quicker at runtime, and it is more important to have fast tests, and spend only a minimal amount of time creating them, than to have the perfect tests. This is not a nuclear plant!
  */
 class TestPsql {
+    // This will create a docker, drop maybe existing schema, and initialize the storage.
     private val env = TestEnv(dropSchema = true, initStorage = true, enableInfoLogs = true)
 
     private fun isLockReleased(collectionId: String): Boolean {
@@ -28,7 +29,7 @@ class TestPsql {
     }
 
     @Test
-    fun run_all() {
+    fun ensure_that_essentials_exist() {
         val schema = env.storage.defaultSchema()
         assertTrue(schema.exists(), "The default schema should exists!")
 
@@ -38,16 +39,40 @@ class TestPsql {
         assertTrue(naksha_dictionaries.exists(), "$VIRT_DICTIONARIES should exist!")
         val naksha_transactions = schema[VIRT_TRANSACTIONS]
         assertTrue(naksha_transactions.exists(), "$VIRT_TRANSACTIONS should exist!")
-
-        // create_collection("test", 0)
     }
 
-    private fun create_collection_low_level(id: String, partitions: Int) {
+    @Test
+    fun create_collection_and_drop_it() {
+        val col = NakshaCollection(randomString())
+        val writeRequest = WriteRequest()
+        writeRequest.writes += Write().createCollection(null, col)
+        var session = env.storage.newWriteSession()
+        session.use {
+            val response = session.execute(writeRequest)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
 
-    }
+        val readRequest = ReadCollections()
+        readRequest.collectionIds += col.id
+        session = env.storage.newReadSession()
+        session.use {
+            val response = session.execute(readRequest)
+            assertIs<SuccessResponse>(response)
+            assertEquals(1, response.resultSize())
+            assertEquals(1, response.features.size)
+            val feature = response.features[0]
+            assertNotNull(feature)
+            assertEquals(col.id, feature.id)
+        }
 
-    private fun drop_collection_low_level(id: String) {
-
+        val dropRequest = WriteRequest()
+        dropRequest.writes += Write().deleteCollectionById(null, col.id)
+        session = env.storage.newWriteSession()
+        session.use {
+            val response = session.execute(dropRequest)
+            assertIs<SuccessResponse>(response)
+        }
     }
 
 //    private fun create_collection(id: String, partitions: Int) {

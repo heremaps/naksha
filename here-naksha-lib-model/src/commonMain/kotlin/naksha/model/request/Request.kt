@@ -13,22 +13,22 @@ import kotlin.js.JsExport
 @JsExport
 open class Request : AnyObject() {
     companion object RequestCompanion {
-        private val ROW_OPTIONS = NotNullProperty<Request, RowOptions>(RowOptions::class) { self,_ -> self.defaultRowOptions() }
+        private val RETURN_OPTIONS = NotNullProperty<Request, ReturnColumns>(ReturnColumns::class) { self, _ -> self.defaultRowOptions() }
         private val RESULT_FILTER_LIST = NotNullProperty<Request, ResultFilterList>(ResultFilterList::class)
     }
 
     /**
-     * The method being called to create the initial [rowOptions].
+     * The method being called to create the initial [returnColumns].
      * @return the initial row options.
      */
-    protected open fun defaultRowOptions() : RowOptions = RowOptions.all()
+    protected open fun defaultRowOptions() : ReturnColumns = ReturnColumns.all()
 
     /**
      * Options of what data is needed by the client.
      *
-     * The storage may ignore this information, however, the client is not guaranteed to receive those parts of a [row][naksha.model.Row] that it unselected in the [rowOptions].
+     * The storage may ignore this information, however, the client is not guaranteed to receive those parts of a [row][naksha.model.Row] that it unselected in the [returnColumns].
      */
-    var rowOptions by ROW_OPTIONS
+    var returnColumns by RETURN_OPTIONS
 
     /**
      * A list of lambdas, that should be invoked by the storage for every row that should be added into a [result-set][ResultSet]. The method can inspect the row, and should return either the unmodified row, a modified version to be added to the response, or _null_, if the row should be removed from the [result-set][ResultSet].

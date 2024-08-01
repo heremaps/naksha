@@ -28,7 +28,7 @@ open class WriteRequest : Request() {
         private val BOOLEAN = NotNullProperty<WriteRequest, Boolean>(Boolean::class) { _, _ -> false }
     }
 
-    override fun defaultRowOptions() : RowOptions = RowOptions().withMeta(true)
+    override fun defaultRowOptions() : ReturnColumns = ReturnColumns.none().withMeta(true)
 
     /**
      * All writes to perform.
@@ -47,18 +47,14 @@ open class WriteRequest : Request() {
      *
      * This improves the performance, because some operations can be done directly within the database, without reading any data back, like for example deleting a feature.
      *
-     * However, if results are needed, this option can be enabled. Beware, that when enabling this option, the default [rowOptions] are limited to return only the [metadata][naksha.model.Metadata]. The reason behind this is, that the client normally only need this, it can merge
-     *
-     * The reason is, that in the most cases, when writing was successful, the client knows the state of
-     *
-     * When [returnResults] is set to _true_, the response will not contain any results (rows), it will not even hold a result-set. This is the fastest way to perform a write-request. You'll still get information if request succeeded or not.
+     * However, if results are needed, this option can be enabled. Beware, that when enabling this option, the default [returnColumns] are limited to return only the [metadata][naksha.model.Metadata]. The reason behind this is, that the client normally only need this, it can simply replace the [metadata][naksha.model.Metadata] in the feature with the one returned, and has an up-to-date feature.
      */
     var returnResults by BOOLEAN
 
     /**
      * By default, the response will return the write results in any order.
      *
-     * If needed, it's possible to change this behaviour by setting this flag to _true_, in such case response will return rows in the order in which the write instructions where given. that is most convenient for the storage, which is less effort for the storage in some cases, because it does not have to order results.
+     * If needed, it's possible to change this behaviour by setting this flag to _true_, in such case response will return rows in the order in which the write instructions where given. If _false_ (_default_), the results are returned is most convenient order for the storage, which is less effort for the storage in some cases, because it does not have to order results.
      */
     var strictOrder by BOOLEAN
 

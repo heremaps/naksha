@@ -16,7 +16,7 @@ open class ReadRequest: Request() {
         private val BOOLEAN = NullableProperty<ReadRequest, Boolean>(Boolean::class) { _,_ -> false }
     }
 
-    override fun defaultRowOptions() : RowOptions = RowOptions.all()
+    override fun defaultRowOptions() : ReturnColumns = ReturnColumns.all()
 
     /**
      * A soft-cap, so the amount of rows the client needs.

@@ -18,27 +18,28 @@ import kotlin.jvm.JvmStatic
 @JsExport
 open class NakshaCollection() : NakshaFeature() {
 
+    // TODO: Add documentation!
     @JsName("of")
     constructor(
         id: String,
-        partitions: Int,
-        geoIndex: String = DEFAULT_GEO_INDEX,
+        partitions: Int = 0,
         storageClass: String? = null,
         autoPurge: Boolean = false,
-        disableHistory: Boolean = false
+        disableHistory: Boolean = false,
+        geoIndex: String? = null
     ) : this() {
         this.id = id
-        this.geoIndex = geoIndex
         this.storageClass = storageClass
         this.partitions = partitions
         this.autoPurge = autoPurge
         this.disableHistory = disableHistory
+        this.geoIndex = geoIndex ?: DEFAULT_GEO_INDEX
     }
 
     override fun typeDefaultValue(): String = "naksha.Collection"
 
     /**
-     * If partitions is given, then collection is internally partitioned in the storage and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested, with a minimum of 2 partitions.
+     * If partitions is given, then collection is internally partitioned in the storage, and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested, with a minimum of 2 partitions.
      *
      * Note that `lib-psql` will allow values between 2 and 256 and 0, to disable partitioning.
      *
@@ -60,8 +61,9 @@ open class NakshaCollection() : NakshaFeature() {
     fun hasPartitions(): Boolean = partitions > 1
 
     /**
-     * The geoIndex to be used for this collection.
-     * The possible varues are implementation specific, for lib-psql there are gist, sp-gist and brin with gist being the default.
+     * The geometry-index to be used for this collection.
+     *
+     * The possible values are implementation specific, for lib-psql there are []gist, sp-gist and brin with gist being the default.
      * The virtual table naksha~indices should expose the supported values. {Create-Only}
      *
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
@@ -137,22 +139,27 @@ open class NakshaCollection() : NakshaFeature() {
 
     var estimatedDeletedFeatures: Int64 by ESTIMATED_DELETED_FEATURES
 
-    companion object {
+    companion object NakshaCollection_C {
 
         /**
          * partition count = 0 -> no partitions only head
          * partition count = 2 -> 2 partitions
          * partition count = n -> n partitions
          */
-        const val PARTITION_COUNT_NONE = 1
+        const val NO_PARTITIONS = 0
 
         /**
-         * The constant for the GIST geo-index.
+         * To create a collection without a geometry index.
+         */
+        const val GEO_INDEX_NONE = "none"
+
+        /**
+         * To create a collection with a GIST geometry-index.
          */
         const val GEO_INDEX_GIST = "gist"
 
         /**
-         * The constant for the SP-GIST geo-index.
+         * To create a collection with an SP-GIST geometry-index.
          */
         const val GEO_INDEX_SP_GIST = "sp-gist"
 

@@ -7,7 +7,6 @@ import naksha.base.Platform
 import naksha.jbon.IDictManager
 import naksha.jbon.JbFeatureDecoder
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaCollection.Companion.PARTITION_COUNT_NONE
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -15,6 +14,7 @@ import kotlin.js.JsExport
  * A collection feature as defined in the Naksha architecture. This class will instantly read the well known properties.
  */
 @JsExport
+@Deprecated("Do we really need this anymore?", level = DeprecationLevel.WARNING)
 class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(dictManager) {
     /**
      * The number of partitions. We use partitioning for tables that are expected to store more than ten million features. With eight
@@ -23,7 +23,7 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(di
      *
      * This value must be a value of 2^n with n between 1 and 8 (2, 4, 8, 16, 32, 64, 128).
      */
-    private var _partitionCount = PARTITION_COUNT_NONE
+    private var _partitionCount = 0
     private var _geoIndex: String? = null
     private var _disableHistory = false
     private var _autoPurge = false
@@ -34,7 +34,7 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(di
 
     override fun clear(): JbNakshaCollectionDecoder {
         super.clear()
-        _partitionCount = PARTITION_COUNT_NONE
+        _partitionCount = 0
         _geoIndex = null
         _disableHistory = false
         _autoPurge = false

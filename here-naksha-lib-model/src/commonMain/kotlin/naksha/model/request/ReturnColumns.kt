@@ -6,12 +6,14 @@ import naksha.base.NotNullProperty
 import naksha.base.AnyObject
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
 /**
  * Fine-grained control over which parts of [rows][naksha.model.Row] are needed in a result-set.
  */
 @JsExport
-open class RowOptions() : AnyObject() {
+open class ReturnColumns() : AnyObject() {
 
     /**
      * Create and initialize row options.
@@ -34,18 +36,22 @@ open class RowOptions() : AnyObject() {
 
     companion object RowOptionsCompanion {
         /**
-         * Create new row-options with all parts being enabled.
-         * @return new row-options with all parts being enabled.
+         * Create return-options with all columns being enabled.
+         * @return new return-options with all columns being enabled.
          */
-        fun all(): RowOptions = RowOptions(feature = true, geometry = true, refPoint = true, meta = true, tags = true, attachment = true)
+        @JvmStatic
+        @JsStatic
+        fun all(): ReturnColumns = ReturnColumns(feature = true, geometry = true, refPoint = true, meta = true, tags = true, attachment = true)
 
         /**
-         * Create new row-options with all parts being disabled.
-         * @return new row-options with all parts being disabled.
+         * Create new return-options with all columns being disabled (only returns [naksha.model.RowId]).
+         * @return new return-options with all columns being disabled (only returns [naksha.model.RowId]).
          */
-        fun none(): RowOptions = RowOptions()
+        @JvmStatic
+        @JsStatic
+        fun none(): ReturnColumns = ReturnColumns()
 
-        private val BOOLEAN = NotNullProperty<RowOptions, Boolean>(Boolean::class) { _, _ -> false }
+        private val BOOLEAN = NotNullProperty<ReturnColumns, Boolean>(Boolean::class) { _, _ -> false }
     }
 
     /**
@@ -53,7 +59,7 @@ open class RowOptions() : AnyObject() {
      */
     var feature by BOOLEAN
 
-    fun withFeature(enabled: Boolean): RowOptions {
+    fun withFeature(enabled: Boolean): ReturnColumns {
         this.feature = enabled
         return this
     }
@@ -63,7 +69,7 @@ open class RowOptions() : AnyObject() {
      */
     var geometry by BOOLEAN
 
-    fun withGeometry(enabled: Boolean): RowOptions {
+    fun withGeometry(enabled: Boolean): ReturnColumns {
         this.geometry = enabled
         return this
     }
@@ -73,7 +79,7 @@ open class RowOptions() : AnyObject() {
      */
     var refPoint by BOOLEAN
 
-    fun withRefPoint(enabled: Boolean): RowOptions {
+    fun withRefPoint(enabled: Boolean): ReturnColumns {
         this.refPoint = enabled
         return this
     }
@@ -83,7 +89,7 @@ open class RowOptions() : AnyObject() {
      */
     var meta by BOOLEAN
 
-    fun withMeta(enabled: Boolean): RowOptions {
+    fun withMeta(enabled: Boolean): ReturnColumns {
         this.meta = enabled
         return this
     }
@@ -93,7 +99,7 @@ open class RowOptions() : AnyObject() {
      */
     var tags by BOOLEAN
 
-    fun withTags(enabled: Boolean): RowOptions {
+    fun withTags(enabled: Boolean): ReturnColumns {
         this.tags = enabled
         return this
     }
@@ -103,7 +109,7 @@ open class RowOptions() : AnyObject() {
      */
     var attachment by BOOLEAN
 
-    fun withAttachment(enabled: Boolean): RowOptions {
+    fun withAttachment(enabled: Boolean): ReturnColumns {
         this.attachment = enabled
         return this
     }

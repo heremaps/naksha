@@ -5,6 +5,7 @@ package naksha.model.request
 import naksha.base.*
 import naksha.model.NakshaContext
 import naksha.model.Naksha
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.objects.NakshaFeature
 import naksha.model.Row
 import naksha.model.RowRef
@@ -156,13 +157,32 @@ open class Write : AnyObject() {
     }
 
     /**
+     * Delete a feature by id.
+     * @param map the map.
+     * @param collectionId the identifier of the collection to act upon.
+     * @param id the identifier of the object to delete.
+     * @param version if the operation should be performed atomic, the version that is expected.
+     */
+    fun deleteFeatureById(map: String?, collectionId: String, id: String, version: Int64? = null) : Write {
+        this.map = map ?: NakshaContext.map()
+        this.collectionId = collectionId
+        this.op = WriteOp.DELETE
+        this.id = id
+        this.rowRef = null
+        this.version = version
+        this.feature = null
+        this.row = null
+        return this
+    }
+
+    /**
      * Create a Naksha collection.
      * @param map the map.
      * @param collection the collection to create.
      */
     fun createCollection(map: String?, collection: NakshaCollection) : Write {
         this.map = map ?: NakshaContext.map()
-        this.collectionId = Naksha.VIRT_COLLECTIONS
+        this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.CREATE
         this.id = collection.id
         this.rowRef = null
@@ -180,7 +200,7 @@ open class Write : AnyObject() {
      */
     fun updateCollection(map: String?, collection: NakshaCollection, atomic: Boolean = false) : Write {
         this.map = map ?: NakshaContext.map()
-        this.collectionId = Naksha.VIRT_COLLECTIONS
+        this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.UPDATE
         this.id = collection.id
         this.rowRef = null
@@ -197,7 +217,7 @@ open class Write : AnyObject() {
      */
     fun upsertCollection(map: String?, collection: NakshaCollection) : Write {
         this.map = map ?: NakshaContext.map()
-        this.collectionId = Naksha.VIRT_COLLECTIONS
+        this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.UPSERT
         this.id = collection.id
         this.rowRef = null
@@ -219,6 +239,24 @@ open class Write : AnyObject() {
         this.id = collection.id
         this.rowRef = null
         this.version = if (atomic) collection.properties.xyz.version else null
+        this.feature = null
+        this.row = null
+        return this
+    }
+
+    /**
+     * Delete a collection.
+     * @param map the map.
+     * @param collectionId the identifier of the collection to delete.
+     * @param version if the operation should be performed atomic, the version that is expected.
+     */
+    fun deleteCollectionById(map: String?, collectionId: String, version: Int64? = null) : Write {
+        this.map = map ?: NakshaContext.map()
+        this.collectionId = VIRT_COLLECTIONS
+        this.op = WriteOp.DELETE
+        this.id = collectionId
+        this.rowRef = null
+        this.version = version
         this.feature = null
         this.row = null
         return this
@@ -290,22 +328,4 @@ open class Write : AnyObject() {
         return this
     }
 
-    /**
-     * Delete an object by id.
-     * @param map the map.
-     * @param collectionId the identifier of the collection to act upon.
-     * @param id the identifier of the object to delete.
-     * @param version if the operation should be performed atomic, the version that is expected.
-     */
-    fun delete(map: String?, collectionId: String, id: String, version: Int64? = null) : Write {
-        this.map = map ?: NakshaContext.map()
-        this.collectionId = collectionId
-        this.op = WriteOp.DELETE
-        this.id = id
-        this.rowRef = null
-        this.version = version
-        this.feature = null
-        this.row = null
-        return this
-    }
 }

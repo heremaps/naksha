@@ -232,61 +232,20 @@ open class PgSession(@JvmField val storage: PgStorage, options: PgOptions) : IWr
     }
 
     /**
-     * Extract the id from the given feature.
-     * @param feature The feature.
-     * @param collectionId The collection-identifier of the collection from which the bytes were read.
-     * @return The id or _null_, if the feature does not have a dedicated id.
-     * @throws IllegalArgumentException If the no such collection exists.
-     */
-    private fun getFeatureId(feature: ByteArray, collectionId: String? = null): String? = featureReader().mapBytes(feature).id()
-
-    /**
-     * Extract the type of the feature by checking _properties.featureType_, _momType_ and _type_ properties in
-     * that order. If none of these properties exist, returning _Feature_.
-     * @param feature The feature to search in.
-     * @param collectionId The collection-identifier from which the feature bytes were read.
-     * @return The feature type.
-     * @throws IllegalArgumentException If no such collection exists.
-     */
-    private fun getFeatureType(feature: ByteArray, collectionId: String? = null): String {
-        val reader = featureReader()
-        reader.mapBytes(feature)
-        reader.dictManager = storage[options.schema].dictionaries()
-        reader.mapBytes(feature)
-        val root = reader.root()
-        if (root.selectKey("properties")) {
-            val value = root.value()
-            if (value.isMap()) {
-                val properties = propertiesReader()
-                properties.mapReader(value)
-                if (properties.selectKey("featureType")) {
-                    val v = properties.value()
-                    if (v.isString()) return v.decodeString()
-                }
-            }
-        }
-        if (root.selectKey("momType") || root.selectKey("type")) {
-            val value = root.value()
-            if (value.isString()) return value.decodeString()
-        }
-        return "Feature"
-    }
-
-    /**
      * Returns collectionId without partition part.
      * For `topology_p0` it will return `topology`.
      */
-    fun getBaseCollectionId(collectionId: String): String {
-        // Note: "topology_p000" is a partition, but we need collection-id.
-        //        0123456789012
-        // So, in that case we will find an underscore at index 8, so i = length-5!
-        val i = collectionId.lastIndexOf('$')
-        return if (i >= 0 && i == (collectionId.length - 3) && collectionId[i + 1] == 'p') {
-            collectionId.substring(0, i)
-        } else {
-            collectionId
-        }
-    }
+//    fun getBaseCollectionId(collectionId: String): String {
+//        // Note: "topology_p000" is a partition, but we need collection-id.
+//        //        0123456789012
+//        // So, in that case we will find an underscore at index 8, so i = length-5!
+//        val i = collectionId.lastIndexOf('$')
+//        return if (i >= 0 && i == (collectionId.length - 3) && collectionId[i + 1] == 'p') {
+//            collectionId.substring(0, i)
+//        } else {
+//            collectionId
+//        }
+//    }
 
     /**
      * Single threaded all-or-nothing bulk write operation.
