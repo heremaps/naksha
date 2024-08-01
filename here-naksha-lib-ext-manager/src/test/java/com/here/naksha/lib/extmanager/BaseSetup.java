@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class BaseSetup {
-
   public ExtensionConfig getExtensionConfig() {
     List<String> whitelistUrls= Arrays.asList(( "java.*,javax.*,com.here.naksha.*").split(","));
     Path file = new File("src/test/resources/data/extension.txt").toPath();
