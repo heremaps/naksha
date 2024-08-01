@@ -184,6 +184,9 @@ SELECT
     }
 
     override fun enterLock(id: String, waitMillis: Int64): ILock {
+        // Very likely, we should move "enterLock" into ISession
+        // The reason is, that when we implement using advisory lock, we need to block connection
+        // When being in a session, we can allow the locker to use this session to do stuff and not to waste an idle connection!
         TODO("Not yet implemented")
     }
 

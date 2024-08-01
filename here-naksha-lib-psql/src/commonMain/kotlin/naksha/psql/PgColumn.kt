@@ -167,19 +167,19 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The `flags` encode how data is stored in the `bytea` type columns.
-         *
+         * Type alias for the flags encoding in the storage, it stores how the binaries are encoded:
          * ```
-         *       Reserved         R1  AE   TE    FE    GE
-         * [0000-0000-0000-0000]-[00][00][0000][0000][0000]
+         *  Reserved       PN       R0  AE   TE     FE    GE
+         * [0000-0000]-[0000-0000]-[00][00][0000]-[0000][0000]
          * ```
-         * - GE: [geometry][geo] and [reference point][geo_ref] encoding - bits: 0-3
-         * - FE: [feature] encoding - bits: 4-7
-         * - TE: [tags] encoding - bits: 8-11
+         * - GE: geometry (and reference point) encoding - bits: 0-3
+         * - FE: feature encoding - bits: 4-7
+         * - TE: tags encoding - bits: 8-11
          * - AE: action - bits: 12+13
-         * - R1: reserved - bits: 14+15
+         * - R0: reserved - bit: 14-15
+         * - PN: partition number - bits: 16-23
          * - ---
-         * - Reserved - bits: 16-31
+         * - Reserved - bits: 24-31
          *
          * Possible actions are:
          * - [naksha.model.ActionValues.CREATED]
@@ -191,6 +191,7 @@ class PgColumn : JsEnum() {
         val flags = def(PgColumn::class, "flags") { self ->
             self._i = 11
             self._type = PgType.INT
+            self._extra = "NOT NULL"
         }
 
         @JvmField

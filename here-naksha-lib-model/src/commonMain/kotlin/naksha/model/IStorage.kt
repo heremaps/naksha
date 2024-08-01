@@ -91,7 +91,7 @@ interface IStorage : AutoCloseable {
         "This is not yet implemented and need further review",
         level = DeprecationLevel.ERROR
     )
-    fun enterLock(id: String, waitMillis: Int64): ILock
+    fun enterLock(id: String, waitMillis: Int64): ILock // Hint: Implement in PsqlStorage
 
     /**
      * Open a new write session.

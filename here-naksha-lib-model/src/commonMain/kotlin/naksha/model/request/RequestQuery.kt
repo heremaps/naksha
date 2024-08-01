@@ -2,14 +2,9 @@
 
 package naksha.model.request
 
-import naksha.base.AnyObject
-import naksha.base.IntList
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.*
 import naksha.geo.HereTile
-import naksha.model.request.query.IPropertyQuery
-import naksha.model.request.query.ISpatialQuery
-import naksha.model.request.query.ITagQuery
+import naksha.model.request.query.*
 import kotlin.js.JsExport
 
 /**

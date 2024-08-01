@@ -66,24 +66,31 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         // In a nutshell: Keep the significant part of the index identifier shorter/equal to 14 characters!
 
         /**
-         * A unique index above the [PgColumn.id] column, only used in [HEAD][PgHead] tables.
-         */
-        @JvmField
-        @JsStatic
-        val id_unique = def(PgIndex::class, "id_unique") { self ->
-            self.columns = listOf(c_id)
-            self.createFn = Fx2 { conn, table ->
-                conn.execute(
-                    self.sql(
-                        """btree ($c_id text_pattern_ops DESC)""",
-                        table, unique = true, addFillFactor = true
-                    )
-                ).close()
-            }
-        }
-
-        /**
-         * A unique index above the [PgColumn.id] column, only used in [HEAD][PgHead] tables.
+         * The primary key added.
+         *
+         * This index includes the `id` so that the following queries do actually perform an index-only access:
+         * ```sql
+         * SELECT id, rowid
+         * FROM {table}
+         * WHERE rowid = (int8send(10)||int4send(0)||int4send(0));
+         *
+         * SELECT id, rowid
+         * FROM {table}
+         * WHERE rowid = ANY(array[
+         *   (int8send(10)||int4send(0)||int4send(0)),
+         *   ...
+         * ]::bytea[]);
+         *
+         * -- This is how "fetch id only" works:
+         * SELECT gzip(string_agg(rowid||id::bytea,'\x00'::bytea))
+         * FROM {table}
+         * WHERE rowid = ANY($1::bytea[]);
+         * ```
+         * This will result in an `Index Only Scan using "{table}$i_rowid_pkey"`, followed by an `Aggregate`.
+         *
+         * However, when we have to load all data, the **index-only** scan turns into an **index-scan**.
+         *
+         * - Automatically to all collections in [PgCollection.create].
          */
         @JvmField
         @JsStatic
@@ -92,7 +99,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_rowid DESC)""",
+                        """btree ($c_rowid DESC) INCLUDE($c_id)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -100,7 +107,28 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         }
 
         /**
-         * A unique index above the [PgColumn.txn] column, only used in the [TRANSACTIONS][PgTransactions] table.
+         * A unique index above the [PgColumn.id] column.
+         *
+         * - Automatically added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta] tables in [PgCollection.create].
+         */
+        @JvmField
+        @JsStatic
+        val id_unique = def(PgIndex::class, "id_unique") { self ->
+            self.columns = listOf(c_id)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_rowid)""",
+                        table, unique = true, addFillFactor = true
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * A unique index above the [PgColumn.txn] column.
+         *
+         * - Automatically added to all [TRANSACTIONS][PgTransactions] tables in [PgCollection.create].
          */
         @JvmField
         @JsStatic
@@ -109,7 +137,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_txn DESC)""",
+                        """btree ($c_txn DESC) INCLUDE ($c_rowid)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -117,7 +145,9 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         }
 
         /**
-         * Unique index above the [PgColumn.id], [PgColumn.txn] and [PgColumn.uid] columns. This is only applied in history.
+         * Unique index above the [PgColumn.id] `DESC`, [PgColumn.txn] `DESC`, and [PgColumn.uid] `ASC` columns.
+         *
+         * - Automatically added to all [HISTORY][PgHistory] tables in [PgCollection.create].
          */
         @JvmField
         @JsStatic
@@ -126,7 +156,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
+                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -134,7 +164,9 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         }
 
         /**
-         * Index above the [PgColumn.id], [PgColumn.txn] and [PgColumn.uid] columns. To query this index above transaction numbers only, use `WHERE id is not null AND txn = $1 AND uid = $2`. If ordering is required, order via `ORDER BY id DESC, txn DESC, uid ASC`.
+         * Index above the [PgColumn.id], [PgColumn.txn] and [PgColumn.uid] columns.
+         *
+         * To query this index above transaction numbers only, use `WHERE id is not null AND txn = $1 AND uid = $2`. If ordering is required, order via `ORDER BY id DESC, txn DESC, uid ASC`.
          */
         @JvmField
         @JsStatic
@@ -143,7 +175,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
+                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -211,7 +243,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_geo_grid DESC, $c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
+                        "btree ($c_geo_grid DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -228,7 +260,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
+                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -245,7 +277,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_author text_pattern_ops DESC, $c_author_ts DESC, $c_id text_pattern_ops DESC, $c_txn DESC, COALESCE($c_uid,0) ASC)""",
+                        """btree ($c_author text_pattern_ops DESC, $c_author_ts DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()

@@ -6,6 +6,10 @@ import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.NakshaVersion
 import naksha.model.NakshaException
 import naksha.model.Naksha
+import naksha.psql.PgIndex.PgIndexCompanion.app_id_updatedAt_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.author_ts_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.geo_grid_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.gist_geo_id_txn_uid
 import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
 import naksha.psql.PgIndex.PgIndexCompanion.tags_id_txn_uid
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -198,7 +202,13 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 storeHistory = false,
                 storedDeleted = false,
                 storeMeta = true,
-                indices = emptyList()
+                indices = listOf(
+                    id_txn_uid,
+                    gist_geo_id_txn_uid,
+                    tags_id_txn_uid,
+                    app_id_updatedAt_id_txn_uid,
+                    author_ts_id_txn_uid
+                )
             )
             collections().create_internal(
                 conn, 0, PgStorageClass.Consistent,
@@ -207,7 +217,10 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 storeMeta = true,
                 indices = listOf(
                     id_txn_uid,
-                    tags_id_txn_uid
+                    gist_geo_id_txn_uid,
+                    tags_id_txn_uid,
+                    app_id_updatedAt_id_txn_uid,
+                    author_ts_id_txn_uid
                 )
             )
             dictionaries().create_internal(
@@ -215,10 +228,7 @@ AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
                 storeHistory = true,
                 storedDeleted = true,
                 storeMeta = true,
-                indices = listOf(
-                    id_txn_uid,
-                    tags_id_txn_uid
-                )
+                indices = listOf(id_txn_uid, tags_id_txn_uid)
             )
             logger.info("Done creating transactions, collections, and dictionaries")
             conn.commit()

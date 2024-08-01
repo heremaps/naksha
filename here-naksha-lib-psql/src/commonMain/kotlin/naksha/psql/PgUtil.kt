@@ -13,6 +13,12 @@ import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
 import naksha.model.objects.NakshaFeature
+import naksha.psql.PgIndex.PgIndexCompanion.app_id_updatedAt_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.author_ts_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.geo_grid_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.gist_geo_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.tags_id_txn_uid
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
 import kotlin.js.JsExport
@@ -78,6 +84,20 @@ class PgUtil private constructor() {
          * yet exists. It is strongly recommended to provide the identifier.
          */
         const val ID = "id"
+
+        /**
+         * The list of default indices that are added, when _null_ is provided as index list to create.
+         */
+        @JvmField
+        @JsStatic
+        var DEFAULT_INDICES = listOf(
+            id_txn_uid,
+            gist_geo_id_txn_uid,
+            geo_grid_id_txn_uid,
+            tags_id_txn_uid,
+            app_id_updatedAt_id_txn_uid,
+            author_ts_id_txn_uid
+        )
 
         /**
          * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes

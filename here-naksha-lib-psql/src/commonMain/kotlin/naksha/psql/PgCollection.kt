@@ -245,6 +245,15 @@ open class PgCollection internal constructor(
                 deleted.createIndex(conn, PgIndex.id_unique)
                 for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) deleted.createIndex(conn, index)
             }
+
+            val meta = if (storeMeta) PgMeta(head) else null
+            if (meta != null) {
+                meta.create(conn)
+                meta.createIndex(conn, PgIndex.rowid_pkey)
+                meta.createIndex(conn, PgIndex.id_unique)
+                for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
+            }
+
             val history = if (storeHistory) PgHistory(head) else null
             if (history != null) {
                 history.create(conn)
@@ -252,17 +261,12 @@ open class PgCollection internal constructor(
                 history.createYear(conn, NOW.year + 1)
                 history.createIndex(conn, PgIndex.rowid_pkey)
                 history.createIndex(conn, PgIndex.id_txn_uid_unique)
-                for (index in indices) if (index != PgIndex.rowid_pkey
-                    && index != PgIndex.id_txn_uid_unique
-                    // We do not need this index, because it would only duplicate the stronger unique one!
-                    && index != PgIndex.id_txn_uid) history.createIndex(conn, index)
-            }
-            val meta = if (storeMeta) PgMeta(head) else null
-            if (meta != null) {
-                meta.create(conn)
-                meta.createIndex(conn, PgIndex.rowid_pkey)
-                meta.createIndex(conn, PgIndex.id_unique)
-                for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
+                for (index in indices) {
+                    if (index != PgIndex.rowid_pkey
+                        && index != PgIndex.id_txn_uid_unique
+                        // We do not need this index, because it would only duplicate the stronger unique one!
+                        && index != PgIndex.id_txn_uid) history.createIndex(conn, index)
+                }
             }
             update(head, deleted, history, meta)
         } finally {

@@ -2,7 +2,6 @@
 
 package naksha.model.objects
 
-import naksha.base.AtomicInt
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.model.Version
