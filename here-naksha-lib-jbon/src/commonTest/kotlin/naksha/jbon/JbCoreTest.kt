@@ -846,4 +846,31 @@ class JbCoreTest {
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())
     }
+
+    @Test
+    fun testSelectPath() {
+        val builder = JbEncoder()
+        val featureJson = """{"id":"bar","properties":{"foo": "hello","bar":[0,1,2,3,4]}}"""
+        val featureMap = Platform.fromJSON(featureJson) as PlatformMap
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
+        val feature = JbFeatureDecoder(dictManager)
+        feature.mapBytes(featureBytes)
+        assertTrue(feature.selectPath("properties", "foo"))
+        assertEquals("hello", feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 0))
+        assertEquals(0, feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 1))
+        assertEquals(1, feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 2))
+        assertEquals(2, feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 3))
+        assertEquals(3, feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 4))
+        assertEquals(4, feature.reader.decodeValue())
+    }
 }
