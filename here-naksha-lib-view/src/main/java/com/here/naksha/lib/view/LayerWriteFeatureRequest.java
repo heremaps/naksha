@@ -20,5 +20,4 @@ package com.here.naksha.lib.view;
 
 import naksha.model.request.WriteRequest;
 
-public class LayerWriteFeatureRequest extends WriteRequest {
-}
+public class LayerWriteFeatureRequest extends WriteRequest {}

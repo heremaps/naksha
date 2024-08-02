@@ -43,6 +43,9 @@ import naksha.model.request.ReadRequest;
 import naksha.model.request.Request;
 import naksha.model.request.ResultRow;
 import naksha.model.request.condition.POp;
+import naksha.model.request.condition.POpType.EQ;
+import naksha.model.request.condition.PRef;
+import naksha.model.request.condition.SOp;
 import naksha.model.response.Response;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -246,8 +249,10 @@ public class ViewReadSession implements IReadSession {
   private boolean isRequestOnlyById(ReadRequest<?> request) {
     if (request instanceof ReadFeatures) {
       ReadFeatures readFeatures = (ReadFeatures) request;
-      POp propertyOp = readFeatures.getPropertyOp();
-      return readFeatures.getSpatialOp() == null && isPropertyOpIdOnly(propertyOp);
+      if (readFeatures.op instanceof SOp) {
+        return false;
+      }
+      return isPropertyOpIdOnly((POp) readFeatures.op);
     } else {
       return false;
     }
@@ -257,11 +262,7 @@ public class ViewReadSession implements IReadSession {
     if (pOp == null) {
       return false;
     }
-    if (pOp.children() == null) {
-      return pOp.op() == POpType.EQ && PRef.id().equals(pOp.getPropertyRef());
-    } else {
-      return pOp.children().stream().allMatch(this::isPropertyOpIdOnly);
-    }
+    return (pOp.getOp() == EQ.INSTANCE) && PRef.id().equals(pOp.getPropertyRef());
   }
 
   @NotNull
@@ -288,9 +289,7 @@ public class ViewReadSession implements IReadSession {
   }
 
   @Override
-  public void setSocketTimeout(int i) {
-
-  }
+  public void setSocketTimeout(int i) {}
 
   @Override
   public int getStmtTimeout() {
@@ -298,9 +297,7 @@ public class ViewReadSession implements IReadSession {
   }
 
   @Override
-  public void setStmtTimeout(int i) {
-
-  }
+  public void setStmtTimeout(int i) {}
 
   @Override
   public int getLockTimeout() {
@@ -308,9 +305,7 @@ public class ViewReadSession implements IReadSession {
   }
 
   @Override
-  public void setLockTimeout(int i) {
-
-  }
+  public void setLockTimeout(int i) {}
 
   @NotNull
   @Override
@@ -319,9 +314,7 @@ public class ViewReadSession implements IReadSession {
   }
 
   @Override
-  public void setRealm(@NotNull String s) {
-
-  }
+  public void setRealm(@NotNull String s) {}
 
   @Override
   public boolean isClosed() {

@@ -18,24 +18,19 @@
  */
 package com.here.naksha.lib.heapcache;
 
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.lambdas.Fe1;
-import com.here.naksha.lib.core.lambdas.Pe1;
-import com.here.naksha.lib.core.models.TxSignalSet;
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.storage.CollectionInfo;
+import naksha.base.Int64;
+import naksha.base.PlatformMap;
+import naksha.jbon.IDictManager;
+import naksha.model.*;
 import com.here.naksha.lib.core.storage.IMasterTransaction;
-import naksha.model.IReadSession;
 import com.here.naksha.lib.core.storage.IReadTransaction;
-import naksha.model.IStorage;
 import com.here.naksha.lib.core.storage.ITransactionSettings;
-import naksha.model.IWriteSession;
 import com.here.naksha.lib.core.util.fib.FibSet;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.Map;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,7 +50,7 @@ public class HeapCache implements IStorage {
     listeners.remove(listener);
   }
 
-  private void notifyEntryAdded(String key, XyzFeature feature) {
+  private void notifyEntryAdded(String key, NakshaFeatureProxy feature) {
     for (WeakReference<CacheChangeListener> reference : listeners) {
       CacheChangeListener listener = reference.get();
       if (listener != null) {
@@ -64,7 +59,7 @@ public class HeapCache implements IStorage {
     }
   }
 
-  private void notifyEntryUpdated(String key, XyzFeature feature) {
+  private void notifyEntryUpdated(String key, NakshaFeatureProxy feature) {
     for (WeakReference<CacheChangeListener> reference : listeners) {
       CacheChangeListener listener = reference.get();
       if (listener != null) {
@@ -82,14 +77,14 @@ public class HeapCache implements IStorage {
     }
   }
 
-  public void putCacheEntry(String key, XyzFeature feature) {
+  public void putCacheEntry(String key, NakshaFeatureProxy feature) {
     CacheEntry entry = cache.putWeak(key);
     entry.setValue(feature);
     // Trigger notification
     notifyEntryAdded(key, feature);
   }
 
-  public void updateCacheEntry(String key, XyzFeature feature) {
+  public void updateCacheEntry(String key, NakshaFeatureProxy feature) {
     CacheEntry entry = cache.get(key);
     if (entry != null) {
       entry.setValue(feature);
@@ -109,40 +104,40 @@ public class HeapCache implements IStorage {
   protected final @NotNull HeapCacheConfig config;
   protected final @NotNull FibSet<String, CacheEntry> cache = new FibSet<>(CacheEntry::new);
 
-  @Override
-  public void init() {}
+//  @Override
+//  public void init() {}
 
-  @Override
-  public void maintain(@NotNull List<CollectionInfo> collectionInfoList) {
-    if (config.storage != null) {
-      config.storage.maintain(collectionInfoList);
-    }
-  }
+//  @Override
+//  public void maintain(@NotNull List<CollectionInfo> collectionInfoList) {
+//    if (config.storage != null) {
+//      config.storage.maintain(collectionInfoList);
+//    }
+//  }
 
-  @Override
+//  @Override
   public @NotNull ITransactionSettings createSettings() {
     // assert config.storage != null;
     // return config.storage.createSettings();
     return null;
   }
 
-  @Override
+//  @Override
   public @NotNull IReadTransaction openReplicationTransaction(@NotNull ITransactionSettings settings) {
     return new HeapReadTx(this);
   }
 
-  @Override
+//  @Override
   public @NotNull IMasterTransaction openMasterTransaction(@NotNull ITransactionSettings settings) {
     return new HeapMasterTx(this);
   }
 
-  @Override
-  public void addListener(@NotNull Pe1<@NotNull TxSignalSet> listener) {}
-
-  @Override
-  public boolean removeListener(@NotNull Pe1<@NotNull TxSignalSet> listener) {
-    return false;
-  }
+//  @Override
+//  public void addListener(@NotNull Pe1<@NotNull TxSignalSet> listener) {}
+//
+//  @Override
+//  public boolean removeListener(@NotNull Pe1<@NotNull TxSignalSet> listener) {
+//    return false;
+//  }
 
   @Override
   public void close() {}
@@ -150,26 +145,26 @@ public class HeapCache implements IStorage {
   /**
    * Initializes the storage, create the transaction table, install needed scripts and extensions.
    */
-  @Override
-  public void initStorage() {}
+//  @Override
+//  public void initStorage() {}
 
   /**
    * Starts the maintainer thread that will take about history garbage collection, sequencing and other background jobs.
    */
-  @Override
-  public void startMaintainer() {}
+//  @Override
+//  public void startMaintainer() {}
 
   /**
    * Blocking call to perform maintenance tasks right now. One-time maintenance.
    */
-  @Override
-  public void maintainNow() {}
+//  @Override
+//  public void maintainNow() {}
 
   /**
    * Stops the maintainer thread.
-   */
-  @Override
-  public void stopMaintainer() {}
+//   */
+//  @Override
+//  public void stopMaintainer() {}
 
   /**
    * Open a new write-session, optionally to a master-node (when being in a multi-writer cluster).
@@ -178,10 +173,10 @@ public class HeapCache implements IStorage {
    * @param useMaster {@code true} if the master-node should be connected to; false if any writer is okay.
    * @return the write-session.
    */
-  @Override
-  public @NotNull IWriteSession newWriteSession(@Nullable NakshaContext context, boolean useMaster) {
-    return IStorage.super.newWriteSession(context, useMaster);
-  }
+//  @Override
+//  public @NotNull IWriteSession newWriteSession(@Nullable NakshaContext context, boolean useMaster) {
+//    return IStorage.super.newWriteSession(context, useMaster);
+//  }
 
   /**
    * Open a new read-session, optionally to a master-node to prevent replication lags.
@@ -192,7 +187,58 @@ public class HeapCache implements IStorage {
    */
   @Override
   public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return IStorage.super.newReadSession(context, useMaster);
+    return newReadSession(context, useMaster);
+  }
+
+  @NotNull
+  @Override
+  public String id() {
+    return "";
+  }
+
+  @Override
+  public void initStorage(@Nullable Map<String, ?> params) {
+
+  }
+
+  @Override
+  public void initRealm(@NotNull String realm) {
+
+  }
+
+  @Override
+  public void dropRealm(@NotNull String realm) {
+
+  }
+
+  @NotNull
+  @Override
+  public NakshaFeatureProxy rowToFeature(@NotNull Row row) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public Row featureToRow(@NotNull PlatformMap feature) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public IDictManager dictManager(@NotNull NakshaContext nakshaContext) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public IWriteSession newWriteSession(@NotNull NakshaContext context) {
+    return null;
   }
 
   /**
@@ -202,9 +248,9 @@ public class HeapCache implements IStorage {
    * @param onShutdown The (optional) method to call when the shutdown is done.
    * @return The future when the shutdown will be done.
    */
-  @Override
-  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    // actually the method is never called in HeapCache, but I don't want to return null in @NotNull tagged method.
-    return Executors.newSingleThreadExecutor().submit(() -> null);
-  }
+//  @Override
+//  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
+//    // actually the method is never called in HeapCache, but I don't want to return null in @NotNull tagged method.
+//    return Executors.newSingleThreadExecutor().submit(() -> null);
+//  }
 }

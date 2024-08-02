@@ -94,7 +94,7 @@ public class View implements IView {
 
   @Override
   public void initStorage(@Nullable Map<String, ?> params) {
-    storage.getOrInit();
+    //    storage.init();
   }
 
   @Override
