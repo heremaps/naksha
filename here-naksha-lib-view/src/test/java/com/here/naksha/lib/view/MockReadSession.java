@@ -18,16 +18,12 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.NakshaContext;
 import naksha.model.IReadSession;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-import naksha.model.request.ReadRequest;
 import naksha.model.request.Request;
 import naksha.model.request.ResultRow;
-import naksha.model.request.notification.Notification;
 import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

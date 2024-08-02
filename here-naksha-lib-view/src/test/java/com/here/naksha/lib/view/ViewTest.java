@@ -28,9 +28,12 @@ import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
+import naksha.model.request.InsertFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.ResultRow;
+import naksha.model.response.ExecutedOp;
 import naksha.model.response.Response;
+import naksha.model.response.SuccessResponse;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
@@ -79,31 +82,31 @@ public class ViewTest {
     ViewReadSession readSession = view.newReadSession(nc, false);
     ReadFeatures readFeatures = new ReadFeatures();
     Response result = readSession.execute(
-        readFeatures, XyzFeatureCodecFactory.get(), customMergeOperation, skipFetchingResolver);
-    MutableCursor<XyzFeature, XyzFeatureCodec> cursor = result.getXyzMutableCursor();
+        readFeatures, customMergeOperation, skipFetchingResolver);
+    assertInstanceOf(SuccessResponse.class,result);
 
     // then
-    assertTrue(cursor.next());
-    List<XyzFeatureCodec> allFeatures = cursor.asList();
+    List<ResultRow> allFeatures = ((SuccessResponse) result).rows;
     assertEquals(3, allFeatures.size());
     assertTrue(allFeatures.containsAll(results));
   }
 
   @Test
   void testWriteApiNotation() {
+    final String VIEW_COLLECTION = "myCollection";
     IStorage storage = mock(IStorage.class);
     IWriteSession session = mock(IWriteSession.class);
 
     ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
-    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS);
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection(VIEW_COLLECTION, topologiesDS);
     View view = new View(viewLayerCollection);
-    when(storage.newWriteSession(nc, true)).thenReturn(session);
+    when(storage.newWriteSession(nc)).thenReturn(session);
 
     final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
     final NakshaFeatureProxy feature = new NakshaFeatureProxy("id0");
-    request.add(EWriteOp.CREATE, feature);
+    request.add(new InsertFeature(VIEW_COLLECTION,feature));
 
-    when(session.execute(request)).thenReturn(new MockResult<>(sampleXyzWriteResponse(1, EExecutedOp.CREATED)));
+    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, ExecutedOp.CREATED),null));
     ViewWriteSession writeSession = view.newWriteSession(nc, true);
 
     try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
@@ -118,7 +121,7 @@ public class ViewTest {
   }
 
   @Test
-  void testDeleteApiNotation() throws NoCursor {
+  void testDeleteApiNotation() {
     IStorage storage = mock(IStorage.class);
     IWriteSession session = mock(IWriteSession.class);
 
@@ -128,10 +131,10 @@ public class ViewTest {
     when(storage.newWriteSession(nc, true)).thenReturn(session);
 
     final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
-    final XyzFeature feature = new XyzFeature("id0");
+    final NakshaFeatureProxy feature = new NakshaFeatureProxy("id0");
     request.add(EWriteOp.DELETE, feature);
 
-    when(session.execute(request)).thenReturn(new MockResult<>(sampleXyzWriteResponse(1, EExecutedOp.DELETED)));
+    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, ExecutedOp.DELETED),null));
     ViewWriteSession writeSession = view.newWriteSession(nc, true);
 
     try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
@@ -155,7 +158,7 @@ public class ViewTest {
     ViewLayer topologiesDS = new ViewLayer(topologiesStorage, "topologies");
     ViewLayer buildingsDS = new ViewLayer(buildingsStorage, "buildings");
 
-    List<XyzFeatureCodec> results = sampleXyzResponse(3);
+    List<ResultRow> results = sampleXyzResponse(3);
     when(topologiesStorage.newReadSession(nc, false)).thenReturn(new MockReadSession(results));
     when(buildingsStorage.newReadSession(nc, false)).thenReturn(readSession);
 
@@ -167,17 +170,17 @@ public class ViewTest {
   }
 
   @Test
-  void shouldNotQueryForMissingIfOriginalRequestWasOnlyById() throws NoCursor {
+  void shouldNotQueryForMissingIfOriginalRequestWasOnlyById() {
     // given
     IStorage topologiesStorage_1 = mock(IStorage.class);
     IStorage topologiesStorage_2 = mock(IStorage.class);
     IReadSession readSession = mock(IReadSession.class);
-    when(readSession.execute(any())).thenReturn(new MockResult<>(emptyList()));
+    when(readSession.execute(any())).thenReturn(new SuccessResponse(emptyList(),null));
 
     ViewLayer topologiesDS_1 = new ViewLayer(topologiesStorage_1, TOPO);
     ViewLayer topologiesDS_2 = new ViewLayer(topologiesStorage_2, TOPO);
 
-    List<XyzFeatureCodec> results = sampleXyzResponse(3);
+    List<ResultRow> results = sampleXyzResponse(3);
     when(topologiesStorage_1.newReadSession(nc, false)).thenReturn(readSession);
     when(topologiesStorage_2.newReadSession(nc, false)).thenReturn(new MockReadSession(results));
 
@@ -214,7 +217,7 @@ public class ViewTest {
     IReadSession buildReadSession = mock(IReadSession.class);
 
     when(topoReadSession.execute(any())).thenThrow(new RuntimeException(new TimeoutException()));
-    when(buildReadSession.execute(any())).thenReturn(new MockResult<>(sampleXyzResponse(1)));
+    when(buildReadSession.execute(any())).thenReturn(new SuccessResponse(sampleXyzResponse(1),null));
 
     when(topologiesStorage.newReadSession(nc, false)).thenReturn(buildReadSession);
     when(buildingsStorage.newReadSession(nc, false)).thenReturn(topoReadSession);

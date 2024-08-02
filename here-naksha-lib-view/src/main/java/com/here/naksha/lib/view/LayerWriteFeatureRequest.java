@@ -18,12 +18,7 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.NakshaFeatureProxy;
-import naksha.model.request.WriteFeature;
-import org.jetbrains.annotations.NotNull;
+import naksha.model.request.WriteRequest;
 
-public class LayerWriteFeatureRequest extends WriteFeature {
-    public LayerWriteFeatureRequest(@NotNull String collectionId, @NotNull NakshaFeatureProxy feature, boolean atomic) {
-        super(collectionId, feature, atomic);
-    }
+public class LayerWriteFeatureRequest extends WriteRequest {
 }

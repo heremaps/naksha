@@ -263,4 +263,68 @@ public class ViewReadSession implements IReadSession {
       return pOp.children().stream().allMatch(this::isPropertyOpIdOnly);
     }
   }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request<?> request) {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public ResultRow getFeatureById(@NotNull String id) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public Map<String, ResultRow> getFeaturesByIds(@NotNull List<String> ids) {
+    return Map.of();
+  }
+
+  @Override
+  public int getSocketTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setSocketTimeout(int i) {
+
+  }
+
+  @Override
+  public int getStmtTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setStmtTimeout(int i) {
+
+  }
+
+  @Override
+  public int getLockTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setLockTimeout(int i) {
+
+  }
+
+  @NotNull
+  @Override
+  public String getRealm() {
+    return "";
+  }
+
+  @Override
+  public void setRealm(@NotNull String s) {
+
+  }
+
+  @Override
+  public boolean isClosed() {
+    return false;
+  }
 }
