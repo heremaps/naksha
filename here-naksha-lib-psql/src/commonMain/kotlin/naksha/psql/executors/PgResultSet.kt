@@ -2,12 +2,9 @@
 
 package naksha.psql.executors
 
-import naksha.model.IStorage
-import naksha.model.Naksha
+import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
-import naksha.model.RowIdArray
 import naksha.model.request.*
 import naksha.psql.PgStorage
 import kotlin.js.JsExport
@@ -33,7 +30,7 @@ class PgResultSet(
      *
      * **Note**: After sorting, the array is replaced with the ordered version. This is quite important to acknowledge when saving the rows-ids to restore result-sets quickly when seeking in them!
      */
-    internal var rowIdArray: RowIdArray,
+    internal var rowIdArray: IRowIdArray,
 
     /**
      * Signal that the [rowIdArray] is incomplete (not the full result set).

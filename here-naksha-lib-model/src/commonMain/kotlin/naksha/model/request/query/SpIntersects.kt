@@ -5,7 +5,7 @@ package naksha.model.request.query
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.geo.GeometryProxy
+import naksha.geo.SpGeometry
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -32,13 +32,13 @@ open class SpIntersects() : AnyObject(), ISpatialQuery {
      * @property transformation the optional transformation to apply to the given geometry.
      */
     @JsName("of")
-    constructor(geometry: GeometryProxy, transformation: SpTransformation) :this() {
+    constructor(geometry: SpGeometry, transformation: SpTransformation) :this() {
         this.geometry = geometry
         this.transformation = transformation
     }
 
     companion object SpIntersectsCompanion {
-        private val GEOMETRY = NotNullProperty<SpIntersects, GeometryProxy>(GeometryProxy::class)
+        private val GEOMETRY = NotNullProperty<SpIntersects, SpGeometry>(SpGeometry::class)
         private val TRANSFORMATION = NullableProperty<SpIntersects, SpTransformation>(SpTransformation::class)
     }
 

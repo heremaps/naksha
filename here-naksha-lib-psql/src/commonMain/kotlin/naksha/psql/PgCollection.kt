@@ -13,6 +13,9 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import naksha.model.Naksha
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
+import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.objects.NakshaCollection
 import naksha.psql.PgStorageClass.Companion.Consistent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -24,7 +27,7 @@ import kotlin.jvm.JvmField
  *
  * Additionally, this implementation supports methods to create new collections (so the whole set of tables), or to refresh the information about the collection, to add or remove indices at runtime.
  *
- * This table should only be used in combination with [NakshaCollection][_nakshaCollection.model.objects.NakshaCollection] and is build according to the data stored in the feature. Actually, clients do operate on the collection features, and the `lib-psql` internally modifies the `PgCollection` accordingly to the external instructions. So, this class is a low level helper, and should only be used with great care, when directly using `lib-psql`.
+ * This table should only be used in combination with [NakshaCollection][naksha.model.objects.NakshaCollection] and is build according to the data stored in the feature. Actually, clients do operate on the collection features, and the `lib-psql` internally modifies the `PgCollection` accordingly to the external instructions. So, this class is a low level helper, and should only be used with great care, when directly using `lib-psql`.
  *
  * @since 3.0.0
  */
@@ -36,6 +39,7 @@ open class PgCollection internal constructor(
      * @since 3.0.0
      */
     @JvmField val schema: PgSchema,
+
     /**
      * The unique identifier of the collection in the schema.
      * @since 3.0.0
@@ -48,6 +52,8 @@ open class PgCollection internal constructor(
     val map: String
         get() = schema.map
 
+    // We should update this, whenever we read from the storage, and find something that is newer.
+    // Newer means, it has a higher version.
     private val _nakshaCollection = AtomicRef<NakshaCollection>(null)
 
     /**
@@ -206,10 +212,10 @@ open class PgCollection internal constructor(
         indices: List<PgIndex>
     ): PgCollection {
         val s = schema.storage
-        val conn = connection ?: s.newConnection(s.defaultOptions.copy(schema = schema.name, useMaster = true, readOnly = false))
+        val conn = connection ?: s.newConnection(schema.adminOptions())
         try {
             val NOW = Epoch()
-            if (this.id == Naksha.VIRT_TRANSACTIONS) {
+            if (this.id == VIRT_TRANSACTIONS) {
                 val txn = PgTransactions(this)
                 txn.create(conn)
                 txn.createYear(conn, NOW.year)
@@ -331,7 +337,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
      */
     fun drop(connection: PgConnection? = null) {
         val s = schema.storage
-        val conn = connection ?: s.newConnection(s.defaultOptions.copy(schema = schema.name, useMaster = true, readOnly = false))
+        val conn = connection ?: s.newConnection(schema.adminOptions())
         try {
             check(!PgTable.isInternal(id)) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "It is not allowed to modify internal tables", id = id)
@@ -374,7 +380,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                 val updateAt = _updateAt
                 if (updateAt != null && currentMillis() < updateAt) return this
                 val s = schema.storage
-                val conn = connection ?: s.newConnection(s.defaultOptions.copy(schema = schema.name, useMaster = true, readOnly = false))
+                val conn = connection ?: s.newConnection(schema.adminOptions())
                 var done: Boolean = false
                 var head: PgHead? = null
                 var deleted: PgDeleted? = null
@@ -401,7 +407,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                         val metaIndices: MutableList<PgIndex> = mutableListOf()
                         while (cursor.next()) {
                             val rel = PgRelation(cursor)
-                            if (id == Naksha.VIRT_TRANSACTIONS) {
+                            if (id == VIRT_TRANSACTIONS) {
                                 // We know that the transaction table does only have a HEAD.
                                 // We further know, that head is split yearly!
                                 if (rel.isAnyHeadRelation()) {
@@ -504,8 +510,8 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                             for (index in metaIndices) meta!!.addIndex(index)
                         }
                     }
-                    // TODO: Updated _nakshaCollection !
                     done = true
+                    refreshNakshaCollection(conn)
                 } finally {
                     if (done) update(head, deleted, history, meta) else update(null, null, null, null)
                     if (connection == null) {
@@ -516,6 +522,27 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
             }
         }
         return this
+    }
+
+    private fun refreshNakshaCollection(conn: PgConnection) {
+        when (id) {
+            // TODO: Improve the details of the virtual collections
+            //       They are invisible when reading all collections, by intention!
+            //       However, when explicitly asked for, they can be accessed, but they can't be modified.
+            VIRT_TRANSACTIONS -> {
+                _nakshaCollection.set(NakshaCollection(VIRT_TRANSACTIONS, 0))
+            }
+            VIRT_COLLECTIONS -> {
+                _nakshaCollection.set(NakshaCollection(VIRT_COLLECTIONS, 0))
+            }
+            VIRT_DICTIONARIES -> {
+                _nakshaCollection.set(NakshaCollection(VIRT_DICTIONARIES, 0))
+            }
+            else -> {
+                // TODO: Read from collections table the latest head version and add into _nakshaCollection
+                // _nakshaCollection.set(?)
+            }
+        }
     }
 
     /**
@@ -547,8 +574,5 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
     ) {
         TODO("Implement me")
     }
-
-    // TODO: We can add more helpers, e.g. to calculate statistics, to drop history being to old, ...
-    // get_byte(digest('hellox','md5'),0)
 
 }

@@ -855,6 +855,13 @@ class JbCoreTest {
         val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
         val feature = JbFeatureDecoder(dictManager)
         feature.mapBytes(featureBytes)
+
+        assertEquals("hello", feature["properties", "foo"])
+        assertEquals(3, feature["properties", "bar", 3])
+
+        assertEquals("hello", feature.getJsonPath("properties.foo"))
+        assertEquals(3, feature.getJsonPath("properties.bar.3"))
+
         assertTrue(feature.selectPath("properties", "foo"))
         assertEquals("hello", feature.reader.decodeValue())
 
@@ -872,5 +879,6 @@ class JbCoreTest {
 
         assertTrue(feature.selectPath("properties", "bar", 4))
         assertEquals(4, feature.reader.decodeValue())
+
     }
 }

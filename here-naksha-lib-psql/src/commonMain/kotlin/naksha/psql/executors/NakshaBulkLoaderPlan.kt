@@ -1,6 +1,13 @@
 //package naksha.psql.executors
 //
+//import naksha.psql.PgConnection
+//import naksha.psql.PgPlan
+//import naksha.psql.PgSchema
+//import naksha.psql.PgSession
+//
 //internal class NakshaBulkLoaderPlan(
+//    val conn: PgConnection,
+//    val schema: PgSchema,
 //    val collectionId: String,
 //    val partitionHeadQuoted: String,
 //    val session: PgSession,
@@ -30,7 +37,7 @@
 //     * Every execution of [insertHeadPlan] creates new plan.
 //     */
 //    private fun insertHeadPlan(): PgPlan {
-//        return session.usePgConnection().prepare(
+//        return conn.prepare(
 //            """INSERT INTO $partitionHeadQuoted (
 //                $COL_CREATED_AT,$COL_UPDATE_AT,$COL_TXN,$COL_UID,$COL_GEO_GRID,$COL_FLAGS,
 //                $COL_APP_ID,$COL_AUTHOR,$COL_TYPE,$COL_ID,

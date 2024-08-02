@@ -12,6 +12,11 @@ import kotlin.reflect.KFunction
 expect class Platform {
     companion object PlatformCompanion {
         /**
+         * The platform specific value of undefined.
+         */
+        val UNDEFINED: Any
+
+        /**
          * The default symbol used for all proxies for which no explicit symbol is returned by the symbol resolvers.
          */
         val DEFAULT_SYMBOL: Symbol

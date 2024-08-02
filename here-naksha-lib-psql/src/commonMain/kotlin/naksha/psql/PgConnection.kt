@@ -2,6 +2,7 @@
 
 package naksha.psql
 
+import naksha.model.SessionOptions
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -20,7 +21,7 @@ interface PgConnection : AutoCloseable {
     /**
      * The session options. Changing the options requires a connection update, and therefore requires a database query to be executed in the background.
      */
-    var options: PgOptions
+    var options: SessionOptions
 
     /**
      * Execute an SQL query with the given arguments. The placeholder should be **$1** to **$n**.

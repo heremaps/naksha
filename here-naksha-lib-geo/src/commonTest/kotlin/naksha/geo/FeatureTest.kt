@@ -2,7 +2,6 @@ package naksha.geo
 
 import naksha.base.Platform
 import naksha.base.PlatformMap
-import naksha.base.PlatformObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -41,7 +40,7 @@ class FeatureTest {
 
         val parsedJson = Platform.fromJSON(polygonJson)
         assertIs<PlatformMap>(parsedJson)
-        val feature = Platform.proxy(parsedJson, GeoFeatureProxy::class)
+        val feature = Platform.proxy(parsedJson, SpFeature::class)
         assertEquals("Feature", feature.type)
         assertEquals("Example", feature.id)
         val bbox = feature.bbox
@@ -55,7 +54,7 @@ class FeatureTest {
         assertEquals(0.0, bbox[5])
 
         val geometry = feature.geometry
-        assertEquals(GeoType.Polygon.toString(), geometry.type)
+        assertEquals(SpType.Polygon.toString(), geometry.type)
         val polygon = geometry.asPolygon()
         assertEquals(1, polygon.getCoordinates().size)
         val polygonCoords = polygon.getCoordinates()

@@ -34,7 +34,7 @@ import com.here.naksha.lib.core.LazyParsableFeatureList.RawDeserializer;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
 import java.util.ArrayList;
 import java.util.List;
-import naksha.geo.BoundingBoxProxy;
+import naksha.geo.SpBoundingBox;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
@@ -51,7 +51,7 @@ public class XyzFeatureCollection extends Response {
 
   @JsonProperty
   @JsonInclude(Include.NON_NULL)
-  private BoundingBoxProxy bbox;
+  private SpBoundingBox bbox;
 
   @JsonProperty
   @JsonInclude(Include.NON_NULL)
@@ -118,7 +118,7 @@ public class XyzFeatureCollection extends Response {
         feature.updateBoundingBox();
       }
 
-      BoundingBoxProxy bbox = feature.getBbox();
+      SpBoundingBox bbox = feature.getBbox();
 
       if (bbox != null) {
         if (bbox.getMinLongitude() < minLon) {
@@ -140,22 +140,22 @@ public class XyzFeatureCollection extends Response {
         && minLat != Double.POSITIVE_INFINITY
         && maxLon != Double.NEGATIVE_INFINITY
         && maxLat != Double.NEGATIVE_INFINITY) {
-      setBbox(new BoundingBoxProxy(minLon, minLat, maxLon, maxLat));
+      setBbox(new SpBoundingBox(minLon, minLat, maxLon, maxLat));
     } else {
       setBbox(null);
     }
   }
 
-  public BoundingBoxProxy getBbox() {
+  public SpBoundingBox getBbox() {
     return bbox;
   }
 
-  public void setBbox(BoundingBoxProxy bbox) {
+  public void setBbox(SpBoundingBox bbox) {
     this.bbox = bbox;
   }
 
   @SuppressWarnings("unused")
-  public XyzFeatureCollection withBbox(final BoundingBoxProxy bbox) {
+  public XyzFeatureCollection withBbox(final SpBoundingBox bbox) {
     setBbox(bbox);
     return this;
   }

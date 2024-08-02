@@ -26,7 +26,7 @@ class JtsTest {
         val y2 = 2.1
 
         // when
-        val polygon = PolygonGeometry(BoundingBoxProxy(x1, y1, x2, y2))
+        val polygon = SpPolygon(SpBoundingBox(x1, y1, x2, y2))
 
         // then
         val coords = polygon.getCoordinates()[0]!!
@@ -57,7 +57,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(PointGeometry::class)
+        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpPoint::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -83,7 +83,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(MultiPointGeometry::class)
+        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpMultiPoint::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -109,7 +109,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(LineStringGeometry::class)
+        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpLineString::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -141,7 +141,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(MultiLineStringGeometry::class)
+        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpMultiLineString::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -183,7 +183,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(PolygonGeometry::class)
+        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpPolygon::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -243,7 +243,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(PolygonGeometry::class)
+        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpPolygon::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -307,7 +307,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(MultiPolygonGeometry::class)
+        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpMultiPolygon::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when

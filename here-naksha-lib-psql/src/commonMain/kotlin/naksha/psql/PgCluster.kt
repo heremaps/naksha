@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.model.SessionOptions
 import kotlin.js.JsExport
 
 /**
@@ -23,7 +24,8 @@ interface PgCluster {
      * Open a PostgresQL session from the session pool of either [master], or a random [replica][replicas], dependent on the [options]
      * given. This method is normally called from [PgStorage].
      * @param options the session options.
+     * @param readOnly if the connection should be read-only.
      * @return the PostgresQL session.
      */
-    fun newConnection(options: PgOptions): PgConnection
+    fun newConnection(options: SessionOptions, readOnly: Boolean): PgConnection
 }

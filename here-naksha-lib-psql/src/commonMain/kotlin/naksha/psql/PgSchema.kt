@@ -14,6 +14,7 @@ import naksha.model.NakshaException
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
+import naksha.model.SessionOptions
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -32,6 +33,11 @@ open class PgSchema(
      */
     @JvmField val name: String
 ) {
+    /**
+     * Admin options for this schema aka map.
+     */
+    fun adminOptions(): SessionOptions = storage.adminOptions.copy(map = storage.mapToSchema(name))
+
     /**
      * The map of this schema.
      */
@@ -68,7 +74,7 @@ open class PgSchema(
     /**
      * Test if this is the default schema.
      */
-    fun isDefault(): Boolean =  name == storage.defaultOptions.schema
+    fun isDefault(): Boolean = name == storage.defaultSchemaName
 
     /**
      * The quoted schema, for example `"foo"`, if no quoting is necessary, the string may be unquoted.
@@ -104,7 +110,7 @@ open class PgSchema(
      * @return the shared and cached [PgCollection] wrapper.
      */
     open operator fun get(id: String): PgCollection = getCollection(id) {
-        when(id) {
+        when (id) {
             VIRT_DICTIONARIES -> PgNakshaDictionaries(this)
             VIRT_COLLECTIONS -> PgNakshaCollections(this)
             VIRT_TRANSACTIONS -> PgNakshaTransactions(this)
@@ -119,7 +125,7 @@ open class PgSchema(
      * @return the shared and cached [PgCollection] wrapper.
      */
     @Suppress("UNCHECKED_CAST")
-    private fun <T: PgCollection> getCollection(id: String, constructor: Fn0<T>): T {
+    private fun <T : PgCollection> getCollection(id: String, constructor: Fn0<T>): T {
         val collections = this.collections
         while (true) {
             var collection: PgCollection? = null
@@ -139,7 +145,7 @@ open class PgSchema(
     }
 
     private fun connOf(connection: PgConnection?): PgConnection {
-        return connection ?: storage.newConnection(storage.defaultOptions.copy(schema = name)) { _, _ -> }
+        return connection ?: storage.newConnection(adminOptions()) { _, _ -> }
     }
 
     private fun closeOf(conn: PgConnection, connection: PgConnection?, commitBeforeClose: Boolean) {

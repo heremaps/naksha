@@ -36,7 +36,7 @@ open class NakshaCollection() : NakshaFeature() {
         this.geoIndex = geoIndex ?: DEFAULT_GEO_INDEX
     }
 
-    override fun typeDefaultValue(): String = "naksha.Collection"
+    override fun defaultFeatureType(): String = "naksha.Collection"
 
     /**
      * If partitions is given, then collection is internally partitioned in the storage, and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested, with a minimum of 2 partitions.
@@ -99,22 +99,29 @@ open class NakshaCollection() : NakshaFeature() {
     var defaultType: String by DEFAULT_TYPE
 
     /**
-     * Default value of `feature.flags`.
+     * The encoding flags to be used for new rows.
      *
-     * {Create-Only} - after collection creation, modification of this parameter takes no effect.
+     * - If _null_, the storage will use whatever is best for the storage.
      */
-    var defaultFlags: Int by DEFAULT_FLAGS
+    var defaultFlags by DEFAULT_FLAGS
+
+    /**
+     * The identifier of the global dictionary to use, when encoding new rows.
+     *
+     * - If _null_, the storage will use whatever is best for the storage.
+     */
+    var encodeDict by STRING_NULL
 
     /**
      * _true_ - disables history of features' modifications.
      */
-    var disableHistory: Boolean by DISABLE_HISTORY
+    var disableHistory by DISABLE_HISTORY
 
     /**
      * If autoPurge is enabled, deleted features are automatically purged and no shadow state is kept available.
      * Note that if [disableHistory] is false, the deleted features will still be around in the history. This mainly effects lib-view.
      */
-    var autoPurge: Boolean by AUTO_PURGE
+    var autoPurge by AUTO_PURGE
 
     /**
      * The indices list contains the list of indices to add to the collection.
@@ -128,7 +135,7 @@ open class NakshaCollection() : NakshaFeature() {
      * Note that there is no guarantee that features are deleted exactly after having reached their max-age.
      * However, they are eligible to be deleted at as soon as possible.
      */
-    var maxAge: Int64 by MAX_AGE
+    var maxAge by MAX_AGE
 
     /**
      * The quadPartitionSize decides (for the optimal partitioning algorithm) how many features should be placed into each "optimal" tile.
@@ -180,7 +187,8 @@ open class NakshaCollection() : NakshaFeature() {
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val DEFAULT_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> "Feature" }
-        private val DEFAULT_FLAGS = NotNullProperty<NakshaCollection, Flags>(Flags::class) { _, _ -> Flags() }
+        private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
+        private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
         private val DISABLE_HISTORY = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val INDICES = NotNullProperty<NakshaCollection, StringList>(StringList::class)

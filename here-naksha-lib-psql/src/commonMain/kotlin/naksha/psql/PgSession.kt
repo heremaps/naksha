@@ -10,29 +10,35 @@ import naksha.jbon.JbMapDecoder
 import naksha.jbon.JbFeatureDecoder
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.Transaction
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.executors.PgSimpleWriter
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
  * A session linked to a PostgresQL database.
  *
- * This object is created when [IStorage.newReadSession] or [IStorage.newWriteSession] are called. Creating a new session does nothing until requests are executed, which is when a [PgSessionRead] or [PgSessionWrite] object is created.
+ * This object is created when [IStorage.newReadSession] or [IStorage.newWriteSession] are called, create the session is cheap without database access.
  *
  * @constructor Create a new session.
  * @param storage the storage to which this session is bound.
- * @param options the default options to use, when opening new database connections.
+ * @param readOnly if this is a read-only session.
+ * @param options the options to use, when opening new database connections.
  */
 @JsExport
-open class PgSession(@JvmField val storage: PgStorage, options: PgOptions) : IWriteSession, IReadSession, ISession {
+open class PgSession(
+    @JvmField val storage: PgStorage,
+    options: SessionOptions?,
+    @JvmField val readOnly: Boolean
+) : IWriteSession, IReadSession, ISession {
 
     /**
      * The options when opening new connections. The options are mostly immutable, except for the timeout values, for which there are dedicated setter.
      */
-    var options: PgOptions = options
+    var options: SessionOptions = options ?: SessionOptions()
         internal set
 
     override var socketTimeout: Int
@@ -54,9 +60,9 @@ open class PgSession(@JvmField val storage: PgStorage, options: PgOptions) : IWr
         }
 
     override var map: String
-        get() = storage.schemaToMap(options.schema)
+        get() = storage.schemaToMap(options.map)
         set(value) {
-            options = options.copy(schema = storage.mapToSchema(value))
+            options = options.copy(map = value)
         }
 
     /**
@@ -74,8 +80,7 @@ open class PgSession(@JvmField val storage: PgStorage, options: PgOptions) : IWr
         var conn = pgConnection
         if (conn == null) {
             txBeforeStart()
-            // TODO: Start new transaction
-            conn = storage.newConnection(options, this::initConnection)
+            conn = storage.newConnection(options, readOnly, this::initConnection)
             pgConnection = conn
             txAfterStart(conn)
         }
@@ -90,11 +95,6 @@ open class PgSession(@JvmField val storage: PgStorage, options: PgOptions) : IWr
     open fun initConnection(conn: PgConnection, query: String) {
         conn.execute(query).close()
     }
-
-    /**
-     * The cached quoted schema name (double quotes).
-     */
-    internal val schemaIdent = quoteIdent(options.schema)
 
     /**
      * The `uid` counter (unique identifier within a transaction).
@@ -215,7 +215,7 @@ open class PgSession(@JvmField val storage: PgStorage, options: PgOptions) : IWr
             reader = JbFeatureDecoder()
             _featureReader = reader
         }
-        reader.dictManager = storage[options.schema].dictionaries()
+        reader.dictManager = storage[storage.defaultSchemaName].dictionaries()
         return reader
     }
 
@@ -285,16 +285,17 @@ open class PgSession(@JvmField val storage: PgStorage, options: PgOptions) : IWr
 
     override fun execute(request: Request): Response {
         when (request) {
+            is WriteRequest -> {
+                PgSimpleWriter(this, request.writes)
+            }
+
             is ReadRequest -> {
                 TODO("ReadRequest not yet implemented")
             }
 
-            is WriteRequest -> {
-                TODO("WriteRequest not yet implemented")
-            }
-
-            else -> throw IllegalArgumentException("Unknown request")
+            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
         }
+        throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
     }
 
     override fun getFeatureById(id: String): ResultRow? {

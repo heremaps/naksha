@@ -166,6 +166,5 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun partitionNumber(featureId: String): Int = Platform.md5(featureId)[0].toInt() and 255
-
     }
 }

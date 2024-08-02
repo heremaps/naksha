@@ -115,6 +115,12 @@ actual class Platform {
         internal val symbolsCache = ConcurrentHashMap<String, Symbol>()
 
         /**
+         * The platform specific value of undefined.
+         */
+        @JvmField
+        actual val UNDEFINED: Any = Object()
+
+        /**
          * The symbol (_com.here.naksha.lib.nak_) to store the default Naksha multi-platform types in.
          */
         @JvmField

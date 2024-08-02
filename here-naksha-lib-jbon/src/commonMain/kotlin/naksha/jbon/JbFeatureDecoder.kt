@@ -1,7 +1,11 @@
 package naksha.jbon
 
 import naksha.base.AnyObject
+import naksha.base.MapProxy
+import naksha.base.Platform
+import naksha.base.PlatformMap
 import kotlin.js.JsExport
+import kotlin.reflect.KClass
 
 /**
  * A feature is a record, where the root unit is a map.
@@ -42,6 +46,40 @@ open class JbFeatureDecoder(dictManager: IDictManager? = null) : JbRecordDecoder
         if (id != null && "id" !in feature) feature.setRaw("id", id)
         return feature
     }
+
+    private fun splitJsonPath(jsonPath: String): Array<Any> {
+        // Regular expression to match parts of the JSON path
+        val parts = jsonPath.split(".")
+        val out = Array(parts.size) {
+            var part: Any = parts[it]
+            try {
+                part = parts[it].toInt()
+            } catch (_: NumberFormatException) {
+            }
+            part
+        }
+        return out
+    }
+
+    /**
+     * Reads the value using the given path.
+     *
+     * @param path the path to select, strings are used to enter maps, integers are used to select from arrays.
+     * @return either the value read from the path or [naksha.base.Platform.UNDEFINED], when the path does not exist.
+     */
+    open operator fun get(vararg path: Any): Any? {
+        reset() // Move the reader to the root-map.
+        if (!_selectPath(reader, 0, path)) return Platform.UNDEFINED
+        return reader.decodeValue()
+    }
+
+    /**
+     * Reads the value using the given path.
+     *
+     * @param path the path to select (`properties.test`), strings are used to enter maps, integers are used to select from arrays.
+     * @return either the value read from the path or [naksha.base.Platform.UNDEFINED], when the path does not exist.
+     */
+    open fun getJsonPath(path: String): Any? = get(*splitJsonPath(path))
 
     /**
      * Moves the cursor to given path.
@@ -94,4 +132,22 @@ open class JbFeatureDecoder(dictManager: IDictManager? = null) : JbRecordDecoder
             return false
         } else return false
     }
+
+    /**
+     * Returns the feature as arbitrary map.
+     * @return the feature as map.
+     */
+    fun toMap(): AnyObject {
+        val feature = _map.toAnyObject()
+        if ("id" in feature) feature.setRaw("id", id())
+        return feature
+    }
+
+    /**
+     * Returns the feature as specific map.
+     * @param T the proxy type to return.
+     * @return the feature as T.
+     */
+    @Suppress("NON_EXPORTABLE_TYPE")
+    fun <T: AnyObject> proxy(klass: KClass<T>): T = toMap().proxy(klass)
 }

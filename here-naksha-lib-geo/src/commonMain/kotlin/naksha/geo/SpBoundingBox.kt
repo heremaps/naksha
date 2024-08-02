@@ -8,7 +8,7 @@ import kotlin.math.min
 
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate", "unused")
 @JsExport
-class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
+class SpBoundingBox() : ListProxy<Double>(Double::class) {
 
     @JsName("of2D")
     constructor(west: Double, south: Double, east: Double, north: Double) : this() {
@@ -32,9 +32,21 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         }
     }
 
+    /**
+     * Returns the center of the bounding box.
+     * @return the center of the bounding box.
+     */
+    fun center(): SpPoint // TODO: Improve this implementation, add 3D!
+        = SpPoint(
+            PointCoord(
+                (getMaxLongitude() - getMinLongitude()) / 2.0,
+                (getMaxLatitude() - getMinLatitude()) / 2.0
+            )
+        )
+
     private fun has(value: Double?): Boolean = value != null && !value.isNaN()
 
-    fun setToPoint(longitude: Double, latitude: Double, margin: Double = 0.0): BoundingBoxProxy {
+    fun setToPoint(longitude: Double, latitude: Double, margin: Double = 0.0): SpBoundingBox {
         withMinLatitude(latitude-margin)
         withMaxLatitude(latitude+margin)
         withMinLongitude(longitude-margin)
@@ -42,7 +54,7 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         return this
     }
 
-    fun addPoint(pointCoord: PointCoord): BoundingBoxProxy {
+    fun addPoint(pointCoord: PointCoord): SpBoundingBox {
         val longitude = pointCoord.getLongitude()
         val latitude = pointCoord.getLatitude()
         if (this.isEmpty()) setToPoint(longitude,latitude)
@@ -63,7 +75,7 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         return (a>=0 && b>=0) || (a<=0 && b<=0)
     }
 
-    fun addMultiPoint(multiPoint: MultiPointCoord): BoundingBoxProxy {
+    fun addMultiPoint(multiPoint: MultiPointCoord): SpBoundingBox {
         for (point in multiPoint) {
             if (point==null) continue
             addPoint(point)
@@ -71,7 +83,7 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         return this
     }
 
-    fun addLineString(lineString: LineStringCoord): BoundingBoxProxy {
+    fun addLineString(lineString: LineStringCoord): SpBoundingBox {
         for (point in lineString) {
             if (point==null) continue
             addPoint(point)
@@ -79,7 +91,7 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         return this
     }
 
-    fun addMultiLineString(multiLineString: MultiLineStringCoord): BoundingBoxProxy {
+    fun addMultiLineString(multiLineString: MultiLineStringCoord): SpBoundingBox {
         for (lineString in multiLineString) {
             if (lineString==null) continue
             addLineString(lineString)
@@ -87,7 +99,7 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         return this
     }
 
-    fun addPolygon(polygon: PolygonCoord): BoundingBoxProxy {
+    fun addPolygon(polygon: PolygonCoord): SpBoundingBox {
         for (lineString in polygon) {
             if (lineString==null) continue
             addLineString(lineString)
@@ -95,7 +107,7 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
         return this
     }
 
-    fun addMultiPolygon(multiPolygon: MultiPolygonCoord): BoundingBoxProxy {
+    fun addMultiPolygon(multiPolygon: MultiPolygonCoord): SpBoundingBox {
         for (polygon in multiPolygon) {
             if (polygon==null) continue
             addPolygon(polygon)
@@ -124,7 +136,7 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
     /**
      * Convert this bounding box into 2D format, removing altitudes.
      */
-    fun to2D(): BoundingBoxProxy {
+    fun to2D(): SpBoundingBox {
         if (!is2D()) {
             val minLon = getMinLongitude()
             val minLat = getMinLatitude()
@@ -142,7 +154,7 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
     /**
      * Convert this bounding box into 3D format, if this is already 3D, does nothing. Ensures that altitudes is not _null_ or [Double.NaN].
      */
-    fun to3D(): BoundingBoxProxy {
+    fun to3D(): SpBoundingBox {
         if (!is3D()) {
             val minLon = getMinLongitude()
             val minLat = getMinLatitude()
@@ -181,39 +193,39 @@ class BoundingBoxProxy() : ListProxy<Double>(Double::class) {
     }
     fun getNorthEastAltitude(): Double? = getMinAltitude()
 
-    fun withMinLongitude(longitude: Double): BoundingBoxProxy {
+    fun withMinLongitude(longitude: Double): SpBoundingBox {
         set(minLonIndex(), longitude)
         return this
     }
-    fun withWestLongitude(longitude: Double): BoundingBoxProxy = withMinLongitude(longitude)
-    fun withMinLatitude(latitude: Double): BoundingBoxProxy {
+    fun withWestLongitude(longitude: Double): SpBoundingBox = withMinLongitude(longitude)
+    fun withMinLatitude(latitude: Double): SpBoundingBox {
         set(minLatIndex(), latitude)
         return this
     }
-    fun withSouthLatitude(latitude: Double): BoundingBoxProxy = withMinLatitude(latitude)
-    fun withMinAltitude(altitude: Double): BoundingBoxProxy {
+    fun withSouthLatitude(latitude: Double): SpBoundingBox = withMinLatitude(latitude)
+    fun withMinAltitude(altitude: Double): SpBoundingBox {
         to3D()
         set(minAltIndex()!!, altitude)
         return this
     }
-    fun withSouthWestAltitude(altitude: Double): BoundingBoxProxy = withMinAltitude(altitude)
+    fun withSouthWestAltitude(altitude: Double): SpBoundingBox = withMinAltitude(altitude)
 
-    fun withMaxLongitude(longitude: Double): BoundingBoxProxy {
+    fun withMaxLongitude(longitude: Double): SpBoundingBox {
         set(maxLonIndex(), longitude)
         return this
     }
-    fun withEastLongitude(longitude: Double): BoundingBoxProxy = withMaxLongitude(longitude)
-    fun withMaxLatitude(latitude: Double): BoundingBoxProxy {
+    fun withEastLongitude(longitude: Double): SpBoundingBox = withMaxLongitude(longitude)
+    fun withMaxLatitude(latitude: Double): SpBoundingBox {
         set(maxLatIndex(), latitude)
         return this
     }
-    fun withNorthLatitude(latitude: Double): BoundingBoxProxy = withMaxLatitude(latitude)
-    fun withMaxAltitude(altitude: Double): BoundingBoxProxy {
+    fun withNorthLatitude(latitude: Double): SpBoundingBox = withMaxLatitude(latitude)
+    fun withMaxAltitude(altitude: Double): SpBoundingBox {
         to3D()
         set(maxAltIndex()!!, altitude)
         return this
     }
-    fun withNorthEastAltitude(altitude: Double): BoundingBoxProxy = withMaxAltitude(altitude)
+    fun withNorthEastAltitude(altitude: Double): SpBoundingBox = withMaxAltitude(altitude)
 
     /**
      * Returns the longitude distance in degree.

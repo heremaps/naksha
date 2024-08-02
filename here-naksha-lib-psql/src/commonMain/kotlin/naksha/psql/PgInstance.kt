@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.model.SessionOptions
 import kotlin.js.JsExport
 
 /**
@@ -50,8 +51,9 @@ interface PgInstance {
      * Returns a connection from the connection pool or opens a new connection. When the returned connection is closed, it will be
      * returned to the connection pool of the instance.
      * @param options the connection options.
+     * @param readOnly if the connection should be read-only.
      * @return the connection.
      * @throws IllegalArgumentException if the instance is read-only (read-replica) and a write-connection is requested.
      */
-    fun openConnection(options: PgOptions): PgConnection
+    fun openConnection(options: SessionOptions, readOnly: Boolean): PgConnection
 }

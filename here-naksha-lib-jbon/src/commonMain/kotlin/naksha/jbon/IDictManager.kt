@@ -31,4 +31,10 @@ interface IDictManager {
      * @return The global dictionary with the given identifier; _null_ when no such dictionary exists.
      */
     fun getDictionary(id: String): JbDictionary?
+
+    /**
+     * The default dictionary to use for encoding.
+     * @return default dictionary to use for encoding; _null_ if none is available.
+     */
+    fun defaultDict(): String? = null
 }

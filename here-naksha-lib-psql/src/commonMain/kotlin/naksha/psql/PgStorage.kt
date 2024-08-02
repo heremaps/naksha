@@ -3,7 +3,6 @@ package naksha.psql
 import naksha.base.fn.Fx2
 import naksha.model.*
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
 
 /**
  * The PostgresQL storage that manages session and connections.
@@ -25,12 +24,7 @@ interface PgStorage : IStorage {
      */
     val cluster: PgCluster?
 
-    /**
-     * The default options as provided in the constructor. The `schema` of the `defaultOptions` is the root schema, which will mapped to the [default map][NakshaContext.DEFAULT_MAP]. This schema is guaranteed to be there, when [initStorage] has been invoked, it is the main source of the storage-id, and it can be accessed via [defaultSchema].
-     */
-    val defaultOptions: PgOptions
-
-    /**
+   /**
      * The page-size of the database (`current_setting('block_size')`).
      */
     val pageSize: Int
@@ -61,24 +55,35 @@ interface PgStorage : IStorage {
     val postgresVersion: NakshaVersion
 
     /**
+     * The default schema, used for the default map.
+     */
+    val defaultSchemaName: String
+
+    /**
      * Translate the map name into a schema name.
      * @param map the map name.
      * @return the schema name.
      */
-    fun mapToSchema(map: String): String = if (map.isEmpty()) defaultOptions.schema else map
+    fun mapToSchema(map: String): String = if (map.isEmpty()) defaultSchemaName else map
 
     /**
      * Translate the schema name into a map name.
      * @param schema the schema name.
      * @return the map name.
      */
-    fun schemaToMap(schema: String): String = if (schema == defaultOptions.schema) defaultOptions.schema else schema
+    fun schemaToMap(schema: String): String = if (schema == defaultSchemaName) defaultSchemaName else schema
 
     /**
-     * Returns the default schema that maps to the default map (empty string), which matches [PgOptions.schema] of the [defaultOptions].
+     * Returns the default schema that maps to the default map (empty string), which matches [defaultSchemaName].
      * @return the default schema.
      */
     fun defaultSchema(): PgSchema
+
+    /**
+     * The default flags to use for the storage.
+     * @return default flags to use for the storage.
+     */
+    fun defaultFlags(): Flags
 
     /**
      * Returns the OID of the transaction sequence.
@@ -104,13 +109,13 @@ interface PgStorage : IStorage {
      * already initialized; does nothing.
      *
      * Well known parameters for this storage:
-     * - [PgPlatform.ID]: if the storage is uninitialized, initialize it with the given storage identifier. If the storage is already
+     * - [PgUtil.ID]: if the storage is uninitialized, initialize it with the given storage identifier. If the storage is already
      * initialized, reads the existing identifier and compares it with the given one. If they do not match, throws an
      * [IllegalStateException]. If not given a random new identifier is generated, when no identifier yet exists. It is strongly
      * recommended to provide the identifier.
-     * - [PgPlatform.CONTEXT]: can be a [NakshaContext] to be used while doing the initialization; only if [superuser][NakshaContext.su] is _true_,
+     * - [PgUtil.CONTEXT]: can be a [NakshaContext] to be used while doing the initialization; only if [superuser][NakshaContext.su] is _true_,
      * then a not uninitialized storage is installed. This requires as well superuser rights in the PostgresQL database.
-     * - [PgPlatform.OPTIONS]: can be a [PgOptions] object to be used for the initialization connection (specific changed defaults to
+     * - [PgUtil.OPTIONS]: can be a [SessionOptions] object to be used for the initialization connection (specific changed defaults to
      * timeouts and locks).
      *
      * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
@@ -119,36 +124,21 @@ interface PgStorage : IStorage {
      */
     override fun initStorage(params: Map<String, *>?)
 
-    override fun newWriteSession(context: NakshaContext, options: NakshaSessionOptions?): IWriteSession =
-        newSession(
-            defaultOptions.copy(
-                readOnly = false,
-                useMaster = true,
-                parallel = options?.parallel ?: false,
-                appId = context.getAppIdOrThrow { "The storage sub-system requires a valid 'appId' in context" },
-                author = context.author
-            )
-        )
+    override fun newWriteSession(options: SessionOptions?): IWriteSession
+        = newSession(options ?: SessionOptions.from(null), false)
 
-    override fun newReadSession(context: NakshaContext, options: NakshaSessionOptions?): IWriteSession =
-        newSession(
-            defaultOptions.copy(
-                readOnly = true,
-                useMaster = options?.useMaster ?: false,
-                parallel = options?.parallel ?: false,
-                appId = context.getAppIdOrThrow { "The storage sub-system requires a valid 'appId' in context" },
-                author = context.author
-            )
-        )
+    override fun newReadSession(options: SessionOptions?): IWriteSession
+        = newSession(options ?: SessionOptions.from(null), true)
 
     /**
      * Returns a new PostgresQL session.
      *
      * This method is invoked from [newReadSession] and [newWriteSession], just with adjusted [options].
-     * @param options the options to use for the database connection used by this session.
+     * @param options the session options.
+     * @param readOnly if the session should be read-only.
      * @return the session.
      */
-    fun newSession(options: PgOptions): PgSession
+    fun newSession(options: SessionOptions, readOnly:Boolean): PgSession
 
     /**
      * Opens a new PostgresQL database connection. A connection received through this method will not really close when
@@ -156,10 +146,11 @@ interface PgStorage : IStorage {
      *
      * If this is the [PLV8 engine](https://plv8.github.io/), then there is only one connection available, so calling this before closing
      * the previous returned connection will always cause an [IllegalStateException].
-     * @param options the options for the session; defaults to [defaultOptions].
+     * @param options the options for the session.
+     * @param readOnly if the connection should be read-only.
      * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the
      * connection. It may just do the work or perform arbitrary additional work.
      * @throws IllegalStateException if all connections are in use.
      */
-    fun newConnection(options: PgOptions = defaultOptions, init: Fx2<PgConnection, String>? = null): PgConnection
+    fun newConnection(options: SessionOptions = SessionOptions.from(null), readOnly: Boolean = false, init: Fx2<PgConnection, String>? = null): PgConnection
 }

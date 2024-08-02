@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
+import naksha.model.SessionOptions
 import java.lang.ref.WeakReference
 
 /**
@@ -17,10 +18,10 @@ class PsqlConnection internal constructor(
     val instance: PsqlInstance,
     val id: Long,
     jdbc: org.postgresql.jdbc.PgConnection,
-    options: PgOptions
+    options: SessionOptions
 ) : PgConnection, AutoCloseable {
 
-    override var options: PgOptions = options
+    override var options: SessionOptions = options
         set(value) {
             //field = value
             //schemaInfo = null

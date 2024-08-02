@@ -24,6 +24,15 @@ import kotlin.js.JsExport
 interface IStorage : AutoCloseable {
 
     /**
+     * The admin options to use for internal processing.
+     *
+     * They are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application can override the defaults to have more control over the `appId` and/or `author` being written, when internal data is processed, and how internal connections authenticate (`appName`).
+     *
+     * If not set, some defaults are read from [NakshaContext] application level defaults, others are internally generated (like `appName`).
+     */
+    val adminOptions: SessionOptions
+
+    /**
      * The storage-id.
      *
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
@@ -97,23 +106,21 @@ interface IStorage : AutoCloseable {
      * Open a new write session.
      *
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @param context the naksha context to use in the session.
-     * @param options additional optional options.
+     * @param options additional options.
      * @return the write session.
      * @since 2.0.7
      */
-    fun newWriteSession(context: NakshaContext = NakshaContext.currentContext(), options: NakshaSessionOptions? = null): IWriteSession
+    fun newWriteSession(options: SessionOptions? = null): IWriteSession
 
     /**
-     * Open a new read-only session. The [NakshaSessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
+     * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
      *
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @param context The naksha context to use in the session.
-     * @param options additional optional options.
+     * @param options additional options.
      * @return the read-only session.
      * @since 2.0.7
      */
-    fun newReadSession(context: NakshaContext = NakshaContext.currentContext(), options: NakshaSessionOptions? = null): IReadSession
+    fun newReadSession(options: SessionOptions? = null): IReadSession
 
     /**
      * Tests if the given handle is valid, and if it is, tries to extend its live-time to the given amount of milliseconds.

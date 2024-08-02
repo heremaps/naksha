@@ -23,10 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmMap;
 import naksha.base.Platform;
-import naksha.geo.BoundingBoxProxy;
-import naksha.geo.MultiPolygonGeometry;
+import naksha.geo.SpBoundingBox;
+import naksha.geo.SpMultiPolygon;
 import naksha.geo.PointCoord;
-import naksha.geo.PointGeometry;
+import naksha.geo.SpPoint;
 import org.junit.jupiter.api.Test;
 
 public class BBoxTest {
@@ -35,7 +35,7 @@ public class BBoxTest {
   public void pointCoordinates() throws Exception {
     String pointGJ = "{\"type\":\"Point\",\"coordinates\":[1,1]}";
     JvmMap jvmMap = (JvmMap) Platform.fromJSON(pointGJ, FromJsonOptions.getDEFAULT());
-    PointGeometry point = jvmMap.proxy(Platform.klassOf(PointGeometry.class));
+    SpPoint point = jvmMap.proxy(Platform.klassOf(SpPoint.class));
     PointCoord coordinates = point.getCoordinates();
 //    final BoundingBoxProxy bbox = new BoundingBoxProxy(coordinates);
 //
@@ -50,8 +50,8 @@ public class BBoxTest {
     String multipolygonGJ =
         "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[101.2,1.2],[101.8,1.2],[101.8,1.8],[101.2,1.8],[101.2,1.2]],[[101.2,1.2],[101.3,1.2],[101.3,1.3],[101.2,1.3],[101.2,1.2]],[[101.6,1.4],[101.7,1.4],[101.7,1.5],[101.6,1.5],[101.6,1.4]],[[101.5,1.6],[101.6,1.6],[101.6,1.7],[101.5,1.7],[101.5,1.6]]],[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]],[[100.35,0.35],[100.65,0.35],[100.65,0.65],[100.35,0.65],[100.35,0.35]]]]}";
     JvmMap jvmMap = (JvmMap) Platform.fromJSON(multipolygonGJ, FromJsonOptions.getDEFAULT());
-    MultiPolygonGeometry multipolygon = jvmMap.proxy(Platform.klassOf(MultiPolygonGeometry.class));
-    BoundingBoxProxy bbox = new BoundingBoxProxy(multipolygon.getCoordinates());
+    SpMultiPolygon multipolygon = jvmMap.proxy(Platform.klassOf(SpMultiPolygon.class));
+    SpBoundingBox bbox = new SpBoundingBox(multipolygon.getCoordinates());
 
     assertEquals(100.0, bbox.getMinLongitude(), 0.0);
     assertEquals(101.8, bbox.getMaxLongitude(), 0.0);

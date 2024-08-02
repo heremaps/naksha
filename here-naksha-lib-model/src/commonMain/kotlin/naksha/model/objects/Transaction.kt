@@ -29,7 +29,7 @@ open class Transaction() : NakshaFeature() {
         private val INT64_NULL = NotNullProperty<Transaction, Int64>(Int64::class)
     }
 
-    override fun typeDefaultValue(): String = "naksha.Tx"
+    override fun defaultFeatureType(): String = "naksha.Tx"
 
     override var id: String
         get() {

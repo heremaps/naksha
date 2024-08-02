@@ -32,7 +32,7 @@ class NakshaLock : NakshaFeature() {
             NakshaLockOwnersProxy::class)
     }
 
-    override fun typeDefaultValue(): String = "naksha.Lock"
+    override fun defaultFeatureType(): String = "naksha.Lock"
     var maxOwners: Int by MAX_OWNERS
     var owner: String? by OWNER
     var expires: Int64 by EXPIRES

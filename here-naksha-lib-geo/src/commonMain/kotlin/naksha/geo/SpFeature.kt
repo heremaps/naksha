@@ -9,16 +9,16 @@ import naksha.base.PlatformUtil
 import kotlin.js.JsExport
 
 /**
- * The data mode for a GeoJSON feature.
+ * The GeoJSON feature.
  */
 @JsExport
-open class GeoFeatureProxy : AnyObject() {
+open class SpFeature : AnyObject() {
 
     companion object GeoFeatureProxyCompanion {
-        private val ID = NotNullProperty<GeoFeatureProxy, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
-        private val TYPE = NotNullProperty<GeoFeatureProxy, String>(String::class) { self, _ -> self.typeDefaultValue() }
-        private val BBOX = NullableProperty<GeoFeatureProxy, BoundingBoxProxy>(BoundingBoxProxy::class)
-        private val GEOMETRY = NotNullProperty<GeoFeatureProxy, GeometryProxy>(GeometryProxy::class) { _, _ ->
+        private val ID = NotNullProperty<SpFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
+        private val TYPE = NotNullProperty<SpFeature, String>(String::class) { self, _ -> self.defaultFeatureType() }
+        private val BBOX_NULL = NullableProperty<SpFeature, SpBoundingBox>(SpBoundingBox::class)
+        private val GEOMETRY_NULL = NotNullProperty<SpFeature, SpGeometry>(SpGeometry::class) { _, _ ->
             throw IllegalStateException("geometry is null")
         }
     }
@@ -26,7 +26,7 @@ open class GeoFeatureProxy : AnyObject() {
     /**
      * The default type to set, when the type is _null_.
      */
-    protected open fun typeDefaultValue(): String = "Feature"
+    protected open fun defaultFeatureType(): String = "Feature"
 
     /**
      * The unique identifier of the feature.
@@ -36,22 +36,22 @@ open class GeoFeatureProxy : AnyObject() {
     /**
      * The bounding box.
      */
-    var bbox by BBOX
+    open var bbox by BBOX_NULL
 
     /**
      * The geometry of the feature.
      */
-    var geometry by GEOMETRY
+    open var geometry by GEOMETRY_NULL
 
     /**
      * The type of the feature.
      */
-    var type by TYPE
+    open var type by TYPE
 
     /**
      * Calculate the bounding box from the geometry and updated the [bbox] property.
      */
-    fun updateBoundingBox(): BoundingBoxProxy {
+    open fun updateBoundingBox(): SpBoundingBox {
         TODO("GeoFeature::updateBoundingBox is not yet implemented")
     }
 }

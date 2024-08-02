@@ -6,6 +6,7 @@ import naksha.base.fn.Fx2
 import naksha.jbon.*
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.Row
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ResultRow
@@ -14,6 +15,7 @@ import naksha.psql.PgUtil.PgUtilCompanion.ID
 import naksha.psql.PgUtil.PgUtilCompanion.OPTIONS
 import naksha.psql.PgUtil.PgUtilCompanion.OVERRIDE
 import naksha.psql.PgPlatform.PgPlatformCompanion.VERSION
+import naksha.psql.PgUtil.PgUtilCompanion.CONTEXT
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -22,9 +24,29 @@ import java.util.concurrent.atomic.AtomicReference
  * This storage class is extended in `here-naksha-storage-psql`, which has a `PsqlStoragePlugin` class that implements the `Plugin` contract (internal contract in _Naksha-Hub_) and makes the storage available to the **Naksha-Hub** as a storage plugin. It parses the configuration from feature properties given, and calls this constructor.
  * @constructor Creates a new PSQL storage.
  * @property cluster the PostgresQL instances used by this storage.
- * @property defaultOptions the default connection options.
+ * @property defaultSchemaName the default schema name.
  */
-open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOptions: PgOptions) : PgStorage, IStorage {
+open class PsqlStorage(override val cluster: PsqlCluster, override val defaultSchemaName: String) : PgStorage, IStorage {
+    private var _adminOptions: SessionOptions? = null
+    override var adminOptions: SessionOptions
+        get() = _adminOptions ?: SessionOptions(
+            map = mapToSchema(defaultSchemaName),
+            appName = "lib-psql/$LATEST",
+            appId = NakshaContext.defaultAppId.get() ?: "lib-psql",
+            author = null,
+            parallel = false,
+            useMaster = true,
+            excludePaths = NakshaContext.defaultExcludePaths.get(),
+            excludeFn = NakshaContext.defaultExcludeFn.get(),
+            connectTimeout = NakshaContext.defaultConnectTimeout.get(),
+            socketTimeout = NakshaContext.defaultSocketTimeout.get(),
+            stmtTimeout = NakshaContext.defaultStmtTimeout.get(),
+            lockTimeout = NakshaContext.defaultLockTimeout.get()
+        )
+        set(value) {
+            _adminOptions = value.copy(map = mapToSchema(defaultSchemaName))
+        }
+
     override var hardCap: Int = 1_000_000
 
     private var _pageSize: Int? = null
@@ -38,14 +60,14 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
     private var _brittleTableSpace: String? = null
     override val brittleTableSpace: String?
         get() {
-            if (id.get() == null) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+            if (_id.get() == null) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
             return _brittleTableSpace
         }
 
     private var _tempTableSpace: String? = null
     override val tempTableSpace: String?
         get() {
-            if (id.get() == null) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+            if (_id.get() == null) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
             return _tempTableSpace
         }
 
@@ -57,57 +79,40 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
     override val postgresVersion: NakshaVersion
         get() = _postgresVersion ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
-    private var id: AtomicReference<String?> = AtomicReference(null)
+    private var _id: AtomicReference<String?> = AtomicReference(null)
     private var _txnSequenceOid: Int? = null
 
-    /**
-     * The storage-id.
-     * @throws IllegalStateException if [initStorage] has not been called before.
-     */
-    override fun id(): String {
-        val id = this.id.get()
-        check(id != null) { "PsqlStorage not initialized" }
-        return id
-    }
+    override fun id(): String = _id.get() ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
-    /**
-     * Connects to the configured PostgresQL database and verifies if the database is initialized.
-     *
-     * If the database is not initialized, it checks if the [current NakshaContext][NakshaContext.currentContext] is a supervisor
-     * context, so the [NakshaContext.su] is _true_. If not, it will throw an [IllegalStateException].
-     *
-     * Eventually, when the database is not initialized and the current actor is a supervisor, it tries to install the
-     * [PLV8 extension](https://plv8.github.io/), if being available. If that succeeds, it will install the `commonjs2`, `lz4`, `jbon`,
-     * and `naksha` JavaScript modules.
-     *
-     * Generally, it will create the schema and all needed admin-tables (for transactions, global dictionary aso.). The server side
-     * (database) code is only supported, if the database supports the [PLV8 extension](https://plv8.github.io/).
-     *
-     * @throws IllegalStateException if the data is not yet initialized, and the [current NakshaContext][NakshaContext.currentContext] is
-     * not a supervisor context, so the [NakshaContext.su] is _false_.
-     */
     override fun initStorage(params: Map<String, *>?) {
-        if (this.id.get() != null) return
+        if (this._id.get() != null) return
         synchronized(this) {
-            if (this.id.get() != null) return
-            var options: PgOptions? = null
-            if (params != null && params.containsKey(OPTIONS)) {
+            if (this._id.get() != null) return
+            val context: NakshaContext = if (params != null && params.containsKey(CONTEXT)) {
+                val v = params[CONTEXT]
+                require(v is NakshaContext) { "params.${CONTEXT} must be an instance of NakshaContext" }
+                v
+            } else NakshaContext.currentContext()
+
+            val options: SessionOptions = if (params != null && params.containsKey(OPTIONS)) {
                 val v = params[OPTIONS]
-                require(v is PgOptions) { "params.${OPTIONS} must be an instance of PgOptions" }
-                options = v
-            }
-            options = (options ?: defaultOptions).copy(schema = defaultOptions.schema, readOnly = false, useMaster = true)
+                require(v is SessionOptions) { "params.${OPTIONS} must be an instance of SessionOptions" }
+                v
+            } else SessionOptions.from(context)
+
             val initId: String? = if (params != null && params.containsKey(ID)) {
                 val _id = params[ID]
                 require(_id is String && _id.length > 0) { "params.${ID} must be a string with a minimal length of 1" }
                 _id
             } else null
+
             var override = false
             if (params != null && params.containsKey(OVERRIDE)) {
                 val v = params[OVERRIDE]
                 require(v is Boolean) { "params.${OVERRIDE} must be a boolean, if given" }
                 override = v
             }
+
             var version = NakshaVersion.latest
             if (params != null && params.contains(VERSION)) {
                 val v = params[VERSION]
@@ -119,7 +124,8 @@ open class PsqlStorage(override val cluster: PsqlCluster, override val defaultOp
                     else -> throw IllegalArgumentException("params.${VERSION} must be a valid Naksha version string or binary encoding")
                 }
             }
-            val conn = cluster.newConnection(options)
+
+            val conn = cluster.newConnection(options, false)
             conn.use {
                 logger.info("Start init of database {}", conn.jdbc.url)
                 conn.jdbc.autoCommit = false
@@ -156,7 +162,7 @@ SELECT
                 }
                 val schema = defaultSchema()
                 val storage_id = schema.init_internal(initId, conn, version, override)
-                id.set(storage_id)
+                _id.set(storage_id)
 
                 logger.info("Load OID of transaction sequence counter (located only in default schema)")
                 cursor = conn.execute("SELECT oid FROM pg_class WHERE relname='$NAKSHA_TXN_SEQ' AND relnamespace=${schema.oid}").fetch()
@@ -190,46 +196,16 @@ SELECT
         TODO("Not yet implemented")
     }
 
-    /**
-     * Returns a new PostgresQL session.
-     *
-     * This method is invoked from [newReadSession] and [newWriteSession], just with adjusted [options].
-     * @param options the options to use for the database connection used by this session.
-     * @return the session.
-     */
-    override fun newSession(options: PgOptions): PgSession = PsqlSession(this, options)
+    override fun newSession(options: SessionOptions, readOnly: Boolean): PgSession = PsqlSession(this, options, readOnly)
 
-    /**
-     * Opens a new PostgresQL database connection. A connection received through this method will not really close when
-     * [PgConnection.close] is invoked, but the wrapper returns the underlying JDBC connection to the connection pool of the instance.
-     *
-     * If this is the [PLV8 engine](https://plv8.github.io/), then there is only one connection available, so calling this before closing
-     * the previous returned connection will always cause an [IllegalStateException].
-     * @param options the options for the session; defaults to [defaultOptions].
-     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the
-     * connection. It may just do the work or perform arbitrary additional work.
-     * @throws IllegalStateException if all connections are in use.
-     */
-    override fun newConnection(options: PgOptions, init: Fx2<PgConnection, String>?): PgConnection {
-        val conn = cluster.newConnection(options)
-        val quotedSchema = if (options.schema == defaultOptions.schema) this.quotedSchema else quoteIdent(options.schema)
+    override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
+        val conn = cluster.newConnection(options, readOnly)
+        val quotedSchema = quoteIdent(mapToSchema(options.map))
         // TODO: Do we need more initialization work here?
         val query = "SET SESSION search_path TO $quotedSchema, public, topology;\n"
         if (init != null) init.call(conn, query) else conn.execute(query).close()
         return conn
     }
-
-
-    private var _quotedSchema: String? = null
-    val quotedSchema: String
-        get() {
-            var s = _quotedSchema
-            if (s == null) {
-                s = quoteIdent(defaultOptions.schema)
-                _quotedSchema = s
-            }
-            return s
-        }
 
     override fun close() {
         TODO("Not yet implemented")
@@ -245,24 +221,24 @@ SELECT
     private val schemata: AtomicMap<String, WeakRef<PsqlSchema>> = Platform.newAtomicMap()
 
     override fun initMap(map: String) {
-        val schema = if (map.isEmpty()) defaultOptions.schema else map
+        val schema = mapToSchema(map)
         this[schema].init()
     }
 
     override fun dropMap(map: String) {
-        val schema = if (map.isEmpty()) defaultOptions.schema else map
+        val schema = mapToSchema(map)
         if (schema in this) this[schema].drop()
     }
 
-    override fun defaultSchema(): PsqlSchema = this[defaultOptions.schema]
+    override fun defaultSchema(): PsqlSchema = this[defaultSchemaName]
+
+    override fun defaultFlags(): Flags = Flags()
+        .featureEncoding(FeatureEncoding.JBON_GZIP)
+        .geoEncoding(GeoEncoding.TWKB_GZIP)
+        .tagsEncoding(TagsEncoding.JBON_GZIP)
 
     override operator fun contains(schemaName: String): Boolean = schemata.containsKey(schemaName)
 
-    /**
-     * Returns a schema wrapper.
-     * @param schemaName the schema name.
-     * @return the schema wrapper.
-     */
     override operator fun get(schemaName: String): PsqlSchema {
         val schemata = this.schemata
         while (true) {

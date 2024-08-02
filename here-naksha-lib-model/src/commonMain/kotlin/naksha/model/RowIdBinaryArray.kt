@@ -40,7 +40,7 @@ import kotlin.jvm.JvmStatic
  * ```
  */
 @JsExport
-data class RowIdArray(
+data class RowIdBinaryArray(
     /**
      * The `rowid`.
      */
@@ -49,7 +49,7 @@ data class RowIdArray(
      * The array to map a collection numbers with a collection name.
      */
     @JvmField val collections: Array<String>
-) {
+) : IRowIdArray {
     private val elementSize: Int
     private val last: Int
     private val view: PlatformDataView
@@ -67,21 +67,21 @@ data class RowIdArray(
 
     companion object RowIdArray_C {
         /**
-         * Return a [RowIdArray] from a compressed byte-array.
+         * Return a [RowIdBinaryArray] from a compressed byte-array.
          * @param compressed the compressed row-id array.
          * @param collections the array to map a collection numbers with a collection name.
-         * @return the [RowIdArray].
+         * @return the [RowIdBinaryArray].
          */
         @JvmStatic
         @JsStatic
-        fun fromGzip(compressed: ByteArray, collections: Array<String>): RowIdArray
-            = RowIdArray(Platform.gzipInflate(compressed), collections)
+        fun fromGzip(compressed: ByteArray, collections: Array<String>): RowIdBinaryArray
+            = RowIdBinaryArray(Platform.gzipInflate(compressed), collections)
     }
 
     /**
      * Returns the amount of row-ids in the array.
      */
-    val size: Int
+    override val size: Int
         get() = rowid_arr.size / elementSize
 
     @Suppress("NOTHING_TO_INLINE")
@@ -92,7 +92,7 @@ data class RowIdArray(
      * @param index the index.
      * @return the transaction number or _null_, if the index is out of bounds.
      */
-    fun getTxn(index: Int): Int64? {
+    override fun getTxn(index: Int): Int64? {
         val offset = offset(index)
         if (offset < 0 || offset > last) return null
         return dataview_get_int64(view, offset)
@@ -103,7 +103,7 @@ data class RowIdArray(
      * @param index the index.
      * @return the `uid` or _null_, if the index is out of bounds.
      */
-    fun getUid(index: Int): Int? {
+    override fun getUid(index: Int): Int? {
         val offset = offset(index)
         if (offset < 0 || offset > last) return null
         return dataview_get_int32(view, offset + 8)
@@ -114,7 +114,7 @@ data class RowIdArray(
      * @param index the index.
      * @return the `flags` or _null_, if the index is out of bounds.
      */
-    fun getFlags(index: Int): Int? {
+    override fun getFlags(index: Int): Int? {
         val offset = offset(index)
         if (offset < 0 || offset > last) return null
         return dataview_get_int32(view, offset + 12)
@@ -125,7 +125,7 @@ data class RowIdArray(
      * @param index the index.
      * @return the collection name or _null_, if the index is out of bounds.
      */
-    fun getCollection(index: Int): String? {
+    override fun getCollection(index: Int): String? {
         if (collections.size == 1) return collections[0]
         val offset = offset(index)
         if (offset < 0 || offset > last) return null
@@ -140,7 +140,7 @@ data class RowIdArray(
      * @param index the index.
      * @return the [RowId] or _null_, if the index is out of bounds.
      */
-    fun getRowId(index: Int): RowId? {
+    override fun getRowId(index: Int): RowId? {
         val offset = offset(index)
         if (offset < 0 || offset > last) return null
         return RowId(Version(dataview_get_int64(view, offset)),
@@ -168,7 +168,7 @@ data class RowIdArray(
      * @param map the map from which the row-ids are.
      * @return the result-row list generated from the information.
      */
-    fun toResultRowList(storage: IStorage, map: String): ResultRowList {
+    override fun toResultRowList(storage: IStorage, map: String): ResultRowList {
         val list = ResultRowList()
         val length = size
         list.setCapacity(length)
@@ -187,7 +187,7 @@ data class RowIdArray(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false
-        other as RowIdArray
+        other as RowIdBinaryArray
         return rowid_arr.contentEquals(other.rowid_arr)
     }
     override fun hashCode(): Int = rowid_arr.contentHashCode()

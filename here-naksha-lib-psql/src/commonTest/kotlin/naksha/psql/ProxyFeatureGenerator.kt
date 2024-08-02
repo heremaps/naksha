@@ -3,7 +3,7 @@ package naksha.psql
 import naksha.base.Platform
 import naksha.base.PlatformUtil
 import naksha.geo.PointCoord
-import naksha.geo.PointGeometry
+import naksha.geo.SpPoint
 import naksha.model.objects.NakshaFeature
 import naksha.model.TagList
 
@@ -368,7 +368,7 @@ class ProxyFeatureGenerator {
         val feature = NakshaFeature(featureId)
         val longitude = Platform.random() * 360 - 180 // -180.0 to 180.0
         val latitude = Platform.random() * 180 - 90 // -90 to 90.0
-        feature.geometry = PointGeometry(PointCoord(longitude, latitude))
+        feature.geometry = SpPoint(PointCoord(longitude, latitude))
 
         val firstName = firstNames[(Platform.random() * (firstNames.size - 1)).toInt()]
         val lastName = lastNames[(Platform.random() * (lastNames.size - 1)).toInt()]

@@ -130,6 +130,9 @@ actual class Platform {
         }
 
         @JsStatic
+        actual val UNDEFINED: Any = js("undefined").unsafeCast<Any>()
+
+        @JsStatic
         actual val DEFAULT_SYMBOL = symbol("com.here.naksha.lib.nak")
 
         @JsStatic

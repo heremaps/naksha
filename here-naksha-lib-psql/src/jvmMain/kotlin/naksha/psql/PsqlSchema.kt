@@ -44,7 +44,7 @@ class PsqlSchema internal constructor(storage: PgStorage, name: String) : PgSche
         autoCommit: Boolean = connection == null
     ): String {
         logger.info("Query database for identifier and version from {}, schema='{}'", connection, name)
-        val conn = connection ?: storage.newConnection(storage.defaultOptions.copy(schema = name, useMaster = true, readOnly = false))
+        val conn = connection ?: storage.newConnection(storage.adminOptions)
         try {
             conn.execute(
                 """CREATE SCHEMA IF NOT EXISTS $nameQuoted;

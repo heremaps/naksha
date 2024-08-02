@@ -1,8 +1,7 @@
 package naksha.psql
 
-import naksha.geo.GeometryProxy
-import naksha.model.Flags
-import naksha.model.geoGzip
+import naksha.geo.SpGeometry
+import naksha.model.SessionOptions
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
 @JsExport
@@ -102,13 +101,8 @@ parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.
             TODO("Not yet implemented")
         }
 
-        /**
-         * Creates a new PostgresQL storage engine.
-         * @param cluster the PostgresQL server cluster to use.
-         * @param options the default options when opening new connections.
-         */
         @JsStatic
-        actual fun newStorage(cluster: PgCluster, options: PgOptions): PgStorage {
+        actual fun newStorage(cluster: PgCluster, schemaName: String): PgStorage {
             plv8Forbidden("PgUtil.newStorage")
             TODO("Not yet implemented")
             // Should return the NodeJsStorage!
@@ -151,7 +145,7 @@ parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.
          * @throws UnsupportedOperationException if this platform does not support running tests.
          */
         @JsStatic
-        actual fun initTestStorage(defaultOptions: PgOptions, params: Map<String, *>?): Boolean {
+        actual fun initTestStorage(defaultOptions: SessionOptions, params: Map<String, *>?): Boolean {
             plv8Forbidden("PgUtil.getTestStorage")
             // TODO: Can we fix this for JavaScript/TypeScript?
             throw UnsupportedOperationException("Testing not supported in PLV8")
@@ -186,7 +180,7 @@ parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
-        actual fun decodeGeometry(bytes: ByteArray?, flags: Int): GeometryProxy? {
+        actual fun decodeGeometry(bytes: ByteArray?, flags: Int): SpGeometry? {
             TODO("Not yet implemented")
         }
 
@@ -197,7 +191,7 @@ parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
-        actual fun encodeGeometry(geometry: GeometryProxy?, flags: Int): ByteArray {
+        actual fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray {
             TODO("Not yet implemented")
         }
     }

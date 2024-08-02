@@ -6,17 +6,16 @@ import kotlin.js.JsName
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class GeometryCollectionProxy() : GeometryProxy() {
+class SpGeometryCollection() : SpGeometry() {
 
     @JsName("of")
-    constructor(geometries: GeometriesProxy) : this() {
+    constructor(geometries: SpGeometryList) : this() {
         this.geometries = geometries
     }
 
     companion object GeometryCollectionCompanion {
-        private val GEOMETRIES = NullableProperty<GeometryCollectionProxy, GeometriesProxy>(GeometriesProxy::class)
+        private val GEOMETRIES = NullableProperty<SpGeometryCollection, SpGeometryList>(SpGeometryList::class)
     }
 
     var geometries by GEOMETRIES
 }
-

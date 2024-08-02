@@ -2,9 +2,10 @@
 
 package naksha.psql.executors
 
+import naksha.model.IRowIdArray
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
-import naksha.model.RowIdArray
+import naksha.model.RowIdBinaryArray
 import naksha.psql.PgConnection
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -32,7 +33,7 @@ class PgQuery internal constructor(
     @JvmField
     internal val arguments: Array<Any?>?
 ) {
-    private var _results: RowIdArray? = null
+    private var _results: IRowIdArray? = null
 
     /**
      * The result that is produces by [execute], basically:
@@ -44,7 +45,7 @@ class PgQuery internal constructor(
      * SELECT gzip(array_agg(rowid)) as rowid_arr FROM table WHERE ...
      * ```
      */
-    val results: RowIdArray
+    val results: IRowIdArray
         get() = _results ?: throw NakshaException(ILLEGAL_STATE, "Invoke 'execute' before reading the results")
 
     /**

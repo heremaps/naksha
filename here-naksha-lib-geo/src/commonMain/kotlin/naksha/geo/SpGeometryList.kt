@@ -5,5 +5,4 @@ import kotlin.js.JsExport
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class GeometriesProxy : ListProxy<GeometryProxy>(GeometryProxy::class) {
-}
+class SpGeometryList : ListProxy<SpGeometry>(SpGeometry::class)

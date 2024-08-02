@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.Fnv1a32
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.model.SessionOptions
 import org.postgresql.PGProperty.*
 import org.postgresql.util.HostSpec
 import java.lang.ref.WeakReference
@@ -147,15 +148,8 @@ class PsqlInstance : PgInstance {
 
     // TODO: Implement session (aka connection) pool!
 
-    /**
-     * Returns a connection from the connection pool or opens a new connection. When the returned connection is closed, it will be
-     * returned to the instance connection pool.
-     * @param options the connection options.
-     * @return the connection.
-     * @throws IllegalArgumentException if the instance is read-only (read-replica) and a write-connection is requested.
-     */
-    override fun openConnection(options: PgOptions): PsqlConnection {
-        if (readOnly) require(options.readOnly) { "Failed to open a write connection to read-replica" }
+    override fun openConnection(options: SessionOptions, readOnly: Boolean): PsqlConnection {
+        if (this.readOnly) require(readOnly) { "Failed to open a write connection to read-replica" }
         var psqlConn: PsqlConnection?
 
         val poolEnum = connectionPool.elements()
@@ -177,7 +171,7 @@ class PsqlInstance : PgInstance {
             // Idle connection found.
             psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
             if (pooledConn.setSession(psqlConn)) {
-                pooledConn.jdbcConn.isReadOnly = options.readOnly
+                pooledConn.jdbcConn.isReadOnly = readOnly
                 return psqlConn
             }
             // Concurrent allocation, another thread was faster, go on.
@@ -196,16 +190,12 @@ class PsqlInstance : PgInstance {
         props.setProperty(REWRITE_BATCHED_INSERTS.getName(), "true")
         val jdbcConn = org.postgresql.jdbc.PgConnection(arrayOf(hostSpec), props, url)
         jdbcConn.setAutoCommit(false)
-        jdbcConn.setReadOnly(options.readOnly)
+        jdbcConn.setReadOnly(readOnly)
         jdbcConn.setHoldability(ResultSet.CLOSE_CURSORS_AT_COMMIT)
 
         val pooledConn = PooledPgConnection(jdbcConn)
-        pooledConn.jdbcConn.isReadOnly = options.readOnly
+        pooledConn.jdbcConn.isReadOnly = readOnly
         psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
-        psqlConn.execute("""
-            SET SESSION search_path TO ${options.schema}, public, topology;
-            SET SESSION enable_seqscan = OFF;
-        """.trimIndent()).close()
         check(pooledConn.setSession(psqlConn))
         check(connectionPool.putIfAbsent(pooledConn.id, pooledConn) == null)
         return psqlConn

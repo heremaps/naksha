@@ -5,7 +5,7 @@ import kotlin.js.JsName
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PolygonGeometry() : GeometryProxy() {
+class SpPolygon() : SpGeometry() {
 
     @JsName("of")
     constructor(coordinates: PolygonCoord) : this() {
@@ -13,7 +13,7 @@ class PolygonGeometry() : GeometryProxy() {
     }
 
     @JsName("ofBoundingBox")
-    constructor(bbox: BoundingBoxProxy) : this() {
+    constructor(bbox: SpBoundingBox) : this() {
         val lineString = LineStringCoord(
             PointCoord(bbox.getWestLongitude(), bbox.getSouthLatitude()),
             PointCoord(bbox.getEastLongitude(), bbox.getSouthLatitude()),
@@ -26,7 +26,7 @@ class PolygonGeometry() : GeometryProxy() {
     }
 
     override fun getCoordinates(): PolygonCoord = super.getCoordinates() as PolygonCoord
-    fun withCoordinates(coordinates: PolygonCoord): PolygonGeometry {
+    fun withCoordinates(coordinates: PolygonCoord): SpPolygon {
         setCoordinates(coordinates)
         return this
     }

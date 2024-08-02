@@ -3,55 +3,46 @@
 //import naksha.base.Fnv1a32
 //import naksha.base.Platform
 //import naksha.model.*
-//import naksha.psql.PgPlan
-//import naksha.psql.PgRow
-//import naksha.psql.PgSession
+//import naksha.model.objects.NakshaCollection
+//import naksha.model.objects.NakshaFeature
+//import naksha.psql.*
 //import naksha.psql.TRANSACTIONS_COL
+//import kotlin.jvm.JvmField
 //
-//internal class RowUpdater(val session: PgSession) {
-//    private lateinit var gridPlan: PgPlan
+//open class RowUpdater(@JvmField val session: PgSession) {
+//
+//    /**
+//     * Returns the [flags][Flags] to use, when encoding new rows.
+//     * @return the [flags][Flags] to use, when encoding new rows.
+//     */
+//    protected open fun flags(collection: NakshaCollection): Flags = collection.defaultFlags ?: session.storage.defaultFlags()
+//
+//    /**
+//     * Returns the encoding to store for the [feature-type][Metadata.type].
+//     * @param collection the collection in which to store the feature.
+//     * @param feature the feature.
+//     * @return the type to store in [Metadata].
+//     */
+//    protected open fun featureType(collection: PgCollection, feature: NakshaFeature): String? {
+//        val type = feature.momType ?: feature.properties.featureType ?: feature.type
+//        return if (type == collection.nakshaCollection.defaultType) null else type
+//    }
 //
 //    /**
 //     * Create the XYZ namespace for an _INSERT_ operation.
-//     * @param collectionId The collection into which a feature is inserted.
-//     * @param NEW The row in which to update the XYZ namespace columns.
-//     * @return The new XYZ namespace for this feature.
+//     * @param row the row as created from a feature.
+//     * @return a new row with updated metadata.
 //     */
-//    internal fun xyzInsert(collectionId: String, NEW: PgRow) {
+//    fun xyzInsert(collection: PgCollection, feature: NakshaFeature): Metadata {
 //        val txn = session.txn()
-//        val txnTs = session.txnTs()
-//
-//        var geoGrid: Int? = NEW.geo_grid
-//
-//        // FIXME: default flags should be taken from collectionConfig
-//        val flags = NEW.flags ?: Flags()
-//
-//        if (geoGrid == null) {
-//            // Only calculate geo-grid, if not given by the client.
-//            val id: String = NEW.id!!
-//            geoGrid = grid(id, flags, NEW.geo)
-//        }
-//
-//        val uid = if (collectionId == TRANSACTIONS_COL) {
-//            0
-//        } else {
-//            session.nextUid()
-//        }
-//
-//        NEW.txn = txn.txn
-//        NEW.txn_next = null
-//        NEW.ptxn = null
-//        NEW.puid = 0
-//        NEW.geo_grid = geoGrid
-//        NEW.version = null // saving space null means 1
-//        NEW.uid = uid
-//        NEW.created_at = null // saving space - it is same as update_at at creation,
-//        NEW.updated_at = txnTs
-//        NEW.author = session.options.author
-//        NEW.author_ts = null // saving space - only apps are allowed to create features
-//        NEW.app_id = session.options.appId
-//        NEW.flags = flags
-//        NEW.fnva1 = rowHash(NEW)
+//        val now = session.txnTs()
+//        return Metadata(
+//            updatedAt = now,
+//            flags = flags(collection.nakshaCollection),
+//            author = session.options.author,
+//            appId = session.options.appId,
+//            type = featureType(collection, feature)
+//        )
 //    }
 //
 //    /**
@@ -99,8 +90,9 @@
 //    }
 //
 //    /**
-//     * Create a GRID ([GeoHash](https://en.wikipedia.org/wiki/Geohash) Reference ID) from the given geometry.
-//     * The GRID is used for distributed processing of features. This method uses GeoHash at level 14, which uses
+//     * Create a GRID for the given row.
+//     *
+//     * The GRID is the HERE tile ID at level 15, calculated either used for distributed processing of features. This method uses GeoHash at level 14, which uses
 //     * 34 bits for latitude and 36 bits for longitude (70-bit total). The precision is therefore higher than 1mm.
 //     *
 //     * If the feature does not have a geometry, this method creates a pseudo GRID (GeoHash Reference ID) from the
@@ -112,7 +104,7 @@
 //     * @param geo The feature geometry; if any.
 //     * @return The GRID (14 character long string).
 //     */
-//    internal fun grid(id: String, flags: Flags, geo: ByteArray?): Int {
+//    internal fun grid(row: Row): Int {
 //        // FIXME TODO use point to here tile function after merge
 //        return 0
 ////        if (geo == null) return Static.gridFromId(id)
@@ -123,17 +115,16 @@
 //    }
 //
 //    /**
-//     * Calculates hash of row using Fnv1a32 algorithm.
-//     * Elements of row used to calculate hash (in order): feature, tags, geo, geoRef
+//     * Calculates hash of a row.
 //     *
-//     * @param row
-//     * @return hash
+//     * @param row the row.
+//     * @return the hash.
 //     */
-//    internal fun rowHash(row: PgRow): Int {
+//    internal fun rowHash(row: Row): Int {
 //        var totalHash = Fnv1a32.hashByteArray(row.feature)
 //        totalHash = Fnv1a32.hashByteArray(row.tags, totalHash)
 //        totalHash = Fnv1a32.hashByteArray(row.geo, totalHash)
-//        totalHash = Fnv1a32.hashByteArray(row.geo_ref, totalHash)
+//        totalHash = Fnv1a32.hashByteArray(row.referencePoint, totalHash)
 //        return totalHash
 //    }
 //}

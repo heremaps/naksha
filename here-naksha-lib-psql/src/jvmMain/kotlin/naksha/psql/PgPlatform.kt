@@ -1,6 +1,7 @@
 package naksha.psql
 
-import naksha.geo.GeometryProxy
+import naksha.geo.SpGeometry
+import naksha.model.SessionOptions
 import java.security.MessageDigest
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
@@ -14,16 +15,20 @@ actual class PgPlatform {
 
         /**
          * A parameter that can be given to [getTestStorage] to not start a docker container, but to connect the test storage against an
-         * existing database with this URL. This parameter is as well auto-detect from the environment variable named
-         * `NAKSHA_TEST_PSQL_DB_URL`.
+         * existing database with this URL.
+         *
+         * If not given, this parameter is auto-detected from the environment variable named `NAKSHA_TEST_PSQL_DB_URL`.
+         *
+         * @see PgTest
          */
         const val TEST_URL = "test_url"
 
         /**
-         * A parameter that can be given to [getTestStorage] to not start a docker container, but to connect against the given instance.
+         * A parameter that can be given to [getTestStorage] to not start a docker container, but to connect against the given instance. The value must be a [PgInstance].
+         *
+         * @see PgTest
          */
-        @JvmField
-        var TEST_INSTANCE = "test_instance"
+        const val TEST_INSTANCE = "test_instance"
 
         @JvmStatic
         internal actual fun quote_literal(vararg parts: String): String? = null
@@ -103,15 +108,10 @@ actual class PgPlatform {
             throw UnsupportedOperationException("PgUtil.getPlv8: This is no PLV8 extension")
         }
 
-        /**
-         * Creates a new PostgresQL storage engine.
-         * @param cluster the PostgresQL server cluster to use.
-         * @param options the default options when opening new connections.
-         */
         @JvmStatic
-        actual fun newStorage(cluster: PgCluster, options: PgOptions): PgStorage {
+        actual fun newStorage(cluster: PgCluster, schemaName: String): PgStorage {
             require(cluster is PsqlCluster) { "The Java PSQL storage only works with PsqlCluster instances, please use PgUtil.newCluster" }
-            return PsqlStorage(cluster, options)
+            return PsqlStorage(cluster, schemaName)
         }
 
         /**
@@ -129,7 +129,7 @@ actual class PgPlatform {
          * @return _true_ if a new test-storage was created; _false_ if there is already an existing storage.
          */
         @JvmStatic
-        actual fun initTestStorage(defaultOptions: PgOptions, params: Map<String, *>?): Boolean {
+        actual fun initTestStorage(defaultOptions: SessionOptions, params: Map<String, *>?): Boolean {
             var testStorage = PsqlTestStorage.storage.get()
             if (testStorage != null) return false
             testStorage = PsqlTestStorage.getTestOrInitStorage(defaultOptions, params)
@@ -157,7 +157,7 @@ actual class PgPlatform {
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
-        actual fun decodeGeometry(bytes: ByteArray?, flags: Int): GeometryProxy? {
+        actual fun decodeGeometry(bytes: ByteArray?, flags: Int): SpGeometry? {
             TODO("Not yet implemented")
         }
 
@@ -168,7 +168,7 @@ actual class PgPlatform {
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
-        actual fun encodeGeometry(geometry: GeometryProxy?, flags: Int): ByteArray {
+        actual fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray {
             TODO("Not yet implemented")
         }
     }

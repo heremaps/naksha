@@ -88,17 +88,17 @@ class PgColumn : JsEnum() {
 
         @JvmField
         @JsStatic
-        val created_at = def(PgColumn::class, "created_at") { self ->
+        val updated_at = def(PgColumn::class, "updated_at") { self ->
             self._i = 0
             self._type = PgType.INT64
+            self._extra = "NOT NULL"
         }
 
         @JvmField
         @JsStatic
-        val updated_at = def(PgColumn::class, "updated_at") { self ->
+        val created_at = def(PgColumn::class, "created_at") { self ->
             self._i = 1
             self._type = PgType.INT64
-            self._extra = "NOT NULL"
         }
 
         @JvmField
@@ -291,7 +291,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val allColumns = arrayOf(
-            created_at, updated_at, author_ts, txn_next, txn, ptxn,
+            updated_at, created_at, author_ts, txn_next, txn, ptxn,
             uid, puid, hash, change_count, geo_grid, flags,
             rowid, id, app_id, author, type,
             tags, geo_ref, geo, feature, attachment
@@ -317,15 +317,14 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val metaColumns = arrayOf(
-            created_at, updated_at, author_ts, txn_next, txn, ptxn,
+            updated_at, created_at, author_ts, txn_next, txn, ptxn,
             uid, puid, hash, change_count, geo_grid, flags,
             id, app_id, author, type)
 
         init {
             // This is only self-check code.
-            var i = 0
-            for (col in allColumns) {
-                check(col.i == i++) { "Invalid columns, column '${col.name}' should be at index ${col.i}, but found at $i" }
+            for ((i, col) in allColumns.withIndex()) {
+                check(i == col.i) { "Invalid columns, column '${col.name}' should be at index ${col.i}, but found at $i" }
             }
         }
 
@@ -337,8 +336,8 @@ class PgColumn : JsEnum() {
         @JvmStatic
         @JsStatic
         fun ofRowColumn(rowColumn: RowColumn): PgColumn? = when (rowColumn.name) {
-            RowColumn.CREATED_AT -> created_at
             RowColumn.UPDATED_AT -> updated_at
+            RowColumn.CREATED_AT -> created_at
             RowColumn.AUTHOR_TS -> author_ts
             RowColumn.NEXT_VERSION -> txn_next
             RowColumn.VERSION -> txn

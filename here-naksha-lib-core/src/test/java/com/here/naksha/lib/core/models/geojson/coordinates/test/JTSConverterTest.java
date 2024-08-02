@@ -26,7 +26,7 @@ import java.nio.file.Paths;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmMap;
 import naksha.base.Platform;
-import naksha.geo.GeometryProxy;
+import naksha.geo.SpGeometry;
 import naksha.geo.ProxyGeoUtil;
 import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Test;
@@ -42,9 +42,9 @@ public class JTSConverterTest {
     JvmMap jvmMap = (JvmMap) Platform.fromJSON(featureText, FromJsonOptions.getDEFAULT());
     NakshaFeature feature = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));
 
-    GeometryProxy sourceGeometry = feature.getGeometry();
+    SpGeometry sourceGeometry = feature.getGeometry();
     org.locationtech.jts.geom.Geometry jtsGeometry = ProxyGeoUtil.toJtsGeometry(sourceGeometry);
-    GeometryProxy targetGeometry = ProxyGeoUtil.toProxyGeometry(jtsGeometry);
+    SpGeometry targetGeometry = ProxyGeoUtil.toProxyGeometry(jtsGeometry);
 
     assertNotNull(targetGeometry);
   }

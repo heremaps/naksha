@@ -3,7 +3,7 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.geo.GeometryProxy
+import naksha.geo.SpGeometry
 import naksha.jbon.IDictManager
 import naksha.jbon.JbDictionary
 import naksha.jbon.JbFeatureDecoder
@@ -86,20 +86,6 @@ class PgUtil private constructor() {
         const val ID = "id"
 
         /**
-         * The list of default indices that are added, when _null_ is provided as index list to create.
-         */
-        @JvmField
-        @JsStatic
-        var DEFAULT_INDICES = listOf(
-            id_txn_uid,
-            gist_geo_id_txn_uid,
-            geo_grid_id_txn_uid,
-            tags_id_txn_uid,
-            app_id_updatedAt_id_txn_uid,
-            author_ts_id_txn_uid
-        )
-
-        /**
          * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
          * (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
          * @param parts the literal parts to merge and quote.
@@ -147,7 +133,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun gridFromId(id: String): String {
+        fun geoHashFrom(id: String): String {
             val BASE32 = PgUtil.BASE32
             val sb = StringBuilder()
             var hash = Fnv1a32.string(Fnv1a32.start(), id)
@@ -269,7 +255,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun decodeGeometry(bytes: ByteArray?, flags: Flags): GeometryProxy? = PgPlatform.decodeGeometry(bytes, flags)
+        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? = PgPlatform.decodeGeometry(bytes, flags)
 
         /**
          * Encodes the given GeoJSON geometry into bytes.
@@ -280,6 +266,6 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun encodeGeometry(geometry: GeometryProxy?, flags: Flags): ByteArray = PgPlatform.encodeGeometry(geometry, flags)
+        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray = PgPlatform.encodeGeometry(geometry, flags)
     }
 }

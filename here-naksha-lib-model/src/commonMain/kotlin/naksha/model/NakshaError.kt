@@ -43,13 +43,13 @@ open class NakshaError() : AnyObject() {
          * Returned when an already initialized storage is initialized, providing a wrong identifier.
          * @since 3.0.0
          */
-        const val STORAGE_ID_MISMATCH = "storageIdMismatch"
+        const val STORAGE_ID_MISMATCH = "StorageIdMismatch"
 
         /**
          * Returned something requires initialisation before some method can be invoked.
          * @since 3.0.0
          */
-        const val UNINITIALIZED = "uninitialized"
+        const val UNINITIALIZED = "Uninitialized"
 
         /**
          * A provided identifier is not allowed.
@@ -61,7 +61,7 @@ open class NakshaError() : AnyObject() {
          * Returned when trying to create a collection that exists already.
          * @since 3.0.0
          */
-        const val COLLECTION_EXISTS = "collectionExists"
+        const val COLLECTION_EXISTS = "CollectionExists"
 
         /**
          * The collection accessed does not exist.
@@ -174,14 +174,28 @@ open class NakshaError() : AnyObject() {
          *
          * @since 3.0.0
          */
-        const val FEATURE_EXISTS = "featureExists"
+        const val FEATURE_EXISTS = "FeatureExists"
 
         /**
          * A feature does not exist, but is expected to exist.
          *
          * @since 3.0.0
          */
-        const val FEATURE_NOT_EXISTS = "featureNotExists"
+        const val FEATURE_NOT_FOUND = "FeatureNotFound"
+
+        /**
+         * A map does exist, but is expected to not exist.
+         *
+         * @since 3.0.0
+         */
+        const val MAP_EXISTS = "MapExists"
+
+        /**
+         * A map does not exist, but is expected to exist.
+         *
+         * @since 3.0.0
+         */
+        const val MAP_NOT_FOUND = "MapNotFound"
 
         private val CODE = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
         private val MSG = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }

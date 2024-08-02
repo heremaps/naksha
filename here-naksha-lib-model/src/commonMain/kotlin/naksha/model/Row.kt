@@ -119,4 +119,12 @@ data class Row(
             tags ?: other.tags,
             attachment ?: other.attachment)
     }
+
+    companion object Row_C {
+        fun insertFeature(feature: NakshaFeature, options: SessionOptions? = null): Row {
+            val hash = Metadata.hash(feature, options?.excludePaths, options?.excludeFn)
+            val geoGrid = Metadata.geoGrid(feature.id, feature.geometry)
+            TODO("Finish me!")
+        }
+    }
 }

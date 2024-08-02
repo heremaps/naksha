@@ -12,48 +12,48 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class GeoType : JsEnum() {
+class SpType : JsEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = GeoType::class
+    override fun namespace(): KClass<out JsEnum> = SpType::class
 
     override fun initClass() {}
 
     companion object GeoTypeCompanion {
         /**
-         * Returns the given value as [GeoType].
+         * Returns the given value as [SpType].
          * @param value the value.
-         * @return the [GeoType] representing this value.
+         * @return the [SpType] representing this value.
          */
         @JvmStatic
         @JsStatic
-        fun of(value: String): GeoType = get(value, GeoType::class)
+        fun of(value: String): SpType = get(value, SpType::class)
 
         @JvmField
         @JsStatic
-        val Point = def(GeoType::class, "Point")
+        val Point = def(SpType::class, "Point")
 
         @JvmField
         @JsStatic
-        val MultiPoint = def(GeoType::class, "MultiPoint")
+        val MultiPoint = def(SpType::class, "MultiPoint")
 
         @JvmField
         @JsStatic
-        val LineString = def(GeoType::class, "LineString")
+        val LineString = def(SpType::class, "LineString")
 
         @JvmField
         @JsStatic
-        val MultiLineString = def(GeoType::class, "MultiLineString")
+        val MultiLineString = def(SpType::class, "MultiLineString")
 
         @JvmField
         @JsStatic
-        val Polygon = def(GeoType::class, "Polygon")
+        val Polygon = def(SpType::class, "Polygon")
 
         @JvmField
         @JsStatic
-        val MultiPolygon = def(GeoType::class, "MultiPolygon")
+        val MultiPolygon = def(SpType::class, "MultiPolygon")
 
         @JvmField
         @JsStatic
-        val GeometryCollection = def(GeoType::class, "GeometryCollection")
+        val GeometryCollection = def(SpType::class, "GeometryCollection")
     }
 }

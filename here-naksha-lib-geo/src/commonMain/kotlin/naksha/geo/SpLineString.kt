@@ -5,7 +5,7 @@ import kotlin.js.JsName
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class LineStringGeometry() : GeometryProxy() {
+class SpLineString() : SpGeometry() {
 
     @JsName("of")
     constructor(coordinates: LineStringCoord) : this() {
@@ -13,7 +13,7 @@ class LineStringGeometry() : GeometryProxy() {
     }
 
     override fun getCoordinates(): LineStringCoord = super.getCoordinates() as LineStringCoord
-    fun withCoordinates(coordinates: LineStringCoord): LineStringGeometry {
+    fun withCoordinates(coordinates: LineStringCoord): SpLineString {
         setCoordinates(coordinates)
         return this
     }

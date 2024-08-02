@@ -326,6 +326,20 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
                 map[pg_truncated_id] = e
             }
         }
+
+        /**
+         * The list of default indices that are added, when _null_ is provided as index list to create.
+         */
+        @JvmField
+        @JsStatic
+        var DEFAULT_INDICES = listOf(
+            id_txn_uid,
+            gist_geo_id_txn_uid,
+            geo_grid_id_txn_uid,
+            tags_id_txn_uid,
+            app_id_updatedAt_id_txn_uid,
+            author_ts_id_txn_uid
+        )
     }
 
     /**

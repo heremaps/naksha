@@ -5,7 +5,7 @@ import kotlin.js.JsName
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class MultiPointGeometry() : GeometryProxy() {
+class SpMultiPoint() : SpGeometry() {
 
     @JsName("of")
     constructor(coordinates: MultiPointCoord) : this() {
@@ -13,7 +13,7 @@ class MultiPointGeometry() : GeometryProxy() {
     }
 
     override fun getCoordinates(): MultiPointCoord = super.getCoordinates() as MultiPointCoord
-    fun withCoordinates(coordinates: MultiPointCoord): MultiPointGeometry {
+    fun withCoordinates(coordinates: MultiPointCoord): SpMultiPoint {
         setCoordinates(coordinates)
         return this
     }
